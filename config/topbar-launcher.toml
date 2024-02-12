@@ -1,0 +1,7 @@
+[notify-system]
+cmd = "swaync-client -t"
+icon = "notifications-symbolic"
+
+[separator]
+cmd = "NULL"
+icon = "nemo-vertical-layout-wide-symbolic"

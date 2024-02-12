@@ -1,0 +1,103 @@
+[firefox-developer-edition]
+cmd = "/usr/lib/firefox-developer-edition/firefox"
+icon = "firefox-developer-edition"
+wclass = "firefoxdeveloperedition"
+desktop_file = "firefoxdeveloperedition.desktop"
+name = "Firefox Developer"
+
+[firefox-newayland]
+cmd = "sh /home/neo/Git/newayland/run"
+icon = "firefox"
+wclass = "firefox"
+desktop_file = "firefox.desktop"
+name = "Firefox newayland"
+
+[steam]
+cmd = "mullvad-exclude gtk-launch steam.desktop"
+icon = "steam"
+wclass = "steam"
+desktop_file = "steam.desktop"
+name = "Steam"
+
+[code]
+cmd = "codium-insiders"
+icon = "vscodium"
+wclass = "codium-insiders-url-handler"
+desktop_file = "vscodium-insiders.desktop"
+name = "Codium"
+
+[telegram]
+cmd = "telegram-desktop"
+icon = "telegram-desktop"
+wclass = "org.telegram.desktop"
+desktop_file = "org.telegram.desktop.desktop"
+name = "Telegram"
+
+[hexchat]
+cmd = "hexchat"
+icon = "hexchat"
+wclass = "hexchat"
+desktop_file = "io.github.hexchat.desktop"
+name = "Hexchat"
+
+[gnome-terminal-server]
+cmd = "gnome-terminal"
+icon = "gnome-terminal"
+wclass = "gnome-terminal-server"
+desktop_file = "org.gnome.Terminal.desktop"
+name = "Terminal"
+
+[chromium]
+cmd = "/usr/lib/chromium/chromium"
+icon = "chromium"
+wclass = "chromium"
+desktop_file = "chromium.desktop"
+name = "Chromium"
+
+[nautilus]
+cmd = "nautilus --new-window"
+icon = "nautilus"
+wclass = "org.gnome.nautilus"
+initial_title = "org.gnome.nautilus"
+desktop_file = "org.gnome.Nautilus.desktop"
+name = "Nautilus"
+
+[thunderbird]
+cmd = "thunderbird"
+icon = "thunderbird"
+wclass = "thunderbird"
+desktop_file = "thunderbird.desktop"
+name = "Thunderbird"
+
+[chatgpt]
+cmd = "gtk-launch chrome-fdaklkkpfdfonopeakobbnidhpebknjc-Default.desktop"
+icon = "chrome-fdaklkkpfdfonopeakobbnidhpebknjc-Default"
+wclass = "chromium"
+initial_title = "chatgpt"
+desktop_file = "chrome-fdaklkkpfdfonopeakobbnidhpebknjc-Default.desktop"
+name = "Chatgpt"
+
+[discord]
+cmd = "gtk-launch FFPWA-01HN3K8DREYBSEB6CJ3QMDDWNG.desktop"
+icon = "discord"
+wclass = "microsoft-edge"
+initial_title = "discord"
+desktop_file = "chrome-fdaklkkpfdfonopeakobbnidhpebknjc-Default.desktop"
+name = "Discord"
+
+[code-oss]
+cmd = "code-oss"
+icon = "code-oss"
+wclass = "code-oss"
+initial_title = "code-oss"
+desktop_file = "code-oss.desktop"
+name = "code-oss"
+
+
+["obsidian"]
+cmd = "obsidian"
+icon = "obsidian"
+wclass = "obsidian"
+initial_title = "obsidian"
+desktop_file = ""
+name = "obsidian"

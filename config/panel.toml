@@ -1,0 +1,47 @@
+[bottom]
+position = "BOTTOM"
+Exclusive = "False"
+
+[left]
+position = "BOTTOM"
+Exclusive = "False"
+
+[right]
+position = "BOTTOM"
+Exclusive = "False"
+
+[top]
+position = "TOP"
+Exclusive = "True"
+
+[window_title_lenght]
+size = 48
+
+[top_background]
+position = "BOTTOM"
+Exclusive = "False"
+
+[change_icon_title]
+firefoxdeveloperedition = "firefox-developer-edition"
+gnome-terminal-server = "gnome-terminal"
+codium-insiders-url-handler = "vscodium"
+wlroots = "wayland"
+com.obsproject.Studio = "com.obsproject.Studio"
+
+[left_side_gestures]
+right_click = "python /home/neo/.config/hypr/scripts/workspaces.py"
+left_click = "hyprctl dispatch fullscreen 1"
+middle_click = "kitty"
+
+[center_side_gestures]
+right_click = "python /home/neo/.config/hypr/scripts/workspaces.py"
+left_click = "hyprctl dispatch fullscreen 1"
+middle_click = "kitty"
+
+[right_side_gestures]
+right_click = "python /home/neo/.config/hypr/scripts/workspaces.py"
+left_click = "hyprctl dispatch fullscreen 1"
+middle_click = "kitty"
+
+[take_note_app]
+cmd = "sleek"
