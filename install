@@ -1,0 +1,32 @@
+export CURRENT_DIR=$(pwd)
+function install {
+    sudo rm -rf build
+    mkdir $HOME/.config/waypanel/
+    cp -r config/* $HOME/.config/waypanel
+    git clone https://github.com/wmww/gtk4-layer-shell
+    cd gtk4-layer-shell
+    meson setup build
+    ninja -C build
+    mkdir /usr/include/waypanel
+    sudo cp build/src /usr/include/waypanel
+    sudo ldconfig
+    sudo ln -s /usr/lib/libgtk4-layer-shell.so.0 /usr/lib/libgtk4-layer-shell.so
+    cd $CURRENT_DIR
+    sudo ninja -C build install
+
+}
+if [ ! -d "gtk4-layer-shell" ]; then
+    install
+fi
+
+if [ -d "gtk4-layer-shell" ]; then
+    cd $CURRENT_DIR
+    sudo meson setup build --wipe
+    sudo ninja -C build install
+    sudo rm -rf build
+    pip install nuitka
+    python -m nuitka waypanel
+    sudo cp waypanel.bin /opt/waypanel/
+    echo "\n\n\n\nUse /opt/waypanel/waypanel.bin if you want the compiled version of the waypanel"
+fi
+

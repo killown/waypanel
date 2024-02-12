@@ -1,0 +1,1488 @@
+#!/usr/bin/env python3
+import os
+from pathlib import Path
+
+
+os.environ["GI_TYPELIB_PATH"] = "/usr/include/waypanel/src"
+
+from ctypes import CDLL
+
+CDLL("libgtk4-layer-shell.so")
+import subprocess
+from subprocess import Popen
+from subprocess import check_output, call
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+
+from src.core.create_panel import CreatePanel
+import asyncio
+from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
+import dbus
+from dbus.mainloop.glib import DBusGMainLoop
+import datetime
+import json
+import sys
+import importlib
+import requests
+import random
+import socket
+import threading
+import time
+import waypy
+
+spam_loader = importlib.util.find_spec("waypy")
+found = spam_loader is not None
+
+if not found:
+    print("Module waypy not found, try | pip install waypy | and try again")
+    sys.exit()
+
+from multiprocessing import Process
+import psutil
+import math
+import pulsectl
+import toml
+from collections import ChainMap
+from src.plugins.dockbar import Dockbar
+from src.plugins.wallpaperPopover import PopoverWallpaper
+from src.plugins.bookmarksPopover import PopoverBookmarks
+from src.plugins.folders import PopoverFolders
+from src.plugins.clipboardMenu import MenuClipboard
+from src.plugins.launcherMenu import MenuLauncher
+from src.core.utils import Utils
+from src.core.dashboard import Dashboard
+from gi.repository import Gtk4LayerShell as LayerShell
+
+
+class InvalidGioTaskError(Exception):
+    pass
+
+
+class AlreadyRunningError(Exception):
+    pass
+
+
+class BackgroundTask(GObject.Object):
+    __gtype_name__ = "BackgroundTask"
+
+    def __init__(self, function, finish_callback, **kwargs):
+        super().__init__(**kwargs)
+
+        self.function = function
+        self.finish_callback = finish_callback
+        self._current = None
+
+    def start(self):
+        if self._current:
+            AlreadyRunningError("Task is already running")
+
+        finish_callback = lambda self, task, nothing: self.finish_callback()
+
+        task = Gio.Task.new(self, None, finish_callback, None)
+        task.run_in_thread(self._thread_cb)
+
+        self._current = task
+
+    @staticmethod
+    def _thread_cb(task, self, task_data, cancellable):
+        try:
+            retval = self.function()
+            task.return_value(retval)
+        except Exception as e:
+            task.return_value(e)
+
+    def finish(self):
+        task = self._current
+        self._current = None
+
+        if not Gio.Task.is_valid(task, self):
+            raise InvalidGioTaskError()
+
+        value = task.propagate_value().value
+
+        if isinstance(value, Exception):
+            raise value
+
+        return value
+
+
+class Panel(Adw.Application):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        # Initialize utilities and connect to activation event
+        self._initialize_utilities()
+        self.connect("activate", self.on_activate)
+
+        # Setup panel boxes
+        self._setup_panel_boxes()
+
+        # Monitor dimensions and volume controls
+        self.monitor_width, self.monitor_height = 0, 0
+        self.toggle_mute = {}
+        self.volume = 0
+        self.clock_box = Gtk.Box()
+        self.args = sys.argv
+
+        # Configuration paths
+        self._setup_config_paths()
+
+        # Load configurations
+        self.panel_cfg = self.load_topbar_config()
+        self.icon_names = [icon.lower() for icon in Gtk.IconTheme().get_icon_names()]
+        self.active_window_changed = None
+        self.notifications = []
+        self.popover_bookmarks = None
+        self.popover_folders = None
+        self.popover_launcher = None
+        self.popover_clipboard = None
+        self.popover_wallpaper = None
+        self.clipboard_text_copy = None
+        self.active_window_changed = None
+        self.waypanel_started_now = True
+        self.window_title_from_topbar = None
+        self.active_window = None
+
+        with open(self.topbar_config) as topbar_config:
+            config = toml.load(topbar_config)
+
+        self.window_title_topbar_length = config["window_title_lenght"]["size"]
+
+        with open(self.topbar_config, "r") as f:
+            self.topbar_config_loaded = toml.load(f)
+
+        with open(self.dockbar_config, "r") as f:
+            self.dockbar_config_loaded = toml.load(f)
+
+    def _initialize_utilities(self):
+        """Initialize utility functions and properties."""
+        self.utils = Utils(application_id="com.github.utils")
+
+    def _setup_panel_boxes(self):
+        """Setup panel boxes and related configurations."""
+        self.top_panel_box_left = Gtk.Box(spacing=10)
+        self.top_panel_box_systray = Gtk.Box(spacing=2)
+        self.top_panel_box_for_buttons = Gtk.Box(spacing=6)
+        self.top_panel_box_window_title = Gtk.Box(spacing=6)
+        self.top_panel_box_widgets_left = Gtk.Box(spacing=6)
+        self.top_panel_box_left.append(self.top_panel_box_window_title)
+        self.top_panel_box_left.append(self.top_panel_box_widgets_left)
+        self.top_panel_box_right = Gtk.Box(spacing=10)
+        self.top_panel_grid_right = Gtk.Grid(column_spacing=10)
+        self.top_panel_grid_right.attach(self.top_panel_box_right, 1, 0, 1, 2)
+        self.top_panel_grid_right.attach_next_to(
+            self.top_panel_box_systray,
+            self.top_panel_box_right,
+            Gtk.PositionType.RIGHT,
+            1,
+            2,
+        )
+        self.top_panel_grid_right.attach_next_to(
+            self.top_panel_box_for_buttons,
+            self.top_panel_box_systray,
+            Gtk.PositionType.RIGHT,
+            1,
+            2,
+        )
+
+        self.top_panel_box_center = Gtk.Box(spacing=6)
+        self.top_panel_box_full = Gtk.Grid()
+        self.top_panel_box_full.set_column_homogeneous(True)
+        self.top_panel_box_full.attach(self.top_panel_box_left, 1, 0, 1, 2)
+        self.top_panel_box_full.attach_next_to(
+            self.top_panel_box_center,
+            self.top_panel_box_left,
+            Gtk.PositionType.RIGHT,
+            1,
+            2,
+        )
+        self.top_panel_box_full.attach_next_to(
+            self.top_panel_grid_right,
+            self.top_panel_box_center,
+            Gtk.PositionType.RIGHT,
+            1,
+            3,
+        )
+        # Dockbar and icon themes
+        self.dock = Dockbar(application_id="com.github.dockbar")
+
+        self.clock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+
+    def _setup_config_paths(self):
+        """Set up configuration paths based on the user's home directory."""
+        self.home = os.path.expanduser("~")
+        self.scripts = os.path.join(self.home, ".config/waypanel/scripts")
+        self.config_path = os.path.join(self.home, ".config/waypanel")
+        self.dockbar_config = os.path.join(self.config_path, "dockbar.toml")
+        self.style_css_config = os.path.join(self.config_path, "style.css")
+        self.workspace_list_config = os.path.join(self.config_path, "workspacebar.toml")
+        self.topbar_config = os.path.join(self.config_path, "panel.toml")
+        self.menu_config = os.path.join(self.config_path, "menu.toml")
+        self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
+        self.cmd_config = os.path.join(self.config_path, "cmd.toml")
+        self.topbar_launcher_config = os.path.join(
+            self.config_path, "topbar-launcher.toml"
+        )
+        self.cache_folder = os.path.join(self.home, ".cache/waypanel")
+        self.psutil_store = {}
+        if not os.path.exists(self.config_path):
+            os.makedirs(self.config_path)
+            os.makedirs(self.scripts)
+
+    def on_activate(self, app):
+        self.monitor_width_height()
+        # start cmd output session, cmd.toml
+        self.cmd_output()
+        self.close_fullscreen_buttons()
+        self.right_position_launcher_topbar()
+        self.setup_panels()
+        self.setup_clock_widget()
+        self.update_widget_with_timeout()
+        self.setup_background_panel_widgets()
+        self.setup_panel_buttons()
+        self.setup_panel_position()
+        self.setup_gestures()
+
+        # plugins
+        self.PopoverWallpaper = PopoverWallpaper()
+        self.PopoverWallpaper.create_menu_popover_wallpaper(self, app)
+        self.PopoverBookmarks = PopoverBookmarks()
+        self.PopoverBookmarks.create_menu_popover_bookmarks(self, app)
+        self.PopoverFolders = PopoverFolders()
+        self.PopoverFolders.create_menu_popover_folders(self, app)
+        self.MenuClipboard = MenuClipboard()
+        self.MenuClipboard.create_popover_menu_clipboard(self, app)
+        self.MenuLauncher = MenuLauncher()
+        self.MenuLauncher.create_menu_popover_launcher(self, app)
+        # self.start_sockets_server()
+        # self.start_thread_wayland()
+
+    def do_activate(self):
+        self.show_panels()
+
+    # def freedesktop_notifications(self):
+    # DBusGMainLoop(set_as_default=True)
+    # bus = dbus.SessionBus()
+    # string = "interface='org.freedesktop.Notifications',member='Notify', eavesdrop='true'"
+    # bus.add_match_string(string)
+    # bus.add_message_filter(self.notification_msg)
+
+    def compositor(self):
+        addr = os.getenv("WAYFIRE_SOCKET")
+        return waypy.WayfireSocket(addr)
+
+    def wayland_instance_watch(self):
+        self.wayinstance.signal_active_window_changed.connect(
+            self.wayland_window_changed
+        )
+
+    def update_background_panel(self):
+        # just to make sure this function will never fails
+        try:
+            sock = self.compositor()
+            title = sock.get_focused_view_title()
+            workspace_id = sock.get_active_workspace_number()
+            pid = sock.get_focused_view_pid()
+            wclass = sock.get_focused_view_app_id()
+            initial_title = title.split(" ")[0]
+            if sock.is_focused_view_fullscreen():
+                return True
+            # Update title and icon
+            self.update_widgets(
+                title,
+                wclass,
+                initial_title,
+                pid,
+                workspace_id,
+            )
+        except Exception as e:
+            print(e)
+        return True
+
+    def wayfire_info(self, method):
+        addr = os.getenv("WAYFIRE_SOCKET")
+        sock = ws.WayfireSocket(addr)
+        query = ws.get_msg_template(method)
+        return sock.send_json(query)["info"]
+
+    def focused_window_info(self):
+        sock = self.compositor()
+        return sock.get_focused_view()
+
+    def list_views(self):
+        sock = self.compositor()
+        return sock.list_views()
+
+    # this function need a rework, get active monitor
+    # remove manual query once you find a way to get active monitor
+    def monitor_width_height(self):
+        # get monitor info and set the width, height for the panela
+        sock = self.compositor()
+        output = sock.get_focused_output_geometry()
+        self.monitor_width = output["width"]
+        self.monitor_height = output["height"]
+
+    # def notification_msg(self, bus, msg):
+    #     m = [str(m) for m in msg.get_args_list() if isinstance(m, dbus.String)]
+    #     notification = " ".join(m)
+    #
+    #     # self.notifications.append(notification)
+    #     with open("/tmp/waypanel-notifications.txt", "a") as file:
+    #         file.write("{0}\n".format(notification))
+    #         file.close()
+    #     with open("/tmp/waypanel-notifications.txt", "r") as file:
+    #         # print(file.readlines())
+    #         print("")
+
+    def setup_menus(self):
+        for menu in self.menus.values():
+            self.top_panel_box_systray.append(menu)
+            # menu.add_css_class("systray")
+            self.top_panel_box_systray.set_halign(Gtk.Align.END)
+            self.top_panel_box_systray.set_hexpand(True)
+
+    def setup_background_panel_widgets(self):
+        # notes label
+        self.todo_button = Adw.ButtonContent()
+        self.todo_button.add_css_class("todo_label")
+        self.todo_button.set_icon_name("notes-app-symbolic")
+        todo = os.path.join(self.home, "Documentos", "todo.txt")
+
+        try:
+            txt = open(todo, "r").readlines()[-1]
+            self.todo_button.set_label(txt.strip())
+            GLib.timeout_add(600000, self.todo_txt)
+        except IndexError:
+            print("todo.txt is empity or does not exist")
+
+        self.tbbox = Gtk.Box(spacing=20)
+        self.tblabelspace = Gtk.Label(label="    ")
+        self.tbworkspace = self.utils.btn_background(
+            "tbworkspace", "gnome-panel-workspace-switcher"
+        )
+        self.tbpid = self.utils.btn_background("tbpid", "view-process-tree")
+        self.tbclass = self.utils.btn_background("tbclass", "cs-windows-symbolic")
+        self.tbcpusage = self.utils.btn_background(
+            "tbcpusage", "preferences-devices-cpu"
+        )
+        self.tbmemusage = self.utils.btn_background(
+            "tbmemusage", "media-memory-sd-symbolic"
+        )
+        self.tbsinkinput = self.utils.btn_background(
+            "tbsinkinput", "multimedia-volume-control-symbolic"
+        )
+        self.tbSIGKILL = self.utils.btn_background("tbSIGKILL", "window-close-symbolic")
+        self.tbdiskusage = self.utils.btn_background(
+            "tbdiskusage", "disk-usage-analyzer"
+        )
+        self.tbvol = self.utils.btn_background("tbvol", "audio-volume-high-symbolic")
+        self.tbcard = self.utils.btn_background("tbvoltbcard", "audio-card")
+        self.tbdiskusage.set_label("Disk Usage")
+        self.tbsinkinput.set_label("Toggle Mute")
+        self.tbvol.set_label("Volume")
+        self.tbSIGKILL.set_label("SIGKILL")
+        self.tbexe = self.utils.btn_background("tbexe", "exec")
+        self.tbbox.append(self.tblabelspace)
+        self.tbbox.append(self.tbworkspace)
+        self.tbbox.append(self.tbclass)
+        self.tbbox.append(self.tbpid)
+        self.tbbox.append(self.tbSIGKILL)
+        # self.tbbox.append(self.tbsinkinput)
+        # self.tbbox.append(self.tbcard)
+        self.tbbox.append(self.tbvol)
+        self.tbbox.append(self.tbcpusage)
+        self.tbbox.append(self.tbmemusage)
+        # self.tbbox.append(self.tbexe)
+        self.tbbox.append(self.tbdiskusage)
+        self.tbbox.append(self.todo_button)
+
+        # self.tbSIGKILL.connect("clicked", self.sigkill_activewindow)
+        self.top_panel_background.set_content(self.tbbox)
+
+    def update_widget_with_timeout(self):
+        GLib.timeout_add(2000, self.update_background_panel)
+        GLib.timeout_add(200, self.update_title_topbar)
+        GLib.timeout_add(2000, self.set_cpu_usage)
+        GLib.timeout_add(30000, self.mullvad_status)
+        # GLib.timeout_add(600000, self.clean_pid_store)
+
+    def show_panels(self):
+        if self.all_panels_enabled:
+            self.dock.do_start()
+            self.top_panel.present()
+            # self.right_panel.present()
+            self.top_panel_background.present()
+
+    def setup_panel_buttons(self):
+        if self.default_panel:
+            workspace_buttons = self.utils.CreateFromAppList(
+                self.workspace_list_config, "v", "RightBar", None, True
+            )
+            self.top_panel.set_content(self.top_panel_box_full)
+            self.right_panel.set_content(workspace_buttons)
+
+        if [i for i in self.args if "topbar" in i]:
+            self.dockbar, workspace_buttons = self.create_widgets("h", "TopBar")
+            self.all_panels_enabled = False
+            self.top_panel.present()
+
+    def clock_dashboard(self, *_):
+        # self.dashboard = Dashboard(application_id="org.waypanel.dashboard",flags= Gio.ApplicationFlags.FLAGS_NONE)
+        # self.dashboard.run(sys.argv)
+        self.utils.run_app("python {0}/calendar.py".format(self.scripts))
+
+    def setup_gestures(self):
+        # Setting up gestures for various UI components
+        self.utils.CreateGesture(self.todo_button, 1, self.take_note_app)
+        self.utils.CreateGesture(self.clock_box, 1, self.clock_dashboard)
+        self.utils.CreateGesture(self.window_title, 1, self.manage_window_notes)
+        self.utils.CreateGesture(self.tbclass, 1, self.dock.dockbar_append)
+        self.utils.CreateGesture(self.tbclass, 3, self.dock.join_windows)
+        self.utils.CreateGesture(self.tbSIGKILL, 1, self.sigkill_activewindow)
+        self.utils.CreateGesture(self.tbvol, 1, self.toggle_mute_from_sink)
+
+        # Gestures for top panel
+        self.utils.CreateGesture(
+            self.top_panel_box_left, 2, self.left_gesture_middle_click
+        )
+        self.utils.CreateGesture(
+            self.top_panel_box_left, 3, self.left_gesture_right_click
+        )
+
+        # Gestures for center panel
+        self.utils.CreateGesture(
+            self.top_panel_box_center, 2, self.center_gesture_middle_click
+        )
+        self.utils.CreateGesture(
+            self.top_panel_box_center, 3, self.center_gesture_right_click
+        )
+
+        # Gestures for right panel
+        self.utils.CreateGesture(
+            self.top_panel_box_right, 1, self.right_gesture_left_click
+        )
+        self.utils.CreateGesture(
+            self.top_panel_box_right, 2, self.left_gesture_middle_click
+        )
+        self.utils.CreateGesture(
+            self.top_panel_box_right, 3, self.left_gesture_right_click
+        )
+
+        # click will copy pid to clipboard
+        self.tbpid_gesture = self.utils.CreateGesture(
+            self.tbpid, 1, self.copy_to_clipboard
+        )
+
+        # Adding scroll event to the full panel
+        EventScroll = Gtk.EventControllerScroll.new(
+            Gtk.EventControllerScrollFlags.BOTH_AXES
+        )
+        EventScroll.connect("scroll", self.scroll_event)
+        self.top_panel_box_full.add_controller(EventScroll)
+
+    def close_fullscreen_buttons(self):
+        # Creating close and full screen buttons for the top bar
+        self.cf_box = Gtk.Box()
+        self.fullscreen_button = self.utils.CreateButton(
+            "window-maximize-symbolic", "wayctl dispatch fullscreen", "cf_button", None
+        )
+        self.close_button = self.utils.CreateButton(
+            "close-symbolic", "wayctl dispatch killactive", "cf_button", None
+        )
+        self.cf_box.append(self.fullscreen_button)
+        self.cf_box.append(self.close_button)
+        self.cf_box.add_css_class("cf_box")
+        self.top_panel_box_for_buttons.append(self.cf_box)
+
+    def right_position_launcher_topbar(self):
+        # Creating close and full screen buttons for the top bar
+        box = self.utils.CreateFromAppList(self.topbar_launcher_config, "h", "TopBar")
+        self.top_panel_box_systray.append(box)
+
+    def setup_clock_widget(self):
+        # Configuring the clock widget for display
+        self.clock_box.set_halign(Gtk.Align.CENTER)
+        self.clock_box.set_hexpand(True)
+        self.clock_box.set_baseline_position(Gtk.BaselinePosition.CENTER)
+        self.clock_box.add_css_class("Clock")
+
+        # Creating clock label with current date and time
+        self.clock_label = Gtk.Label()
+        self.clock_label.set_label(datetime.datetime.now().strftime("%d %A %H:%M"))
+        self.clock_label.set_halign(Gtk.Align.CENTER)
+        self.clock_label.set_hexpand(True)
+        self.clock_box.append(self.clock_label)
+
+        # Adding the clock widget to the center panel
+        self.top_panel_box_center.append(self.clock_box)
+
+        # Schedule the initial update and then update every minute
+        GLib.timeout_add_seconds(60 - datetime.datetime.now().second, self.update_clock)
+
+    def update_clock(self):
+        # Update the label with the current date and time
+        self.clock_label.set_label(datetime.datetime.now().strftime("%d %A %H:%M"))
+
+        # Schedule the next update at the beginning of the next minute
+        seconds_until_next_minute = 60 - datetime.datetime.now().second
+        GLib.timeout_add_seconds(seconds_until_next_minute, self.update_clock)
+
+        # Returning True means the timeout will continue to be scheduled
+        return False  # We don't want to repeat the timeout immediately
+
+    def setup_panel_position(self):
+        """
+        Set up the position and content of various panels based on the command-line arguments.
+
+        This method configures custom panel positions and widgets based on provided command-line arguments.
+        """
+
+        # Configuring the top panel based on command-line arguments
+        if any("topbar" in i for i in self.args):
+            # Create widgets for the horizontal top bar
+            self.dockbar, self.workspace_buttons = self.create_widgets("h", "TopBar")
+            self.all_panels_enabled = False
+            self.top_panel.present()
+
+        # Configure the top panel content based on specific options
+        if "--topbar-apps" in self.args:
+            self.top_panel.set_content(self.dockbar)
+        elif "--topbar-workspaces" in self.args:
+            self.top_panel.set_content(self.workspace_buttons)
+        elif "--topbar-todo" in self.args:
+            self.top_panel.set_content(self.todo_label_box)
+
+        # Configuring the right panel based on command-line arguments
+        if any("rightbar" in i for i in self.args):
+            # Create widgets for the horizontal right bar
+            self.dockbar, self.workspace_buttons = self.create_widgets("h", "RightBar")
+            self.all_panels_enabled = False
+            self.right_panel.present()
+
+        # Configure the right panel content based on specific options
+        elif "--rightbar-apps" in self.args:
+            self.right_panel.set_content(self.dockbar)
+        elif "--rightbar-workspaces" in self.args:
+            self.right_panel.set_content(self.workspace_buttons)
+        elif "--rightbar-todo" in self.args:
+            self.right_panel.set_content(self.todo_label_box)
+
+        # Configuring the left panel based on command-line arguments
+        if any("leftbar" in i for i in self.args):
+            # Create a vertical left bar
+            CreatePanel(app, "LEFT", "BOTTOM", self.exclusive, 0, 32, "LeftBar")
+            self.dockbar, workspace_buttons = self.create_widgets("v", "LeftBar")
+            self.all_panels_enabled = False
+            self.left_panel.present()
+
+        # Configure the left panel content based on specific options
+        elif "--leftbar-apps" in self.args:
+            self.left_panel.set_content(self.dockbar)
+        elif "--leftbar-workspaces" in self.args:
+            self.left_panel.set_content(self.workspace_buttons)
+        elif "--leftbar-todo" in self.args:
+            self.left_panel.set_content(self.todo_label_box)
+
+        # Configuring the bottom panel based on command-line arguments
+        if any("bottombar" in i for i in self.args):
+            # Create widgets for the horizontal bottom bar
+            self.dockbar, self.workspace_buttons = self.create_widgets("h", "BottomBar")
+            self.all_panels_enabled = False
+            self.bottom_panel.present()
+
+        # Configure the bottom panel content based on specific options
+        elif "--bottombar-apps" in self.args:
+            self.bottom_panel.set_content(self.dockbar)
+        elif "--bottombar-workspaces" in self.args:
+            self.bottom_panel.set_content(self.workspace_buttons)
+        elif "--bottombar-todo" in self.args:
+            self.bottom_panel.set_content(self.todo_label_box)
+
+    def load_css_from_file(self):
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_file(Gio.File.new_for_path(self.style_css_config))
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+        )
+
+    def on_waywatch_finished(self, task):
+        try:
+            retval = task.finish()
+            print(retval)
+        except Exception as err:
+            print("Unhandled exception occured!", err.message)
+
+    # def start_thread_wayland(self):
+    # server_thread = threading.Thread(target=self.waylandWatch)
+    # server_thread.daemon = True
+    # server_thread.start()
+    # waywatch = BackgroundTask(self.waylandWatch, self.on_waywatch_finished)
+    # waywatch.start()
+
+    def setup_panels(self):
+        self.top_panel_box_left.add_css_class("top_panel_box_left")
+        self.top_panel_box_window_title.add_css_class("top_panel_box_window_title")
+        self.top_panel_box_widgets_left.add_css_class("top_panel_box_widgets_left")
+        self.top_panel_box_right.add_css_class("top_panel_box_right")
+        self.top_panel_box_systray.add_css_class("top_panel_box_systray")
+        self.top_panel_box_center.add_css_class("top_panel_box_center")
+        self.top_panel_box_full.add_css_class("top_panel_box_full")
+        self.panel_on_top = "TOP"
+        self.exclusive = True
+        self.all_panels_enabled = True
+
+        self.load_css_from_file()
+
+        self.top_panel_box_right.set_halign(Gtk.Align.FILL)
+        self.top_panel_box_right.set_homogeneous(True)
+        self.top_panel_box_right.set_hexpand(True)
+
+        # setup window title
+        self.window_title = Adw.ButtonContent()
+        self.top_panel_box_window_title.append(self.window_title)
+        self.window_title.add_css_class("WindowTitle")
+
+        self.menus = self.create_new_menu()
+        self.setup_menus()
+
+        if "--custom" in self.args:
+            self.default_panel = False
+
+        if "--background" in self.args:
+            self.exclusive = False
+
+        self.default_panel = True
+        with open(self.topbar_config, "r") as f:
+            panel_toml = toml.load(f)
+            for p in panel_toml:
+                if "bottom" == p:
+                    self.exclusive = True
+                    if panel_toml[p]["Exclusive"] == "False":
+                        self.exclusive = False
+
+                    position = panel_toml[p]["position"]
+                    self.bottom_panel = CreatePanel(
+                        app, "BOTTOM", position, self.exclusive, 32, 0, "BottomBar"
+                    )
+                if "right" == p:
+                    self.exclusive = True
+                    if panel_toml[p]["Exclusive"] == "False":
+                        self.exclusive = False
+                    position = panel_toml[p]["position"]
+                    self.right_panel = CreatePanel(
+                        app, "RIGHT", position, self.exclusive, 0, 32, "RightBar"
+                    )
+                if "left" == p:
+                    self.exclusive = True
+                    if panel_toml[p]["Exclusive"] == "False":
+                        self.exclusive = False
+                    position = panel_toml[p]["position"]
+                    self.left_panel = CreatePanel(
+                        app, "LEFT", position, self.exclusive, 0, 32, "LeftBar"
+                    )
+                if "top" == p:
+                    self.exclusive = True
+                    if panel_toml[p]["Exclusive"] == "False":
+                        self.exclusive = False
+                    position = panel_toml[p]["position"]
+                    self.top_panel = CreatePanel(
+                        app,
+                        "TOP",
+                        position,
+                        self.exclusive,
+                        self.monitor_width,
+                        24,
+                        "TopBar",
+                    )
+                if "top_background" == p:
+                    self.exclusive = True
+                    if panel_toml[p]["Exclusive"] == "False":
+                        self.exclusive = False
+                    position = panel_toml[p]["position"]
+                    self.top_panel_background = CreatePanel(
+                        app,
+                        "TOP",
+                        position,
+                        self.exclusive,
+                        self.monitor_width,
+                        18,
+                        "TopBarBackground",
+                    )
+
+    def mullvad_status(self):
+        """
+        Check the status of the Mullvad VPN and update the menu label accordingly.
+
+        This function checks the status of the Mullvad VPN by executing the "mullvad status" command,
+        and updates the label of the VPN menu item based on the status.
+
+        Returns:
+            bool: Always returns True.
+        """
+        # Execute the "mullvad status" command and decode the output
+        output = check_output("mullvad status".split()).decode()
+
+        # Update the menu label based on the output
+        if "Disconnected" in output:
+            vpn_menu = self.menus["VPN"]
+            vpn_menu.set_label("VPN Disconnected")
+        elif "Connected" in output:
+            vpn_menu = self.menus["VPN"]
+            vpn_menu.set_label("VPN")
+
+        return True
+
+    def take_note_app(self, *_):
+        """
+        Open the note-taking application specified in the configuration file.
+
+        This function reads the configuration file to retrieve the command for
+        the note-taking application,
+        and then executes the command to open the application.
+
+        Args:
+            *_: Additional arguments (unused).
+
+        Returns:
+            None
+        """
+        # Read the configuration file and load the configuration
+        with open(self.topbar_config, "r") as f:
+            config = toml.load(f)
+
+        # Run the note-taking application using the specified command
+        self.utils.run_app(config["take_note_app"]["cmd"])
+
+    def get_monitor_info(self):
+        """
+        Retrieve information about the connected monitors.
+
+        This function retrieves information about the connected monitors,
+        such as their dimensions and names,
+        and returns the information as a dictionary.
+
+        Returns:
+            dict: A dictionary containing information
+            about the connected monitors.
+        """
+        # get default display and retrieve
+        # information about the connected monitors
+        screen = Gdk.Display.get_default()
+        monitors = screen.get_monitors()
+        monitor_info = {}
+        for monitor in monitors:
+            monitor_width = monitor.get_geometry().width
+            monitor_height = monitor.get_geometry().height
+            name = monitor.props.connector
+            monitor_info[name] = [monitor_width, monitor_height]
+
+        return monitor_info
+
+    def create_widgets(self, orientation, class_style):
+        """
+        Create widgets based on the specified orientation and class style.
+
+        This function creates widgets, such as a dockbar and workspace buttons, based on the specified
+        orientation and class style, and returns the created widgets.
+
+        Args:
+            orientation (str): The orientation of the widgets (e.g., "horizontal", "vertical").
+            class_style (str): The class style of the widgets.
+
+        Returns:
+            tuple: A tuple containing the created dockbar and workspace buttons.
+        """
+        dockbar = self.utils.CreateFromAppList(
+            self.dockbar_config, orientation, class_style
+        )
+        workspace_buttons = self.utils.CreateFromAppList(
+            self.workspace_list_config, orientation, class_style
+        )
+        return dockbar, workspace_buttons
+
+    def todo_txt(self):
+        """
+        Update the label of the TODO button with the last line from the TODO.txt file.
+
+        This function reads the last line from the TODO.txt file and updates the label of the TODO button
+        with the content of the last line.
+
+        Returns:
+            bool: Always returns True.
+        """
+        # Define the path to the TODO.txt file
+        todo_filepath = os.path.join(self.home, "Documentos", "todo.txt")
+
+        # Read the last line from the TODO.txt file
+        last_line = open(todo_filepath, "r").readlines()[-1]
+
+        # Update the label of the TODO button with the content of the last line
+        self.todo_button.set_label(last_line.strip())
+
+        return True
+
+    def on_button_press_event(self, _, event):
+        """
+        Handle the button press event.
+
+        This function handles the button press event by checking the type of the event and the button
+        that was pressed, and then performing the corresponding action.
+
+        Args:
+            widget: The widget that emitted the event.
+            event: The event object containing information about the event.
+
+        Returns:
+            None
+        """
+        if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 3:
+            return True
+
+    def right_side_middle_click(self, *_):
+        """
+        Handle the middle click gesture on the right side.
+
+        This function handles the middle click gesture on the right side by executing the "kitty" command
+        to open the Kitty terminal emulator.
+
+        Args:
+            gesture: The gesture object.
+            data: Additional data (unused).
+            x: The x-coordinate of the click.
+            y: The y-coordinate of the click.
+
+        Returns:
+            None
+        """
+        Popen("kitty".split())
+
+    def scroll_event(self, _, _dx, dy):
+        """
+        Handle the scroll event.
+
+        This function handles the scroll event by checking the direction of the scroll and adjusting
+        the volume accordingly using the "pactl" command.
+
+        Args:
+            controller: The controller object.
+            _dx: The horizontal delta (unused).
+            dy: The vertical delta representing the direction and speed of the scroll.
+
+        Returns:
+            None
+        """
+        # Check the direction of the scroll and adjust the volume using the "pactl" command
+        print(_dx, dy)
+        if dy > 0:
+            self.utils.run_app("pactl -- set-sink-volume 0 -8%")
+        else:
+            self.utils.run_app("pactl -- set-sink-volume 0 +8%")
+
+        with pulsectl.Pulse("volume-increaser") as pulse:
+            # Iterate through all the audio sinks
+            for sink in pulse.sink_list():
+                # Check if the sink is currently running (active)
+                if "running" in str(sink.state):
+                    # Calculate the volume percentage and round it to the nearest whole number
+                    volume = round(sink.volume.values[0] * 100)
+
+                    # Update the volume label with the current volume percentage
+                    self.tbvol.set_label("Volume: {0}%".format(volume))
+
+    def left_gesture_left_click(self, *_):
+        # data format is (self, gesture, data, x, y)
+        cmd = self.panel_cfg["left_side_gestures"]["left_click"]
+        self.utils.run_app(cmd, True)
+
+    def left_gesture_right_click(self, *_):
+        sock = self.compositor()
+        sock.go_next_workspace()
+        # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
+        # self.utils.run_app(cmd, True)
+
+    def left_gesture_middle_click(self, *_):
+        cmd = self.panel_cfg["left_side_gestures"]["middle_click"]
+        self.utils.run_app(cmd, True)
+
+    def center_gesture_left_click(self, *_):
+        cmd = self.panel_cfg["center_side_gestures"]["left_click"]
+        self.utils.run_app(cmd, True)
+
+    def center_gesture_middle_click(self, *_):
+        cmd = self.panel_cfg["center_side_gestures"]["middle_click"]
+        self.utils.run_app(cmd, True)
+
+    def center_gesture_right_click(self, *_):
+        cmd = self.panel_cfg["left_side_gestures"]["right_click"]
+        self.utils.run_app(cmd, True)
+
+    def right_gesture_left_click(self, *_):
+        cmd = self.panel_cfg["right_side_gestures"]["left_click"]
+        self.utils.run_app(cmd, True)
+
+    def right_gesture_right_click(self, *_):
+        cmd = self.panel_cfg["right_side_gestures"]["right_click"]
+        self.utils.run_app(cmd, True)
+
+    def right_gesture_middle_click(self, *_):
+        cmd = self.panel_cfg["right_side_gestures"]["middle_click"]
+        self.utils.run_app(cmd, True)
+
+    def create_simple_action(self):
+        """
+        Create a simple action to run a command.
+
+        This function creates a simple action named "run-command" that takes a string parameter.
+        It connects the "activate" signal of the action to the menu_run_action method.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        # Create a simple action with the specified name and parameter type
+        action = Gio.SimpleAction(
+            name="run-command", parameter_type=GLib.VariantType("s")
+        )
+
+        # Connect the "activate" signal of the action to the menu_run_action method
+        action.connect("activate", self.menu_run_action)
+
+        # Add the action to the application
+        app.add_action(action)
+
+    def create_menu_item(self, menu, name, cmd):
+        """
+        Create a menu item with the specified name and command.
+
+        This function creates a menu item with the specified name and command,
+        sets its action to "app.run-command" with the command as the target value,
+        and appends the menu item to the specified menu.
+
+        Args:
+            menu (Gio.Menu): The menu to which the menu item should be appended.
+            name (str): The name of the menu item.
+            cmd (str): The command associated with the menu item.
+
+        Returns:
+            None
+        """
+        # Create a new menu item with the specified name
+        menuitem = Gio.MenuItem.new(name, None)
+
+        # Set the action of the menu item to "app.run-command" with the command as the target value
+        menuitem.set_action_and_target_value("app.run-command", GLib.Variant("s", cmd))
+        # menuitem.set_icon("audio-card-symbolic")
+
+        # Append the menu item to the specified menu
+        menu.append_item(menuitem)
+
+    def create_new_menu(self):
+        """
+        Create a new menu based on the configuration file.
+
+        This function reads the menu configuration from a TOML file,
+        creates a new menu based on the configuration, and returns a dictionary
+        containing the menu buttons associated with the created menus.
+
+        Args:
+            None
+
+        Returns:
+            dict: A dictionary containing the menu buttons associated with the created menus.
+        """
+        # Read the menu configuration from the specified file
+        with open(self.menu_config, "r") as f:
+            menu_toml = toml.load(f)
+
+        # Initialize a dictionary to store the menu buttons
+        menu_buttons = {}
+
+        # Iterate through the menu configuration and create the corresponding menus and menu items
+        for m in menu_toml:
+            if m == "icons":
+                continue
+            menu = Gio.Menu()
+            btn = Gtk.MenuButton(label=m)
+            # if no icon is specified in [icons] from menu.toml then use Label instead
+            try:
+                btn.set_icon_name(menu_toml["icons"][m])
+            except Exception as e:
+                print(e)
+                btn.set_label(label=m)
+
+            btn.set_menu_model(menu)
+            submenu = None
+            dsubmenu = {}
+            menu_buttons[m] = btn
+            self.create_simple_action()
+            for item in menu_toml[m].values():
+                name = item[0]["name"]
+                cmd = item[0]["cmd"]
+                if "submenu" in item[0]:
+                    submenu_label = item[0]["submenu"]
+                    submenu = dsubmenu.get(submenu_label)
+                    if submenu is None:
+                        submenu = Gio.Menu()
+                        dsubmenu[submenu_label] = submenu
+                    self.create_menu_item(submenu, name, cmd)
+                else:
+                    self.create_menu_item(menu, name, cmd)
+            if dsubmenu:
+                [menu.append_submenu(k, dsubmenu[k]) for k in dsubmenu.keys()]
+
+        # Return the dictionary containing the menu buttons
+        return menu_buttons
+
+    def sigkill_activewindow(self, *_):
+        active_window = self.get_wayland_active_window()
+        pid = active_window.pid
+        cmd = "kill -9 {0}".format(pid)
+        self.utils.run_app(cmd)
+
+    def menu_run_action(self, action, param):
+        self.utils.run_app(param.get_string())
+
+    def load_topbar_config(self):
+        with open(self.topbar_config, "r") as f:
+            return toml.load(f)
+
+    def clean_pid_store(self):
+        # [optimization]
+        # every 10 minutes check for non-existent pids and clean the dict
+        instance = wayland()
+        windows = instance.get_windows()
+        pid_list = [i.pid for i in windows]
+        for pid in self.psutil_store.keys():
+            if pid not in pid_list:
+                del self.psutil_store[pid]
+
+    def copy_to_clipboard(self, *_):
+        # lazy to not use wl-copy
+        active_window = self.get_wayland_active_window()
+        self.utils.run_app("wl-copy {0}".format(active_window.pid))
+        self.utils.run_app("kitty --hold -- htop -p {0}".format(active_window.pid))
+
+    def sink_input_info(self):
+        pactl = "pactl list sink-inputs".split()
+        sink_inputs = check_output(pactl).decode()
+        sinklist = sink_inputs.split("Sink Input #")
+        info = {}
+        info["sinklist"] = sinklist
+        return info
+
+    def toggle_mute_from_sink(self, *_):
+        active_window = self.get_wayland_active_window()
+        pid = active_window.pid
+        info = self.sink_input_info()
+        sinklist = info["sinklist"]
+        for sink in sinklist:
+            if 'application.process.id = "{0}"'.format(pid) in sink:
+                sink = sink.split("\n")[0]
+                self.utils.run_app("pactl set-sink-input-mute {0} toggle".format(sink))
+
+    def notify_client(self, *_):
+        self.utils.run_app("swaync-client -t")
+
+    def disk_usage_by_pid(self):
+        sock = self.compositor()
+        pid = sock.get_focused_view_pid()
+        p = psutil.Process(pid)
+        io_counters = p.io_counters()
+        disk_usage_process = io_counters[2] + io_counters[3]  # read_bytes + write_bytes
+        return int(round(disk_usage_process / (1024**2), 2))
+
+    def manage_window_notes(self, *_):
+        """
+        Manage notes for the active window.
+
+        This function retrieves information about the active window, such as its initial title
+        and window class, and updates a configuration file with this information. It also
+        manages the creation and opening of a Markdown file for notes related to the window.
+
+        Args:
+            *_: Additional arguments (unused).
+
+        Returns:
+            None
+        """
+        # Retrieve information about the active window
+        active_window = self.get_wayland_active_window()
+        initial_title = active_window.initial_title.lower()
+        wm_class = active_window.initial_wm_class.lower()
+        title = active_window.title.lower()
+
+        # Adjust the window class based on specific conditions
+        if "firefox" in wm_class and "." in title:
+            wm_class = title.split()[0]
+        if initial_title == "zsh":
+            wm_class = title.split()[0]
+        if initial_title == "fish":
+            wm_class = title.split()[0]
+
+        # Load existing window notes from the configuration file
+        with open(self.window_notes_config, "r") as config_file:
+            existing_notes = toml.load(config_file)
+
+        # Create a new entry for the active window and update the configuration
+        new_entry = {wm_class: {"initial_title": initial_title, "title": title}}
+        updated_notes = ChainMap(new_entry, existing_notes)
+
+        # Save the updated notes back to the configuration file
+        with open(self.window_notes_config, "w") as config_file:
+            toml.dump(updated_notes, config_file)
+
+        # Define the path and command for the Markdown file related to the window
+        filepath = f"/home/neo/Notes/{wm_class}.md"
+        cmd = f"marktext {filepath}"
+
+        # Create the Markdown file if it doesn't exist
+        if not os.path.isfile(filepath):
+            Path(filepath).touch()
+
+        # run the Markdown editor application
+        self.utils.run_app(cmd)
+
+    def output_loop(self, output, label):
+        """
+        Update the label with the output of a command.
+
+        This function executes the specified command, captures its output, and updates
+        the label widget with the captured output.
+
+        Args:
+            output (str): The command whose output will be displayed in the label.
+            label (Gtk.Label): The label widget to update with the command output.
+
+        Returns:
+            bool: True if the label content is successfully updated, False otherwise.
+        """  # Execute the specified command and capture its output
+        command_output = check_output(output.split()).decode().replace("\n", "")
+
+        # Set the label content with the captured output using markup
+        separator = " "
+        label.set_markup(command_output + separator)
+
+        # Remove the previously scheduled source for single execution
+        GLib.Source.remove(self.exec_once)
+
+        # Return True to indicate successful update
+        return True
+
+    def create_cmd_label(self, output, position, css_class, refresh):
+        """
+        Create and configure a label widget to display command output.
+
+        This function creates a label widget with the specified CSS class and adds it to a box container
+        based on the specified position. It also schedules periodic updates of the label content.
+
+        Args:
+            output (str): The command whose output will be displayed in the label.
+            position (str): The position where the label should be added ('left', 'right', or 'center').
+            css_class (str): The CSS class to apply to the label and the box container.
+            refresh (int): The interval in milliseconds for refreshing the label content.
+
+        Returns:
+            None
+        """
+        # Create a new label widget
+        label = Gtk.Label()
+
+        # Create a new box container
+        box = Gtk.Box()
+
+        # Configure the box container properties
+        box.set_halign(Gtk.Align.END)
+        box.set_hexpand(False)
+        box.set_baseline_position(Gtk.BaselinePosition.BOTTOM)
+
+        # Add the specified CSS class to the box container and the label
+        box.add_css_class(css_class)
+        label.add_css_class(css_class)
+
+        # Add the label to the box container
+        box.append(label)
+
+        # Determine the position to add the box container and label
+        if position == "left":
+            self.top_panel_box_left.append(box)
+        elif position == "right":
+            self.top_panel_box_systray.append(box)
+        elif position == "center":
+            self.clock_box.append(box)
+
+        # Schedule the periodic updates of the label content
+        self.exec_once = GLib.timeout_add(1000, lambda: self.output_loop(output, label))
+        GLib.timeout_add(refresh, lambda: self.output_loop(output, label))
+
+    def cmd_output(self):
+        """
+        Read command settings from a configuration file and create corresponding command labels.
+
+        This function reads command settings from a TOML configuration file, iterates through each setting,
+        and creates and configures the corresponding command label using the create_cmd_label function.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        # Read command settings from the configuration file
+        with open(self.cmd_config, "r") as config_file:
+            cmd_settings = toml.load(config_file)
+
+        # Iterate through each command setting and create/configure the corresponding command label
+        for label_key in cmd_settings:
+            output = cmd_settings[label_key]["cmd"]
+            position = cmd_settings[label_key]["position"]
+            refresh = cmd_settings[label_key]["refresh"]
+            css_class = cmd_settings[label_key]["css_class"]
+
+            # Create and configure the command label with the specified settings
+            self.create_cmd_label(output, position, css_class, refresh)
+
+    def volume_watch(self):
+        """
+        Watch for changes in the volume and update the volume and card labels accordingly.
+
+        This function uses the `pulsectl` library to monitor the volume and updates the labels
+        with the current volume percentage and the description of the active audio sink.
+
+        """
+        # Initialize PulseAudio client
+        with pulsectl.Pulse("volume-increaser") as pulse:
+            # Iterate through all the audio sinks
+            for sink in pulse.sink_list():
+                # Check if the sink is currently running (active)
+                if "running" in str(sink.state):
+                    # Calculate the volume percentage and round it to the nearest whole number
+                    volume = round(sink.volume.values[0] * 100)
+
+                    # Update the volume label with the current volume percentage
+                    self.tbvol.set_label("Volume: {0}%".format(volume))
+
+                    # Update the card label with the description of the active audio sink
+                    self.tbcard.set_label("{0}".format(sink.description))
+
+    def update_title_topbar(self):
+        try:
+            sock = self.compositor()
+            title = sock.get_focused_view_title()
+            wclass = sock.get_focused_view_app_id()
+
+            # if self.window_title_from_topbar == title:
+            #    return True
+
+            self.window_title_from_topbar = (
+                title  # Modify title based on certain patterns
+            )
+            title = self.modify_title(title)
+
+            # Limit the title length
+            title = title[: self.window_title_topbar_length]
+
+            # Apply custom icon if available
+            custom_icon = self.apply_custom_icon(wclass)
+            if custom_icon:
+                wclass = custom_icon
+
+            # Update title and icon
+            self.update_title_and_icons(title, wclass, wclass)
+        except Exception as e:
+            print(e)
+        return True
+
+    def has_active_window_changed(self):
+        # Get the currently active window
+        active_window = self.get_wayland_active_window()
+
+        # Extract the address of the active window
+        address = active_window.address
+
+        # Check if the panel has just started; if yes, update the widgets
+        # This ensures that the title from the active window updates when the panel starts
+        if self.active_window_changed is None:
+            if self.waypanel_started_now:
+                self.active_window_changed = address
+                self.waypanel_started_now = False
+                return True
+
+        # Check if the active window address has changed
+        if self.active_window_changed != address:
+            self.active_window_changed = address
+            return True
+        else:
+            # No change in the active window
+            return False
+
+    def update_widgets(self, title, wm_class, initial_title, pid, workspace_id):
+        sock = self.compositor()
+        is_fullscreen = sock.is_focused_view_fullscreen()
+        if is_fullscreen:
+            return True
+        # Modify title based on certain patterns
+        title = self.modify_title(title)
+        # Limit the title length
+        title = title[: self.window_title_topbar_length]
+
+        self.update_title_and_icons(title, wm_class, initial_title)
+
+        # Fetch and format process information
+        mem_usage, exe, cpu_usage = self.fetch_process_info(pid)
+
+        # Update widget labels and icons
+        self.update_widget_labels(
+            workspace_id, pid, wm_class, cpu_usage, mem_usage, exe
+        )
+
+    def extract_widget_info(self, active_window):
+        """Extract and return widget-related information."""
+        title = active_window.title[0:100]
+        workspace_id = active_window.workspace_id
+        pid = active_window.pid
+        wclass = active_window.initial_wm_class.lower()
+        initial_title = active_window.initial_title
+        return title, workspace_id, pid, wclass, initial_title
+
+    def apply_custom_icon(self, wclass):
+        """Apply custom icon if available."""
+        panel_cfg = self.panel_cfg["change_icon_title"]
+        if wclass in panel_cfg:
+            return panel_cfg[wclass]
+
+    def fetch_process_info(self, pid):
+        """Fetch and return process information."""
+        if pid not in self.psutil_store.keys():
+            process = psutil.Process(pid)
+            self.psutil_store[pid] = process
+        mem_usage = self.utils.convert_size(
+            int(self.psutil_store[pid].memory_info().rss)
+        )
+        exe = self.psutil_store[pid].exe()
+        cpu_usage = int(self.psutil_store[pid].cpu_percent())
+        return mem_usage, exe, cpu_usage
+
+    def set_cpu_usage(self):
+        sock = self.compositor()
+        pid = sock.get_focused_view_pid()
+        """Fetch and return process information."""
+        if pid not in self.psutil_store.keys():
+            process = psutil.Process(pid)
+            self.psutil_store[pid] = process
+        cpu_usage = int(self.psutil_store[pid].cpu_percent())
+        self.tbcpusage.set_label("CPU: {0}%".format(cpu_usage))
+        return True
+
+    def modify_title(self, title):
+        """Modify title based on certain patterns."""
+        if "." in title:
+            parts = title.split(" ", 1)
+            if parts[0].startswith("www."):
+                title = parts[0][4:]  # Assuming "www." always has a length of 4
+            else:
+                title = parts[0]
+
+        if " — " in title:
+            title = title.split(" — ", 1)[0]
+
+        return title
+
+    def icon_exist(self, argument):
+        if argument is not None:
+            exist = [name for name in self.icon_names if argument.lower() in name]
+            return exist
+
+    def get_icon(self, wm_class, initial_title, title):
+        icon = None
+
+        if ".desktop" in wm_class:
+            wm_class = wm_class.split(".desktop")[0]
+            if "org." in wm_class:
+                wm_class = wm_class.split("org.")[-1]
+
+        # Set additional label-based icons for specific initial_titles (zsh, fish)
+        # this block of code is only for shell icons, like nvim, htop and so on
+        label = title.split()[0] if initial_title.startswith(("zsh", "fish")) else None
+
+        if label:
+            icon_exist = self.icon_exist(label)
+            if icon_exist:
+                self.window_title.set_icon_name(label)
+                return label
+
+        try:
+            icon = self.topbar_config_loaded["change_icon_title"][wm_class]
+        except KeyError:
+            try:
+                icon = self.dockbar_config_loaded[wm_class]["icon"]
+            except KeyError:
+                pass
+
+        if icon is not None:
+            return icon
+
+        icon_exist = self.icon_exist(wm_class)
+        if wm_class in icon_exist:
+            return wm_class
+
+        # If no icon for wm_class, check if there's an icon for the initial_title
+        icon_exist = self.icon_exist(initial_title)
+        if initial_title in icon_exist:
+            return initial_title
+
+        # If still no icon, search for desktop files based on wmclass and initial_title
+        desk_local = self.utils.search_local_desktop(initial_title)
+        desk = self.utils.search_desktop(wm_class)
+        if desk_local and "-Default" in desk_local:
+            icon = desk_local.split(".desktop")[0]
+            return icon
+        if desk_local is None:
+            if desk:
+                icon = desk.split(".desktop")[0]
+                return icon
+        return None
+
+    def update_title_and_icons(self, title, wm_class, initial_title):
+        """Update title and icons."""
+        # some classes and initial titles has whitespaces which will lead to not found icons
+        if " " in initial_title:
+            initial_title = initial_title.split()[0]
+        if " " in wm_class:
+            wm_class = wm_class.split()[0]
+
+        icon = self.get_icon(wm_class, initial_title, title)
+        if icon is not None:
+            self.window_title.set_icon_name(icon)
+            self.tbclass.set_icon_name(icon)
+
+        # Set window label
+        self.window_title.set_label(title)
+
+    def update_widget_labels(
+        self, workspace_id, pid, wclass, cpu_usage, mem_usage, exe
+    ):
+        """Update widget labels."""
+
+        # Only update labels related to window details if the window has changed
+        self.tbpid.set_label("PID: {0}".format(pid))
+        self.tbclass.set_label("{0}".format(wclass))
+        self.tbexe.set_label("Exe: {0}".format(exe))
+        self.tbdiskusage.set_label("Disk: {0}MB".format(self.disk_usage_by_pid()))
+
+        # Update labels for general information
+        self.tbworkspace.set_label("W: {0}".format(workspace_id))
+        self.tbcpusage.set_label("CPU: {0}%".format(cpu_usage))
+        self.tbmemusage.set_label("MEM: {0}".format(mem_usage))
+
+        # Update volume information
+        self.volume_watch()
+
+
+app = Panel(application_id="com.waypanel.GtkApplication")
+app.run(None)

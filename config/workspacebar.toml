@@ -1,0 +1,32 @@
+[workspace_8]
+cmd = "hyprctl dispatch hyprshell:leaveoverview;hyprctl dispatch workspace 8"
+icon = "8"
+
+[workspace_7]
+cmd = "hyprctl dispatch hyprshell:leaveoverview;hyprctl dispatch workspace 7"
+icon = "7"
+
+[workspace_6]
+cmd = "hyprctl dispatch hyprshell:leaveoverview;hyprctl dispatch workspace 6"
+icon = "6"
+
+
+[workspace_5]
+cmd = "hyprctl dispatch hyprshell:leaveoverview;hyprctl dispatch workspace 5"
+icon = "5"
+
+[workspace_4]
+cmd = "hyprctl dispatch hyprshell:leaveoverview;hyprctl dispatch workspace 4"
+icon = "4"
+
+[workspace_3]
+cmd = "hyprctl dispatch hyprshell:leaveoverview;hyprctl dispatch workspace 3"
+icon = "3"
+
+[workspace_2]
+cmd = "hyprctl dispatch hyprshell:leaveoverview;hyprctl dispatch workspace 2"
+icon = "2"
+
+[workspace_1]
+cmd = "hyprctl dispatch hyprshell:leaveoverview;hyprctl dispatch workspace 1"
+icon = "1"

@@ -1,0 +1,42 @@
+
+[Home]
+name = "Home"
+path = "/home/neo"
+filemanager = "nautilus"
+icon = "folder-home-symbolic"
+
+[Downloads]
+name = "Downloads"
+path = "Downloads"
+filemanager = "nautilus"
+icon = "folder-downloads-symbolic"
+
+[Documentos]
+name = "Documentos"
+path = "Documentos"
+filemanager = "nautilus"
+icon = "folder-documents-symbolic"
+
+[Imagens]
+name = "Imagens"
+path = "Imagens"
+filemanager = "thunar"
+icon = "folder-image-symbolic"
+
+[Waypanel]
+name = "Waypanel Project"
+path = "Git/waypanel"
+filemanager = "kitty -- nvim . "
+icon = "nvim"
+
+[Waypanel_Config]
+name = ".Waypanel"
+path = ".config/waypanel"
+filemanager = "nautilus"
+icon = "configuration_section-symbolic"
+
+[Compositor_Config]
+name = ".Wayfire"
+path = ".config/wayfire"
+filemanager = "nautilus"
+icon = "configuration_section-symbolic"
