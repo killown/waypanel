@@ -176,7 +176,7 @@ class Dockbar(Adw.Application):
         sock.watch
         while True:
             msg = sock.read_message()
-            self.set_layer_position_exclusive(msg)
+            # self.set_layer_position_exclusive(msg)
 
             # this will maximize every new window
             if "event" in msg and msg["event"] == "view-mapped":
@@ -260,7 +260,7 @@ class Dockbar(Adw.Application):
             if i["app-id"] == "nil":
                 continue
 
-            if i["state"]["mapped"] is False:
+            if i["mapped"] is False:
                 continue
 
             wm_class = i["app-id"].lower()
