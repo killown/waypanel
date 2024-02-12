@@ -21,12 +21,15 @@ fi
 
 if [ -d "gtk4-layer-shell" ]; then
     cd $CURRENT_DIR
+    sudo rm -rf /opt/waypanel/*
     sudo meson setup build --wipe
     sudo ninja -C build install
     sudo rm -rf build
     pip install nuitka
     python -m nuitka waypanel
     sudo cp waypanel.bin /opt/waypanel/
+    sudo cp waypanel /opt/waypanel 
+    sudo cp -r src /opt/waypanel 
     echo "\n\n\n\nUse /opt/waypanel/waypanel.bin if you want the compiled version of the waypanel"
 fi
 

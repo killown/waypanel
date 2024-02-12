@@ -311,7 +311,7 @@ class Utils(Adw.Application):
     def set_view_focus(self, pid):
         sock = self.compositor()
         sock.set_focus(pid)
-        sock.scale_toggle()
+        # sock.scale_toggle()
 
     def CreateButton(
         self, icon_name, cmd, Class_Style, wclass, initial_title=None, use_label=False
