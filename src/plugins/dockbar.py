@@ -17,7 +17,7 @@ from gi.repository import Gtk, Adw, GLib, Gio, GObject
 from ..core.create_panel import *
 from ..core.utils import Utils
 import numpy as np
-import waypy
+import waypy as ws
 
 
 class InvalidGioTaskError(Exception):
@@ -154,96 +154,93 @@ class Dockbar(Adw.Application):
                     # Start the taskbar list for the bottom panel
                     # Remaining check pids will be handled later
                     self.Taskbar("h", "taskbar", 0)
-            # LayerShell.auto_exclusive_zone_enable(self.left_panel)
-            # LayerShell.auto_exclusive_zone_enable(self.bottom_panel)
+
+            # LayerShell.set_layer(self.left_panel, LayerShell.Layer.TOP)
+            # LayerShell.set_layer(self.bottom_panel, LayerShell.Layer.TOP)
 
     def set_layer_position_exclusive(self, msg):
         if msg["view"] is None:
-            print(msg)
-            LayerShell.set_exclusive_zone(self.left_panel, 60)
-            LayerShell.set_exclusive_zone(self.bottom_panel, 52)
+            # update taskbar if overview is activated
             LayerShell.set_layer(self.left_panel, LayerShell.Layer.TOP)
             LayerShell.set_layer(self.bottom_panel, LayerShell.Layer.TOP)
 
         else:
-            LayerShell.set_exclusive_zone(self.left_panel, 0)
-            LayerShell.set_exclusive_zone(self.bottom_panel, 0)
+            self.compositor_window_changed()
+            # LayerShell.set_exclusive_zone(self.left_panel, 0)
+            # LayerShell.set_exclusive_zone(self.bottom_panel, 0)
             LayerShell.set_layer(self.left_panel, LayerShell.Layer.BOTTOM)
             LayerShell.set_layer(self.bottom_panel, LayerShell.Layer.BOTTOM)
 
     def event_scale_view(self):
         sock = self.compositor()
-        sock.watch
-        while True:
+        sock.watch()
+        while 1:
             msg = sock.read_message()
-            # self.set_layer_position_exclusive(msg)
+            if "event" in msg:
+                print(msg)
+                # lets try to not break the loop then catch the Exception
+                try:
+                    self.set_layer_position_exclusive(msg)
+                except Exception as e:
+                    print(e)
 
-            # this will maximize every new window
-            if "event" in msg and msg["event"] == "view-mapped":
-                view = msg["view"]
-                sock.assign_slot(view["id"], "slot_c")
-
-    def on_hyprwatch_finished(self):
+    def on_compositor_finished(self):
         # non working code
         try:
-            retval = self.hyprwatch_task.finish()
-            print(retval)
+            retval = self.taskbarwatch_task.finish()
         except Exception as err:
             print(err)
 
     def start_thread_compositor(self):
         self.scale_task = BackgroundTaskbar(
-            self.ScaleWatch, lambda: self.on_hyprwatch_finished
+            self.ScaleWatch, lambda: self.on_compositor_finished
         )
         self.scale_task.start()
 
         self.taskbarwatch_task = BackgroundTaskbar(
-            self.TaskbarWatch, lambda: self.on_hyprwatch_finished
+            self.TaskbarWatch, lambda: self.on_compositor_finished
         )
         self.taskbarwatch_task.start()
 
-    def compositor_window_changed(self, sender, **kwargs):
+    def compositor_window_changed(self):
         # if no windows, window_created signal will conflict with window_changed
         # the issue will be no new button will be appended to the taskbar
         # necessary to check if the window list is empity
-        if not len(self.hyprinstance.get_windows()) == 0:
-            self.update_active_window_shell()
+        # if not len(self.hyprinstance.get_windows()) == 0:
+        self.update_active_window_shell()
 
     def TaskbarWatch(self):
         sock = self.compositor()
+        sock.watch()
         while True:
             msg = sock.read_message()
             view = msg["view"]
+            if view is None:
+                return
+            # window created
             if "event" in msg and msg["event"] == "view-mapped":
-                self.taskbar_window_created(view_id=view["id"])
+                self.taskbar_window_created(view["pid"])
+            # window destroyed
             if "event" in msg and msg["event"] == "view-unmapped":
-                self.taskbar_window_destroyed(view["id"])
+                self.taskbar_window_destroyed(view["pid"])
 
-    def taskbar_window_created(self, view_id):
-        self.Taskbar("h", "taskbar", view_id)
+    def taskbar_window_created(self, pid):
+        self.Taskbar("h", "taskbar", pid)
 
-    def taskbar_window_destroyed(self, view_id):
-        self.taskbar_remove(view_id)
+    def taskbar_window_destroyed(self, pid):
+        self.taskbar_remove(pid)
 
     def ScaleWatch(self):
         self.event_scale_view()
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
-        return waypy.WayfireSocket(addr)
+        return ws.WayfireSocket(addr)
 
     def Taskbar(
-        self, orientation, class_style, view_id, update_button=False, callback=None
+        self, orientation, class_style, pid, update_button=False, callback=None
     ):
         sock = self.compositor()
-        print("aqui tem view id man {}".format(view_id))
-        # Filter windows to exclude those already in the taskbar
-        all_windows = [
-            i for i in sock.list_views() if i["app-id"] not in self.taskbar_list
-        ]
-        # If no new windows, exit the function
-        if not all_windows or all_windows == []:
-            return
 
         # Load configuration from dockbar_config file
         with open(self.dockbar_config, "r") as f:
@@ -253,15 +250,7 @@ class Dockbar(Adw.Application):
         launchers_desktop_file = [config[i]["desktop_file"] for i in config]
 
         for i in sock.list_views():
-            # let the list add all existent views if no buttons found
-            if i["role"] == "desktop-environment":
-                continue
-
-            if i["app-id"] == "nil":
-                continue
-
-            if i["mapped"] is False:
-                continue
+            # in case there is no views
 
             wm_class = i["app-id"].lower()
             initial_title = i["title"].split()[0].lower()
@@ -273,7 +262,8 @@ class Dockbar(Adw.Application):
                 wm_class = wm_class.split()[0]
 
             title = i["title"]
-            pid = i["id"]
+            pid = i["pid"]
+            view_id = i["id"]
 
             # Skip windows with wm_class found in launchers_desktop_file if update_button is False
             if wm_class in launchers_desktop_file and not update_button:
@@ -287,26 +277,27 @@ class Dockbar(Adw.Application):
             if "org.gnome.nautilus" in wm_class:
                 initial_title = "nautilus"
             # Create a taskbar launcher button using utility function
+            pid_view_id = {pid: view_id}
             button = self.utils.create_taskbar_launcher(
                 wm_class,
                 title,
                 initial_title,
                 orientation,
                 class_style,
-                pid,
+                pid_view_id,
             )
             print(button.get_name())
             # Append the button to the taskbar
             self.taskbar.append(button)
 
             # Store button information in dictionaries for easy access
-            self.buttons_pid[pid] = [button, initial_title]
+            self.buttons_pid[pid] = [button, initial_title, view_id]
 
             # Add the pid to the taskbar_list to keep track of added windows
             self.taskbar_list.append(pid)
 
         # Return True to indicate successful execution of the Taskbar function
-        return
+        return True
 
     def update_taskbar(
         self,
@@ -328,20 +319,21 @@ class Dockbar(Adw.Application):
         self.taskbar.append(button)
 
         # Store button information in dictionaries for easy access
-        self.buttons_pid[pid] = [button, initial_title]
+        self.buttons_pid[pid] = [button, initial_title, view_id]
 
         # Return True to indicate successful execution of the update_taskbar function
         return True
 
     def update_active_window_shell(self):
-        active_view = self.focused_window_info()
-        initial_title = active_view["title"].split()[0]
+        sock = self.compositor()
+        focused_view = sock.get_focused_view()
+        initial_title = focused_view["title"].split()[0]
 
         # Check if the active window has the title "zsh"
         if initial_title in ["zsh", "fish", "bash"]:
-            title = active_view["title"]
-            wm_class = active_view["app-id"]
-            pid = active_view["id"]
+            title = focused_view["title"]
+            wm_class = focused_view["app-id"]
+            pid = focused_view["pid"]
 
             # Quick fix for nautilus initial class
             if "org.gnome.nautilus" in wm_class.lower():
@@ -371,7 +363,7 @@ class Dockbar(Adw.Application):
         try:
             # Get the active window and all PIDs of windows with wm_class
             active_window = instance.get_active_window()
-            all_pids = [i.pid for i in instance.get_windows() if i.wm_class]
+            list_pids = [i for i in sock.list_pids() if pid == i]
 
             # Check if the PIDs have changed
             if all_pids != self.all_pids:
@@ -386,17 +378,17 @@ class Dockbar(Adw.Application):
         # Return True to indicate successful execution of the check_pids function
         return True
 
-    def taskbar_remove(self, view_id):
+    def taskbar_remove(self, pid):
         # Iterate over copied dictionary to avoid concurrent modification
-        try:
-            # Remove button and associated data
-            button = self.buttons_pid[view_id][0]
-            self.taskbar.remove(button)
-            self.taskbar_list.remove(view_id)
-            del self.buttons_pid[view_id]
-        except Exception as e:
-            print(e)
-        # Return True to indicate successful execution of the taskbar_remove function
+        # Remove button and associated data
+        sock = self.compositor()
+        list_pids = [i for i in sock.list_pids()]
+        for pid in self.buttons_pid.copy():
+            if pid not in list_pids:
+                button = self.buttons_pid[pid][0]
+                self.taskbar.remove(button)
+                self.taskbar_list.remove(pid)
+                del self.buttons_pid[pid]
         return True
 
     # Append a window to the dockbar

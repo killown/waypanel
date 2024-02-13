@@ -5,6 +5,7 @@ from gi.repository import Gio, Gtk, Adw
 from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen
 import toml
+import waypy
 
 
 class PopoverBookmarks(Adw.Application):
@@ -145,14 +146,13 @@ class PopoverBookmarks(Adw.Application):
 
     def open_url_from_bookmarks(self, x):
         url, container = x.get_child().MYTEXT
-        instance = Hyprland()
-        all_windows = instance.get_windows()
-        window = [
-            i.address for i in all_windows if "firefoxdeveloperedition" in i.wm_class
+        sock = self.compositor()
+        all_windows = sock.list_views()
+        view = [
+            i["id"] for i in all_windows if "firefoxdeveloperedition" in i["app-id"]
         ]
-        if window:
-            cmd = "hyprctl dispatch focuswindow address:{0}".format(window[0]).split()
-            Popen(cmd)
+        if view:
+            sock.set_focus(view[0])
         cmd = [
             "firefox-developer-edition",
             "ext+container:name={0}&url={1}".format(container, url),
@@ -203,3 +203,7 @@ class PopoverBookmarks(Adw.Application):
         ):  # == row_hbox.MYTEXT (Gtk.ListBoxRow===>get_child()===>row_hbox.MYTEXT)
             return True  # if True Show row
         return False
+
+    def compositor(self):
+        addr = os.getenv("WAYFIRE_SOCKET")
+        return waypy.WayfireSocket(addr)

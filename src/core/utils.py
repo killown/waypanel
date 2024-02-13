@@ -39,10 +39,6 @@ class Utils(Adw.Application):
             os.makedirs(self.scripts)
 
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
-        if isinstance(cmd, type(self.set_view_focus)):
-            self.set_view_focus(self.active_view_id)
-            return True
-
         if "kitty --hold" in cmd and cmd_mode:
             try:
                 Popen(cmd.split(), start_new_session=True)
@@ -128,18 +124,6 @@ class Utils(Adw.Application):
                 return deskfile
         return None
 
-    def wayfire_info(self, method):
-        addr = os.getenv("WAYFIRE_SOCKET")
-        sock = ws.WayfireSocket(addr)
-        query = ws.get_msg_template(method)
-        return sock.send_json(query)
-
-    def focused_window_info(self):
-        return self.wayfire_info("window-rules/get-focused-view")["info"]
-
-    def list_views(self):
-        return self.wayfire_info("window-rules/list-views")
-
     def update_icon(self, wm_class, initial_title, title):
         # Set window icon based on icon_exist
         if " " in initial_title:
@@ -187,7 +171,7 @@ class Utils(Adw.Application):
         initial_title,
         orientation,
         class_style,
-        view_id,
+        pid,
         callback=None,
     ):
         if ".desktop" in wmclass:
@@ -248,7 +232,7 @@ class Utils(Adw.Application):
 
         # Create a clickable image button and attach a gesture if callback is provided
         button = self.create_clicable_image(
-            icon, class_style, wmclass, title, initial_title, view_id
+            icon, class_style, wmclass, title, initial_title, pid
         )
         # if callback is not None:
         #    self.CreateGesture(button, 3, callback)
@@ -301,17 +285,18 @@ class Utils(Adw.Application):
         box.append(image)
         box.append(label)
         box.add_css_class("box_from_clicable_image")
-        self.CreateGesture(box, 1, lambda *_: self.set_view_focus(pid))
+        view_id = list(pid.values())[0]
+        self.CreateGesture(box, 1, lambda *_: self.set_view_focus(view_id))
         return box
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
         return waypy.WayfireSocket(addr)
 
-    def set_view_focus(self, pid):
+    def set_view_focus(self, view_id):
         sock = self.compositor()
-        sock.set_focus(pid)
-        # sock.scale_toggle()
+        sock.scale_leave()
+        sock.set_focus(view_id)
 
     def CreateButton(
         self, icon_name, cmd, Class_Style, wclass, initial_title=None, use_label=False
