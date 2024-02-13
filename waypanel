@@ -280,32 +280,24 @@ class Panel(Adw.Application):
 
     def update_background_panel(self):
         # just to make sure this function will never fails
-        try:
-            sock = self.compositor()
-            title = sock.get_focused_view_title()
-            workspace_id = sock.get_active_workspace_number()
-            pid = sock.get_focused_view_pid()
-            wclass = sock.get_focused_view_app_id()
-            initial_title = title.split(" ")[0]
-            if sock.is_focused_view_fullscreen():
-                return True
-            # Update title and icon
-            self.update_widgets(
-                title,
-                wclass,
-                initial_title,
-                pid,
-                workspace_id,
-            )
-        except Exception as e:
-            print(e)
-        return True
 
-    def wayfire_info(self, method):
-        addr = os.getenv("WAYFIRE_SOCKET")
-        sock = ws.WayfireSocket(addr)
-        query = ws.get_msg_template(method)
-        return sock.send_json(query)["info"]
+        sock = self.compositor()
+        title = sock.get_focused_view_title()
+        workspace_id = sock.get_active_workspace_number()
+        pid = sock.get_focused_view_pid()
+        wclass = sock.get_focused_view_app_id()
+        initial_title = title.split(" ")[0]
+        if sock.is_focused_view_fullscreen():
+            return True
+        # Update title and icon
+        self.update_widgets(
+            title,
+            wclass,
+            initial_title,
+            pid,
+            workspace_id,
+        )
+        return True
 
     def focused_window_info(self):
         sock = self.compositor()
@@ -410,10 +402,10 @@ class Panel(Adw.Application):
 
     def show_panels(self):
         if self.all_panels_enabled:
-            self.dock.do_start()
             self.top_panel.present()
-            # self.right_panel.present()
             self.top_panel_background.present()
+            self.dock.do_start()
+            self.right_panel.present()
 
     def setup_panel_buttons(self):
         if self.default_panel:
@@ -1112,10 +1104,11 @@ class Panel(Adw.Application):
             None
         """
         # Retrieve information about the active window
-        active_window = self.get_wayland_active_window()
-        initial_title = active_window.initial_title.lower()
-        wm_class = active_window.initial_wm_class.lower()
-        title = active_window.title.lower()
+        sock = self.compositor()
+        focused_view = sock.get_focused_view()
+        title = focused_view["title"]
+        wm_class = focused_view["app-id"].lower()
+        initial_title = title.split()[0].lower()
 
         # Adjust the window class based on specific conditions
         if "firefox" in wm_class and "." in title:
@@ -1274,10 +1267,13 @@ class Panel(Adw.Application):
         try:
             sock = self.compositor()
             title = sock.get_focused_view_title()
+            if title == "":
+                return True
             wclass = sock.get_focused_view_app_id()
 
-            # if self.window_title_from_topbar == title:
-            #    return True
+            if self.window_title_from_topbar == title:
+                self.window_title_from_topbar = title
+                return True
 
             self.window_title_from_topbar = (
                 title  # Modify title based on certain patterns
