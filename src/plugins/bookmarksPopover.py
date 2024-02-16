@@ -5,7 +5,7 @@ from gi.repository import Gio, Gtk, Adw
 from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen
 import toml
-import waypy
+import wayfire
 
 
 class PopoverBookmarks(Adw.Application):
@@ -206,4 +206,4 @@ class PopoverBookmarks(Adw.Application):
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
-        return waypy.WayfireSocket(addr)
+        return wayfire.WayfireSocket(addr)

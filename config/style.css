@@ -1,14 +1,14 @@
 .WindowTitle {
-  -gtk-icon-size: 24px;
+  -gtk-icon-size: 28px;
   border-style: solid;
   border-width: 2px;
   font-size: 14px;
-  background: #000000d8;
-  background-color: #000000d8;
+  background: #1e2030;
+  background-color: #1e2030;
   padding: 2px 4px 2px 4px;
-  margin: 2px 4px 2px 4px;
+  margin: 1px 1px 1px 1px;
   border-width: 2px;
-  border-color: #f8f8f84a;
+  border-color: #000000;
   border-radius: 10px;
 }
 
@@ -34,8 +34,8 @@
 .LeftBar-buttons {
   border-radius: 10px;
   font-size: 16px;
-  background: #000000d8;
-  background-color: #000000d8;
+  background: #1e2030;
+  background-color: #1e2030;
   border-style: solid;
   border-width: 2px;
   padding: 4px 4px 4px 4px;
@@ -47,8 +47,8 @@
   font-size: 16px;
   border-style: solid;
   border-width: 2px;
-  background: #000000d8;
-  background-color: #000000d8;
+  background: #1e2030;
+  background-color: #1e2030;
   padding: 8px 8px 8px 8px;
   border-color: #b5b3b0;
 }
@@ -63,10 +63,10 @@
   -gtk-icon-size: 24px;
   border-style: solid;
   border-width: 2px;
-  background: #000000d8;
-  background-color: #000000d8;
+  background: #1e2030;
+  background-color: #1e2030;
   padding: 2px 4px 2px 4px;
-  margin: 2px 4px 2px 4px;
+  margin: 1px 1px 1px 1px;
   border-width: 2px;
   border-color: #f8f8f84a;
   border-radius: 10px;
@@ -76,10 +76,10 @@
   -gtk-icon-size: 24px;
   border-style: solid;
   border-width: 2px;
-  background: #000000d8;
-  background-color: #000000d8;
+  background: #1e2030;
+  background-color: #1e2030;
   padding: 2px 4px 2px 4px;
-  margin: 2px 4px 2px 4px;
+  margin: 1px 1px 1px 1px;
   border-width: 2px;
   border-color: #f8f8f84a;
   border-radius: 10px;
@@ -119,8 +119,8 @@
 .box_from_clicable_image {
   border-radius: 8px;
   font-size: 15px;
-  background: #000000d8;
-  background-color: #000000d8;
+  background: #1e2030;
+  background-color: #1e2030;
   border-style: solid;
   border-width: 1px;
   margin: 2px 2px 2px 2px;
@@ -144,8 +144,8 @@
 .Clock {
   font-size: 18px;
   font-weight: bold;
-  background: #000000d8;
-  background-color: #000000d8;
+  background: #1e2030;
+  background-color: #1e2030;
   border-style: solid;
   padding: 0px 4px 0px 4px;
   margin: 2px 4px 2px 4px;
@@ -196,8 +196,8 @@
 
 .top_panel_box_systray {
   -gtk-icon-size: 20px;
-  background: #000000d8;
-  background-color: #000000d8;
+  background: #1e2030;
+  background-color: #1e2030;
   border-radius: 10px;
   font-size: 16px;
   border-style: solid;

@@ -17,7 +17,7 @@ from gi.repository import Gtk, Adw, GLib, Gio, GObject
 from ..core.create_panel import *
 from ..core.utils import Utils
 import numpy as np
-import waypy as ws
+import wayfire as ws
 
 
 class InvalidGioTaskError(Exception):
@@ -102,7 +102,7 @@ class Dockbar(Adw.Application):
     # Start the Dockbar application
     def do_start(self):
         # Set up a timeout to periodically check process IDs
-        # GLib.timeout_add(300, self.check_pids)
+        # GLib.timeout_add(300, self.update_active_window_shell)
         self.start_thread_compositor()
         # Populate self.stored_windows during panel start
         sock = self.compositor()
@@ -177,7 +177,6 @@ class Dockbar(Adw.Application):
         while 1:
             msg = sock.read_message()
             if "event" in msg:
-                print(msg)
                 # lets try to not break the loop then catch the Exception
                 try:
                     self.set_layer_position_exclusive(msg)
@@ -187,7 +186,7 @@ class Dockbar(Adw.Application):
     def on_compositor_finished(self):
         # non working code
         try:
-            retval = self.taskbarwatch_task.finish()
+            self.taskbarwatch_task.finish()
         except Exception as err:
             print(err)
 
@@ -207,25 +206,37 @@ class Dockbar(Adw.Application):
         # the issue will be no new button will be appended to the taskbar
         # necessary to check if the window list is empity
         # if not len(self.hyprinstance.get_windows()) == 0:
-        self.update_active_window_shell()
+        # self.update_active_window_shell()
+        print()
 
     def TaskbarWatch(self):
         sock = self.compositor()
         sock.watch()
         while True:
-            msg = sock.read_message()
-            view = msg["view"]
-            if view is None:
-                return
-            # window created
-            if "event" in msg and msg["event"] == "view-mapped":
-                self.taskbar_window_created(view["pid"])
-            # window destroyed
-            if "event" in msg and msg["event"] == "view-unmapped":
-                self.taskbar_window_destroyed(view["pid"])
+            try:
+                msg = sock.read_message()
+                if "view" in msg:
+                    view = msg["view"]
+                    if "event" in msg and msg["event"] == "view-title-changed":
+                        self.Taskbar("h", "taskbar")
+                        self.update_active_window_shell(view["id"])
+                        # if msg["event"] == "view-focused":
+                        # GLib.idle_add(self.update_title_topbar)
+                    # window created
+                    if "event" in msg and msg["event"] == "view-mapped":
+                        try:
+                            self.taskbar_window_created()
+                        except Exception as e:
+                            print(e)
+                    # window destroyed
+                    if "event" in msg and msg["event"] == "view-unmapped":
+                        pid = view["pid"]
+                        self.taskbar_window_destroyed(pid)
+            except Exception as e:
+                print(e)
 
-    def taskbar_window_created(self, pid):
-        self.Taskbar("h", "taskbar", pid)
+    def taskbar_window_created(self):
+        self.Taskbar("h", "taskbar")
 
     def taskbar_window_destroyed(self, pid):
         self.taskbar_remove(pid)
@@ -237,9 +248,7 @@ class Dockbar(Adw.Application):
         addr = os.getenv("WAYFIRE_SOCKET")
         return ws.WayfireSocket(addr)
 
-    def Taskbar(
-        self, orientation, class_style, pid, update_button=False, callback=None
-    ):
+    def Taskbar(self, orientation, class_style, update_button=False, callback=None):
         sock = self.compositor()
 
         # Load configuration from dockbar_config file
@@ -277,16 +286,15 @@ class Dockbar(Adw.Application):
             if "org.gnome.nautilus" in wm_class:
                 initial_title = "nautilus"
             # Create a taskbar launcher button using utility function
-            pid_view_id = {pid: view_id}
+
             button = self.utils.create_taskbar_launcher(
                 wm_class,
                 title,
                 initial_title,
                 orientation,
                 class_style,
-                pid_view_id,
+                view_id,
             )
-            print(button.get_name())
             # Append the button to the taskbar
             self.taskbar.append(button)
 
@@ -324,31 +332,19 @@ class Dockbar(Adw.Application):
         # Return True to indicate successful execution of the update_taskbar function
         return True
 
-    def update_active_window_shell(self):
+    def update_active_window_shell(self, id):
         sock = self.compositor()
-        focused_view = sock.get_focused_view()
-        initial_title = focused_view["title"].split()[0]
-
+        view = sock.get_view(id)
+        initial_title = view["title"].split()[0]
         # Check if the active window has the title "zsh"
-        if initial_title in ["zsh", "fish", "bash"]:
-            title = focused_view["title"]
-            wm_class = focused_view["app-id"]
-            pid = focused_view["pid"]
-
-            # Quick fix for nautilus initial class
-            if "org.gnome.nautilus" in wm_class.lower():
-                initial_title = "nautilus"
-
-            if pid in self.buttons:
-                btn = self.buttons[pid]
-                btn_title = btn[1]
-
-                # Check if the title has changed
-                if title != btn_title:
-                    self.taskbar.remove(btn)
-                    self.update_taskbar(
-                        pid, wm_class, initial_title, title, "h", "taskbar", id
-                    )
+        if view["app-id"] in ["kitty", "gnome-terminal-server"]:
+            title = view["title"]
+            wm_class = view["app-id"]
+            pid = view["pid"]
+            btn = self.buttons_pid[pid]
+            self.taskbar.remove(btn[0])
+            self.update_taskbar(pid, wm_class, initial_title, title, "h", "taskbar", id)
+        return True
 
     def check_pids(self):
         # *** Need a fix since this code depends on the Hyprshell plugin

@@ -11,7 +11,7 @@ from subprocess import Popen
 import math
 import pulsectl
 import psutil
-import waypy
+import wayfire
 
 
 class Utils(Adw.Application):
@@ -56,6 +56,54 @@ class Utils(Adw.Application):
                 Popen(cmd.split(), start_new_session=True)
             except Exception as e:
                 print(e)
+
+    def CreateWorkspacePanel(
+        self, config, orientation, class_style, callback=None, use_label=False
+    ):
+        # Map orientation to Gtk.Orientation
+        if orientation == "h":
+            orientation = Gtk.Orientation.HORIZONTAL
+        if orientation == "v":
+            orientation = Gtk.Orientation.VERTICAL
+
+        # Create a Gtk.Box with specified spacing and orientation
+        box = Gtk.Box(spacing=10, orientation=orientation)
+        box.add_css_class("box_from_dockbar")  # Add a CSS class to the box for styling
+
+        # Load configuration from a file using the toml library
+        with open(config, "r") as f:
+            config = toml.load(f)
+
+            # Iterate through each application in the configuration
+            for app in config:
+                wclass = None
+                initial_title = None
+
+                try:
+                    # Try to get the 'wclass' field from the configuration, if present
+                    wclass = config[app]["wclass"]
+                except KeyError:
+                    pass
+
+                # Create a button using the CreateButton method
+                button = self.CreateButton(
+                    config[app]["icon"],
+                    config[app]["cmd"],
+                    class_style,
+                    wclass,
+                    initial_title,
+                    use_label,
+                )
+
+                # If a callback is provided, create a gesture for the button
+                if callback is not None:
+                    self.CreateGesture(button, 3, callback)
+
+                # Append the button to the Gtk.Box
+                box.append(button)
+
+        # Return the created Gtk.Box
+        return box
 
     def CreateFromAppList(
         self, config, orientation, class_style, callback=None, use_label=False
@@ -171,7 +219,7 @@ class Utils(Adw.Application):
         initial_title,
         orientation,
         class_style,
-        pid,
+        view_id,
         callback=None,
     ):
         if ".desktop" in wmclass:
@@ -232,7 +280,7 @@ class Utils(Adw.Application):
 
         # Create a clickable image button and attach a gesture if callback is provided
         button = self.create_clicable_image(
-            icon, class_style, wmclass, title, initial_title, pid
+            icon, class_style, wmclass, title, initial_title, view_id
         )
         # if callback is not None:
         #    self.CreateGesture(button, 3, callback)
@@ -248,7 +296,7 @@ class Utils(Adw.Application):
                 return False
 
     def create_clicable_image(
-        self, icon, Class_Style, wclass, title, initial_title, pid=None
+        self, icon, Class_Style, wclass, title, initial_title, view_id
     ):
         box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
         box.add_css_class(Class_Style)
@@ -285,13 +333,12 @@ class Utils(Adw.Application):
         box.append(image)
         box.append(label)
         box.add_css_class("box_from_clicable_image")
-        view_id = list(pid.values())[0]
         self.CreateGesture(box, 1, lambda *_: self.set_view_focus(view_id))
         return box
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
-        return waypy.WayfireSocket(addr)
+        return wayfire.WayfireSocket(addr)
 
     def set_view_focus(self, view_id):
         sock = self.compositor()
@@ -299,7 +346,14 @@ class Utils(Adw.Application):
         sock.set_focus(view_id)
 
     def CreateButton(
-        self, icon_name, cmd, Class_Style, wclass, initial_title=None, use_label=False
+        self,
+        icon_name,
+        cmd,
+        Class_Style,
+        wclass,
+        initial_title=None,
+        use_label=False,
+        use_function=False,
     ):
         box = Gtk.Box(spacing=6)
         box.add_css_class(Class_Style)
@@ -314,10 +368,14 @@ class Utils(Adw.Application):
         if cmd == "NULL":
             button.set_sensitive(False)
             return button
-        self.CreateGesture(
-            button, 1, lambda *_: self.run_app(cmd, wclass, initial_title)
-        )
-        self.CreateGesture(button, 3, lambda *_: self.dockbar_remove(icon_name))
+        if use_function is False:
+            self.CreateGesture(
+                button, 1, lambda *_: self.run_app(cmd, wclass, initial_title)
+            )
+            self.CreateGesture(button, 3, lambda *_: self.dockbar_remove(icon_name))
+        else:
+            use_function()
+
         return button
 
     def load_topbar_config(self):
