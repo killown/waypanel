@@ -30,13 +30,13 @@ import random
 import socket
 import threading
 import time
-import waypy
+import wayfire
 
-spam_loader = importlib.util.find_spec("waypy")
+spam_loader = importlib.util.find_spec("wayfire")
 found = spam_loader is not None
 
 if not found:
-    print("Module waypy not found, try | pip install waypy | and try again")
+    print("Module wayfire not found, try | pip install wayfire | and try again")
     sys.exit()
 
 from multiprocessing import Process
@@ -167,8 +167,8 @@ class Panel(Adw.Application):
         self.top_panel_box_for_buttons = Gtk.Box(spacing=6)
         self.top_panel_box_window_title = Gtk.Box(spacing=6)
         self.top_panel_box_widgets_left = Gtk.Box(spacing=6)
-        self.top_panel_box_left.append(self.top_panel_box_window_title)
         self.top_panel_box_left.append(self.top_panel_box_widgets_left)
+        self.top_panel_box_left.append(self.top_panel_box_window_title)
         self.top_panel_box_right = Gtk.Box(spacing=10)
         self.top_panel_grid_right = Gtk.Grid(column_spacing=10)
         self.top_panel_grid_right.attach(self.top_panel_box_right, 1, 0, 1, 2)
@@ -256,8 +256,10 @@ class Panel(Adw.Application):
         self.MenuClipboard.create_popover_menu_clipboard(self, app)
         self.MenuLauncher = MenuLauncher()
         self.MenuLauncher.create_menu_popover_launcher(self, app)
-        # self.start_sockets_server()
-        # self.start_thread_wayland()
+
+        # the title is only updated when a event happens, so needed to update in the panel start
+        self.update_title_topbar()
+        self.start_thread_all_events()
 
     def do_activate(self):
         self.show_panels()
@@ -271,7 +273,7 @@ class Panel(Adw.Application):
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
-        return waypy.WayfireSocket(addr)
+        return wayfire.WayfireSocket(addr)
 
     def wayland_instance_watch(self):
         self.wayinstance.signal_active_window_changed.connect(
@@ -298,6 +300,34 @@ class Panel(Adw.Application):
             workspace_id,
         )
         return True
+
+    def all_events_watch(self):
+        sock = self.compositor()
+        sock.watch()
+        while 1:
+            try:
+                msg = sock.read_message()
+                if "event" in msg:
+                    if msg["event"] == "view-title-changed":
+                        self.update_title_topbar()
+                        # view = msg["view"]
+                    if msg["event"] == "view-focused":
+                        self.update_title_topbar()
+            except Exception as e:
+                print(e)
+
+    def start_thread_all_events(self):
+        self.all_events = BackgroundTask(
+            self.all_events_watch, lambda: self.on_compositor_finished
+        )
+        self.all_events.start()
+
+    def on_compositor_finished(self):
+        # non working code
+        try:
+            self.all_events_watch.finish()
+        except Exception as err:
+            print(err)
 
     def focused_window_info(self):
         sock = self.compositor()
@@ -394,18 +424,18 @@ class Panel(Adw.Application):
         self.top_panel_background.set_content(self.tbbox)
 
     def update_widget_with_timeout(self):
-        GLib.timeout_add(2000, self.update_background_panel)
-        GLib.timeout_add(200, self.update_title_topbar)
+        # GLib.timeout_add(2000, self.update_background_panel)
+        # GLib.timeout_add(200, self.update_title_topbar)
         GLib.timeout_add(2000, self.set_cpu_usage)
         GLib.timeout_add(30000, self.mullvad_status)
-        # GLib.timeout_add(600000, self.clean_pid_store)
+        GLib.timeout_add(600000, self.clean_pid_store)
 
     def show_panels(self):
         if self.all_panels_enabled:
             self.top_panel.present()
             self.top_panel_background.present()
             self.dock.do_start()
-            self.right_panel.present()
+            # self.right_panel.present()
 
     def setup_panel_buttons(self):
         if self.default_panel:
@@ -477,8 +507,13 @@ class Panel(Adw.Application):
     def close_fullscreen_buttons(self):
         # Creating close and full screen buttons for the top bar
         self.cf_box = Gtk.Box()
+        sock = self.compositor()
         self.fullscreen_button = self.utils.CreateButton(
-            "window-maximize-symbolic", "wayctl dispatch fullscreen", "cf_button", None
+            "window-maximize-symbolic",
+            None,
+            "cf_button",
+            None,
+            use_function=sock.maximize_focused,
         )
         self.close_button = self.utils.CreateButton(
             "close-symbolic", "wayctl dispatch killactive", "cf_button", None
@@ -892,7 +927,7 @@ class Panel(Adw.Application):
 
     def left_gesture_right_click(self, *_):
         sock = self.compositor()
-        sock.go_next_workspace()
+        sock.go_next_workspace_with_views()
         # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
         # self.utils.run_app(cmd, True)
 
@@ -909,8 +944,10 @@ class Panel(Adw.Application):
         self.utils.run_app(cmd, True)
 
     def center_gesture_right_click(self, *_):
-        cmd = self.panel_cfg["left_side_gestures"]["right_click"]
-        self.utils.run_app(cmd, True)
+        sock = self.compositor()
+        sock.toggle_expo()
+        # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
+        # self.utils.run_app(cmd, True)
 
     def right_gesture_left_click(self, *_):
         cmd = self.panel_cfg["right_side_gestures"]["left_click"]
