@@ -224,10 +224,7 @@ class Dockbar(Adw.Application):
                         # GLib.idle_add(self.update_title_topbar)
                     # window created
                     if "event" in msg and msg["event"] == "view-mapped":
-                        try:
-                            self.taskbar_window_created()
-                        except Exception as e:
-                            print(e)
+                        self.taskbar_window_created()
                     # window destroyed
                     if "event" in msg and msg["event"] == "view-unmapped":
                         pid = view["pid"]
@@ -259,17 +256,8 @@ class Dockbar(Adw.Application):
         launchers_desktop_file = [config[i]["desktop_file"] for i in config]
 
         for i in sock.list_views():
-            # in case there is no views
-
             wm_class = i["app-id"].lower()
             initial_title = i["title"].split()[0].lower()
-
-            # some classes and initial titles has whitespaces which will lead to not found icons
-            if " " in initial_title:
-                initial_title = initial_title.split()[0]
-            if " " in wm_class:
-                wm_class = wm_class.split()[0]
-
             title = i["title"]
             pid = i["pid"]
             view_id = i["id"]
@@ -309,15 +297,17 @@ class Dockbar(Adw.Application):
 
     def update_taskbar(
         self,
-        pid,
-        wm_class,
-        initial_title,
-        title,
         orientation,
         class_style,
         view_id,
-        callback=None,
+        callb1ack=None,
     ):
+        sock = self.compositor()
+        view = sock.get_view(view_id)
+        pid = view["pid"]
+        title = view["title"]
+        wm_class = view["app-id"]
+        initial_title = title.split(" ")[0].lower()
         # Create a taskbar launcher button using utility function
         button = self.utils.create_taskbar_launcher(
             wm_class, title, initial_title, orientation, class_style, view_id
@@ -335,15 +325,11 @@ class Dockbar(Adw.Application):
     def update_active_window_shell(self, id):
         sock = self.compositor()
         view = sock.get_view(id)
-        initial_title = view["title"].split()[0]
-        # Check if the active window has the title "zsh"
         if view["app-id"] in ["kitty", "gnome-terminal-server"]:
-            title = view["title"]
-            wm_class = view["app-id"]
             pid = view["pid"]
-            btn = self.buttons_pid[pid]
-            self.taskbar.remove(btn[0])
-            self.update_taskbar(pid, wm_class, initial_title, title, "h", "taskbar", id)
+            button = self.buttons_pid[pid][0]
+            self.taskbar.remove(button)
+            self.update_taskbar("h", "taskbar", id)
         return True
 
     def check_pids(self):

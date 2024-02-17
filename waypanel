@@ -304,17 +304,50 @@ class Panel(Adw.Application):
     def all_events_watch(self):
         sock = self.compositor()
         sock.watch()
+        plugin_state = None
         while 1:
             try:
                 msg = sock.read_message()
                 if "event" in msg:
+                    view = msg["view"]
                     if msg["event"] == "view-title-changed":
-                        self.update_title_topbar()
-                        # view = msg["view"]
+                        self.on_title_changed()
+                    if msg["event"] == "app-id-changed":
+                        self.on_app_id_changed()
                     if msg["event"] == "view-focused":
-                        self.update_title_topbar()
+                        self.on_view_focused()
+                    if msg["view"] is not None:
+                        if plugin_state is not None:
+                            # plugin state stores the view id
+                            plugin_state = None
+                            sock.maximize(view[plugin_state])
+
+                    if msg["event"] == "plugin-activation-state-changed":
+                        if msg["plugin"] == "expo":
+                            plugin_state = view["id"]
+                            self.on_expo_activated_signal()
+
+                        if msg["plugin"] == "scale":
+                            plugin_state = view["id"]
+                            self.on_scale_activated_signal()
+
             except Exception as e:
                 print(e)
+
+    def on_title_changed(self):
+        self.update_title_topbar()
+
+    def on_app_id_changed(self):
+        self.update_title_topbar()
+
+    def on_expo_activated(self):
+        return
+
+    def on_scale_activated(self):
+        return
+
+    def on_view_focused(self):
+        self.update_title_topbar()
 
     def start_thread_all_events(self):
         self.all_events = BackgroundTask(
@@ -424,7 +457,7 @@ class Panel(Adw.Application):
         self.top_panel_background.set_content(self.tbbox)
 
     def update_widget_with_timeout(self):
-        # GLib.timeout_add(2000, self.update_background_panel)
+        GLib.timeout_add(2000, self.update_background_panel)
         # GLib.timeout_add(200, self.update_title_topbar)
         GLib.timeout_add(2000, self.set_cpu_usage)
         GLib.timeout_add(30000, self.mullvad_status)
@@ -1441,7 +1474,11 @@ class Panel(Adw.Application):
 
         # Set additional label-based icons for specific initial_titles (zsh, fish)
         # this block of code is only for shell icons, like nvim, htop and so on
-        label = title.split()[0] if initial_title.startswith(("zsh", "fish")) else None
+        label = (
+            title.split()[0]
+            if wm_class.startswith(("kitty", "gnome-terminal-server"))
+            else None
+        )
 
         if label:
             icon_exist = self.icon_exist(label)
@@ -1484,11 +1521,6 @@ class Panel(Adw.Application):
     def update_title_and_icons(self, title, wm_class, initial_title):
         """Update title and icons."""
         # some classes and initial titles has whitespaces which will lead to not found icons
-        if " " in initial_title:
-            initial_title = initial_title.split()[0]
-        if " " in wm_class:
-            wm_class = wm_class.split()[0]
-
         icon = self.get_icon(wm_class, initial_title, title)
         if icon is not None:
             self.window_title.set_icon_name(icon)

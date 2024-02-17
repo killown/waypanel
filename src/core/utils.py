@@ -238,9 +238,9 @@ class Utils(Adw.Application):
         icon = self.update_icon(wmclass, initial_title, title)
 
         # Special case for "zsh" initial_title
-        if initial_title == "zsh":
+        if wmclass == "kitty":
             label = title.split(" ")[0]
-        if initial_title == "fish":
+        if wmclass in "gnome-terminal-server":
             label = title.split(" ")[0]
             icon_exist = [i for i in self.icon_theme_list if label in i]
             try:
@@ -270,13 +270,11 @@ class Utils(Adw.Application):
             pass
 
         # Set additional label-based icons for specific initial_titles (zsh, fish)
-        label = title.split(" ")[0] if initial_title in ["zsh", "fish"] else None
-
-        if label:
-            icon_exist = self.icon_exist(label)
-            if icon_exist:
-                self.window_title.set_icon_name(icon_exist[0])
-                self.tbclass.set_icon_name(label)
+        label = (
+            title.split(" ")[0]
+            if wmclass in ["kitty", "gnome-terminal-server"]
+            else None
+        )
 
         # Create a clickable image button and attach a gesture if callback is provided
         button = self.create_clicable_image(
@@ -295,6 +293,51 @@ class Utils(Adw.Application):
             else:
                 return False
 
+    def get_icon(self, wm_class, initial_title, title):
+        icon = None
+
+        if ".desktop" in wm_class:
+            wm_class = wm_class.split(".desktop")[0]
+            if "org." in wm_class:
+                wm_class = wm_class.split("org.")[-1]
+
+        # Set additional label-based icons for specific initial_titles (zsh, fish)
+        # this block of code is only for shell icons, like nvim, htop and so on
+        label = (
+            title.split()[0]
+            if wm_class.startswith(("kitty", "gnome-terminal-server"))
+            else None
+        )
+
+        if label:
+            icon_exist = self.icon_exist(label)
+            if icon_exist:
+                return label
+
+        if icon is not None:
+            return icon
+
+        icon_exist = self.icon_exist(wm_class)
+        if wm_class in icon_exist:
+            return wm_class
+
+        # If no icon for wm_class, check if there's an icon for the initial_title
+        icon_exist = self.icon_exist(initial_title)
+        if initial_title in icon_exist:
+            return initial_title
+
+        # If still no icon, search for desktop files based on wmclass and initial_title
+        desk_local = self.search_local_desktop(initial_title)
+        desk = self.search_desktop(wm_class)
+        if desk_local and "-Default" in desk_local:
+            icon = desk_local.split(".desktop")[0]
+            return icon
+        if desk_local is None:
+            if desk:
+                icon = desk.split(".desktop")[0]
+                return icon
+        return None
+
     def create_clicable_image(
         self, icon, Class_Style, wclass, title, initial_title, view_id
     ):
@@ -303,26 +346,15 @@ class Utils(Adw.Application):
         image = None
         if icon is None:
             icon = ""
-        # panel.toml has filters for missing icons
-        try:
-            icon = self.panel_cfg["change_icon_title"][icon]
-        except Exception as e:
-            print(e)
-        if isinstance(icon, str):
-            image = Gtk.Image.new_from_icon_name(icon)
-        else:
-            image = Gtk.Image.new_from_gicon(icon)
-        image.add_css_class("icon_from_popover_launcher")
-        image.set_icon_size(Gtk.IconSize.LARGE)
-        image.props.margin_end = 5
-        image.set_halign(Gtk.Align.END)
         label = Gtk.Label.new()
         # zsh use titles instead of initial title
         use_this_title = initial_title
-        if "zsh" == initial_title.lower():
+        if "kitty" in wclass.lower():
             use_this_title = title
-        if "fish" == initial_title.lower():
+            icon = title.split()[0]
+        if "gnome-terminal-server" in wclass.lower():
             use_this_title = title
+            icon = title.split()[0]
 
         desktop_local_file = self.search_local_desktop(initial_title)
         if desktop_local_file:
@@ -330,8 +362,26 @@ class Utils(Adw.Application):
 
         label.set_label(use_this_title)
         label.add_css_class("clicable_image_label")
+
+        # panel.toml has filters for missing icons
+        try:
+            icon = self.panel_cfg["change_icon_title"][icon]
+        except Exception as e:
+            print(e)
+
+        icon = self.get_icon(wclass, initial_title, title)
+        if isinstance(icon, str):
+            image = Gtk.Image.new_from_icon_name(icon)
+        else:
+            image = Gtk.Image.new_from_gicon(icon)
+        image.set_icon_size(Gtk.IconSize.LARGE)
+        image.props.margin_end = 5
+        image.set_halign(Gtk.Align.END)
+        image.add_css_class("icon_from_popover_launcher")
+
         box.append(image)
         box.append(label)
+        # if you put the add_css_class above, wont work
         box.add_css_class("box_from_clicable_image")
         self.CreateGesture(box, 1, lambda *_: self.set_view_focus(view_id))
         return box
