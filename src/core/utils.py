@@ -363,13 +363,12 @@ class Utils(Adw.Application):
         label.set_label(use_this_title)
         label.add_css_class("clicable_image_label")
 
+        icon = self.get_icon(wclass, initial_title, title)
         # panel.toml has filters for missing icons
         try:
             icon = self.panel_cfg["change_icon_title"][icon]
         except Exception as e:
             print(e)
-
-        icon = self.get_icon(wclass, initial_title, title)
         if isinstance(icon, str):
             image = Gtk.Image.new_from_icon_name(icon)
         else:
@@ -424,7 +423,7 @@ class Utils(Adw.Application):
             )
             self.CreateGesture(button, 3, lambda *_: self.dockbar_remove(icon_name))
         else:
-            use_function()
+            self.CreateGesture(button, 1, use_function)
 
         return button
 

@@ -144,7 +144,7 @@ class Panel(Adw.Application):
         self.waypanel_started_now = True
         self.window_title_from_topbar = None
         self.active_window = None
-
+        self.last_view_toplevel_focused = None
         with open(self.topbar_config) as topbar_config:
             config = toml.load(topbar_config)
 
@@ -316,11 +316,22 @@ class Panel(Adw.Application):
                         self.on_app_id_changed()
                     if msg["event"] == "view-focused":
                         self.on_view_focused()
+                        if view["role"] == "toplevel":
+                            self.on_view_role_toplevel_focused()
+                            # last view focus only for top level Windows
+                            # means that views like layer shell won't have focus set in this var
+                            # this is necessary for example, if you click in the maximize buttons
+                            # in the top bar then you need a toplevel window to maximize_last_view
+                            # if not, it will try to maximize the LayerShell
+                            # big comment because I am sure I will forget why I did this
+                            self.last_view_toplevel_focused = view["id"]
+
                     if msg["view"] is not None:
                         if plugin_state is not None:
                             # plugin state stores the view id
                             plugin_state = None
-                            sock.maximize(view[plugin_state])
+                            id = self.last_view_toplevel_focused
+                            sock.maximize(view[id])
 
                     if msg["event"] == "plugin-activation-state-changed":
                         if msg["plugin"] == "expo":
@@ -333,6 +344,9 @@ class Panel(Adw.Application):
 
             except Exception as e:
                 print(e)
+
+    def on_view_role_toplevel_focused(self):
+        return
 
     def on_title_changed(self):
         self.update_title_topbar()
@@ -537,6 +551,11 @@ class Panel(Adw.Application):
         EventScroll.connect("scroll", self.scroll_event)
         self.top_panel_box_full.add_controller(EventScroll)
 
+    def maximize_last_view(self, *_):
+        sock = self.compositor()
+        print("asdf" * 100, self.last_view_toplevel_focused)
+        sock.maximize(self.last_view_toplevel_focused)
+
     def close_fullscreen_buttons(self):
         # Creating close and full screen buttons for the top bar
         self.cf_box = Gtk.Box()
@@ -546,7 +565,7 @@ class Panel(Adw.Application):
             None,
             "cf_button",
             None,
-            use_function=sock.maximize_focused,
+            use_function=self.maximize_last_view,
         )
         self.close_button = self.utils.CreateButton(
             "close-symbolic", "wayctl dispatch killactive", "cf_button", None
