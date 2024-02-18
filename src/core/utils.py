@@ -247,26 +247,29 @@ class Utils(Adw.Application):
                 return False
 
     def get_icon(self, wm_class, initial_title, title):
+        wm_class = wm_class.lower()
         icon = self.icon_exist(wm_class)
         if icon == "":
             app_id = self.compositor().get_focused_view()["app-id"]
             icon = self.icon_exist(app_id)
 
-        desk_local = self.search_local_desktop(initial_title)
-        desk = self.search_desktop(wm_class)
+        # handle web apps
+        if "microsoft-edge" in wm_class or "chromium" in wm_class:
+            desk_local = self.search_local_desktop(initial_title)
+            desk = self.search_desktop(wm_class)
+            if desk_local and "-Default" in desk_local:
+                icon = desk_local.split(".desktop")[0]
+                return icon
+            if desk_local is None:
+                if desk:
+                    icon = desk.split(".desktop")[0]
+                    return icon
 
         if "kitty" in wm_class.lower() and "kitty" not in title.lower():
             icon_exist = self.icon_exist(initial_title)
             if icon_exist:
                 return icon_exist
 
-        if desk_local and "-Default" in desk_local and icon == "":
-            icon = desk_local.split(".desktop")[0]
-            return icon
-        if desk_local is None and icon == "":
-            if desk:
-                icon = desk.split(".desktop")[0]
-                return icon
         if icon:
             return icon
 
@@ -280,9 +283,26 @@ class Utils(Adw.Application):
         image = None
         label = Gtk.Label.new()
         # zsh use titles instead of initial title
-        use_this_title = initial_title
+        # title max len, 4 words max
+
+        use_this_title = title
+
+        # show less words in the taskbar title
+        parse_title = use_this_title.split()
+        if len(parse_title) > 2:
+            use_this_title = " ".join(parse_title[:3])
+
         if "kitty" in wclass.lower():
             use_this_title = title
+        else:
+            self.gio_icon_list = Gio.AppInfo.get_all()
+            exist = [
+                i.get_display_name()
+                for i in self.gio_icon_list
+                if wclass == i.get_startup_wm_class()
+            ]
+            if exist:
+                use_this_title = exist[0]
 
         label.set_label(use_this_title)
         label.add_css_class("clicable_image_label")
