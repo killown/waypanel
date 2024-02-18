@@ -285,14 +285,9 @@ class Utils(Adw.Application):
         desk = self.search_desktop(wm_class)
 
         if "kitty" in wm_class.lower() and "kitty" not in title.lower():
-            icon = title.split()[0]
-            return icon
-        if (
-            "gnome-terminal-server" in wm_class.lower()
-            and "gnome-terminal-server" not in title.lower()
-        ):
-            icon = title.split()[0]
-            return icon
+            icon_exist = self.icon_exist(initial_title)
+            if icon_exist:
+                return icon_exist
 
         if desk_local and "-Default" in desk_local and icon == "":
             icon = desk_local.split(".desktop")[0]
@@ -342,7 +337,7 @@ class Utils(Adw.Application):
         image.set_icon_size(Gtk.IconSize.LARGE)
         image.props.margin_end = 5
         image.set_halign(Gtk.Align.END)
-        image.add_css_class("icon_from_popover_launcher")
+        image.add_css_class("icon_from_clicable_image")
 
         box.append(image)
         box.append(label)
