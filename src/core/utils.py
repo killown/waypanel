@@ -33,6 +33,8 @@ class Utils(Adw.Application):
         self.icon_names = [
             icon.split(".")[-1].lower() for icon in Gtk.IconTheme().get_icon_names()
         ]
+        self.gio_icon_list = Gio.AppInfo.get_all()
+
         self.focused_view_id = None
         if not os.path.exists(self.config_path):
             os.makedirs(self.config_path)
@@ -185,11 +187,31 @@ class Utils(Adw.Application):
     def icon_exist(self, argument):
         if "." in argument:
             argument = argument.split(".")[-1]
+
+        # we split title and consider initial_title in certain cases
+        # there is some titles that starts with "app: some title"
+        # so if we simply title.split()[0] won't catch this case
+        if ":" in argument:
+            argument = argument.split(":")[0]
+
         if argument:
-            exist = [name for name in self.icon_names if argument.lower() in name]
+            # try to methods, with gtk and gio
+            exist = None
+            exist = [
+                i.get_icon()
+                for i in self.gio_icon_list
+                if argument.lower() == i.get_startup_wm_class()
+            ]
+
             if exist:
-                exist = exist[0]
+                # found icons, so extract from the list
+                exist = exist[0].get_names()[0]
                 return exist
+            else:
+                exist = [name for name in self.icon_names if argument.lower() in name]
+                if exist:
+                    exist = exist[0]
+                    return exist
         return ""
 
     def create_taskbar_launcher(
@@ -202,67 +224,18 @@ class Utils(Adw.Application):
         view_id,
         callback=None,
     ):
-        if ".desktop" in wmclass:
-            wmclass = wmclass.split(".desktop")[0]
-            if "org." in wmclass:
-                wmclass = wmclass.split("org.")[-1]
-
         # Map orientation to Gtk.Orientation
         if orientation == "h":
             orientation = Gtk.Orientation.HORIZONTAL
         elif orientation == "v":
             orientation = Gtk.Orientation.VERTICAL
 
-        # Check if a window with the given address is already open
-
         icon = self.get_icon(wmclass, initial_title, title)
-
-        # Special case for "zsh" initial_title
-        if wmclass == "kitty":
-            label = title.split(" ")[0]
-        if wmclass in "gnome-terminal-server":
-            label = title.split(" ")[0]
-            icon_exist = [i for i in self.icon_theme_list if label in i]
-            try:
-                icon = icon_exist[-1]
-            except IndexError:
-                pass
-
-        # button title will appear captalized
-        initial_title = " ".join(i.capitalize() for i in initial_title.split())
-
-        # Load panel config and check if there is a custom icon set
-        with open(self.topbar_config, "r") as f:
-            config = toml.load(f)
-        try:
-            # Try to get icon information from the configuration file
-            icon = config["change_icon_title"][wmclass]
-        except KeyError:
-            pass
-
-        # Load dockbar configuration and set the icon from default if exist
-        with open(self.dockbar_config, "r") as f:
-            config = toml.load(f)
-        try:
-            # Try to get icon information from the configuration file
-            icon = config[wmclass.lower()]["icon"]
-        except KeyError:
-            pass
-
-        # Set additional label-based icons for specific initial_titles (zsh, fish)
-        label = (
-            title.split(" ")[0]
-            if wmclass in ["kitty", "gnome-terminal-server"]
-            else None
-        )
 
         # Create a clickable image button and attach a gesture if callback is provided
         button = self.create_clicable_image(
             icon, class_style, wmclass, title, initial_title, view_id
         )
-        # if callback is not None:
-        #    self.CreateGesture(button, 3, callback)
-
         return button
 
     def search_str_inside_file(self, file_path, word):
@@ -277,8 +250,6 @@ class Utils(Adw.Application):
         icon = self.icon_exist(wm_class)
         if icon == "":
             app_id = self.compositor().get_focused_view()["app-id"]
-            if "firefox" in app_id:
-                app_id = "firefox"
             icon = self.icon_exist(app_id)
 
         desk_local = self.search_local_desktop(initial_title)
@@ -307,31 +278,14 @@ class Utils(Adw.Application):
         box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
         box.add_css_class(Class_Style)
         image = None
-        if icon is None:
-            icon = ""
         label = Gtk.Label.new()
         # zsh use titles instead of initial title
         use_this_title = initial_title
         if "kitty" in wclass.lower():
             use_this_title = title
-            icon = title.split()[0]
-        if "gnome-terminal-server" in wclass.lower():
-            use_this_title = title
-            icon = title.split()[0]
-
-        desktop_local_file = self.search_local_desktop(initial_title)
-        if desktop_local_file:
-            icon = desktop_local_file.split(".desktop")[0]
 
         label.set_label(use_this_title)
         label.add_css_class("clicable_image_label")
-
-        icon = self.get_icon(wclass, initial_title, title)
-        # panel.toml has filters for missing icons
-        try:
-            icon = self.panel_cfg["change_icon_title"][icon]
-        except Exception as e:
-            print(e)
 
         image = Gtk.Image.new_from_icon_name(icon)
         image.set_icon_size(Gtk.IconSize.LARGE)
