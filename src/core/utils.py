@@ -29,9 +29,9 @@ class Utils(Adw.Application):
         self.cmd_config = os.path.join(self.config_path, "cmd.toml")
         self.psutil_store = {}
         self.panel_cfg = self.load_topbar_config()
-        self.icon_theme_list = Gtk.IconTheme().get_icon_names()
+        # split the org.gnome dots from the list
         self.icon_names = [
-            i.get_id().split(".")[0].lower() for i in Gio.AppInfo.get_all()
+            icon.split(".")[-1].lower() for icon in Gtk.IconTheme().get_icon_names()
         ]
         self.focused_view_id = None
         if not os.path.exists(self.config_path):
@@ -172,31 +172,6 @@ class Utils(Adw.Application):
                 return deskfile
         return None
 
-    def update_icon(self, wm_class, initial_title, title):
-        # Set window icon based on icon_exist
-        if " " in initial_title:
-            initial_title = initial_title.replace(" ", "")
-        icon_exist = self.icon_exist(wm_class)
-        if wm_class in icon_exist:
-            return wm_class
-        if wm_class not in icon_exist:
-            # If no icon for wm_class, check if there's an icon for the initial_title
-            icon_exist = self.icon_exist(initial_title)
-            if initial_title in icon_exist:
-                return initial_title
-        # If still no icon, search for desktop files based on wmclass and initial_title
-        desk = self.search_desktop(wm_class)
-        desk_local = self.search_local_desktop(initial_title)
-        if wm_class not in icon_exist and initial_title not in icon_exist:
-            if desk_local and "-Default" in desk_local:
-                icon = desk_local.split(".desktop")[0]
-                return icon
-            if desk_local is None:
-                if desk:
-                    icon = desk.split(".desktop")[0]
-                    return icon
-        return None
-
     def search_desktop(self, wm_class):
         all_apps = Gio.AppInfo.get_all()
         desktop_files = [
@@ -208,9 +183,14 @@ class Utils(Adw.Application):
             return None
 
     def icon_exist(self, argument):
-        if argument is not None:
+        if "." in argument:
+            argument = argument.split(".")[-1]
+        if argument:
             exist = [name for name in self.icon_names if argument.lower() in name]
-            return exist
+            if exist:
+                exist = exist[0]
+                return exist
+        return ""
 
     def create_taskbar_launcher(
         self,
@@ -235,7 +215,7 @@ class Utils(Adw.Application):
 
         # Check if a window with the given address is already open
 
-        icon = self.update_icon(wmclass, initial_title, title)
+        icon = self.get_icon(wmclass, initial_title, title)
 
         # Special case for "zsh" initial_title
         if wmclass == "kitty":
@@ -294,49 +274,37 @@ class Utils(Adw.Application):
                 return False
 
     def get_icon(self, wm_class, initial_title, title):
-        icon = None
+        icon = self.icon_exist(wm_class)
+        if icon == "":
+            app_id = self.compositor().get_focused_view()["app-id"]
+            if "firefox" in app_id:
+                app_id = "firefox"
+            icon = self.icon_exist(app_id)
 
-        if ".desktop" in wm_class:
-            wm_class = wm_class.split(".desktop")[0]
-            if "org." in wm_class:
-                wm_class = wm_class.split("org.")[-1]
-
-        # Set additional label-based icons for specific initial_titles (zsh, fish)
-        # this block of code is only for shell icons, like nvim, htop and so on
-        label = (
-            title.split()[0]
-            if wm_class.startswith(("kitty", "gnome-terminal-server"))
-            else None
-        )
-
-        if label:
-            icon_exist = self.icon_exist(label)
-            if icon_exist:
-                return label
-
-        if icon is not None:
-            return icon
-
-        icon_exist = self.icon_exist(wm_class)
-        if wm_class in icon_exist:
-            return wm_class
-
-        # If no icon for wm_class, check if there's an icon for the initial_title
-        icon_exist = self.icon_exist(initial_title)
-        if initial_title in icon_exist:
-            return initial_title
-
-        # If still no icon, search for desktop files based on wmclass and initial_title
         desk_local = self.search_local_desktop(initial_title)
         desk = self.search_desktop(wm_class)
-        if desk_local and "-Default" in desk_local:
+
+        if "kitty" in wm_class.lower() and "kitty" not in title.lower():
+            icon = title.split()[0]
+            return icon
+        if (
+            "gnome-terminal-server" in wm_class.lower()
+            and "gnome-terminal-server" not in title.lower()
+        ):
+            icon = title.split()[0]
+            return icon
+
+        if desk_local and "-Default" in desk_local and icon == "":
             icon = desk_local.split(".desktop")[0]
             return icon
-        if desk_local is None:
+        if desk_local is None and icon == "":
             if desk:
                 icon = desk.split(".desktop")[0]
                 return icon
-        return None
+        if icon:
+            return icon
+
+        return ""
 
     def create_clicable_image(
         self, icon, Class_Style, wclass, title, initial_title, view_id
@@ -369,10 +337,8 @@ class Utils(Adw.Application):
             icon = self.panel_cfg["change_icon_title"][icon]
         except Exception as e:
             print(e)
-        if isinstance(icon, str):
-            image = Gtk.Image.new_from_icon_name(icon)
-        else:
-            image = Gtk.Image.new_from_gicon(icon)
+
+        image = Gtk.Image.new_from_icon_name(icon)
         image.set_icon_size(Gtk.IconSize.LARGE)
         image.props.margin_end = 5
         image.set_halign(Gtk.Align.END)

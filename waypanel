@@ -16,6 +16,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
+from src.core.utils import Utils as utils
 from src.core.create_panel import CreatePanel
 import asyncio
 from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
@@ -119,8 +120,6 @@ class Panel(Adw.Application):
         # Setup panel boxes
         self._setup_panel_boxes()
 
-        # Monitor dimensions and volume controls
-        self.monitor_width, self.monitor_height = 0, 0
         self.toggle_mute = {}
         self.volume = 0
         self.clock_box = Gtk.Box()
@@ -131,7 +130,8 @@ class Panel(Adw.Application):
 
         # Load configurations
         self.panel_cfg = self.load_topbar_config()
-        self.icon_names = [icon.lower() for icon in Gtk.IconTheme().get_icon_names()]
+        self.utils = utils()
+        self.get_icon = self.utils.get_icon
         self.active_window_changed = None
         self.notifications = []
         self.popover_bookmarks = None
@@ -150,6 +150,14 @@ class Panel(Adw.Application):
 
         self.window_title_topbar_length = config["window_title_lenght"]["size"]
 
+        # Monitor dimensions to set the panel size
+        self.monitor_width, self.monitor_height = 0, 0
+        if "monitor" in config:
+            self.monitor_width, self.monitor_height = (
+                config["monitor"]["width"],
+                config["monitor"]["height"],
+            )
+        self.monitor_name = config["monitor"]["name"]
         with open(self.topbar_config, "r") as f:
             self.topbar_config_loaded = toml.load(f)
 
@@ -304,48 +312,53 @@ class Panel(Adw.Application):
     def all_events_watch(self):
         sock = self.compositor()
         sock.watch()
-        plugin_state = None
         while 1:
             try:
                 msg = sock.read_message()
-                if "event" in msg:
+                view = None
+
+                if "view" in msg:
                     view = msg["view"]
+
+                if "event" in msg:
                     if msg["event"] == "view-title-changed":
                         self.on_title_changed()
+
                     if msg["event"] == "app-id-changed":
                         self.on_app_id_changed()
+
                     if msg["event"] == "view-focused":
                         self.on_view_focused()
-                        if view["role"] == "toplevel":
-                            self.on_view_role_toplevel_focused()
-                            # last view focus only for top level Windows
-                            # means that views like layer shell won't have focus set in this var
-                            # this is necessary for example, if you click in the maximize buttons
-                            # in the top bar then you need a toplevel window to maximize_last_view
-                            # if not, it will try to maximize the LayerShell
-                            # big comment because I am sure I will forget why I did this
-                            self.last_view_toplevel_focused = view["id"]
-
-                    if msg["view"] is not None:
-                        if plugin_state is not None:
-                            # plugin state stores the view id
-                            plugin_state = None
-                            id = self.last_view_toplevel_focused
-                            sock.maximize(view[id])
+                        if view is not None:
+                            if view["role"] == "toplevel":
+                                self.on_view_role_toplevel_focused(view)
 
                     if msg["event"] == "plugin-activation-state-changed":
-                        if msg["plugin"] == "expo":
-                            plugin_state = view["id"]
-                            self.on_expo_activated_signal()
+                        # if plugin state is true (activated)
+                        if msg["state"] is True:
+                            if msg["plugin"] == "expo":
+                                self.on_expo_activated()
+                            if msg["plugin"] == "scale":
+                                self.on_scale_activated()
 
-                        if msg["plugin"] == "scale":
-                            plugin_state = view["id"]
-                            self.on_scale_activated_signal()
+                        # if plugin state is false (desactivated)
+                        if msg["state"] is False:
+                            if msg["plugin"] == "expo":
+                                self.on_expo_desactivated()
+                            if msg["plugin"] == "scale":
+                                self.on_scale_desactivated()
 
             except Exception as e:
                 print(e)
 
-    def on_view_role_toplevel_focused(self):
+    def on_view_role_toplevel_focused(self, view):
+        # last view focus only for top level Windows
+        # means that views like layer shell won't have focus set in this var
+        # this is necessary for example, if you click in the maximize buttons
+        # in the top bar then you need a toplevel window to maximize_last_view
+        # if not, it will try to maximize the LayerShell
+        # big comment because I am sure I will forget why I did this
+        self.last_view_toplevel_focused = view["id"]
         return
 
     def on_title_changed(self):
@@ -360,8 +373,24 @@ class Panel(Adw.Application):
     def on_scale_activated(self):
         return
 
+    def on_expo_desactivated(self):
+        # when you move a view in expo, it sometimes will leave workspace area
+        # isn't the panel goal to change compositor behaviour
+        # but for some a nice quick fix, if you dont need this
+        # just disable this function call
+        self.maximize_last_view_on_expo_desacivated()
+        return
+
+    def on_scale_desactivated(self):
+        return
+
     def on_view_focused(self):
         self.update_title_topbar()
+
+    def maximize_last_view_on_expo_desacivated(self):
+        id = self.last_view_toplevel_focused
+        sock = self.compositor()
+        sock.maximize(id)
 
     def start_thread_all_events(self):
         self.all_events = BackgroundTask(
@@ -389,9 +418,13 @@ class Panel(Adw.Application):
     def monitor_width_height(self):
         # get monitor info and set the width, height for the panela
         sock = self.compositor()
-        output = sock.get_focused_output_geometry()
-        self.monitor_width = output["width"]
-        self.monitor_height = output["height"]
+        focused_view = sock.get_focused_view()
+        # there is no monitor focused output while there is no views
+        if focused_view:
+            output = self.get_monitor_info()
+            output = output[self.monitor_name]
+            self.monitor_width = output[0]
+            self.monitor_height = output[1]
 
     # def notification_msg(self, bus, msg):
     #     m = [str(m) for m in msg.get_args_list() if isinstance(m, dbus.String)]
@@ -1194,17 +1227,17 @@ class Panel(Adw.Application):
         """
         # Retrieve information about the active window
         sock = self.compositor()
-        focused_view = sock.get_focused_view()
-        title = focused_view["title"]
-        wm_class = focused_view["app-id"].lower()
+        view = sock.get_view(self.last_view_toplevel_focused)
+        title = view["title"]
+        wm_class = view["app-id"].lower()
         initial_title = title.split()[0].lower()
 
         # Adjust the window class based on specific conditions
         if "firefox" in wm_class and "." in title:
             wm_class = title.split()[0]
-        if initial_title == "zsh":
+        if wm_class == "kitty":
             wm_class = title.split()[0]
-        if initial_title == "fish":
+        if wm_class == "gnome-terminal-server":
             wm_class = title.split()[0]
 
         # Load existing window notes from the configuration file
@@ -1356,17 +1389,11 @@ class Panel(Adw.Application):
         try:
             sock = self.compositor()
             title = sock.get_focused_view_title()
+            initial_title = title.split()[0]
             if title == "":
                 return True
             wclass = sock.get_focused_view_app_id()
 
-            if self.window_title_from_topbar == title:
-                self.window_title_from_topbar = title
-                return True
-
-            self.window_title_from_topbar = (
-                title  # Modify title based on certain patterns
-            )
             title = self.modify_title(title)
 
             # Limit the title length
@@ -1378,7 +1405,7 @@ class Panel(Adw.Application):
                 wclass = custom_icon
 
             # Update title and icon
-            self.update_title_and_icons(title, wclass, wclass)
+            self.update_title_and_icons(title, wclass, initial_title)
         except Exception as e:
             print(e)
         return True
@@ -1478,70 +1505,12 @@ class Panel(Adw.Application):
 
         return title
 
-    def icon_exist(self, argument):
-        if argument is not None:
-            exist = [name for name in self.icon_names if argument.lower() in name]
-            return exist
-
-    def get_icon(self, wm_class, initial_title, title):
-        icon = None
-
-        if ".desktop" in wm_class:
-            wm_class = wm_class.split(".desktop")[0]
-            if "org." in wm_class:
-                wm_class = wm_class.split("org.")[-1]
-
-        # Set additional label-based icons for specific initial_titles (zsh, fish)
-        # this block of code is only for shell icons, like nvim, htop and so on
-        label = (
-            title.split()[0]
-            if wm_class.startswith(("kitty", "gnome-terminal-server"))
-            else None
-        )
-
-        if label:
-            icon_exist = self.icon_exist(label)
-            if icon_exist:
-                self.window_title.set_icon_name(label)
-                return label
-
-        try:
-            icon = self.topbar_config_loaded["change_icon_title"][wm_class]
-        except KeyError:
-            try:
-                icon = self.dockbar_config_loaded[wm_class]["icon"]
-            except KeyError:
-                pass
-
-        if icon is not None:
-            return icon
-
-        icon_exist = self.icon_exist(wm_class)
-        if wm_class in icon_exist:
-            return wm_class
-
-        # If no icon for wm_class, check if there's an icon for the initial_title
-        icon_exist = self.icon_exist(initial_title)
-        if initial_title in icon_exist:
-            return initial_title
-
-        # If still no icon, search for desktop files based on wmclass and initial_title
-        desk_local = self.utils.search_local_desktop(initial_title)
-        desk = self.utils.search_desktop(wm_class)
-        if desk_local and "-Default" in desk_local:
-            icon = desk_local.split(".desktop")[0]
-            return icon
-        if desk_local is None:
-            if desk:
-                icon = desk.split(".desktop")[0]
-                return icon
-        return None
-
     def update_title_and_icons(self, title, wm_class, initial_title):
         """Update title and icons."""
         # some classes and initial titles has whitespaces which will lead to not found icons
         icon = self.get_icon(wm_class, initial_title, title)
-        if icon is not None:
+        print(icon)
+        if icon:
             self.window_title.set_icon_name(icon)
             self.tbclass.set_icon_name(icon)
 
