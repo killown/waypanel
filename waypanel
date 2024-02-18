@@ -289,16 +289,15 @@ class Panel(Adw.Application):
         )
 
     def update_background_panel(self):
-        # just to make sure this function will never fails
-
         sock = self.compositor()
-        title = sock.get_focused_view_title()
-        workspace_id = sock.get_active_workspace_number()
-        pid = sock.get_focused_view_pid()
-        wclass = sock.get_focused_view_app_id()
-        initial_title = title.split(" ")[0]
         if sock.is_focused_view_fullscreen():
             return True
+        view = sock.get_focused_view()
+        title = view["title"]
+        workspace_id = sock.get_active_workspace_number()
+        pid = view["pid"]
+        wclass = view["app-id"]
+        initial_title = title.split(" ")[0]
         # Update title and icon
         self.update_widgets(
             title,
