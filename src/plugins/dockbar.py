@@ -270,11 +270,6 @@ class Dockbar(Adw.Application):
             if pid in self.taskbar_list and not update_button:
                 continue
 
-            # Quick fix for nautilus initial class
-            if "org.gnome.nautilus" in wm_class:
-                initial_title = "nautilus"
-            # Create a taskbar launcher button using utility function
-
             button = self.utils.create_taskbar_launcher(
                 wm_class,
                 title,
@@ -330,34 +325,6 @@ class Dockbar(Adw.Application):
             button = self.buttons_pid[pid][0]
             self.taskbar.remove(button)
             self.update_taskbar("h", "taskbar", id)
-        return True
-
-    def check_pids(self):
-        # *** Need a fix since this code depends on the Hyprshell plugin
-        if not instance.get_workspace_by_name("OVERVIEW"):
-            return True
-
-        # do not check anything if no window closed or created
-        if not self.is_any_window_created_or_closed():
-            self.update_active_window_shell()
-            return True
-
-        try:
-            # Get the active window and all PIDs of windows with wm_class
-            active_window = instance.get_active_window()
-            list_pids = [i for i in sock.list_pids() if pid == i]
-
-            # Check if the PIDs have changed
-            if all_pids != self.all_pids:
-                self.taskbar_remove()
-                self.all_pids = all_pids
-                self.Taskbar("h", "taskbar")
-                return True
-            self.update_active_window_shell()
-        except Exception as e:
-            print(e)
-
-        # Return True to indicate successful execution of the check_pids function
         return True
 
     def taskbar_remove(self, pid):
