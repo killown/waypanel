@@ -387,9 +387,10 @@ class Panel(Adw.Application):
         self.update_title_topbar()
 
     def maximize_last_view_on_expo_desacivated(self):
-        id = self.last_view_toplevel_focused
-        sock = self.compositor()
-        sock.maximize(id)
+        # id = self.last_view_toplevel_focused
+        # sock = self.compositor()
+        # sock.maximize(id)
+        return
 
     def start_thread_all_events(self):
         self.all_events = BackgroundTask(
