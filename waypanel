@@ -513,7 +513,7 @@ class Panel(Adw.Application):
     def show_panels(self):
         if self.all_panels_enabled:
             self.top_panel.present()
-            self.top_panel_background.present()
+            # self.top_panel_background.present()
             self.dock.do_start()
             # self.right_panel.present()
 
