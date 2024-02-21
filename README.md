@@ -1,8 +1,5 @@
 ## waypanel
 
-![screenshot](https://github.com/killown/hyprpybar/assets/24453/ad87cdc6-0634-4af5-84f0-b24ad45cf003)
-
-![screenshot](https://github.com/killown/hyprpybar/assets/24453/b7d6ae14-bdc8-4901-8b12-4686fdfa293c)
 
 ##### _Gtk4/Adwaita panel made for wayfire_
 
@@ -16,8 +13,6 @@ cd waypanel
 sh install
 mkdir ~/.config/waypanel; cp config/* ~/.config/waypanel
 ```
-
-[](https://www.youtube.com/watch?v=UYnr8RLHP7c "Youtube Video")
 
 The info panel is intended to be used with hyprshell plugin
 
