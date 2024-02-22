@@ -249,62 +249,79 @@ class Utils(Adw.Application):
     def get_icon(self, wm_class, initial_title, title):
         wm_class = wm_class.lower()
         icon = self.icon_exist(wm_class)
-        if icon == "":
-            app_id = self.compositor().get_focused_view()["app-id"]
+
+        if not icon:
+            app_id = self.compositor().get_focused_view().get("app-id", "")
             icon = self.icon_exist(app_id)
 
         # handle web apps
-        if "microsoft-edge" in wm_class or "chromium" in wm_class:
+        if any(app in wm_class for app in ["microsoft-edge", "chromium"]):
             desk_local = self.search_local_desktop(initial_title)
             desk = self.search_desktop(wm_class)
-            if desk_local and "-Default" in desk_local:
-                icon = desk_local.split(".desktop")[0]
-                return icon
-            if desk_local is None:
-                if desk:
-                    icon = desk.split(".desktop")[0]
-                    return icon
 
-        if "kitty" in wm_class.lower() and "kitty" not in title.lower():
+            if desk_local and "-Default" in desk_local:
+                return desk_local.split(".desktop")[0]
+
+            if desk:
+                return desk.split(".desktop")[0]
+
+        if "kitty" in wm_class and "kitty" not in title.lower():
             icon_exist = self.icon_exist(initial_title)
             if icon_exist:
                 return icon_exist
 
-        if icon:
-            return icon
+        return icon if icon else ""
 
-        return ""
+    # maybe remove at some point, just test the new function first
+    # def get_icon(self, wm_class, initial_title, title):
+    #     wm_class = wm_class.lower()
+    #     icon = self.icon_exist(wm_class)
+    #     if icon == "":
+    #         app_id = self.compositor().get_focused_view()["app-id"]
+    #         icon = self.icon_exist(app_id)
+    #
+    #     # handle web apps
+    #     if "microsoft-edge" in wm_class or "chromium" in wm_class:
+    #         desk_local = self.search_local_desktop(initial_title)
+    #         desk = self.search_desktop(wm_class)
+    #         if desk_local and "-Default" in desk_local:
+    #             icon = desk_local.split(".desktop")[0]
+    #             return icon
+    #         if desk_local is None:
+    #             if desk:
+    #                 icon = desk.split(".desktop")[0]
+    #                 return icon
+    #
+    #     if "kitty" in wm_class.lower() and "kitty" not in title.lower():
+    #         icon_exist = self.icon_exist(initial_title)
+    #         if icon_exist:
+    #             return icon_exist
+    #
+    #     if icon:
+    #         return icon
+    #
+    #     return ""
 
     def create_clicable_image(
         self, icon, Class_Style, wclass, title, initial_title, view_id
     ):
         box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
         box.add_css_class(Class_Style)
-        image = None
-        label = Gtk.Label.new()
-        # zsh use titles instead of initial title
-        # title max len, 4 words max
 
-        use_this_title = title
+        use_this_title = title.split("\n", 1)[0][
+            :40
+        ]  # Get the first line and limit to 40 characters
 
-        # show less words in the taskbar title
-        parse_title = use_this_title.split()
-        if len(parse_title) > 2:
-            use_this_title = " ".join(parse_title[:3])
-
-        if "kitty" in wclass.lower():
-            use_this_title = title
-        else:
+        if "kitty" not in wclass.lower():
             self.gio_icon_list = Gio.AppInfo.get_all()
             exist = [
                 i.get_display_name()
                 for i in self.gio_icon_list
                 if wclass == i.get_startup_wm_class()
             ]
-            if exist:
-                use_this_title = exist[0]
+            use_this_title = exist[0] if exist else use_this_title
 
-        label.set_label(use_this_title)
+        label = Gtk.Label.new(use_this_title)
         label.add_css_class("clicable_image_label")
 
         image = Gtk.Image.new_from_icon_name(icon)
@@ -315,10 +332,55 @@ class Utils(Adw.Application):
 
         box.append(image)
         box.append(label)
-        # if you put the add_css_class above, wont work
         box.add_css_class("box_from_clicable_image")
+
         self.CreateGesture(box, 1, lambda *_: self.set_view_focus(view_id))
         return box
+
+    # def create_clicable_image(
+    #     self, icon, Class_Style, wclass, title, initial_title, view_id
+    # ):
+    #     box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
+    #     box.add_css_class(Class_Style)
+    #     image = None
+    #     label = Gtk.Label.new()
+    #     # zsh use titles instead of initial title
+    #     # title max len, 4 words max
+    #
+    #     use_this_title = title
+    #
+    #     # show less words in the taskbar title
+    #     parse_title = use_this_title.split()
+    #     if len(parse_title) > 2:
+    #         use_this_title = " ".join(parse_title[:3])
+    #
+    #     if "kitty" in wclass.lower():
+    #         use_this_title = title
+    #     else:
+    #         self.gio_icon_list = Gio.AppInfo.get_all()
+    #         exist = [
+    #             i.get_display_name()
+    #             for i in self.gio_icon_list
+    #             if wclass == i.get_startup_wm_class()
+    #         ]
+    #         if exist:
+    #             use_this_title = exist[0]
+    #
+    #     label.set_label(use_this_title)
+    #     label.add_css_class("clicable_image_label")
+    #
+    #     image = Gtk.Image.new_from_icon_name(icon)
+    #     image.set_icon_size(Gtk.IconSize.LARGE)
+    #     image.props.margin_end = 5
+    #     image.set_halign(Gtk.Align.END)
+    #     image.add_css_class("icon_from_clicable_image")
+    #
+    #     box.append(image)
+    #     box.append(label)
+    #     # if you put the add_css_class above, wont work
+    #     box.add_css_class("box_from_clicable_image")
+    #     self.CreateGesture(box, 1, lambda *_: self.set_view_focus(view_id))
+    #     return box
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
@@ -326,7 +388,13 @@ class Utils(Adw.Application):
 
     def set_view_focus(self, view_id):
         sock = self.compositor()
-        sock.scale_leave()
+        try:
+            has_views = sock.get_views_from_active_workspace()
+            # scale leave only when there is view, if not the wayfire may crash
+            if has_views:
+                sock.scale_leave()
+        except Exception as e:
+            print(e)
         sock.set_focus(view_id)
 
     def CreateButton(
