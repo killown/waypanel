@@ -297,7 +297,7 @@ class Panel(Adw.Application):
         workspace_id = sock.get_active_workspace_number()
         pid = view["pid"]
         wclass = view["app-id"]
-        initial_title = title.split(" ")[0]
+        initial_title = title.split()[0]
         # Update title and icon
         self.update_widgets(
             title,
@@ -513,7 +513,7 @@ class Panel(Adw.Application):
     def show_panels(self):
         if self.all_panels_enabled:
             self.top_panel.present()
-            # self.top_panel_background.present()
+            self.top_panel_background.present()
             self.dock.do_start()
             # self.right_panel.present()
 
@@ -586,7 +586,6 @@ class Panel(Adw.Application):
 
     def maximize_last_view(self, *_):
         sock = self.compositor()
-        print("asdf" * 100, self.last_view_toplevel_focused)
         sock.maximize(self.last_view_toplevel_focused)
 
     def close_fullscreen_buttons(self):
@@ -821,7 +820,7 @@ class Panel(Adw.Application):
                         position,
                         self.exclusive,
                         self.monitor_width,
-                        18,
+                        24,
                         "TopBarBackground",
                     )
 
@@ -988,7 +987,6 @@ class Panel(Adw.Application):
             None
         """
         # Check the direction of the scroll and adjust the volume using the "pactl" command
-        print(_dx, dy)
         if dy > 0:
             self.utils.run_app("pactl -- set-sink-volume 0 -8%")
         else:
@@ -1509,7 +1507,6 @@ class Panel(Adw.Application):
         """Update title and icons."""
         # some classes and initial titles has whitespaces which will lead to not found icons
         icon = self.get_icon(wm_class, initial_title, title)
-        print(icon)
         if icon:
             self.window_title.set_icon_name(icon)
             self.tbclass.set_icon_name(icon)
