@@ -7,14 +7,21 @@ import psutil
 from subprocess import Popen, call, check_output as out
 from collections import ChainMap
 import threading
-
+from src.core.create_panel import (
+    set_layer_position_exclusive,
+    unset_layer_position_exclusive,
+)
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("Gtk4LayerShell", "1.0")
 from gi.repository import Gtk4LayerShell as LayerShell
 from gi.repository import Gtk, Adw, GLib, Gio, GObject
-from ..core.create_panel import *
+from ..core.create_panel import (
+    CreatePanel,
+    set_layer_position_exclusive,
+    unset_layer_position_exclusive,
+)
 from ..core.utils import Utils
 import numpy as np
 import wayfire as ws
@@ -133,6 +140,20 @@ class Dockbar(Adw.Application):
                     self.left_panel.set_content(self.dockbar)
                     self.left_panel.present()
 
+                # Check if the panel is positioned on the left side
+                if "right" == p:
+                    exclusive = panel_toml[p]["Exclusive"] == "True"
+                    position = panel_toml[p]["position"]
+                    # Create a right panel and associated components
+                    self.right_panel = CreatePanel(
+                        self, "RIGHT", position, exclusive, 32, 0, "RightBar"
+                    )
+                    workspace_buttons = self.utils.CreateFromAppList(
+                        self.workspace_list_config, "v", "RightBar", None, True
+                    )
+                    self.right_panel.set_content(workspace_buttons)
+                    self.right_panel.present()
+
                 # Check if the panel is positioned at the bottom
                 if "bottom" == p:
                     exclusive = panel_toml[p]["Exclusive"] == "True"
@@ -157,31 +178,6 @@ class Dockbar(Adw.Application):
 
             # LayerShell.set_layer(self.left_panel, LayerShell.Layer.TOP)
             # LayerShell.set_layer(self.bottom_panel, LayerShell.Layer.TOP)
-
-    def set_layer_position_exclusive(self, msg):
-        if msg["view"] is None:
-            # update taskbar if overview is activated
-            LayerShell.set_layer(self.left_panel, LayerShell.Layer.TOP)
-            LayerShell.set_layer(self.bottom_panel, LayerShell.Layer.TOP)
-
-        else:
-            self.compositor_window_changed()
-            # LayerShell.set_exclusive_zone(self.left_panel, 0)
-            # LayerShell.set_exclusive_zone(self.bottom_panel, 0)
-            LayerShell.set_layer(self.left_panel, LayerShell.Layer.BOTTOM)
-            LayerShell.set_layer(self.bottom_panel, LayerShell.Layer.BOTTOM)
-
-    def event_scale_view(self):
-        sock = self.compositor()
-        sock.watch()
-        while 1:
-            msg = sock.read_message()
-            if "event" in msg:
-                # lets try to not break the loop then catch the Exception
-                try:
-                    self.set_layer_position_exclusive(msg)
-                except Exception as e:
-                    print(e)
 
     def on_compositor_finished(self):
         # non working code
@@ -212,25 +208,83 @@ class Dockbar(Adw.Application):
     def TaskbarWatch(self):
         sock = self.compositor()
         sock.watch()
+        view = None
         while True:
             try:
                 msg = sock.read_message()
                 if "view" in msg:
                     view = msg["view"]
-                    if "event" in msg and msg["event"] == "view-title-changed":
-                        self.Taskbar("h", "taskbar")
-                        self.update_active_window_shell(view["id"])
-                        # if msg["event"] == "view-focused":
-                        # GLib.idle_add(self.update_title_topbar)
-                    # window created
-                    if "event" in msg and msg["event"] == "view-mapped":
-                        self.taskbar_window_created()
-                    # window destroyed
-                    if "event" in msg and msg["event"] == "view-unmapped":
-                        pid = view["pid"]
-                        self.taskbar_window_destroyed(pid)
+
+                if "event" in msg:
+                    if msg["event"] == "view-title-changed":
+                        self.on_title_changed(msg["view"])
+
+                    if msg["event"] == "app-id-changed":
+                        self.on_app_id_changed()
+
+                    if msg["event"] == "view-focused":
+                        self.on_view_focused()
+                        if view is not None:
+                            if view["role"] == "toplevel":
+                                self.on_view_role_toplevel_focused(view)
+
+                    if msg["event"] == "view-mapped":
+                        self.on_view_created()
+
+                    if msg["event"] == "view-unmapped":
+                        self.on_view_destroyed(msg["view"])
+
+                    if msg["event"] == "plugin-activation-state-changed":
+                        # if plugin state is true (activated)
+                        if msg["state"] is True:
+                            if msg["plugin"] == "expo":
+                                self.on_expo_activated()
+                            if msg["plugin"] == "scale":
+                                self.on_scale_activated()
+
+                        # if plugin state is false (desactivated)
+                        if msg["state"] is False:
+                            if msg["plugin"] == "expo":
+                                self.on_expo_desactivated()
+                            if msg["plugin"] == "scale":
+                                self.on_scale_desactivated()
             except Exception as e:
                 print(e)
+
+    def on_view_role_toplevel_focused(self, view):
+        return
+
+    def on_expo_activated(self):
+        return
+
+    def on_expo_desactivated(self):
+        return
+
+    def on_view_focused(self):
+        return
+
+    def on_scale_activated(self):
+        set_layer_position_exclusive(self.left_panel)
+        set_layer_position_exclusive(self.right_panel)
+        set_layer_position_exclusive(self.bottom_panel)
+
+    def on_scale_desactivated(self):
+        unset_layer_position_exclusive(self.left_panel)
+        unset_layer_position_exclusive(self.right_panel)
+        unset_layer_position_exclusive(self.bottom_panel)
+
+    def on_view_created(self):
+        self.taskbar_window_created()
+
+    def on_view_destroyed(self, view):
+        pid = view["pid"]
+        self.taskbar_window_destroyed(pid)
+
+    def on_title_changed(self, view):
+        self.Taskbar("h", "taskbar")
+        self.update_active_window_shell(view["id"])
+        # if msg["event"] == "view-focused":
+        # GLib.idle_add(self.update_title_topbar)
 
     def taskbar_window_created(self):
         self.Taskbar("h", "taskbar")

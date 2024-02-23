@@ -10,6 +10,19 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Adw, Gdk
 
 
+def set_layer_position_exclusive(window):
+    # update taskbar if overview is activated
+    # LayerShell.auto_exclusive_zone_enable(window)
+    LayerShell.set_layer(window, LayerShell.Layer.TOP)
+    # LayerShell.set_exclusive_zone(window, 56)
+
+
+def unset_layer_position_exclusive(window):
+    # LayerShell.auto_exclusive_zone_enable(window)
+    # LayerShell.set_exclusive_zone(window, 0)
+    LayerShell.set_layer(window, LayerShell.Layer.BOTTOM)
+
+
 def get_monitor_info():
     """
     Retrieve information about the connected monitors.
@@ -69,18 +82,27 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
 
     if layer == "TOP":
         LayerShell.set_layer(window, LayerShell.Layer.TOP)
-        LayerShell.set_exclusive_zone(window, 46)
+        LayerShell.set_exclusive_zone(window, 32)
 
     if anchor == "LEFT":
         LayerShell.set_anchor(window, LayerShell.Edge.LEFT, True)
+        if exclusive:
+            LayerShell.auto_exclusive_zone_enable(window)
 
     if anchor == "RIGHT":
         LayerShell.set_anchor(window, LayerShell.Edge.RIGHT, True)
+        if exclusive:
+            LayerShell.auto_exclusive_zone_enable(window)
 
     if anchor == "TOP":
         LayerShell.set_anchor(window, LayerShell.Edge.TOP, True)
+        if exclusive:
+            LayerShell.auto_exclusive_zone_enable(window)
+
     if anchor == "BOTTOM":
         LayerShell.set_anchor(window, LayerShell.Edge.BOTTOM, True)
+        if exclusive:
+            LayerShell.auto_exclusive_zone_enable(window)
 
     # LayerShell.set_margin(window, LayerShell.Edge.BOTTOM, 0)
     # LayerShell.set_margin(window, LayerShell.Edge.TOP, 0)

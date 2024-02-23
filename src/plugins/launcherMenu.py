@@ -41,7 +41,7 @@ class MenuLauncher(Adw.Application):
         self.app = app
         self.menubutton_launcher = Gtk.Button()
         self.menubutton_launcher.connect("clicked", self.open_popover_launcher)
-        self.menubutton_launcher.set_icon_name("archlinux-logo")
+        self.menubutton_launcher.set_icon_name("start-here-archlinux")
         obj.top_panel_box_widgets_left.append(self.menubutton_launcher)
 
     def create_popover_launcher(self, *_):
@@ -95,6 +95,7 @@ class MenuLauncher(Adw.Application):
             row_hbox.MYTEXT = name, filename  # to filter later
             self.listbox.append(row_hbox)
             line = Gtk.Label.new()
+            line.add_css_class("label_from_popover_launcher")
             line.add_css_class("")
             line.set_label(name)
             line.props.margin_start = 5
@@ -103,7 +104,6 @@ class MenuLauncher(Adw.Application):
 
             image = Gtk.Image.new_from_icon_name(icon)
             image.add_css_class("icon_from_popover_launcher")
-            image.set_icon_size(Gtk.IconSize.LARGE)
             image.props.margin_end = 5
             image.set_halign(Gtk.Align.END)
             row_hbox.append(image)
@@ -127,7 +127,6 @@ class MenuLauncher(Adw.Application):
 
             image = Gtk.Image.new_from_gicon(icon)
             image.add_css_class("icon_from_popover_launcher")
-            image.set_icon_size(Gtk.IconSize.LARGE)
             image.props.margin_end = 5
             image.set_halign(Gtk.Align.END)
             row_hbox.append(image)

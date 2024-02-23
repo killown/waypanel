@@ -13,11 +13,14 @@ from subprocess import Popen
 from subprocess import check_output, call
 import gi
 
+gi.require_version("Gtk4LayerShell", "1.0")
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
 from src.core.utils import Utils as utils
 from src.core.create_panel import CreatePanel
+from src.core.create_panel import set_layer_position_exclusive
+from src.core.create_panel import unset_layer_position_exclusive
 import asyncio
 from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
 import dbus
@@ -290,8 +293,8 @@ class Panel(Adw.Application):
 
     def update_background_panel(self):
         sock = self.compositor()
-        if sock.is_focused_view_fullscreen():
-            return True
+        # if sock.is_focused_view_fullscreen():
+        #    return True
         view = sock.get_focused_view()
         title = view["title"]
         workspace_id = sock.get_active_workspace_number()
@@ -332,6 +335,12 @@ class Panel(Adw.Application):
                             if view["role"] == "toplevel":
                                 self.on_view_role_toplevel_focused(view)
 
+                    if msg["event"] == "view-mapped":
+                        self.on_view_created()
+
+                    if msg["event"] == "view-unmapped":
+                        self.on_view_destroyed()
+
                     if msg["event"] == "plugin-activation-state-changed":
                         # if plugin state is true (activated)
                         if msg["state"] is True:
@@ -363,13 +372,18 @@ class Panel(Adw.Application):
     def on_title_changed(self):
         self.update_title_topbar()
 
+    def on_view_created(self):
+        sock = self.compositor()
+        sock.tilling()
+
+    def on_view_destroyed(self):
+        sock = self.compositor()
+        sock.tilling()
+
     def on_app_id_changed(self):
         self.update_title_topbar()
 
     def on_expo_activated(self):
-        return
-
-    def on_scale_activated(self):
         return
 
     def on_expo_desactivated(self):
@@ -378,6 +392,9 @@ class Panel(Adw.Application):
         # but for some a nice quick fix, if you dont need this
         # just disable this function call
         self.maximize_last_view_on_expo_desacivated()
+        return
+
+    def on_scale_activated(self):
         return
 
     def on_scale_desactivated(self):
@@ -515,18 +532,12 @@ class Panel(Adw.Application):
             self.top_panel.present()
             self.top_panel_background.present()
             self.dock.do_start()
-            # self.right_panel.present()
 
     def setup_panel_buttons(self):
         if self.default_panel:
-            workspace_buttons = self.utils.CreateFromAppList(
-                self.workspace_list_config, "v", "RightBar", None, True
-            )
             self.top_panel.set_content(self.top_panel_box_full)
-            self.right_panel.set_content(workspace_buttons)
-
         if [i for i in self.args if "topbar" in i]:
-            self.dockbar, workspace_buttons = self.create_widgets("h", "TopBar")
+            self.dockbar, _ = self.create_widgets("h", "TopBar")
             self.all_panels_enabled = False
             self.top_panel.present()
 
@@ -584,23 +595,30 @@ class Panel(Adw.Application):
         EventScroll.connect("scroll", self.scroll_event)
         self.top_panel_box_full.add_controller(EventScroll)
 
-    def maximize_last_view(self, *_):
+    def maximize_last_focused_view(self, *_):
         sock = self.compositor()
         sock.maximize(self.last_view_toplevel_focused)
+
+    def close_last_focused_view(self, *_):
+        sock = self.compositor()
+        sock.close_view(self.last_view_toplevel_focused)
 
     def close_fullscreen_buttons(self):
         # Creating close and full screen buttons for the top bar
         self.cf_box = Gtk.Box()
-        sock = self.compositor()
         self.fullscreen_button = self.utils.CreateButton(
             "window-maximize-symbolic",
             None,
             "cf_button",
             None,
-            use_function=self.maximize_last_view,
+            use_function=self.maximize_last_focused_view,
         )
         self.close_button = self.utils.CreateButton(
-            "close-symbolic", "wayctl dispatch killactive", "cf_button", None
+            "close-symbolic",
+            None,
+            "cf_button",
+            None,
+            use_function=self.close_last_focused_view,
         )
         self.cf_box.append(self.fullscreen_button)
         self.cf_box.append(self.close_button)
@@ -806,7 +824,7 @@ class Panel(Adw.Application):
                         position,
                         self.exclusive,
                         self.monitor_width,
-                        24,
+                        36,
                         "TopBar",
                     )
                 if "top_background" == p:
@@ -1121,6 +1139,7 @@ class Panel(Adw.Application):
                 continue
             menu = Gio.Menu()
             btn = Gtk.MenuButton(label=m)
+            btn.add_css_class("TrayMenus")
             # if no icon is specified in [icons] from menu.toml then use Label instead
             try:
                 btn.set_icon_name(menu_toml["icons"][m])
