@@ -37,9 +37,7 @@ class PopoverWallpaper(Adw.Application):
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
         self.menubutton_wallpaper = Gtk.Button()
         self.menubutton_wallpaper.connect("clicked", self.open_popover_wallpaper)
-        self.menubutton_wallpaper.set_icon_name(
-            "preferences-desktop-wallpaper-symbolic"
-        )
+        self.menubutton_wallpaper.set_icon_name("livewallpaper")
         obj.top_panel_box_widgets_left.append(self.menubutton_wallpaper)
         self.app = app
 
