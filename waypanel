@@ -1583,10 +1583,13 @@ if __name__ == "__main__":
     with open(panel_config) as panel_config:
         config = toml.load(panel_config)
     monitor_name = config["monitor"]["name"]
-    app = Panel(application_id="com.waypanel.GtkApplication")
+    argv = sys.argv
+    if len(argv) > 1:
+        monitor_name = argv[1]
+
+    app = Panel(application_id="com.waypanel.{0}.GtkApplication".format(monitor_name))
     app.run(None)
     sock.watch()
-
     while True:
         msg = sock.read_message()
         if "event" in msg:

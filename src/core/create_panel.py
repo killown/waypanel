@@ -1,6 +1,7 @@
 import gi
 import os
 import toml
+import sys
 
 gi.require_version("Adw", "1")
 gi.require_version("Gtk4LayerShell", "1.0")
@@ -70,9 +71,15 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     if "monitor" in config:
         monitor_name = config["monitor"]["name"]
 
+    argv = sys.argv
+    if len(argv) > 1:
+        argv = sys.argv[1]
+        monitor_name = argv
+
     if monitor_name in monitor:
         monitor = monitor[monitor_name]
         gdk_monitor = monitor["monitor"]
+        print(monitor)
 
     window.set_default_size(width, height)
     LayerShell.init_for_window(window)
@@ -81,6 +88,7 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
         LayerShell.set_monitor(window, gdk_monitor)
 
     if layer == "TOP":
+        window.set_default_size(monitor["width"], height)
         LayerShell.set_layer(window, LayerShell.Layer.TOP)
         LayerShell.set_exclusive_zone(window, 32)
 
@@ -107,6 +115,7 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     # LayerShell.set_margin(window, LayerShell.Edge.BOTTOM, 0)
     # LayerShell.set_margin(window, LayerShell.Edge.TOP, 0)
     if class_style == "TopBarBackground":
+        window.set_default_size(monitor["width"], height)
         LayerShell.set_margin(window, LayerShell.Edge.BOTTOM, 11)
         # LayerShell.set_margin(window, LayerShell.Edge.TOP, 11)
 
