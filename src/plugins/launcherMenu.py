@@ -96,7 +96,6 @@ class MenuLauncher(Adw.Application):
             self.listbox.append(row_hbox)
             line = Gtk.Label.new()
             line.add_css_class("label_from_popover_launcher")
-            line.add_css_class("")
             line.set_label(name)
             line.props.margin_start = 5
             line.props.hexpand = True

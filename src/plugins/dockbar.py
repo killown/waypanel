@@ -374,11 +374,10 @@ class Dockbar(Adw.Application):
     def update_active_window_shell(self, id):
         sock = self.compositor()
         view = sock.get_view(id)
-        if view["app-id"] in ["kitty", "gnome-terminal-server"]:
-            pid = view["pid"]
-            button = self.buttons_pid[pid][0]
-            self.taskbar.remove(button)
-            self.update_taskbar("h", "taskbar", id)
+        pid = view["pid"]
+        button = self.buttons_pid[pid][0]
+        self.taskbar.remove(button)
+        self.update_taskbar("h", "taskbar", id)
         return True
 
     def taskbar_remove(self, pid):

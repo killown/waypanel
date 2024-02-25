@@ -8,9 +8,8 @@ os.environ["GI_TYPELIB_PATH"] = "/usr/include/waypanel/src"
 from ctypes import CDLL
 
 CDLL("libgtk4-layer-shell.so")
-import subprocess
 from subprocess import Popen
-from subprocess import check_output, call
+from subprocess import check_output
 import gi
 
 gi.require_version("Gtk4LayerShell", "1.0")
@@ -18,22 +17,11 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
 from src.core.utils import Utils as utils
-from src.core.create_panel import CreatePanel
-from src.core.create_panel import set_layer_position_exclusive
-from src.core.create_panel import unset_layer_position_exclusive
-import asyncio
+from src.core.create_panel import CreatePanel, get_monitor_info
 from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
-import dbus
-from dbus.mainloop.glib import DBusGMainLoop
 import datetime
-import json
 import sys
 import importlib
-import requests
-import random
-import socket
-import threading
-import time
 import wayfire
 
 spam_loader = importlib.util.find_spec("wayfire")
@@ -43,21 +31,18 @@ if not found:
     print("Module wayfire not found, try | pip install wayfire | and try again")
     sys.exit()
 
-from multiprocessing import Process
 import psutil
-import math
 import pulsectl
 import toml
 from collections import ChainMap
 from src.plugins.dockbar import Dockbar
 from src.plugins.wallpaperPopover import PopoverWallpaper
 from src.plugins.bookmarksPopover import PopoverBookmarks
+from src.plugins.dashboardPopover import PopoverDashboard
 from src.plugins.folders import PopoverFolders
 from src.plugins.clipboardMenu import MenuClipboard
 from src.plugins.launcherMenu import MenuLauncher
 from src.core.utils import Utils
-from src.core.dashboard import Dashboard
-from gi.repository import Gtk4LayerShell as LayerShell
 
 
 class InvalidGioTaskError(Exception):
@@ -142,12 +127,14 @@ class Panel(Adw.Application):
         self.popover_launcher = None
         self.popover_clipboard = None
         self.popover_wallpaper = None
+        self.set_cpu_usage_state = []
         self.clipboard_text_copy = None
         self.active_window_changed = None
         self.waypanel_started_now = True
         self.window_title_from_topbar = None
         self.active_window = None
         self.last_view_toplevel_focused = None
+        self.is_scale_active = None
         with open(self.topbar_config) as topbar_config:
             config = toml.load(topbar_config)
 
@@ -309,15 +296,20 @@ class Panel(Adw.Application):
             pid,
             workspace_id,
         )
-        return True
+        if self.is_scale_active:
+            return True
+        else:
+            return False
 
     def all_events_watch(self):
         sock = self.compositor()
         sock.watch()
+        view = None
         while 1:
             try:
                 msg = sock.read_message()
-                view = None
+                if "event" not in msg:
+                    continue
 
                 if "view" in msg:
                     view = msg["view"]
@@ -395,10 +387,16 @@ class Panel(Adw.Application):
         return
 
     def on_scale_activated(self):
-        return
+        # call it once to update without waiting timeout_add
+        # then timeout_add until scale is false
+        self.update_background_panel()
+        self.set_cpu_usage()
+        GLib.timeout_add(1000, self.set_cpu_usage)
+        GLib.timeout_add(1000, self.update_background_panel)
+        self.is_scale_active = True
 
     def on_scale_desactivated(self):
-        return
+        self.is_scale_active = False
 
     def on_view_focused(self):
         self.update_title_topbar()
@@ -492,7 +490,7 @@ class Panel(Adw.Application):
         self.tbsinkinput = self.utils.btn_background(
             "tbsinkinput", "multimedia-volume-control-symbolic"
         )
-        self.tbSIGKILL = self.utils.btn_background("tbSIGKILL", "window-close-symbolic")
+        # self.tbSIGKILL = self.utils.btn_background("tbSIGKILL", "window-close-symbolic")
         self.tbdiskusage = self.utils.btn_background(
             "tbdiskusage", "disk-usage-analyzer"
         )
@@ -501,13 +499,13 @@ class Panel(Adw.Application):
         self.tbdiskusage.set_label("Disk Usage")
         self.tbsinkinput.set_label("Toggle Mute")
         self.tbvol.set_label("Volume")
-        self.tbSIGKILL.set_label("SIGKILL")
-        self.tbexe = self.utils.btn_background("tbexe", "exec")
+        # self.tbSIGKILL.set_label("SIGKILL")
+        # self.tbexe = self.utils.btn_background("tbexe", "exec")
         self.tbbox.append(self.tblabelspace)
         self.tbbox.append(self.tbworkspace)
         self.tbbox.append(self.tbclass)
         self.tbbox.append(self.tbpid)
-        self.tbbox.append(self.tbSIGKILL)
+        # self.tbbox.append(self.tbSIGKILL)
         # self.tbbox.append(self.tbsinkinput)
         # self.tbbox.append(self.tbcard)
         self.tbbox.append(self.tbvol)
@@ -521,9 +519,7 @@ class Panel(Adw.Application):
         self.top_panel_background.set_content(self.tbbox)
 
     def update_widget_with_timeout(self):
-        GLib.timeout_add(2000, self.update_background_panel)
         # GLib.timeout_add(200, self.update_title_topbar)
-        GLib.timeout_add(2000, self.set_cpu_usage)
         GLib.timeout_add(30000, self.mullvad_status)
         GLib.timeout_add(600000, self.clean_pid_store)
 
@@ -544,16 +540,17 @@ class Panel(Adw.Application):
     def clock_dashboard(self, *_):
         # self.dashboard = Dashboard(application_id="org.waypanel.dashboard",flags= Gio.ApplicationFlags.FLAGS_NONE)
         # self.dashboard.run(sys.argv)
-        self.utils.run_app("python {0}/calendar.py".format(self.scripts))
+        # self.utils.run_app("python {0}/calendar.py".format(self.scripts))
+        return
 
     def setup_gestures(self):
         # Setting up gestures for various UI components
         self.utils.CreateGesture(self.todo_button, 1, self.take_note_app)
-        self.utils.CreateGesture(self.clock_box, 1, self.clock_dashboard)
+        # self.utils.CreateGesture(self.clock_box, 1, self.clock_dashboard)
         self.utils.CreateGesture(self.window_title, 1, self.manage_window_notes)
         self.utils.CreateGesture(self.tbclass, 1, self.dock.dockbar_append)
         self.utils.CreateGesture(self.tbclass, 3, self.dock.join_windows)
-        self.utils.CreateGesture(self.tbSIGKILL, 1, self.sigkill_activewindow)
+        # self.utils.CreateGesture(self.tbSIGKILL, 1, self.sigkill_activewindow)
         self.utils.CreateGesture(self.tbvol, 1, self.toggle_mute_from_sink)
 
         # Gestures for top panel
@@ -638,9 +635,14 @@ class Panel(Adw.Application):
         self.clock_box.add_css_class("Clock")
 
         # Creating clock label with current date and time
-        self.clock_label = Gtk.Label()
+        self.PopoverDashboard = PopoverDashboard()
+        self.popover_dashboard = self.PopoverDashboard.create_menu_popover_dashboard(
+            self, app
+        )
+        self.clock_label = self.popover_dashboard
         self.clock_label.set_label(datetime.datetime.now().strftime("%d %A %H:%M"))
         self.clock_label.set_halign(Gtk.Align.CENTER)
+        self.clock_label.add_css_class("Clock")
         self.clock_label.set_hexpand(True)
         self.clock_box.append(self.clock_label)
 
@@ -1186,9 +1188,9 @@ class Panel(Adw.Application):
     def clean_pid_store(self):
         # [optimization]
         # every 10 minutes check for non-existent pids and clean the dict
-        instance = wayland()
-        windows = instance.get_windows()
-        pid_list = [i.pid for i in windows]
+        sock = self.compositor()
+        windows = sock.list_views()
+        pid_list = [i["pid"] for i in windows]
         for pid in self.psutil_store.keys():
             if pid not in pid_list:
                 del self.psutil_store[pid]
@@ -1349,7 +1351,9 @@ class Panel(Adw.Application):
             self.clock_box.append(box)
 
         # Schedule the periodic updates of the label content
-        self.exec_once = GLib.timeout_add(1000, lambda: self.output_loop(output, label))
+        self.exec_once = GLib.timeout_add(
+            refresh, lambda: self.output_loop(output, label)
+        )
         GLib.timeout_add(refresh, lambda: self.output_loop(output, label))
 
     def cmd_output(self):
@@ -1464,11 +1468,8 @@ class Panel(Adw.Application):
 
         # Fetch and format process information
         mem_usage, exe, cpu_usage = self.fetch_process_info(pid)
-
         # Update widget labels and icons
-        self.update_widget_labels(
-            workspace_id, pid, wm_class, cpu_usage, mem_usage, exe
-        )
+        self.update_widget_labels(workspace_id, pid, wm_class, mem_usage, exe)
 
     def extract_widget_info(self, active_window):
         """Extract and return widget-related information."""
@@ -1499,14 +1500,33 @@ class Panel(Adw.Application):
 
     def set_cpu_usage(self):
         sock = self.compositor()
-        pid = sock.get_focused_view_pid()
+        pid = sock.get_focused_view()["pid"]
+        allow_to_set_zero = False
         """Fetch and return process information."""
         if pid not in self.psutil_store.keys():
             process = psutil.Process(pid)
             self.psutil_store[pid] = process
         cpu_usage = int(self.psutil_store[pid].cpu_percent())
-        self.tbcpusage.set_label("CPU: {0}%".format(cpu_usage))
-        return True
+
+        # if there is 4 seconds with 0% them we allow to the label
+        # if not, this would spam 0% randomly
+        if self.set_cpu_usage_state.count(0) > 4:
+            allow_to_set_zero = True
+            self.set_cpu_usage_state = []
+        else:
+            allow_to_set_zero = False
+
+        self.set_cpu_usage_state.append(cpu_usage)
+
+        if allow_to_set_zero is True or cpu_usage > 0:
+            print(cpu_usage)
+            self.tbcpusage.set_label("CPU: {0}%".format(cpu_usage))
+            print(self.tbcpusage.get_label())
+
+        if self.is_scale_active:
+            return True
+        else:
+            return False
 
     def modify_title(self, title):
         """Modify title based on certain patterns."""
@@ -1533,25 +1553,46 @@ class Panel(Adw.Application):
         # Set window label
         self.window_title.set_label(title)
 
-    def update_widget_labels(
-        self, workspace_id, pid, wclass, cpu_usage, mem_usage, exe
-    ):
+    def update_widget_labels(self, workspace_id, pid, wclass, mem_usage, exe):
         """Update widget labels."""
 
         # Only update labels related to window details if the window has changed
         self.tbpid.set_label("PID: {0}".format(pid))
         self.tbclass.set_label("{0}".format(wclass))
-        self.tbexe.set_label("Exe: {0}".format(exe))
+        # self.tbexe.set_label("Exe: {0}".format(exe))
         self.tbdiskusage.set_label("Disk: {0}MB".format(self.disk_usage_by_pid()))
 
         # Update labels for general information
-        self.tbworkspace.set_label("W: {0}".format(workspace_id))
-        self.tbcpusage.set_label("CPU: {0}%".format(cpu_usage))
+        self.tbworkspace.set_label("Workspace: {0}".format(workspace_id))
+        # self.tbcpusage.set_label("CPU: {0}%".format(cpu_usage))
         self.tbmemusage.set_label("MEM: {0}".format(mem_usage))
 
         # Update volume information
         self.volume_watch()
 
+    def quit(self):
+        self.quit()
 
-app = Panel(application_id="com.waypanel.GtkApplication")
-app.run(None)
+
+if __name__ == "__main__":
+    addr = os.getenv("WAYFIRE_SOCKET")
+    sock = wayfire.WayfireSocket(addr)
+    home = os.path.expanduser("~")
+    config_path = os.path.join(home, ".config/waypanel")
+    panel_config = os.path.join(config_path, "panel.toml")
+    with open(panel_config) as panel_config:
+        config = toml.load(panel_config)
+    monitor_name = config["monitor"]["name"]
+    app = Panel(application_id="com.waypanel.GtkApplication")
+    app.run(None)
+    sock.watch()
+
+    while True:
+        msg = sock.read_message()
+        if "event" in msg:
+            event = msg["event"]
+            if monitor_name == msg["output"]["name"]:
+                if event == "output-removed":
+                    app.quit()
+                if event == "output-added":
+                    app.run(None)

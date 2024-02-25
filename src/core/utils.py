@@ -335,6 +335,7 @@ class Utils(Adw.Application):
         box.add_css_class("box_from_clicable_image")
 
         self.CreateGesture(box, 1, lambda *_: self.set_view_focus(view_id))
+        self.CreateGesture(box, 3, lambda *_: self.close_view(view_id))
         return box
 
     # def create_clicable_image(
@@ -385,6 +386,10 @@ class Utils(Adw.Application):
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
         return wayfire.WayfireSocket(addr)
+
+    def close_view(self, view_id):
+        sock = self.compositor()
+        sock.close_view(view_id)
 
     def set_view_focus(self, view_id):
         sock = self.compositor()

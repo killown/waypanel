@@ -18,6 +18,7 @@ class PopoverFolders(Adw.Application):
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
         self.home = os.path.expanduser("~")
+        self.home_folders = os.listdir(self.home)
         self.scripts = os.path.join(self.home, ".config/hypr/scripts")
         self.config_path = os.path.join(self.home, ".config/waypanel")
         self.dockbar_config = os.path.join(self.config_path, "dockbar.toml")
@@ -109,7 +110,38 @@ class PopoverFolders(Adw.Application):
             # Create label for the bookmark name
             line = Gtk.Label.new()
             line.add_css_class("label_from_folders")
-            line.set_label("\n" + name + "\n")
+            line.set_label(name)
+            line.props.margin_start = 5
+            line.props.hexpand = True
+            line.set_halign(Gtk.Align.START)
+
+            # Create image for the bookmark icon
+            image = Gtk.Image.new_from_icon_name(icon)
+            image.add_css_class("icon_from_folders")
+            image.set_icon_size(Gtk.IconSize.LARGE)
+            image.props.margin_end = 5
+            image.set_halign(Gtk.Align.END)
+
+            # Add label and image to the bookmark box
+            row_hbox.append(image)
+            row_hbox.append(line)
+
+        for folder in self.home_folders:
+            folders_path = os.path.join(self.home, folder)
+            icon = "nautilus"
+
+            row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+            row_hbox.MYTEXT = folders_path, "nautilus"
+
+            # Configure bookmark icon
+
+            # Add the bookmark to the listbox
+            self.listbox.append(row_hbox)
+
+            # Create label for the bookmark name
+            line = Gtk.Label.new()
+            line.add_css_class("label_from_folders")
+            line.set_label(folder)
             line.props.margin_start = 5
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)
