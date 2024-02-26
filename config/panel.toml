@@ -1,6 +1,15 @@
+[monitor]
+width = 2560
+height = 1080
+name = "DP-1"
+
 [bottom]
 position = "BOTTOM"
 Exclusive = "False"
+
+[views]
+tilling = "True"
+maximize_views_on_expo = "True"
 
 [left]
 position = "BOTTOM"
