@@ -23,6 +23,7 @@ import datetime
 import sys
 import importlib
 import wayfire
+import time
 
 spam_loader = importlib.util.find_spec("wayfire")
 found = spam_loader is not None
@@ -137,6 +138,9 @@ class Panel(Adw.Application):
         self.is_scale_active = None
         with open(self.topbar_config) as topbar_config:
             config = toml.load(topbar_config)
+
+        self.tilling_enabled = config["views"]["tilling"]
+        self.maximize_views_on_expo_enabled = config["views"]["maximize_views_on_expo"]
 
         self.window_title_topbar_length = config["window_title_lenght"]["size"]
 
@@ -365,10 +369,14 @@ class Panel(Adw.Application):
         self.update_title_topbar()
 
     def on_view_created(self):
+        if self.tilling_enabled == "False":
+            return
         sock = self.compositor()
         sock.tilling()
 
     def on_view_destroyed(self):
+        if self.tilling_enabled == "False":
+            return
         sock = self.compositor()
         sock.tilling()
 
@@ -402,6 +410,21 @@ class Panel(Adw.Application):
         self.update_title_topbar()
 
     def maximize_last_view_on_expo_desacivated(self):
+        if self.maximize_views_on_expo_enabled == "False":
+            return
+        # check if the workspace has only one view so maximize this view
+        ws_info = sock.get_active_workspace_info()
+        ws_with_views = [
+            i
+            for i in sock.get_workspaces_with_views()
+            if i["x"] == ws_info["x"] and i["y"] == ws_info["y"]
+        ]
+        ws_count = len(ws_with_views)
+        if ws_count != 1:
+            return
+        id = ws_with_views[0]["view-id"]
+        if ws_count == 1:
+            sock.maximize(id)
         # id = self.last_view_toplevel_focused
         # sock = self.compositor()
         # sock.maximize(id)
@@ -1583,19 +1606,23 @@ if __name__ == "__main__":
     with open(panel_config) as panel_config:
         config = toml.load(panel_config)
     monitor_name = config["monitor"]["name"]
+
     argv = sys.argv
     if len(argv) > 1:
-        monitor_name = argv[1]
+        monitor_name = argv[1].strip()
 
     app = Panel(application_id="com.waypanel.{0}.GtkApplication".format(monitor_name))
     app.run(None)
     sock.watch()
     while True:
+        print("was supposed to work")
         msg = sock.read_message()
+        print(msg)
         if "event" in msg:
             event = msg["event"]
             if monitor_name == msg["output"]["name"]:
                 if event == "output-removed":
                     app.quit()
                 if event == "output-added":
+                    print("testing output-added")
                     app.run(None)
