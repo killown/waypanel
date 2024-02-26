@@ -30,6 +30,7 @@ if [ -d "gtk4-layer-shell" ]; then
     sudo cp waypanel.bin /opt/waypanel/
     sudo cp waypanel /opt/waypanel 
     sudo cp -r src /opt/waypanel 
+    rm waypanel.bin
     echo "\n\n\n\nUse /opt/waypanel/waypanel.bin if you want the compiled version of the waypanel"
 fi
 
