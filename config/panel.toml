@@ -39,17 +39,17 @@ com.obsproject.Studio = "com.obsproject.Studio"
 
 [left_side_gestures]
 right_click = "python /home/neo/.config/hypr/scripts/workspaces.py"
-left_click = "hyprctl dispatch fullscreen 1"
+left_click = ""
 middle_click = "kitty"
 
 [center_side_gestures]
 right_click = "python /home/neo/.config/hypr/scripts/workspaces.py"
-left_click = "hyprctl dispatch fullscreen 1"
+left_click = ""
 middle_click = "kitty"
 
 [right_side_gestures]
 right_click = "python /home/neo/.config/hypr/scripts/workspaces.py"
-left_click = "hyprctl dispatch fullscreen 1"
+left_click = ""
 middle_click = "kitty"
 
 [take_note_app]

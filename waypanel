@@ -136,6 +136,7 @@ class Panel(Adw.Application):
         self.active_window = None
         self.last_view_toplevel_focused = None
         self.is_scale_active = None
+        self.focused_output = None
         with open(self.topbar_config) as topbar_config:
             config = toml.load(topbar_config)
 
@@ -412,6 +413,8 @@ class Panel(Adw.Application):
     def maximize_last_view_on_expo_desacivated(self):
         if self.maximize_views_on_expo_enabled == "False":
             return
+        if sock.is_focused_view_fullscreen:
+            return
         # check if the workspace has only one view so maximize this view
         ws_info = sock.get_active_workspace_info()
         ws_with_views = [
@@ -479,7 +482,6 @@ class Panel(Adw.Application):
     def setup_menus(self):
         for menu in self.menus.values():
             self.top_panel_box_systray.append(menu)
-            # menu.add_css_class("systray")
             self.top_panel_box_systray.set_halign(Gtk.Align.END)
             self.top_panel_box_systray.set_hexpand(True)
 
@@ -665,7 +667,7 @@ class Panel(Adw.Application):
         self.clock_label = self.popover_dashboard
         self.clock_label.set_label(datetime.datetime.now().strftime("%d %A %H:%M"))
         self.clock_label.set_halign(Gtk.Align.CENTER)
-        self.clock_label.add_css_class("Clock")
+        self.clock_label.add_css_class("ClockButton")
         self.clock_label.set_hexpand(True)
         self.clock_box.append(self.clock_label)
 
