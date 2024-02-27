@@ -58,7 +58,7 @@ class PopoverFolders(Adw.Application):
 
         # Set up scrolled window
         self.scrolled_window = Gtk.ScrolledWindow()
-        self.scrolled_window.set_min_content_width(200)
+        self.scrolled_window.set_min_content_width(400)
         self.scrolled_window.set_min_content_height(600)
 
         # Set up main box
