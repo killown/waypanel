@@ -4,12 +4,12 @@
   border-width: 2px;
   font-size: 18px;
   font-family: "Sriracha";
-  background: #24283b;
-  background-color: #24283b;
+  background: rgba(36, 40, 59, 0.744);
+  background-color: rgba(36, 40, 59, 0.744);
   padding: 2px 4px 2px 4px;
   margin: 1px 1px 1px 1px;
   border-width: 1px;
-  border-color: #24283b;
+  border-color: rgba(36, 40, 59, 0.744);
   border-radius: 10px;
   box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
 }
@@ -36,12 +36,12 @@
 .LeftBar-buttons {
   border-radius: 10px;
   font-size: 16px;
-  background: #24283b9a;
-  background-color: #24283b9a;
+  background: rgba(36, 40, 59, 0.651)9a;
+  background-color: rgba(36, 40, 59, 0.651)9a;
   border-style: solid;
   border-width: 2px;
   padding: 1px 1px 1px 1px;
-  border-color: #24283b;
+  border-color: rgba(36, 40, 59, 0.744);
   box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
 }
 
@@ -68,12 +68,12 @@
   -gtk-icon-size: 26px;
   border-style: solid;
   border-width: 2px;
-  background: #24283b;
-  background-color: #24283b;
+  background: rgba(36, 40, 59, 0.744);
+  background-color: rgba(36, 40, 59, 0.744);
   padding: 2px 4px 2px 4px;
   margin: 1px 1px 1px 1px;
   border-width: 2px;
-  border-color: #24283b;
+  border-color: rgba(36, 40, 59, 0.744);
   border-radius: 10px;
   box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
 }
@@ -82,12 +82,12 @@
   -gtk-icon-size: 32px;
   border-style: solid;
   border-width: 2px;
-  background: #24283b;
-  background-color: #24283b;
+  background: rgba(36, 40, 59, 0.744);
+  background-color: rgba(36, 40, 59, 0.744);
   padding: 2px 4px 2px 4px;
   margin: 1px 1px 1px 1px;
   border-width: 2px;
-  border-color: #24283b;
+  border-color: rgba(36, 40, 59, 0.744);
   border-radius: 10px;
   box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
 }
@@ -98,10 +98,11 @@
   background-color: #14151700;
 }
 
+/*this is for menubuttons from systray menus*/
 .image-button {
-  -gtk-icon-size: 26px;
+  -gtk-icon-size: 20px;
   background: rgb(0, 0, 0);
-  background-color: #14151700;
+  background-color: #ffffff00;
 }
 
 .text-button {
@@ -113,7 +114,7 @@
   border-style: solid;
   border-width: 0.1px;
   padding: 4px 4px 4px 4px;
-  border-color: #24283b;
+  border-color: rgba(36, 40, 59, 0.744);
 }
 
 .icon_from_clicable_image {
@@ -129,13 +130,13 @@
 .box_from_clicable_image {
   border-radius: 8px;
   font-size: 15px;
-  background: #24283b;
-  background-color: #24283b;
+  background: rgba(36, 40, 59, 0.744);
+  background-color: rgba(36, 40, 59, 0.744);
   border-style: solid;
   border-width: 1px;
   margin: 4px 4px 4px 4px;
   padding: 2px 2px 2px 2px;
-  border-color: #24283b;
+  border-color: rgba(36, 40, 59, 0.744);
   box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
 }
 
@@ -153,17 +154,27 @@
   font-weight: bold;
 }
 
-.Clock {
+.ClockButton {
   font-size: 18px;
   font-weight: bold;
   font-family: "Sriracha";
-  background: #24283b;
-  background-color: #24283b;
   border-style: solid;
   padding: 0px 4px 0px 4px;
   margin: 2px 4px 2px 4px;
   border-width: 0px;
-  border-color: #24283b;
+}
+
+.Clock {
+  font-size: 18px;
+  font-weight: bold;
+  font-family: "Sriracha";
+  background: rgba(36, 40, 59, 0.744);
+  background-color: rgba(36, 40, 59, 0.744);
+  border-style: solid;
+  padding: 0px 4px 0px 4px;
+  margin: 2px 4px 2px 4px;
+  border-width: 0px;
+  border-color: rgba(36, 40, 59, 0.744);
   border-radius: 8px;
   box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
 }
@@ -206,16 +217,21 @@
 
 .top_panel_box_systray {
   -gtk-icon-size: 22px;
-  background: #24283b;
-  background-color: #24283b;
+  background: rgba(36, 40, 59, 0.744);
+  background-color: rgba(36, 40, 59, 0.744);
   border-radius: 10px;
   border-style: solid;
   margin: 2px 4px 2px 4px;
   border-width: 2px;
-  border-color: #24283b;
+  border-color: rgba(36, 40, 59, 0.744);
   padding: 0px 4px 0px 4px;
   box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
 }
+
+.TrayMenus {
+  -gtk-icon-size: 12px;
+}
+
 
 .top_panel_box_center {
   -gtk-icon-size: 0px;

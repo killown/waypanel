@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from math import atan
 import os
 from pathlib import Path
 
@@ -137,6 +138,8 @@ class Panel(Adw.Application):
         self.last_view_toplevel_focused = None
         self.is_scale_active = None
         self.focused_output = None
+        self.vol_slider = None
+        self.icon_vol_slider = None
         with open(self.topbar_config) as topbar_config:
             config = toml.load(topbar_config)
 
@@ -605,6 +608,8 @@ class Panel(Adw.Application):
             self.top_panel_box_right, 3, self.left_gesture_right_click
         )
 
+        self.utils.CreateGesture(self.top_panel_box_systray, 3, self.notify_client)
+
         # click will copy pid to clipboard
         self.tbpid_gesture = self.utils.CreateGesture(
             self.tbpid, 1, self.copy_to_clipboard
@@ -651,6 +656,7 @@ class Panel(Adw.Application):
         # Creating close and full screen buttons for the top bar
         box = self.utils.CreateFromAppList(self.topbar_launcher_config, "h", "TopBar")
         self.top_panel_box_systray.append(box)
+        self.top_panel_box_systray.append(self.volume_slider())
 
     def setup_clock_widget(self):
         # Configuring the clock widget for display
@@ -1033,9 +1039,9 @@ class Panel(Adw.Application):
         """
         # Check the direction of the scroll and adjust the volume using the "pactl" command
         if dy > 0:
-            self.utils.run_app("pactl -- set-sink-volume 0 -8%")
+            self.utils.run_app("pactl -- set-sink-volume @DEFAULT_SINK@  -8%")
         else:
-            self.utils.run_app("pactl -- set-sink-volume 0 +8%")
+            self.utils.run_app("pactl -- set-sink-volume @DEFAULT_SINK@  +8%")
 
         with pulsectl.Pulse("volume-increaser") as pulse:
             # Iterate through all the audio sinks
@@ -1047,6 +1053,7 @@ class Panel(Adw.Application):
 
                     # Update the volume label with the current volume percentage
                     self.tbvol.set_label("Volume: {0}%".format(volume))
+                    self.vol_slider.set_value(volume)
 
     def left_gesture_left_click(self, *_):
         # data format is (self, gesture, data, x, y)
@@ -1226,6 +1233,44 @@ class Panel(Adw.Application):
         self.utils.run_app("wl-copy {0}".format(active_window.pid))
         self.utils.run_app("kitty --hold -- htop -p {0}".format(active_window.pid))
 
+    def volume_slider(self):
+        self.vol_slider_box = Gtk.Box()
+        self.icon_vol_slider = Gtk.Button()
+        self.icon_vol_slider.set_icon_name("audio-volume-high-symbolic")
+        self.icon_vol_slider.connect("clicked", self.on_toggle_volume)
+        self.vol_slider_box.append(self.icon_vol_slider)
+        self.vol_slider = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL)
+        self.vol_slider.set_range(0, 100)
+        self.vol_slider.add_css_class("vol_slider")
+        self.vol_slider.set_format_value_func()
+        # self.vol_slider.set_draw_value(True)
+        self.vol_slider.set_value(50)
+        self.vol_slider.set_value_pos(Gtk.PositionType.RIGHT)
+        self.vol_slider.connect("value-changed", self.on_slider_changed)
+        self.vol_slider_box.append(self.vol_slider)
+        return self.vol_slider_box
+
+    def on_slider_changed(self, slider):
+        vol = int(slider.get_value())
+
+        if self.is_volume_muted:
+            self.utils.run_app("pactl set-sink-mute @DEFAULT_SINK@ false")
+            self.icon_vol_slider.set_icon_name("audio-volume-high-symbolic")
+
+        self.utils.run_app("pactl -- set-sink-volume @DEFAULT_SINK@ {0}%".format(vol))
+        self.vol_slider.set_value(vol)
+
+        with pulsectl.Pulse("volume-increaser") as pulse:
+            # Iterate through all the audio sinks
+            for sink in pulse.sink_list():
+                # Check if the sink is currently running (active)
+                if "running" in str(sink.state):
+                    # Calculate the volume percentage and round it to the nearest whole number
+                    volume = round(sink.volume.values[0] * 100)
+
+                    # Update the volume label with the current volume percentage
+                    self.tbvol.set_label("Volume: {0}%".format(volume))
+
     def sink_input_info(self):
         pactl = "pactl list sink-inputs".split()
         sink_inputs = check_output(pactl).decode()
@@ -1234,13 +1279,29 @@ class Panel(Adw.Application):
         info["sinklist"] = sinklist
         return info
 
+    def is_volume_muted(self):
+        volume_state = check_output(
+            "pactl get-sink-mute @DEFAULT_SINK@".split()
+        ).decode()
+        if "no" in volume_state.split()[-1]:
+            return False
+        else:
+            return True
+
+    def on_toggle_volume(self, *_):
+        self.utils.run_app("pactl set-sink-mute @DEFAULT_SINK@ toggle")
+        if self.is_volume_muted():
+            self.icon_vol_slider.set_icon_name("audio-volume-high-symbolic")
+        else:
+            self.icon_vol_slider.set_icon_name("stock_volume-mute")
+
     def toggle_mute_from_sink(self, *_):
-        active_window = self.get_wayland_active_window()
-        pid = active_window.pid
+        sock = self.compositor()
+        title = sock.get_focused_view()["title"]
         info = self.sink_input_info()
         sinklist = info["sinklist"]
         for sink in sinklist:
-            if 'application.process.id = "{0}"'.format(pid) in sink:
+            if title.lower() in sink.lower():
                 sink = sink.split("\n")[0]
                 self.utils.run_app("pactl set-sink-input-mute {0} toggle".format(sink))
 
