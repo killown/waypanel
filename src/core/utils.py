@@ -303,7 +303,13 @@ class Utils(Adw.Application):
     #     return ""
 
     def create_clicable_image(
-        self, icon, Class_Style, wclass, title, initial_title, view_id
+        self,
+        icon,
+        Class_Style,
+        wclass,
+        title,
+        initial_title,
+        view_id,
     ):
         box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
         box.add_css_class(Class_Style)
