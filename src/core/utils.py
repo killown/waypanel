@@ -404,9 +404,9 @@ class Utils(Adw.Application):
             # scale leave only when there is view, if not the wayfire may crash
             if has_views:
                 sock.scale_leave()
+                sock.set_focus(view_id)
         except Exception as e:
             print(e)
-        sock.set_focus(view_id)
 
     def CreateButton(
         self,
