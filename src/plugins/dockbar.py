@@ -277,7 +277,10 @@ class Dockbar(Adw.Application):
         self.taskbar_window_created()
 
     def on_view_destroyed(self, view):
-        pid = view["pid"]
+        if view is None:
+            return
+
+        pid = view["id"]
         self.taskbar_window_destroyed(pid)
 
     def on_title_changed(self, view):

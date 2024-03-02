@@ -54,7 +54,7 @@ class MenuClipboard(Adw.Application):
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
         self.app.add_action(show_searchbar_action)
         self.scrolled_window = Gtk.ScrolledWindow()
-        self.scrolled_window.set_min_content_width(800)
+        self.scrolled_window.set_min_content_width(600)
         self.scrolled_window.set_min_content_height(600)
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.searchbar = Gtk.SearchEntry.new()

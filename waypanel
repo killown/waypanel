@@ -25,6 +25,7 @@ import sys
 import importlib
 import wayfire
 import time
+import netifaces
 
 spam_loader = importlib.util.find_spec("wayfire")
 found = spam_loader is not None
@@ -140,6 +141,7 @@ class Panel(Adw.Application):
         self.focused_output = None
         self.vol_slider = None
         self.icon_vol_slider = None
+        self.was_last_focused_view_maximized = None
         with open(self.topbar_config) as topbar_config:
             config = toml.load(topbar_config)
 
@@ -238,6 +240,7 @@ class Panel(Adw.Application):
             os.makedirs(self.scripts)
 
     def on_activate(self, app):
+        # FIXME: need to create a way to allow setup positions of widgets
         self.monitor_width_height()
         # start cmd output session, cmd.toml
         self.cmd_output()
@@ -262,6 +265,13 @@ class Panel(Adw.Application):
         self.MenuClipboard.create_popover_menu_clipboard(self, app)
         self.MenuLauncher = MenuLauncher()
         self.MenuLauncher.create_menu_popover_launcher(self, app)
+
+        # volume
+        self.top_panel_box_systray.append(self.volume_slider())
+
+        # menus
+        self.menus = self.create_new_menu()
+        self.setup_menus()
 
         # the title is only updated when a event happens, so needed to update in the panel start
         self.update_title_topbar()
@@ -326,20 +336,28 @@ class Panel(Adw.Application):
                     if msg["event"] == "view-title-changed":
                         self.on_title_changed()
 
+                    if msg["event"] == "view-tiled" and "view" in msg:
+                        if sock.is_view_maximized(view["id"]):
+                            # that is meant for dialogs, if on_view_destroyed then no tilling
+                            self.was_last_focused_view_maximized = True
+
                     if msg["event"] == "app-id-changed":
                         self.on_app_id_changed()
 
                     if msg["event"] == "view-focused":
-                        self.on_view_focused()
-                        if view is not None:
-                            if view["role"] == "toplevel":
-                                self.on_view_role_toplevel_focused(view)
+                        if view["role"] == "toplevel":
+                            self.on_view_role_toplevel_focused(view)
+                            self.on_view_focused()
 
                     if msg["event"] == "view-mapped":
-                        self.on_view_created()
+                        if view["role"] == "toplevel":
+                            self.on_view_role_toplevel_focused(view)
+                            self.on_view_focused()
+                            self.on_view_created(view)
 
                     if msg["event"] == "view-unmapped":
-                        self.on_view_destroyed()
+                        if view["role"] == "toplevel":
+                            self.on_view_destroyed()
 
                     if msg["event"] == "plugin-activation-state-changed":
                         # if plugin state is true (activated)
@@ -372,17 +390,20 @@ class Panel(Adw.Application):
     def on_title_changed(self):
         self.update_title_topbar()
 
-    def on_view_created(self):
+    # created view must start as maximized to auto tilling works
+    def on_view_created(self, view):
+        sock = self.compositor()
         if self.tilling_enabled == "False":
             return
-        sock = self.compositor()
-        sock.tilling()
+        if sock.is_view_maximized(view["id"]):
+            sock.tilling()
 
     def on_view_destroyed(self):
         if self.tilling_enabled == "False":
             return
         sock = self.compositor()
-        sock.tilling()
+        if self.was_last_focused_view_maximized:
+            sock.tilling()
 
     def on_app_id_changed(self):
         self.update_title_topbar()
@@ -513,7 +534,7 @@ class Panel(Adw.Application):
             "tbcpusage", "preferences-devices-cpu"
         )
         self.tbmemusage = self.utils.btn_background(
-            "tbmemusage", "media-memory-sd-symbolic"
+            "tbmemusage", "indicator-sensors-memory"
         )
         self.tbsinkinput = self.utils.btn_background(
             "tbsinkinput", "multimedia-volume-control-symbolic"
@@ -524,9 +545,11 @@ class Panel(Adw.Application):
         )
         self.tbvol = self.utils.btn_background("tbvol", "audio-volume-high-symbolic")
         self.tbcard = self.utils.btn_background("tbvoltbcard", "audio-card")
+        self.tbnet = self.utils.btn_background(
+            "tbnet", "notification-network-ethernet-connected"
+        )
         self.tbdiskusage.set_label("Disk Usage")
         self.tbsinkinput.set_label("Toggle Mute")
-        self.tbvol.set_label("Volume")
         # self.tbSIGKILL.set_label("SIGKILL")
         # self.tbexe = self.utils.btn_background("tbexe", "exec")
         self.tbbox.append(self.tblabelspace)
@@ -537,6 +560,7 @@ class Panel(Adw.Application):
         # self.tbbox.append(self.tbsinkinput)
         # self.tbbox.append(self.tbcard)
         self.tbbox.append(self.tbvol)
+        self.tbbox.append(self.tbnet)
         self.tbbox.append(self.tbcpusage)
         self.tbbox.append(self.tbmemusage)
         # self.tbbox.append(self.tbexe)
@@ -656,7 +680,6 @@ class Panel(Adw.Application):
         # Creating close and full screen buttons for the top bar
         box = self.utils.CreateFromAppList(self.topbar_launcher_config, "h", "TopBar")
         self.top_panel_box_systray.append(box)
-        self.top_panel_box_systray.append(self.volume_slider())
 
     def setup_clock_widget(self):
         # Configuring the clock widget for display
@@ -807,9 +830,6 @@ class Panel(Adw.Application):
         self.window_title = Adw.ButtonContent()
         self.top_panel_box_window_title.append(self.window_title)
         self.window_title.add_css_class("WindowTitle")
-
-        self.menus = self.create_new_menu()
-        self.setup_menus()
 
         if "--custom" in self.args:
             self.default_panel = False
@@ -1052,7 +1072,7 @@ class Panel(Adw.Application):
                     volume = round(sink.volume.values[0] * 100)
 
                     # Update the volume label with the current volume percentage
-                    self.tbvol.set_label("Volume: {0}%".format(volume))
+                    self.tbvol.set_label("{0}%".format(volume))
                     self.vol_slider.set_value(volume)
 
     def left_gesture_left_click(self, *_):
@@ -1269,7 +1289,7 @@ class Panel(Adw.Application):
                     volume = round(sink.volume.values[0] * 100)
 
                     # Update the volume label with the current volume percentage
-                    self.tbvol.set_label("Volume: {0}%".format(volume))
+                    self.tbvol.set_label("{0}%".format(volume))
 
     def sink_input_info(self):
         pactl = "pactl list sink-inputs".split()
@@ -1487,7 +1507,7 @@ class Panel(Adw.Application):
                     volume = round(sink.volume.values[0] * 100)
 
                     # Update the volume label with the current volume percentage
-                    self.tbvol.set_label("Volume: {0}%".format(volume))
+                    self.tbvol.set_label("{0}%".format(volume))
 
                     # Update the card label with the description of the active audio sink
                     self.tbcard.set_label("{0}".format(sink.description))
@@ -1552,6 +1572,16 @@ class Panel(Adw.Application):
 
         self.update_title_and_icons(title, wm_class, initial_title)
 
+        gws = netifaces.gateways()
+        if gws["default"]:
+            gw = list(gws["default"].values())[0][-1]
+            if self.is_interface_up(gw):
+                self.tbnet.set_icon_name("notification-network-ethernet-connected")
+                self.tbnet.set_label(gw)
+        else:
+            self.tbnet.set_icon_name("network-disconnected")
+            self.tbnet.set_label("Disconnected")
+
         # Fetch and format process information
         mem_usage, exe, cpu_usage = self.fetch_process_info(pid)
         # Update widget labels and icons
@@ -1571,6 +1601,10 @@ class Panel(Adw.Application):
         panel_cfg = self.panel_cfg["change_icon_title"]
         if wclass in panel_cfg:
             return panel_cfg[wclass]
+
+    def is_interface_up(self, interface):
+        addr = netifaces.ifaddresses(interface)
+        return netifaces.AF_INET in addr
 
     def fetch_process_info(self, pid):
         """Fetch and return process information."""
