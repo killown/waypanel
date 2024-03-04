@@ -3,7 +3,6 @@ from math import atan
 import os
 from pathlib import Path
 
-
 os.environ["GI_TYPELIB_PATH"] = "/usr/include/waypanel/src"
 
 from ctypes import CDLL
@@ -26,6 +25,7 @@ import importlib
 import wayfire
 import time
 import netifaces
+import soundcard as sc
 
 spam_loader = importlib.util.find_spec("wayfire")
 found = spam_loader is not None
@@ -42,6 +42,8 @@ from src.plugins.dockbar import Dockbar
 from src.plugins.wallpaperPopover import PopoverWallpaper
 from src.plugins.bookmarksPopover import PopoverBookmarks
 from src.plugins.dashboardPopover import PopoverDashboard
+from src.plugins.dashboardSoundCard import SoundCardDashboard
+from src.plugins.dashboardBluetooth import BluetoothDashboard
 from src.plugins.folders import PopoverFolders
 from src.plugins.clipboardMenu import MenuClipboard
 from src.plugins.launcherMenu import MenuLauncher
@@ -266,6 +268,9 @@ class Panel(Adw.Application):
         self.MenuLauncher = MenuLauncher()
         self.MenuLauncher.create_menu_popover_launcher(self, app)
 
+        # bluetooth manager
+        self.top_panel_box_systray.append(self.bluetooth_manager())
+
         # volume
         self.top_panel_box_systray.append(self.volume_slider())
 
@@ -367,6 +372,10 @@ class Panel(Adw.Application):
                             if msg["plugin"] == "scale":
                                 self.on_scale_activated()
 
+                        if msg["state"] is True:
+                            if msg["plugin"] == "move":
+                                self.on_moving_view()
+
                         # if plugin state is false (desactivated)
                         if msg["state"] is False:
                             if msg["plugin"] == "expo":
@@ -385,6 +394,9 @@ class Panel(Adw.Application):
         # if not, it will try to maximize the LayerShell
         # big comment because I am sure I will forget why I did this
         self.last_view_toplevel_focused = view["id"]
+        return
+
+    def on_moving_view(self):
         return
 
     def on_title_changed(self):
@@ -654,24 +666,36 @@ class Panel(Adw.Application):
         sock = self.compositor()
         sock.close_view(self.last_view_toplevel_focused)
 
+    def minimize_last_focused_view(self, *_):
+        sock = self.compositor()
+        sock.set_minimized(self.last_view_toplevel_focused, True)
+
     def close_fullscreen_buttons(self):
         # Creating close and full screen buttons for the top bar
         self.cf_box = Gtk.Box()
-        self.fullscreen_button = self.utils.CreateButton(
+        self.maximize_button = self.utils.CreateButton(
             "window-maximize-symbolic",
             None,
-            "cf_button",
+            "maximize",
             None,
             use_function=self.maximize_last_focused_view,
         )
         self.close_button = self.utils.CreateButton(
-            "close-symbolic",
+            "window-close-symbolic",
             None,
-            "cf_button",
+            "close",
             None,
             use_function=self.close_last_focused_view,
         )
-        self.cf_box.append(self.fullscreen_button)
+        self.minimize_button = self.utils.CreateButton(
+            "window-minimize-symbolic",
+            None,
+            "minimize",
+            None,
+            use_function=self.minimize_last_focused_view,
+        )
+        self.cf_box.append(self.minimize_button)
+        self.cf_box.append(self.maximize_button)
         self.cf_box.append(self.close_button)
         self.cf_box.add_css_class("cf_box")
         self.top_panel_box_for_buttons.append(self.cf_box)
@@ -680,6 +704,19 @@ class Panel(Adw.Application):
         # Creating close and full screen buttons for the top bar
         box = self.utils.CreateFromAppList(self.topbar_launcher_config, "h", "TopBar")
         self.top_panel_box_systray.append(box)
+
+    def get_soundcard_list(self):
+        return sc.all_speakers()
+
+    def get_default_soundcard_id(self):
+        return sc.default_speaker().id
+
+    def get_default_soundcard_name(self):
+        return sc.default_speaker().name
+
+    def set_default_soundcard(self, id):
+        cmd = "pactl set-default-sink {0}".format(id).split()
+        Popen(cmd)
 
     def setup_clock_widget(self):
         # Configuring the clock widget for display
@@ -1253,11 +1290,19 @@ class Panel(Adw.Application):
         self.utils.run_app("wl-copy {0}".format(active_window.pid))
         self.utils.run_app("kitty --hold -- htop -p {0}".format(active_window.pid))
 
+    def bluetooth_manager(self):
+        bt = BluetoothDashboard()
+        bt = bt.create_menu_popover_bluetooth(self, app)
+        bt.set_icon_name("preferences-bluetooth-symbolic")
+        return bt
+
     def volume_slider(self):
         self.vol_slider_box = Gtk.Box()
-        self.icon_vol_slider = Gtk.Button()
+        self.icon_vol_slider = SoundCardDashboard()
+        self.icon_vol_slider = self.icon_vol_slider.create_menu_popover_soundcard(
+            self, app
+        )
         self.icon_vol_slider.set_icon_name("audio-volume-high-symbolic")
-        self.icon_vol_slider.connect("clicked", self.on_toggle_volume)
         self.vol_slider_box.append(self.icon_vol_slider)
         self.vol_slider = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL)
         self.vol_slider.set_range(0, 100)
@@ -1309,11 +1354,17 @@ class Panel(Adw.Application):
             return True
 
     def on_toggle_volume(self, *_):
-        self.utils.run_app("pactl set-sink-mute @DEFAULT_SINK@ toggle")
-        if self.is_volume_muted():
-            self.icon_vol_slider.set_icon_name("audio-volume-high-symbolic")
-        else:
-            self.icon_vol_slider.set_icon_name("stock_volume-mute")
+        # Creating clock label with current date and time
+        self.soundcard_dashboard = PopoverDashboard()
+        self.soundcard_dashboard = (
+            self.soundcard_dashboard.create_menu_popover_dashboard(self, app)
+        )
+
+        # self.utils.run_app("pactl set-sink-mute @DEFAULT_SINK@ toggle")
+        # if self.is_volume_muted():
+        #     self.icon_vol_slider.set_icon_name("audio-volume-high-symbolic")
+        # else:
+        #     self.icon_vol_slider.set_icon_name("stock_volume-mute")
 
     def toggle_mute_from_sink(self, *_):
         sock = self.compositor()

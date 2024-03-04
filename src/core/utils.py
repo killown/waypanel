@@ -418,7 +418,7 @@ class Utils(Adw.Application):
         use_label=False,
         use_function=False,
     ):
-        box = Gtk.Box(spacing=6)
+        box = Gtk.Box(spacing=2)
         box.add_css_class(Class_Style)
         button = Adw.ButtonContent()
         if use_label:
@@ -427,7 +427,7 @@ class Utils(Adw.Application):
             button.add_css_class("hvr-grow")
             button.set_icon_name(icon_name)
 
-        button.add_css_class("{}-buttons".format(Class_Style))
+        button.add_css_class("{}-button".format(Class_Style))
         if cmd == "NULL":
             button.set_sensitive(False)
             return button
