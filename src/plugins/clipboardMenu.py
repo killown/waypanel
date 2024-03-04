@@ -68,6 +68,7 @@ class MenuClipboard(Adw.Application):
         self.button_clear = Gtk.Button()
         self.button_clear.set_label("Clear")
         self.button_clear.connect("clicked", self.print_listbox)
+        self.button_clear.add_css_class("button_clear_from_clipboard")
         self.main_box.append(self.button_clear)
         self.listbox = Gtk.ListBox.new()
         self.listbox.connect(
