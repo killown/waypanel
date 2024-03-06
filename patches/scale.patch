@@ -1,0 +1,119 @@
+diff --git a/metadata/scale.xml b/metadata/scale.xml
+index 8f9d19d4..b676fa56 100644
+--- a/metadata/scale.xml
++++ b/metadata/scale.xml
+@@ -16,6 +16,11 @@
+ 				<_long>Toggles scale showing windows from all workspaces.</_long>
+ 				<default></default>
+ 			</option>
++			<option name="leave" type="activator">
++				<_short>Leave</_short>
++				<_long>leave the scale.</_long>
++				<default>&lt;super&gt; KEY_P</default>
++			</option>
+ 			<option name="duration" type="int">
+ 				<_short>Animation Transition Time</_short>
+ 				<_long>Time it takes for views to transition. Units are in milliseconds.</_long>
+diff --git a/plugins/scale/scale.cpp b/plugins/scale/scale.cpp
+index 126ba19e..bf7aa843 100644
+--- a/plugins/scale/scale.cpp
++++ b/plugins/scale/scale.cpp
+@@ -287,6 +287,16 @@ class wayfire_scale : public wf::per_output_plugin_instance_t,
+         }
+     }
+ 
++    bool handle_leave(bool want_all_workspaces)
++    {
++        if (active && (all_same_as_current_workspace_views() ||
++                       (want_all_workspaces == this->all_workspaces)))
++        {
++            deactivate();
++            return true;
++        }
++    }
++
+     wf::signal::connection_t<scale_update_signal> update_cb = [=] (scale_update_signal *ev)
+     {
+         if (active)
+@@ -554,6 +564,7 @@ class wayfire_scale : public wf::per_output_plugin_instance_t,
+         auto center = wf::point_t{vg.x + vg.width / 2, vg.y + vg.height / 2};
+ 
+         return wf::point_t{
++            //changed here
+             ws.x + (int)std::floor((double)center.x / og.width),
+             ws.y + (int)std::floor((double)center.y / og.height)};
+     }
+@@ -788,7 +799,10 @@ class wayfire_scale : public wf::per_output_plugin_instance_t,
+         double translation_x,
+         double translation_y,
+         double target_alpha)
++
+     {
++        if (!view_data.transformer) 
++            return;
+         view_data.animation.scale_animation.scale_x.set(
+             view_data.transformer->scale_x, scale_x);
+         view_data.animation.scale_animation.scale_y.set(
+@@ -917,6 +931,11 @@ class wayfire_scale : public wf::per_output_plugin_instance_t,
+         filter_views(views);
+ 
+         auto workarea = output->workarea->get_workarea();
++        auto border_size = 40;
++        auto b = border_size; 
++        workarea.x += b; workarea.y += b; 
++        workarea.width -= b * 2; 
++        workarea.height -= b * 2;
+ 
+         auto sorted_rows = view_sort(views);
+         size_t cnt_rows  = sorted_rows.size();
+@@ -1343,7 +1362,7 @@ class wayfire_scale : public wf::per_output_plugin_instance_t,
+         // trigger an action in scale
+         last_selected_view = nullptr;
+ 
+-        grab->grab_input(wf::scene::layer::OVERLAY);
++        grab->grab_input(wf::scene::layer::WORKSPACE);
+         if (current_focus_view != wf::get_core().seat->get_active_view())
+         {
+             wf::get_core().default_wm->focus_raise_view(current_focus_view);
+@@ -1483,6 +1502,7 @@ class wayfire_scale_global : public wf::plugin_interface_t,
+ {
+     wf::ipc_activator_t toggle_ws{"scale/toggle"};
+     wf::ipc_activator_t toggle_all{"scale/toggle_all"};
++    wf::ipc_activator_t ws_leave{"scale/leave"};
+ 
+   public:
+     void init() override
+@@ -1490,6 +1510,7 @@ class wayfire_scale_global : public wf::plugin_interface_t,
+         this->init_output_tracking();
+         toggle_ws.set_handler(toggle_cb);
+         toggle_all.set_handler(toggle_all_cb);
++        ws_leave.set_handler(leave_overview);
+     }
+ 
+     void fini() override
+@@ -1508,6 +1529,15 @@ class wayfire_scale_global : public wf::plugin_interface_t,
+         return false;
+     };
+ 
++    wf::ipc_activator_t::handler_t leave_overview = [=] (wf::output_t *output, wayfire_view)
++    {
++        if (this->output_instance[output]->handle_leave(false))
++        {
++            output->render->schedule_redraw();
++            return true;
++        }
++    };
++
+     wf::ipc_activator_t::handler_t toggle_all_cb = [=] (wf::output_t *output, wayfire_view)
+     {
+         if (this->output_instance[output]->handle_toggle(true))
+@@ -1518,6 +1548,7 @@ class wayfire_scale_global : public wf::plugin_interface_t,
+ 
+         return false;
+     };
++
+ };
+ 
+-DECLARE_WAYFIRE_PLUGIN(wayfire_scale_global);
++DECLARE_WAYFIRE_PLUGIN(wayfire_scale_global);
+\ No newline at end of file
