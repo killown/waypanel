@@ -1,8 +1,5 @@
 [icons]
 "System" = "system-shutdown-symbolic"
-"Bluez" = "preferences-bluetooth-symbolic"
-"Audio" = "audio-card-symbolic"
-"UTILS" = "org.gnome.Settings-applications-symbolic"
 
 
 [[VPN.item_1]]
@@ -20,65 +17,6 @@ name = "Mullvad Disconnect"
 [[VPN.item_4]]
 cmd = "/home/neo/Scripts/hyprland/mullvad-connect.py"
 name = "Mullvad Connect"
-
-[[UTILS.item_1]]
-cmd = "eyedropper"
-name = "Color Picker"
-
-[[Bluez.item_1]]
-#use bluetoothctl scan on in case you don't have the address yet to pair the device
-cmd = "bluetoothctl pair AC:12:2F:DC:E1:3C; bluetoothctl connect AC:12:2F:DC:E1:3C"
-name = "Soundcore Life Q30"
-submenu = "Conectar"
-
-[[Bluez.item_1_1]]
-#use bluetoothctl scan on in case you don't have the address yet to pair the device
-cmd = "bluetoothctl disconnect AC:12:2F:DC:E1:3C"
-name = "Soundcore Life Q30"
-submenu = "Desconectar"
-
-[[Bluez.item_2]]
-#use bluetoothctl scan on in case you don't have the address yet to pair the device
-cmd = "bluetoothctl connect 84:30:95:15:35:AE"
-name = "Controle PS4"
-submenu = "Conectar"
-
-[[Bluez.item_2_2]]
-#use bluetoothctl scan on in case you don't have the address yet to pair the device
-cmd = "bluetoothctl disconnect 84:30:95:15:35:AE"
-name = "Controle PS4"
-submenu = "Desconectar"
-
-[[Bluez.item_3]]
-#use bluetoothctl scan on in case you don't have the address yet to pair the device
-cmd = "bluetoothctl connect 98:B6:E9:1A:57:A9"
-name = "Controle Gamesir"
-submenu = "Conectar"
-
-[[Bluez.item_3_3]]
-#use bluetoothctl scan on in case you don't have the address yet to pair the device
-cmd = "bluetoothctl disconnect 98:B6:E9:1A:57:A9"
-name = "Controle Gamesir"
-submenu = "Desconectar"
-
-[[Audio.item_1]]
-#use pactl list sinks short to list the audio output available
-cmd = "pactl set-default-sink alsa_output.usb-3142_fifine_Headset-00.analog-stereo"
-name = "Fifine Headset"
-
-[[Audio.item_2]]
-#use pactl list sinks short to list the audio output available
-cmd = "pactl set-default-sink alsa_output.pci-0000_0c_00.4.analog-stereo"
-name = "Analog Stereo PC"
-
-[[Audio.item_3]]
-#use pactl list sinks short to list the audio output available
-cmd = "pactl set-default-sink bluez_output.AC_12_2F_DC_E1_3C.1"
-name = "Soundcore Life Q30"
-
-[[Audio.item_4]]
-cmd = "pavucontrol"
-name = "Audio Control"
 
 [[System.item_1]]
 cmd = "wayland-logout"

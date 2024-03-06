@@ -1,5 +1,6 @@
 export CURRENT_DIR=$(pwd)
 function install {
+    pip install -r requirements.txt
     sudo rm -rf build
     mkdir $HOME/.config/waypanel/
     cp -r config/* $HOME/.config/waypanel
@@ -20,17 +21,25 @@ if [ ! -d "gtk4-layer-shell" ]; then
 fi
 
 if [ -d "gtk4-layer-shell" ]; then
+    directory="/opt/waypanel"
+
+    if [ ! -d "$directory" ]; then
+        sudo mkdir -p "$directory"
+        echo "Directory created: $directory"
+    fi
     cd $CURRENT_DIR
     sudo rm -rf /opt/waypanel/*
+    rm -rf waypanel.build
     sudo meson setup build --wipe
     sudo ninja -C build install
     sudo rm -rf build
     pip install nuitka
     python -m nuitka waypanel
     sudo cp waypanel.bin /opt/waypanel/
-    sudo cp waypanel /opt/waypanel 
-    sudo cp -r src /opt/waypanel 
+    sudo cp waypanel /opt/waypanel
+    sudo cp -r src /opt/waypanel
     rm waypanel.bin
+    rm -rf waypanel.build/
     echo "\n\n\n\nUse /opt/waypanel/waypanel.bin if you want the compiled version of the waypanel"
 fi
 
