@@ -15,10 +15,16 @@ sh install
 mkdir ~/.config/waypanel; cp config/* ~/.config/waypanel
 ```
 
-use waypanel with monitor name to start in specific monitors
+# compile wayfire with the required scale patch to work with background panels
+https://github.com/killown/waypanel/blob/main/patches/scale.patch
+
+# wayfire.ini
+required plugins:  stipc,  scale,   ipc,   ipc-rules
+
+# minimal panel setup 
+panel.toml [monitor]
 
 ### Current features
-
 - Dockbar
 - Information panel with numerous features
 - Top panel with a GNOME appearance
