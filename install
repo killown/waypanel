@@ -50,7 +50,9 @@ if [ -d "gtk4-layer-shell" ]; then
     sudo cp -r src /opt/waypanel
     rm waypanel.bin
     rm -rf waypanel.build/
-    echo "\n\n\n\nUse /opt/waypanel/waypanel.bin if you want the compiled version of the waypanel"
+    echo "Use /opt/waypanel/waypanel.bin if you want the compiled version of the waypanel"
     echo "install swww for wallpaper plugin"
+    echo "install and use wl-paste --watch cliphist store for clipboard plugin"
+    echo "install SwayNotificationCenter for notifications"
 fi
 
