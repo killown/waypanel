@@ -1,0 +1,372 @@
+.WindowTitle {
+  -gtk-icon-size: 32px;
+  border-style: solid;
+  border-width: 2px;
+  font-size: 16px;
+  font-family: "Sriracha";
+  background: rgba(36, 40, 59, 0.744);
+  background-color: rgba(36, 40, 59, 0.744);
+  padding: 0px 4px 0px 4px;
+  margin: 2px 4px 6px 4px;
+  border-width: 1px;
+  border-color: rgba(36, 40, 59, 0.744);
+  border-radius: 10px;
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+}
+
+.LeftBar {
+  -gtk-icon-size: 48px;
+  background: #00000000;
+  background-color: #00000000;
+}
+
+.hvr-grow {
+  transform: translateZ(0);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0);
+  transition-duration: 0.1s;
+  transition-property: transform;
+}
+
+.hvr-grow:hover,
+.hvr-grow:focus,
+.hvr-grow:active {
+  transform: scale(0.94);
+}
+
+.LeftBar-button {
+  border-radius: 10px;
+  font-size: 16px;
+  background: rgba(36, 40, 59, 0.651) 9a;
+  background-color: rgba(36, 40, 59, 0.651) 9a;
+  border-style: solid;
+  border-width: 2px;
+  padding: 1px 1px 1px 1px;
+  border-color: rgba(36, 40, 59, 0.744);
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+}
+
+.RightBar-button {
+  border-radius: 10px;
+  font-size: 22px;
+  font-family: "Sriracha";
+  border-style: solid;
+  border-width: 2px;
+  background: #00000000;
+  background-color: #00000000;
+  padding: 2px 10px 2px 4px;
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+}
+
+.RightBar {
+  -gtk-icon-size: 0px;
+  color: #ffffff;
+  background: #00000000;
+  background-color: #00000000;
+}
+
+.cf_box {
+  border-style: solid;
+  background: rgba(36, 40, 59, 0);
+  padding: 2px 4px 2px 4px;
+  margin: 1px 1px 1px 1px;
+}
+
+.close-button {
+   -gtk-icon-size: 22px;
+    background-image: linear-gradient(to right, #d41a1a 0%, #d81b99  51%, #ad5d2f  100%);
+    padding: 2px 16px 2px 16px;
+    margin: 2px 2px 10px 2px;
+    background-size: 100% auto;
+    color: white;            
+    border-color: rgba(36, 40, 59, 0.744);
+    border-radius: 4px;
+    box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+    display: block; 
+}
+
+.maximize-button {
+  -gtk-icon-size: 22px;
+  background-image: linear-gradient(to right, rgba(36, 40, 59, 0.651) 0%, rgba(36, 40, 59, 0.651)  51%, rgba(36, 40, 59, 0.651)  100%);
+  padding: 6px 6px 6px 6px;
+  margin: 2px 2px 10px 2px;
+  background-size: 100% auto;
+  color: white;            
+  border-color: rgba(36, 40, 59, 0.744);
+  border-radius: 4px;
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+  display: block; 
+}
+
+.minimize-button {
+  -gtk-icon-size: 22px;
+  background-image: linear-gradient(to right, rgba(36, 40, 59, 0.651) 0%, rgba(36, 40, 59, 0.651)  51%, rgba(36, 40, 59, 0.651)  100%);
+  padding: 2px 6px 2px 6px;
+  margin: 2px 2px 10px 2px;
+  background-size: 100% auto;
+  color: white;            
+  border-color: rgba(36, 40, 59, 0.744);
+  border-radius: 4px;
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+  display: block; 
+}
+
+.top_panel_box_widgets_left {
+  -gtk-icon-size: 32px;
+  border-style: solid;
+  border-width: 2px;
+  background: rgba(36, 40, 59, 0.744);
+  background-color: rgba(36, 40, 59, 0.744);
+  padding: 2px 4px 2px 4px;
+  margin: 2px 4px 6px 4px;
+  border-width: 2px;
+  border-color: rgba(36, 40, 59, 0.744);
+  border-radius: 10px;
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+}
+
+scale slider {
+  min-width: 20px;
+  min-height: 20px;
+}
+
+scale {
+  min-width: 60px;
+}
+
+.weather {
+  font-size: 18px;
+  font-weight: bold;
+  background-color: #14151700;
+}
+
+/*this is for menubuttons from systray menus*/
+.image-button {
+  -gtk-icon-size: 20px;
+  background: rgb(0, 0, 0);
+  background-color: #ffffff00;
+}
+
+.text-button {
+  border-radius: 80px;
+  background: rgb(0, 0, 0);
+  background-color: rgba(13, 61, 151, 0);
+  font-size: 13px;
+  color: #fff8ee;
+  border-style: solid;
+  border-width: 0.1px;
+  padding: 4px 4px 4px 4px;
+  border-color: rgba(36, 40, 59, 0.744);
+}
+
+.bluetooth-dashboard-buttons {
+  border-radius: 8px;
+  font-size: 16px;
+  color: #ffffff;
+  background: rgba(42, 46, 68, 0.774);
+  background-color: rgba(42, 46, 68, 0.774);
+  border-style: solid;
+  border-width: 1px;
+  margin: 4px 4px 4px 4px;
+  padding: 2px 2px 2px 2px;
+  border-color: rgba(36, 40, 59, 0.744);
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+}
+
+.button_clear_from_clipboard {
+  border-radius: 8px;
+  font-size: 16px;
+  color: #ffffff;
+  background: rgba(36, 40, 59, 0.9);
+  background-color: rgba(36, 40, 59, 0.9);
+  border-style: solid;
+  border-width: 1px;
+  margin: 4px 4px 4px 4px;
+  padding: 2px 2px 2px 2px;
+  border-color: rgba(36, 40, 59, 0.744);
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+}
+
+.icon_from_clicable_image {
+  -gtk-icon-size: 46px;
+}
+.icon_from_popover_launcher {
+  -gtk-icon-size: 52px;
+}
+.icon_from_folders {
+  -gtk-icon-size: 56px;
+}
+
+.box_from_clicable_image {
+  border-radius: 8px;
+  font-size: 15px;
+  background: rgba(36, 40, 59, 0.744);
+  background-color: rgba(36, 40, 59, 0.744);
+  border-style: solid;
+  border-width: 1px;
+  margin: 4px 4px 4px 4px;
+  padding: 2px 2px 2px 2px;
+  border-color: rgba(36, 40, 59, 0.744);
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+}
+
+.label_from_popover_launcher {
+  font-size: 18px;
+}
+
+.label_from_folders {
+  font-size: 20px;
+  font-family: "Sriracha";
+}
+
+.label_from_bookmarks {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.ClockButton {
+  font-size: 18px;
+  font-weight: bold;
+  font-family: "Sriracha";
+  border-style: solid;
+  padding: 0px 4px 0px 4px;
+  border-width: 0px;
+}
+
+.Clock {
+  font-size: 18px;
+  font-weight: bold;
+  font-family: "Sriracha";
+  background: rgba(36, 40, 59, 0.744);
+  background-color: rgba(36, 40, 59, 0.744);
+  border-style: solid;
+  padding: 0px 4px 0px 4px;
+  margin: 2px 4px 6px 4px;
+  border-width: 0px;
+  border-color: rgba(36, 40, 59, 0.744);
+  border-radius: 8px;
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+}
+
+.wallpaper {
+  -gtk-icon-size: 400px;
+}
+
+.tbcpusage {
+  min-width: 120px;
+}
+
+.tbpid {
+  min-width: 80px;
+}
+
+.tbmemusage {
+  min-width: 140px;
+}
+
+.tbdiskusage {
+  min-width: 120px;
+}
+
+.tbclass {
+  min-width: 100px;
+}
+
+.TopBar {
+  font-size: 11px;
+  color: #e2e2e2;
+  background-color: #00000000;
+  background: #00000000;
+  border-radius: 1px;
+}
+
+.top_panel_box_left {
+  -gtk-icon-size: 32px;
+}
+
+.top_panel_box_systray {
+  -gtk-icon-size: 28px;
+  background: rgba(36, 40, 59, 0.744);
+  background-color: rgba(36, 40, 59, 0.744);
+  border-radius: 10px;
+  border-style: solid;
+  margin: 2px 4px 6px 4px;
+  border-width: 2px;
+  border-color: rgba(36, 40, 59, 0.744);
+  padding: 2px 4px 2px 4px;
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+}
+
+.TrayMenus {
+  -gtk-icon-size: 12px;
+}
+
+.top_panel_box_center {
+  -gtk-icon-size: 0px;
+}
+
+.todo_label {
+  font-size: 15px;
+}
+
+.clicable_image_label {
+  color: #ffffff;
+}
+
+.TopBarBackground {
+  -gtk-icon-size: 24px;
+  font-size: 16px;
+  color: #d6d6d6;
+  background-color: #00000075;
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+  margin: 20px 0px 0px 0px;
+}
+
+.BottomBar {
+  background-color: #00000000;
+  margin: 6px 8px 6px 8px;
+  font-family: "Sriracha";
+}
+
+.taskbar {
+  font-size: 16px;
+  padding: 4px 8px 4px 8px;
+}
+
+.box_from_clicable_image:hover {
+  color: rgb(4, 4, 4);
+  background: #b5b3b05a;
+  text-shadow:
+    rgb(9, 5, 5) 0.006em 0.006em 0.007em,
+    #141414 1px 1px 1px,
+    #141414 1px 2px 1px,
+    #141414 1px 3px 1px,
+    rgba(16, 16, 16, 0.4) 1px 38px 26px,
+    rgba(16, 16, 16, 0.2) 1px 42px 30px,
+    rgba(16, 16, 16, 0.2) 1px 46px 65px,
+    rgba(16, 16, 16, 0.4) 1px 50px 95px,
+    rgb(35, 35, 35) -0.15em -0.1em 100px;
+}
+
+.hvr-grow:hover {
+  color: rgb(4, 4, 4);
+  background: #b5b3b05a;
+  text-shadow:
+    rgb(9, 5, 5) 0.006em 0.006em 0.007em,
+    #141414 1px 1px 1px,
+    #141414 1px 2px 1px,
+    #141414 1px 3px 1px,
+    #141414 1px 4px 1px,
+    #141414 1px 5px 1px,
+    #141414 1px 6px 1px,
+    #141414 1px 7px 1px,
+    #141414 1px 8px 1px,
+    #141414 1px 9px 1px,
+    #141414 1px 10px 1px,
+    #141414 1px 11px 1px,
+    #141414 1px 12px 1px,
+    rgba(16, 16, 16, 0.4) 1px 38px 26px,
+    rgba(16, 16, 16, 0.2) 1px 42px 30px,
+    rgba(16, 16, 16, 0.2) 1px 46px 65px,
+    rgba(16, 16, 16, 0.4) 1px 50px 95px,
+    rgb(35, 35, 35) -0.15em -0.1em 100px;
+}
