@@ -1,21 +1,20 @@
 [icons]
 "System" = "system-shutdown-symbolic"
 
-
 [[VPN.item_1]]
-cmd = "/home/neo/Scripts/hyprland/mullvad-random-br.py"
+cmd = "/opt/waypanel/scripts/mullvad-random-br.py"
 name = "Change Server"
 
 [[VPN.item_2]]
-cmd = "/home/neo/Scripts/hyprland/mullvad-status.py"
+cmd = "/opt/waypanel/scripts/mullvad-status.py"
 name = "Connection Status"
 
 [[VPN.item_3]]
-cmd = "/home/neo/Scripts/hyprland/mullvad-disconnect.py"
+cmd = "/opt/waypanel/scripts/mullvad-disconnect.py"
 name = "Mullvad Disconnect"
 
 [[VPN.item_4]]
-cmd = "/home/neo/Scripts/hyprland/mullvad-connect.py"
+cmd = "/opt/waypanel/scripts/mullvad-connect.py"
 name = "Mullvad Connect"
 
 [[System.item_1]]

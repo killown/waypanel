@@ -1,7 +1,9 @@
-[monitor]
-width = 2560
-height = 1080
-name = "DP-1"
+# uncomment and configure the monitor where the panel will start
+# you can get monitor info using wlr-randr
+#[monitor]
+#width = 2560
+#height = 1080
+#name = "DP-1"
 
 [bottom]
 position = "BOTTOM"
@@ -38,17 +40,17 @@ wlroots = "wayland"
 com.obsproject.Studio = "com.obsproject.Studio"
 
 [left_side_gestures]
-right_click = "python /home/neo/.config/hypr/scripts/workspaces.py"
+right_click = "python /opt/waypanel/scripts/workspaces.py"
 left_click = ""
 middle_click = "kitty"
 
 [center_side_gestures]
-right_click = "python /home/neo/.config/hypr/scripts/workspaces.py"
+right_click = "python /opt/waypanel/scripts/workspaces.py"
 left_click = ""
 middle_click = "kitty"
 
 [right_side_gestures]
-right_click = "python /home/neo/.config/hypr/scripts/workspaces.py"
+right_click = "python /opt/waypanel/scripts/workspaces.py"
 left_click = ""
 middle_click = "kitty"
 
