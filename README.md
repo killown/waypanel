@@ -15,13 +15,13 @@ sh install
 mkdir ~/.config/waypanel; cp config/* ~/.config/waypanel
 ```
 
-# compile wayfire with the required scale patch to work with background panels
+### compile wayfire with the required scale patch to work with background panels
 https://github.com/killown/waypanel/blob/main/patches/scale.patch
 
-# wayfire.ini
+### wayfire.ini
 required plugins:  stipc,  scale,   ipc,   ipc-rules
 
-# minimal panel setup 
+### minimal panel setup 
 panel.toml [monitor]
 
 ### Current features
