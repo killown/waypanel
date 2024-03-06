@@ -328,7 +328,7 @@ class Utils(Adw.Application):
             use_this_title = exist[0] if exist else use_this_title
 
         label = Gtk.Label.new(use_this_title)
-        label.add_css_class("clicable_image_label")
+        label.add_css_class("label_from_clicable_image")
 
         image = Gtk.Image.new_from_icon_name(icon)
         image.set_icon_size(Gtk.IconSize.LARGE)

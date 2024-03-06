@@ -39,6 +39,7 @@ class PopoverWallpaper(Adw.Application):
         self.menubutton_wallpaper.connect("clicked", self.open_popover_wallpaper)
         self.menubutton_wallpaper.set_icon_name("livewallpaper")
         obj.top_panel_box_widgets_left.append(self.menubutton_wallpaper)
+        self.menubutton_wallpaper.add_css_class("top_left_widgets")
         self.app = app
 
     def create_popover_wallpaper(self, *_):
