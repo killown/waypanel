@@ -53,7 +53,7 @@ class SystemDashboard(Adw.Application):
         self.popover_dashboard = Gtk.Popover.new()
         # Set width and height of the popover dashboard
         self.popover_dashboard.set_size_request(
-            600, 200
+            600, 266
         )  # Set width to 600 and height to 400
 
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
@@ -63,21 +63,21 @@ class SystemDashboard(Adw.Application):
         self.stack.props.hexpand = True
         self.stack.props.vexpand = True
         data_and_categories = {
-            ("Logout", "", "logout_highlight-symbolic"): "System",
-            ("Reboot", "", "system-reboot-symbolic"): "System",
-            ("Shutdown", "", "gnome-shutdown-symbolic"): "System",
-            ("Lock", "", "system-lock-screen-symbolic"): "System",
+            ("Logout", "", "logout_highlight-symbolic"): "System Actions",
+            ("Reboot", "", "system-reboot-symbolic"): "System Actions",
+            ("Shutdown", "", "gnome-shutdown-symbolic"): "System Actions",
+            ("Lock", "", "system-lock-screen-symbolic"): "System Actions",
             (
                 "Exit Waypanel",
                 "",
                 "window-close-symbolic",
-            ): "Panel",
+            ): "System Actions",
             (
                 "Restart Waypanel",
                 "",
                 "system-restart-symbolic",
-            ): "Panel",
-            ("Turn Off Monitors", "", "display-symbolic"): "Monitor",
+            ): "System Actions",
+            ("Turn Off Monitors", "", "display-symbolic"): "System Actions",
         }
         done = []
         for data, category in data_and_categories.items():
@@ -180,8 +180,15 @@ class SystemDashboard(Adw.Application):
         if action == "Turn Off Monitors":
             Popen("wayctl --dpms off_all".split())
         if action == "Lock":
+            # FIXME: allow the user set their own cmd in toml
             Popen(
-                "swaylock --screenshots --clock --indicator --grace-no-mouse --indicator-radius 100 --indicator-thickness 7 --effect-blur 7x5 --effect-vignette 0.5:0.5  --ring-color ffffff --key-hl-color 880033 --line-color 00000000 --inside-color 00000088 --separator-color 00000000 --grace 2 --fade-in 4".split()
+                """swaylock --screenshots --clock --indicator
+                    --grace-no-mouse --indicator-radius 100
+                    --indicator-thickness 7 --effect-blur 7x5
+                    --effect-vignette 0.5:0.5  --ring-color ffffff
+                    --key-hl-color 880033 --line-color 00000000
+                    --inside-color 00000088 --separator-color 00000000
+                    --grace 2 --fade-in 4""".split()
             )
         if action == "Restart Waypanel":
             # FIXME: need a better way to exit the panel
