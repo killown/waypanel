@@ -275,15 +275,16 @@ class Panel(Adw.Application):
         wallpapers_folder = GLib.get_user_special_dir(
             GLib.UserDirectory.DIRECTORY_PICTURES
         )
-        wallpapers_folder = os.path.join(wallpapers_folder, "wallpapers")
+        wallpapers_folder = os.path.join(wallpapers_folder, "Wallpapers")
 
         if not os.path.exists(wallpapers_folder):
             os.makedirs(wallpapers_folder, exist_ok=True)
 
-        # disable the wallpapers folder plugin by commenting the following two lines
-        # use the same logic to disable any other plugin
-        self.PopoverWallpaper = PopoverWallpaper()
-        self.PopoverWallpaper.create_menu_popover_wallpaper(self, app)
+        if os.path.exists("/usr/bin/swww"):
+            # disable the wallpapers folder plugin by commenting the following two lines
+            # use the same logic to disable any other plugin
+            self.PopoverWallpaper = PopoverWallpaper()
+            self.PopoverWallpaper.create_menu_popover_wallpaper(self, app)
 
         bookmarks_file = os.path.join(self.home, ".bookmarks")
         if os.path.exists(bookmarks_file):

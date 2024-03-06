@@ -51,5 +51,6 @@ if [ -d "gtk4-layer-shell" ]; then
     rm waypanel.bin
     rm -rf waypanel.build/
     echo "\n\n\n\nUse /opt/waypanel/waypanel.bin if you want the compiled version of the waypanel"
+    echo "install swww for wallpaper plugin"
 fi
 
