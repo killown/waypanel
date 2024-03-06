@@ -1,7 +1,7 @@
 import os
 import random
 import gi
-from gi.repository import Gio, Gtk, Adw
+from gi.repository import Gio, Gtk, Adw, GLib
 from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen
 
@@ -68,7 +68,11 @@ class PopoverWallpaper(Adw.Application):
         self.main_box.append(self.scrolled_window)
         self.scrolled_window.set_child(self.listbox)
         self.popover_wallpaper.set_child(self.main_box)
-        wallpapers_path = os.path.join(self.home, "Imagens/wallpapers")
+        wallpapers_path = GLib.get_user_special_dir(
+            GLib.UserDirectory.DIRECTORY_PICTURES
+        )
+        wallpapers_path = os.path.join(wallpapers_path, "Wallpapers")
+
         if not os.path.exists(wallpapers_path):
             os.mkdir(wallpapers_path)
         wallpaper_files = os.listdir(wallpapers_path)
