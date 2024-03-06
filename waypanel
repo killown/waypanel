@@ -34,6 +34,12 @@ if not found:
     print("Module wayfire not found, try | pip install wayfire | and try again")
     sys.exit()
 
+spam_loader = importlib.util.find_spec("gi")
+found = spam_loader is not None
+
+if not found:
+    print("Module 'gi' not found, install python gobject")
+
 import psutil
 import pulsectl
 import toml
@@ -259,10 +265,24 @@ class Panel(Adw.Application):
         # plugins
         self.MenuLauncher = MenuLauncher()
         self.MenuLauncher.create_menu_popover_launcher(self, app)
+
+        wallpapers_folder = GLib.get_user_special_dir(
+            GLib.UserDirectory.DIRECTORY_PICTURES
+        )
+        wallpapers_folder = os.path.join(wallpapers_folder, "wallpapers")
+
+        if not os.path.exists(wallpapers_folder):
+            os.makedirs(wallpapers_folder, exist_ok=True)
+
+        # disable the wallpapers folder plugin by commenting the following two lines
+        # use the same logic to disable any other plugin
         self.PopoverWallpaper = PopoverWallpaper()
         self.PopoverWallpaper.create_menu_popover_wallpaper(self, app)
-        self.PopoverBookmarks = PopoverBookmarks()
-        self.PopoverBookmarks.create_menu_popover_bookmarks(self, app)
+
+        bookmarks_file = os.path.join(self.home, ".bookmarks")
+        if os.path.exists(bookmarks_file):
+            self.PopoverBookmarks = PopoverBookmarks()
+            self.PopoverBookmarks.create_menu_popover_bookmarks(self, app)
         self.PopoverFolders = PopoverFolders()
         self.PopoverFolders.create_menu_popover_folders(self, app)
         self.MenuClipboard = MenuClipboard()

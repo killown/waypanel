@@ -272,7 +272,7 @@ scale {
 
 /*this is for menubuttons from systray menus*/
 .image-button {
-  -gtk-icon-size: 22px;
+  -gtk-icon-size: 26px;
   background: rgb(0, 0, 0);
   color: #ffffffd8;
   background-color: #ffffff00;
@@ -445,6 +445,7 @@ scale {
 }
 
 .top_panel_box_systray {
+  -gtk-icon-size: 26px;
   align-items: center;
   appearance: none;
   background-color: #24283bc5;
@@ -546,7 +547,7 @@ scale {
   justify-content: center;
   line-height: 1;
   list-style: none;
-  overflow: hidden;
+  overflow: hidden; 
   padding-left: 8px;
   padding-right: 8px;
   padding-top: 8px;
