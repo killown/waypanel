@@ -50,6 +50,7 @@ from src.plugins.bookmarksPopover import PopoverBookmarks
 from src.plugins.dashboardPopover import PopoverDashboard
 from src.plugins.dashboardSoundCard import SoundCardDashboard
 from src.plugins.dashboardBluetooth import BluetoothDashboard
+from src.plugins.dashboardSystem import SystemDashboard
 from src.plugins.folders import PopoverFolders
 from src.plugins.clipboardMenu import MenuClipboard
 from src.plugins.launcherMenu import MenuLauncher
@@ -305,6 +306,9 @@ class Panel(Adw.Application):
         # menus
         self.menus = self.create_new_menu()
         self.setup_menus()
+
+        # system dashboard
+        self.top_panel_box_systray.append(self.system_dashboard())
 
         # the title is only updated when a event happens, so needed to update in the panel start
         self.update_title_topbar()
@@ -1324,6 +1328,12 @@ class Panel(Adw.Application):
         bt = bt.create_menu_popover_bluetooth(self, app)
         bt.set_icon_name("preferences-bluetooth-symbolic")
         return bt
+
+    def system_dashboard(self):
+        s = SystemDashboard()
+        s = s.create_menu_popover_system(self, app)
+        s.set_icon_name("shutdown_highlight-symbolic")
+        return s
 
     def volume_slider(self):
         self.vol_slider_box = Gtk.Box()
