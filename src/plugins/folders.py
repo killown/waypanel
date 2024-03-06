@@ -41,6 +41,7 @@ class PopoverFolders(Adw.Application):
         self.menubutton_folders = Gtk.Button()
         self.menubutton_folders.connect("clicked", self.open_popover_folders)
         self.menubutton_folders.set_icon_name("org.gnome.files")
+        self.menubutton_folders.add_css_class("top_left_widgets")
         obj.top_panel_box_widgets_left.append(self.menubutton_folders)
 
     def create_popover_folders(self, *_):
@@ -118,7 +119,7 @@ class PopoverFolders(Adw.Application):
             # Create image for the bookmark icon
             image = Gtk.Image.new_from_icon_name(icon)
             image.add_css_class("icon_from_folders")
-            image.set_icon_size(Gtk.IconSize.LARGE)
+            image.set_icon_size(Gtk.IconSize.INHERIT)
             image.props.margin_end = 5
             image.set_halign(Gtk.Align.END)
 

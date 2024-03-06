@@ -257,6 +257,8 @@ class Panel(Adw.Application):
         self.setup_gestures()
 
         # plugins
+        self.MenuLauncher = MenuLauncher()
+        self.MenuLauncher.create_menu_popover_launcher(self, app)
         self.PopoverWallpaper = PopoverWallpaper()
         self.PopoverWallpaper.create_menu_popover_wallpaper(self, app)
         self.PopoverBookmarks = PopoverBookmarks()
@@ -265,8 +267,6 @@ class Panel(Adw.Application):
         self.PopoverFolders.create_menu_popover_folders(self, app)
         self.MenuClipboard = MenuClipboard()
         self.MenuClipboard.create_popover_menu_clipboard(self, app)
-        self.MenuLauncher = MenuLauncher()
-        self.MenuLauncher.create_menu_popover_launcher(self, app)
 
         # bluetooth manager
         self.top_panel_box_systray.append(self.bluetooth_manager())
@@ -434,10 +434,10 @@ class Panel(Adw.Application):
     def on_scale_activated(self):
         # call it once to update without waiting timeout_add
         # then timeout_add until scale is false
-        self.update_background_panel()
-        self.set_cpu_usage()
-        GLib.timeout_add(1000, self.set_cpu_usage)
-        GLib.timeout_add(1000, self.update_background_panel)
+        # self.update_background_panel()
+        # self.set_cpu_usage()
+        # GLib.timeout_add(1000, self.set_cpu_usage)
+        # GLib.timeout_add(1000, self.update_background_panel)
         self.is_scale_active = True
 
     def on_scale_desactivated(self):
@@ -525,7 +525,7 @@ class Panel(Adw.Application):
         # notes label
         self.todo_button = Adw.ButtonContent()
         self.todo_button.add_css_class("todo_label")
-        self.todo_button.set_icon_name("notes-app-symbolic")
+        self.todo_button.set_icon_name("task-due")
         todo = os.path.join(self.home, "Documentos", "todo.txt")
 
         try:
@@ -590,7 +590,7 @@ class Panel(Adw.Application):
     def show_panels(self):
         if self.all_panels_enabled:
             self.top_panel.present()
-            self.top_panel_background.present()
+            # self.top_panel_background.present()
             self.dock.do_start()
 
     def setup_panel_buttons(self):
@@ -948,10 +948,10 @@ class Panel(Adw.Application):
         # Update the menu label based on the output
         if "Disconnected" in output:
             vpn_menu = self.menus["VPN"]
-            vpn_menu.set_label("VPN Disconnected")
+            vpn_menu.set_icon_name("mullvadr")
         elif "Connected" in output:
             vpn_menu = self.menus["VPN"]
-            vpn_menu.set_label("VPN")
+            vpn_menu.set_icon_name("mullvadg")
 
         return True
 
@@ -1230,7 +1230,7 @@ class Panel(Adw.Application):
                 continue
             menu = Gio.Menu()
             btn = Gtk.MenuButton(label=m)
-            btn.add_css_class("TrayMenus")
+            btn.add_css_class("top_panel_box_systray")
             # if no icon is specified in [icons] from menu.toml then use Label instead
             try:
                 btn.set_icon_name(menu_toml["icons"][m])
@@ -1306,7 +1306,7 @@ class Panel(Adw.Application):
         self.vol_slider_box.append(self.icon_vol_slider)
         self.vol_slider = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL)
         self.vol_slider.set_range(0, 100)
-        self.vol_slider.add_css_class("vol_slider")
+        self.vol_slider_box.add_css_class("vol_slider_box")
         self.vol_slider.set_format_value_func()
         # self.vol_slider.set_draw_value(True)
         self.vol_slider.set_value(50)
@@ -1335,6 +1335,18 @@ class Panel(Adw.Application):
 
                     # Update the volume label with the current volume percentage
                     self.tbvol.set_label("{0}%".format(volume))
+                    if volume == 0:
+                        self.icon_vol_slider.set_icon_name(
+                            "audio-volume-muted-symbolic"
+                        )
+                    if volume < 35:
+                        self.icon_vol_slider.set_icon_name("audio-volume-low-symbolic")
+                    if volume >= 35 and volume <= 75:
+                        self.icon_vol_slider.set_icon_name(
+                            "audio-volume-medium-symbolic"
+                        )
+                    if volume > 75:
+                        self.icon_vol_slider.set_icon_name("audio-volume-high-symbolic")
 
     def sink_input_info(self):
         pactl = "pactl list sink-inputs".split()
@@ -1627,10 +1639,10 @@ class Panel(Adw.Application):
         if gws["default"]:
             gw = list(gws["default"].values())[0][-1]
             if self.is_interface_up(gw):
-                self.tbnet.set_icon_name("notification-network-ethernet-connected")
+                self.tbnet.set_icon_name("network-wired-symbolic")
                 self.tbnet.set_label(gw)
         else:
-            self.tbnet.set_icon_name("network-disconnected")
+            self.tbnet.set_icon_name("network-wired-unavailable")
             self.tbnet.set_label("Disconnected")
 
         # Fetch and format process information

@@ -41,6 +41,7 @@ class PopoverBookmarks(Adw.Application):
         self.menubutton_bookmarks = Gtk.Button()
         self.menubutton_bookmarks.connect("clicked", self.open_popover_bookmarks)
         self.menubutton_bookmarks.set_icon_name("firefox-developer-edition")
+        self.menubutton_bookmarks.add_css_class("top_left_widgets")
         obj.top_panel_box_widgets_left.append(self.menubutton_bookmarks)
 
     def create_popover_bookmarks(self, *_):

@@ -152,7 +152,7 @@ class Dockbar(Adw.Application):
                         self.workspace_list_config, "v", "RightBar", None, True
                     )
                     self.right_panel.set_content(workspace_buttons)
-                    self.right_panel.present()
+                    # self.right_panel.present()
 
                 # Check if the panel is positioned at the bottom
                 if "bottom" == p:
