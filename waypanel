@@ -165,7 +165,13 @@ class Panel(Adw.Application):
                 config["monitor"]["width"],
                 config["monitor"]["height"],
             )
-        self.monitor_name = config["monitor"]["name"]
+        self.monitor_name = None
+        try:
+            self.monitor_name = config["monitor"]["name"]
+        except KeyError:
+            print("configure [monitor] in .config/panel.toml")
+            sys.exit()
+
         with open(self.topbar_config, "r") as f:
             self.topbar_config_loaded = toml.load(f)
 
@@ -604,8 +610,9 @@ class Panel(Adw.Application):
 
     def update_widget_with_timeout(self):
         # GLib.timeout_add(200, self.update_title_topbar)
-        GLib.timeout_add(30000, self.mullvad_status)
-        GLib.timeout_add(600000, self.clean_pid_store)
+        if os.path.exists("/usr/bin/mullvad"):
+            GLib.timeout_add(30000, self.mullvad_status)
+            GLib.timeout_add(600000, self.clean_pid_store)
 
     def show_panels(self):
         if self.all_panels_enabled:
@@ -1785,7 +1792,12 @@ if __name__ == "__main__":
     panel_config = os.path.join(config_path, "panel.toml")
     with open(panel_config) as panel_config:
         config = toml.load(panel_config)
-    monitor_name = config["monitor"]["name"]
+    monitor_name = None
+    try:
+        monitor_name = config["monitor"]["name"]
+    except KeyError:
+        print("configure [monitor] in .config/panel.toml")
+        sys.exit()
 
     argv = sys.argv
     if len(argv) > 1:

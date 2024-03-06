@@ -1,5 +1,5 @@
-[date]
-refresh = 1000000
-position = "center"
-cmd = "sh /home/neo/.config/hypr/scripts/weather.sh"
-css_class = "weather"
+#[date]
+#refresh = 1000000
+#position = "center"
+#cmd = "sh /home/neo/.config/hypr/scripts/weather.sh"
+#css_class = "weather"

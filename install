@@ -1,6 +1,15 @@
 export CURRENT_DIR=$(pwd)
 function install {
     pip install -r requirements.txt
+    git clone https://github.com/killown/waypy
+    cd waypy 
+    sh install 
+    cd ..
+    git clone https://github.com/killown/wayctl
+    cd wayctl 
+    sudo cp wayctl.py /usr/bin/wayctl
+    sudo chmod +x  /usr/bin/wayctl
+    cd ..
     sudo rm -rf build
     mkdir $HOME/.config/waypanel/
     cp -r config/* $HOME/.config/waypanel
@@ -36,6 +45,7 @@ if [ -d "gtk4-layer-shell" ]; then
     pip install nuitka
     python -m nuitka waypanel
     sudo cp waypanel.bin /opt/waypanel/
+    sudo cp -r config/scripts /opt/waypanel
     sudo cp waypanel /opt/waypanel
     sudo cp -r src /opt/waypanel
     rm waypanel.bin
