@@ -1,0 +1,500 @@
+.WindowTitle {
+  align-items: center;
+  appearance: none;
+  background-color: #fcfcfd;
+  border-radius: 4px;
+  border-width: 0;
+  box-shadow:
+    rgba(45, 35, 66, 0.4) 0 2px 4px,
+    rgba(45, 35, 66, 0.3) 0 7px 13px -3px,
+    #d6d6e7 0 -3px 0 inset;
+  box-sizing: border-box;
+  color: #36395ad8;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 18px;
+  font-family: "Sriracha";
+  justify-content: center;
+  line-height: 1;
+  list-style: none;
+  overflow: hidden;
+  padding-left: 6px;
+  padding-right: 6px;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  position: relative;
+  text-align: left;
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  white-space: nowrap;
+  will-change: box-shadow, transform;
+}
+
+.LeftBar {
+  -gtk-icon-size: 48px;
+  background: #505050b4;
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+
+.hvr-grow {
+  transform: translateZ(0);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0);
+  transition-duration: 0.1s;
+  transition-property: transform;
+}
+
+.hvr-grow:hover,
+.hvr-grow:focus,
+.hvr-grow:active {
+  transform: scale(0.94);
+}
+
+.LeftBar-button {
+  align-items: center;
+  appearance: none;
+  background-color: #fcfcfd;
+  border-radius: 4px;
+  border-width: 0;
+  box-shadow:
+    rgba(0, 0, 0, 0.4) 0 2px 4px,
+    rgba(0, 0, 0, 0.3) 0 7px 13px -3px,
+    #000000 0 -3px 0 inset;
+  box-sizing: border-box;
+  color: #36395ad8;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 18px;
+  font-family: "Sriracha";
+  justify-content: center;
+  line-height: 1;
+  list-style: none;
+  overflow: hidden;
+  padding-left: 6px;
+  padding-right: 6px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  position: relative;
+  text-align: left;
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  white-space: nowrap;
+  will-change: box-shadow, transform;
+}
+
+.RightBar-button {
+  border-radius: 10px;
+  font-size: 22px;
+  font-family: "Sriracha";
+  border-style: solid;
+  border-width: 2px;
+  background: #00000000;
+  background-color: #00000000;
+  padding: 2px 10px 2px 4px;
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+}
+
+.RightBar {
+  -gtk-icon-size: 0px;
+  color: #ffffff;
+  background: #00000000;
+  background-color: #00000000;
+}
+
+.cf_box {
+  border-style: solid;
+  background: rgba(36, 40, 59, 0);
+  padding: 2px 4px 2px 4px;
+  margin: 1px 1px 1px 1px;
+}
+
+.close-button {
+  -gtk-icon-size: 22px;
+  background: #fff;
+  padding: 2px 16px 2px 16px;
+  margin: 2px 2px 16px 2px;
+  background-size: 100% auto;
+  color: rgb(0, 0, 0);
+  border-color: rgba(36, 40, 59, 0.744);
+  border-radius: 4px;
+
+  display: block;
+}
+
+.maximize-button {
+  -gtk-icon-size: 22px;
+  background: #fff;
+  padding: 6px 6px 6px 6px;
+  margin: 2px 2px 16px 2px;
+  color: rgb(0, 0, 0);
+  border-color: rgba(36, 40, 59, 0.744);
+  border-radius: 4px;
+
+  display: block;
+}
+
+.minimize-button {
+  -gtk-icon-size: 22px;
+  background: #fff;
+  padding: 2px 6px 2px 6px;
+  margin: 2px 2px 16px 2px;
+  background-size: 100% auto;
+  color: rgb(0, 0, 0);
+  border-color: rgba(36, 40, 59, 0.744);
+  border-radius: 4px;
+
+  display: block;
+}
+
+.top_panel_box_widgets_left {
+  align-items: center;
+  appearance: none;
+  background-color: #fcfcfd;
+  border-radius: 4px;
+  border-width: 0;
+  box-shadow:
+    rgba(45, 35, 66, 0.4) 0 2px 4px,
+    rgba(45, 35, 66, 0.3) 0 7px 13px -3px,
+    #d6d6e7 0 -3px 0 inset;
+  box-sizing: border-box;
+  color: #36395a;
+  padding-left: 6px;
+  padding-right: 6px;
+  margin-top: 6px;
+  margin-left: 6px;
+  margin-right: 6px;
+  margin-bottom: 6px;
+  position: relative;
+  text-align: left;
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  white-space: nowrap;
+  will-change: box-shadow, transform;
+}
+
+
+scale slider {
+  min-width: 20px;
+  min-height: 20px;
+}
+
+scale {
+  min-width: 60px;
+}
+
+.weather {
+  font-size: 18px;
+  font-weight: bold;
+  background-color: #14151700;
+}
+
+/*this is for menubuttons from systray menus*/
+.image-button {
+  -gtk-icon-size: 22px;
+  background: rgb(0, 0, 0);
+  color: #36395ad8;
+  background-color: #ffffff00;
+}
+
+.text-button {
+  border-radius: 80px;
+  background: rgb(0, 0, 0);
+  background-color: rgba(13, 61, 151, 0);
+  font-size: 13px;
+  color: #36395ad8;
+  border-style: solid;
+  border-width: 0.1px;
+  padding: 4px 4px 4px 4px;
+  border-color: rgba(36, 40, 59, 0.744);
+}
+
+.bluetooth-dashboard-buttons {
+  border-radius: 8px;
+  font-size: 16px;
+  color: #ffffff;
+  background: rgba(42, 46, 68, 0.774);
+  background-color: rgba(42, 46, 68, 0.774);
+  border-style: solid;
+  border-width: 1px;
+  margin: 4px 4px 4px 4px;
+  padding: 2px 2px 2px 2px;
+  border-color: rgba(36, 40, 59, 0.744);
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+}
+
+.button_clear_from_clipboard {
+  border-radius: 8px;
+  font-size: 16px;
+  color: #ffffff;
+  background: rgba(36, 40, 59, 0.9);
+  background-color: rgba(36, 40, 59, 0.9);
+  border-style: solid;
+  border-width: 1px;
+  margin: 4px 4px 4px 4px;
+  padding: 2px 2px 2px 2px;
+  border-color: rgba(36, 40, 59, 0.744);
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+}
+
+.icon_from_clicable_image {
+  -gtk-icon-size: 42px;
+}
+
+.label_from_clicable_image {
+  color: #36395ad8;
+}
+
+
+.icon_from_popover_launcher {
+  -gtk-icon-size: 52px;
+}
+.icon_from_folders {
+  -gtk-icon-size: 56px;
+}
+
+.box_from_clicable_image {
+  border-radius: 8px;
+  border-style: solid;
+  border-width: 1px;
+  margin: 4px 4px 4px 4px;
+  padding: 2px 2px 2px 2px;
+}
+
+.label_from_popover_launcher {
+  font-size: 18px;
+}
+
+.label_from_folders {
+  font-size: 20px;
+  font-family: "Sriracha";
+}
+
+.label_from_bookmarks {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.ClockButton {
+  font-size: 18px;
+  font-weight: bold;
+  font-family: "Sriracha";
+  color: #36395ad8;
+  border-style: solid;
+  padding: 0px 4px 0px 4px;
+  border-width: 0px;
+}
+
+.Clock {
+  align-items: center;
+  appearance: none;
+  background-color: #fcfcfd;
+  border-radius: 4px;
+  border-width: 0;
+  box-shadow:
+    rgba(45, 35, 66, 0.4) 0 2px 4px,
+    rgba(45, 35, 66, 0.3) 0 7px 13px -3px,
+    #d6d6e7 0 -3px 0 inset;
+  box-sizing: border-box;
+  color: #36395a;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 18px;
+  font-family: "Sriracha";
+  justify-content: center;
+  line-height: 1;
+  list-style: none;
+  overflow: hidden;
+  padding-left: 6px;
+  padding-right: 6px;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  position: relative;
+  text-align: left;
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  white-space: nowrap;
+  will-change: box-shadow, transform;
+}
+
+.wallpaper {
+  -gtk-icon-size: 400px;
+}
+
+.tbcpusage {
+  min-width: 120px;
+}
+
+.tbpid {
+  min-width: 80px;
+}
+
+.tbmemusage {
+  min-width: 140px;
+}
+
+.tbdiskusage {
+  min-width: 120px;
+}
+
+.tbclass {
+  min-width: 100px;
+}
+
+.TopBar {
+  font-size: 11px;
+  color: #000000;
+  background-color: #00000000;
+  background: #00000000;
+  border-radius: 1px;
+}
+
+.top_panel_box_left {
+  -gtk-icon-size: 32px;
+}
+
+.top_left_widgets {
+  -gtk-icon-size: 32px;
+}
+
+.top_panel_box_systray {
+  align-items: center;
+  appearance: none;
+  background-color: #fcfcfd;
+  border-radius: 4px;
+  border-width: 0;
+  box-shadow:
+    rgba(45, 35, 66, 0.4) 0 2px 4px,
+    rgba(45, 35, 66, 0.3) 0 7px 13px -3px,
+    #d6d6e7 0 -3px 0 inset;
+  box-sizing: border-box;
+  color: #36395ad8;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 18px;
+  font-family: "Sriracha";
+  justify-content: center;
+  line-height: 1;
+  list-style: none;
+  overflow: hidden;
+  padding-left: 6px;
+  padding-right: 6px;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  position: relative;
+  text-align: left;
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  white-space: nowrap;
+  will-change: box-shadow, transform;
+}
+
+
+.top_panel_box_center {
+  -gtk-icon-size: 0px;
+}
+
+.todo_label {
+  font-size: 15px;
+}
+
+.clicable_image_label {
+  color: #ffffff;
+}
+
+.TopBarBackground {
+  -gtk-icon-size: 24px;
+  align-items: center;
+  appearance: none;
+  background-color: #fcfcfdd8;
+  box-shadow:
+    rgba(45, 35, 66, 0.4) 0 2px 4px,
+    rgba(45, 35, 66, 0.3) 0 7px 13px -3px,
+    #d6d6e7 0 -3px 0 inset;
+  box-sizing: border-box;
+  color: #36395ad8;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  justify-content: center;
+  line-height: 1;
+  list-style: none;
+  overflow: hidden;
+  padding-left: 6px;
+  padding-right: 6px;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  position: relative;
+  text-align: left;
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  white-space: nowrap;
+  will-change: box-shadow, transform;
+}
+
+.BottomBar {
+  background-color: #00000000;
+  margin: 6px 8px 6px 8px;
+}
+
+.taskbar {
+  background: #fcfcfd;
+  border-radius: 4px;
+  border-width: 0;
+  box-shadow:
+    rgba(45, 35, 66, 0.4) 0 2px 4px,
+    rgba(45, 35, 66, 0.3) 0 7px 13px -3px,
+    #d6d6e7 0 -3px 0 inset;
+  box-sizing: border-box;
+  color: #36395ad8;
+  font-size: 18px;
+  font-family: "Sriracha";
+  padding-left: 6px;
+  padding-right: 6px;
+  margin-top: 6px;
+  margin-bottom: 6px;
+
+}
+
+.box_from_clicable_image:hover {
+  color: rgb(255, 255, 255);
+  background: #b5b3b05a;
+  text-shadow:
+    rgb(9, 5, 5) 0.006em 0.006em 0.007em,
+}
+
+.hvr-grow:hover {
+  color: rgb(255, 255, 255);
+  background: #b5b3b05a;
+  text-shadow:
+    rgb(9, 5, 5) 0.006em 0.006em 0.007em,
+}
