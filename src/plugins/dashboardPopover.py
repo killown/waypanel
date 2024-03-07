@@ -93,17 +93,13 @@ class PopoverDashboard(Adw.Application):
 
         return self.popover_dashboard
 
-    def run_app_from_dashboard(self, x):
-        selected_text, filename = x.get_child().MYTEXT
-        cmd = "gtk-launch {}".format(filename)
-        self.utils.run_app(cmd)
-        self.popover_dashboard.popdown()
-
     def open_popover_dashboard(self, *_):
         if self.popover_dashboard and self.popover_dashboard.is_visible():
             self.popover_dashboard.popdown()
-
-        self.create_popover_dashboard(self.app)
+        if self.popover_dashboard and not self.popover_dashboard.is_visible():
+            self.popover_dashboard.popup()
+        if not self.popover_dashboard:
+            self.popover_dashboard = self.create_popover_dashboard(self.app)
 
     def popover_is_closed(self, *_):
         return

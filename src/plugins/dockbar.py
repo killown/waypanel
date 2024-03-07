@@ -396,19 +396,21 @@ class Dockbar(Adw.Application):
                 del self.buttons_pid[pid]
         return True
 
-    # Append a window to the dockbar
+    # Append a window to the Dockbar
+    # this whole function is a mess, this was based in another compositor
+    # so need a rework
     def dockbar_append(self, *_):
-        w = self.instance.get_active_window()
-        initial_title = w.initial_title.lower()
-        wclass = w.wm_class.lower()
+        sock = self.compositor()
+        wclass = sock.get_focused_view_app_id().lower()
         wclass = "".join(wclass)
-        icon = initial_title
+        initial_title = wclass
+        icon = wclass
         cmd = initial_title
         desktop_file = ""
 
         # Adjusting for special cases like zsh or bash
         if initial_title in ["zsh", "bash", "fish"]:
-            title = w.title.split(" ")[0]
+            title = sock.get_focused_view_title().split()[0]
             cmd = f"kitty --hold {title}"
             icon = wclass
 
@@ -431,7 +433,7 @@ class Dockbar(Adw.Application):
                 webapp_path = os.path.join(self.webapps_applications, deskfile)
                 # necessary initial title without lower()
                 desktop_file_found = self.utils.search_str_inside_file(
-                    webapp_path, w.initial_title
+                    webapp_path, initial_title
                 )
 
                 if desktop_file_found:

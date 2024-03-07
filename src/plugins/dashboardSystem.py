@@ -164,8 +164,10 @@ class SystemDashboard(Adw.Application):
     def open_popover_dashboard(self, *_):
         if self.popover_dashboard and self.popover_dashboard.is_visible():
             self.popover_dashboard.popdown()
-
-        self.create_popover_system(self.app)
+        if self.popover_dashboard and not self.popover_dashboard.is_visible():
+            self.popover_dashboard.popup()
+        if not self.popover_dashboard:
+            self.popover_dashboard = self.create_popover_system(self.app)
 
     def on_action(self, button, action):
         if action == "Exit Waypanel":
