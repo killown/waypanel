@@ -34,12 +34,16 @@ class BluetoothDashboard(Adw.Application):
         )
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
+        self.bluetooth_buttons = {}
 
     def get_bluetooth_list(self):
         devices = (
             check_output("bluetoothctl devices".split()).decode().strip().split("\n")
         )
-        return [" ".join(i.split(" ")[1:]) for i in devices]
+
+        devices = [" ".join(i.split(" ")[1:]) for i in devices]
+        print(devices)
+        return devices
 
     def create_menu_popover_bluetooth(self, obj, app, *_):
         self.top_panel = obj.top_panel
@@ -49,6 +53,13 @@ class BluetoothDashboard(Adw.Application):
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
         self.menubutton_dashboard.set_icon_name("start-here-archlinux")
         return self.menubutton_dashboard
+
+    def CreateGesture(self, widget, mouse_button, arg):
+        gesture = Gtk.GestureClick.new()
+        gesture.connect("released", lambda *_: self.on_bluetooth_clicked(arg))
+        gesture.set_button(mouse_button)
+        widget.add_controller(gesture)
+        return widget
 
     def create_popover_bluetooth(self, *_):
         # Create a popover
@@ -71,17 +82,16 @@ class BluetoothDashboard(Adw.Application):
             bluetooth_button.add_css_class("bluetooth-dashboard-buttons")
             device_id = device.split()[0]
             device_name = " ".join(device.split()[1:])
+            self.bluetooth_buttons[device_name] = device_id
             bluetooth_button.set_label(device_name)
             if device_id in connected_devices:
                 bluetooth_button.set_icon_name("bluetooth-active")
             else:
                 bluetooth_button.set_icon_name("bluetooth-disabled")
-
-            # Connect the changed signal to a callback function
-            # bluetooth_button.connect("clicked", self.on_bluetooth_clicked)
-            self.utils.CreateGesture(
-                bluetooth_button, 1, lambda *_: self.on_bluetooth_clicked(device)
-            )
+            gesture = Gtk.GestureClick.new()
+            gesture.connect("released", self.on_bluetooth_clicked)
+            gesture.set_button(1)
+            bluetooth_button.add_controller(gesture)
             box.append(bluetooth_button)
 
         # Set the box as the child of the popover
@@ -90,11 +100,12 @@ class BluetoothDashboard(Adw.Application):
         # Set the parent widget of the popover and display it
         self.popover_dashboard.set_parent(self.menubutton_dashboard)
         self.popover_dashboard.popup()
-
         return self.popover_dashboard
 
-    def on_bluetooth_clicked(self, device, *_):
-        device_id = device.split()[0]
+    def on_bluetooth_clicked(self, gesture, *_):
+        button = gesture.get_widget()
+        device_name = button.get_label()
+        device_id = self.bluetooth_buttons[device_name]
         cmd = "bluetoothctl connect {0}".format(device_id).split()
         Popen(cmd)
 
