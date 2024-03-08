@@ -13,5 +13,3 @@ random2
 # Third-party library imports
 pygobject
 
-# Package imports
-gi
