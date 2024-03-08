@@ -21,6 +21,9 @@ from src.core.create_panel import CreatePanel, get_monitor_info
 from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
 import datetime
 import sys
+
+sys.path.append("/opt/waypanel/")
+
 import importlib
 import wayfire
 import time
