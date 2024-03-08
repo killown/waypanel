@@ -45,7 +45,6 @@ import pulsectl
 import toml
 from collections import ChainMap
 from src.plugins.dockbar import Dockbar
-from src.plugins.wallpaperPopover import PopoverWallpaper
 from src.plugins.bookmarksPopover import PopoverBookmarks
 from src.plugins.dashboardPopover import PopoverDashboard
 from src.plugins.dashboardSoundCard import SoundCardDashboard
@@ -138,7 +137,6 @@ class Panel(Adw.Application):
         self.popover_folders = None
         self.popover_launcher = None
         self.popover_clipboard = None
-        self.popover_wallpaper = None
         self.set_cpu_usage_state = []
         self.clipboard_text_copy = None
         self.active_window_changed = None
@@ -273,20 +271,6 @@ class Panel(Adw.Application):
         self.MenuLauncher = MenuLauncher()
         self.MenuLauncher.create_menu_popover_launcher(self, app)
 
-        wallpapers_folder = GLib.get_user_special_dir(
-            GLib.UserDirectory.DIRECTORY_PICTURES
-        )
-        wallpapers_folder = os.path.join(wallpapers_folder, "Wallpapers")
-
-        if not os.path.exists(wallpapers_folder):
-            os.makedirs(wallpapers_folder, exist_ok=True)
-
-        if os.path.exists("/usr/bin/swww"):
-            # disable the wallpapers folder plugin by commenting the following two lines
-            # use the same logic to disable any other plugin
-            self.PopoverWallpaper = PopoverWallpaper()
-            self.PopoverWallpaper.create_menu_popover_wallpaper(self, app)
-
         bookmarks_file = os.path.join(self.home, ".bookmarks")
         if os.path.exists(bookmarks_file):
             self.PopoverBookmarks = PopoverBookmarks()
@@ -313,6 +297,12 @@ class Panel(Adw.Application):
         # the title is only updated when a event happens, so needed to update in the panel start
         self.update_title_topbar()
         self.start_thread_all_events()
+
+        # Start monitoring CSS file for changes
+        self.monitor = Gio.File.new_for_path(self.style_css_config).monitor(
+            Gio.FileMonitorFlags.NONE, None
+        )
+        self.monitor.connect("changed", self.on_css_file_changed)
 
     def do_activate(self):
         self.show_panels()
@@ -854,6 +844,11 @@ class Panel(Adw.Application):
             self.bottom_panel.set_content(self.workspace_buttons)
         elif "--bottombar-todo" in self.args:
             self.bottom_panel.set_content(self.todo_label_box)
+
+    def on_css_file_changed(self, monitor, file, other_file, event_type):
+        if event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT:
+            # Reload CSS when changes are done
+            self.load_css_from_file()
 
     def load_css_from_file(self):
         css_provider = Gtk.CssProvider()
