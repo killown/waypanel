@@ -130,5 +130,7 @@ class PopoverWallpaper(Adw.Application):
     def open_popover_wallpaper(self, *_):
         if self.popover_wallpaper and self.popover_wallpaper.is_visible():
             self.popover_wallpaper.popdown()
-
-        self.create_popover_wallpaper(self.app)
+        if self.popover_wallpaper and not self.popover_wallpaper.is_visible():
+            self.popover_wallpaper.popup()
+        if not self.popover_wallpaper:
+            self.popover_wallpaper = self.create_popover_wallpaper(self.app)
