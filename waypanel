@@ -15,15 +15,14 @@ import gi
 gi.require_version("Gtk4LayerShell", "1.0")
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
+import sys
+
+sys.path.append("/opt/waypanel/")
 
 from src.core.utils import Utils as utils
 from src.core.create_panel import CreatePanel, get_monitor_info
 from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
 import datetime
-import sys
-
-sys.path.append("/opt/waypanel/")
-
 import importlib
 import wayfire
 import time
