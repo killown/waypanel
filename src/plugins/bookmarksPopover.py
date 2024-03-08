@@ -1,7 +1,7 @@
 import os
 import random
 import gi
-from gi.repository import Gio, Gtk, Adw
+from gi.repository import Gio, Gtk, Adw, GdkPixbuf
 from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen
 import toml
@@ -15,6 +15,7 @@ class PopoverBookmarks(Adw.Application):
         self.app = None
         self.top_panel = None
         self._setup_config_paths()
+        self.listbox = Gtk.ListBox.new()
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -68,24 +69,24 @@ class PopoverBookmarks(Adw.Application):
         # Create and configure search bar
         self.searchbar = Gtk.SearchEntry.new()
         self.searchbar.grab_focus()
-        self.searchbar.connect("search_changed", self.on_search_entry_changed)
+        self.searchbar.connect("search-changed", self.on_search_entry_changed)
         self.searchbar.set_focus_on_click(True)
         self.searchbar.props.hexpand = True
         self.searchbar.props.vexpand = True
         self.main_box.append(self.searchbar)
 
-        # Create and configure listbox
-        self.listbox = Gtk.ListBox.new()
-        self.listbox.connect(
-            "row-selected", lambda widget, row: self.open_url_from_bookmarks(row)
-        )
-        self.searchbar.set_key_capture_widget(self.top_panel)
-        self.listbox.props.hexpand = True
-        self.listbox.props.vexpand = True
-        self.listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
-        self.listbox.set_show_separators(True)
+        # Create and configure flow box
+        self.flowbox = Gtk.FlowBox()
+        self.flowbox.set_valign(Gtk.Align.START)
+        self.flowbox.set_max_children_per_line(10)
+        self.flowbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.flowbox.set_activate_on_single_click(True)
+
+        # Connect signal for selecting a row
+        self.flowbox.connect("child-activated", self.open_url_from_bookmarks)
+
+        self.scrolled_window.set_child(self.flowbox)
         self.main_box.append(self.scrolled_window)
-        self.scrolled_window.set_child(self.listbox)
 
         # Configure popover with main box
         self.popover_bookmarks.set_child(self.main_box)
@@ -95,14 +96,14 @@ class PopoverBookmarks(Adw.Application):
         with open(bookmarks_path, "r") as f:
             all_bookmarks = toml.load(f)
 
-        # Populate listbox with bookmarks
+        # Populate flow box with bookmarks
         for name, bookmark_data in all_bookmarks.items():
             url = bookmark_data.get("url", "")
             container = bookmark_data.get("container", "")
+            self.row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
 
             # Create a box for each bookmark
-            row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-            row_hbox.MYTEXT = url, container
+            self.row_hbox.MYTEXT = url, container
 
             # Configure bookmark icon
             icon = url
@@ -114,9 +115,6 @@ class PopoverBookmarks(Adw.Application):
                 icon = url + ".png"
             bookmark_image = os.path.join(self.config_path, "bookmarks/images/", icon)
 
-            # Add the bookmark to the listbox
-            self.listbox.append(row_hbox)
-
             # Create label for the bookmark name
             line = Gtk.Label.new()
             line.add_css_class("label_from_bookmarks")
@@ -125,28 +123,30 @@ class PopoverBookmarks(Adw.Application):
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)
 
-            # Create image for the bookmark icon
-            image = Gtk.Image.new_from_file(bookmark_image)
+            # Inside the loop where you load bookmarks
+            # Load the original image as a Pixbuf
+            original_pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                bookmark_image, 64, 64, True
+            )
+
+            # Create a Gtk.Image widget and set the Pixbuf
+            image = Gtk.Image.new_from_pixbuf(original_pixbuf)
+
             image.add_css_class("icon_from_popover_launcher")
-            image.set_icon_size(Gtk.IconSize.LARGE)
             image.props.margin_end = 5
             image.set_halign(Gtk.Align.END)
 
             # Add label and image to the bookmark box
-            row_hbox.append(image)
-            row_hbox.append(line)
-
-        # Configure listbox filter function
-        self.listbox.set_filter_func(self.on_filter_invalidate)
+            self.row_hbox.append(image)
+            self.row_hbox.append(line)
+            self.flowbox.append(self.row_hbox)
 
         # Set the parent and display the popover
         self.popover_bookmarks.set_parent(self.menubutton_bookmarks)
-        self.popover_bookmarks.popup()
-
         return self.popover_bookmarks
 
-    def open_url_from_bookmarks(self, x):
-        url, container = x.get_child().MYTEXT
+    def open_url_from_bookmarks(self, x, *_):
+        url, container = [i.get_child().MYTEXT for i in x.get_selected_children()][0]
         sock = self.compositor()
         all_windows = sock.list_views()
         view = [
@@ -162,12 +162,18 @@ class PopoverBookmarks(Adw.Application):
         self.popover_bookmarks.popdown()
 
     def open_popover_bookmarks(self, *_):
+        if self.popover_bookmarks is None:
+            self.popover_bookmarks = self.create_popover_bookmarks(self.app)
+
         if self.popover_bookmarks and self.popover_bookmarks.is_visible():
             self.popover_bookmarks.popdown()
+            del self.listbox
+            del self.popover_bookmarks
+            self.listbox = Gtk.ListBox.new()
+            self.popover_bookmarks = None
+
         if self.popover_bookmarks and not self.popover_bookmarks.is_visible():
             self.popover_bookmarks.popup()
-        if not self.popover_bookmarks:
-            self.popover_bookmarks = self.create_popover_bookmarks(self.app)
 
     def popover_is_closed(self, *_):
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)

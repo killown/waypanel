@@ -28,8 +28,8 @@ class PopoverFolders(Adw.Application):
         self.menu_config = os.path.join(self.config_path, "menu.toml")
         self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
         self.cmd_config = os.path.join(self.config_path, "cmd.toml")
-        self.topbar_launcher_config = os.path.join(
-            self.config_path, "topbar-launcher.toml"
+        self.topbar_folders_config = os.path.join(
+            self.config_path, "topbar-folders.toml"
         )
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
@@ -175,17 +175,17 @@ class PopoverFolders(Adw.Application):
         self.popover_folders.popdown()
 
     def open_popover_folders(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
-
         if self.popover_folders and self.popover_folders.is_visible():
             self.popover_folders.popdown()
-
-        self.create_popover_folders(self.app)
+        if self.popover_folders and not self.popover_folders.is_visible():
+            self.popover_folders.popup()
+        if not self.popover_folders:
+            self.popover_folders = self.create_popover_folders(self.app)
 
     def popover_is_closed(self, *_):
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
 
-    def popover_launcher_is_closed(self, *_):
+    def popover_folders_is_closed(self, *_):
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
 
     def on_show_searchbar_action_actived(self, action, parameter):
