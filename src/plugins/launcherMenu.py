@@ -144,20 +144,12 @@ class MenuLauncher(Adw.Application):
         self.popover_launcher.popdown()
 
     def open_popover_launcher(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
-
         if self.popover_launcher and self.popover_launcher.is_visible():
             self.popover_launcher.popdown()
-
-        self.create_popover_launcher(self.app)
-
-    def open_popover_clipboard(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
-
-        if self.popover_clipboard and self.popover_clipboard.is_visible():
-            self.popover_clipboard.popdown()
-
-        self.create_popover_clipboard(self.app)
+        if self.popover_launcher and not self.popover_launcher.is_visible():
+            self.popover_launcher.popup()
+        if not self.popover_launcher:
+            self.popover_launcher = self.create_popover_launcher(self.app)
 
     def popover_is_closed(self, *_):
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)

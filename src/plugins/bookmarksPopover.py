@@ -162,12 +162,12 @@ class PopoverBookmarks(Adw.Application):
         self.popover_bookmarks.popdown()
 
     def open_popover_bookmarks(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
-
         if self.popover_bookmarks and self.popover_bookmarks.is_visible():
             self.popover_bookmarks.popdown()
-
-        self.create_popover_bookmarks(self.app)
+        if self.popover_bookmarks and not self.popover_bookmarks.is_visible():
+            self.popover_bookmarks.popup()
+        if not self.popover_bookmarks:
+            self.popover_bookmarks = self.create_popover_bookmarks(self.app)
 
     def popover_is_closed(self, *_):
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
