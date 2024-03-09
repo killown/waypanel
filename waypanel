@@ -12,9 +12,6 @@ from subprocess import Popen
 from subprocess import check_output
 import gi
 
-gi.require_version("Gtk4LayerShell", "1.0")
-gi.require_version("Gtk", "4.0")
-gi.require_version("Adw", "1")
 import sys
 
 sys.path.append("/opt/waypanel/")
@@ -319,6 +316,26 @@ class Panel(Adw.Application):
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
         return wayfire.WayfireSocket(addr)
+
+    def get_folder_location(self, folder_name):
+        """
+        Get the location of a specified folder for the current user.
+
+        :param folder_name: The name of the folder to locate.
+                            Possible values: "DOCUMENTS", "DOWNLOAD", "MUSIC", "PICTURES", "VIDEOS", etc.
+        :return: The path to the specified folder, or None if it cannot be determined or does not exist.
+        """
+        folder_location = None
+        try:
+            # Get the user's specified folder using xdg-user-dir
+            folder_path = Gio.File.new_for_uri(
+                f"xdg-user-dir://{folder_name.upper()}"
+            ).get_path()
+            folder_location = Gio.File.new_for_path(folder_path)
+        except Exception as e:
+            print(f"Error: {e}")
+
+        return folder_location.get_path() if folder_location else None
 
     def wayland_instance_watch(self):
         self.wayinstance.signal_active_window_changed.connect(
