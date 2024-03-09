@@ -1,11 +1,9 @@
 import os
-import random
 import gi
 from gi.repository import Gio, Gtk, Adw
 from gi.repository import Gtk4LayerShell as LayerShell
-from subprocess import Popen
 from ..core.utils import Utils
-import toml
+from subprocess import check_output
 
 
 class PopoverDashboard(Adw.Application):
@@ -16,6 +14,9 @@ class PopoverDashboard(Adw.Application):
         self.top_panel = None
         self._setup_config_paths()
         self.utils = Utils(application_id="com.github.utils")
+        self.left_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self.right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self.right_label = Gtk.Label()
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -35,13 +36,28 @@ class PopoverDashboard(Adw.Application):
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
 
+    def get_folder_location(self, folder_name):
+        """
+        Get the location of a specified folder for the current user.
+
+        :param folder_name: The name of the folder to locate.
+                            Possible values: "DOCUMENTS", "DOWNLOAD", "MUSIC", "PICTURES", "VIDEOS", etc.
+        :return: The path to the specified folder, or None if it cannot be determined or does not exist.
+        """
+        folder_location = (
+            check_output("xdg-user-dir {0}".format(folder_name.upper()).split())
+            .decode()
+            .strip()
+        )
+        folder_location = Gio.File.new_for_path(folder_location)
+        return folder_location.get_path()
+
     def create_menu_popover_dashboard(self, obj, app, *_):
         self.top_panel = obj.top_panel
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        self.menubutton_dashboard.set_icon_name("start-here-archlinux")
         return self.menubutton_dashboard
 
     def create_popover_dashboard(self, *_):
@@ -49,24 +65,19 @@ class PopoverDashboard(Adw.Application):
         self.popover_dashboard = Gtk.Popover.new()
 
         # Set width and height of the popover dashboard
-        self.popover_dashboard.set_size_request(
-            600, 400
-        )  # Set width to 600 and height to 400
+        self.popover_dashboard.set_size_request(600, 400)
 
         # Create a grid to hold the elements
         grid = Gtk.Grid()
         grid.set_row_homogeneous(True)
         grid.set_column_homogeneous(True)
 
-        # Create a box for the left side
-        left_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-
         # Add elements to the left box
         left_label = Gtk.Label(label="")
-        left_box.append(left_label)
+        self.left_box.append(left_label)
 
         # Add the left box to the grid
-        grid.attach(left_box, 0, 0, 1, 2)  # Set row span to 2 for twice the height
+        grid.attach(self.left_box, 0, 0, 1, 2)
 
         # Create a calendar for the right side
         calendar = Gtk.Calendar()
@@ -75,14 +86,11 @@ class PopoverDashboard(Adw.Application):
         grid.attach(calendar, 1, 0, 1, 1)
 
         # Create a box for the right side below the calendar
-        right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-
-        # Add elements to the right box
-        right_label = Gtk.Label(label="")
-        right_box.append(right_label)
+        self.right_label = Gtk.Label(label="")
+        self.right_box.append(self.right_label)
 
         # Add the right box to the grid below the calendar
-        grid.attach_next_to(right_box, calendar, Gtk.PositionType.BOTTOM, 1, 1)
+        grid.attach_next_to(self.right_box, calendar, Gtk.PositionType.BOTTOM, 1, 1)
 
         # Set the grid as the child of the popover
         self.popover_dashboard.set_child(grid)
@@ -90,7 +98,6 @@ class PopoverDashboard(Adw.Application):
         # Set the parent widget of the popover and display it
         self.popover_dashboard.set_parent(self.menubutton_dashboard)
         self.popover_dashboard.popup()
-
         return self.popover_dashboard
 
     def open_popover_dashboard(self, *_):
@@ -106,8 +113,3 @@ class PopoverDashboard(Adw.Application):
 
     def popover_dashboard_is_closed(self, *_):
         return
-
-    def on_show_searchbar_action_actived(self, action, parameter):
-        self.searchbar.set_search_mode(
-            True
-        )  # Ctrl+F To Active show_searchbar and show searchbar
