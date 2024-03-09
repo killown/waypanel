@@ -1,11 +1,12 @@
 import os
-import random
 import gi
 from gi.repository import Gio, Gtk, Adw, GdkPixbuf
 from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen
 import toml
 import wayfire
+import requests
+from bs4 import BeautifulSoup
 
 
 class PopoverBookmarks(Adw.Application):
@@ -34,6 +35,7 @@ class PopoverBookmarks(Adw.Application):
         )
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
+        self.bookmarks_image_path = os.path.join(self.config_path, "bookmarks/images/")
 
     def create_menu_popover_bookmarks(self, obj, app, *_):
         self.top_panel = obj.top_panel
@@ -53,38 +55,22 @@ class PopoverBookmarks(Adw.Application):
         self.popover_bookmarks = Gtk.Popover.new()
         self.popover_bookmarks.set_autohide(True)
 
-        # Create an action to show the search bar
-        show_searchbar_action = Gio.SimpleAction.new("show_searchbar")
-        show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
-        self.app.add_action(show_searchbar_action)
-
         # Set up scrolled window
         self.scrolled_window = Gtk.ScrolledWindow()
-        self.scrolled_window.set_min_content_width(200)
-        self.scrolled_window.set_min_content_height(600)
+        self.scrolled_window.set_policy(
+            Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC
+        )
 
         # Set up main box
-        self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-
-        # Create and configure search bar
-        self.searchbar = Gtk.SearchEntry.new()
-        self.searchbar.grab_focus()
-        self.searchbar.connect("search-changed", self.on_search_entry_changed)
-        self.searchbar.set_focus_on_click(True)
-        self.searchbar.props.hexpand = True
-        self.searchbar.props.vexpand = True
-        self.main_box.append(self.searchbar)
+        self.main_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
 
         # Create and configure flow box
         self.flowbox = Gtk.FlowBox()
         self.flowbox.set_valign(Gtk.Align.START)
-        self.flowbox.set_max_children_per_line(10)
+        self.flowbox.set_max_children_per_line(4)
         self.flowbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.flowbox.set_activate_on_single_click(True)
-
-        # Connect signal for selecting a row
         self.flowbox.connect("child-activated", self.open_url_from_bookmarks)
-
         self.scrolled_window.set_child(self.flowbox)
         self.main_box.append(self.scrolled_window)
 
@@ -113,7 +99,6 @@ class PopoverBookmarks(Adw.Application):
                 print(icon)
             else:
                 icon = url + ".png"
-            bookmark_image = os.path.join(self.config_path, "bookmarks/images/", icon)
 
             # Create label for the bookmark name
             line = Gtk.Label.new()
@@ -123,11 +108,24 @@ class PopoverBookmarks(Adw.Application):
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)
 
-            # Inside the loop where you load bookmarks
-            # Load the original image as a Pixbuf
-            original_pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                bookmark_image, 64, 64, True
-            )
+            bookmark_image = os.path.join(self.bookmarks_image_path, icon)
+
+            # skip this url if there is an exception
+            try:
+                if not os.path.exists(bookmark_image):
+                    if "image" in bookmark_data:
+                        new_url = bookmark_data.get("image", "")
+                        self.download_image_direct(new_url, bookmark_image)
+                    else:
+                        self.download_image(url, self.bookmarks_image_path)
+                # Inside the loop where you load bookmarks
+                # Load the original image as a Pixbuf
+                original_pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                    bookmark_image, 64, 64, True
+                )
+            except Exception as e:
+                print(e)
+                continue
 
             # Create a Gtk.Image widget and set the Pixbuf
             image = Gtk.Image.new_from_pixbuf(original_pixbuf)
@@ -141,9 +139,72 @@ class PopoverBookmarks(Adw.Application):
             self.row_hbox.append(line)
             self.flowbox.append(self.row_hbox)
 
+        # Connect signal for selecting a row
+        height = self.flowbox.get_preferred_size().natural_size.height
+        self.scrolled_window.set_min_content_width(height / 2)
+        self.scrolled_window.set_min_content_height(height / 2)
+
         # Set the parent and display the popover
         self.popover_bookmarks.set_parent(self.menubutton_bookmarks)
         return self.popover_bookmarks
+
+    def download_image_direct(self, url, save_path):
+        # Specify a custom user-agent header
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+        }
+
+        # Send a GET request to the URL with custom headers
+        if "https://" not in url:
+            url = "https://" + url
+        response = requests.get(url, headers=headers)
+        print(response)
+
+        # Check if the request was successful
+        if response.status_code == 200:
+            # Save the image
+            with open(save_path, "wb") as f:
+                f.write(response.content)
+            print("Image downloaded successfully.")
+        else:
+            # If request failed
+            print(f"Failed to download image. Status code: {response.status_code}")
+
+    def download_image(self, url, save_path):
+        # Specify a custom user-agent header
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+        }
+
+        # Send a GET request to the URL with custom headers
+        if "https://" not in url:
+            url = "https://" + url
+        response = requests.get(url, headers=headers)
+        print(response)
+        # Parse the HTML content of the webpage
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Check for the og:image meta tag
+        og_image_meta = soup.find("meta", property="og:image")
+        if og_image_meta:
+            image_url = og_image_meta.get("content")
+            if image_url:
+                # Send a GET request to download the image with custom headers
+                image_response = requests.get(image_url, headers=headers)
+                if image_response.status_code == 200:
+                    # Create the directory if it doesn't exist
+                    if not os.path.exists(save_path):
+                        os.makedirs(save_path)
+                    # Save the image
+                    with open(
+                        os.path.join(save_path, "{0}.png".format(url)), "wb"
+                    ) as f:
+                        f.write(image_response.content)
+                    print("Image downloaded successfully.")
+        # If no suitable image found
+        print(
+            "No suitable image found. If the domain doesn't allow scraping tools, that may deny the image download"
+        )
 
     def open_url_from_bookmarks(self, x, *_):
         url, container = [i.get_child().MYTEXT for i in x.get_selected_children()][0]
@@ -180,36 +241,6 @@ class PopoverBookmarks(Adw.Application):
 
     def popover_launcher_is_closed(self, *_):
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
-
-    def on_show_searchbar_action_actived(self, action, parameter):
-        self.searchbar.set_search_mode(
-            True
-        )  # Ctrl+F To Active show_searchbar and show searchbar
-
-    def search_entry_grab_focus(self):
-        self.searchentry.grab_focus()
-        print("search entry is focused: {}".format(self.searchentry.is_focus()))
-
-    def on_search_entry_changed(self, searchentry):
-        """The filter_func will be called for each row after the call,
-        and it will continue to be called each time a row changes (via [method`Gtk`.ListBoxRow.changed])
-        or when [method`Gtk`.ListBox.invalidate_filter] is called."""
-        searchentry.grab_focus()
-        # run filter (run self.on_filter_invalidate look at self.listbox.set_filter_func(self.on_filter_invalidate) )
-        self.listbox.invalidate_filter()
-
-    def on_filter_invalidate(self, row):
-        text_to_search = (
-            self.searchbar.get_text().strip()
-        )  # get text from searchentry and remove space from start and end
-        if not isinstance(row, str):
-            row = row.get_child().MYTEXT[0]
-        row = row.lower().strip()
-        if (
-            text_to_search.lower() in row
-        ):  # == row_hbox.MYTEXT (Gtk.ListBoxRow===>get_child()===>row_hbox.MYTEXT)
-            return True  # if True Show row
-        return False
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
