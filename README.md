@@ -1,6 +1,6 @@
 ## waypanel
 
-![image](https://github.com/killown/waypanel/assets/24453/09e44a10-b9fd-47f6-ba8e-646b57808ca7)
+![waypanel](https://github.com/killown/waypanel/assets/24453/4d718444-bebf-4641-a2a3-19708126d11e)
 
 ##### _Gtk4/Adwaita panel made for wayfire_
 
