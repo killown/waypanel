@@ -25,6 +25,9 @@ from ..core.create_panel import (
 from ..core.utils import Utils
 import numpy as np
 import wayfire as ws
+import sys
+
+sys.path.append("/usr/lib/waypanel/")
 
 
 class InvalidGioTaskError(Exception):
