@@ -53,6 +53,7 @@ class PopoverBookmarks(Adw.Application):
         """
         # Create a new popover menu
         self.popover_bookmarks = Gtk.Popover.new()
+        self.popover_bookmarks.set_has_arrow(False)
         self.popover_bookmarks.set_autohide(True)
 
         # Set up scrolled window

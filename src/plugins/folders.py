@@ -50,6 +50,7 @@ class PopoverFolders(Adw.Application):
         """
         # Create a new popover menu
         self.popover_folders = Gtk.Popover.new()
+        self.popover_folders.set_has_arrow(False)
         self.popover_folders.set_autohide(True)
 
         # Create an action to show the search bar
