@@ -111,6 +111,7 @@ class SoundCardDashboard(Adw.Application):
     def create_popover_soundcard(self, *_):
         # Create a popover
         self.popover_dashboard = Gtk.Popover.new()
+        self.popover_dashboard.set_has_arrow(False)
 
         # Set width and height of the popover dashboard
         # self.popover_dashboard.set_size_request(600, 400)

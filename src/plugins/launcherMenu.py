@@ -48,6 +48,7 @@ class MenuLauncher(Adw.Application):
     def create_popover_launcher(self, *_):
         # Create a popover
         self.popover_launcher = Gtk.Popover.new()  # Create a new popover menu
+        self.popover_launcher.set_has_arrow(False)
         show_searchbar_action = Gio.SimpleAction.new("show_searchbar")
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
         self.app.add_action(show_searchbar_action)
