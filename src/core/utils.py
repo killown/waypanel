@@ -344,51 +344,6 @@ class Utils(Adw.Application):
         self.CreateGesture(box, 3, lambda *_: self.close_view(view_id))
         return box
 
-    # def create_clicable_image(
-    #     self, icon, Class_Style, wclass, title, initial_title, view_id
-    # ):
-    #     box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
-    #     box.add_css_class(Class_Style)
-    #     image = None
-    #     label = Gtk.Label.new()
-    #     # zsh use titles instead of initial title
-    #     # title max len, 4 words max
-    #
-    #     use_this_title = title
-    #
-    #     # show less words in the taskbar title
-    #     parse_title = use_this_title.split()
-    #     if len(parse_title) > 2:
-    #         use_this_title = " ".join(parse_title[:3])
-    #
-    #     if "kitty" in wclass.lower():
-    #         use_this_title = title
-    #     else:
-    #         self.gio_icon_list = Gio.AppInfo.get_all()
-    #         exist = [
-    #             i.get_display_name()
-    #             for i in self.gio_icon_list
-    #             if wclass == i.get_startup_wm_class()
-    #         ]
-    #         if exist:
-    #             use_this_title = exist[0]
-    #
-    #     label.set_label(use_this_title)
-    #     label.add_css_class("clicable_image_label")
-    #
-    #     image = Gtk.Image.new_from_icon_name(icon)
-    #     image.set_icon_size(Gtk.IconSize.LARGE)
-    #     image.props.margin_end = 5
-    #     image.set_halign(Gtk.Align.END)
-    #     image.add_css_class("icon_from_clicable_image")
-    #
-    #     box.append(image)
-    #     box.append(label)
-    #     # if you put the add_css_class above, wont work
-    #     box.add_css_class("box_from_clicable_image")
-    #     self.CreateGesture(box, 1, lambda *_: self.set_view_focus(view_id))
-    #     return box
-
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
         return wayfire.WayfireSocket(addr)
@@ -399,12 +354,12 @@ class Utils(Adw.Application):
 
     def set_view_focus(self, view_id):
         sock = self.compositor()
+        sock.set_focus(view_id)
         try:
             has_views = sock.get_views_from_active_workspace()
             # scale leave only when there is view, if not the wayfire may crash
             if has_views:
-                sock.scale_leave()
-                sock.set_focus(view_id)
+                sock.scale_toggle()
         except Exception as e:
             print(e)
 
@@ -445,11 +400,15 @@ class Utils(Adw.Application):
         with open(self.topbar_config, "r") as f:
             return toml.load(f)
 
-    def CreateGesture(self, widget, mouse_button, callback):
+    def CreateGesture(self, widget, mouse_button, callback, arg=None):
         gesture = Gtk.GestureClick.new()
-        gesture.connect("released", callback)
+        if arg is None:
+            gesture.connect("released", callback)
+        else:
+            gesture.connect("released", lambda arg: callback(arg))
         gesture.set_button(mouse_button)
         widget.add_controller(gesture)
+        return widget
 
     def convert_size(self, size_bytes):
         if size_bytes == 0:
