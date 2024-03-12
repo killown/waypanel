@@ -30,9 +30,7 @@ class Utils(Adw.Application):
         self.psutil_store = {}
         self.panel_cfg = self.load_topbar_config()
         # split the org.gnome dots from the list
-        self.icon_names = [
-            icon.split(".")[-1].lower() for icon in Gtk.IconTheme().get_icon_names()
-        ]
+        self.icon_names = [icon for icon in Gtk.IconTheme().get_icon_names()]
         self.gio_icon_list = Gio.AppInfo.get_all()
 
         self.focused_view_id = None
@@ -185,14 +183,14 @@ class Utils(Adw.Application):
             return None
 
     def icon_exist(self, argument):
-        if "." in argument:
-            argument = argument.split(".")[-1]
+        # if "." in argument:
+        #    argument = argument.split(".")[-1]
 
         # we split title and consider initial_title in certain cases
         # there is some titles that starts with "app: some title"
         # so if we simply title.split()[0] won't catch this case
-        if ":" in argument:
-            argument = argument.split(":")[0]
+        # if ":" in argument:
+        #    argument = argument.split(":")[0]
 
         if argument:
             # try to methods, with gtk and gio
@@ -200,7 +198,7 @@ class Utils(Adw.Application):
             exist = [
                 i.get_icon()
                 for i in self.gio_icon_list
-                if argument.lower() == i.get_startup_wm_class()
+                if argument == i.get_startup_wm_class()
             ]
 
             if exist:
@@ -211,6 +209,7 @@ class Utils(Adw.Application):
                 exist = [name for name in self.icon_names if argument.lower() in name]
                 if exist:
                     exist = exist[0]
+                    print(exist)
                     return exist
         return ""
 
@@ -247,7 +246,9 @@ class Utils(Adw.Application):
                 return False
 
     def get_icon(self, wm_class, initial_title, title):
-        wm_class = wm_class.lower()
+        # FIXME: this wm_class came from another compositor
+        # now I am lazy to change it for app-id, there is too many changes to do
+
         icon = self.icon_exist(wm_class)
 
         if not icon:
@@ -331,6 +332,7 @@ class Utils(Adw.Application):
         label.add_css_class("label_from_clicable_image")
 
         image = Gtk.Image.new_from_icon_name(icon)
+
         image.set_icon_size(Gtk.IconSize.LARGE)
         image.props.margin_end = 5
         image.set_halign(Gtk.Align.END)
