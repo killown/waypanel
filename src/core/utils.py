@@ -356,12 +356,19 @@ class Utils(Adw.Application):
 
     def set_view_focus(self, view_id):
         sock = self.compositor()
+        # check before set the focus, if not, it will get the new output
+        is_view_from_focused_output = any(
+            view for view in sock.focused_output_views() if view_id == view["id"]
+        )
         sock.set_focus(view_id)
         try:
             has_views = sock.get_views_from_active_workspace()
             # scale leave only when there is view, if not the wayfire may crash
             if has_views:
-                sock.scale_toggle()
+                # we don't want to toggle scale on a different output
+                print(sock.focused_output_views())
+                if is_view_from_focused_output:
+                    sock.scale_toggle()
         except Exception as e:
             print(e)
 
