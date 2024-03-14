@@ -22,9 +22,11 @@ from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
 import datetime
 import importlib
 import wayfire
-import time
 import netifaces
 import soundcard as sc
+
+gi.require_version("Gtk4LayerShell", "1.0")
+from gi.repository import Gtk4LayerShell as LayerShell
 
 spam_loader = importlib.util.find_spec("wayfire")
 found = spam_loader is not None
@@ -932,7 +934,7 @@ class Panel(Adw.Application):
 
                     position = panel_toml[p]["position"]
                     self.bottom_panel = CreatePanel(
-                        app, "BOTTOM", position, self.exclusive, 32, 0, "BottomBar"
+                        app, "BOTTOM", position, self.exclusive, 48, 0, "BottomBar"
                     )
                 if "right" == p:
                     self.exclusive = True
@@ -948,7 +950,7 @@ class Panel(Adw.Application):
                         self.exclusive = False
                     position = panel_toml[p]["position"]
                     self.left_panel = CreatePanel(
-                        app, "LEFT", position, self.exclusive, 0, 32, "LeftBar"
+                        app, "LEFT", position, self.exclusive, 0, 48, "LeftBar"
                     )
                 if "top" == p:
                     self.exclusive = True
