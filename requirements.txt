@@ -9,6 +9,7 @@ soundcard
 toml
 numpy
 random2
+wayfire 
 
 # Third-party library imports
 pygobject
