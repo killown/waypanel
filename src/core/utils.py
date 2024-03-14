@@ -11,6 +11,7 @@ from subprocess import Popen
 import math
 import pulsectl
 import psutil
+from wayfire import sock
 import wayfire
 
 
@@ -252,7 +253,7 @@ class Utils(Adw.Application):
         icon = self.icon_exist(wm_class)
 
         if not icon:
-            app_id = self.compositor().get_focused_view().get("app-id", "")
+            app_id = sock.get_focused_view().get("app-id", "")
             icon = self.icon_exist(app_id)
 
         # handle web apps
@@ -351,26 +352,19 @@ class Utils(Adw.Application):
         return wayfire.WayfireSocket(addr)
 
     def close_view(self, view_id):
-        sock = self.compositor()
         sock.close_view(view_id)
 
     def set_view_focus(self, view_id):
-        sock = self.compositor()
-        # check before set the focus, if not, it will get the new output
+        # monitor A with scale toggled will focus on monitor B
+        # but monitr B as no scale active so it will activate scale
+        # to try to prevent that, store te active output before set the new focus
         is_view_from_focused_output = any(
             view for view in sock.focused_output_views() if view_id == view["id"]
         )
+        # toggle scale off first and then we can focus to the new window
+        if is_view_from_focused_output:
+            sock.scale_toggle()
         sock.set_focus(view_id)
-        try:
-            has_views = sock.get_views_from_active_workspace()
-            # scale leave only when there is view, if not the wayfire may crash
-            if has_views:
-                # we don't want to toggle scale on a different output
-                print(sock.focused_output_views())
-                if is_view_from_focused_output:
-                    sock.scale_toggle()
-        except Exception as e:
-            print(e)
 
     def CreateButton(
         self,
