@@ -17,7 +17,7 @@ import sys
 sys.path.append("/opt/waypanel/")
 
 from src.core.utils import Utils as utils
-from src.core.create_panel import CreatePanel, get_monitor_info
+from src.core.create_panel import CreatePanel
 from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
 import datetime
 import importlib
@@ -368,11 +368,53 @@ class Panel(Adw.Application):
         else:
             return False
 
+    def handle_plugin_event(self, msg, view):
+        if msg["event"] == "plugin-activation-state-changed":
+            if msg["state"]:
+                if msg["plugin"] == "expo":
+                    self.on_expo_activated()
+                if msg["plugin"] == "scale":
+                    self.on_scale_activated()
+                if msg["plugin"] == "move":
+                    self.on_moving_view()
+            else:
+                if msg["plugin"] == "expo":
+                    self.on_expo_desactivated()
+                if msg["plugin"] == "scale":
+                    self.on_scale_desactivated()
+
+    def handle_view_event(self, msg, view):
+        if msg["event"] == "view-title-changed":
+            self.on_title_changed()
+
+        if msg["event"] == "view-tiled" and view:
+            if self.sock.is_view_maximized(view["id"]):
+                self.was_last_focused_view_maximized = True
+
+        if msg["event"] == "app-id-changed":
+            self.on_app_id_changed()
+
+        if msg["event"] == "view-focused":
+            if view and view["role"] == "toplevel":
+                self.on_view_role_toplevel_focused(view)
+                self.on_view_focused()
+                self.last_focused_output = view["output-id"]
+
+        if msg["event"] == "view-mapped":
+            if view and view["role"] == "toplevel":
+                self.on_view_role_toplevel_focused(view)
+                self.on_view_focused()
+                self.on_view_created(view)
+
+        if msg["event"] == "view-unmapped":
+            if view and view["role"] == "toplevel":
+                self.on_view_destroyed()
+
     def all_events_watch(self):
         sock = self.compositor()
         sock.watch()
         view = None
-        while 1:
+        while True:
             try:
                 msg = sock.read_message()
                 if "event" not in msg:
@@ -381,52 +423,8 @@ class Panel(Adw.Application):
                 if "view" in msg:
                     view = msg["view"]
 
-                if "event" in msg:
-                    if msg["event"] == "view-title-changed":
-                        self.on_title_changed()
-
-                    if msg["event"] == "view-tiled" and "view" in msg:
-                        if sock.is_view_maximized(view["id"]):
-                            # that is meant for dialogs, if on_view_destroyed then no tilling
-                            self.was_last_focused_view_maximized = True
-
-                    if msg["event"] == "app-id-changed":
-                        self.on_app_id_changed()
-
-                    if msg["event"] == "view-focused":
-                        if view["role"] == "toplevel":
-                            self.on_view_role_toplevel_focused(view)
-                            self.on_view_focused()
-                            self.last_focused_output = view["output-id"]
-
-                    if msg["event"] == "view-mapped":
-                        if view["role"] == "toplevel":
-                            self.on_view_role_toplevel_focused(view)
-                            self.on_view_focused()
-                            self.on_view_created(view)
-
-                    if msg["event"] == "view-unmapped":
-                        if view["role"] == "toplevel":
-                            self.on_view_destroyed()
-
-                    if msg["event"] == "plugin-activation-state-changed":
-                        # if plugin state is true (activated)
-                        if msg["state"] is True:
-                            if msg["plugin"] == "expo":
-                                self.on_expo_activated()
-                            if msg["plugin"] == "scale":
-                                self.on_scale_activated()
-
-                        if msg["state"] is True:
-                            if msg["plugin"] == "move":
-                                self.on_moving_view()
-
-                        # if plugin state is false (desactivated)
-                        if msg["state"] is False:
-                            if msg["plugin"] == "expo":
-                                self.on_expo_desactivated()
-                            if msg["plugin"] == "scale":
-                                self.on_scale_desactivated()
+                self.handle_view_event(msg, view)
+                self.handle_plugin_event(msg, view)
 
             except Exception as e:
                 print(e)
@@ -547,18 +545,6 @@ class Panel(Adw.Application):
             output = output[self.monitor_name]
             self.monitor_width = output[0]
             self.monitor_height = output[1]
-
-    # def notification_msg(self, bus, msg):
-    #     m = [str(m) for m in msg.get_args_list() if isinstance(m, dbus.String)]
-    #     notification = " ".join(m)
-    #
-    #     # self.notifications.append(notification)
-    #     with open("/tmp/waypanel-notifications.txt", "a") as file:
-    #         file.write("{0}\n".format(notification))
-    #         file.close()
-    #     with open("/tmp/waypanel-notifications.txt", "r") as file:
-    #         # print(file.readlines())
-    #         print("")
 
     def setup_menus(self):
         for menu in self.menus.values():
@@ -849,13 +835,6 @@ class Panel(Adw.Application):
             print(retval)
         except Exception as err:
             print("Unhandled exception occured!", err.message)
-
-    # def start_thread_wayland(self):
-    # server_thread = threading.Thread(target=self.waylandWatch)
-    # server_thread.daemon = True
-    # server_thread.start()
-    # waywatch = BackgroundTask(self.waylandWatch, self.on_waywatch_finished)
-    # waywatch.start()
 
     def setup_panels(self):
         self.top_panel_box_left.add_css_class("top_panel_box_left")
