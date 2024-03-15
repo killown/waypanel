@@ -358,9 +358,12 @@ class Utils(Adw.Application):
         # monitor A with scale toggled will focus on monitor B
         # but monitr B as no scale active so it will activate scale
         # to try to prevent that, store te active output before set the new focus
-        is_view_from_focused_output = any(
-            view for view in sock.focused_output_views() if view_id == view["id"]
-        )
+        focused_output_views = sock.focused_output_views()
+        is_view_from_focused_output = None
+        if focused_output_views:
+            is_view_from_focused_output = any(
+                view for view in focused_output_views if view_id == view["id"]
+            )
         # toggle scale off first and then we can focus to the new window
         if is_view_from_focused_output:
             sock.scale_toggle()
