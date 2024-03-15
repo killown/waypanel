@@ -145,6 +145,7 @@ class Panel(Adw.Application):
         self.window_title_from_topbar = None
         self.active_window = None
         self.last_view_toplevel_focused = None
+        self.last_focused_output = None
         self.is_scale_active = None
         self.focused_output = None
         self.vol_slider = None
@@ -396,6 +397,7 @@ class Panel(Adw.Application):
                         if view["role"] == "toplevel":
                             self.on_view_role_toplevel_focused(view)
                             self.on_view_focused()
+                            self.last_focused_output = view["output-id"]
 
                     if msg["event"] == "view-mapped":
                         if view["role"] == "toplevel":
@@ -805,66 +807,27 @@ class Panel(Adw.Application):
         This method configures custom panel positions and widgets based on provided command-line arguments.
         """
 
-        # Configuring the top panel based on command-line arguments
-        if any("topbar" in i for i in self.args):
-            # Create widgets for the horizontal top bar
-            self.dockbar, self.workspace_buttons = self.create_widgets("h", "TopBar")
-            self.all_panels_enabled = False
-            self.top_panel.present()
+        panel_configurations = {
+            "topbar": ("h", "TopBar", self.top_panel),
+            "rightbar": ("h", "RightBar", self.right_panel),
+            "leftbar": ("v", "LeftBar", self.left_panel),
+            "bottombar": ("h", "BottomBar", self.bottom_panel),
+        }
 
-        # Configure the top panel content based on specific options
-        if "--topbar-apps" in self.args:
-            self.top_panel.set_content(self.dockbar)
-        elif "--topbar-workspaces" in self.args:
-            self.top_panel.set_content(self.workspace_buttons)
-        elif "--topbar-todo" in self.args:
-            self.top_panel.set_content(self.todo_label_box)
+        for arg, (orientation, panel_name, panel) in panel_configurations.items():
+            if any(arg in i for i in self.args):
+                dockbar, workspace_buttons = self.create_widgets(
+                    orientation, panel_name
+                )
+                self.all_panels_enabled = False
+                panel.present()
 
-        # Configuring the right panel based on command-line arguments
-        if any("rightbar" in i for i in self.args):
-            # Create widgets for the horizontal right bar
-            self.dockbar, self.workspace_buttons = self.create_widgets("h", "RightBar")
-            self.all_panels_enabled = False
-            self.right_panel.present()
-
-        # Configure the right panel content based on specific options
-        elif "--rightbar-apps" in self.args:
-            self.right_panel.set_content(self.dockbar)
-        elif "--rightbar-workspaces" in self.args:
-            self.right_panel.set_content(self.workspace_buttons)
-        elif "--rightbar-todo" in self.args:
-            self.right_panel.set_content(self.todo_label_box)
-
-        # Configuring the left panel based on command-line arguments
-        if any("leftbar" in i for i in self.args):
-            # Create a vertical left bar
-            CreatePanel(app, "LEFT", "BOTTOM", self.exclusive, 0, 32, "LeftBar")
-            self.dockbar, workspace_buttons = self.create_widgets("v", "LeftBar")
-            self.all_panels_enabled = False
-            self.left_panel.present()
-
-        # Configure the left panel content based on specific options
-        elif "--leftbar-apps" in self.args:
-            self.left_panel.set_content(self.dockbar)
-        elif "--leftbar-workspaces" in self.args:
-            self.left_panel.set_content(self.workspace_buttons)
-        elif "--leftbar-todo" in self.args:
-            self.left_panel.set_content(self.todo_label_box)
-
-        # Configuring the bottom panel based on command-line arguments
-        if any("bottombar" in i for i in self.args):
-            # Create widgets for the horizontal bottom bar
-            self.dockbar, self.workspace_buttons = self.create_widgets("h", "BottomBar")
-            self.all_panels_enabled = False
-            self.bottom_panel.present()
-
-        # Configure the bottom panel content based on specific options
-        elif "--bottombar-apps" in self.args:
-            self.bottom_panel.set_content(self.dockbar)
-        elif "--bottombar-workspaces" in self.args:
-            self.bottom_panel.set_content(self.workspace_buttons)
-        elif "--bottombar-todo" in self.args:
-            self.bottom_panel.set_content(self.todo_label_box)
+                if f"--{arg}-apps" in self.args:
+                    panel.set_content(dockbar)
+                elif f"--{arg}-workspaces" in self.args:
+                    panel.set_content(workspace_buttons)
+                elif f"--{arg}-todo" in self.args:
+                    panel.set_content(self.todo_label_box)
 
     def on_css_file_changed(self, monitor, file, other_file, event_type):
         if event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT:
@@ -1168,7 +1131,7 @@ class Panel(Adw.Application):
 
     def left_gesture_right_click(self, *_):
         sock = self.compositor()
-        sock.go_next_workspace_with_views()
+        sock.go_next_workspace_with_views(self.last_focused_output)
         # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
         # self.utils.run_app(cmd, True)
 
