@@ -1,6 +1,4 @@
 .WindowTitle {
-  align-items: center;
-  appearance: none;
   background-color: #24283bc5;
   border-radius: 4px;
   border-width: 0;
@@ -8,31 +6,18 @@
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
     #00000075 0 -3px 0 inset;
-  box-sizing: border-box;
   color: #ffffffd8;
-  cursor: pointer;
-  display: inline-flex;
   font-size: 18px;
   font-family: "Sriracha";
-  justify-content: center;
   line-height: 1;
-  list-style: none;
-  overflow: hidden;
   padding-left: 6px;
   padding-right: 6px;
   margin-top: 6px;
   margin-bottom: 6px;
-  position: relative;
-  text-align: left;
   text-decoration: none;
   transition:
     box-shadow 0.15s,
     transform 0.15s;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  white-space: nowrap;
-  will-change: box-shadow, transform;
 }
 
 .LeftBar {
@@ -61,8 +46,6 @@
   padding-bottom: 8px;
   margin-left: 8px;
   margin-right: 6px;
-  align-items: center;
-  appearance: none;
   background-color: #24283ba2;
   border-radius: 14px;
   border-width: 0;
@@ -70,33 +53,17 @@
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
     #00000075 0 -3px 0 inset;
-  box-sizing: border-box;
   color: #ffffffd8;
-  cursor: pointer;
-  display: inline-flex;
   font-size: 18px;
   font-family: "Sriracha";
-  justify-content: center;
   line-height: 1;
-  list-style: none;
-  overflow: hidden;
-  position: relative;
-  text-align: left;
   text-decoration: none;
   transition:
     box-shadow 0.15s,
     transform 0.15s;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  white-space: nowrap;
-  will-change: box-shadow, transform;
-
 }
 
 .RightBar-button {
-  align-items: center;
-  appearance: none;
   background-color: #24283bb2;
   border-radius: 4px;
   border-width: 0;
@@ -104,16 +71,10 @@
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
     #00000075 0 -3px 0 inset;
-  box-sizing: border-box;
   color: #ffffffd8;
-  cursor: pointer;
-  display: inline-flex;
   font-size: 18px;
   font-family: "Sriracha";
-  justify-content: center;
   line-height: 1;
-  list-style: none;
-  overflow: hidden;
   padding-left: 6px;
   padding-right: 12px;
   padding-top: 6px;
@@ -122,17 +83,10 @@
   margin-bottom: 1px;
   margin-left: 1px;
   margin-right: 1px;
-  position: relative;
-  text-align: left;
   text-decoration: none;
   transition:
     box-shadow 0.15s,
     transform 0.15s;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  white-space: nowrap;
-  will-change: box-shadow, transform;
 }
 
 .RightBar {
@@ -167,8 +121,6 @@
   color: rgb(255, 255, 255);
   border-color: rgba(36, 40, 59, 0.744);
   border-radius: 4px;
-
-  display: block;
 }
 
 .maximize-button {
@@ -189,8 +141,6 @@
   color: rgb(255, 255, 255);
   border-color: rgba(36, 40, 59, 0.744);
   border-radius: 4px;
-
-  display: block;
 }
 
 .minimize-button {
@@ -211,13 +161,9 @@
   color: rgb(255, 255, 255);
   border-color: rgba(36, 40, 59, 0.744);
   border-radius: 4px;
-
-  display: block;
 }
 
 .top_panel_box_widgets_left {
-  align-items: center;
-  appearance: none;
   background-color: #24283bc5;
   border-radius: 4px;
   border-width: 0;
@@ -225,35 +171,21 @@
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
     #00000075 0 -3px 0 inset;
-  box-sizing: border-box;
   color: #ffffffd8;
-  cursor: pointer;
-  display: inline-flex;
   font-size: 18px;
   font-family: "Sriracha";
-  justify-content: center;
   line-height: 1;
-  list-style: none;
-  overflow: hidden;
   padding-left: 6px;
   padding-right: 6px;
   margin-top: 6px;
   margin-bottom: 6px;
   margin-left: 6px;
   margin-right: 6px;
-  position: relative;
-  text-align: left;
   text-decoration: none;
   transition:
     box-shadow 0.15s,
     transform 0.15s;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  white-space: nowrap;
-  will-change: box-shadow, transform;
 }
-
 
 scale slider {
   min-width: 20px;
@@ -326,10 +258,10 @@ scale {
   color: #ffffffd8;
 }
 
-
 .icon_from_popover_launcher {
   -gtk-icon-size: 52px;
 }
+
 .icon_from_folders {
   -gtk-icon-size: 56px;
 }
@@ -368,8 +300,6 @@ scale {
 }
 
 .Clock {
-  align-items: center;
-  appearance: none;
   background-color: #24283bc5;
   border-radius: 4px;
   border-width: 0;
@@ -377,31 +307,18 @@ scale {
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
     #00000075 0 -3px 0 inset;
-  box-sizing: border-box;
   color: #ffffffd8;
-  cursor: pointer;
-  display: inline-flex;
   font-size: 18px;
   font-family: "Sriracha";
-  justify-content: center;
   line-height: 1;
-  list-style: none;
-  overflow: hidden;
   padding-left: 6px;
   padding-right: 6px;
   margin-top: 6px;
   margin-bottom: 6px;
-  position: relative;
-  text-align: left;
   text-decoration: none;
   transition:
     box-shadow 0.15s,
     transform 0.15s;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  white-space: nowrap;
-  will-change: box-shadow, transform;
 }
 
 .wallpaper {
@@ -446,8 +363,6 @@ scale {
 
 .top_panel_box_systray {
   -gtk-icon-size: 26px;
-  align-items: center;
-  appearance: none;
   background-color: #24283bc5;
   border-radius: 4px;
   border-width: 0;
@@ -455,33 +370,19 @@ scale {
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
     #00000075 0 -3px 0 inset;
-  box-sizing: border-box;
   color: #ffffffd8;
-  cursor: pointer;
-  display: inline-flex;
   font-size: 18px;
   font-family: "Sriracha";
-  justify-content: center;
   line-height: 1;
-  list-style: none;
-  overflow: hidden;
   padding-left: 6px;
   padding-right: 6px;
   margin-top: 6px;
   margin-bottom: 6px;
-  position: relative;
-  text-align: left;
   text-decoration: none;
   transition:
     box-shadow 0.15s,
     transform 0.15s;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  white-space: nowrap;
-  will-change: box-shadow, transform;
 }
-
 
 .top_panel_box_center {
   -gtk-icon-size: 0px;
@@ -497,29 +398,14 @@ scale {
 
 .TopBarBackground {
   -gtk-icon-size: 24px;
-  align-items: center;
-  appearance: none;
   background-color: #24283b75;
-  box-sizing: border-box;
   color: #ffffffd8;
-  cursor: pointer;
-  display: inline-flex;
   font-size: 16px;
-  justify-content: center;
   line-height: 1;
-  list-style: none;
-  overflow: hidden;
-  position: relative;
-  text-align: left;
   text-decoration: none;
   transition:
     box-shadow 0.15s,
     transform 0.15s;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  white-space: nowrap;
-  will-change: box-shadow, transform;
 }
 
 .BottomBar {
@@ -529,40 +415,24 @@ scale {
 }
 
 .taskbar {
-  align-items: center;
-  appearance: none;
-
   border-radius: 14px;
   border-width: 0;
   box-shadow:
     rgba(255, 255, 255, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
     #00000075 0 -3px 0 inset;
-  box-sizing: border-box;
   color: #ffffffd8;
-  cursor: pointer;
-  display: inline-flex;
   font-size: 18px;
   font-family: "Sriracha";
-  justify-content: center;
   line-height: 1;
-  list-style: none;
-  overflow: hidden; 
   padding-left: 8px;
   padding-right: 8px;
   padding-top: 8px;
   padding-bottom: 8px;
-  position: relative;
-  text-align: left;
   text-decoration: none;
   transition:
     box-shadow 0.15s,
     transform 0.15s;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  white-space: nowrap;
-  will-change: box-shadow, transform;
 }
 
 .box_from_clicable_image:hover {
@@ -573,6 +443,5 @@ scale {
 .hvr-grow:hover {
   color: rgb(255, 255, 255);
   background: #b5b3b0;
-  text-shadow:
-    rgb(9, 5, 5) 0.006em 0.006em 0.007em,
+  text-shadow: rgb(9, 5, 5) 0.006em 0.006em 0.007em;
 }
