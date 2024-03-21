@@ -79,7 +79,6 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     if monitor_name in monitor:
         monitor = monitor[monitor_name]
         gdk_monitor = monitor["monitor"]
-        print(monitor)
 
     window.set_default_size(width, height)
     LayerShell.init_for_window(window)
