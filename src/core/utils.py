@@ -4,8 +4,10 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, GLib, Gio, Gdk
+from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
 from gi.repository import Gtk
+
+gi.require_version("Gtk4LayerShell", "1.0")
 from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen
 import math
@@ -13,6 +15,59 @@ import pulsectl
 import psutil
 from wayfire import sock
 import wayfire
+from time import sleep
+
+
+class InvalidGioTaskError(Exception):
+    pass
+
+
+class AlreadyRunningError(Exception):
+    pass
+
+
+class BackgroundUtils(GObject.Object):
+    __gtype_name__ = "BackgroundUtils"
+
+    def __init__(self, function, finish_callback, **kwargs):
+        super().__init__(**kwargs)
+
+        self.function = function
+        self.finish_callback = finish_callback
+        self._current = None
+
+    def start(self):
+        if self._current:
+            AlreadyRunningError("Task is already running")
+
+        finish_callback = lambda self, task, nothing: self.finish_callback()
+
+        task = Gio.Task.new(self, None, finish_callback, None)
+        task.run_in_thread(self._thread_cb)
+
+        self._current = task
+
+    @staticmethod
+    def _thread_cb(task, self, task_data, cancellable):
+        try:
+            retval = self.function()
+            task.return_value(retval)
+        except Exception as e:
+            task.return_value(e)
+
+    def finish(self):
+        task = self._current
+        self._current = None
+
+        if not Gio.Task.is_valid(task, self):
+            raise InvalidGioTaskError()
+
+        value = task.propagate_value().value
+
+        if isinstance(value, Exception):
+            raise value
+
+        return value
 
 
 class Utils(Adw.Application):
@@ -38,6 +93,9 @@ class Utils(Adw.Application):
         if not os.path.exists(self.config_path):
             os.makedirs(self.config_path)
             os.makedirs(self.scripts)
+
+        self.is_scale_active = {}
+        self.start_thread_compositor()
 
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
         if "kitty --hold" in cmd and cmd_mode:
@@ -98,7 +156,7 @@ class Utils(Adw.Application):
 
                 # If a callback is provided, create a gesture for the button
                 if callback is not None:
-                    self.CreateGesture(button, 3, callback)
+                    self.create_gesture(button, 3, callback)
 
                 # Append the button to the Gtk.Box
                 box.append(button)
@@ -146,13 +204,52 @@ class Utils(Adw.Application):
 
                 # If a callback is provided, create a gesture for the button
                 if callback is not None:
-                    self.CreateGesture(button, 3, callback)
+                    self.create_gesture(button, 3, callback)
 
                 # Append the button to the Gtk.Box
                 box.append(button)
 
         # Return the created Gtk.Box
         return box
+
+    def on_compositor_finished(self):
+        # non working code
+        try:
+            self.taskbarwatch_task.finish()
+        except Exception as err:
+            print(err)
+
+    def start_thread_compositor(self):
+        self.watch_task = BackgroundUtils(
+            self.watch_events, lambda: self.on_compositor_finished
+        )
+        self.watch_task.start()
+
+    def compositor_window_changed(self):
+        # if no windows, window_created signal will conflict with window_changed
+        # the issue will be no new button will be appended to the taskbar
+        # necessary to check if the window list is empity
+        # if not len(self.hyprinstance.get_windows()) == 0:
+        # self.update_active_window_shell()
+        print()
+
+    def watch_events(self):
+        sock = self.compositor()
+        sock.watch()
+        while True:
+            try:
+                msg = sock.read_message()
+                if msg["event"] == "plugin-activation-state-changed":
+                    if msg["state"] is True:
+                        if msg["plugin"] == "scale":
+                            self.is_scale_active[msg["output"]] = True
+
+                    if msg["state"] is False:
+                        if msg["plugin"] == "scale":
+                            self.is_scale_active[msg["output"]] = False
+
+            except Exception as e:
+                print(e)
 
     def search_local_desktop(self, initial_title):
         for deskfile in os.listdir(self.webapps_applications):
@@ -184,15 +281,6 @@ class Utils(Adw.Application):
             return None
 
     def icon_exist(self, argument):
-        # if "." in argument:
-        #    argument = argument.split(".")[-1]
-
-        # we split title and consider initial_title in certain cases
-        # there is some titles that starts with "app: some title"
-        # so if we simply title.split()[0] won't catch this case
-        # if ":" in argument:
-        #    argument = argument.split(":")[0]
-
         if argument:
             # try to methods, with gtk and gio
             exist = None
@@ -210,7 +298,6 @@ class Utils(Adw.Application):
                 exist = [name for name in self.icon_names if argument.lower() in name]
                 if exist:
                     exist = exist[0]
-                    print(exist)
                     return exist
         return ""
 
@@ -233,7 +320,7 @@ class Utils(Adw.Application):
         icon = self.get_icon(wmclass, initial_title, title)
 
         # Create a clickable image button and attach a gesture if callback is provided
-        button = self.create_clicable_image(
+        button = self.create_clickable_image(
             icon, class_style, wmclass, title, initial_title, view_id
         )
         return button
@@ -247,104 +334,65 @@ class Utils(Adw.Application):
                 return False
 
     def get_icon(self, wm_class, initial_title, title):
-        # FIXME: this wm_class came from another compositor
-        # now I am lazy to change it for app-id, there is too many changes to do
+        found_icon = self.icon_exist(wm_class)
+        if found_icon:
+            return found_icon
 
-        icon = self.icon_exist(wm_class)
+        app_id = sock.get_focused_view().get("app-id", "")
+        found_icon = self.icon_exist(app_id)
+        if found_icon:
+            return found_icon
 
-        if not icon:
-            app_id = sock.get_focused_view().get("app-id", "")
-            icon = self.icon_exist(app_id)
-
-        # handle web apps
-        if any(app in wm_class for app in ["microsoft-edge", "chromium"]):
+        web_apps = {"microsoft-edge", "chromium"}
+        if any(app in wm_class for app in web_apps):
             desk_local = self.search_local_desktop(initial_title)
             desk = self.search_desktop(wm_class)
 
             if desk_local and "-Default" in desk_local:
                 return desk_local.split(".desktop")[0]
-
-            if desk:
+            elif desk:
                 return desk.split(".desktop")[0]
 
         if "kitty" in wm_class and "kitty" not in title.lower():
-            icon_exist = self.icon_exist(initial_title)
-            if icon_exist:
-                return icon_exist
+            title_icon = self.icon_exist(initial_title)
+            if title_icon:
+                return title_icon
 
-        return icon if icon else ""
+        return ""
 
-    # maybe remove at some point, just test the new function first
-    # def get_icon(self, wm_class, initial_title, title):
-    #     wm_class = wm_class.lower()
-    #     icon = self.icon_exist(wm_class)
-    #     if icon == "":
-    #         app_id = self.compositor().get_focused_view()["app-id"]
-    #         icon = self.icon_exist(app_id)
-    #
-    #     # handle web apps
-    #     if "microsoft-edge" in wm_class or "chromium" in wm_class:
-    #         desk_local = self.search_local_desktop(initial_title)
-    #         desk = self.search_desktop(wm_class)
-    #         if desk_local and "-Default" in desk_local:
-    #             icon = desk_local.split(".desktop")[0]
-    #             return icon
-    #         if desk_local is None:
-    #             if desk:
-    #                 icon = desk.split(".desktop")[0]
-    #                 return icon
-    #
-    #     if "kitty" in wm_class.lower() and "kitty" not in title.lower():
-    #         icon_exist = self.icon_exist(initial_title)
-    #         if icon_exist:
-    #             return icon_exist
-    #
-    #     if icon:
-    #         return icon
-    #
-    #     return ""
-
-    def create_clicable_image(
-        self,
-        icon,
-        Class_Style,
-        wclass,
-        title,
-        initial_title,
-        view_id,
+    def create_clickable_image(
+        self, icon_name, class_style, wclass, title, initial_title, view_id
     ):
         box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
-        box.add_css_class(Class_Style)
+        box.add_css_class(class_style)
 
-        use_this_title = title.split("\n", 1)[0][
-            :40
-        ]  # Get the first line and limit to 40 characters
+        use_this_title = title[:40]  # Limit to 40 characters
 
         if "kitty" not in wclass.lower():
             self.gio_icon_list = Gio.AppInfo.get_all()
-            exist = [
+            exist = (
                 i.get_display_name()
                 for i in self.gio_icon_list
                 if wclass == i.get_startup_wm_class()
-            ]
-            use_this_title = exist[0] if exist else use_this_title
+            )
+            use_this_title = next(iter(exist), use_this_title)
 
         label = Gtk.Label.new(use_this_title)
-        label.add_css_class("label_from_clicable_image")
+        label.add_css_class("label_from_clickable_image")
 
-        image = Gtk.Image.new_from_icon_name(icon)
-
+        image = Gtk.Image.new_from_icon_name(icon_name)
         image.set_icon_size(Gtk.IconSize.LARGE)
         image.props.margin_end = 5
         image.set_halign(Gtk.Align.END)
-        image.add_css_class("icon_from_clicable_image")
+        image.add_css_class("icon_from_clickable_image")
 
         box.append(image)
         box.append(label)
-        box.add_css_class("box_from_clicable_image")
+        box.add_css_class("box_from_clickable_image")
 
-        self.CreateGesture(box, 1, lambda *_: self.set_view_focus(view_id))
-        self.CreateGesture(box, 3, lambda *_: self.close_view(view_id))
+        self.create_gesture(box, 1, lambda *_: self.set_view_focus(view_id))
+        self.create_gesture(box, 3, lambda *_: self.close_view(view_id))
+
         return box
 
     def compositor(self):
@@ -355,19 +403,44 @@ class Utils(Adw.Application):
         sock.close_view(view_id)
 
     def set_view_focus(self, view_id):
-        # monitor A with scale toggled will focus on monitor B
-        # but monitr B as no scale active so it will activate scale
-        # to try to prevent that, store te active output before set the new focus
+        list_views = sock.list_views()
+        matching_views = [view for view in list_views if view_id == view["id"]]
+
+        if not matching_views:
+            return None
+
+        view_id = matching_views[0]["id"]
+        output_id = matching_views[0]["output-id"]
         focused_output_views = sock.focused_output_views()
         is_view_from_focused_output = None
         if focused_output_views:
             is_view_from_focused_output = any(
                 view for view in focused_output_views if view_id == view["id"]
             )
-        # toggle scale off first and then we can focus to the new window
-        if is_view_from_focused_output:
-            sock.scale_toggle()
-        sock.set_focus(view_id)
+
+        if output_id in self.is_scale_active:
+            if self.is_scale_active[output_id] is True:
+                # explaining the two set_focus, first is for the output we want to disactivate scale
+                # the second is for focus in the view after scale is disactivated
+                sock.set_focus(view_id)
+                sock.scale_toggle()
+                sock.set_focus(view_id)
+            else:
+                sock.set_focus(view_id)
+
+        alpha = sock.get_view_alpha(view_id)["alpha"]
+        config_path = os.path.join(self.home, ".config/waypanel/")
+        shader = os.path.join(config_path, "shaders/view-effect.shader")
+        revert_effect = os.path.join(config_path, "shaders/revert.shader")
+
+        if os.path.exists(shader) and not is_view_from_focused_output:
+            sock.set_view_shader(view_id, shader)
+            sleep(0.2)
+            sock.set_view_shader(view_id, revert_effect)
+        elif not is_view_from_focused_output:
+            sock.set_view_alpha(view_id, alpha / 2)
+            sleep(0.2)
+            sock.set_view_alpha(view_id, alpha)
 
     def CreateButton(
         self,
@@ -393,12 +466,12 @@ class Utils(Adw.Application):
             button.set_sensitive(False)
             return button
         if use_function is False:
-            self.CreateGesture(
+            self.create_gesture(
                 button, 1, lambda *_: self.run_app(cmd, wclass, initial_title)
             )
-            self.CreateGesture(button, 3, lambda *_: self.dockbar_remove(icon_name))
+            self.create_gesture(button, 3, lambda *_: self.dockbar_remove(icon_name))
         else:
-            self.CreateGesture(button, 1, use_function)
+            self.create_gesture(button, 1, use_function)
 
         return button
 
@@ -406,7 +479,7 @@ class Utils(Adw.Application):
         with open(self.topbar_config, "r") as f:
             return toml.load(f)
 
-    def CreateGesture(self, widget, mouse_button, callback, arg=None):
+    def create_gesture(self, widget, mouse_button, callback, arg=None):
         gesture = Gtk.GestureClick.new()
         if arg is None:
             gesture.connect("released", callback)
@@ -428,5 +501,4 @@ class Utils(Adw.Application):
     def btn_background(self, class_style, icon_name):
         tbtn_title_b = Adw.ButtonContent()
         tbtn_title_b.set_icon_name(icon_name)
-        tbtn_title_b.add_css_class(class_style)
         return tbtn_title_b
