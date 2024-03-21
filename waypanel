@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from math import atan
 import os
 from pathlib import Path
 
@@ -151,6 +150,7 @@ class Panel(Adw.Application):
         self.vol_slider = None
         self.icon_vol_slider = None
         self.was_last_focused_view_maximized = None
+        self.previous_workspace = {}
         with open(self.topbar_config) as topbar_config:
             config = toml.load(topbar_config)
 
@@ -368,6 +368,60 @@ class Panel(Adw.Application):
         else:
             return False
 
+    def handle_tilling_layout(self, view):
+        if view["type"] == "toplevel" and view["parent"] == -1:
+            # this is needed, self.compositor, if pass sock from watch, it will fail
+            sock = self.compositor()
+            layout = sock.get_tiling_layout()
+            all_views = sock.tile_list_views(layout)
+            output = sock.get_focused_output()
+            desired_layout = {}
+            if not all_views or (len(all_views) == 1 and all_views[0][0] == view["id"]):
+                desired_layout = {
+                    "vertical-split": [{"view-id": view["id"], "weight": 1}]
+                }
+                sock.set_tiling_layout(desired_layout)
+                return
+
+            main_view = all_views[0][0]
+            weight_main = all_views[0][1]
+            stack_views_old = [v for v in all_views[1:] if v[0] != view["id"]]
+            weight_others = max(
+                [v[1] for v in stack_views_old],
+                default=output["workarea"]["width"] - weight_main,
+            )
+
+            if main_view == view["id"]:
+                return
+
+            if not stack_views_old:
+                desired_layout = {
+                    "vertical-split": [
+                        {"view-id": main_view, "weight": 1},
+                        {"view-id": view["id"], "weight": 1},
+                    ]
+                }
+                sock.set_tiling_layout(desired_layout)
+                return
+
+            stack = [{"view-id": v[0], "weight": v[2]} for v in stack_views_old]
+            stack += [
+                {
+                    "view-id": view["id"],
+                    "weight": sum([v[2] for v in stack_views_old])
+                    / len(stack_views_old),
+                }
+            ]
+
+            desired_layout = {
+                "vertical-split": [
+                    {"weight": weight_main, "view-id": main_view},
+                    {"weight": weight_others, "horizontal-split": stack},
+                ]
+            }
+
+            sock.set_tiling_layout(desired_layout)
+
     def handle_plugin_event(self, msg, view):
         if msg["event"] == "plugin-activation-state-changed":
             if msg["state"]:
@@ -410,6 +464,17 @@ class Panel(Adw.Application):
             if view and view["role"] == "toplevel":
                 self.on_view_destroyed()
 
+    def handle_workspace_events(self, msg):
+        sock = self.compositor()
+        focused_output = sock.get_focused_output_name()
+        if msg["event"] == "wset-workspace-changed":
+            wviews = sock.get_workspaces_with_views()
+            pw = msg["previous-workspace"]
+            print(pw)
+            # only set the previous workspace if has views
+            if any(i for i in wviews if pw["x"] == i["x"] and pw["y"] == i["y"]):
+                self.previous_workspace[focused_output] = pw
+
     def all_events_watch(self):
         sock = self.compositor()
         sock.watch()
@@ -420,12 +485,16 @@ class Panel(Adw.Application):
                 if "event" not in msg:
                     continue
 
+                self.handle_workspace_events(msg)
+
+                if msg["event"] == "view-mapped":
+                    # for some reason sock fails if pass to handle tilling
+                    self.handle_tilling_layout(view)
+
                 if "view" in msg:
                     view = msg["view"]
-
-                self.handle_view_event(msg, view)
-                self.handle_plugin_event(msg, view)
-
+                    self.handle_view_event(msg, view)
+                    self.handle_plugin_event(msg, view)
             except Exception as e:
                 print(e)
 
@@ -454,11 +523,11 @@ class Panel(Adw.Application):
             sock.tilling()
 
     def on_view_destroyed(self):
-        if self.tilling_enabled == "False":
-            return
         sock = self.compositor()
-        if self.was_last_focused_view_maximized:
-            sock.tilling()
+        active_workspace_has_views = sock.get_views_from_active_workspace()
+        focused_output = sock.get_focused_output_name()
+        if not active_workspace_has_views:
+            sock.set_workspace(self.previous_workspace[focused_output])
 
     def on_app_id_changed(self):
         self.update_title_topbar()
@@ -641,45 +710,45 @@ class Panel(Adw.Application):
 
     def setup_gestures(self):
         # Setting up gestures for various UI components
-        self.utils.CreateGesture(self.todo_button, 1, self.take_note_app)
-        # self.utils.CreateGesture(self.clock_box, 1, self.clock_dashboard)
-        self.utils.CreateGesture(self.window_title, 1, self.manage_window_notes)
-        self.utils.CreateGesture(self.tbclass, 1, self.dock.dockbar_append)
-        self.utils.CreateGesture(self.tbclass, 3, self.dock.join_windows)
-        # self.utils.CreateGesture(self.tbSIGKILL, 1, self.sigkill_activewindow)
-        self.utils.CreateGesture(self.tbvol, 1, self.toggle_mute_from_sink)
+        self.utils.create_gesture(self.todo_button, 1, self.take_note_app)
+        # self.utils.create_gesture(self.clock_box, 1, self.clock_dashboard)
+        self.utils.create_gesture(self.window_title, 1, self.manage_window_notes)
+        self.utils.create_gesture(self.tbclass, 1, self.dock.dockbar_append)
+        self.utils.create_gesture(self.tbclass, 3, self.dock.join_windows)
+        # self.utils.create_gesture(self.tbSIGKILL, 1, self.sigkill_activewindow)
+        self.utils.create_gesture(self.tbvol, 1, self.toggle_mute_from_sink)
 
         # Gestures for top panel
-        self.utils.CreateGesture(
+        self.utils.create_gesture(
             self.top_panel_box_left, 2, self.left_gesture_middle_click
         )
-        self.utils.CreateGesture(
+        self.utils.create_gesture(
             self.top_panel_box_left, 3, self.left_gesture_right_click
         )
 
         # Gestures for center panel
-        self.utils.CreateGesture(
+        self.utils.create_gesture(
             self.top_panel_box_center, 2, self.center_gesture_middle_click
         )
-        self.utils.CreateGesture(
+        self.utils.create_gesture(
             self.top_panel_box_center, 3, self.center_gesture_right_click
         )
 
         # Gestures for right panel
-        self.utils.CreateGesture(
+        self.utils.create_gesture(
             self.top_panel_box_right, 1, self.right_gesture_left_click
         )
-        self.utils.CreateGesture(
+        self.utils.create_gesture(
             self.top_panel_box_right, 2, self.left_gesture_middle_click
         )
-        self.utils.CreateGesture(
+        self.utils.create_gesture(
             self.top_panel_box_right, 3, self.left_gesture_right_click
         )
 
-        self.utils.CreateGesture(self.top_panel_box_systray, 3, self.notify_client)
+        self.utils.create_gesture(self.top_panel_box_systray, 3, self.notify_client)
 
         # click will copy pid to clipboard
-        self.tbpid_gesture = self.utils.CreateGesture(
+        self.tbpid_gesture = self.utils.create_gesture(
             self.tbpid, 1, self.copy_to_clipboard
         )
 
@@ -776,15 +845,25 @@ class Panel(Adw.Application):
         GLib.timeout_add_seconds(60 - datetime.datetime.now().second, self.update_clock)
 
     def update_clock(self):
-        # Update the label with the current date and time
-        self.clock_label.set_label(datetime.datetime.now().strftime("%d %A %H:%M"))
+        try:
+            print("Updating clock...")
 
-        # Schedule the next update at the beginning of the next minute
-        seconds_until_next_minute = 60 - datetime.datetime.now().second
-        GLib.timeout_add_seconds(seconds_until_next_minute, self.update_clock)
+            # Update the label with the current date and time
+            self.clock_label.set_label(datetime.datetime.now().strftime("%d %A %H:%M"))
 
-        # Returning True means the timeout will continue to be scheduled
-        return False  # We don't want to repeat the timeout immediately
+        except Exception as e:
+            print("An error occurred while updating the clock:", e)
+
+        # Schedule the next update after 60 seconds
+        try:
+            timeout_id = GLib.timeout_add_seconds(60, self.update_clock)
+            if timeout_id == 0:
+                print("Failed to schedule next update")
+        except Exception as e:
+            print("Error scheduling next update:", e)
+
+        # Returning False means the timeout will not be rescheduled automatically
+        return False
 
     def setup_panel_position(self):
         """
@@ -831,8 +910,7 @@ class Panel(Adw.Application):
 
     def on_waywatch_finished(self, task):
         try:
-            retval = task.finish()
-            print(retval)
+            task.finish()
         except Exception as err:
             print("Unhandled exception occured!", err.message)
 
@@ -1110,7 +1188,7 @@ class Panel(Adw.Application):
 
     def left_gesture_right_click(self, *_):
         sock = self.compositor()
-        sock.go_next_workspace_with_views(self.last_focused_output)
+        sock.go_next_workspace_with_views()
         # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
         # self.utils.run_app(cmd, True)
 
@@ -1128,7 +1206,7 @@ class Panel(Adw.Application):
 
     def center_gesture_right_click(self, *_):
         sock = self.compositor()
-        sock.toggle_expo()
+        sock.go_next_workspace_with_views()
         # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
         # self.utils.run_app(cmd, True)
 
@@ -1137,8 +1215,9 @@ class Panel(Adw.Application):
         self.utils.run_app(cmd, True)
 
     def right_gesture_right_click(self, *_):
-        cmd = self.panel_cfg["right_side_gestures"]["right_click"]
-        self.utils.run_app(cmd, True)
+        sock.toggle_expo()
+        # cmd = self.panel_cfg["right_side_gestures"]["right_click"]
+        # self.utils.run_app(cmd, True)
 
     def right_gesture_middle_click(self, *_):
         cmd = self.panel_cfg["right_side_gestures"]["middle_click"]
@@ -1699,7 +1778,6 @@ class Panel(Adw.Application):
         self.set_cpu_usage_state.append(cpu_usage)
 
         if allow_to_set_zero is True or cpu_usage > 0:
-            print(cpu_usage)
             self.tbcpusage.set_label("CPU: {0}%".format(cpu_usage))
             print(self.tbcpusage.get_label())
 
