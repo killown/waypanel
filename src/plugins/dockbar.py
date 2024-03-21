@@ -86,7 +86,6 @@ class Dockbar(Adw.Application):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        # Initialize Utils and set configuration paths
         self.utils = Utils()
         self.home = os.path.expanduser("~")
         self.webapps_applications = os.path.join(self.home, ".local/share/applications")
@@ -108,6 +107,7 @@ class Dockbar(Adw.Application):
         self.has_taskbar_started = False
         self.stored_windows = []
         self.window_created_now = None
+        self.is_scale_active = {}
 
     # Start the Dockbar application
     def do_start(self):
@@ -122,9 +122,7 @@ class Dockbar(Adw.Application):
         with open(self.topbar_config, "r") as f:
             panel_toml = toml.load(f)
 
-            # Iterate over panel configurations
             for p in panel_toml:
-                # Check if the panel is positioned on the left side
                 if "left" == p:
                     exclusive = panel_toml[p]["Exclusive"] == "True"
                     position = panel_toml[p]["position"]
@@ -143,21 +141,19 @@ class Dockbar(Adw.Application):
                     self.left_panel.set_content(self.dockbar)
                     self.left_panel.present()
 
-                # Check if the panel is positioned on the left side
-                if "right" == p:
-                    exclusive = panel_toml[p]["Exclusive"] == "True"
-                    position = panel_toml[p]["position"]
-                    # Create a right panel and associated components
-                    self.right_panel = CreatePanel(
-                        self, "RIGHT", position, exclusive, 32, 0, "RightBar"
-                    )
-                    workspace_buttons = self.utils.CreateFromAppList(
-                        self.workspace_list_config, "v", "RightBar", None, True
-                    )
-                    self.right_panel.set_content(workspace_buttons)
-                    # self.right_panel.present()
+                # if "right" == p:
+                #     exclusive = panel_toml[p]["Exclusive"] == "True"
+                #     position = panel_toml[p]["position"]
+                #     # Create a right panel and associated components
+                #     self.right_panel = CreatePanel(
+                #         self, "RIGHT", position, exclusive, 32, 0, "RightBar"
+                #     )
+                #     workspace_buttons = self.utils.CreateFromAppList(
+                #         self.workspace_list_config, "v", "RightBar", None, True
+                #     )
+                #     self.right_panel.set_content(workspace_buttons)
+                #     # self.right_panel.present()
 
-                # Check if the panel is positioned at the bottom
                 if "bottom" == p:
                     exclusive = panel_toml[p]["Exclusive"] == "True"
                     position = panel_toml[p]["position"]
@@ -209,6 +205,7 @@ class Dockbar(Adw.Application):
         print()
 
     def TaskbarWatch(self):
+        # FIXME: create a file dedicated for watching events
         sock = self.compositor()
         sock.watch()
         view = None
@@ -244,6 +241,7 @@ class Dockbar(Adw.Application):
                                 self.on_expo_activated()
                             if msg["plugin"] == "scale":
                                 self.on_scale_activated()
+                                self.is_scale_active[msg["output"]] = True
 
                         # if plugin state is false (desactivated)
                         if msg["state"] is False:
@@ -251,6 +249,8 @@ class Dockbar(Adw.Application):
                                 self.on_expo_desactivated()
                             if msg["plugin"] == "scale":
                                 self.on_scale_desactivated()
+                                self.is_scale_active[msg["output"]] = False
+
             except Exception as e:
                 print(e)
 
@@ -268,12 +268,12 @@ class Dockbar(Adw.Application):
 
     def on_scale_activated(self):
         set_layer_position_exclusive(self.left_panel)
-        set_layer_position_exclusive(self.right_panel)
+        # set_layer_position_exclusive(self.right_panel)
         set_layer_position_exclusive(self.bottom_panel)
 
     def on_scale_desactivated(self):
         unset_layer_position_exclusive(self.left_panel)
-        unset_layer_position_exclusive(self.right_panel)
+        # unset_layer_position_exclusive(self.right_panel)
         unset_layer_position_exclusive(self.bottom_panel)
 
     def on_view_created(self):
@@ -363,7 +363,6 @@ class Dockbar(Adw.Application):
         title = view["title"]
         wm_class = view["app-id"]
         initial_title = title.split(" ")[0].lower()
-        # Create a taskbar launcher button using utility function
         button = self.utils.create_taskbar_launcher(
             wm_class, title, initial_title, orientation, class_style, view_id
         )
@@ -374,7 +373,6 @@ class Dockbar(Adw.Application):
         # Store button information in dictionaries for easy access
         self.buttons_pid[pid] = [button, initial_title, view_id]
 
-        # Return True to indicate successful execution of the update_taskbar function
         return True
 
     def update_active_window_shell(self, id):
