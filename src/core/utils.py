@@ -98,7 +98,7 @@ class Utils(Adw.Application):
         self.start_thread_compositor()
 
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
-        if "kitty --hold" in cmd and cmd_mode:
+        if "alacritty" in cmd and cmd_mode:
             try:
                 Popen(cmd.split(), start_new_session=True)
             except Exception as e:
@@ -353,7 +353,7 @@ class Utils(Adw.Application):
             elif desk:
                 return desk.split(".desktop")[0]
 
-        if "kitty" in wm_class and "kitty" not in title.lower():
+        if "alacritty" in wm_class and "alacritty" not in title.lower():
             title_icon = self.icon_exist(initial_title)
             if title_icon:
                 return title_icon
@@ -368,7 +368,7 @@ class Utils(Adw.Application):
 
         use_this_title = title[:40]  # Limit to 40 characters
 
-        if "kitty" not in wclass.lower():
+        if "alacritty" not in wclass.lower():
             self.gio_icon_list = Gio.AppInfo.get_all()
             exist = (
                 i.get_display_name()
@@ -420,9 +420,6 @@ class Utils(Adw.Application):
 
         if output_id in self.is_scale_active:
             if self.is_scale_active[output_id] is True:
-                # explaining the two set_focus, first is for the output we want to disactivate scale
-                # the second is for focus in the view after scale is disactivated
-                sock.set_focus(view_id)
                 sock.scale_toggle()
                 sock.set_focus(view_id)
             else:
