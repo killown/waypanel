@@ -1,27 +1,23 @@
 .WindowTitle {
-  background-color: #24283bc5;
-  border-radius: 4px;
+  background-color: #24283b;
+  border-radius: 8px;
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -3px 0 inset;
+    #00000075 0 -4px 0 inset;
   color: #ffffffd8;
-  font-size: 18px;
-  font-family: "Sriracha";
-  line-height: 1;
-  padding-left: 6px;
-  padding-right: 6px;
-  margin-top: 6px;
-  margin-bottom: 6px;
+  font-size: 16px;
   text-decoration: none;
   transition:
     box-shadow 0.15s,
     transform 0.15s;
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 .LeftBar {
-  -gtk-icon-size: 48px;
+  -gtk-icon-size: 36px;
   background: #d3d3d300;
 }
 
@@ -32,12 +28,6 @@
   transition-property: transform;
 }
 
-.hvr-grow:hover,
-.hvr-grow:focus,
-.hvr-grow:active {
-  transform: scale(0.94);
-}
-
 .LeftBar-button {
   color: #ffffffd8;
   padding-left: 8px;
@@ -46,17 +36,16 @@
   padding-bottom: 8px;
   margin-left: 8px;
   margin-right: 6px;
-  background-color: #24283ba2;
+  background-color: #24283bad;
   border-radius: 14px;
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -3px 0 inset;
+    #00000075 0 -4px 0 inset;
   color: #ffffffd8;
   font-size: 18px;
   font-family: "Sriracha";
-  line-height: 1;
   text-decoration: none;
   transition:
     box-shadow 0.15s,
@@ -64,14 +53,13 @@
 }
 
 .RightBar-button {
-  background-color: #24283bb2;
+  background-color: #24283b;
   border-radius: 4px;
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -3px 0 inset;
-  color: #ffffffd8;
+    #00000075 0 -4px 0 inset;
   font-size: 18px;
   font-family: "Sriracha";
   line-height: 1;
@@ -79,8 +67,6 @@
   padding-right: 12px;
   padding-top: 6px;
   padding-bottom: 6px;
-  margin-top: 1px;
-  margin-bottom: 1px;
   margin-left: 1px;
   margin-right: 1px;
   text-decoration: none;
@@ -105,16 +91,14 @@
 
 .close-button {
   -gtk-icon-size: 22px;
-  background-color: #24283bc5;
+  background-color: #24283b;
   border-radius: 4px;
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -3px 0 inset;
+    #00000075 0 -4px 0 inset;
   padding: 2px 16px 2px 16px;
-  margin-top: 6px;
-  margin-bottom: 16px;
   margin-left: 1px;
   margin-right: 1px;
   background-size: 100% auto;
@@ -125,16 +109,14 @@
 
 .maximize-button {
   -gtk-icon-size: 22px;
-  background-color: #24283bc5;
+  background-color: #24283b;
   border-radius: 4px;
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -3px 0 inset;
+    #00000075 0 -4px 0 inset;
   padding: 2px 16px 2px 16px;
-  margin-top: 6px;
-  margin-bottom: 16px;
   margin-left: 1px;
   margin-right: 1px;
   background-size: 100% auto;
@@ -145,16 +127,14 @@
 
 .minimize-button {
   -gtk-icon-size: 22px;
-  background-color: #24283bc5;
+  background-color: #24283b;
   border-radius: 4px;
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -3px 0 inset;
+    #00000075 0 -4px 0 inset;
   padding: 2px 16px 2px 16px;
-  margin-top: 6px;
-  margin-bottom: 16px;
   margin-left: 1px;
   margin-right: 1px;
   background-size: 100% auto;
@@ -164,27 +144,21 @@
 }
 
 .top_panel_box_widgets_left {
-  background-color: #24283bc5;
-  border-radius: 4px;
+  background-color: #24283b;
+  border-radius: 8px;
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -3px 0 inset;
+    #00000075 0 -4px 0 inset;
   color: #ffffffd8;
-  font-size: 18px;
-  font-family: "Sriracha";
-  line-height: 1;
-  padding-left: 6px;
-  padding-right: 6px;
-  margin-top: 6px;
-  margin-bottom: 6px;
-  margin-left: 6px;
-  margin-right: 6px;
+  font-size: 14px;
   text-decoration: none;
   transition:
     box-shadow 0.15s,
     transform 0.15s;
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 scale slider {
@@ -197,17 +171,18 @@ scale {
 }
 
 .weather {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: bold;
   background-color: #14151700;
 }
 
 /*this is for menubuttons from systray menus*/
 .image-button {
-  -gtk-icon-size: 26px;
+  -gtk-icon-size: 20px;
   background: rgb(0, 0, 0);
   color: #ffffffd8;
   background-color: #ffffff00;
+
 }
 
 .text-button {
@@ -218,7 +193,6 @@ scale {
   color: #36395ad8;
   border-style: solid;
   border-width: 0.1px;
-  padding: 4px 4px 4px 4px;
   border-color: rgba(36, 40, 59, 0.744);
 }
 
@@ -245,34 +219,46 @@ scale {
   border-style: solid;
   border-width: 1px;
   margin: 4px 4px 4px 4px;
-  padding: 2px 2px 2px 2px;
   border-color: rgba(36, 40, 59, 0.744);
   box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
 }
 
-.icon_from_clicable_image {
-  -gtk-icon-size: 42px;
+.icon_from_clickable_image {
+  -gtk-icon-size: 32px;
 }
 
-.label_from_clicable_image {
+.label_from_clickable_image {
   color: #ffffffd8;
 }
 
 .icon_from_popover_launcher {
-  -gtk-icon-size: 52px;
+  -gtk-icon-size: 42px;
 }
 
+.transparent-popover-launcher {
+  border-color: shade(@dark_bg_color, 0.8);
+  background-image: none;
+  background-color: @dark_bg_color;
+  color: @dark_fg_color;
+}
+
+.popover_launcher_flowbox {
+  background-color: transparent;
+}
+
+.popover_launcher_row_hbox {
+  background-color: transparent;
+}
 .icon_from_folders {
-  -gtk-icon-size: 56px;
+  -gtk-icon-size: 42px;
 }
 
-.box_from_clicable_image {
+.box_from_clickable_image {
   background-color: #24283be5;
   border-radius: 8px;
   border-style: solid;
   border-width: 1px;
   margin: 4px 4px 4px 4px;
-  padding: 2px 2px 2px 2px;
 }
 
 .label_from_popover_launcher {
@@ -289,32 +275,24 @@ scale {
   font-weight: bold;
 }
 
+.icon_from_bookmarks {
+  -gtk-icon-size: 48px;
+}
+
 .ClockButton {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
-  font-family: "Sriracha";
   color: #ffffffd8;
-  border-style: solid;
-  padding: 0px 4px 0px 4px;
-  border-width: 0px;
 }
 
 .Clock {
-  background-color: #24283bc5;
-  border-radius: 4px;
-  border-width: 0;
+  background-color: #24283b;
+  border-radius: 8px;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -3px 0 inset;
+    #00000075 0 -4px 0 inset;
   color: #ffffffd8;
-  font-size: 18px;
-  font-family: "Sriracha";
-  line-height: 1;
-  padding-left: 6px;
-  padding-right: 6px;
-  margin-top: 6px;
-  margin-bottom: 6px;
   text-decoration: none;
   transition:
     box-shadow 0.15s,
@@ -346,39 +324,36 @@ scale {
 }
 
 .TopBar {
-  font-size: 11px;
   color: #000000;
   background-color: #00000000;
   background: #00000000;
-  border-radius: 1px;
 }
 
 .top_panel_box_left {
-  -gtk-icon-size: 32px;
+  -gtk-icon-size: 28px;
+  padding: 0px 4px 2px 4px;
+}
+
+.top_panel_box_right {
+  padding: 0px 4px 2px 4px;
 }
 
 .top_left_widgets {
-  -gtk-icon-size: 32px;
+  -gtk-icon-size: 26px;
+  padding: 0px 4px 2px 4px;
 }
 
 .top_panel_box_systray {
-  -gtk-icon-size: 26px;
-  background-color: #24283bc5;
-  border-radius: 4px;
+  -gtk-icon-size: 18px;
+  background-color: #24283b;
+  border-radius: 8px;
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -3px 0 inset;
+    #00000075 0 -4px 0 inset;
   color: #ffffffd8;
-  font-size: 18px;
-  font-family: "Sriracha";
-  line-height: 1;
-  padding-left: 6px;
-  padding-right: 6px;
-  margin-top: 6px;
-  margin-bottom: 6px;
-  text-decoration: none;
+  padding: 0px 4px 0px 4px;
   transition:
     box-shadow 0.15s,
     transform 0.15s;
@@ -386,13 +361,14 @@ scale {
 
 .top_panel_box_center {
   -gtk-icon-size: 0px;
+  padding: 0px 4px 2px 4px;
 }
 
 .todo_label {
   font-size: 15px;
 }
 
-.clicable_image_label {
+.clickable_image_label {
   color: #ffffff;
 }
 
@@ -411,7 +387,6 @@ scale {
 .BottomBar {
   background-color: #00000000;
   margin: 6px 8px 6px 8px;
-  font-family: "Sriracha";
 }
 
 .taskbar {
@@ -422,8 +397,7 @@ scale {
     rgba(0, 0, 0, 0.555) 0 1px 1px,
     #00000075 0 -3px 0 inset;
   color: #ffffffd8;
-  font-size: 18px;
-  font-family: "Sriracha";
+  font-size: 16px;
   line-height: 1;
   padding-left: 8px;
   padding-right: 8px;
@@ -435,7 +409,7 @@ scale {
     transform 0.15s;
 }
 
-.box_from_clicable_image:hover {
+.box_from_clickable_image:hover {
   color: rgb(255, 255, 255);
   background-color: #24283b;
 }
