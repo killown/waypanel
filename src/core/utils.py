@@ -98,7 +98,7 @@ class Utils(Adw.Application):
         self.start_thread_compositor()
 
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
-        if "alacritty" in cmd and cmd_mode:
+        if "kitty" in cmd and cmd_mode:
             try:
                 Popen(cmd.split(), start_new_session=True)
             except Exception as e:
@@ -334,6 +334,11 @@ class Utils(Adw.Application):
                 return False
 
     def get_icon(self, wm_class, initial_title, title):
+        if "kitty" in wm_class and "kitty" not in title.lower():
+            title_icon = self.icon_exist(initial_title)
+            if title_icon:
+                return title_icon
+
         found_icon = self.icon_exist(wm_class)
         if found_icon:
             return found_icon
@@ -352,11 +357,6 @@ class Utils(Adw.Application):
                 return desk_local.split(".desktop")[0]
             elif desk:
                 return desk.split(".desktop")[0]
-
-        if "alacritty" in wm_class and "alacritty" not in title.lower():
-            title_icon = self.icon_exist(initial_title)
-            if title_icon:
-                return title_icon
 
         return ""
 
