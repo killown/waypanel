@@ -368,14 +368,14 @@ class Utils(Adw.Application):
 
         use_this_title = title[:40]  # Limit to 40 characters
 
-        if "alacritty" not in wclass.lower():
-            self.gio_icon_list = Gio.AppInfo.get_all()
-            exist = (
-                i.get_display_name()
-                for i in self.gio_icon_list
-                if wclass == i.get_startup_wm_class()
-            )
-            use_this_title = next(iter(exist), use_this_title)
+        # if "kitty" not in wclass.lower():
+        #     self.gio_icon_list = Gio.AppInfo.get_all()
+        #     exist = (
+        #         i.get_display_name()
+        #         for i in self.gio_icon_list
+        #         if wclass == i.get_startup_wm_class()
+        #     )
+        #     use_this_title = next(iter(exist), use_this_title)
 
         label = Gtk.Label.new(use_this_title)
         label.add_css_class("label_from_clickable_image")
@@ -421,9 +421,9 @@ class Utils(Adw.Application):
         if output_id in self.is_scale_active:
             if self.is_scale_active[output_id] is True:
                 sock.scale_toggle()
-                sock.set_focus(view_id)
+                sock.go_workspace_set_focus(view_id)
             else:
-                sock.set_focus(view_id)
+                sock.go_workspace_set_focus(view_id)
 
         alpha = sock.get_view_alpha(view_id)["alpha"]
         config_path = os.path.join(self.home, ".config/waypanel/")
