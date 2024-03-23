@@ -103,7 +103,7 @@ class Dockbar(Adw.Application):
         sock = self.compositor()
         self.all_pids = [i["id"] for i in sock.list_views()]
         self.timeout_taskbar = None
-        self.buttons_pid = {}
+        self.buttons_id = {}
         self.has_taskbar_started = False
         self.stored_windows = []
         self.window_created_now = None
@@ -319,15 +319,14 @@ class Dockbar(Adw.Application):
             wm_class = i["app-id"].lower()
             initial_title = i["title"].split()[0].lower()
             title = i["title"]
-            pid = i["pid"]
-            view_id = i["id"]
+            id = i["id"]
 
             # Skip windows with wm_class found in launchers_desktop_file if update_button is False
             if wm_class in launchers_desktop_file and not update_button:
                 continue
 
             # Skip windows with pid found in self.taskbar_list if update_button is False
-            if pid in self.taskbar_list and not update_button:
+            if id in self.taskbar_list and not update_button:
                 continue
 
             button = self.utils.create_taskbar_launcher(
@@ -336,16 +335,16 @@ class Dockbar(Adw.Application):
                 initial_title,
                 orientation,
                 class_style,
-                view_id,
+                id,
             )
             # Append the button to the taskbar
             self.taskbar.append(button)
 
             # Store button information in dictionaries for easy access
-            self.buttons_pid[pid] = [button, initial_title, view_id]
+            self.buttons_id[id] = [button, initial_title, id]
 
             # Add the pid to the taskbar_list to keep track of added windows
-            self.taskbar_list.append(pid)
+            self.taskbar_list.append(id)
 
         # Return True to indicate successful execution of the Taskbar function
         return True
@@ -359,27 +358,27 @@ class Dockbar(Adw.Application):
     ):
         sock = self.compositor()
         view = sock.get_view(view_id)
-        pid = view["pid"]
+        id = view["id"]
         title = view["title"]
         wm_class = view["app-id"]
         initial_title = title.split(" ")[0].lower()
         button = self.utils.create_taskbar_launcher(
-            wm_class, title, initial_title, orientation, class_style, view_id
+            wm_class, title, initial_title, orientation, class_style, id
         )
 
         # Append the button to the taskbar
         self.taskbar.append(button)
 
         # Store button information in dictionaries for easy access
-        self.buttons_pid[pid] = [button, initial_title, view_id]
+        self.buttons_id[id] = [button, initial_title, id]
 
         return True
 
     def update_active_window_shell(self, id):
         sock = self.compositor()
         view = sock.get_view(id)
-        pid = view["pid"]
-        button = self.buttons_pid[pid][0]
+        id = view["id"]
+        button = self.buttons_id[id][0]
         self.taskbar.remove(button)
         self.update_taskbar("h", "taskbar", id)
         return True
@@ -388,13 +387,13 @@ class Dockbar(Adw.Application):
         # Iterate over copied dictionary to avoid concurrent modification
         # Remove button and associated data
         sock = self.compositor()
-        list_pids = [i for i in sock.list_pids()]
-        for pid in self.buttons_pid.copy():
-            if pid not in list_pids:
-                button = self.buttons_pid[pid][0]
+        list_ids = [i for i in sock.list_ids()]
+        for id in self.buttons_id.copy():
+            if id not in list_ids:
+                button = self.buttons_id[id][0]
                 self.taskbar.remove(button)
-                self.taskbar_list.remove(pid)
-                del self.buttons_pid[pid]
+                self.taskbar_list.remove(id)
+                del self.buttons_id[id]
         return True
 
     # Append a window to the Dockbar
