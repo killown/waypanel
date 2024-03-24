@@ -52,6 +52,7 @@ class MenuLauncher(Adw.Application):
         self.popover_launcher = Gtk.Popover()
         self.popover_launcher.set_has_arrow(False)
         self.popover_launcher.add_css_class("transparent-popover-launcher")
+        self.popover_launcher.connect("closed", self.popover_is_closed)
         show_searchbar_action = Gio.SimpleAction.new("show_searchbar")
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
         self.app.add_action(show_searchbar_action)
