@@ -40,7 +40,6 @@ class PopoverBookmarks(Adw.Application):
     def create_menu_popover_bookmarks(self, obj, app, *_):
         self.top_panel = obj.top_panel
         self.app = app
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
         self.menubutton_bookmarks = Gtk.Button()
         self.menubutton_bookmarks.connect("clicked", self.open_popover_bookmarks)
         self.menubutton_bookmarks.set_icon_name("firefox-developer-edition")
@@ -56,6 +55,7 @@ class PopoverBookmarks(Adw.Application):
         self.popover_bookmarks.set_has_arrow(False)
         self.popover_bookmarks.set_autohide(True)
         self.popover_bookmarks.connect("closed", self.popover_is_closed)
+        self.popover_bookmarks.connect("notify::visible", self.popover_is_open)
 
         # Set up scrolled window
         self.scrolled_window = Gtk.ScrolledWindow()
@@ -239,10 +239,10 @@ class PopoverBookmarks(Adw.Application):
         if self.popover_bookmarks and not self.popover_bookmarks.is_visible():
             self.popover_bookmarks.popup()
 
-    def popover_is_closed(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
+    def popover_is_open(self, *_):
+        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
 
-    def popover_launcher_is_closed(self, *_):
+    def popover_is_closed(self, *_):
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
 
     def compositor(self):

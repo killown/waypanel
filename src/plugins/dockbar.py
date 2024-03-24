@@ -277,7 +277,7 @@ class Dockbar(Adw.Application):
         unset_layer_position_exclusive(self.bottom_panel)
 
     def on_view_created(self):
-        self.taskbar_window_created()
+        self.Taskbar("h", "taskbar")
 
     def on_view_destroyed(self, view):
         if view is None:
@@ -291,9 +291,6 @@ class Dockbar(Adw.Application):
         self.update_active_window_shell(view["id"])
         # if msg["event"] == "view-focused":
         # GLib.idle_add(self.update_title_topbar)
-
-    def taskbar_window_created(self):
-        self.Taskbar("h", "taskbar")
 
     def taskbar_window_destroyed(self, pid):
         self.taskbar_remove(pid)
@@ -325,7 +322,7 @@ class Dockbar(Adw.Application):
             if wm_class in launchers_desktop_file and not update_button:
                 continue
 
-            # Skip windows with pid found in self.taskbar_list if update_button is False
+            # Skip windows with ids found in self.taskbar_list if update_button is False
             if id in self.taskbar_list and not update_button:
                 continue
 

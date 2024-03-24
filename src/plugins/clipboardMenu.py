@@ -52,6 +52,7 @@ class MenuClipboard(Adw.Application):
         self.popover_clipboard = Gtk.Popover.new()  # Create a new popover menu
         self.popover_clipboard.set_has_arrow(False)
         self.popover_clipboard.connect("closed", self.popover_is_closed)
+        self.popover_clipboard.connect("notify::visible", self.popover_is_open)
         show_searchbar_action = Gio.SimpleAction.new("show_searchbar")
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
         self.app.add_action(show_searchbar_action)
@@ -162,10 +163,10 @@ class MenuClipboard(Adw.Application):
         if not self.popover_clipboard:
             self.popover_clipboard = self.create_popover_clipboard(self.app)
 
-    def popover_is_closed(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
+    def popover_is_open(self, *_):
+        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
 
-    def popover_launcher_is_closed(self, *_):
+    def popover_is_closed(self, *_):
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
 
     def on_show_searchbar_action_actived(self, action, parameter):
