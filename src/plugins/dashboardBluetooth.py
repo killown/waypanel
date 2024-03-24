@@ -66,6 +66,7 @@ class BluetoothDashboard(Adw.Application):
         self.popover_dashboard = Gtk.Popover.new()
         self.popover_dashboard.set_has_arrow(False)
         self.popover_dashboard.connect("closed", self.popover_is_closed)
+        self.popover_dashboard.connect("notify::visible", self.popover_is_open)
 
         # Set width and height of the popover dashboard
         # self.popover_dashboard.set_size_request(600, 400)
@@ -132,11 +133,11 @@ class BluetoothDashboard(Adw.Application):
         if not self.popover_dashboard:
             self.popover_dashboard = self.create_popover_bluetooth(self.app)
 
+    def popover_is_open(self, *_):
+        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
+
     def popover_is_closed(self, *_):
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
-
-    def popover_dashboard_is_closed(self, *_):
-        return
 
     def on_show_searchbar_action_actived(self, action, parameter):
         self.searchbar.set_search_mode(
