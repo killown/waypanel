@@ -52,6 +52,7 @@ class PopoverFolders(Adw.Application):
         self.popover_folders = Gtk.Popover.new()
         self.popover_folders.set_has_arrow(False)
         self.popover_folders.set_autohide(True)
+        self.popover_folders.connect("closed", self.popover_is_closed)
 
         # Create an action to show the search bar
         show_searchbar_action = Gio.SimpleAction.new("show_searchbar")

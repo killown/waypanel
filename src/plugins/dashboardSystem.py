@@ -52,6 +52,7 @@ class SystemDashboard(Adw.Application):
         # Create a popover
         self.popover_dashboard = Gtk.Popover.new()
         self.popover_dashboard.set_has_arrow(False)
+        self.popover_dashboard.connect("closed", self.popover_is_closed)
         # Set width and height of the popover dashboard
         self.popover_dashboard.set_size_request(
             600, 266
@@ -199,7 +200,7 @@ class SystemDashboard(Adw.Application):
             Popen("/opt/waypanel/waypanel.bin".split())
 
     def popover_is_closed(self, *_):
-        return
+        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
 
     def popover_dashboard_is_closed(self, *_):
         return

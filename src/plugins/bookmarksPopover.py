@@ -55,6 +55,7 @@ class PopoverBookmarks(Adw.Application):
         self.popover_bookmarks = Gtk.Popover.new()
         self.popover_bookmarks.set_has_arrow(False)
         self.popover_bookmarks.set_autohide(True)
+        self.popover_bookmarks.connect("closed", self.popover_is_closed)
 
         # Set up scrolled window
         self.scrolled_window = Gtk.ScrolledWindow()
@@ -142,8 +143,9 @@ class PopoverBookmarks(Adw.Application):
 
         # Connect signal for selecting a row
         height = self.flowbox.get_preferred_size().natural_size.height
-        self.scrolled_window.set_min_content_width(height / 2)
-        self.scrolled_window.set_min_content_height(height / 2)
+        width = self.flowbox.get_preferred_size().natural_size.width
+        self.scrolled_window.set_min_content_width(height)
+        self.scrolled_window.set_min_content_height(width)
 
         # Set the parent and display the popover
         self.popover_bookmarks.set_parent(self.menubutton_bookmarks)
