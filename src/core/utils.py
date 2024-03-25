@@ -287,7 +287,7 @@ class Utils(Adw.Application):
             exist = [
                 i.get_icon()
                 for i in self.gio_icon_list
-                if argument == i.get_startup_wm_class()
+                if argument in i.get_id().lower()
             ]
 
             if exist:
@@ -343,7 +343,7 @@ class Utils(Adw.Application):
         if found_icon:
             return found_icon
 
-        app_id = sock.get_focused_view().get("app-id", "")
+        app_id = sock.get_focused_view_app_id()
         found_icon = self.icon_exist(app_id)
         if found_icon:
             return found_icon
