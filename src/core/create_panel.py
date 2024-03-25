@@ -12,16 +12,27 @@ from gi.repository import Adw, Gdk
 
 
 def set_layer_position_exclusive(window):
-    # update taskbar if overview is activated
-    # LayerShell.auto_exclusive_zone_enable(window)
+    """
+    Sets the layer position exclusively for the given window.
+
+    Note: If you encounter issues with the first execution of this function not working,
+    it may be due to a delay in IPC with sock.watch immediately after the panel starts.
+    Waiting longer before activating the scale for the first time should resolve this.
+    Alternatively, executing the scale twice can also have the desired effect.
+
+    The panel is hidden by default. This function makes it visible.
+    If visibility doesn't take effect, the panel will remain hidden until IPC is ready.
+    """
+    LayerShell.auto_exclusive_zone_enable(window)
     LayerShell.set_layer(window, LayerShell.Layer.TOP)
-    # LayerShell.set_exclusive_zone(window, 56)
+    window.set_visible(True)
 
 
 def unset_layer_position_exclusive(window):
-    # LayerShell.auto_exclusive_zone_enable(window)
-    # LayerShell.set_exclusive_zone(window, 0)
+    LayerShell.set_exclusive_zone(window, 0)
+    print(LayerShell.get_exclusive_zone(window))
     LayerShell.set_layer(window, LayerShell.Layer.BOTTOM)
+    window.set_visible(False)
 
 
 def get_monitor_info():
