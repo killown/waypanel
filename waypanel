@@ -505,11 +505,6 @@ class Panel(Adw.Application):
                     msg = sock.read_message()
                     if "event" not in msg:
                         continue
-                    print(LayerShell.get_keyboard_mode(self.top_panel).value_name)
-                    if self.request_switch_keyboard_on_demand_to_none is True:
-                        LayerShell.set_keyboard_mode(
-                            self.top_panel, LayerShell.KeyboardMode.NONE
-                        )
 
                     self.handle_output_events(msg)
 
