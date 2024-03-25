@@ -149,8 +149,11 @@ class Panel(Adw.Application):
         self.focused_output = None
         self.vol_slider = None
         self.icon_vol_slider = None
+        self.workspace_empty = None
+        self.signal_view_destroyed = False
         self.was_last_focused_view_maximized = None
         self.previous_workspace = {}
+        self.request_switch_keyboard_on_demand_to_none = None
         with open(self.topbar_config) as topbar_config:
             config = toml.load(topbar_config)
 
@@ -268,6 +271,7 @@ class Panel(Adw.Application):
         self.setup_panel_buttons()
         self.setup_panel_position()
         self.setup_gestures()
+        self.sock = self.compositor()
 
         # plugins
         self.MenuLauncher = MenuLauncher()
@@ -305,6 +309,8 @@ class Panel(Adw.Application):
             Gio.FileMonitorFlags.NONE, None
         )
         self.monitor.connect("changed", self.on_css_file_changed)
+
+        self.get_focused_output = self.sock.get_focused_output()
 
     def do_activate(self):
         self.show_panels()
@@ -449,54 +455,76 @@ class Panel(Adw.Application):
             self.on_app_id_changed()
 
         if msg["event"] == "view-focused":
+            if msg["view"] is None:
+                return
             if view and view["role"] == "toplevel":
                 self.on_view_role_toplevel_focused(view)
                 self.on_view_focused()
                 self.last_focused_output = view["output-id"]
 
         if msg["event"] == "view-mapped":
-            if view and view["role"] == "toplevel":
-                self.on_view_role_toplevel_focused(view)
-                self.on_view_focused()
-                self.on_view_created(view)
+            if "role" in view:
+                if view["role"] == "toplevel":
+                    self.on_view_role_toplevel_focused(view)
+                    self.on_view_focused()
+                    self.on_view_created(view)
 
         if msg["event"] == "view-unmapped":
             if view and view["role"] == "toplevel":
                 self.on_view_destroyed()
 
-    def handle_workspace_events(self, msg):
+    def set_previous_workspace_with_views(self, msg):
         sock = self.compositor()
         focused_output = sock.get_focused_output_name()
-        if msg["event"] == "wset-workspace-changed":
+        wviews = sock.get_workspaces_with_views()
+        pw = msg["previous-workspace"]
+
+        # only set previous workspaces that has views
+        if any(i for i in wviews if pw["x"] == i["x"] and pw["y"] == i["y"]):
+            self.previous_workspace[focused_output] = pw
+        else:
             wviews = sock.get_workspaces_with_views()
-            pw = msg["previous-workspace"]
-            print(pw)
-            # only set the previous workspace if has views
-            if any(i for i in wviews if pw["x"] == i["x"] and pw["y"] == i["y"]):
-                self.previous_workspace[focused_output] = pw
+            wviews = {"x": wviews[-1]["x"], "y": wviews[-1]["y"]}
+            self.previous_workspace[focused_output] = wviews
+
+    def handle_workspace_events(self, msg):
+        if msg["event"] == "wset-workspace-changed":
+            self.set_previous_workspace_with_views(msg)
+
+    def handle_output_events(self, msg):
+        if msg["event"] == "output-gain-focus":
+            return
 
     def all_events_watch(self):
-        sock = self.compositor()
-        sock.watch()
-        view = None
         while True:
-            try:
-                msg = sock.read_message()
-                if "event" not in msg:
-                    continue
+            sock = self.compositor()
+            sock.watch()
+            view = None
+            while True:
+                try:
+                    msg = sock.read_message()
+                    if "event" not in msg:
+                        continue
+                    print(LayerShell.get_keyboard_mode(self.top_panel).value_name)
+                    if self.request_switch_keyboard_on_demand_to_none is True:
+                        LayerShell.set_keyboard_mode(
+                            self.top_panel, LayerShell.KeyboardMode.NONE
+                        )
 
-                self.handle_workspace_events(msg)
+                    self.handle_output_events(msg)
 
-                if msg["event"] == "view-mapped":
-                    # for some reason sock fails if pass to handle tilling
-                    self.handle_tilling_layout(view)
+                    if msg["event"] == "view-mapped":
+                        # for some reason sock fails if pass to handle tilling
+                        self.handle_tilling_layout(view)
 
-                if "view" in msg:
-                    view = msg["view"]
-                    self.handle_view_event(msg, view)
-                    self.handle_plugin_event(msg, view)
-            except Exception as e:
-                print(e)
+                    if "view" in msg:
+                        view = msg["view"]
+                        self.handle_view_event(msg, view)
+                        self.handle_plugin_event(msg, view)
+                    self.handle_workspace_events(msg)
+                except Exception as e:
+                    print(e)
+                    break
 
     def on_view_role_toplevel_focused(self, view):
         # last view focus only for top level Windows
@@ -516,18 +544,43 @@ class Panel(Adw.Application):
 
     # created view must start as maximized to auto tilling works
     def on_view_created(self, view):
+        return
+        # sock = self.compositor()
+        # if self.tilling_enabled == "False":
+        #    return
+        # if sock.is_view_maximized(view["id"]):
+        #    sock.tilling()
+
+    def go_to_workspace_with_views(self):
         sock = self.compositor()
-        if self.tilling_enabled == "False":
-            return
-        if sock.is_view_maximized(view["id"]):
-            sock.tilling()
+        focused_output = sock.get_focused_output_name()
+        wviews = sock.get_workspaces_with_views()
+        wviews = {"x": wviews[0]["x"], "y": wviews[0]["y"]}
+        if focused_output not in self.previous_workspace:
+            wviews = sock.get_workspaces_with_views()
+            wviews = {"x": wviews[-1]["x"], "y": wviews[-1]["y"]}
+            self.previous_workspace[focused_output] = wviews
+
+        aw = sock.get_active_workspace_info()
+        previous_workspace = self.previous_workspace[focused_output]
+
+        if not {"x": aw["x"], "y": aw["y"]} == previous_workspace:
+            sock.set_workspace(previous_workspace)
+        else:
+            sock.set_workspace(wviews)
+
+        self.previous_workspace[focused_output] = wviews
 
     def on_view_destroyed(self):
+        # this signal will be cleared with {'event': 'view-focused', 'view': None}
+        # useful when focusing empty workspaces
+        # if no signal like that, the go_next_workspace_with_views will be triggered
+        # and never will allow to visit an empty workspace
         sock = self.compositor()
-        active_workspace_has_views = sock.get_views_from_active_workspace()
-        focused_output = sock.get_focused_output_name()
-        if not active_workspace_has_views:
-            sock.set_workspace(self.previous_workspace[focused_output])
+        workspace_has_views = sock.get_views_from_active_workspace()
+        if not workspace_has_views:
+            self.go_to_workspace_with_views()
+        return
 
     def on_app_id_changed(self):
         self.update_title_topbar()
@@ -1146,7 +1199,9 @@ class Panel(Adw.Application):
         Returns:
             None
         """
-        Popen("kitty".split())
+        sock = self.compositor()
+        sock.toggle_expo()
+        # Popen("kitty".split())
 
     def scroll_event(self, _, _dx, dy):
         """
@@ -1193,16 +1248,22 @@ class Panel(Adw.Application):
         # self.utils.run_app(cmd, True)
 
     def left_gesture_middle_click(self, *_):
-        cmd = self.panel_cfg["left_side_gestures"]["middle_click"]
-        self.utils.run_app(cmd, True)
+        sock = self.compositor()
+        sock.toggle_expo()
+        # cmd = self.panel_cfg["left_side_gestures"]["middle_click"]
+        # self.utils.run_app(cmd, True)
 
     def center_gesture_left_click(self, *_):
-        cmd = self.panel_cfg["center_side_gestures"]["left_click"]
-        self.utils.run_app(cmd, True)
+        sock = self.compositor()
+        sock.toggle_expo()
+        # cmd = self.panel_cfg["center_side_gestures"]["left_click"]
+        # self.utils.run_app(cmd, True)
 
     def center_gesture_middle_click(self, *_):
-        cmd = self.panel_cfg["center_side_gestures"]["middle_click"]
-        self.utils.run_app(cmd, True)
+        sock = self.compositor()
+        sock.toggle_expo()
+        # cmd = self.panel_cfg["center_side_gestures"]["middle_click"]
+        # self.utils.run_app(cmd, True)
 
     def center_gesture_right_click(self, *_):
         sock = self.compositor()
@@ -1215,13 +1276,16 @@ class Panel(Adw.Application):
         self.utils.run_app(cmd, True)
 
     def right_gesture_right_click(self, *_):
+        sock = self.compositor()
         sock.toggle_expo()
         # cmd = self.panel_cfg["right_side_gestures"]["right_click"]
         # self.utils.run_app(cmd, True)
 
     def right_gesture_middle_click(self, *_):
-        cmd = self.panel_cfg["right_side_gestures"]["middle_click"]
-        self.utils.run_app(cmd, True)
+        sock = self.compositor()
+        sock.toggle_expo()
+        # cmd = self.panel_cfg["right_side_gestures"]["middle_click"]
+        # self.utils.run_app(cmd, True)
 
     def create_simple_action(self):
         """
@@ -1300,7 +1364,7 @@ class Panel(Adw.Application):
                 continue
             menu = Gio.Menu()
             btn = Gtk.MenuButton(label=m)
-            btn.add_css_class("top_panel_box_systray")
+            btn.add_css_class("top_panel_menubutton_systray")
             # if no icon is specified in [icons] from menu.toml then use Label instead
             try:
                 btn.set_icon_name(menu_toml["icons"][m])
