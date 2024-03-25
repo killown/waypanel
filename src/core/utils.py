@@ -339,15 +339,6 @@ class Utils(Adw.Application):
             if title_icon:
                 return title_icon
 
-        found_icon = self.icon_exist(wm_class)
-        if found_icon:
-            return found_icon
-
-        app_id = sock.get_focused_view_app_id()
-        found_icon = self.icon_exist(app_id)
-        if found_icon:
-            return found_icon
-
         web_apps = {"microsoft-edge", "chromium"}
         if any(app in wm_class for app in web_apps):
             desk_local = self.search_local_desktop(initial_title)
@@ -357,6 +348,15 @@ class Utils(Adw.Application):
                 return desk_local.split(".desktop")[0]
             elif desk:
                 return desk.split(".desktop")[0]
+
+        found_icon = self.icon_exist(wm_class)
+        if found_icon:
+            return found_icon
+
+        app_id = sock.get_focused_view_app_id()
+        found_icon = self.icon_exist(app_id)
+        if found_icon:
+            return found_icon
 
         return ""
 
