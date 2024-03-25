@@ -140,6 +140,7 @@ class Dockbar(Adw.Application):
                     self.dockbar.append(self.add_launcher)
                     self.left_panel.set_content(self.dockbar)
                     self.left_panel.present()
+                    self.left_panel.set_visible(False)
 
                 # if "right" == p:
                 #     exclusive = panel_toml[p]["Exclusive"] == "True"
@@ -170,6 +171,7 @@ class Dockbar(Adw.Application):
                     self.taskbar.add_css_class("taskbar")
                     self.bottom_panel.set_content(self.taskbar)
                     self.bottom_panel.present()
+                    self.bottom_panel.set_visible(False)
 
                     # Start the taskbar list for the bottom panel
                     # Remaining check pids will be handled later
@@ -215,6 +217,11 @@ class Dockbar(Adw.Application):
                 if "view" in msg:
                     view = msg["view"]
 
+                if view is None:
+                    # workspace with no views should show the dockbar and taskbar
+                    self.left_panel.set_visible(True)
+                    self.bottom_panel.set_visible(True)
+
                 if "event" in msg:
                     if msg["event"] == "view-title-changed":
                         self.on_title_changed(msg["view"])
@@ -227,6 +234,8 @@ class Dockbar(Adw.Application):
                         if view is not None:
                             if view["role"] == "toplevel":
                                 self.on_view_role_toplevel_focused(view)
+                                self.left_panel.set_visible(False)
+                                self.bottom_panel.set_visible(False)
 
                     if msg["event"] == "view-mapped":
                         self.on_view_created()
@@ -267,6 +276,7 @@ class Dockbar(Adw.Application):
         return
 
     def on_scale_activated(self):
+        print("this should print now with scale activated for the first time")
         set_layer_position_exclusive(self.left_panel)
         # set_layer_position_exclusive(self.right_panel)
         set_layer_position_exclusive(self.bottom_panel)
