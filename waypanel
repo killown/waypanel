@@ -1897,36 +1897,39 @@ class Panel(Adw.Application):
 
 
 if __name__ == "__main__":
-    addr = os.getenv("WAYFIRE_SOCKET")
-    sock = wayfire.WayfireSocket(addr)
-    home = os.path.expanduser("~")
-    config_path = os.path.join(home, ".config/waypanel")
-    panel_config = os.path.join(config_path, "panel.toml")
-    with open(panel_config) as panel_config:
-        config = toml.load(panel_config)
-    monitor_name = None
-    try:
-        monitor_name = config["monitor"]["name"]
-    except KeyError:
-        print("configure [monitor] in .config/panel.toml")
-        sys.exit()
-
-    argv = sys.argv
-    if len(argv) > 1:
-        monitor_name = argv[1].strip()
-
-    app = Panel(application_id="com.waypanel.{0}.GtkApplication".format(monitor_name))
-    app.run(None)
-    sock.watch()
     while True:
-        print("was supposed to work")
-        msg = sock.read_message()
-        print(msg)
-        if "event" in msg:
-            event = msg["event"]
-            if monitor_name == msg["output"]["name"]:
-                if event == "output-removed":
-                    app.quit()
-                if event == "output-added":
-                    print("testing output-added")
-                    app.run(None)
+        addr = os.getenv("WAYFIRE_SOCKET")
+        sock = wayfire.WayfireSocket(addr)
+        home = os.path.expanduser("~")
+        config_path = os.path.join(home, ".config/waypanel")
+        panel_config = os.path.join(config_path, "panel.toml")
+        with open(panel_config) as panel_config:
+            config = toml.load(panel_config)
+        monitor_name = None
+        try:
+            monitor_name = config["monitor"]["name"]
+        except KeyError:
+            print("configure [monitor] in .config/panel.toml")
+            sys.exit()
+
+        argv = sys.argv
+        if len(argv) > 1:
+            monitor_name = argv[1].strip()
+
+        app = Panel(
+            application_id="com.waypanel.{0}.GtkApplication".format(monitor_name)
+        )
+        app.run(None)
+        sock.watch()
+        while True:
+            print("was supposed to work")
+            msg = sock.read_message()
+            print(msg)
+            if "event" in msg:
+                event = msg["event"]
+                if monitor_name == msg["output"]["name"]:
+                    if event == "output-removed":
+                        app.quit()
+                    if event == "output-added":
+                        print("testing output-added")
+                        app.run(None)
