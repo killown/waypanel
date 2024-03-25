@@ -236,6 +236,18 @@ class Dockbar(Adw.Application):
                                 self.on_view_role_toplevel_focused(view)
                                 self.left_panel.set_visible(False)
                                 self.bottom_panel.set_visible(False)
+                                LayerShell.set_layer(
+                                    self.left_panel, LayerShell.Layer.BOTTOM
+                                )
+                                LayerShell.set_layer(
+                                    self.left_panel, LayerShell.Layer.BOTTOM
+                                )
+                                LayerShell.set_layer(
+                                    self.bottom_panel, LayerShell.Layer.BOTTOM
+                                )
+                                LayerShell.set_layer(
+                                    self.bottom_panel, LayerShell.Layer.BOTTOM
+                                )
 
                     if msg["event"] == "view-mapped":
                         self.on_view_created()
