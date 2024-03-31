@@ -4,16 +4,14 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
+from gi.repository import Gtk, Adw, Gio, GObject
 from gi.repository import Gtk
 
 gi.require_version("Gtk4LayerShell", "1.0")
 from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen
 import math
-import pulsectl
-import psutil
-from wayfire import sock
+from wayfire.ipc import sock
 import wayfire
 from time import sleep
 
@@ -425,19 +423,19 @@ class Utils(Adw.Application):
             else:
                 sock.go_workspace_set_focus(view_id)
 
-        alpha = sock.get_view_alpha(view_id)["alpha"]
-        config_path = os.path.join(self.home, ".config/waypanel/")
-        shader = os.path.join(config_path, "shaders/view-effect.shader")
-        revert_effect = os.path.join(config_path, "shaders/revert.shader")
+        # alpha = sock.get_view_alpha(view_id)["alpha"]
+        # config_path = os.path.join(self.home, ".config/waypanel/")
+        # shader = os.path.join(config_path, "shaders/view-effect.shader")
+        # revert_effect = os.path.join(config_path, "shaders/revert.shader")
 
-        if os.path.exists(shader) and not is_view_from_focused_output:
-            sock.set_view_shader(view_id, shader)
-            sleep(0.2)
-            sock.set_view_shader(view_id, revert_effect)
-        elif not is_view_from_focused_output:
-            sock.set_view_alpha(view_id, alpha / 2)
-            sleep(0.2)
-            sock.set_view_alpha(view_id, alpha)
+        # if os.path.exists(shader) and not is_view_from_focused_output:
+        # sock.set_view_shader(view_id, shader)
+        # sleep(0.2)
+        # sock.set_view_shader(view_id, revert_effect)
+        # if not is_view_from_focused_output:
+        #    sock.set_view_alpha(view_id, alpha / 2)
+        #    sleep(0.2)
+        #    sock.set_view_alpha(view_id, alpha)
 
     def CreateButton(
         self,
