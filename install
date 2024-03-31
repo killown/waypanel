@@ -37,21 +37,21 @@ if [ -d "gtk4-layer-shell" ]; then
         echo "Directory created: $directory"
     fi
     cd $CURRENT_DIR
-    sudo rm -rf /opt/waypanel/*
-    rm -rf waypanel.build
-    sudo meson setup build --wipe
-    sudo ninja -C build install
-    sudo rm -rf build
-    pip install nuitka
-    python -m nuitka waypanel
-    sudo cp waypanel.bin /opt/waypanel/
+    #rm -rf waypanel.build
+    #sudo meson setup build --wipe
+    #sudo ninja -C build install
+    #sudo rm -rf build
+    #pip install nuitka
+    #python -m nuitka waypanel
+    #sudo cp waypanel.bin /opt/waypanel/
     sudo cp -r config/scripts /opt/waypanel
     sudo cp waypanel /opt/waypanel
+    sudo ln -s /opt/waypane/waypanel /usr/bin
     sudo cp -r src /opt/waypanel
-    rm waypanel.bin
-    rm -rf waypanel.build/
-    echo "Use /opt/waypanel/waypanel.bin if you want the compiled version of the waypanel"
-    echo "install swww for wallpaper plugin"
+    #rm waypanel.bin
+    #rm -rf waypanel.build/
+    rm -rf waypy 
+    rm -rf wayctl
     echo "install and use wl-paste --watch cliphist store for clipboard plugin"
     echo "install SwayNotificationCenter for notifications"
 fi
