@@ -24,7 +24,7 @@ from ..core.create_panel import (
 )
 from ..core.utils import Utils
 import numpy as np
-import wayfire as ws
+import wayfire.ipc as ws
 import sys
 
 sys.path.append("/usr/lib/waypanel/")
@@ -140,7 +140,7 @@ class Dockbar(Adw.Application):
                     self.dockbar.append(self.add_launcher)
                     self.left_panel.set_content(self.dockbar)
                     self.left_panel.present()
-                    self.left_panel.set_visible(False)
+                    # self.left_panel.set_visible(False)
 
                 # if "right" == p:
                 #     exclusive = panel_toml[p]["Exclusive"] == "True"
@@ -156,26 +156,27 @@ class Dockbar(Adw.Application):
                 #     # self.right_panel.present()
 
                 if "bottom" == p:
-                    exclusive = panel_toml[p]["Exclusive"] == "True"
-                    position = panel_toml[p]["position"]
-
-                    # Create a bottom panel and associated components
-                    self.bottom_panel = CreatePanel(
-                        self, "BOTTOM", position, exclusive, 32, 0, "BottomBar"
-                    )
-                    self.add_launcher = Gtk.Button()
-                    self.add_launcher.set_icon_name("tab-new-symbolic")
-                    self.add_launcher.connect("clicked", self.dockbar_append)
-                    self.taskbar = Gtk.Box()
-                    self.taskbar.append(self.add_launcher)
-                    self.taskbar.add_css_class("taskbar")
-                    self.bottom_panel.set_content(self.taskbar)
-                    self.bottom_panel.present()
-                    self.bottom_panel.set_visible(False)
-
-                    # Start the taskbar list for the bottom panel
-                    # Remaining check pids will be handled later
-                    self.Taskbar("h", "taskbar", 0)
+                    print()
+                    # exclusive = panel_toml[p]["Exclusive"] == "True"
+                    # position = panel_toml[p]["position"]
+                    #
+                    # # Create a bottom panel and associated components
+                    # self.bottom_panel = CreatePanel(
+                    #     self, "BOTTOM", position, exclusive, 32, 0, "BottomBar"
+                    # )
+                    # self.add_launcher = Gtk.Button()
+                    # self.add_launcher.set_icon_name("tab-new-symbolic")
+                    # self.add_launcher.connect("clicked", self.dockbar_append)
+                    # self.taskbar = Gtk.Box()
+                    # self.taskbar.append(self.add_launcher)
+                    # self.taskbar.add_css_class("taskbar")
+                    # self.bottom_panel.set_content(self.taskbar)
+                    # self.bottom_panel.present()
+                    # # self.bottom_panel.set_visible(False)
+                    #
+                    # # Start the taskbar list for the bottom panel
+                    # # Remaining check pids will be handled later
+                    # self.Taskbar("h", "taskbar", 0)
 
             # LayerShell.set_layer(self.left_panel, LayerShell.Layer.TOP)
             # LayerShell.set_layer(self.bottom_panel, LayerShell.Layer.TOP)
@@ -207,71 +208,60 @@ class Dockbar(Adw.Application):
         print()
 
     def TaskbarWatch(self):
-        # FIXME: create a file dedicated for watching events
-        sock = self.compositor()
-        sock.watch()
-        view = None
+        # evets should ever stop, if it breaks the loop
+        # lets start a new one
         while True:
             try:
-                msg = sock.read_message()
-                if "view" in msg:
-                    view = msg["view"]
+                # FIXME: create a file dedicated for watching events
+                sock = self.compositor()
+                sock.watch()
+                view = None
+                while True:
+                    try:
+                        msg = sock.read_message()
+                        if "view" in msg:
+                            view = msg["view"]
 
-                if view is None:
-                    # workspace with no views should show the dockbar and taskbar
-                    self.left_panel.set_visible(True)
-                    self.bottom_panel.set_visible(True)
+                        if "event" in msg:
+                            if msg["event"] == "view-title-changed":
+                                self.on_title_changed(msg["view"])
 
-                if "event" in msg:
-                    if msg["event"] == "view-title-changed":
-                        self.on_title_changed(msg["view"])
+                            if msg["event"] == "app-id-changed":
+                                self.on_app_id_changed()
 
-                    if msg["event"] == "app-id-changed":
-                        self.on_app_id_changed()
+                            if msg["event"] == "view-focused":
+                                self.on_view_focused()
+                                if view is not None:
+                                    if view["role"] == "toplevel":
+                                        self.on_view_role_toplevel_focused(view)
+                                        # self.left_panel.set_visible(False)
+                                        # self.bottom_panel.set_visible(False)
 
-                    if msg["event"] == "view-focused":
-                        self.on_view_focused()
-                        if view is not None:
-                            if view["role"] == "toplevel":
-                                self.on_view_role_toplevel_focused(view)
-                                self.left_panel.set_visible(False)
-                                self.bottom_panel.set_visible(False)
-                                LayerShell.set_layer(
-                                    self.left_panel, LayerShell.Layer.BOTTOM
-                                )
-                                LayerShell.set_layer(
-                                    self.left_panel, LayerShell.Layer.BOTTOM
-                                )
-                                LayerShell.set_layer(
-                                    self.bottom_panel, LayerShell.Layer.BOTTOM
-                                )
-                                LayerShell.set_layer(
-                                    self.bottom_panel, LayerShell.Layer.BOTTOM
-                                )
+                            if msg["event"] == "view-mapped":
+                                self.on_view_created()
 
-                    if msg["event"] == "view-mapped":
-                        self.on_view_created()
+                            if msg["event"] == "view-unmapped":
+                                self.on_view_destroyed(msg["view"])
 
-                    if msg["event"] == "view-unmapped":
-                        self.on_view_destroyed(msg["view"])
+                            if msg["event"] == "plugin-activation-state-changed":
+                                # if plugin state is true (activated)
+                                if msg["state"] is True:
+                                    if msg["plugin"] == "expo":
+                                        self.on_expo_activated()
+                                    if msg["plugin"] == "scale":
+                                        self.on_scale_activated()
+                                        self.is_scale_active[msg["output"]] = True
 
-                    if msg["event"] == "plugin-activation-state-changed":
-                        # if plugin state is true (activated)
-                        if msg["state"] is True:
-                            if msg["plugin"] == "expo":
-                                self.on_expo_activated()
-                            if msg["plugin"] == "scale":
-                                self.on_scale_activated()
-                                self.is_scale_active[msg["output"]] = True
+                                # if plugin state is false (desactivated)
+                                if msg["state"] is False:
+                                    if msg["plugin"] == "expo":
+                                        self.on_expo_desactivated()
+                                    if msg["plugin"] == "scale":
+                                        self.on_scale_desactivated()
+                                        self.is_scale_active[msg["output"]] = False
 
-                        # if plugin state is false (desactivated)
-                        if msg["state"] is False:
-                            if msg["plugin"] == "expo":
-                                self.on_expo_desactivated()
-                            if msg["plugin"] == "scale":
-                                self.on_scale_desactivated()
-                                self.is_scale_active[msg["output"]] = False
-
+                    except Exception as e:
+                        print(e)
             except Exception as e:
                 print(e)
 
@@ -288,15 +278,14 @@ class Dockbar(Adw.Application):
         return
 
     def on_scale_activated(self):
-        print("this should print now with scale activated for the first time")
         set_layer_position_exclusive(self.left_panel)
         # set_layer_position_exclusive(self.right_panel)
-        set_layer_position_exclusive(self.bottom_panel)
+        # set_layer_position_exclusive(self.bottom_panel)
 
     def on_scale_desactivated(self):
         unset_layer_position_exclusive(self.left_panel)
         # unset_layer_position_exclusive(self.right_panel)
-        unset_layer_position_exclusive(self.bottom_panel)
+        # unset_layer_position_exclusive(self.bottom_panel)
 
     def on_view_created(self):
         self.Taskbar("h", "taskbar")
