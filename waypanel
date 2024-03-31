@@ -1367,7 +1367,6 @@ class Panel(Adw.Application):
             menu = Gio.Menu()
             btn = Gtk.MenuButton(label=m)
             btn.set_always_show_arrow(False)
-            btn.add_css_class("top_panel_menubutton_systray")
             # if no icon is specified in [icons] from menu.toml then use Label instead
             try:
                 btn.set_icon_name(menu_toml["icons"][m])
