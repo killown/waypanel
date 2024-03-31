@@ -223,9 +223,12 @@ class MenuLauncher(Adw.Application):
 
     def popover_is_open(self, *_):
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
+        return
 
     def popover_is_closed(self, *_):
+        print("just want to check if the popover is closing")
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
+        print(LayerShell.get_keyboard_mode(self.top_panel).value_name)
 
     def on_show_searchbar_action_actived(self, action, parameter):
         self.searchbar.set_search_mode(
