@@ -101,7 +101,6 @@ class SoundCardDashboard(Adw.Application):
 
     def create_menu_popover_soundcard(self, obj, app, *_):
         self.top_panel = obj.top_panel
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
@@ -209,12 +208,12 @@ class SoundCardDashboard(Adw.Application):
             self.popover_dashboard.popup()
         if not self.popover_dashboard:
             self.popover_dashboard = self.create_popover_soundcard(self.app)
-  
+
     def popover_is_open(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
+        return
 
     def popover_is_closed(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
+        return
 
     def on_show_searchbar_action_actived(self, action, parameter):
         self.searchbar.set_search_mode(
