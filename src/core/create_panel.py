@@ -25,14 +25,14 @@ def set_layer_position_exclusive(window):
     """
     # LayerShell.auto_exclusive_zone_enable(window)
     LayerShell.set_layer(window, LayerShell.Layer.TOP)
-    window.set_visible(True)
+    # window.set_visible(True)
 
 
 def unset_layer_position_exclusive(window):
     # LayerShell.set_exclusive_zone(window, 0)
     # print(LayerShell.get_exclusive_zone(window))
     LayerShell.set_layer(window, LayerShell.Layer.BOTTOM)
-    window.set_visible(False)
+    # window.set_visible(False)
 
 
 def get_monitor_info():
