@@ -16,11 +16,11 @@ import sys
 sys.path.append("/opt/waypanel/")
 
 from src.core.utils import Utils as utils
-from src.core.create_panel import CreatePanel
+from src.core.create_panel import *
 from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
 import datetime
 import importlib
-import wayfire
+import wayfire.ipc as wayfire
 import netifaces
 import soundcard as sc
 
@@ -44,6 +44,7 @@ import psutil
 import pulsectl
 import toml
 from collections import ChainMap
+
 from src.plugins.dockbar import Dockbar
 from src.plugins.bookmarksPopover import PopoverBookmarks
 from src.plugins.dashboardPopover import PopoverDashboard
@@ -231,7 +232,7 @@ class Panel(Adw.Application):
             1,
             3,
         )
-        # Dockbar and icon themes
+        # load the Dockbar
         self.dock = Dockbar(application_id="com.github.dockbar")
 
         self.clock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -428,7 +429,7 @@ class Panel(Adw.Application):
 
             sock.set_tiling_layout(desired_layout)
 
-    def handle_plugin_event(self, msg, view):
+    def handle_plugin_event(self, msg):
         if msg["event"] == "plugin-activation-state-changed":
             if msg["state"]:
                 if msg["plugin"] == "expo":
@@ -515,7 +516,8 @@ class Panel(Adw.Application):
                     if "view" in msg:
                         view = msg["view"]
                         self.handle_view_event(msg, view)
-                        self.handle_plugin_event(msg, view)
+
+                    self.handle_plugin_event(msg)
                     self.handle_workspace_events(msg)
                 except Exception as e:
                     print(e)
@@ -539,12 +541,19 @@ class Panel(Adw.Application):
 
     # created view must start as maximized to auto tilling works
     def on_view_created(self, view):
-        return
+        # sock = self.compositor()
+        # view_id = view["id"]
+        # config_path = os.path.join(self.home, ".config/waypanel/")
+        shader = os.path.join(config_path, "shaders/border")
+        # if os.path.exists(shader):
+        #    sock.set_view_shader(view_id, shader)
+
         # sock = self.compositor()
         # if self.tilling_enabled == "False":
         #    return
         # if sock.is_view_maximized(view["id"]):
         #    sock.tilling()
+        return
 
     def go_to_workspace_with_views(self):
         sock = self.compositor()
@@ -679,7 +688,7 @@ class Panel(Adw.Application):
         try:
             txt = open(todo, "r").readlines()[-1]
             self.todo_button.set_label(txt.strip())
-            GLib.timeout_add(600000, self.todo_txt)
+            # GLib.timeout_add(600000, self.todo_txt)
         except IndexError:
             print("todo.txt is empity or does not exist")
 
@@ -731,15 +740,14 @@ class Panel(Adw.Application):
         self.top_panel_background.set_content(self.tbbox)
 
     def update_widget_with_timeout(self):
-        # GLib.timeout_add(200, self.update_title_topbar)
         if os.path.exists("/usr/bin/mullvad"):
-            GLib.timeout_add(30000, self.mullvad_status)
-            GLib.timeout_add(600000, self.clean_pid_store)
+            GLib.timeout_add(10000, self.mullvad_status)
 
     def show_panels(self):
         if self.all_panels_enabled:
             self.top_panel.present()
             # self.top_panel_background.present()
+            # load the dockbar
             self.dock.do_start()
 
     def setup_panel_buttons(self):
@@ -762,7 +770,7 @@ class Panel(Adw.Application):
         # self.utils.create_gesture(self.clock_box, 1, self.clock_dashboard)
         self.utils.create_gesture(self.window_title, 1, self.manage_window_notes)
         self.utils.create_gesture(self.tbclass, 1, self.dock.dockbar_append)
-        self.utils.create_gesture(self.tbclass, 3, self.dock.join_windows)
+        # self.utils.create_gesture(self.tbclass, 3, self.dock.join_windows)
         # self.utils.create_gesture(self.tbSIGKILL, 1, self.sigkill_activewindow)
         self.utils.create_gesture(self.tbvol, 1, self.toggle_mute_from_sink)
 
@@ -1059,16 +1067,15 @@ class Panel(Adw.Application):
         Returns:
             bool: Always returns True.
         """
-        # Execute the "mullvad status" command and decode the output
-        output = check_output("mullvad status".split()).decode()
+        is_mullvad_active = os.path.exists("/sys/class/net/wg-mullvad")
 
-        # Update the menu label based on the output
-        if "Disconnected" in output:
+        # Update the menu label based on mullvad active or not
+        if not is_mullvad_active:
             vpn_menu = self.menus["VPN"]
-            vpn_menu.set_icon_name("mullvadr")
-        elif "Connected" in output:
+            vpn_menu.set_icon_name("stock_disconnect")
+        else:
             vpn_menu = self.menus["VPN"]
-            vpn_menu.set_icon_name("mullvadg")
+            vpn_menu.set_icon_name("mullvad-symbolic")
 
         return True
 
@@ -1359,6 +1366,7 @@ class Panel(Adw.Application):
                 continue
             menu = Gio.Menu()
             btn = Gtk.MenuButton(label=m)
+            btn.set_always_show_arrow(False)
             btn.add_css_class("top_panel_menubutton_systray")
             # if no icon is specified in [icons] from menu.toml then use Label instead
             try:
@@ -1402,16 +1410,6 @@ class Panel(Adw.Application):
     def load_topbar_config(self):
         with open(self.topbar_config, "r") as f:
             return toml.load(f)
-
-    def clean_pid_store(self):
-        # [optimization]
-        # every 10 minutes check for non-existent pids and clean the dict
-        sock = self.compositor()
-        windows = sock.list_views()
-        pid_list = [i["pid"] for i in windows]
-        for pid in self.psutil_store.keys():
-            if pid not in pid_list:
-                del self.psutil_store[pid]
 
     def copy_to_clipboard(self, *_):
         # lazy to not use wl-copy
