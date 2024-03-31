@@ -4,7 +4,7 @@ from gi.repository import Gio, Gtk, Adw, GdkPixbuf
 from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen
 import toml
-import wayfire
+import wayfire.ipc as wayfire
 import requests
 from bs4 import BeautifulSoup
 
@@ -240,10 +240,10 @@ class PopoverBookmarks(Adw.Application):
             self.popover_bookmarks.popup()
 
     def popover_is_open(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
+        return
 
     def popover_is_closed(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
+        return
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
