@@ -129,7 +129,11 @@ class MenuClipboard(Adw.Application):
                 print(text)
                 echo = Popen(("echo", text), stdout=subprocess.PIPE)
                 echo.wait()
-                check_output(("cliphist", "delete"), stdin=echo.stdout).decode()
+                # huge lists will break the output
+                try:
+                    check_output(("cliphist", "delete"), stdin=echo.stdout).decode()
+                except Exception as e:
+                    print(e)
 
     def wl_copy_clipboard(self, x, *_):
         selected_text = x.get_child().MYTEXT
