@@ -1,19 +1,19 @@
 import os
-import toml
+import math
 import gi
+
+gi.require_version("Gtk4LayerShell", "1.0")
+gi.require_version("Adw", "1")
+from gi.repository import Gtk4LayerShell as LayerShell
+from gi.repository import Gtk, Adw, Gio, GObject
+from subprocess import Popen
+from wayfire.ipc import sock
+import wayfire.ipc as wayfire
+import toml
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw, Gio, GObject
-from gi.repository import Gtk
-
 gi.require_version("Gtk4LayerShell", "1.0")
-from gi.repository import Gtk4LayerShell as LayerShell
-from subprocess import Popen
-import math
-from wayfire.ipc import sock
-import wayfire
-from time import sleep
 
 
 class InvalidGioTaskError(Exception):
@@ -29,20 +29,16 @@ class BackgroundUtils(GObject.Object):
 
     def __init__(self, function, finish_callback, **kwargs):
         super().__init__(**kwargs)
-
         self.function = function
         self.finish_callback = finish_callback
         self._current = None
 
     def start(self):
         if self._current:
-            AlreadyRunningError("Task is already running")
-
+            raise AlreadyRunningError("Task is already running")
         finish_callback = lambda self, task, nothing: self.finish_callback()
-
         task = Gio.Task.new(self, None, finish_callback, None)
         task.run_in_thread(self._thread_cb)
-
         self._current = task
 
     @staticmethod
@@ -83,14 +79,13 @@ class Utils(Adw.Application):
         self.cmd_config = os.path.join(self.config_path, "cmd.toml")
         self.psutil_store = {}
         self.panel_cfg = self.load_topbar_config()
-        # split the org.gnome dots from the list
         self.icon_names = [icon for icon in Gtk.IconTheme().get_icon_names()]
         self.gio_icon_list = Gio.AppInfo.get_all()
+        self.gestures = {}
 
         self.focused_view_id = None
         if not os.path.exists(self.config_path):
             os.makedirs(self.config_path)
-            os.makedirs(self.scripts)
 
         self.is_scale_active = {}
         self.start_thread_compositor()
@@ -114,122 +109,101 @@ class Utils(Adw.Application):
             except Exception as e:
                 print(e)
 
+    def widget_exists(self, widget):
+        return widget is not None and isinstance(widget, Gtk.Widget)
+
     def CreateWorkspacePanel(
         self, config, orientation, class_style, callback=None, use_label=False
     ):
-        # Map orientation to Gtk.Orientation
         if orientation == "h":
             orientation = Gtk.Orientation.HORIZONTAL
         if orientation == "v":
             orientation = Gtk.Orientation.VERTICAL
 
-        # Create a Gtk.Box with specified spacing and orientation
         box = Gtk.Box(spacing=10, orientation=orientation)
-        box.add_css_class("box_from_dockbar")  # Add a CSS class to the box for styling
+        box.add_css_class("box_from_dockbar")
 
-        # Load configuration from a file using the toml library
         with open(config, "r") as f:
-            config = toml.load(f)
+            config_data = toml.load(f)
 
-            # Iterate through each application in the configuration
-            for app in config:
+            for app in config_data:
                 wclass = None
                 initial_title = None
 
                 try:
-                    # Try to get the 'wclass' field from the configuration, if present
-                    wclass = config[app]["wclass"]
+                    wclass = config_data[app]["wclass"]
                 except KeyError:
                     pass
 
-                # Create a button using the CreateButton method
                 button = self.CreateButton(
-                    config[app]["icon"],
-                    config[app]["cmd"],
+                    config_data[app]["icon"],
+                    config_data[app]["cmd"],
                     class_style,
                     wclass,
                     initial_title,
                     use_label,
                 )
 
-                # If a callback is provided, create a gesture for the button
                 if callback is not None:
                     self.create_gesture(button, 3, callback)
 
-                # Append the button to the Gtk.Box
                 box.append(button)
 
-        # Return the created Gtk.Box
         return box
 
     def CreateFromAppList(
         self, config, orientation, class_style, callback=None, use_label=False
     ):
-        # Map orientation to Gtk.Orientation
         if orientation == "h":
             orientation = Gtk.Orientation.HORIZONTAL
         if orientation == "v":
             orientation = Gtk.Orientation.VERTICAL
 
-        # Create a Gtk.Box with specified spacing and orientation
         box = Gtk.Box(spacing=10, orientation=orientation)
-        box.add_css_class("box_from_dockbar")  # Add a CSS class to the box for styling
+        box.add_css_class("box_from_dockbar")
 
-        # Load configuration from a file using the toml library
         with open(config, "r") as f:
-            config = toml.load(f)
+            config_data = toml.load(f)
 
-            # Iterate through each application in the configuration
-            for app in config:
+            for app in config_data:
                 wclass = None
                 initial_title = None
 
                 try:
-                    # Try to get the 'wclass' field from the configuration, if present
-                    wclass = config[app]["wclass"]
+                    wclass = config_data[app]["wclass"]
                 except KeyError:
                     pass
 
-                # Create a button using the CreateButton method
                 button = self.CreateButton(
-                    config[app]["icon"],
-                    config[app]["cmd"],
+                    config_data[app]["icon"],
+                    config_data[app]["cmd"],
                     class_style,
                     wclass,
                     initial_title,
                     use_label,
                 )
 
-                # If a callback is provided, create a gesture for the button
                 if callback is not None:
                     self.create_gesture(button, 3, callback)
 
-                # Append the button to the Gtk.Box
                 box.append(button)
 
-        # Return the created Gtk.Box
         return box
 
     def on_compositor_finished(self):
-        # non working code
         try:
-            self.taskbarwatch_task.finish()
+            self.watch_task.finish()
         except Exception as err:
             print(err)
 
     def start_thread_compositor(self):
         self.watch_task = BackgroundUtils(
-            self.watch_events, lambda: self.on_compositor_finished
+            self.watch_events, self.on_compositor_finished
         )
         self.watch_task.start()
 
     def compositor_window_changed(self):
-        # if no windows, window_created signal will conflict with window_changed
-        # the issue will be no new button will be appended to the taskbar
-        # necessary to check if the window list is empity
-        # if not len(self.hyprinstance.get_windows()) == 0:
-        # self.update_active_window_shell()
-        print()
+        pass
 
     def watch_events(self):
         sock = self.compositor()
@@ -241,21 +215,15 @@ class Utils(Adw.Application):
                     if msg["state"] is True:
                         if msg["plugin"] == "scale":
                             self.is_scale_active[msg["output"]] = True
-
                     if msg["state"] is False:
                         if msg["plugin"] == "scale":
                             self.is_scale_active[msg["output"]] = False
-
             except Exception as e:
                 print(e)
 
     def search_local_desktop(self, initial_title):
         for deskfile in os.listdir(self.webapps_applications):
-            if (
-                deskfile.startswith("chrome")
-                or deskfile.startswith("msedge")
-                or deskfile.startswith("FFPWA-")
-            ):
+            if deskfile.startswith(("chrome", "msedge", "FFPWA-")):
                 pass
             else:
                 continue
@@ -263,7 +231,6 @@ class Utils(Adw.Application):
             desktop_file_found = self.search_str_inside_file(
                 webapp_path, initial_title.lower()
             )
-
             if desktop_file_found:
                 return deskfile
         return None
@@ -280,16 +247,12 @@ class Utils(Adw.Application):
 
     def icon_exist(self, argument):
         if argument:
-            # try to methods, with gtk and gio
-            exist = None
             exist = [
                 i.get_icon()
                 for i in self.gio_icon_list
                 if argument in i.get_id().lower()
             ]
-
             if exist:
-                # found icons, so extract from the list
                 exist = exist[0].get_names()[0]
                 return exist
             else:
@@ -309,7 +272,6 @@ class Utils(Adw.Application):
         view_id,
         callback=None,
     ):
-        # Map orientation to Gtk.Orientation
         if orientation == "h":
             orientation = Gtk.Orientation.HORIZONTAL
         elif orientation == "v":
@@ -317,7 +279,6 @@ class Utils(Adw.Application):
 
         icon = self.get_icon(wmclass, initial_title, title)
 
-        # Create a clickable image button and attach a gesture if callback is provided
         button = self.create_clickable_image(
             icon, class_style, wmclass, title, initial_title, view_id
         )
@@ -364,16 +325,7 @@ class Utils(Adw.Application):
         box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
         box.add_css_class(class_style)
 
-        use_this_title = title[:40]  # Limit to 40 characters
-
-        # if "kitty" not in wclass.lower():
-        #     self.gio_icon_list = Gio.AppInfo.get_all()
-        #     exist = (
-        #         i.get_display_name()
-        #         for i in self.gio_icon_list
-        #         if wclass == i.get_startup_wm_class()
-        #     )
-        #     use_this_title = next(iter(exist), use_this_title)
+        use_this_title = title[:40]
 
         label = Gtk.Label.new(use_this_title)
         label.add_css_class("label_from_clickable_image")
@@ -423,20 +375,6 @@ class Utils(Adw.Application):
             else:
                 sock.go_workspace_set_focus(view_id)
 
-        # alpha = sock.get_view_alpha(view_id)["alpha"]
-        # config_path = os.path.join(self.home, ".config/waypanel/")
-        # shader = os.path.join(config_path, "shaders/view-effect.shader")
-        # revert_effect = os.path.join(config_path, "shaders/revert.shader")
-
-        # if os.path.exists(shader) and not is_view_from_focused_output:
-        # sock.set_view_shader(view_id, shader)
-        # sleep(0.2)
-        # sock.set_view_shader(view_id, revert_effect)
-        # if not is_view_from_focused_output:
-        #    sock.set_view_alpha(view_id, alpha / 2)
-        #    sleep(0.2)
-        #    sock.set_view_alpha(view_id, alpha)
-
     def CreateButton(
         self,
         icon_name,
@@ -479,10 +417,17 @@ class Utils(Adw.Application):
         if arg is None:
             gesture.connect("released", callback)
         else:
-            gesture.connect("released", lambda arg: callback(arg))
+            gesture.connect("released", lambda gesture, arg=arg: callback(arg))
         gesture.set_button(mouse_button)
         widget.add_controller(gesture)
+        self.gestures[widget] = gesture
         return widget
+
+    def remove_gesture(self, widget):
+        if widget in self.gestures:
+            gesture = self.gestures[widget]
+            widget.remove_controller(gesture)
+            del self.gestures[widget]
 
     def convert_size(self, size_bytes):
         if size_bytes == 0:
