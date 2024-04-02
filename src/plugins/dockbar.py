@@ -1,12 +1,9 @@
 import os
-import signal
 import toml
 import gi
 import json
-import psutil
 from subprocess import Popen, call, check_output as out
 from collections import ChainMap
-import threading
 from src.core.create_panel import (
     set_layer_position_exclusive,
     unset_layer_position_exclusive,
@@ -111,10 +108,7 @@ class Dockbar(Adw.Application):
 
     # Start the Dockbar application
     def do_start(self):
-        # Set up a timeout to periodically check process IDs
-        # GLib.timeout_add(300, self.update_active_window_shell)
         self.start_thread_compositor()
-        # Populate self.stored_windows during panel start
         sock = self.compositor()
         self.stored_windows = [i["id"] for i in sock.list_views()]
 
@@ -140,7 +134,6 @@ class Dockbar(Adw.Application):
                     self.dockbar.append(self.add_launcher)
                     self.left_panel.set_content(self.dockbar)
                     self.left_panel.present()
-                    # self.left_panel.set_visible(False)
 
                 # if "right" == p:
                 #     exclusive = panel_toml[p]["Exclusive"] == "True"
@@ -157,26 +150,25 @@ class Dockbar(Adw.Application):
 
                 if "bottom" == p:
                     print()
-                    # exclusive = panel_toml[p]["Exclusive"] == "True"
-                    # position = panel_toml[p]["position"]
-                    #
-                    # # Create a bottom panel and associated components
-                    # self.bottom_panel = CreatePanel(
-                    #     self, "BOTTOM", position, exclusive, 32, 0, "BottomBar"
-                    # )
-                    # self.add_launcher = Gtk.Button()
-                    # self.add_launcher.set_icon_name("tab-new-symbolic")
-                    # self.add_launcher.connect("clicked", self.dockbar_append)
-                    # self.taskbar = Gtk.Box()
-                    # self.taskbar.append(self.add_launcher)
-                    # self.taskbar.add_css_class("taskbar")
-                    # self.bottom_panel.set_content(self.taskbar)
-                    # self.bottom_panel.present()
-                    # # self.bottom_panel.set_visible(False)
-                    #
-                    # # Start the taskbar list for the bottom panel
-                    # # Remaining check pids will be handled later
-                    # self.Taskbar("h", "taskbar", 0)
+                    exclusive = panel_toml[p]["Exclusive"] == "True"
+                    position = panel_toml[p]["position"]
+
+                    # Create a bottom panel and associated components
+                    self.bottom_panel = CreatePanel(
+                        self, "BOTTOM", position, exclusive, 32, 0, "BottomBar"
+                    )
+                    self.add_launcher = Gtk.Button()
+                    self.add_launcher.set_icon_name("tab-new-symbolic")
+                    self.add_launcher.connect("clicked", self.dockbar_append)
+                    self.taskbar = Gtk.Box()
+                    self.taskbar.append(self.add_launcher)
+                    self.taskbar.add_css_class("taskbar")
+                    self.bottom_panel.set_content(self.taskbar)
+                    self.bottom_panel.present()
+
+                    # Start the taskbar list for the bottom panel
+                    # Remaining check pids will be handled later
+                    self.Taskbar("h", "taskbar", 0)
 
             # LayerShell.set_layer(self.left_panel, LayerShell.Layer.TOP)
             # LayerShell.set_layer(self.bottom_panel, LayerShell.Layer.TOP)
@@ -189,11 +181,6 @@ class Dockbar(Adw.Application):
             print(err)
 
     def start_thread_compositor(self):
-        self.scale_task = BackgroundTaskbar(
-            self.ScaleWatch, lambda: self.on_compositor_finished
-        )
-        self.scale_task.start()
-
         self.taskbarwatch_task = BackgroundTaskbar(
             self.TaskbarWatch, lambda: self.on_compositor_finished
         )
@@ -234,14 +221,12 @@ class Dockbar(Adw.Application):
                                 if view is not None:
                                     if view["role"] == "toplevel":
                                         self.on_view_role_toplevel_focused(view)
-                                        # self.left_panel.set_visible(False)
-                                        # self.bottom_panel.set_visible(False)
 
                             if msg["event"] == "view-mapped":
                                 self.on_view_created()
 
                             if msg["event"] == "view-unmapped":
-                                self.on_view_destroyed(msg["view"])
+                                self.on_view_destroyed(view)
 
                             if msg["event"] == "plugin-activation-state-changed":
                                 # if plugin state is true (activated)
@@ -277,37 +262,26 @@ class Dockbar(Adw.Application):
     def on_view_focused(self):
         return
 
+    # events that will make the panel clickable or not
     def on_scale_activated(self):
         set_layer_position_exclusive(self.left_panel)
         # set_layer_position_exclusive(self.right_panel)
-        # set_layer_position_exclusive(self.bottom_panel)
+        set_layer_position_exclusive(self.bottom_panel)
 
     def on_scale_desactivated(self):
         unset_layer_position_exclusive(self.left_panel)
         # unset_layer_position_exclusive(self.right_panel)
-        # unset_layer_position_exclusive(self.bottom_panel)
+        unset_layer_position_exclusive(self.bottom_panel)
 
     def on_view_created(self):
         self.Taskbar("h", "taskbar")
 
     def on_view_destroyed(self, view):
-        if view is None:
-            return
-
-        pid = view["id"]
-        self.taskbar_window_destroyed(pid)
+        self.taskbar_remove(view["id"])
 
     def on_title_changed(self, view):
         self.Taskbar("h", "taskbar")
         self.update_active_window_shell(view["id"])
-        # if msg["event"] == "view-focused":
-        # GLib.idle_add(self.update_title_topbar)
-
-    def taskbar_window_destroyed(self, pid):
-        self.taskbar_remove(pid)
-
-    def ScaleWatch(self):
-        self.event_scale_view()
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
@@ -345,6 +319,10 @@ class Dockbar(Adw.Application):
                 class_style,
                 id,
             )
+            # we don't know if there is any  stuation where button is not being created
+            # to prevent issues lets check if buttons exist
+            if not self.utils.widget_exists(button):
+                return
             # Append the button to the taskbar
             self.taskbar.append(button)
 
@@ -383,26 +361,36 @@ class Dockbar(Adw.Application):
         return True
 
     def update_active_window_shell(self, id):
-        sock = self.compositor()
-        view = sock.get_view(id)
-        id = view["id"]
         button = self.buttons_id[id][0]
         self.taskbar.remove(button)
         self.update_taskbar("h", "taskbar", id)
         return True
 
-    def taskbar_remove(self, pid):
-        # Iterate over copied dictionary to avoid concurrent modification
-        # Remove button and associated data
+    def remove_button(self, id):
+        button = self.buttons_id[id][0]
+        if not self.utils.widget_exists(button):
+            return None
+        self.taskbar.remove(button)
+        self.taskbar_list.remove(id)
+        self.utils.remove_gesture(button)
+        del self.buttons_id[id]
+
+    def taskbar_remove(self, id=None):
+        if id is not None:
+            self.remove_button(id)
+
         sock = self.compositor()
-        list_ids = [i for i in sock.list_ids()]
-        for id in self.buttons_id.copy():
-            if id not in list_ids:
-                button = self.buttons_id[id][0]
-                self.taskbar.remove(button)
-                self.taskbar_list.remove(id)
-                del self.buttons_id[id]
-        return True
+        ids = sock.list_ids()
+
+        if not ids:
+            return
+
+        list_ids = [i for i in ids]
+
+        for button_id in self.buttons_id:
+            if button_id not in list_ids:
+                self.remove_button(button_id)
+        return
 
     # Append a window to the Dockbar
     # this whole function is a mess, this was based in another compositor
