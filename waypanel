@@ -1061,21 +1061,34 @@ class Panel(Adw.Application):
         """
         Check the status of the Mullvad VPN and update the menu label accordingly.
 
-        This function checks the status of the Mullvad VPN by executing the "mullvad status" command,
-        and updates the label of the VPN menu item based on the status.
+        This function checks the status of the Mullvad VPN by searching for files in
+        the directory "/sys/class/net" that start with either "wg" or "tun".
+        If the interface is "tun", it checks for the presence of "-mullvad" as well.
+        It updates the label of the VPN menu item based on the status.
 
         Returns:
-            bool: Always returns True.
+            bool: True if the function executes successfully.
         """
-        is_mullvad_active = os.path.exists("/sys/class/net/wg-mullvad")
+        vpn_menu = self.menus.get("VPN")  # Retrieve VPN menu
 
-        # Update the menu label based on mullvad active or not
+        if vpn_menu is None:
+            return False
+
+        net_files = os.listdir("/sys/class/net")
+
+        is_mullvad_active = any(
+            (file.startswith("wg") or file.startswith("tun")) for file in net_files
+        )
+
         if not is_mullvad_active:
-            vpn_menu = self.menus["VPN"]
-            vpn_menu.set_icon_name("stock_disconnect")
-        else:
-            vpn_menu = self.menus["VPN"]
+            is_mullvad_active = any(
+                file.startswith("tun") and "-mullvad" in file for file in net_files
+            )
+
+        if is_mullvad_active:
             vpn_menu.set_icon_name("mullvad-symbolic")
+        else:
+            vpn_menu.set_icon_name("stock_disconnect")
 
         return True
 
