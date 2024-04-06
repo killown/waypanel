@@ -23,60 +23,9 @@ from ..core.utils import Utils
 import numpy as np
 import wayfire.ipc as ws
 import sys
+from src.core.background import *
 
 sys.path.append("/usr/lib/waypanel/")
-
-
-class InvalidGioTaskError(Exception):
-    pass
-
-
-class AlreadyRunningError(Exception):
-    pass
-
-
-class BackgroundTaskbar(GObject.Object):
-    __gtype_name__ = "BackgroundTaskbar"
-
-    def __init__(self, function, finish_callback, **kwargs):
-        super().__init__(**kwargs)
-
-        self.function = function
-        self.finish_callback = finish_callback
-        self._current = None
-
-    def start(self):
-        if self._current:
-            AlreadyRunningError("Task is already running")
-
-        finish_callback = lambda self, task, nothing: self.finish_callback()
-
-        task = Gio.Task.new(self, None, finish_callback, None)
-        task.run_in_thread(self._thread_cb)
-
-        self._current = task
-
-    @staticmethod
-    def _thread_cb(task, self, task_data, cancellable):
-        try:
-            retval = self.function()
-            task.return_value(retval)
-        except Exception as e:
-            task.return_value(e)
-
-    def finish(self):
-        task = self._current
-        self._current = None
-
-        if not Gio.Task.is_valid(task, self):
-            raise InvalidGioTaskError()
-
-        value = task.propagate_value().value
-
-        if isinstance(value, Exception):
-            raise value
-
-        return value
 
 
 class Dockbar(Adw.Application):
@@ -181,7 +130,7 @@ class Dockbar(Adw.Application):
             print(err)
 
     def start_thread_compositor(self):
-        self.taskbarwatch_task = BackgroundTaskbar(
+        self.taskbarwatch_task = Background(
             self.TaskbarWatch, lambda: self.on_compositor_finished
         )
         self.taskbarwatch_task.start()
@@ -267,11 +216,13 @@ class Dockbar(Adw.Application):
         set_layer_position_exclusive(self.left_panel)
         # set_layer_position_exclusive(self.right_panel)
         set_layer_position_exclusive(self.bottom_panel)
+        return
 
     def on_scale_desactivated(self):
         unset_layer_position_exclusive(self.left_panel)
         # unset_layer_position_exclusive(self.right_panel)
         unset_layer_position_exclusive(self.bottom_panel)
+        return
 
     def on_view_created(self):
         self.Taskbar("h", "taskbar")
