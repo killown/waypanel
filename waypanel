@@ -55,58 +55,7 @@ from src.plugins.folders import PopoverFolders
 from src.plugins.clipboardMenu import MenuClipboard
 from src.plugins.launcherMenu import MenuLauncher
 from src.core.utils import Utils
-
-
-class InvalidGioTaskError(Exception):
-    pass
-
-
-class AlreadyRunningError(Exception):
-    pass
-
-
-class BackgroundTask(GObject.Object):
-    __gtype_name__ = "BackgroundTask"
-
-    def __init__(self, function, finish_callback, **kwargs):
-        super().__init__(**kwargs)
-
-        self.function = function
-        self.finish_callback = finish_callback
-        self._current = None
-
-    def start(self):
-        if self._current:
-            AlreadyRunningError("Task is already running")
-
-        finish_callback = lambda self, task, nothing: self.finish_callback()
-
-        task = Gio.Task.new(self, None, finish_callback, None)
-        task.run_in_thread(self._thread_cb)
-
-        self._current = task
-
-    @staticmethod
-    def _thread_cb(task, self, task_data, cancellable):
-        try:
-            retval = self.function()
-            task.return_value(retval)
-        except Exception as e:
-            task.return_value(e)
-
-    def finish(self):
-        task = self._current
-        self._current = None
-
-        if not Gio.Task.is_valid(task, self):
-            raise InvalidGioTaskError()
-
-        value = task.propagate_value().value
-
-        if isinstance(value, Exception):
-            raise value
-
-        return value
+from src.core.background import *
 
 
 class Panel(Adw.Application):
@@ -498,11 +447,11 @@ class Panel(Adw.Application):
 
     def all_events_watch(self):
         while True:
-            sock = self.compositor()
-            sock.watch()
-            view = None
-            while True:
-                try:
+            try:
+                sock = self.compositor()
+                sock.watch()
+                view = None
+                while True:
                     msg = sock.read_message()
                     if "event" not in msg:
                         continue
@@ -519,9 +468,8 @@ class Panel(Adw.Application):
 
                     self.handle_plugin_event(msg)
                     self.handle_workspace_events(msg)
-                except Exception as e:
-                    print(e)
-                    break
+            except Exception as e:
+                print(e)
 
     def on_view_role_toplevel_focused(self, view):
         # last view focus only for top level Windows
@@ -584,6 +532,8 @@ class Panel(Adw.Application):
         workspace_has_views = sock.get_views_from_active_workspace()
         if not workspace_has_views:
             self.go_to_workspace_with_views()
+        sock.focus_next_view_from_active_workspace()
+
         return
 
     def on_app_id_changed(self):
@@ -639,7 +589,7 @@ class Panel(Adw.Application):
         return
 
     def start_thread_all_events(self):
-        self.all_events = BackgroundTask(
+        self.all_events = Background(
             self.all_events_watch, lambda: self.on_compositor_finished
         )
         self.all_events.start()
