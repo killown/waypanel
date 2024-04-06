@@ -1,6 +1,9 @@
 import os
 import math
 import gi
+from src.core.background import *
+import numpy as np
+from time import sleep
 
 gi.require_version("Gtk4LayerShell", "1.0")
 gi.require_version("Adw", "1")
@@ -14,54 +17,6 @@ import toml
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("Gtk4LayerShell", "1.0")
-
-
-class InvalidGioTaskError(Exception):
-    pass
-
-
-class AlreadyRunningError(Exception):
-    pass
-
-
-class BackgroundUtils(GObject.Object):
-    __gtype_name__ = "BackgroundUtils"
-
-    def __init__(self, function, finish_callback, **kwargs):
-        super().__init__(**kwargs)
-        self.function = function
-        self.finish_callback = finish_callback
-        self._current = None
-
-    def start(self):
-        if self._current:
-            raise AlreadyRunningError("Task is already running")
-        finish_callback = lambda self, task, nothing: self.finish_callback()
-        task = Gio.Task.new(self, None, finish_callback, None)
-        task.run_in_thread(self._thread_cb)
-        self._current = task
-
-    @staticmethod
-    def _thread_cb(task, self, task_data, cancellable):
-        try:
-            retval = self.function()
-            task.return_value(retval)
-        except Exception as e:
-            task.return_value(e)
-
-    def finish(self):
-        task = self._current
-        self._current = None
-
-        if not Gio.Task.is_valid(task, self):
-            raise InvalidGioTaskError()
-
-        value = task.propagate_value().value
-
-        if isinstance(value, Exception):
-            raise value
-
-        return value
 
 
 class Utils(Adw.Application):
@@ -197,9 +152,7 @@ class Utils(Adw.Application):
             print(err)
 
     def start_thread_compositor(self):
-        self.watch_task = BackgroundUtils(
-            self.watch_events, self.on_compositor_finished
-        )
+        self.watch_task = Background(self.watch_events, self.on_compositor_finished)
         self.watch_task.start()
 
     def compositor_window_changed(self):
@@ -253,7 +206,12 @@ class Utils(Adw.Application):
                 if argument in i.get_id().lower()
             ]
             if exist:
-                exist = exist[0].get_names()[0]
+                # Check if exist[0] is a FileIcon object
+                if hasattr(exist[0], "get_names"):
+                    exist = exist[0].get_names()[0]
+                else:
+                    # If not, assume it's a string
+                    exist = exist[0]
                 return exist
             else:
                 exist = [name for name in self.icon_names if argument.lower() in name]
@@ -330,8 +288,13 @@ class Utils(Adw.Application):
         label = Gtk.Label.new(use_this_title)
         label.add_css_class("label_from_clickable_image")
 
-        image = Gtk.Image.new_from_icon_name(icon_name)
-        image.set_icon_size(Gtk.IconSize.LARGE)
+        if isinstance(icon_name, Gio.FileIcon):
+            # If icon_name is a FileIcon object, directly use it
+            image = Gtk.Image.new_from_gicon(icon_name)
+        else:
+            # Otherwise, treat icon_name as a string representing the icon name
+            image = Gtk.Image.new_from_icon_name(icon_name)
+
         image.props.margin_end = 5
         image.set_halign(Gtk.Align.END)
         image.add_css_class("icon_from_clickable_image")
@@ -352,28 +315,46 @@ class Utils(Adw.Application):
     def close_view(self, view_id):
         sock.close_view(view_id)
 
+    def view_focus_indicator_effect(self, view_id):
+        sock = self.compositor()
+        float_sequence = np.arange(0.1, 1.1, 0.1)
+        print(float_sequence)
+        original_alpha = sock.get_view_alpha(view_id)
+        for i in float_sequence:
+            sock.set_view_alpha(view_id, i)
+            sleep(0.04)
+        sock.set_view_alpha(view_id, original_alpha)
+
     def set_view_focus(self, view_id):
-        list_views = sock.list_views()
-        matching_views = [view for view in list_views if view_id == view["id"]]
+        try:
+            view = sock.get_view(view_id)
+            if not view:
+                return None
 
-        if not matching_views:
-            return None
+            view_id = view["id"]
+            output_id = view["output-id"]
 
-        view_id = matching_views[0]["id"]
-        output_id = matching_views[0]["output-id"]
-        focused_output_views = sock.focused_output_views()
-        is_view_from_focused_output = None
-        if focused_output_views:
-            is_view_from_focused_output = any(
-                view for view in focused_output_views if view_id == view["id"]
-            )
-
-        if output_id in self.is_scale_active:
-            if self.is_scale_active[output_id] is True:
-                sock.scale_toggle()
-                sock.go_workspace_set_focus(view_id)
+            if output_id in self.is_scale_active:
+                if self.is_scale_active[output_id] is True:
+                    sock.scale_toggle()
+                    sock.go_workspace_set_focus(view_id)
+                    sock.move_cursor_middle(view_id)
+                    # FIXME:
+                    # this is why there is a bug in this part
+                    # you need only sock.watch for the whole panel
+                    # unset_layer_position_exclusive()
+                    # try to build only ony sock.watch in waypanel that comunicates with all the panels
+                    # I am not sure yet but it seems, one sock.watch may catch a socket event and other may not
+                    # if this is not the case, if every watch catch events, a good idea is to create a sock.watch in
+                    # create_panel.py which will watch for scale toggle and use set unset the layers
             else:
                 sock.go_workspace_set_focus(view_id)
+                sock.move_cursor_middle(view_id)
+                self.view_focus_indicator_effect(view_id)
+
+        except Exception as e:
+            print(e)
+            return True
 
     def CreateButton(
         self,
