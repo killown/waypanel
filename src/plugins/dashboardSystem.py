@@ -69,16 +69,6 @@ class SystemDashboard(Adw.Application):
             ("Reboot", "", "system-reboot-symbolic"): "System Actions",
             ("Shutdown", "", "gnome-shutdown-symbolic"): "System Actions",
             ("Lock", "", "system-lock-screen-symbolic"): "System Actions",
-            (
-                "Exit Waypanel",
-                "",
-                "window-close-symbolic",
-            ): "System Actions",
-            (
-                "Restart Waypanel",
-                "",
-                "system-restart-symbolic",
-            ): "System Actions",
             ("Turn Off Monitors", "", "display-symbolic"): "System Actions",
         }
         done = []
