@@ -1894,13 +1894,15 @@ if __name__ == "__main__":
     app.run(None)
     sock.watch()
     print("was supposed to work")
-    msg = sock.read_message()
-    print(msg)
-    if "event" in msg:
-        event = msg["event"]
-        if monitor_name == msg["output"]["name"]:
-            if event == "output-removed":
-                app.quit()
-            if event == "output-added":
-                print("testing output-added")
-                app.run(None)
+    while True:
+        msg = sock.read_message()
+        print(msg)
+        if "event" in msg:
+            event = msg["event"]
+            if monitor_name == msg["output"]["name"]:
+                if event == "output-removed":
+                    app.quit()
+                    break
+                if event == "output-added":
+                    print("testing output-added")
+                    app.run(None)
