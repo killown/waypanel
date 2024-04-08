@@ -383,6 +383,8 @@ class Panel(Adw.Application):
             sock.set_tiling_layout(desired_layout)
 
     def handle_plugin_event(self, msg):
+        if "event" not in msg:
+            return
         if msg["event"] == "plugin-activation-state-changed":
             if msg["state"]:
                 if msg["plugin"] == "expo":
@@ -398,10 +400,25 @@ class Panel(Adw.Application):
                     self.on_scale_desactivated()
 
     def handle_view_event(self, msg, view):
+        if "event" not in msg:
+            return
+
+        if msg["event"] == "view-mapped":
+            return
+
         if view is None:
             return
 
-        if view["app-id"] == "nil":
+        if view["app-id"] == "nil" or view["app-id"] == "":
+            return
+
+        if view["pid"] == -1:
+            return
+
+        if "role" not in view:
+            return
+
+        if view["role"] != "toplevel":
             return
 
         if msg["event"] == "view-title-changed":
@@ -415,22 +432,13 @@ class Panel(Adw.Application):
             self.on_app_id_changed()
 
         if msg["event"] == "view-focused":
-            if msg["view"] is None:
-                return
-            if view and view["role"] == "toplevel":
-                self.on_view_role_toplevel_focused(view)
-                self.on_view_focused()
-                self.last_focused_output = view["output-id"]
-
-        if msg["event"] == "view-mapped":
-            if "role" in view:
-                if view["role"] == "toplevel":
-                    self.on_view_role_toplevel_focused(view)
-                    self.on_view_focused()
-                    self.on_view_created(view)
+            self.on_view_role_toplevel_focused(view)
+            self.on_view_focused()
+            self.on_view_created(view)
+            self.last_focused_output = view["output-id"]
 
         if msg["event"] == "view-unmapped":
-            if view and view["role"] == "toplevel":
+            if view["app-id"] != "" and view["app-id"] != "nil":
                 self.on_view_destroyed()
 
     def set_previous_workspace_with_views(self, msg):
@@ -448,10 +456,15 @@ class Panel(Adw.Application):
             self.previous_workspace[focused_output] = wviews
 
     def handle_workspace_events(self, msg):
+        if "event" not in msg:
+            return
+
         if msg["event"] == "wset-workspace-changed":
             self.set_previous_workspace_with_views(msg)
 
     def handle_output_events(self, msg):
+        if "event" not in msg:
+            return
         if msg["event"] == "output-gain-focus":
             return
 
@@ -463,9 +476,14 @@ class Panel(Adw.Application):
                 view = None
                 while True:
                     msg = sock.read_message()
-                    print(msg, "\n\n")
                     if "event" not in msg:
                         continue
+
+                    if "view" in msg:
+                        if msg["view"]["pid"] == -1:
+                            continue
+
+                    print(msg, "\n\n")
 
                     self.handle_output_events(msg)
 
@@ -1867,9 +1885,6 @@ class Panel(Adw.Application):
         # Update volume information
         self.volume_watch()
 
-    def quit(self):
-        self.quit()
-
 
 if __name__ == "__main__":
     addr = os.getenv("WAYFIRE_SOCKET")
@@ -1899,10 +1914,10 @@ if __name__ == "__main__":
         print(msg)
         if "event" in msg:
             event = msg["event"]
-            if monitor_name == msg["output"]["name"]:
-                if event == "output-removed":
-                    app.quit()
-                    break
-                if event == "output-added":
-                    print("testing output-added")
-                    app.run(None)
+            # if monitor_name == msg["output"]["name"]:
+            # if event == "output-removed":
+            #    app.quit()
+            #    break
+            # if event == "output-added":
+            #    print("testing output-added")
+            #    app.run(None)
