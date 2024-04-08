@@ -292,6 +292,12 @@ class Utils(Adw.Application):
         if wclass == "nil":
             return Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
 
+        # no pid no new taskbar button, that will crash the panel
+        self.compositor()
+        pid = sock.get_view_pid(view_id)
+        if pid == -1:
+            return
+
         title = self.filter_utf8_for_gtk(title)
         box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
         box.add_css_class(class_style)
