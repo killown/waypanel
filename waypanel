@@ -393,6 +393,8 @@ class Panel(Adw.Application):
                     self.on_scale_activated()
                 if msg["plugin"] == "move":
                     self.on_moving_view()
+                if msg["plugin"] == "builtin-close-view":
+                    self.on_view_destroyed()
             else:
                 if msg["plugin"] == "expo":
                     self.on_expo_desactivated()
@@ -403,13 +405,10 @@ class Panel(Adw.Application):
         if "event" not in msg:
             return
 
-        if msg["event"] == "view-mapped":
-            return
+        if msg["event"] == "view-unmapped":
+            self.on_view_destroyed()
 
         if view is None:
-            return
-
-        if view["app-id"] == "nil" or view["app-id"] == "":
             return
 
         if view["pid"] == -1:
@@ -434,12 +433,10 @@ class Panel(Adw.Application):
         if msg["event"] == "view-focused":
             self.on_view_role_toplevel_focused(view)
             self.on_view_focused()
-            self.on_view_created(view)
             self.last_focused_output = view["output-id"]
 
-        if msg["event"] == "view-unmapped":
-            if view["app-id"] != "" and view["app-id"] != "nil":
-                self.on_view_destroyed()
+        if msg["event"] == "view-mapped":
+            self.on_view_created(view)
 
     def set_previous_workspace_with_views(self, msg):
         sock = self.compositor()
@@ -532,27 +529,10 @@ class Panel(Adw.Application):
         #    sock.tilling()
         return
 
-    def go_to_workspace_with_views(self):
-        sock = self.compositor()
-        focused_output = sock.get_focused_output_name()
-        wviews = sock.get_workspaces_with_views()
-        wviews = {"x": wviews[0]["x"], "y": wviews[0]["y"]}
-        if focused_output not in self.previous_workspace:
-            wviews = sock.get_workspaces_with_views()
-            wviews = {"x": wviews[-1]["x"], "y": wviews[-1]["y"]}
-            self.previous_workspace[focused_output] = wviews
-
-        aw = sock.get_active_workspace_info()
-        previous_workspace = self.previous_workspace[focused_output]
-
-        if not {"x": aw["x"], "y": aw["y"]} == previous_workspace:
-            sock.set_workspace(previous_workspace)
-        else:
-            sock.set_workspace(wviews)
-
-        self.previous_workspace[focused_output] = wviews
-
     def on_view_destroyed(self):
+        # if it check if workspace has views too fast, will still get the id from destroyed view
+        # and thus never change to next workspace
+        sleep(0.2)
         # this signal will be cleared with {'event': 'view-focused', 'view': None}
         # useful when focusing empty workspaces
         # if no signal like that, the go_next_workspace_with_views will be triggered
@@ -560,10 +540,7 @@ class Panel(Adw.Application):
         sock = self.compositor()
         workspace_has_views = sock.get_views_from_active_workspace()
         if not workspace_has_views:
-            # too many animations going on
-            # that could cause a recursion if not waiting
-            sleep(0.2)
-            self.go_to_workspace_with_views()
+            sock.go_next_workspace_with_views()
         sock.focus_next_view_from_active_workspace()
 
         return
