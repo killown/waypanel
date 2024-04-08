@@ -230,6 +230,9 @@ class Utils(Adw.Application):
         view_id,
         callback=None,
     ):
+        title = self.filter_utf8_for_gtk(title)
+        if "\\u" in title:
+            title = title.split("\\u")[0]
         if orientation == "h":
             orientation = Gtk.Orientation.HORIZONTAL
         elif orientation == "v":
@@ -251,6 +254,7 @@ class Utils(Adw.Application):
                 return False
 
     def get_icon(self, wm_class, initial_title, title):
+        title = self.filter_utf8_for_gtk(title)
         if "kitty" in wm_class and "kitty" not in title.lower():
             title_icon = self.icon_exist(initial_title)
             if title_icon:
@@ -277,9 +281,18 @@ class Utils(Adw.Application):
 
         return ""
 
+    # FIXME: panel will crash if started app has some random errors in output
+    # that means, the panels bellow will be always on top and no clickable anymore
+    # example of apps with errors, nautilus, element, chromium etc.
     def create_clickable_image(
         self, icon_name, class_style, wclass, title, initial_title, view_id
     ):
+
+        # this is creating empty box in case you can't find any app-id
+        if wclass == "nil":
+            return Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
+
+        title = self.filter_utf8_for_gtk(title)
         box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
         box.add_css_class(class_style)
 
@@ -317,26 +330,38 @@ class Utils(Adw.Application):
 
     def view_focus_indicator_effect(self, view_id):
         sock = self.compositor()
-        float_sequence = np.arange(0.1, 1.1, 0.1)
-        print(float_sequence)
-        original_alpha = sock.get_view_alpha(view_id)
-        for i in float_sequence:
-            sock.set_view_alpha(view_id, i)
-            sleep(0.04)
+        precision = 1
+        values = np.arange(0.1, 1, 0.1)
+        float_sequence = [round(value, precision) for value in values]
+        original_alpha = sock.get_view_alpha(view_id)["alpha"]
+        for f in float_sequence:
+            try:
+                sock.set_view_alpha(view_id, f)
+                sleep(0.04)
+            except Exception as e:
+                print(e)
         sock.set_view_alpha(view_id, original_alpha)
 
     def set_view_focus(self, view_id):
         try:
             view = sock.get_view(view_id)
-            if not view:
-                return None
+            if view is None:
+                return
+
+            # why foucs an app with no app-id
+            if view["app-id"] == "nil":
+                return
 
             view_id = view["id"]
             output_id = view["output-id"]
 
             if output_id in self.is_scale_active:
+                # there is an issue depending on the scale animation duration
+                # the panel will freeze because it enter in a infinite recursion
+                # the conflict happens with go_workspace_set_focus while the animation of scale is still happening
                 if self.is_scale_active[output_id] is True:
                     sock.scale_toggle()
+                    sleep(0.08)
                     sock.go_workspace_set_focus(view_id)
                     sock.move_cursor_middle(view_id)
                     # FIXME:
@@ -355,6 +380,15 @@ class Utils(Adw.Application):
         except Exception as e:
             print(e)
             return True
+
+    def filter_utf8_for_gtk(self, byte_string, encoding="utf-8"):
+        if isinstance(byte_string, str):
+            return byte_string  # For Python 3, assume the string is already decoded
+        try:
+            decoded_text = byte_string.decode(encoding)
+        except AttributeError:
+            decoded_text = byte_string.decode(encoding, errors="ignore")
+        return decoded_text
 
     def CreateButton(
         self,
@@ -380,9 +414,7 @@ class Utils(Adw.Application):
             button.set_sensitive(False)
             return button
         if use_function is False:
-            self.create_gesture(
-                button, 1, lambda *_: self.run_app(cmd, wclass, initial_title)
-            )
+            self.create_gesture(button, 1, lambda *_: sock.run(cmd))
             self.create_gesture(button, 3, lambda *_: self.dockbar_remove(icon_name))
         else:
             self.create_gesture(button, 1, use_function)
