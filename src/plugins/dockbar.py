@@ -143,6 +143,58 @@ class Dockbar(Adw.Application):
         # self.update_active_window_shell()
         print()
 
+    def handle_view_event(self, msg, view):
+        if "event" not in msg:
+            return
+
+        if view is None:
+            return
+
+        if "role" not in view:
+            return
+
+        if view["role"] != "toplevel":
+            return
+
+        if msg["event"] == "view-title-changed":
+            self.on_title_changed(view)
+
+        if msg["event"] == "view-tiled" and view:
+            sock = self.compositor()
+            if sock.is_view_maximized(view["id"]):
+                self.was_last_focused_view_maximized = True
+
+        if msg["event"] == "app-id-changed":
+            self.on_app_id_changed()
+
+        if msg["event"] == "view-focused":
+            self.on_view_role_toplevel_focused(view)
+            self.on_view_focused()
+            self.last_focused_output = view["output-id"]
+
+        if msg["event"] == "view-mapped":
+            self.on_view_created()
+
+        if msg["event"] == "view-unmapped":
+            self.on_view_destroyed(view)
+
+    def handle_plugin_event(self, msg):
+        if "event" not in msg:
+            return
+        if msg["event"] == "plugin-activation-state-changed":
+            if msg["state"]:
+                if msg["plugin"] == "expo":
+                    self.on_expo_activated()
+                if msg["plugin"] == "scale":
+                    self.on_scale_activated()
+                if msg["plugin"] == "move":
+                    self.on_moving_view()
+            else:
+                if msg["plugin"] == "expo":
+                    self.on_expo_desactivated()
+                if msg["plugin"] == "scale":
+                    self.on_scale_desactivated()
+
     def TaskbarWatch(self):
         # evets should ever stop, if it breaks the loop
         # lets start a new one
@@ -157,44 +209,10 @@ class Dockbar(Adw.Application):
                         msg = sock.read_message()
                         if "view" in msg:
                             view = msg["view"]
-                            if view["app-id"] == "nil":
-                                continue
 
                         if "event" in msg:
-                            if msg["event"] == "view-title-changed":
-                                self.on_title_changed(msg["view"])
-
-                            if msg["event"] == "app-id-changed":
-                                self.on_app_id_changed()
-
-                            if msg["event"] == "view-focused":
-                                self.on_view_focused()
-                                if view is not None:
-                                    if view["role"] == "toplevel":
-                                        self.on_view_role_toplevel_focused(view)
-
-                            if msg["event"] == "view-mapped":
-                                self.on_view_created()
-
-                            if msg["event"] == "view-unmapped":
-                                self.on_view_destroyed(view)
-
-                            if msg["event"] == "plugin-activation-state-changed":
-                                # if plugin state is true (activated)
-                                if msg["state"] is True:
-                                    if msg["plugin"] == "expo":
-                                        self.on_expo_activated()
-                                    if msg["plugin"] == "scale":
-                                        self.on_scale_activated()
-                                        self.is_scale_active[msg["output"]] = True
-
-                                # if plugin state is false (desactivated)
-                                if msg["state"] is False:
-                                    if msg["plugin"] == "expo":
-                                        self.on_expo_desactivated()
-                                    if msg["plugin"] == "scale":
-                                        self.on_scale_desactivated()
-                                        self.is_scale_active[msg["output"]] = False
+                            self.handle_view_event(msg, view)
+                            self.handle_plugin_event(msg)
 
                     except Exception as e:
                         print(e)
@@ -236,6 +254,7 @@ class Dockbar(Adw.Application):
         self.Taskbar("h", "taskbar")
 
     def on_view_destroyed(self, view):
+        print("asdf" * 100)
         self.taskbar_remove(view["id"])
 
     def on_title_changed(self, view):
@@ -256,7 +275,22 @@ class Dockbar(Adw.Application):
         # Extract desktop_file paths from the configuration
         launchers_desktop_file = [config[i]["desktop_file"] for i in config]
 
-        for i in sock.list_views():
+        list_views = sock.list_views()
+        if not list_views:
+            return
+
+        list_ids = sock.list_ids()
+        if list_ids:
+            try:
+                [
+                    self.taskbar_remove(id)
+                    for id in self.taskbar_list
+                    if id not in list_ids
+                ]
+            except Exception as e:
+                print(e)
+
+        for i in list_views:
             wm_class = i["app-id"].lower()
             initial_title = i["title"].split()[0].lower()
             title = i["title"]
@@ -330,7 +364,10 @@ class Dockbar(Adw.Application):
             return False
 
     def update_active_window_shell(self, id):
+        button = self.buttons_id[id][0]
         if not self.pid_exist(id):
+            return
+        if not self.utils.widget_exists(button):
             return
         button = self.buttons_id[id][0]
         self.taskbar.remove(button)
@@ -340,7 +377,7 @@ class Dockbar(Adw.Application):
     def remove_button(self, id):
         button = self.buttons_id[id][0]
         if not self.utils.widget_exists(button):
-            return None
+            return
         self.taskbar.remove(button)
         self.taskbar_list.remove(id)
         self.utils.remove_gesture(button)
@@ -350,20 +387,10 @@ class Dockbar(Adw.Application):
         button = self.buttons_id[id][0]
         if not self.utils.widget_exists(button):
             return None
-        if id is not None:
-            self.remove_button(id)
-
-        sock = self.compositor()
-        ids = sock.list_ids()
-
-        if not ids:
-            return
-
-        list_ids = [i for i in ids]
+        self.remove_button(id)
 
         for button_id in self.buttons_id:
-            if button_id not in list_ids:
-                self.remove_button(button_id)
+            self.remove_button(button_id)
         return
 
     # Append a window to the Dockbar
