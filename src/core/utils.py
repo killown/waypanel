@@ -43,7 +43,7 @@ class Utils(Adw.Application):
             os.makedirs(self.config_path)
 
         self.is_scale_active = {}
-        # self.start_thread_compositor()
+        self.start_thread_compositor()
 
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
         if "kitty" in cmd and cmd_mode:
@@ -369,7 +369,10 @@ class Utils(Adw.Application):
                 # thus will produce the same kind of issue
                 if self.is_scale_active[output_id] is True:
                     sock.scale_toggle()
-                    sleep(0.2)
+                    # sleep(0.2)
+                    sock.go_workspace_set_focus(view_id)
+                    sock.move_cursor_middle(view_id)
+                else:
                     sock.go_workspace_set_focus(view_id)
                     sock.move_cursor_middle(view_id)
             else:
