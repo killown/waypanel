@@ -46,8 +46,8 @@ class Dockbar(Adw.Application):
         self.psutil_store = {}
         self.panel_cfg = self.utils.load_topbar_config()
         self.taskbar_list = [None]
-        sock = self.compositor()
-        self.all_pids = [i["id"] for i in sock.list_views()]
+        self.sock = self.compositor()
+        self.all_pids = [i["id"] for i in self.sock.list_views()]
         self.timeout_taskbar = None
         self.buttons_id = {}
         self.has_taskbar_started = False
@@ -58,8 +58,7 @@ class Dockbar(Adw.Application):
     # Start the Dockbar application
     def do_start(self):
         self.start_thread_compositor()
-        sock = self.compositor()
-        self.stored_windows = [i["id"] for i in sock.list_views()]
+        self.stored_windows = [i["id"] for i in self.sock.list_views()]
 
         # Read configuration from topbar toml
         with open(self.topbar_config, "r") as f:
@@ -160,8 +159,7 @@ class Dockbar(Adw.Application):
             self.on_title_changed(view)
 
         if msg["event"] == "view-tiled" and view:
-            sock = self.compositor()
-            if sock.is_view_maximized(view["id"]):
+            if self.sock.is_view_maximized(view["id"]):
                 self.was_last_focused_view_maximized = True
 
         if msg["event"] == "app-id-changed":
@@ -233,8 +231,7 @@ class Dockbar(Adw.Application):
 
     # events that will make the panel clickable or not
     def on_scale_activated(self):
-        sock = self.compositor()
-        output_id = sock.get_focused_output_id()
+        output_id = self.sock.get_focused_output_id()
         set_layer_position_exclusive(self.left_panel)
         # set_layer_position_exclusive(self.right_panel)
         set_layer_position_exclusive(self.bottom_panel)
@@ -242,8 +239,7 @@ class Dockbar(Adw.Application):
         return
 
     def on_scale_desactivated(self):
-        sock = self.compositor()
-        output_id = sock.get_focused_output_id()
+        output_id = self.sock.get_focused_output_id()
         unset_layer_position_exclusive(self.left_panel)
         # unset_layer_position_exclusive(self.right_panel)
         unset_layer_position_exclusive(self.bottom_panel)
@@ -251,22 +247,20 @@ class Dockbar(Adw.Application):
         return
 
     def on_view_created(self):
-        self.Taskbar("h", "taskbar")
+        self.update_taskbar_list()
 
     def on_view_destroyed(self, view):
-        print("asdf" * 100)
-        self.taskbar_remove(view["id"])
+        self.update_taskbar_list()
 
     def on_title_changed(self, view):
         self.Taskbar("h", "taskbar")
-        self.update_active_window_shell(view["id"])
+        self.taskbar_view_changed("h", "taskbar", view["id"])
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
         return ws.WayfireSocket(addr)
 
     def Taskbar(self, orientation, class_style, update_button=False, callback=None):
-        sock = self.compositor()
 
         # Load configuration from dockbar_config file
         with open(self.dockbar_config, "r") as f:
@@ -275,34 +269,29 @@ class Dockbar(Adw.Application):
         # Extract desktop_file paths from the configuration
         launchers_desktop_file = [config[i]["desktop_file"] for i in config]
 
-        list_views = sock.list_views()
+        list_views = self.sock.list_views()
         if not list_views:
             return
 
-        list_ids = sock.list_ids()
-        if list_ids:
-            try:
-                [
-                    self.taskbar_remove(id)
-                    for id in self.taskbar_list
-                    if id not in list_ids
-                ]
-            except Exception as e:
-                print(e)
-
         for i in list_views:
+            id = i["id"]
+            if not self.id_exist(id):
+                continue
+            if id in self.buttons_id:
+                continue
+            if id in self.taskbar_list:
+                continue
             wm_class = i["app-id"].lower()
             initial_title = i["title"].split()[0].lower()
             title = i["title"]
             title = self.utils.filter_utf8_for_gtk(title)
-            id = i["id"]
 
             # Skip windows with wm_class found in launchers_desktop_file if update_button is False
             if wm_class in launchers_desktop_file and not update_button:
                 continue
 
             # Skip windows with ids found in self.taskbar_list if update_button is False
-            if id in self.taskbar_list and not update_button:
+            if self.id_exist(id) and update_button is False:
                 continue
 
             button = self.utils.create_taskbar_launcher(
@@ -329,15 +318,18 @@ class Dockbar(Adw.Application):
         # Return True to indicate successful execution of the Taskbar function
         return True
 
-    def update_taskbar(
+    def taskbar_view_changed(
         self,
         orientation,
         class_style,
         view_id,
-        callb1ack=None,
+        callback=None,
     ):
-        sock = self.compositor()
-        view = sock.get_view(view_id)
+        if not self.id_exist(view_id):
+            return
+        if view_id in self.taskbar_list:
+            return
+        view = self.sock.get_view(view_id)
         id = view["id"]
         title = view["title"]
         title = self.utils.filter_utf8_for_gtk(title)
@@ -353,26 +345,31 @@ class Dockbar(Adw.Application):
         # Store button information in dictionaries for easy access
         self.buttons_id[id] = [button, initial_title, id]
 
+        self.taskbar_list.append(id)
+
         return True
 
     def pid_exist(self, id):
-        sock = self.compositor()
-        pid = sock.get_view_pid(id)
+        pid = self.sock.get_view_pid(id)
         if pid != -1:
             return True
         else:
             return False
 
-    def update_active_window_shell(self, id):
-        button = self.buttons_id[id][0]
-        if not self.pid_exist(id):
-            return
-        if not self.utils.widget_exists(button):
-            return
-        button = self.buttons_id[id][0]
-        self.taskbar.remove(button)
-        self.update_taskbar("h", "taskbar", id)
-        return True
+    def id_exist(self, id):
+        ids = self.sock.list_ids()
+        if id in ids:
+            return True
+        else:
+            return False
+
+    def update_taskbar_list(self):
+        self.Taskbar("h", "taskbar")
+        ids = self.sock.list_ids()
+        button_ids = self.buttons_id.copy()
+        for button_id in button_ids:
+            if button_id not in ids:
+                self.taskbar_remove(button_id)
 
     def remove_button(self, id):
         button = self.buttons_id[id][0]
@@ -384,21 +381,18 @@ class Dockbar(Adw.Application):
         del self.buttons_id[id]
 
     def taskbar_remove(self, id=None):
+        if self.id_exist(id):
+            return
         button = self.buttons_id[id][0]
         if not self.utils.widget_exists(button):
-            return None
+            return
         self.remove_button(id)
-
-        for button_id in self.buttons_id:
-            self.remove_button(button_id)
-        return
 
     # Append a window to the Dockbar
     # this whole function is a mess, this was based in another compositor
     # so need a rework
     def dockbar_append(self, *_):
-        sock = self.compositor()
-        wclass = sock.get_focused_view_app_id().lower()
+        wclass = self.sock.get_focused_view_app_id().lower()
         wclass = "".join(wclass)
         initial_title = wclass
         icon = wclass
