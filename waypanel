@@ -29,6 +29,9 @@ from gi.repository import Gtk4LayerShell as LayerShell
 
 spam_loader = importlib.util.find_spec("wayfire")
 found = spam_loader is not None
+from time import sleep
+
+sys.setrecursionlimit(1600)
 
 if not found:
     print("Module wayfire not found, try | pip install wayfire | and try again")
@@ -307,6 +310,7 @@ class Panel(Adw.Application):
         #    return True
         view = sock.get_focused_view()
         title = view["title"]
+        title = self.utils.filter_utf8_for_gtk(title)
         workspace_id = sock.get_active_workspace_number()
         pid = view["pid"]
         wclass = view["app-id"]
@@ -394,6 +398,12 @@ class Panel(Adw.Application):
                     self.on_scale_desactivated()
 
     def handle_view_event(self, msg, view):
+        if view is None:
+            return
+
+        if view["app-id"] == "nil":
+            return
+
         if msg["event"] == "view-title-changed":
             self.on_title_changed()
 
@@ -453,6 +463,7 @@ class Panel(Adw.Application):
                 view = None
                 while True:
                     msg = sock.read_message()
+                    print(msg, "\n\n")
                     if "event" not in msg:
                         continue
 
@@ -531,6 +542,9 @@ class Panel(Adw.Application):
         sock = self.compositor()
         workspace_has_views = sock.get_views_from_active_workspace()
         if not workspace_has_views:
+            # too many animations going on
+            # that could cause a recursion if not waiting
+            sleep(0.2)
             self.go_to_workspace_with_views()
         sock.focus_next_view_from_active_workspace()
 
@@ -1476,6 +1490,7 @@ class Panel(Adw.Application):
     def toggle_mute_from_sink(self, *_):
         sock = self.compositor()
         title = sock.get_focused_view()["title"]
+        title = self.utils.filter_utf8_for_gtk(title)
         info = self.sink_input_info()
         sinklist = info["sinklist"]
         for sink in sinklist:
@@ -1512,6 +1527,7 @@ class Panel(Adw.Application):
         sock = self.compositor()
         view = sock.get_view(self.last_view_toplevel_focused)
         title = view["title"]
+        title = self.utils.filter_utf8_for_gtk(title)
         wm_class = view["app-id"].lower()
         initial_title = title.split()[0].lower()
 
@@ -1674,6 +1690,7 @@ class Panel(Adw.Application):
         try:
             sock = self.compositor()
             title = sock.get_focused_view_title()
+            title = self.utils.filter_utf8_for_gtk(title)
             initial_title = title.split()[0]
             if title == "":
                 return True
@@ -1748,6 +1765,7 @@ class Panel(Adw.Application):
     def extract_widget_info(self, active_window):
         """Extract and return widget-related information."""
         title = active_window.title[0:100]
+        title = self.utils.filter_utf8_for_gtk(title)
         workspace_id = active_window.workspace_id
         pid = active_window.pid
         wclass = active_window.initial_wm_class.lower()
@@ -1807,6 +1825,7 @@ class Panel(Adw.Application):
 
     def modify_title(self, title):
         """Modify title based on certain patterns."""
+        title = self.utils.filter_utf8_for_gtk(title)
         if "." in title:
             parts = title.split(" ", 1)
             if parts[0].startswith("www."):
@@ -1822,6 +1841,7 @@ class Panel(Adw.Application):
     def update_title_and_icons(self, title, wm_class, initial_title):
         """Update title and icons."""
         # some classes and initial titles has whitespaces which will lead to not found icons
+        title = self.utils.filter_utf8_for_gtk(title)
         icon = self.get_icon(wm_class, initial_title, title)
         if icon:
             self.window_title.set_icon_name(icon)
@@ -1852,39 +1872,35 @@ class Panel(Adw.Application):
 
 
 if __name__ == "__main__":
-    while True:
-        addr = os.getenv("WAYFIRE_SOCKET")
-        sock = wayfire.WayfireSocket(addr)
-        home = os.path.expanduser("~")
-        config_path = os.path.join(home, ".config/waypanel")
-        panel_config = os.path.join(config_path, "panel.toml")
-        with open(panel_config) as panel_config:
-            config = toml.load(panel_config)
-        monitor_name = None
-        try:
-            monitor_name = config["monitor"]["name"]
-        except KeyError:
-            print("configure [monitor] in .config/panel.toml")
-            sys.exit()
+    addr = os.getenv("WAYFIRE_SOCKET")
+    sock = wayfire.WayfireSocket(addr)
+    home = os.path.expanduser("~")
+    config_path = os.path.join(home, ".config/waypanel")
+    panel_config = os.path.join(config_path, "panel.toml")
+    with open(panel_config) as panel_config:
+        config = toml.load(panel_config)
+    monitor_name = None
+    try:
+        monitor_name = config["monitor"]["name"]
+    except KeyError:
+        print("configure [monitor] in .config/panel.toml")
+        sys.exit()
 
-        argv = sys.argv
-        if len(argv) > 1:
-            monitor_name = argv[1].strip()
+    argv = sys.argv
+    if len(argv) > 1:
+        monitor_name = argv[1].strip()
 
-        app = Panel(
-            application_id="com.waypanel.{0}.GtkApplication".format(monitor_name)
-        )
-        app.run(None)
-        sock.watch()
-        while True:
-            print("was supposed to work")
-            msg = sock.read_message()
-            print(msg)
-            if "event" in msg:
-                event = msg["event"]
-                if monitor_name == msg["output"]["name"]:
-                    if event == "output-removed":
-                        app.quit()
-                    if event == "output-added":
-                        print("testing output-added")
-                        app.run(None)
+    app = Panel(application_id="com.waypanel.{0}.GtkApplication".format(monitor_name))
+    app.run(None)
+    sock.watch()
+    print("was supposed to work")
+    msg = sock.read_message()
+    print(msg)
+    if "event" in msg:
+        event = msg["event"]
+        if monitor_name == msg["output"]["name"]:
+            if event == "output-removed":
+                app.quit()
+            if event == "output-added":
+                print("testing output-added")
+                app.run(None)
