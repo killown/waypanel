@@ -157,6 +157,8 @@ class Dockbar(Adw.Application):
                         msg = sock.read_message()
                         if "view" in msg:
                             view = msg["view"]
+                            if view["app-id"] == "nil":
+                                continue
 
                         if "event" in msg:
                             if msg["event"] == "view-title-changed":
@@ -213,15 +215,21 @@ class Dockbar(Adw.Application):
 
     # events that will make the panel clickable or not
     def on_scale_activated(self):
+        sock = self.compositor()
+        output_id = sock.get_focused_output_id()
         set_layer_position_exclusive(self.left_panel)
         # set_layer_position_exclusive(self.right_panel)
         set_layer_position_exclusive(self.bottom_panel)
+        print(output_id, "set layer")
         return
 
     def on_scale_desactivated(self):
+        sock = self.compositor()
+        output_id = sock.get_focused_output_id()
         unset_layer_position_exclusive(self.left_panel)
         # unset_layer_position_exclusive(self.right_panel)
         unset_layer_position_exclusive(self.bottom_panel)
+        print(output_id, "unset layer")
         return
 
     def on_view_created(self):
@@ -252,6 +260,7 @@ class Dockbar(Adw.Application):
             wm_class = i["app-id"].lower()
             initial_title = i["title"].split()[0].lower()
             title = i["title"]
+            title = self.utils.filter_utf8_for_gtk(title)
             id = i["id"]
 
             # Skip windows with wm_class found in launchers_desktop_file if update_button is False
@@ -297,6 +306,7 @@ class Dockbar(Adw.Application):
         view = sock.get_view(view_id)
         id = view["id"]
         title = view["title"]
+        title = self.utils.filter_utf8_for_gtk(title)
         wm_class = view["app-id"]
         initial_title = title.split(" ")[0].lower()
         button = self.utils.create_taskbar_launcher(
@@ -358,6 +368,7 @@ class Dockbar(Adw.Application):
         # Adjusting for special cases like zsh or bash
         if initial_title in ["zsh", "bash", "fish"]:
             title = sock.get_focused_view_title().split()[0]
+            title = self.utils.filter_utf8_for_gtk(title)
             cmd = f"kitty --hold {title}"
             icon = wclass
 
