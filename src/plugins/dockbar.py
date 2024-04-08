@@ -321,7 +321,17 @@ class Dockbar(Adw.Application):
 
         return True
 
+    def pid_exist(self, id):
+        sock = self.compositor()
+        pid = sock.get_view_pid(id)
+        if pid != -1:
+            return True
+        else:
+            return False
+
     def update_active_window_shell(self, id):
+        if not self.pid_exist(id):
+            return
         button = self.buttons_id[id][0]
         self.taskbar.remove(button)
         self.update_taskbar("h", "taskbar", id)
@@ -337,6 +347,9 @@ class Dockbar(Adw.Application):
         del self.buttons_id[id]
 
     def taskbar_remove(self, id=None):
+        button = self.buttons_id[id][0]
+        if not self.utils.widget_exists(button):
+            return None
         if id is not None:
             self.remove_button(id)
 
