@@ -43,7 +43,7 @@ class Utils(Adw.Application):
             os.makedirs(self.config_path)
 
         self.is_scale_active = {}
-        self.start_thread_compositor()
+        # self.start_thread_compositor()
 
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
         if "kitty" in cmd and cmd_mode:
@@ -164,13 +164,14 @@ class Utils(Adw.Application):
         while True:
             try:
                 msg = sock.read_message()
-                if msg["event"] == "plugin-activation-state-changed":
-                    if msg["state"] is True:
-                        if msg["plugin"] == "scale":
-                            self.is_scale_active[msg["output"]] = True
-                    if msg["state"] is False:
-                        if msg["plugin"] == "scale":
-                            self.is_scale_active[msg["output"]] = False
+                if "event" in msg:
+                    if msg["event"] == "plugin-activation-state-changed":
+                        if msg["state"] is True:
+                            if msg["plugin"] == "scale":
+                                self.is_scale_active[msg["output"]] = True
+                        if msg["state"] is False:
+                            if msg["plugin"] == "scale":
+                                self.is_scale_active[msg["output"]] = False
             except Exception as e:
                 print(e)
 
@@ -231,8 +232,6 @@ class Utils(Adw.Application):
         callback=None,
     ):
         title = self.filter_utf8_for_gtk(title)
-        if "\\u" in title:
-            title = title.split("\\u")[0]
         if orientation == "h":
             orientation = Gtk.Orientation.HORIZONTAL
         elif orientation == "v":
@@ -354,6 +353,7 @@ class Utils(Adw.Application):
             if view is None:
                 return
 
+            print(view)
             # why foucs an app with no app-id
             if view["app-id"] == "nil":
                 return
