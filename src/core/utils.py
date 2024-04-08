@@ -357,21 +357,15 @@ class Utils(Adw.Application):
 
             if output_id in self.is_scale_active:
                 # there is an issue depending on the scale animation duration
-                # the panel will freeze because it enter in a infinite recursion
+                # the panel will freeze while the layzer shell will keep on top of the views because it enter in a infinite recursion
                 # the conflict happens with go_workspace_set_focus while the animation of scale is still happening
+                # another issue with scale is, if you enable close on new views option it will close faster than you set layer on bottom
+                # thus will produce the same kind of issue
                 if self.is_scale_active[output_id] is True:
                     sock.scale_toggle()
-                    sleep(0.08)
+                    sleep(0.2)
                     sock.go_workspace_set_focus(view_id)
                     sock.move_cursor_middle(view_id)
-                    # FIXME:
-                    # this is why there is a bug in this part
-                    # you need only sock.watch for the whole panel
-                    # unset_layer_position_exclusive()
-                    # try to build only ony sock.watch in waypanel that comunicates with all the panels
-                    # I am not sure yet but it seems, one sock.watch may catch a socket event and other may not
-                    # if this is not the case, if every watch catch events, a good idea is to create a sock.watch in
-                    # create_panel.py which will watch for scale toggle and use set unset the layers
             else:
                 sock.go_workspace_set_focus(view_id)
                 sock.move_cursor_middle(view_id)
