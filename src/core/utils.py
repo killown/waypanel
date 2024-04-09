@@ -189,6 +189,35 @@ class Utils(Adw.Application):
                 return deskfile
         return None
 
+    def extract_icon_info(self, application_name):
+        icon_name = None
+
+        # Paths to search for desktop files
+        search_paths = [
+            "/usr/share/applications/",
+            os.path.expanduser("~/.local/share/applications/"),
+        ]
+
+        # Loop through each search path
+        for search_path in search_paths:
+            # Check if the search path exists
+            if os.path.exists(search_path):
+                # Loop through each file in the directory
+                for file_name in os.listdir(search_path):
+                    if file_name.endswith(".desktop"):
+                        file_path = os.path.join(search_path, file_name)
+                        with open(file_path, "r") as desktop_file:
+                            found_name = False
+                            for line in desktop_file:
+                                if line.startswith("Name="):
+                                    if line.strip().split("=")[1] == application_name:
+                                        found_name = True
+                                elif found_name and line.startswith("Icon="):
+                                    icon_name = line.strip().split("=")[1]
+                                    return icon_name
+
+        return icon_name
+
     def search_desktop(self, wm_class):
         all_apps = Gio.AppInfo.get_all()
         desktop_files = [
@@ -200,6 +229,8 @@ class Utils(Adw.Application):
             return None
 
     def icon_exist(self, argument):
+        argument = argument.lower()
+
         if argument:
             exist = [
                 i.get_icon()
@@ -207,17 +238,21 @@ class Utils(Adw.Application):
                 if argument in i.get_id().lower()
             ]
             if exist:
-                # Check if exist[0] is a FileIcon object
                 if hasattr(exist[0], "get_names"):
-                    exist = exist[0].get_names()[0]
+                    return exist[0].get_names()[0]
+                if hasattr(exist[0], "get_icon"):
+                    return exist[0].get_icon()
+                if hasattr(exist[0], "get_name"):
+                    return exist[0].get_name()
+                if hasattr(exist[0], "get_id"):
+                    return self.extract_icon_info(exist[0].get_id())
                 else:
                     # If not, assume it's a string
-                    exist = exist[0]
-                return exist
+                    return exist[0]
             else:
                 exist = [name for name in self.icon_names if argument.lower() in name]
                 if exist:
-                    exist = exist[0]
+                    exist = exist[0].lower()
                     return exist
         return ""
 
@@ -262,12 +297,9 @@ class Utils(Adw.Application):
         web_apps = {"microsoft-edge", "chromium"}
         if any(app in wm_class for app in web_apps):
             desk_local = self.search_local_desktop(initial_title)
-            desk = self.search_desktop(wm_class)
 
             if desk_local and "-Default" in desk_local:
                 return desk_local.split(".desktop")[0]
-            elif desk:
-                return desk.split(".desktop")[0]
 
         found_icon = self.icon_exist(wm_class)
         if found_icon:
@@ -306,6 +338,7 @@ class Utils(Adw.Application):
         label = Gtk.Label.new(use_this_title)
         label.add_css_class("label_from_clickable_image")
 
+        print(icon_name)
         if isinstance(icon_name, Gio.FileIcon):
             # If icon_name is a FileIcon object, directly use it
             image = Gtk.Image.new_from_gicon(icon_name)
