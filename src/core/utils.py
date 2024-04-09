@@ -369,7 +369,8 @@ class Utils(Adw.Application):
                 # thus will produce the same kind of issue
                 if self.is_scale_active[output_id] is True:
                     sock.scale_toggle()
-                    # sleep(0.2)
+                    # FIXME: better get animation speed from the conf so define a proper sleep
+                    sleep(0.2)
                     sock.go_workspace_set_focus(view_id)
                     sock.move_cursor_middle(view_id)
                 else:
