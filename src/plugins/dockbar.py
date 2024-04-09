@@ -163,7 +163,8 @@ class Dockbar(Adw.Application):
                 self.was_last_focused_view_maximized = True
 
         if msg["event"] == "app-id-changed":
-            self.on_app_id_changed()
+            # self.on_app_id_changed()
+            return
 
         if msg["event"] == "view-focused":
             self.on_view_role_toplevel_focused(view)
