@@ -146,13 +146,25 @@ class Dockbar(Adw.Application):
         if "event" not in msg:
             return
 
+        if msg["event"] == "view-unmapped":
+            self.on_view_destroyed()
+
         if view is None:
+            return
+
+        if view["pid"] == -1:
             return
 
         if "role" not in view:
             return
 
         if view["role"] != "toplevel":
+            return
+
+        if view["app-id"] == "":
+            return
+
+        if view["app-id"] == "nil":
             return
 
         if msg["event"] == "view-title-changed":
