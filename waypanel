@@ -847,7 +847,7 @@ class Panel(Adw.Application):
             self, app
         )
         self.clock_label = self.popover_dashboard
-        self.clock_label.set_label(datetime.datetime.now().strftime("%d %A %H:%M"))
+        self.clock_label.set_label(datetime.datetime.now().strftime("%b %d  %H:%M"))
         self.clock_label.set_halign(Gtk.Align.CENTER)
         self.clock_label.add_css_class("ClockButton")
         self.clock_label.set_hexpand(True)
@@ -864,7 +864,7 @@ class Panel(Adw.Application):
             print("Updating clock...")
 
             # Update the label with the current date and time
-            self.clock_label.set_label(datetime.datetime.now().strftime("%d %A %H:%M"))
+            self.clock_label.set_label(datetime.datetime.now().strftime("%b %d  %H:%M"))
 
         except Exception as e:
             print("An error occurred while updating the clock:", e)
@@ -998,7 +998,7 @@ class Panel(Adw.Application):
                         position,
                         self.exclusive,
                         self.monitor_width,
-                        36,
+                        24,
                         "TopBar",
                     )
                 if "top_background" == p:
