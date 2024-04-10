@@ -6,9 +6,11 @@ from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen, check_output
 import subprocess
 from ..core.utils import Utils
+import threading
+from subprocess import check_output, PIPE
 
 
-class MenuClipboard(Adw.Application):
+class MenuClipboard(Gtk.Application):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.popover_clipboard = None
@@ -37,6 +39,39 @@ class MenuClipboard(Adw.Application):
         )
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
+
+    def clear_clipboard(self, text_list):
+        # Clear the clipboard
+        echo = Popen(("echo", text_list), stdout=subprocess.PIPE)
+        echo.wait()
+        Popen(("cliphist", "delete"), stdin=echo.stdout)
+
+    def update_clipboard_list(self):
+        # Clear the existing list
+        self.listbox.remove_all()
+
+        # Repopulate the list with updated clipboard history
+        clipboard_history = (
+            check_output("cliphist list".split())
+            .decode("latin-1")
+            .encode("utf-8")
+            .decode()
+        )
+        clipboard_history = clipboard_history.split("\n")
+        for i in clipboard_history:
+            row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+            image_button = Gtk.Button()
+            image_button.set_icon_name("edit-delete-remove")
+            image_button.connect("clicked", self.cliphist_delete_selected)
+            row_hbox.append(image_button)
+            row_hbox.MYTEXT = i
+            self.listbox.append(row_hbox)
+            line = Gtk.Label.new()
+            line.set_label(i)
+            line.props.margin_end = 5
+            line.props.hexpand = True
+            line.set_halign(Gtk.Align.START)
+            row_hbox.append(line)
 
     def create_popover_menu_clipboard(self, obj, app, *_):
         self.top_panel = obj.top_panel
@@ -70,7 +105,7 @@ class MenuClipboard(Adw.Application):
         self.main_box.append(self.searchbar)
         self.button_clear = Gtk.Button()
         self.button_clear.set_label("Clear")
-        self.button_clear.connect("clicked", self.print_listbox)
+        self.button_clear.connect("clicked", self.clear_cliphist)
         self.button_clear.add_css_class("button_clear_from_clipboard")
         self.main_box.append(self.button_clear)
         self.listbox = Gtk.ListBox.new()
@@ -115,7 +150,16 @@ class MenuClipboard(Adw.Application):
         self.popover_clipboard.popup()
         return self.popover_clipboard
 
-    def print_listbox(self, *_):
+    def wl_copy_clipboard(self, x, *_):
+        selected_text = x.get_child().MYTEXT
+        echo = Popen(("echo", selected_text), stdout=subprocess.PIPE)
+        echo.wait()
+        selected_text = check_output(("cliphist", "decode"), stdin=echo.stdout).decode()
+        # not gonna use buggy pyperclip
+        Popen(["wl-copy", selected_text])
+        self.popover_clipboard.popdown()
+
+    def clear_cliphist(self, *_):
         box = self.listbox
         counter = 0
         while True:
@@ -126,23 +170,14 @@ class MenuClipboard(Adw.Application):
             counter += 1
             search = self.searchbar.get_text().strip()
             if search.lower() in text.lower() and isinstance(text, str):
-                print(text)
-                echo = Popen(("echo", text), stdout=subprocess.PIPE)
-                echo.wait()
                 # huge lists will break the output
                 try:
-                    check_output(("cliphist", "delete"), stdin=echo.stdout).decode()
+                    command_thread = threading.Thread(
+                        target=self.clear_clipboard, args=(text,)
+                    )
+                    command_thread.start()
                 except Exception as e:
                     print(e)
-
-    def wl_copy_clipboard(self, x, *_):
-        selected_text = x.get_child().MYTEXT
-        echo = Popen(("echo", selected_text), stdout=subprocess.PIPE)
-        echo.wait()
-        selected_text = check_output(("cliphist", "decode"), stdin=echo.stdout).decode()
-        # not gonna use buggy pyperclip
-        Popen(["wl-copy", selected_text])
-        self.popover_clipboard.popdown()
 
     def cliphist_delete_selected(self, button):
         button = [i for i in self.find_text_using_button if button == i][0]
@@ -163,6 +198,7 @@ class MenuClipboard(Adw.Application):
         if self.popover_clipboard and self.popover_clipboard.is_visible():
             self.popover_clipboard.popdown()
         if self.popover_clipboard and not self.popover_clipboard.is_visible():
+            self.update_clipboard_list()
             self.popover_clipboard.popup()
         if not self.popover_clipboard:
             self.popover_clipboard = self.create_popover_clipboard(self.app)
