@@ -229,7 +229,6 @@ class Utils(Adw.Application):
             return None
 
     def icon_exist(self, argument):
-        argument = argument.lower()
 
         if argument:
             exist = [
@@ -244,15 +243,13 @@ class Utils(Adw.Application):
                     return exist[0].get_icon()
                 if hasattr(exist[0], "get_name"):
                     return exist[0].get_name()
-                if hasattr(exist[0], "get_id"):
-                    return self.extract_icon_info(exist[0].get_id())
                 else:
-                    # If not, assume it's a string
+                    # assume it's a string
                     return exist[0]
             else:
                 exist = [name for name in self.icon_names if argument.lower() in name]
                 if exist:
-                    exist = exist[0].lower()
+                    exist = exist[0]
                     return exist
         return ""
 
@@ -282,7 +279,7 @@ class Utils(Adw.Application):
     def search_str_inside_file(self, file_path, word):
         with open(file_path, "r") as file:
             content = file.read()
-            if word.lower() in content.lower():
+            if "name={}".format(word.lower()) in content.lower():
                 return True
             else:
                 return False
@@ -294,19 +291,21 @@ class Utils(Adw.Application):
             if title_icon:
                 return title_icon
 
-        web_apps = {"microsoft-edge", "chromium"}
-        if any(app in wm_class for app in web_apps):
+        web_apps = {
+            "chromium",
+            "microsoft-edge",
+            "microsoft-edge-dev",
+            "microsoft-edge-beta",
+        }
+        if any(app in wm_class.lower() for app in web_apps):
             desk_local = self.search_local_desktop(initial_title)
 
-            if desk_local and "-Default" in desk_local:
-                return desk_local.split(".desktop")[0]
+            if desk_local and desk_local.endswith("-Default.desktop"):
+                if desk_local.startswith("msedge-") or desk_local.startswith("chrome-"):
+                    icon_name = desk_local.split(".desktop")[0]
+                    return icon_name
 
         found_icon = self.icon_exist(wm_class)
-        if found_icon:
-            return found_icon
-
-        app_id = sock.get_focused_view_app_id()
-        found_icon = self.icon_exist(app_id)
         if found_icon:
             return found_icon
 
