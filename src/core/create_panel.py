@@ -104,7 +104,7 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     if layer == "TOP":
         window.set_default_size(monitor["width"], height)
         LayerShell.set_layer(window, LayerShell.Layer.TOP)
-        LayerShell.set_exclusive_zone(window, 32)
+        LayerShell.set_exclusive_zone(window, 24)
 
     if anchor == "LEFT":
         LayerShell.set_anchor(window, LayerShell.Edge.LEFT, True)
