@@ -147,7 +147,7 @@ class Dockbar(Adw.Application):
             return
 
         if msg["event"] == "view-unmapped":
-            self.on_view_destroyed()
+            self.on_view_destroyed(view)
 
         if view is None:
             return
