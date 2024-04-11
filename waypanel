@@ -103,6 +103,7 @@ class Panel(Adw.Application):
         self.vol_slider = None
         self.icon_vol_slider = None
         self.workspace_empty = None
+        self.timeout_ids = {}
         self.signal_view_destroyed = False
         self.was_last_focused_view_maximized = None
         self.previous_workspace = {}
@@ -263,6 +264,10 @@ class Panel(Adw.Application):
         self.monitor.connect("changed", self.on_css_file_changed)
 
         self.get_focused_output = self.sock.get_focused_output()
+
+        self.output_is_ready_to_dpms_off = {}
+        for output_name in self.sock.list_outputs_names():
+            self.output_is_ready_to_dpms_off[output_name] = False
 
     def do_activate(self):
         self.show_panels()
@@ -511,11 +516,52 @@ class Panel(Adw.Application):
         self.last_view_toplevel_focused = view["id"]
         return
 
-    def output_get_focus(self):
+    def dpms_manager(self):
+        # FIXME: need allow the user enable/disable dpms and set the timeout
         monitors = self.sock.dpms_status()
+        focused_monitor = self.sock.get_focused_output_name()
+
+        # Turn on monitors that are currently off
         for mon in monitors:
             if monitors[mon] == "off":
                 self.sock.dpms("on", mon)
+
+        # Set up timeouts for monitors that are not focused and not already timed out
+        for mon in monitors:
+            if monitors[mon] != focused_monitor:
+                monitor_id = self.sock.get_output_id_by_name(mon)
+                if not self.sock.has_ouput_fullscreen_view(monitor_id):
+                    if (
+                        mon not in self.timeout_ids
+                    ):  # Check if timeout is not already set
+                        # Set up a GLib timeout and store its ID
+                        self.timeout_ids[mon] = GLib.timeout_add(
+                            600000, self.set_output_ready_for_dpms_off, mon
+                        )
+            else:
+                self.cancel_timeout_if_monitor_has_focus(mon)
+
+    def set_output_ready_for_dpms_off(self, mon):
+        if self.monitor_has_focus(mon):
+            return
+        self.sock.dpms("off", mon)
+        # Remove the timeout ID from the dictionary
+        self.timeout_ids.pop(mon, None)
+        return False
+
+    def monitor_has_focus(self, mon):
+        focused_monitor = self.sock.get_focused_output_name()
+        return mon == focused_monitor
+
+    def cancel_timeout_if_monitor_has_focus(self, mon):
+        if self.monitor_has_focus(mon):
+            timeout_id = self.timeout_ids.get(mon)
+            if timeout_id:
+                GLib.source_remove(timeout_id)
+                self.timeout_ids.pop(mon, None)
+
+    def output_get_focus(self):
+        self.dpms_manager()
 
     def on_moving_view(self):
         return
