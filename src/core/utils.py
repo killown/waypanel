@@ -324,8 +324,7 @@ class Utils(Adw.Application):
             return Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
 
         # no pid no new taskbar button, that will crash the panel
-        self.compositor()
-        pid = sock.get_view_pid(view_id)
+        pid = self.sock.get_view_pid(view_id)
         if pid == -1:
             return
 
@@ -334,11 +333,11 @@ class Utils(Adw.Application):
         box.add_css_class(class_style)
 
         output_name = self.sock.get_view_output_name(view_id)
-        focused_output = self.sock.get_focused_output_name()
+        default_output = self.get_default_monitor_name(self.topbar_config)
 
         use_this_title = title[:40]
 
-        if output_name != focused_output:
+        if output_name != default_output:
             use_this_title = use_this_title + " Mon: ({})".format(output_name)
         label = Gtk.Label.new(use_this_title)
         label.add_css_class("label_from_clickable_image")
@@ -360,9 +359,22 @@ class Utils(Adw.Application):
         box.add_css_class("box_from_clickable_image")
 
         self.create_gesture(box, 1, lambda *_: self.set_view_focus(view_id))
+        self.create_gesture(box, 2, lambda *_: self.close_view(view_id))
         self.create_gesture(box, 3, lambda *_: self.set_view_active_workspace(view_id))
 
         return box
+
+    def get_default_monitor_name(self, config_file_path):
+        try:
+            with open(config_file_path, "r") as file:
+                config = toml.load(file)
+                if "monitor" in config:
+                    return config["monitor"].get("name")
+                else:
+                    return None
+        except FileNotFoundError:
+            print(f"Config file '{config_file_path}' not found.")
+            return None
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
