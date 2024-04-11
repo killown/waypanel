@@ -21,6 +21,8 @@ class MenuClipboard(Gtk.Application):
         self.find_text_using_button = {}
         self.row_content = None
         self.listbox = None
+        self.clipboard_cmd = "cliphist"
+        self.clipboard_cmd_exist = self.command_exists("cliphist")
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -51,12 +53,14 @@ class MenuClipboard(Gtk.Application):
         self.listbox.remove_all()
 
         # Repopulate the list with updated clipboard history
-        clipboard_history = (
-            check_output("cliphist list".split())
-            .decode("latin-1")
-            .encode("utf-8")
-            .decode()
-        )
+        clipboard_history = "\n"
+        if self.clipboard_cmd_exist:
+            clipboard_history = (
+                check_output("cliphist list".split())
+                .decode("latin-1")
+                .encode("utf-8")
+                .decode()
+            )
         clipboard_history = clipboard_history.split("\n")
         for i in clipboard_history:
             if not i:
@@ -110,7 +114,14 @@ class MenuClipboard(Gtk.Application):
         self.main_box.append(self.searchbar)
         self.button_clear = Gtk.Button()
         self.button_clear.add_css_class("clipboard_clear_button")
-        self.button_clear.set_label("Clear")
+        if self.clipboard_cmd_exist:
+            self.button_clear.set_label("Clear")
+        else:
+            self.button_clear.set_label(
+                "Enable clipboard by installing {0} and autostart wl-paste --watch cliphist store".format(
+                    self.clipboard_cmd.capitalize()
+                )
+            )
         self.button_clear.connect("clicked", self.clear_cliphist)
         self.button_clear.add_css_class("button_clear_from_clipboard")
         self.main_box.append(self.button_clear)
@@ -126,15 +137,18 @@ class MenuClipboard(Gtk.Application):
         self.main_box.append(self.scrolled_window)
         self.scrolled_window.set_child(self.listbox)
         self.popover_clipboard.set_child(self.main_box)
-        # self.popover.connect("closed", self.popover_is_closed)
-        clipboard_history = (
-            check_output("cliphist list".split())
-            .decode("latin-1")
-            .encode("utf-8")
-            .decode()
-        )
+        clipboard_history = "\n"
+        if self.clipboard_cmd_exist:
+            clipboard_history = (
+                check_output("cliphist list".split())
+                .decode("latin-1")
+                .encode("utf-8")
+                .decode()
+            )
         clipboard_history = clipboard_history.split("\n")
         for i in clipboard_history:
+            if not self.clipboard_cmd_exist:
+                continue
             row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
             image_button = Gtk.Button()
             image_button.set_icon_name("edit-delete-remove")
@@ -187,6 +201,14 @@ class MenuClipboard(Gtk.Application):
                 except Exception as e:
                     print(e)
 
+    def command_exists(self, command):
+        try:
+            subprocess.call([command])
+            return True
+        except Exception as e:
+            print(e)
+            return False
+
     def cliphist_delete_selected(self, button):
         button = [i for i in self.find_text_using_button if button == i]
         print(button)
@@ -213,6 +235,7 @@ class MenuClipboard(Gtk.Application):
         if self.popover_clipboard and self.popover_clipboard.is_visible():
             self.popover_clipboard.popdown()
         if self.popover_clipboard and not self.popover_clipboard.is_visible():
+            print(self.clipboard_cmd_exist)
             self.update_clipboard_list()
             self.popover_clipboard.popup()
         if not self.popover_clipboard:
