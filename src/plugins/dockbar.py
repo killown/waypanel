@@ -290,6 +290,11 @@ class Dockbar(Adw.Application):
             else:
                 image.set_from_icon_name(icon)
         if title:
+            output_name = self.sock.get_view_output_name(view["id"])
+            default_output = self.get_default_monitor_name(self.topbar_config)
+
+            if output_name != default_output:
+                title = "({0}) {1}".format(output_name, title)
             label.set_label(title)
 
     def Taskbar(self, orientation, class_style, update_button=False, callback=None):
