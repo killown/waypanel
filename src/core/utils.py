@@ -235,7 +235,7 @@ class Utils(Adw.Application):
             exist = [
                 i.get_icon()
                 for i in self.gio_icon_list
-                if argument in i.get_id().lower()
+                if argument.lower() in i.get_id().lower()
             ]
             if exist:
                 if hasattr(exist[0], "get_names"):
