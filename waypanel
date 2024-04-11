@@ -236,9 +236,8 @@ class Panel(Adw.Application):
             self.PopoverBookmarks.create_menu_popover_bookmarks(self, app)
         self.PopoverFolders = PopoverFolders()
         self.PopoverFolders.create_menu_popover_folders(self, app)
-        if os.path.exists("/usr/bin/cliphist"):
-            self.MenuClipboard = MenuClipboard()
-            self.MenuClipboard.create_popover_menu_clipboard(self, app)
+        self.MenuClipboard = MenuClipboard()
+        self.MenuClipboard.create_popover_menu_clipboard(self, app)
 
         # bluetooth manager
         self.top_panel_box_systray.append(self.bluetooth_manager())
@@ -469,6 +468,7 @@ class Panel(Adw.Application):
         if "event" not in msg:
             return
         if msg["event"] == "output-gain-focus":
+            self.output_get_focus()
             return
 
     def all_events_watch(self):
@@ -485,8 +485,6 @@ class Panel(Adw.Application):
                     if "view" in msg:
                         if msg["view"]["pid"] == -1:
                             continue
-
-                    print(msg, "\n\n")
 
                     self.handle_output_events(msg)
 
@@ -512,6 +510,12 @@ class Panel(Adw.Application):
         # big comment because I am sure I will forget why I did this
         self.last_view_toplevel_focused = view["id"]
         return
+
+    def output_get_focus(self):
+        monitors = self.sock.dpms_status()
+        for mon in monitors:
+            if monitors[mon] == "off":
+                self.sock.dpms("on", mon)
 
     def on_moving_view(self):
         return
