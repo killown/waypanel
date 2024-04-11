@@ -338,7 +338,7 @@ class Utils(Adw.Application):
         use_this_title = title[:40]
 
         if output_name != default_output:
-            use_this_title = use_this_title + " Mon: ({})".format(output_name)
+            use_this_title = "({0}) {1}".format(output_name, use_this_title)
         label = Gtk.Label.new(use_this_title)
         label.add_css_class("label_from_clickable_image")
 
