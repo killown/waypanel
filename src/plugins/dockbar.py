@@ -13,7 +13,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("Gtk4LayerShell", "1.0")
 from gi.repository import Gtk4LayerShell as LayerShell
-from gi.repository import Gtk, Adw, GLib, Gio, GObject
+from gi.repository import Gtk, Adw, GLib, Gio, GObject, Gio
 from ..core.create_panel import (
     CreatePanel,
     set_layer_position_exclusive,
@@ -263,7 +263,6 @@ class Dockbar(Adw.Application):
         return
 
     def on_view_created(self, view):
-        print(view, "asdf" * 100)
         self.update_taskbar_list()
         self.new_taskbar_view("h", "taskbar", view["id"])
 
@@ -271,13 +270,27 @@ class Dockbar(Adw.Application):
         self.update_taskbar_list()
 
     def on_title_changed(self, view):
-        return
-        # self.Taskbar("h", "taskbar")
-        # self.taskbar_view_changed("h", "taskbar", view["id"])
+        self.update_taskbar_icons(view)
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
         return ws.WayfireSocket(addr)
+
+    def update_taskbar_icons(self, view):
+        title = self.utils.filter_utf8_for_gtk(view["title"])
+        initial_title = title.split()[0]
+        icon = self.utils.get_icon(view["app-id"], initial_title, title)
+        button = self.buttons_id[view["id"]][0]
+        image = button.get_first_child()
+        label = button.get_last_child()
+        print(image, label)
+        if icon:
+            if isinstance(icon, Gio.FileIcon):
+                image.set_from_gicon(icon)
+            else:
+                image.set_from_icon_name(icon)
+        if title:
+            label.set_label(title)
 
     def Taskbar(self, orientation, class_style, update_button=False, callback=None):
 
