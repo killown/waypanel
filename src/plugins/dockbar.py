@@ -175,8 +175,7 @@ class Dockbar(Adw.Application):
                 self.was_last_focused_view_maximized = True
 
         if msg["event"] == "app-id-changed":
-            # self.on_app_id_changed()
-            return
+            self.on_app_id_changed(msg["view"])
 
         if msg["event"] == "view-focused":
             self.on_view_role_toplevel_focused(view)
@@ -184,10 +183,10 @@ class Dockbar(Adw.Application):
             self.last_focused_output = view["output-id"]
 
         if msg["event"] == "view-mapped":
-            self.on_view_created()
+            self.on_view_created(view)
 
         if msg["event"] == "view-unmapped":
-            self.on_view_destroyed(view)
+            self.on_view_destroyed(msg["view"])
 
     def handle_plugin_event(self, msg):
         if "event" not in msg:
@@ -242,6 +241,10 @@ class Dockbar(Adw.Application):
     def on_view_focused(self):
         return
 
+    def on_app_id_changed(self, view):
+        self.update_taskbar_list()
+        self.new_taskbar_view("h", "taskbar", view["id"])
+
     # events that will make the panel clickable or not
     def on_scale_activated(self):
         output_id = self.sock.get_focused_output_id()
@@ -259,15 +262,18 @@ class Dockbar(Adw.Application):
         print(output_id, "unset layer")
         return
 
-    def on_view_created(self):
+    def on_view_created(self, view):
+        print(view, "asdf" * 100)
         self.update_taskbar_list()
+        self.new_taskbar_view("h", "taskbar", view["id"])
 
     def on_view_destroyed(self, view):
         self.update_taskbar_list()
 
     def on_title_changed(self, view):
-        self.Taskbar("h", "taskbar")
-        self.taskbar_view_changed("h", "taskbar", view["id"])
+        return
+        # self.Taskbar("h", "taskbar")
+        # self.taskbar_view_changed("h", "taskbar", view["id"])
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
@@ -331,7 +337,7 @@ class Dockbar(Adw.Application):
         # Return True to indicate successful execution of the Taskbar function
         return True
 
-    def taskbar_view_changed(
+    def new_taskbar_view(
         self,
         orientation,
         class_style,
@@ -414,7 +420,7 @@ class Dockbar(Adw.Application):
 
         # Adjusting for special cases like zsh or bash
         if initial_title in ["zsh", "bash", "fish"]:
-            title = sock.get_focused_view_title().split()[0]
+            title = self.sock.get_focused_view_title().split()[0]
             title = self.utils.filter_utf8_for_gtk(title)
             cmd = f"kitty --hold {title}"
             icon = wclass
