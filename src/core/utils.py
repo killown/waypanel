@@ -37,6 +37,7 @@ class Utils(Adw.Application):
         self.icon_names = [icon for icon in Gtk.IconTheme().get_icon_names()]
         self.gio_icon_list = Gio.AppInfo.get_all()
         self.gestures = {}
+        self.sock = self.compositor()
 
         self.focused_view_id = None
         if not os.path.exists(self.config_path):
@@ -332,8 +333,13 @@ class Utils(Adw.Application):
         box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
         box.add_css_class(class_style)
 
+        output_name = self.sock.get_view_output_name(view_id)
+        focused_output = self.sock.get_focused_output_name()
+
         use_this_title = title[:40]
 
+        if output_name != focused_output:
+            use_this_title = use_this_title + " Mon: ({})".format(output_name)
         label = Gtk.Label.new(use_this_title)
         label.add_css_class("label_from_clickable_image")
 
@@ -354,13 +360,19 @@ class Utils(Adw.Application):
         box.add_css_class("box_from_clickable_image")
 
         self.create_gesture(box, 1, lambda *_: self.set_view_focus(view_id))
-        self.create_gesture(box, 3, lambda *_: self.close_view(view_id))
+        self.create_gesture(box, 3, lambda *_: self.set_view_active_workspace(view_id))
 
         return box
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
         return wayfire.WayfireSocket(addr)
+
+    def set_view_active_workspace(self, view_id):
+        self.sock.scale_toggle()
+        active_workspace = self.sock.get_active_workspace()
+        output_id = self.sock.get_focused_output_id()
+        self.sock.set_workspace(active_workspace, view_id=view_id, output_id=output_id)
 
     def close_view(self, view_id):
         sock.close_view(view_id)
