@@ -59,11 +59,15 @@ class MenuClipboard(Gtk.Application):
         )
         clipboard_history = clipboard_history.split("\n")
         for i in clipboard_history:
+            if not i:
+                continue
             row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
             image_button = Gtk.Button()
             image_button.set_icon_name("edit-delete-remove")
             image_button.connect("clicked", self.cliphist_delete_selected)
+            spacer = Gtk.Label(label="    ")
             row_hbox.append(image_button)
+            row_hbox.append(spacer)
             row_hbox.MYTEXT = i
             self.listbox.append(row_hbox)
             line = Gtk.Label.new()
@@ -72,6 +76,7 @@ class MenuClipboard(Gtk.Application):
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)
             row_hbox.append(line)
+            self.find_text_using_button[image_button] = line
 
     def create_popover_menu_clipboard(self, obj, app, *_):
         self.top_panel = obj.top_panel
@@ -104,6 +109,7 @@ class MenuClipboard(Gtk.Application):
 
         self.main_box.append(self.searchbar)
         self.button_clear = Gtk.Button()
+        self.button_clear.add_css_class("clipboard_clear_button")
         self.button_clear.set_label("Clear")
         self.button_clear.connect("clicked", self.clear_cliphist)
         self.button_clear.add_css_class("button_clear_from_clipboard")
@@ -133,7 +139,9 @@ class MenuClipboard(Gtk.Application):
             image_button = Gtk.Button()
             image_button.set_icon_name("edit-delete-remove")
             image_button.connect("clicked", lambda i: self.cliphist_delete_selected(i))
+            spacer = Gtk.Label(label="    ")
             row_hbox.append(image_button)
+            row_hbox.append(spacer)
             row_hbox.MYTEXT = i
             self.listbox.append(row_hbox)
             line = Gtk.Label.new()
@@ -180,13 +188,20 @@ class MenuClipboard(Gtk.Application):
                     print(e)
 
     def cliphist_delete_selected(self, button):
-        button = [i for i in self.find_text_using_button if button == i][0]
+        button = [i for i in self.find_text_using_button if button == i]
+        print(button)
+        if button:
+            button = button[0]
+        else:
+            print("clipboard del button not found")
+            return
         label = self.find_text_using_button[button]
         text = label.get_text()
         label.set_label("")
         echo = Popen(("echo", text), stdout=subprocess.PIPE)
         echo.wait()
-        check_output(("cliphist", "delete"), stdin=echo.stdout).decode()
+        Popen(("cliphist", "delete"), stdin=echo.stdout)
+        self.update_clipboard_list()
 
     def run_app_from_launcher(self, x):
         selected_text, filename = x.get_child().MYTEXT
