@@ -60,6 +60,9 @@ class PopoverDashboard(Adw.Application):
         return self.menubutton_dashboard
 
     def create_popover_dashboard(self, *_):
+        # FIXME: need to reset the calendar to the right month
+        # if you change for another month, the popup and popdown wont reset
+
         # Create a popover
         self.popover_dashboard = Gtk.Popover.new()
         self.popover_dashboard.set_has_arrow(False)
@@ -67,7 +70,7 @@ class PopoverDashboard(Adw.Application):
         self.popover_dashboard.connect("notify::visible", self.popover_is_open)
 
         # Set width and height of the popover dashboard
-        self.popover_dashboard.set_size_request(600, 400)
+        self.popover_dashboard.set_size_request(400, 200)
 
         # Create a grid to hold the elements
         grid = Gtk.Grid()
@@ -79,7 +82,7 @@ class PopoverDashboard(Adw.Application):
         self.left_box.append(left_label)
 
         # Add the left box to the grid
-        grid.attach(self.left_box, 0, 0, 1, 2)
+        # grid.attach(self.left_box, 0, 0, 1, 2)
 
         # Create a calendar for the right side
         calendar = Gtk.Calendar()
@@ -92,7 +95,7 @@ class PopoverDashboard(Adw.Application):
         self.right_box.append(self.right_label)
 
         # Add the right box to the grid below the calendar
-        grid.attach_next_to(self.right_box, calendar, Gtk.PositionType.BOTTOM, 1, 1)
+        # grid.attach_next_to(self.right_box, calendar, Gtk.PositionType.BOTTOM, 1, 1)
 
         # Set the grid as the child of the popover
         self.popover_dashboard.set_child(grid)
