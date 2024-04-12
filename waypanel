@@ -100,6 +100,7 @@ class Panel(Adw.Application):
         self.last_focused_output = None
         self.is_scale_active = None
         self.focused_output = None
+        self.dpms_monitors_timeout = 3600
         self.vol_slider = None
         self.icon_vol_slider = None
         self.workspace_empty = None
@@ -268,6 +269,18 @@ class Panel(Adw.Application):
         self.output_is_ready_to_dpms_off = {}
         for output_name in self.sock.list_outputs_names():
             self.output_is_ready_to_dpms_off[output_name] = False
+
+        with open(self.topbar_config, "r") as f:
+            panel_toml = toml.load(f)
+
+        timeout_all = panel_toml["dpms"]["timeout_all"]
+        timeout_single = panel_toml["dpms"]["timeout_single"]
+        dpms_enabled = panel_toml["dpms"]["enabled"]
+        self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
+            timeout_all, self.turn_off_monitors
+        )
+        self.turn_off_monitor_timeout = timeout_single
+        self.dpms_enaled = dpms_enabled
 
     def do_activate(self):
         self.show_panels()
@@ -476,6 +489,14 @@ class Panel(Adw.Application):
             self.output_get_focus()
             return
 
+    def turn_off_monitors(self):
+        # this function is intended to be used with glib timeout
+        print(
+            "{self.dpms_monitors_timeout} hour of inactivity. Turning off monitor(s)..."
+        )
+        self.sock.dpms("off")
+        return False
+
     def all_events_watch(self):
         while True:
             try:
@@ -484,6 +505,11 @@ class Panel(Adw.Application):
                 view = None
                 while True:
                     msg = sock.read_message()
+                    # dpms counter
+                    GLib.source_remove(self.turn_off_monitors_timeout)
+                    self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
+                        self.dpms_monitors_timeout, self.turn_off_monitors
+                    )
                     if "event" not in msg:
                         continue
 
@@ -516,10 +542,12 @@ class Panel(Adw.Application):
         self.last_view_toplevel_focused = view["id"]
         return
 
-    def dpms_manager(self):
+    def dpms_manager(self, timeout):
         # FIXME: need allow the user enable/disable dpms and set the timeout
+        # add timeout add seconds method to allow better powersaving
         monitors = self.sock.dpms_status()
         focused_monitor = self.sock.get_focused_output_name()
+        self.cancel_timeout_if_monitor_has_focus(focused_monitor)
 
         # Turn on monitors that are currently off
         for mon in monitors:
@@ -535,11 +563,9 @@ class Panel(Adw.Application):
                         mon not in self.timeout_ids
                     ):  # Check if timeout is not already set
                         # Set up a GLib timeout and store its ID
-                        self.timeout_ids[mon] = GLib.timeout_add(
-                            600000, self.set_output_ready_for_dpms_off, mon
+                        self.timeout_ids[mon] = GLib.timeout_add_seconds(
+                            timeout, self.set_output_ready_for_dpms_off, mon
                         )
-            else:
-                self.cancel_timeout_if_monitor_has_focus(mon)
 
     def set_output_ready_for_dpms_off(self, mon):
         if self.monitor_has_focus(mon):
@@ -561,7 +587,8 @@ class Panel(Adw.Application):
                 self.timeout_ids.pop(mon, None)
 
     def output_get_focus(self):
-        self.dpms_manager()
+        if self.dpms_enabled:
+            self.dpms_manager(self.turn_off_monitor_timeout)
 
     def on_moving_view(self):
         return
