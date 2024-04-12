@@ -13,6 +13,7 @@ from subprocess import Popen
 from wayfire.ipc import sock
 import wayfire.ipc as wayfire
 import toml
+import pulsectl
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -330,7 +331,8 @@ class Utils(Adw.Application):
 
         title = self.filter_utf8_for_gtk(title)
         box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
-        box.add_css_class(class_style)
+        if class_style is not None:
+            box.add_css_class(class_style)
 
         output_name = self.sock.get_view_output_name(view_id)
         default_output = self.get_default_monitor_name(self.topbar_config)
