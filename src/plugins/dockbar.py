@@ -188,6 +188,9 @@ class Dockbar(Adw.Application):
         if msg["event"] == "view-unmapped":
             self.on_view_destroyed(msg["view"])
 
+        if msg["event"] == "view-wset-changed":
+            self.update_taskbar(view)
+
     def handle_plugin_event(self, msg):
         if "event" not in msg:
             return
@@ -269,21 +272,40 @@ class Dockbar(Adw.Application):
     def on_view_destroyed(self, view):
         self.update_taskbar_list()
 
+    def on_view_wset_changed(self, view):
+        self.update_taskbar(view)
+
     def on_title_changed(self, view):
-        self.update_taskbar_icons(view)
+        self.update_taskbar(view)
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
         return ws.WayfireSocket(addr)
 
-    def update_taskbar_icons(self, view):
+    def get_default_monitor_name(self):
+        try:
+            with open(self.topbar_config, "r") as file:
+                config = toml.load(file)
+                if "monitor" in config:
+                    return config["monitor"].get("name")
+                else:
+                    return None
+        except FileNotFoundError:
+            return None
+
+    def update_taskbar(self, view):
         title = self.utils.filter_utf8_for_gtk(view["title"])
+        title = title[:20]
+
+        first_word_length = len(title.split()[0])
+        if first_word_length > 10:
+            title = title.split()[0]
+
         initial_title = title.split()[0]
         icon = self.utils.get_icon(view["app-id"], initial_title, title)
         button = self.buttons_id[view["id"]][0]
         image = button.get_first_child()
         label = button.get_last_child()
-        print(image, label)
         if icon:
             if isinstance(icon, Gio.FileIcon):
                 image.set_from_gicon(icon)
@@ -291,14 +313,13 @@ class Dockbar(Adw.Application):
                 image.set_from_icon_name(icon)
         if title:
             output_name = self.sock.get_view_output_name(view["id"])
-            default_output = self.get_default_monitor_name(self.topbar_config)
+            default_output = self.get_default_monitor_name()
 
             if output_name != default_output:
                 title = "({0}) {1}".format(output_name, title)
             label.set_label(title)
 
     def Taskbar(self, orientation, class_style, update_button=False, callback=None):
-
         # Load configuration from dockbar_config file
         with open(self.dockbar_config, "r") as f:
             config = toml.load(f)
