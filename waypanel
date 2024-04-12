@@ -275,12 +275,11 @@ class Panel(Adw.Application):
 
         timeout_all = panel_toml["dpms"]["timeout_all"]
         timeout_single = panel_toml["dpms"]["timeout_single"]
-        dpms_enabled = panel_toml["dpms"]["enabled"]
+        self.dpms_enabled = panel_toml["dpms"]["enabled"]
         self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
             timeout_all, self.turn_off_monitors
         )
         self.turn_off_monitor_timeout = timeout_single
-        self.dpms_enaled = dpms_enabled
 
     def do_activate(self):
         self.show_panels()
@@ -505,6 +504,7 @@ class Panel(Adw.Application):
                 view = None
                 while True:
                     msg = sock.read_message()
+                    print(msg, "\n\n\n")
                     # dpms counter
                     GLib.source_remove(self.turn_off_monitors_timeout)
                     self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
