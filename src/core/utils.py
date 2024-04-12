@@ -335,7 +335,11 @@ class Utils(Adw.Application):
         output_name = self.sock.get_view_output_name(view_id)
         default_output = self.get_default_monitor_name(self.topbar_config)
 
-        use_this_title = title[:40]
+        use_this_title = title[:30]
+
+        first_word_length = len(title.split()[0])
+        if first_word_length > 13:
+            use_this_title = title.split()[0]
 
         if output_name != default_output:
             use_this_title = "({0}) {1}".format(output_name, use_this_title)
