@@ -1,9 +1,14 @@
 # uncomment and configure the monitor where the panel will start
 # you can get monitor info using wlr-randr
-#[monitor]
-#width = 2560
-#height = 1080
-#name = "DP-1"
+[monitor]
+width = 2560
+height = 1080
+name = "DP-1"
+
+[dpms]
+enabled = true
+timeout_all = 3600
+timeout_single = 1800
 
 [bottom]
 position = "BOTTOM"
