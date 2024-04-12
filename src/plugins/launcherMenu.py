@@ -72,7 +72,7 @@ class MenuLauncher(Adw.Application):
         self.main_box.append(self.searchbar)
         self.flowbox = Gtk.FlowBox()
         self.flowbox.set_valign(Gtk.Align.START)
-        self.flowbox.set_max_children_per_line(2)
+        self.flowbox.set_max_children_per_line(4)
         self.flowbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.flowbox.set_activate_on_single_click(True)
         self.flowbox.connect("child-activated", self.run_app_from_launcher)
@@ -123,32 +123,10 @@ class MenuLauncher(Adw.Application):
             self.row_hbox.append(line)
             self.flowbox.append(self.row_hbox)
 
-        for n, i in enumerate(dockbar_apps):
-            name = dockbar_names[n]
-            cmd = i["desktop_file"]
-            icon = i["icon"]
-            if icon is None:
-                continue
-            self.row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-            self.row_hbox.add_css_class("popover_launcher_row_hbox")
-            self.row_hbox.MYTEXT = name, cmd, name
-            line = Gtk.Label.new()
-            line.add_css_class("label_from_popover_launcher")
-            line.set_label(name)
-            line.props.margin_start = 5
-            line.props.hexpand = True
-            line.set_halign(Gtk.Align.START)
-
-            image = Gtk.Image.new_from_icon_name(icon)
-            image.add_css_class("icon_from_popover_launcher")
-            image.props.margin_end = 5
-            image.set_halign(Gtk.Align.END)
-            self.row_hbox.append(image)
-            self.row_hbox.append(line)
-            self.flowbox.append(self.row_hbox)
-
         for i in all_apps:
             name = i.get_name()
+            if name in recent_apps:
+                continue
             keywords = " ".join(i.get_keywords())
 
             if name.count(" ") > 2:
@@ -165,7 +143,6 @@ class MenuLauncher(Adw.Application):
             line.props.margin_start = 5
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)
-
             image = Gtk.Image.new_from_gicon(icon)
             image.add_css_class("icon_from_popover_launcher")
             image.props.margin_end = 5
@@ -176,8 +153,8 @@ class MenuLauncher(Adw.Application):
         self.flowbox.set_filter_func(self.on_filter_invalidate)
         # Connect signal for selecting a row
         width = self.flowbox.get_preferred_size().natural_size.width
-        self.scrolled_window.set_min_content_width(width * 2)
-        self.scrolled_window.set_min_content_height(800)
+        self.scrolled_window.set_min_content_width(width * 4)
+        self.scrolled_window.set_min_content_height(600)
         self.popover_launcher.set_parent(self.menubutton_launcher)
         self.popover_launcher.popup()
         return self.popover_launcher
@@ -226,9 +203,8 @@ class MenuLauncher(Adw.Application):
         return
 
     def popover_is_closed(self, *_):
-        print("just want to check if the popover is closing")
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
-        print(LayerShell.get_keyboard_mode(self.top_panel).value_name)
+        # print(LayerShell.get_keyboard_mode(self.top_panel).value_name)
 
     def on_show_searchbar_action_actived(self, action, parameter):
         self.searchbar.set_search_mode(
