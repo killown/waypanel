@@ -612,7 +612,7 @@ class Panel(Adw.Application):
         #    sock.tilling()
         return
 
-    def on_view_destroyed(self):
+    def on_view_destroyed(self, view_id):
         # if it check if workspace has views too fast, will still get the id from destroyed view
         # and thus never change to next workspace
         sleep(0.2)
@@ -620,9 +620,8 @@ class Panel(Adw.Application):
         # useful when focusing empty workspaces
         # if no signal like that, the go_next_workspace_with_views will be triggered
         # and never will allow to visit an empty workspace
-        sock = self.compositor()
-        workspace_has_views = sock.get_views_from_active_workspace()
-        if not workspace_has_views:
+        workspace_from_view = self.sock.get_workspace_from_view(view_id)
+        if not self.sock.has_workspace_views(workspace_from_view):
             sock.go_next_workspace_with_views()
         sock.focus_next_view_from_active_workspace()
 
