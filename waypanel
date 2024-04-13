@@ -105,6 +105,7 @@ class Panel(Adw.Application):
         self.icon_vol_slider = None
         self.workspace_empty = None
         self.timeout_ids = {}
+        self.turn_off_monitors_timeout = None
         self.signal_view_destroyed = False
         self.was_last_focused_view_maximized = None
         self.previous_workspace = {}
@@ -133,6 +134,10 @@ class Panel(Adw.Application):
 
         with open(self.topbar_config, "r") as f:
             self.topbar_config_loaded = toml.load(f)
+
+        self.background_panel_enabled = self.topbar_config_loaded["background_panel"][
+            "enabled"
+        ]
 
         with open(self.dockbar_config, "r") as f:
             self.dockbar_config_loaded = toml.load(f)
@@ -277,7 +282,7 @@ class Panel(Adw.Application):
         timeout_single = panel_toml["dpms"]["timeout_single"]
         self.dpms_enabled = panel_toml["dpms"]["enabled"]
         self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
-            timeout_all, self.turn_off_monitors
+            timeout_all, self.dpms_manager
         )
         self.turn_off_monitor_timeout = timeout_single
 
@@ -418,10 +423,13 @@ class Panel(Adw.Application):
                     self.on_scale_desactivated()
 
     def handle_view_event(self, msg, view):
+        event = None
         if "event" not in msg:
             return
+        else:
+            event = msg["event"]
 
-        if msg["event"] == "view-unmapped":
+        if event == "view-unmapped":
             self.on_view_destroyed()
 
         if view is None:
@@ -442,22 +450,22 @@ class Panel(Adw.Application):
         if view["app-id"] == "nil":
             return
 
-        if msg["event"] == "view-title-changed":
+        if event == "view-title-changed":
             self.on_title_changed()
 
-        if msg["event"] == "view-tiled" and view:
+        if event == "view-tiled" and view:
             if self.sock.is_view_maximized(view["id"]):
                 self.was_last_focused_view_maximized = True
 
-        if msg["event"] == "app-id-changed":
+        if event == "app-id-changed":
             self.on_app_id_changed()
 
-        if msg["event"] == "view-focused":
-            self.on_view_role_toplevel_focused(view)
+        if event == "view-focused":
+            self.on_view_role_toplevel_focused(view["id"])
             self.on_view_focused()
             self.last_focused_output = view["output-id"]
 
-        if msg["event"] == "view-mapped":
+        if event == "view-mapped":
             self.on_view_created(view)
 
     def set_previous_workspace_with_views(self, msg):
@@ -488,14 +496,6 @@ class Panel(Adw.Application):
             self.output_get_focus()
             return
 
-    def turn_off_monitors(self):
-        # this function is intended to be used with glib timeout
-        print(
-            "{self.dpms_monitors_timeout} hour of inactivity. Turning off monitor(s)..."
-        )
-        self.sock.dpms("off")
-        return False
-
     def all_events_watch(self):
         while True:
             try:
@@ -508,7 +508,7 @@ class Panel(Adw.Application):
                     # dpms counter
                     GLib.source_remove(self.turn_off_monitors_timeout)
                     self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
-                        self.dpms_monitors_timeout, self.turn_off_monitors
+                        self.dpms_monitors_timeout, self.dpms_manager
                     )
                     if "event" not in msg:
                         continue
@@ -532,19 +532,29 @@ class Panel(Adw.Application):
             except Exception as e:
                 print(e)
 
-    def on_view_role_toplevel_focused(self, view):
+    def on_view_role_toplevel_focused(self, view_id):
+        print(view_id)
         # last view focus only for top level Windows
         # means that views like layer shell won't have focus set in this var
         # this is necessary for example, if you click in the maximize buttons
         # in the top bar then you need a toplevel window to maximize_last_view
         # if not, it will try to maximize the LayerShell
         # big comment because I am sure I will forget why I did this
-        self.last_view_toplevel_focused = view["id"]
-        return
+        self.last_view_toplevel_focused = view_id
 
-    def dpms_manager(self, timeout):
-        # FIXME: need allow the user enable/disable dpms and set the timeout
-        # add timeout add seconds method to allow better powersaving
+    def dpms_manager(self, timeout=0):
+        # if timeout is zero, turn off all monitors and return false for probably glib.timeout
+        if timeout == 0:
+            print(
+                "{self.dpms_monitors_timeout} hour of inactivity. Turning off monitor(s)..."
+            )
+            # no dpms while the focused view is fullscreen
+            if not self.sock.is_focused_view_fullscreen():
+                self.sock.dpms("off")
+                return False
+            else:
+                return True
+
         monitors = self.sock.dpms_status()
         focused_monitor = self.sock.get_focused_output_name()
         self.cancel_timeout_if_monitor_has_focus(focused_monitor)
@@ -644,13 +654,18 @@ class Panel(Adw.Application):
     def on_scale_activated(self):
         # call it once to update without waiting timeout_add
         # then timeout_add until scale is false
-        # self.update_background_panel()
-        # self.set_cpu_usage()
-        # GLib.timeout_add(1000, self.set_cpu_usage)
-        # GLib.timeout_add(1000, self.update_background_panel)
+
+        if self.background_panel_enabled:
+            self.update_background_panel()
+            self.set_cpu_usage()
+            GLib.timeout_add_seconds(1, self.set_cpu_usage)
+            GLib.timeout_add_seconds(1, self.update_background_panel)
+            set_layer_position_exclusive(self.update_background_panel)
         self.is_scale_active = True
 
     def on_scale_desactivated(self):
+        if self.ackground_panel_enabled:
+            unset_layer_position_exclusive(self.update_background_panel)
         self.is_scale_active = False
 
     def on_view_focused(self):
@@ -787,9 +802,10 @@ class Panel(Adw.Application):
     def show_panels(self):
         if self.all_panels_enabled:
             self.top_panel.present()
-            # self.top_panel_background.present()
-            # load the dockbar
             self.dock.do_start()
+            if self.background_panel_enabled:
+                self.top_panel_background.present()
+            # load the dockbar
 
     def setup_panel_buttons(self):
         if self.default_panel:
