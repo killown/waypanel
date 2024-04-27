@@ -7,6 +7,8 @@ from subprocess import Popen, check_output
 from ..core.utils import Utils
 import toml
 import soundcard as sc
+import pulsectl
+from wayfire.ipc import sock
 
 
 class SoundCardDashboard(Adw.Application):
@@ -17,6 +19,7 @@ class SoundCardDashboard(Adw.Application):
         self.top_panel = None
         self._setup_config_paths()
         self.utils = Utils(application_id="com.github.utils")
+        self.sock = sock
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -35,6 +38,30 @@ class SoundCardDashboard(Adw.Application):
         )
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
+
+    def get_view_id_by_pid(self, pid):
+        lviews = self.sock.list_views()
+        for view in lviews:
+            if pid == view["pid"]:
+                return view["id"]
+
+    def get_active_audio_app_info(self):
+        audio_apps = {}
+
+        with pulsectl.Pulse("list-sink-inputs") as pulse:
+            for sink_input in pulse.sink_input_list():
+                if not sink_input.mute and sink_input.volume.value_flat > 0.0:
+                    app_name = sink_input.proplist.get("application.name", "Unknown")
+                    pid = int(
+                        sink_input.proplist.get("application.process.id", "Unknown")
+                    )
+
+                    audio_apps[pid] = {
+                        "application_name": app_name,
+                        "index": sink_input.index,
+                        "view_id": self.get_view_id_by_pid(pid),
+                    }
+        return audio_apps
 
     def get_soundcard_list(self):
         return sc.all_speakers()
@@ -108,7 +135,8 @@ class SoundCardDashboard(Adw.Application):
         return self.menubutton_dashboard
 
     def create_popover_soundcard(self, *_):
-        # Create a popover
+        # FIXME: the popup does not update the list of cards
+
         self.popover_dashboard = Gtk.Popover.new()
         self.popover_dashboard.set_has_arrow(False)
         self.popover_dashboard.connect("closed", self.popover_is_closed)
@@ -171,6 +199,21 @@ class SoundCardDashboard(Adw.Application):
         # Add the horizontal box to the vertical box
         box.append(sc_hbox)
         box.append(mic_hbox)
+
+        # apps_playing = self.get_active_audio_app_info()
+        # for playing in apps_playing:
+        #     title = apps_playing[playing]["application_name"]
+        #     view_id = apps_playing[playing]["view_id"]
+        #     # button.connect(
+        #     #    "clicked", lambda *_: self.sock.go_workspace_set_focus(view_id)
+        #     # )
+        #     app_id = self.sock.get_view(view_id)["app-id"]
+        #     icon = self.utils.get_icon(app_id, title, title)
+        #     button = self.utils.create_clickable_image(
+        #         icon, None, app_id, title, title, view_id
+        #     )
+        #
+        #     box.append(button)
 
         # Set the box as the child of the popover
         self.popover_dashboard.set_child(box)
