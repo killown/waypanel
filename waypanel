@@ -29,7 +29,6 @@ from gi.repository import Gtk4LayerShell as LayerShell
 
 spam_loader = importlib.util.find_spec("wayfire")
 found = spam_loader is not None
-from time import sleep
 
 sys.setrecursionlimit(1600)
 
@@ -59,6 +58,8 @@ from src.plugins.clipboardMenu import MenuClipboard
 from src.plugins.launcherMenu import MenuLauncher
 from src.core.utils import Utils
 from src.core.background import *
+from wayfire.extra.features import ExtraFeatures
+from wayfire.ipc import WayfireIPC
 
 
 class Panel(Adw.Application):
@@ -82,7 +83,9 @@ class Panel(Adw.Application):
 
         # Load configurations
         self.panel_cfg = self.load_topbar_config()
+
         self.utils = utils()
+
         self.get_icon = self.utils.get_icon
         self.active_window_changed = None
         self.notifications = []
@@ -233,6 +236,40 @@ class Panel(Adw.Application):
         self.setup_gestures()
         self.sock = self.compositor()
 
+        required_plugins = [
+            "stipc",
+            "ipc",
+            "ipc-rules",
+            "resize",
+            "window-rules",
+            "wsets",
+            "session-lock",
+            "wm-actions",
+            "move",
+            "vswitch",
+            "grid",
+            "place",
+            "scale",
+        ]
+
+        extra_features = ExtraFeatures()
+        enabled_plugins = extra_features.list_enabled_plugins()
+
+        COLOR_RESET = "\033[0m"
+        COLOR_RED = "\033[91m"
+
+        for plugin in required_plugins:
+            if plugin not in enabled_plugins:
+                print(
+                    "\n{0}ERROR:{2} The plugin: {0}'{1}'{2} is required to start the shell!!!!".format(
+                        COLOR_RED,
+                        plugin,
+                        COLOR_RESET,
+                    )
+                )
+                print("Required Plugin List: {}".format(required_plugins))
+                sys.exit()
+
         # plugins
         self.MenuLauncher = MenuLauncher()
         self.MenuLauncher.create_menu_popover_launcher(self, app)
@@ -298,7 +335,7 @@ class Panel(Adw.Application):
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
-        return wayfire.WayfireSocket(addr)
+        return WayfireIPC(addr)
 
     def get_folder_location(self, folder_name):
         """
@@ -332,7 +369,7 @@ class Panel(Adw.Application):
         view = sock.get_focused_view()
         title = view["title"]
         title = self.utils.filter_utf8_for_gtk(title)
-        workspace_id = sock.get_active_workspace_number()
+        workspace_id = self.get_active_workspace_number()
         pid = view["pid"]
         wclass = view["app-id"]
         initial_title = title.split()[0]
@@ -354,7 +391,7 @@ class Panel(Adw.Application):
             # this is needed, self.compositor, if pass sock from watch, it will fail
             sock = self.compositor()
             layout = sock.get_tiling_layout()
-            all_views = sock.tile_list_views(layout)
+            all_views = self.tile_list_views(layout)
             output = sock.get_focused_output()
             desired_layout = {}
             if not all_views or (len(all_views) == 1 and all_views[0][0] == view["id"]):
@@ -454,7 +491,7 @@ class Panel(Adw.Application):
             self.on_title_changed()
 
         if event == "view-tiled" and view:
-            if self.sock.is_view_maximized(view["id"]):
+            if self.is_view_maximized(view["id"]):
                 self.was_last_focused_view_maximized = True
 
         if event == "app-id-changed":
@@ -470,15 +507,15 @@ class Panel(Adw.Application):
 
     def set_previous_workspace_with_views(self, msg):
         sock = self.compositor()
-        focused_output = sock.get_focused_output_name()
-        wviews = sock.get_workspaces_with_views()
+        focused_output = self.sock.get_focused_output_name()
+        wviews = self.sock.get_workspaces_with_views()
         pw = msg["previous-workspace"]
 
         # only set previous workspaces that has views
         if any(i for i in wviews if pw["x"] == i["x"] and pw["y"] == i["y"]):
             self.previous_workspace[focused_output] = pw
         else:
-            wviews = sock.get_workspaces_with_views()
+            wviews = self.sock.get_workspaces_with_views()
             wviews = {"x": wviews[-1]["x"], "y": wviews[-1]["y"]}
             self.previous_workspace[focused_output] = wviews
 
@@ -580,6 +617,9 @@ class Panel(Adw.Application):
     def set_output_ready_for_dpms_off(self, mon):
         if self.monitor_has_focus(mon):
             return
+        monitor_id = self.sock.get_output_id_by_name(mon)
+        if self.sock.has_ouput_fullscreen_view(monitor_id):
+            return
         self.sock.dpms("off", mon)
         # Remove the timeout ID from the dictionary
         self.timeout_ids.pop(mon, None)
@@ -622,18 +662,22 @@ class Panel(Adw.Application):
         #    sock.tilling()
         return
 
-    def on_view_destroyed(self, view_id):
+    def on_view_destroyed(self):
+        # FIXME: awaiting a fix in wayfire that is spamming unmapped views when switching tabs
+        # if view_id in self.list_ids():
+        #    return
+
         # if it check if workspace has views too fast, will still get the id from destroyed view
         # and thus never change to next workspace
-        sleep(0.2)
+        # sleep(0.2)
         # this signal will be cleared with {'event': 'view-focused', 'view': None}
         # useful when focusing empty workspaces
         # if no signal like that, the go_next_workspace_with_views will be triggered
         # and never will allow to visit an empty workspace
-        workspace_from_view = self.sock.get_workspace_from_view(view_id)
-        if not self.sock.has_workspace_views(workspace_from_view):
-            sock.go_next_workspace_with_views()
-        sock.focus_next_view_from_active_workspace()
+        # workspace_from_view = self.sock.get_workspace_from_view(view_id)
+        # if not self.sock.has_workspace_views(workspace_from_view):
+        #    sock.go_next_workspace_with_views()
+        # sock.focus_next_view_from_active_workspace()
 
         return
 
@@ -664,7 +708,7 @@ class Panel(Adw.Application):
         self.is_scale_active = True
 
     def on_scale_desactivated(self):
-        if self.ackground_panel_enabled:
+        if self.background_panel_enabled:
             unset_layer_position_exclusive(self.update_background_panel)
         self.is_scale_active = False
 
@@ -674,13 +718,13 @@ class Panel(Adw.Application):
     def maximize_last_view_on_expo_desacivated(self):
         if self.maximize_views_on_expo_enabled == "False":
             return
-        if sock.is_focused_view_fullscreen:
+        if self.sock.is_focused_view_fullscreen:
             return
         # check if the workspace has only one view so maximize this view
-        ws_info = sock.get_active_workspace_info()
+        ws_info = self.get_active_workspace_info()
         ws_with_views = [
             i
-            for i in sock.get_workspaces_with_views()
+            for i in self.sock.get_workspaces_with_views()
             if i["x"] == ws_info["x"] and i["y"] == ws_info["y"]
         ]
         ws_count = len(ws_with_views)
@@ -688,7 +732,7 @@ class Panel(Adw.Application):
             return
         id = ws_with_views[0]["view-id"]
         if ws_count == 1:
-            sock.maximize(id)
+            self.maximize(id)
         # id = self.last_view_toplevel_focused
         # sock = self.compositor()
         # sock.maximize(id)
@@ -873,8 +917,7 @@ class Panel(Adw.Application):
         self.top_panel_box_full.add_controller(EventScroll)
 
     def maximize_last_focused_view(self, *_):
-        sock = self.compositor()
-        sock.maximize(self.last_view_toplevel_focused)
+        self.maximize(self.last_view_toplevel_focused)
 
     def close_last_focused_view(self, *_):
         sock = self.compositor()
@@ -1314,8 +1357,7 @@ class Panel(Adw.Application):
         self.utils.run_app(cmd, True)
 
     def left_gesture_right_click(self, *_):
-        sock = self.compositor()
-        sock.go_next_workspace_with_views()
+        self.sock.go_next_workspace_with_views()
         # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
         # self.utils.run_app(cmd, True)
 
@@ -1338,8 +1380,7 @@ class Panel(Adw.Application):
         # self.utils.run_app(cmd, True)
 
     def center_gesture_right_click(self, *_):
-        sock = self.compositor()
-        sock.go_next_workspace_with_views()
+        self.go_next_workspace_with_views()
         # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
         # self.utils.run_app(cmd, True)
 
@@ -1781,13 +1822,12 @@ class Panel(Adw.Application):
 
     def update_title_topbar(self):
         try:
-            sock = self.compositor()
-            title = sock.get_focused_view_title()
+            title = self.sock.get_focused_view_title()
             title = self.utils.filter_utf8_for_gtk(title)
             initial_title = title.split()[0]
             if title == "":
                 return True
-            wclass = sock.get_focused_view_app_id()
+            wclass = self.sock.get_focused_view_app_id()
 
             title = self.modify_title(title)
 
@@ -1829,8 +1869,7 @@ class Panel(Adw.Application):
             return False
 
     def update_widgets(self, title, wm_class, initial_title, pid, workspace_id):
-        sock = self.compositor()
-        is_fullscreen = sock.is_focused_view_fullscreen()
+        is_fullscreen = self.sock.is_focused_view_fullscreen()
         if is_fullscreen:
             return True
         # Modify title based on certain patterns
