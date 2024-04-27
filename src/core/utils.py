@@ -11,9 +11,8 @@ from gi.repository import Gtk4LayerShell as LayerShell
 from gi.repository import Gtk, Adw, Gio, GObject
 from subprocess import Popen
 from wayfire.ipc import sock
-import wayfire.ipc as wayfire
 import toml
-import pulsectl
+from wayfire.ipc import WayfireIPC
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -384,12 +383,12 @@ class Utils(Adw.Application):
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
-        return wayfire.WayfireSocket(addr)
+        return WayfireIPC(addr)
 
     def set_view_active_workspace(self, view_id):
         self.sock.scale_toggle()
-        active_workspace = self.sock.get_active_workspace()
-        output_id = self.sock.get_focused_output_id()
+        active_workspace = self.get_active_workspace()
+        output_id = self.get_focused_output_id()
         self.sock.set_workspace(active_workspace, view_id=view_id, output_id=output_id)
 
     def close_view(self, view_id):
@@ -415,7 +414,6 @@ class Utils(Adw.Application):
             if view is None:
                 return
 
-            print(view)
             # why foucs an app with no app-id
             if view["app-id"] == "nil":
                 return
@@ -433,15 +431,15 @@ class Utils(Adw.Application):
                     sock.scale_toggle()
                     # FIXME: better get animation speed from the conf so define a proper sleep
                     sleep(0.2)
-                    sock.go_workspace_set_focus(view_id)
-                    sock.move_cursor_middle(view_id)
+                    self.sock.go_workspace_set_focus(view_id)
+                    self.sock.move_cursor_middle(view_id)
                 else:
-                    sock.go_workspace_set_focus(view_id)
-                    sock.move_cursor_middle(view_id)
+                    self.sock.go_workspace_set_focus(view_id)
+                    self.sock.move_cursor_middle(view_id)
             else:
-                sock.go_workspace_set_focus(view_id)
-                sock.move_cursor_middle(view_id)
-                self.view_focus_indicator_effect(view_id)
+                self.sock.go_workspace_set_focus(view_id)
+                self.sock.move_cursor_middle(view_id)
+                self.sock.view_focus_indicator_effect(view_id)
 
         except Exception as e:
             print(e)
@@ -480,7 +478,7 @@ class Utils(Adw.Application):
             button.set_sensitive(False)
             return button
         if use_function is False:
-            self.create_gesture(button, 1, lambda *_: sock.run(cmd))
+            self.create_gesture(button, 1, lambda *_: sock.run_cmd(cmd))
             self.create_gesture(button, 3, lambda *_: self.dockbar_remove(icon_name))
         else:
             self.create_gesture(button, 1, use_function)
