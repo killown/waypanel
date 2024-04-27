@@ -21,9 +21,9 @@ from ..core.create_panel import (
 )
 from ..core.utils import Utils
 import numpy as np
-import wayfire.ipc as ws
 import sys
 from src.core.background import *
+from wayfire.ipc import WayfireIPC
 
 sys.path.append("/usr/lib/waypanel/")
 
@@ -171,7 +171,7 @@ class Dockbar(Adw.Application):
             self.on_title_changed(view)
 
         if msg["event"] == "view-tiled" and view:
-            if self.sock.is_view_maximized(view["id"]):
+            if self.is_view_maximized(view["id"]):
                 self.was_last_focused_view_maximized = True
 
         if msg["event"] == "app-id-changed":
@@ -250,19 +250,15 @@ class Dockbar(Adw.Application):
 
     # events that will make the panel clickable or not
     def on_scale_activated(self):
-        output_id = self.sock.get_focused_output_id()
         set_layer_position_exclusive(self.left_panel)
         # set_layer_position_exclusive(self.right_panel)
         set_layer_position_exclusive(self.bottom_panel)
-        print(output_id, "set layer")
         return
 
     def on_scale_desactivated(self):
-        output_id = self.sock.get_focused_output_id()
         unset_layer_position_exclusive(self.left_panel)
         # unset_layer_position_exclusive(self.right_panel)
         unset_layer_position_exclusive(self.bottom_panel)
-        print(output_id, "unset layer")
         return
 
     def on_view_created(self, view):
@@ -280,7 +276,7 @@ class Dockbar(Adw.Application):
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
-        return ws.WayfireSocket(addr)
+        return WayfireIPC(addr)
 
     def get_default_monitor_name(self):
         try:
@@ -450,7 +446,7 @@ class Dockbar(Adw.Application):
     # this whole function is a mess, this was based in another compositor
     # so need a rework
     def dockbar_append(self, *_):
-        wclass = self.sock.get_focused_view_app_id().lower()
+        wclass = self.get_focused_view_app_id().lower()
         wclass = "".join(wclass)
         initial_title = wclass
         icon = wclass
@@ -459,7 +455,7 @@ class Dockbar(Adw.Application):
 
         # Adjusting for special cases like zsh or bash
         if initial_title in ["zsh", "bash", "fish"]:
-            title = self.sock.get_focused_view_title().split()[0]
+            title = self.get_focused_view_title().split()[0]
             title = self.utils.filter_utf8_for_gtk(title)
             cmd = f"kitty --hold {title}"
             icon = wclass
