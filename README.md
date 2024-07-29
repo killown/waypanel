@@ -10,6 +10,9 @@ The core of this panel lies in leveraging a shell overview, reminiscent of GNOME
 
 ```
 pip install wayfire
+git clone https://github.com/killown/waypanel
+cd waypanel
+sh install
 mkdir ~/.config/waypanel; cp config/* ~/.config/waypanel
 ```
 
