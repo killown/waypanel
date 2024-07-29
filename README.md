@@ -14,6 +14,10 @@ git clone https://github.com/killown/waypanel
 cd waypanel
 sh install
 mkdir ~/.config/waypanel; cp config/* ~/.config/waypanel
+
+### Start the panel
+
+/usr/bin/waypanel
 ```
 
 ### wayfire.ini
