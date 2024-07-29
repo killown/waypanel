@@ -10,9 +10,20 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk4LayerShell as LayerShell
 from gi.repository import Gtk, Adw, Gio, GObject
 from subprocess import Popen
-from wayfire.ipc import sock
+
 import toml
-from wayfire.ipc import WayfireIPC
+from wayfire.ipc import WayfireSocket
+
+from wayfire.ipc import *
+
+from wayfire.extra.ipc_utils import *
+import shlex
+import subprocess
+
+addr = os.getenv("WAYFIRE_SOCKET")
+sock = WayfireSocket(addr)
+
+wayfire_utils = WayfireUtils(sock)
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -65,6 +76,10 @@ class Utils(Adw.Application):
             except Exception as e:
                 print(e)
 
+    def run_cmd(command):
+        command = shlex.split(command)
+        subprocess.run(command, check=True)
+
     def widget_exists(self, widget):
         return widget is not None and isinstance(widget, Gtk.Widget)
 
@@ -106,6 +121,22 @@ class Utils(Adw.Application):
                 box.append(button)
 
         return box
+
+
+    def find_dock_icon(self, app_id):
+        with open(self.dockbar_config, "r") as f:
+            config_data = toml.load(f)
+
+            for app in config_data:
+                try:
+                    wclass = config_data[app]["wclass"]
+                    if app_id in wclass:
+                        icon = config_data[app]["icon"]
+                        return icon
+                    else:
+                        return None
+                except KeyError:
+                    return None
 
     def CreateFromAppList(
         self, config, orientation, class_style, callback=None, use_label=False
@@ -249,6 +280,7 @@ class Utils(Adw.Application):
                     return exist[0]
             else:
                 exist = [name for name in self.icon_names if argument.lower() in name]
+                print(exist)
                 if exist:
                     exist = exist[0]
                     return exist
@@ -318,13 +350,12 @@ class Utils(Adw.Application):
     def create_clickable_image(
         self, icon_name, class_style, wclass, title, initial_title, view_id
     ):
-
         # this is creating empty box in case you can't find any app-id
         if wclass == "nil":
             return Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
 
         # no pid no new taskbar button, that will crash the panel
-        pid = self.sock.get_view_pid(view_id)
+        pid = wayfire_utils.get_view_pid(view_id)
         if pid == -1:
             return
 
@@ -333,7 +364,7 @@ class Utils(Adw.Application):
         if class_style is not None:
             box.add_css_class(class_style)
 
-        output_name = self.sock.get_view_output_name(view_id)
+        output_name = wayfire_utils.get_view_output_name(view_id)
         default_output = self.get_default_monitor_name(self.topbar_config)
 
         use_this_title = title[:30]
@@ -347,13 +378,16 @@ class Utils(Adw.Application):
         label = Gtk.Label.new(use_this_title)
         label.add_css_class("label_from_clickable_image")
 
-        print(icon_name)
         if isinstance(icon_name, Gio.FileIcon):
             # If icon_name is a FileIcon object, directly use it
             image = Gtk.Image.new_from_gicon(icon_name)
         else:
             # Otherwise, treat icon_name as a string representing the icon name
-            image = Gtk.Image.new_from_icon_name(icon_name)
+            dock_icon = self.find_dock_icon(wclass)
+            if dock_icon:
+                image = Gtk.Image.new_from_icon_name(dock_icon)
+            else:
+                image = Gtk.Image.new_from_icon_name(icon_name)
 
         image.props.margin_end = 5
         image.set_halign(Gtk.Align.END)
@@ -364,7 +398,7 @@ class Utils(Adw.Application):
         box.add_css_class("box_from_clickable_image")
 
         self.create_gesture(box, 1, lambda *_: self.set_view_focus(view_id))
-        self.create_gesture(box, 2, lambda *_: self.close_view(view_id))
+        self.create_gesture(box, 2, lambda *_: wayfire_utils.close_view(view_id))
         self.create_gesture(box, 3, lambda *_: self.set_view_active_workspace(view_id))
 
         return box
@@ -383,16 +417,16 @@ class Utils(Adw.Application):
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
-        return WayfireIPC(addr)
+        return WayfireSocket(addr)
 
     def set_view_active_workspace(self, view_id):
-        self.sock.scale_toggle()
-        active_workspace = self.get_active_workspace()
-        output_id = self.get_focused_output_id()
-        self.sock.set_workspace(active_workspace, view_id=view_id, output_id=output_id)
+        wayfire_utils.scale_toggle()
+        active_workspace = wayfire_utils.get_active_workspace()
+        output_id = wayfire_utils.get_focused_output_id()
+        wayfire_utils.set_workspace(active_workspace, view_id=view_id, output_id=output_id)
 
     def close_view(self, view_id):
-        sock.close_view(view_id)
+        wayfire_utils.close_view(view_id)
 
     def view_focus_indicator_effect(self, view_id):
         sock = self.compositor()
@@ -402,11 +436,11 @@ class Utils(Adw.Application):
         original_alpha = sock.get_view_alpha(view_id)["alpha"]
         for f in float_sequence:
             try:
-                sock.set_view_alpha(view_id, f)
+                wayfire_utils.set_view_alpha(view_id, f)
                 sleep(0.04)
             except Exception as e:
                 print(e)
-        sock.set_view_alpha(view_id, original_alpha)
+        wayfire_utils.set_view_alpha(view_id, original_alpha)
 
     def set_view_focus(self, view_id):
         try:
@@ -431,15 +465,15 @@ class Utils(Adw.Application):
                     sock.scale_toggle()
                     # FIXME: better get animation speed from the conf so define a proper sleep
                     sleep(0.2)
-                    self.sock.go_workspace_set_focus(view_id)
-                    self.sock.move_cursor_middle(view_id)
+                    wayfire_utils.go_workspace_set_focus(view_id)
+                    wayfire_utils.move_cursor_middle(view_id)
                 else:
-                    self.sock.go_workspace_set_focus(view_id)
-                    self.sock.move_cursor_middle(view_id)
+                    wayfire_utils.go_workspace_set_focus(view_id)
+                    wayfire_utils.move_cursor_middle(view_id)
             else:
-                self.sock.go_workspace_set_focus(view_id)
-                self.sock.move_cursor_middle(view_id)
-                self.sock.view_focus_indicator_effect(view_id)
+                wayfire_utils.go_workspace_set_focus(view_id)
+                wayfire_utils.move_cursor_middle(view_id)
+                #wayfire_utils.view_focus_indicator_effect(view_id)
 
         except Exception as e:
             print(e)
@@ -478,7 +512,7 @@ class Utils(Adw.Application):
             button.set_sensitive(False)
             return button
         if use_function is False:
-            self.create_gesture(button, 1, lambda *_: sock.run_cmd(cmd))
+            self.create_gesture(button, 1, lambda *_: Utils.run_cmd(cmd))
             self.create_gesture(button, 3, lambda *_: self.dockbar_remove(icon_name))
         else:
             self.create_gesture(button, 1, use_function)

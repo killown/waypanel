@@ -8,8 +8,10 @@ from ..core.utils import Utils
 import toml
 import soundcard as sc
 import pulsectl
-from wayfire.ipc import sock
 
+from wayfire.ipc import WayfireSocket
+addr = os.getenv("WAYFIRE_SOCKET")
+sock = WayfireSocket(addr)
 
 class SoundCardDashboard(Adw.Application):
     def __init__(self, **kwargs):
