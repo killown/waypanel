@@ -9,22 +9,20 @@ The core of this panel lies in leveraging a shell overview, reminiscent of GNOME
 ### How to Install
 
 ```
-git clone https://github.com/killown/waypanel
-cd waypanel
-sh install
+pip install wayfire
 mkdir ~/.config/waypanel; cp config/* ~/.config/waypanel
 ```
 
-### compile wayfire with the required scale patch to work with background panels
-https://github.com/killown/waypanel/blob/main/patches/scale.patch
-
 ### wayfire.ini
-required plugins:  stipc,  scale,   ipc,   ipc-rules
 
-### minimal panel setup 
+required plugins: stipc, scale, ipc, ipc-rules
+
+### minimal panel setup
+
 panel.toml [monitor]
 
 ### Current features
+
 - Dockbar
 - Information panel with numerous features
 - Top panel with a GNOME appearance
