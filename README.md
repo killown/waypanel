@@ -15,10 +15,11 @@ cd waypanel
 sh install
 mkdir ~/.config/waypanel; cp config/* ~/.config/waypanel
 
+```
+
 ### Start the panel
 
 /usr/bin/waypanel
-```
 
 ### wayfire.ini
 
@@ -54,16 +55,19 @@ panel.toml [monitor]
 #### Create custom output in the top bar using toml
 
 ```
+
 [some_name]
 refresh = 1000 #in ms
 position = "center" #left center right
 cmd = "command" #command or script
 css_class = "css_class" #to customize the widget look
+
 ```
 
 #### Create new menus in the top bar using toml
 
 ```
+
 [[MyMenu.item_1]]
 cmd = "command"
 name = "Menu Label"
@@ -72,8 +76,13 @@ name = "Menu Label"
 cmd = "command"
 name = "Menu Label"
 submenu = "submenu_name"
+
 ```
 
 ## License
 
 waypanel is licensed under the MIT license. [See LICENSE for more information](https://github.com/killown/hyprpybar/blob/main/LICENSE).
+
+```
+
+```
