@@ -23,10 +23,18 @@ from ..core.utils import Utils
 import numpy as np
 import sys
 from src.core.background import *
-from wayfire.ipc import WayfireIPC
+
+from wayfire.ipc import WayfireSocket
+
+from  wayfire.extra.ipc_utils import *
+
+
+addr = os.getenv("WAYFIRE_SOCKET")
+sock = WayfireSocket(addr)
 
 sys.path.append("/usr/lib/waypanel/")
 
+wayfire_utils = WayfireUtils(sock)
 
 class Dockbar(Adw.Application):
     def __init__(self, **kwargs):
@@ -116,7 +124,7 @@ class Dockbar(Adw.Application):
 
                     # Start the taskbar list for the bottom panel
                     # Remaining check pids will be handled later
-                    self.Taskbar("h", "taskbar", 0)
+                    self.Taskbar("h", "taskbar")
 
             # LayerShell.set_layer(self.left_panel, LayerShell.Layer.TOP)
             # LayerShell.set_layer(self.bottom_panel, LayerShell.Layer.TOP)
@@ -171,7 +179,7 @@ class Dockbar(Adw.Application):
             self.on_title_changed(view)
 
         if msg["event"] == "view-tiled" and view:
-            if self.is_view_maximized(view["id"]):
+            if wayfire_utils.is_view_maximized(view["id"]):
                 self.was_last_focused_view_maximized = True
 
         if msg["event"] == "app-id-changed":
@@ -276,7 +284,7 @@ class Dockbar(Adw.Application):
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
-        return WayfireIPC(addr)
+        return WayfireSocket(addr)
 
     def get_default_monitor_name(self):
         try:
@@ -308,7 +316,7 @@ class Dockbar(Adw.Application):
             else:
                 image.set_from_icon_name(icon)
         if title:
-            output_name = self.sock.get_view_output_name(view["id"])
+            output_name = wayfire_utils.get_view_output_name(view["id"])
             default_output = self.get_default_monitor_name()
 
             if output_name != default_output:
@@ -328,46 +336,7 @@ class Dockbar(Adw.Application):
             return
 
         for i in list_views:
-            id = i["id"]
-            if not self.id_exist(id):
-                continue
-            if id in self.buttons_id:
-                continue
-            if id in self.taskbar_list:
-                continue
-            wm_class = i["app-id"].lower()
-            initial_title = i["title"].split()[0].lower()
-            title = i["title"]
-            title = self.utils.filter_utf8_for_gtk(title)
-
-            # Skip windows with wm_class found in launchers_desktop_file if update_button is False
-            if wm_class in launchers_desktop_file and not update_button:
-                continue
-
-            # Skip windows with ids found in self.taskbar_list if update_button is False
-            if self.id_exist(id) and update_button is False:
-                continue
-
-            button = self.utils.create_taskbar_launcher(
-                wm_class,
-                title,
-                initial_title,
-                orientation,
-                class_style,
-                id,
-            )
-            # we don't know if there is any  stuation where button is not being created
-            # to prevent issues lets check if buttons exist
-            if not self.utils.widget_exists(button):
-                return
-            # Append the button to the taskbar
-            self.taskbar.append(button)
-
-            # Store button information in dictionaries for easy access
-            self.buttons_id[id] = [button, initial_title, id]
-
-            # Add the pid to the taskbar_list to keep track of added windows
-            self.taskbar_list.append(id)
+            self.new_taskbar_view(orientation,class_style, i["id"])
 
         # Return True to indicate successful execution of the Taskbar function
         return True
@@ -384,6 +353,8 @@ class Dockbar(Adw.Application):
         if view_id in self.taskbar_list:
             return
         view = self.sock.get_view(view_id)
+        if view["type"] != "toplevel":
+            return
         id = view["id"]
         title = view["title"]
         title = self.utils.filter_utf8_for_gtk(title)
@@ -392,7 +363,8 @@ class Dockbar(Adw.Application):
         button = self.utils.create_taskbar_launcher(
             wm_class, title, initial_title, orientation, class_style, id
         )
-
+        if not self.utils.widget_exists(button):
+            return
         # Append the button to the taskbar
         self.taskbar.append(button)
 
@@ -404,14 +376,14 @@ class Dockbar(Adw.Application):
         return True
 
     def pid_exist(self, id):
-        pid = self.sock.get_view_pid(id)
+        pid = wayfire_utils.get_view_pid(id)
         if pid != -1:
             return True
         else:
             return False
 
     def id_exist(self, id):
-        ids = self.sock.list_ids()
+        ids = wayfire_utils.list_ids()
         if id in ids:
             return True
         else:
@@ -419,7 +391,7 @@ class Dockbar(Adw.Application):
 
     def update_taskbar_list(self):
         self.Taskbar("h", "taskbar")
-        ids = self.sock.list_ids()
+        ids = wayfire_utils.list_ids()
         button_ids = self.buttons_id.copy()
         for button_id in button_ids:
             if button_id not in ids:
@@ -446,7 +418,7 @@ class Dockbar(Adw.Application):
     # this whole function is a mess, this was based in another compositor
     # so need a rework
     def dockbar_append(self, *_):
-        wclass = self.get_focused_view_app_id().lower()
+        wclass = wayfire_utils.get_focused_view_app_id().lower()
         wclass = "".join(wclass)
         initial_title = wclass
         icon = wclass

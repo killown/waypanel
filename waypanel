@@ -21,6 +21,7 @@ from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
 import datetime
 import importlib
 import wayfire.ipc as wayfire
+from wayfire.ipc import *
 import netifaces
 import soundcard as sc
 
@@ -58,8 +59,12 @@ from src.plugins.clipboardMenu import MenuClipboard
 from src.plugins.launcherMenu import MenuLauncher
 from src.core.utils import Utils
 from src.core.background import *
-from wayfire.extra.features import ExtraFeatures
-from wayfire.ipc import WayfireIPC
+from wayfire.ipc import WayfireSocket
+from wayfire.extra.ipc_utils import *
+
+addr = os.getenv("WAYFIRE_SOCKET")
+sock = WayfireSocket(addr)
+wayfire_utils = WayfireUtils(sock)
 
 
 class Panel(Adw.Application):
@@ -252,23 +257,23 @@ class Panel(Adw.Application):
             "scale",
         ]
 
-        extra_features = ExtraFeatures()
-        enabled_plugins = extra_features.list_enabled_plugins()
+        #extra_features = ExtraFeatures()
+        #enabled_plugins = extra_features.list_enabled_plugins()
 
         COLOR_RESET = "\033[0m"
         COLOR_RED = "\033[91m"
 
-        for plugin in required_plugins:
-            if plugin not in enabled_plugins:
-                print(
-                    "\n{0}ERROR:{2} The plugin: {0}'{1}'{2} is required to start the shell!!!!".format(
-                        COLOR_RED,
-                        plugin,
-                        COLOR_RESET,
-                    )
-                )
-                print("Required Plugin List: {}".format(required_plugins))
-                sys.exit()
+        #for plugin in required_plugins:
+        #    if plugin not in enabled_plugins:
+        #        print(
+        #            "\n{0}ERROR:{2} The plugin: {0}'{1}'{2} is required to start the shell!!!!".format(
+        #                COLOR_RED,
+        #                plugin,
+        #                COLOR_RESET,
+        #            )
+        #        )
+        #        print("Required Plugin List: {}".format(required_plugins))
+        #        sys.exit()
 
         # plugins
         self.MenuLauncher = MenuLauncher()
@@ -309,7 +314,7 @@ class Panel(Adw.Application):
         self.get_focused_output = self.sock.get_focused_output()
 
         self.output_is_ready_to_dpms_off = {}
-        for output_name in self.sock.list_outputs_names():
+        for output_name in wayfire_utils.list_outputs_names():
             self.output_is_ready_to_dpms_off[output_name] = False
 
         with open(self.topbar_config, "r") as f:
@@ -335,7 +340,7 @@ class Panel(Adw.Application):
 
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
-        return WayfireIPC(addr)
+        return WayfireSocket(addr)
 
     def get_folder_location(self, folder_name):
         """
@@ -369,7 +374,7 @@ class Panel(Adw.Application):
         view = sock.get_focused_view()
         title = view["title"]
         title = self.utils.filter_utf8_for_gtk(title)
-        workspace_id = self.get_active_workspace_number()
+        workspace_id = wayfire_utils.get_active_workspace_number()
         pid = view["pid"]
         wclass = view["app-id"]
         initial_title = title.split()[0]
@@ -388,17 +393,19 @@ class Panel(Adw.Application):
 
     def handle_tilling_layout(self, view):
         if view["type"] == "toplevel" and view["parent"] == -1:
-            # this is needed, self.compositor, if pass sock from watch, it will fail
-            sock = self.compositor()
-            layout = sock.get_tiling_layout()
-            all_views = self.tile_list_views(layout)
-            output = sock.get_focused_output()
+            # this is needed, self.compositor, if pass sock from watch, it will fail 
+            wx = wayfire_utils.get_active_workspace()["x"] 
+            wy = wayfire_utils.get_active_workspace()["y"]
+            wset = self.sock.get_focused_view()["wset-index"]
+            layout = self.sock.get_tiling_layout(wset, wx, wy)
+            all_views = wayfire_utils.tile_list_views(layout)
+            output = self.sock.get_focused_output()
             desired_layout = {}
             if not all_views or (len(all_views) == 1 and all_views[0][0] == view["id"]):
                 desired_layout = {
                     "vertical-split": [{"view-id": view["id"], "weight": 1}]
                 }
-                sock.set_tiling_layout(desired_layout)
+                self.sock.set_tiling_layout(wset, wx, wy, desired_layout)
                 return
 
             main_view = all_views[0][0]
@@ -419,7 +426,7 @@ class Panel(Adw.Application):
                         {"view-id": view["id"], "weight": 1},
                     ]
                 }
-                sock.set_tiling_layout(desired_layout)
+                self.sock.set_tiling_layout(wset,wx,wy,desired_layout)
                 return
 
             stack = [{"view-id": v[0], "weight": v[2]} for v in stack_views_old]
@@ -438,7 +445,7 @@ class Panel(Adw.Application):
                 ]
             }
 
-            sock.set_tiling_layout(desired_layout)
+            self.sock.set_tiling_layout(wset, wx, wy, desired_layout)
 
     def handle_plugin_event(self, msg):
         if "event" not in msg:
@@ -491,7 +498,7 @@ class Panel(Adw.Application):
             self.on_title_changed()
 
         if event == "view-tiled" and view:
-            if self.is_view_maximized(view["id"]):
+            if wayfire_utils.is_view_maximized(view["id"]):
                 self.was_last_focused_view_maximized = True
 
         if event == "app-id-changed":
@@ -507,15 +514,15 @@ class Panel(Adw.Application):
 
     def set_previous_workspace_with_views(self, msg):
         sock = self.compositor()
-        focused_output = self.sock.get_focused_output_name()
-        wviews = self.sock.get_workspaces_with_views()
+        focused_output = wayfire_utils.get_focused_output_name()
+        wviews = wayfire_utils.get_workspaces_with_views()
         pw = msg["previous-workspace"]
 
         # only set previous workspaces that has views
         if any(i for i in wviews if pw["x"] == i["x"] and pw["y"] == i["y"]):
             self.previous_workspace[focused_output] = pw
         else:
-            wviews = self.sock.get_workspaces_with_views()
+            wviews = wayfire_utils.get_workspaces_with_views()
             wviews = {"x": wviews[-1]["x"], "y": wviews[-1]["y"]}
             self.previous_workspace[focused_output] = wviews
 
@@ -541,7 +548,7 @@ class Panel(Adw.Application):
                 view = None
                 while True:
                     msg = sock.read_message()
-                    print(msg, "\n\n\n")
+                    #print(msg, "\n\n\n")
                     # dpms counter
                     GLib.source_remove(self.turn_off_monitors_timeout)
                     self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
@@ -586,26 +593,26 @@ class Panel(Adw.Application):
                 "{self.dpms_monitors_timeout} hour of inactivity. Turning off monitor(s)..."
             )
             # no dpms while the focused view is fullscreen
-            if not self.sock.is_focused_view_fullscreen():
-                self.sock.dpms("off")
+            if not wayfire_utils.is_focused_view_fullscreen():
+                wayfire_utils.dpms("off")
                 return False
             else:
                 return True
 
-        monitors = self.sock.dpms_status()
-        focused_monitor = self.sock.get_focused_output_name()
+        monitors = wayfire_utils.dpms_status()
+        focused_monitor = wayfire_utils.get_focused_output_name()
         self.cancel_timeout_if_monitor_has_focus(focused_monitor)
 
         # Turn on monitors that are currently off
         for mon in monitors:
             if monitors[mon] == "off":
-                self.sock.dpms("on", mon)
+                wayfire_utils.dpms("on", mon)
 
         # Set up timeouts for monitors that are not focused and not already timed out
         for mon in monitors:
             if monitors[mon] != focused_monitor:
-                monitor_id = self.sock.get_output_id_by_name(mon)
-                if not self.sock.has_ouput_fullscreen_view(monitor_id):
+                monitor_id = wayfire_utils.get_output_id_by_name(mon)
+                if not wayfire_utils.has_ouput_fullscreen_view(monitor_id):
                     if (
                         mon not in self.timeout_ids
                     ):  # Check if timeout is not already set
@@ -617,16 +624,16 @@ class Panel(Adw.Application):
     def set_output_ready_for_dpms_off(self, mon):
         if self.monitor_has_focus(mon):
             return
-        monitor_id = self.sock.get_output_id_by_name(mon)
-        if self.sock.has_ouput_fullscreen_view(monitor_id):
+        monitor_id = wayfire_utils.get_output_id_by_name(mon)
+        if wayfire_utils.has_ouput_fullscreen_view(monitor_id):
             return
-        self.sock.dpms("off", mon)
+        wayfire_utils.dpms("off", mon)
         # Remove the timeout ID from the dictionary
         self.timeout_ids.pop(mon, None)
         return False
 
     def monitor_has_focus(self, mon):
-        focused_monitor = self.sock.get_focused_output_name()
+        focused_monitor = wayfire_utils.get_focused_output_name()
         return mon == focused_monitor
 
     def cancel_timeout_if_monitor_has_focus(self, mon):
@@ -637,6 +644,8 @@ class Panel(Adw.Application):
                 self.timeout_ids.pop(mon, None)
 
     def output_get_focus(self):
+        focused_output_name = wayfire_utils.get_focused_output_name()
+        Utils.run_cmd("xrandr --output {0}".format(focused_output_name))
         if self.dpms_enabled:
             self.dpms_manager(self.turn_off_monitor_timeout)
 
@@ -718,13 +727,13 @@ class Panel(Adw.Application):
     def maximize_last_view_on_expo_desacivated(self):
         if self.maximize_views_on_expo_enabled == "False":
             return
-        if self.sock.is_focused_view_fullscreen:
+        if wayfire_utils.is_focused_view_fullscreen:
             return
         # check if the workspace has only one view so maximize this view
         ws_info = self.get_active_workspace_info()
         ws_with_views = [
             i
-            for i in self.sock.get_workspaces_with_views()
+            for i in wayfire_utils.get_workspaces_with_views()
             if i["x"] == ws_info["x"] and i["y"] == ws_info["y"]
         ]
         ws_count = len(ws_with_views)
@@ -1357,7 +1366,7 @@ class Panel(Adw.Application):
         self.utils.run_app(cmd, True)
 
     def left_gesture_right_click(self, *_):
-        self.sock.go_next_workspace_with_views()
+        wayfire_utils.go_next_workspace_with_views()
         # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
         # self.utils.run_app(cmd, True)
 
@@ -1637,7 +1646,7 @@ class Panel(Adw.Application):
 
     def disk_usage_by_pid(self):
         sock = self.compositor()
-        pid = sock.get_focused_view_pid()
+        pid = wayfire_utils.get_focused_view_pid()
         p = psutil.Process(pid)
         io_counters = p.io_counters()
         disk_usage_process = io_counters[2] + io_counters[3]  # read_bytes + write_bytes
@@ -1822,12 +1831,12 @@ class Panel(Adw.Application):
 
     def update_title_topbar(self):
         try:
-            title = self.sock.get_focused_view_title()
+            title = wayfire_utils.get_focused_view_title()
             title = self.utils.filter_utf8_for_gtk(title)
             initial_title = title.split()[0]
             if title == "":
                 return True
-            wclass = self.sock.get_focused_view_app_id()
+            wclass = wayfire_utils.get_focused_view_app_id()
 
             title = self.modify_title(title)
 
@@ -1869,7 +1878,7 @@ class Panel(Adw.Application):
             return False
 
     def update_widgets(self, title, wm_class, initial_title, pid, workspace_id):
-        is_fullscreen = self.sock.is_focused_view_fullscreen()
+        is_fullscreen = wayfire_utils.is_focused_view_fullscreen()
         if is_fullscreen:
             return True
         # Modify title based on certain patterns
