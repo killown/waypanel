@@ -538,7 +538,7 @@ class Utils(Adw.Application):
             button.set_sensitive(False)
             return button
         if use_function is False:
-            self.create_gesture(button, 1, lambda *_: Utils.run_cmd(cmd))
+            self.create_gesture(button, 1, lambda *_: self.run_cmd(cmd))
             self.create_gesture(button, 3, lambda *_: self.dockbar_remove(icon_name))
         else:
             self.create_gesture(button, 1, use_function)
