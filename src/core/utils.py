@@ -25,6 +25,10 @@ sock = WayfireSocket(addr)
 
 wayfire_utils = WayfireUtils(sock)
 
+from wayfire.extra.stipc import Stipc
+
+
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("Gtk4LayerShell", "1.0")
@@ -49,6 +53,7 @@ class Utils(Adw.Application):
         self.gio_icon_list = Gio.AppInfo.get_all()
         self.gestures = {}
         self.sock = self.compositor()
+        self.stipc = Stipc(sock)
 
         self.focused_view_id = None
         if not os.path.exists(self.config_path):
@@ -76,7 +81,28 @@ class Utils(Adw.Application):
             except Exception as e:
                 print(e)
 
-    def run_cmd(command):
+    def find_view_middle_cursor_position(self, view_geometry, monitor_geometry):
+        # Calculate the middle position of the view
+        view_middle_x = view_geometry["x"] + view_geometry["width"] // 2
+        view_middle_y = view_geometry["y"] + view_geometry["height"] // 2
+
+        # Calculate the offset from the monitor's top-left corner
+        cursor_x = monitor_geometry["x"] + view_middle_x
+        cursor_y = monitor_geometry["y"] + view_middle_y
+
+        return cursor_x, cursor_y
+
+    def move_cursor_middle(self, view_id):
+        view = sock.get_view(view_id)
+        output_id = view["output-id"]
+        view_geometry = view["geometry"]
+        output_geometry = sock.get_output(output_id)["geometry"]
+        cursor_x, cursor_y = self.find_view_middle_cursor_position(
+            view_geometry, output_geometry
+        )
+        self.stipc.move_cursor(cursor_x, cursor_y)
+
+    def run_cmd(self, command):
         command = shlex.split(command)
         subprocess.run(command, check=True)
 
@@ -466,13 +492,13 @@ class Utils(Adw.Application):
                     # FIXME: better get animation speed from the conf so define a proper sleep
                     sleep(0.2)
                     wayfire_utils.go_workspace_set_focus(view_id)
-                    wayfire_utils.move_cursor_middle(view_id)
+                    self.move_cursor_middle(view_id)
                 else:
                     wayfire_utils.go_workspace_set_focus(view_id)
-                    wayfire_utils.move_cursor_middle(view_id)
+                    self.move_cursor_middle(view_id)
             else:
                 wayfire_utils.go_workspace_set_focus(view_id)
-                wayfire_utils.move_cursor_middle(view_id)
+                self.move_cursor_middle(view_id)
                 #wayfire_utils.view_focus_indicator_effect(view_id)
 
         except Exception as e:
