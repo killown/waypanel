@@ -143,9 +143,8 @@ class Panel(Adw.Application):
         with open(self.topbar_config, "r") as f:
             self.topbar_config_loaded = toml.load(f)
 
-        self.background_panel_enabled = self.topbar_config_loaded["background_panel"][
-            "enabled"
-        ]
+            #self.background_panel_enabled = self.topbar_config_loaded["background_panel"][
+            #"enabled"]
 
         with open(self.dockbar_config, "r") as f:
             self.dockbar_config_loaded = toml.load(f)
@@ -645,7 +644,7 @@ class Panel(Adw.Application):
 
     def output_get_focus(self):
         focused_output_name = wayfire_utils.get_focused_output_name()
-        Utils.run_cmd("xrandr --output {0}".format(focused_output_name))
+        self.utils.run_cmd("xrandr --output {0}".format(focused_output_name))
         if self.dpms_enabled:
             self.dpms_manager(self.turn_off_monitor_timeout)
 
@@ -708,17 +707,17 @@ class Panel(Adw.Application):
         # call it once to update without waiting timeout_add
         # then timeout_add until scale is false
 
-        if self.background_panel_enabled:
-            self.update_background_panel()
-            self.set_cpu_usage()
-            GLib.timeout_add_seconds(1, self.set_cpu_usage)
-            GLib.timeout_add_seconds(1, self.update_background_panel)
-            set_layer_position_exclusive(self.update_background_panel)
+        #if self.background_panel_enabled:
+        #    self.update_background_panel()
+        #    self.set_cpu_usage()
+        #    GLib.timeout_add_seconds(1, self.set_cpu_usage)
+        #    GLib.timeout_add_seconds(1, self.update_background_panel)
+        #    set_layer_position_exclusive(self.update_background_panel)
         self.is_scale_active = True
 
     def on_scale_desactivated(self):
-        if self.background_panel_enabled:
-            unset_layer_position_exclusive(self.update_background_panel)
+        #if self.background_panel_enabled:
+        #    unset_layer_position_exclusive(self.update_background_panel)
         self.is_scale_active = False
 
     def on_view_focused(self):
@@ -856,8 +855,8 @@ class Panel(Adw.Application):
         if self.all_panels_enabled:
             self.top_panel.present()
             self.dock.do_start()
-            if self.background_panel_enabled:
-                self.top_panel_background.present()
+            #if self.background_panel_enabled:
+            #    self.top_panel_background.present()
             # load the dockbar
 
     def setup_panel_buttons(self):
