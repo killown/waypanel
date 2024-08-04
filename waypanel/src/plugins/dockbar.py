@@ -23,18 +23,12 @@ from ..core.utils import Utils
 import numpy as np
 import sys
 from src.core.background import *
-
 from wayfire.ipc import WayfireSocket
+from  wayfire.extra.ipc_utils import WayfireUtils
 
-from  wayfire.extra.ipc_utils import *
-
-
-addr = os.getenv("WAYFIRE_SOCKET")
-sock = WayfireSocket(addr)
 
 sys.path.append("/usr/lib/waypanel/")
 
-wayfire_utils = WayfireUtils(sock)
 
 class Dockbar(Adw.Application):
     def __init__(self, **kwargs):
@@ -54,7 +48,8 @@ class Dockbar(Adw.Application):
         self.psutil_store = {}
         self.panel_cfg = self.utils.load_topbar_config()
         self.taskbar_list = [None]
-        self.sock = self.compositor()
+        self.sock = WayfireSocket()
+        self.wf_utils = WayfireUtils(self.sock)
         self.all_pids = [i["id"] for i in self.sock.list_views()]
         self.timeout_taskbar = None
         self.buttons_id = {}
@@ -179,7 +174,7 @@ class Dockbar(Adw.Application):
             self.on_title_changed(view)
 
         if msg["event"] == "view-tiled" and view:
-            if wayfire_utils.is_view_maximized(view["id"]):
+            if self.wf_utils.is_view_maximized(view["id"]):
                 self.was_last_focused_view_maximized = True
 
         if msg["event"] == "app-id-changed":
@@ -222,7 +217,7 @@ class Dockbar(Adw.Application):
         while True:
             try:
                 # FIXME: create a file dedicated for watching events
-                sock = self.compositor()
+                sock = WayfireSocket()
                 sock.watch()
                 view = None
                 while True:
@@ -282,9 +277,6 @@ class Dockbar(Adw.Application):
     def on_title_changed(self, view):
         self.update_taskbar(view)
 
-    def compositor(self):
-        addr = os.getenv("WAYFIRE_SOCKET")
-        return WayfireSocket(addr)
 
     def get_default_monitor_name(self):
         try:
@@ -316,7 +308,7 @@ class Dockbar(Adw.Application):
             else:
                 image.set_from_icon_name(icon)
         if title:
-            output_name = wayfire_utils.get_view_output_name(view["id"])
+            output_name = self.wf_utils.get_view_output_name(view["id"])
             default_output = self.get_default_monitor_name()
 
             if output_name != default_output:
@@ -376,14 +368,14 @@ class Dockbar(Adw.Application):
         return True
 
     def pid_exist(self, id):
-        pid = wayfire_utils.get_view_pid(id)
+        pid = self.wf_utils.get_view_pid(id)
         if pid != -1:
             return True
         else:
             return False
 
     def id_exist(self, id):
-        ids = wayfire_utils.list_ids()
+        ids = self.wf_utils.list_ids()
         if id in ids:
             return True
         else:
@@ -391,7 +383,7 @@ class Dockbar(Adw.Application):
 
     def update_taskbar_list(self):
         self.Taskbar("h", "taskbar")
-        ids = wayfire_utils.list_ids()
+        ids = self.wf_utils.list_ids()
         button_ids = self.buttons_id.copy()
         for button_id in button_ids:
             if button_id not in ids:
@@ -418,7 +410,7 @@ class Dockbar(Adw.Application):
     # this whole function is a mess, this was based in another compositor
     # so need a rework
     def dockbar_append(self, *_):
-        wclass = wayfire_utils.get_focused_view_app_id().lower()
+        wclass = self.wf_utils.get_focused_view_app_id().lower()
         wclass = "".join(wclass)
         initial_title = wclass
         icon = wclass
