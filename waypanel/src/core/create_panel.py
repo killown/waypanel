@@ -71,7 +71,6 @@ def get_monitor_info():
 def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     window = Adw.Window(application=app)
     window.add_css_class(class_style)
-
     # lets try to set monitor info from Gdk, if not, get the panel default info instead
     monitor = get_monitor_info()
     gdk_monitor = None
@@ -96,7 +95,11 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
         gdk_monitor = monitor["monitor"]
 
     window.set_default_size(width, height)
+    window.set_focus_on_click(False)
     LayerShell.init_for_window(window)
+    LayerShell.set_namespace(window, "waypanel")
+    #LayerShell.set_keyboard_mode(window, 0)
+
 
     if gdk_monitor is not None:
         LayerShell.set_monitor(window, gdk_monitor)

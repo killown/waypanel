@@ -10,21 +10,15 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk4LayerShell as LayerShell
 from gi.repository import Gtk, Adw, Gio, GObject
 from subprocess import Popen
-
+from subprocess import check_output
 import toml
 from wayfire.ipc import WayfireSocket
 
 from wayfire.ipc import *
 
-from wayfire.extra.ipc_utils import *
+from wayfire.extra.ipc_utils import WayfireUtils
 import shlex
-import subprocess
-
-addr = os.getenv("WAYFIRE_SOCKET")
-sock = WayfireSocket(addr)
-
-wayfire_utils = WayfireUtils(sock)
-
+from subprocess import call
 from wayfire.extra.stipc import Stipc
 
 
@@ -52,8 +46,9 @@ class Utils(Adw.Application):
         self.icon_names = [icon for icon in Gtk.IconTheme().get_icon_names()]
         self.gio_icon_list = Gio.AppInfo.get_all()
         self.gestures = {}
-        self.sock = self.compositor()
-        self.stipc = Stipc(sock)
+        self.sock = WayfireSocket()
+        self.wf_utils = WayfireUtils(self.sock)
+        self.stipc = Stipc(self.sock)
 
         self.focused_view_id = None
         if not os.path.exists(self.config_path):
@@ -93,10 +88,10 @@ class Utils(Adw.Application):
         return cursor_x, cursor_y
 
     def move_cursor_middle(self, view_id):
-        view = sock.get_view(view_id)
+        view = self.sock.get_view(view_id)
         output_id = view["output-id"]
         view_geometry = view["geometry"]
-        output_geometry = sock.get_output(output_id)["geometry"]
+        output_geometry = self.sock.get_output(output_id)["geometry"]
         cursor_x, cursor_y = self.find_view_middle_cursor_position(
             view_geometry, output_geometry
         )
@@ -104,7 +99,7 @@ class Utils(Adw.Application):
 
     def run_cmd(self, command):
         command = shlex.split(command)
-        subprocess.run(command, check=True)
+        Popen(command)
 
     def widget_exists(self, widget):
         return widget is not None and isinstance(widget, Gtk.Widget)
@@ -217,7 +212,7 @@ class Utils(Adw.Application):
         pass
 
     def watch_events(self):
-        sock = self.compositor()
+        sock = WayfireSocket()
         sock.watch()
         while True:
             try:
@@ -312,6 +307,30 @@ class Utils(Adw.Application):
                     return exist
         return ""
 
+    def dpms_status(self):
+        status = check_output(["wlopm"]).decode().strip().split("\n")
+        dpms_status = {}
+        for line in status:
+            line = line.split()
+            dpms_status[line[0]] = line[1]
+        return dpms_status
+
+    def dpms(self, state, output_name=None):
+        if state == "off" and output_name is None:
+            outputs = [output["name"] for output in self.list_outputs()]
+            for output in outputs:
+                call("wlopm --off {}".format(output).split())
+        if state == "on" and output_name is None:
+            outputs = [output["name"] for output in self.list_outputs()]
+            for output in outputs:
+                call("wlopm --on {}".format(output).split())
+        if state == "on":
+            call("wlopm --on {}".format(output_name).split())
+        if state == "off":
+            call("wlopm --off {}".format(output_name).split())
+        if state == "toggle":
+            call("wlopm --toggle {}".format(output_name).split())
+
     def create_taskbar_launcher(
         self,
         wmclass,
@@ -381,7 +400,7 @@ class Utils(Adw.Application):
             return Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
 
         # no pid no new taskbar button, that will crash the panel
-        pid = wayfire_utils.get_view_pid(view_id)
+        pid = self.wf_utils.get_view_pid(view_id)
         if pid == -1:
             return
 
@@ -390,7 +409,7 @@ class Utils(Adw.Application):
         if class_style is not None:
             box.add_css_class(class_style)
 
-        output_name = wayfire_utils.get_view_output_name(view_id)
+        output_name = self.wf_utils.get_view_output_name(view_id)
         default_output = self.get_default_monitor_name(self.topbar_config)
 
         use_this_title = title[:30]
@@ -424,7 +443,7 @@ class Utils(Adw.Application):
         box.add_css_class("box_from_clickable_image")
 
         self.create_gesture(box, 1, lambda *_: self.set_view_focus(view_id))
-        self.create_gesture(box, 2, lambda *_: wayfire_utils.close_view(view_id))
+        self.create_gesture(box, 2, lambda *_: self.wf_utils.close_view(view_id))
         self.create_gesture(box, 3, lambda *_: self.set_view_active_workspace(view_id))
 
         return box
@@ -441,36 +460,31 @@ class Utils(Adw.Application):
             print(f"Config file '{config_file_path}' not found.")
             return None
 
-    def compositor(self):
-        addr = os.getenv("WAYFIRE_SOCKET")
-        return WayfireSocket(addr)
-
     def set_view_active_workspace(self, view_id):
-        wayfire_utils.scale_toggle()
-        active_workspace = wayfire_utils.get_active_workspace()
-        output_id = wayfire_utils.get_focused_output_id()
-        wayfire_utils.set_workspace(active_workspace, view_id=view_id, output_id=output_id)
+        self.wf_utils.scale_toggle()
+        active_workspace = self.wf_utils.get_active_workspace()
+        output_id = self.wf_utils.get_focused_output_id()
+        self.wf_utils.set_workspace(active_workspace, view_id=view_id, output_id=output_id)
 
     def close_view(self, view_id):
-        wayfire_utils.close_view(view_id)
+        self.wf_utils.close_view(view_id)
 
     def view_focus_indicator_effect(self, view_id):
-        sock = self.compositor()
         precision = 1
         values = np.arange(0.1, 1, 0.1)
         float_sequence = [round(value, precision) for value in values]
-        original_alpha = sock.get_view_alpha(view_id)["alpha"]
+        original_alpha = self.sock.get_view_alpha(view_id)["alpha"]
         for f in float_sequence:
             try:
-                wayfire_utils.set_view_alpha(view_id, f)
+                self.wf_utils.set_view_alpha(view_id, f)
                 sleep(0.04)
             except Exception as e:
                 print(e)
-        wayfire_utils.set_view_alpha(view_id, original_alpha)
+        self.wf_utils.set_view_alpha(view_id, original_alpha)
 
     def set_view_focus(self, view_id):
         try:
-            view = sock.get_view(view_id)
+            view = self.sock.get_view(view_id)
             if view is None:
                 return
 
@@ -488,18 +502,18 @@ class Utils(Adw.Application):
                 # another issue with scale is, if you enable close on new views option it will close faster than you set layer on bottom
                 # thus will produce the same kind of issue
                 if self.is_scale_active[output_id] is True:
-                    sock.scale_toggle()
+                    self.sock.scale_toggle()
                     # FIXME: better get animation speed from the conf so define a proper sleep
                     sleep(0.2)
-                    wayfire_utils.go_workspace_set_focus(view_id)
+                    self.wf_utils.go_workspace_set_focus(view_id)
                     self.move_cursor_middle(view_id)
                 else:
-                    wayfire_utils.go_workspace_set_focus(view_id)
+                    self.wf_utils.go_workspace_set_focus(view_id)
                     self.move_cursor_middle(view_id)
             else:
-                wayfire_utils.go_workspace_set_focus(view_id)
+                self.wf_utils.go_workspace_set_focus(view_id)
                 self.move_cursor_middle(view_id)
-                #wayfire_utils.view_focus_indicator_effect(view_id)
+                #self.wf_utils.view_focus_indicator_effect(view_id)
 
         except Exception as e:
             print(e)
@@ -526,7 +540,13 @@ class Utils(Adw.Application):
     ):
         box = Gtk.Box(spacing=2)
         box.add_css_class(Class_Style)
+        box.set_can_focus(False)
+        box.set_focusable(False)
+        box.set_focus_on_click(False)
         button = Adw.ButtonContent()
+        button.set_can_focus(False)
+        button.set_focusable(False)
+        button.set_focus_on_click(False)
         if use_label:
             button.set_label(icon_name)
         else:
