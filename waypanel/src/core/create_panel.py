@@ -3,6 +3,7 @@ import os
 import toml
 import sys
 
+
 gi.require_version("Adw", "1")
 gi.require_version("Gtk4LayerShell", "1.0")
 from gi.repository import Gtk4LayerShell as LayerShell

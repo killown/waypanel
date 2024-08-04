@@ -4,7 +4,7 @@ import gi
 import json
 from subprocess import Popen, call, check_output as out
 from collections import ChainMap
-from src.core.create_panel import (
+from waypanel.src.core.create_panel import (
     set_layer_position_exclusive,
     unset_layer_position_exclusive,
 )
@@ -22,7 +22,7 @@ from ..core.create_panel import (
 from ..core.utils import Utils
 import numpy as np
 import sys
-from src.core.background import *
+from waypanel.src.core.background import *
 from wayfire.ipc import WayfireSocket
 from  wayfire.extra.ipc_utils import WayfireUtils
 

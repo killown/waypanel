@@ -2,7 +2,8 @@
 import os
 from pathlib import Path
 
-os.environ["GI_TYPELIB_PATH"] = "/usr/include/waypanel/src"
+
+os.environ["GI_TYPELIB_PATH"] = os.path.expanduser('~/.local/lib/gtk4-layer-shell/lib/girepository-1.0')
 
 from ctypes import CDLL
 
@@ -13,14 +14,12 @@ import gi
 
 import sys
 
-sys.path.append("/opt/waypanel/")
 
-from src.core.utils import Utils as utils
-from src.core.create_panel import *
+from waypanel.src.core.utils import Utils as utils
+from waypanel.src.core.create_panel import *
 from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
 import datetime
 import importlib
-import wayfire.ipc as wayfire
 from wayfire.ipc import *
 import netifaces
 import soundcard as sc
@@ -48,17 +47,17 @@ import pulsectl
 import toml
 from collections import ChainMap
 
-from src.plugins.dockbar import Dockbar
-from src.plugins.bookmarksPopover import PopoverBookmarks
-from src.plugins.dashboardPopover import PopoverDashboard
-from src.plugins.dashboardSoundCard import SoundCardDashboard
-from src.plugins.dashboardBluetooth import BluetoothDashboard
-from src.plugins.dashboardSystem import SystemDashboard
-from src.plugins.folders import PopoverFolders
-from src.plugins.clipboardMenu import MenuClipboard
-from src.plugins.launcherMenu import MenuLauncher
-from src.core.utils import Utils
-from src.core.background import *
+from waypanel.src.plugins.dockbar import Dockbar
+from waypanel.src.plugins.bookmarksPopover import PopoverBookmarks
+from waypanel.src.plugins.dashboardPopover import PopoverDashboard
+from waypanel.src.plugins.dashboardSoundCard import SoundCardDashboard
+from waypanel.src.plugins.dashboardBluetooth import BluetoothDashboard
+from waypanel.src.plugins.dashboardSystem import SystemDashboard
+from waypanel.src.plugins.folders import PopoverFolders
+from waypanel.src.plugins.clipboardMenu import MenuClipboard
+from waypanel.src.plugins.launcherMenu import MenuLauncher
+from waypanel.src.core.utils import Utils
+from waypanel.src.core.background import *
 from wayfire.ipc import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
 
