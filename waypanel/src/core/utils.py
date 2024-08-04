@@ -1,13 +1,10 @@
 import os
 import math
 import gi
-from src.core.background import *
+from waypanel.src.core.background import *
 import numpy as np
 from time import sleep
 
-gi.require_version("Gtk4LayerShell", "1.0")
-gi.require_version("Adw", "1")
-from gi.repository import Gtk4LayerShell as LayerShell
 from gi.repository import Gtk, Adw, Gio, GObject
 from subprocess import Popen
 from subprocess import check_output
@@ -25,7 +22,6 @@ from wayfire.extra.stipc import Stipc
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-gi.require_version("Gtk4LayerShell", "1.0")
 
 
 class Utils(Adw.Application):
