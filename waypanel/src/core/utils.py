@@ -4,7 +4,7 @@ import gi
 from waypanel.src.core.background import *
 import numpy as np
 from time import sleep
-
+import subprocess
 from gi.repository import Gtk, Adw, Gio, GObject
 from subprocess import Popen
 from subprocess import check_output
@@ -237,6 +237,48 @@ class Utils(Adw.Application):
             if desktop_file_found:
                 return deskfile
         return None
+
+    def layer_shell_check(self):
+        """Check if gtk4-layer-shell is installed, and install it if not."""
+        # Define paths
+        install_path = os.path.expanduser('~/.local/lib/gtk4-layer-shell')
+        installed_marker = os.path.join(install_path, 'libgtk_layer_shell.so')  # Adjust if necessary
+        temp_dir = '/tmp/gtk4-layer-shell'
+        repo_url = 'https://github.com/wmww/gtk4-layer-shell.git'
+        build_dir = 'build'
+        
+        # Check if the library is installed
+        if os.path.exists(installed_marker):
+            print("gtk4-layer-shell is already installed.")
+            return
+        
+        # Proceed with installation if not installed
+        print("gtk4-layer-shell is not installed. Installing...")
+        
+        # Create a temporary directory
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir)
+        
+        # Clone the repository
+        print("Cloning the repository...")
+        subprocess.run(['git', 'clone', repo_url, temp_dir], check=True)
+        
+        # Change to the repository directory
+        os.chdir(temp_dir)
+        
+        # Set up the build directory with Meson
+        print("Configuring the build environment...")
+        subprocess.run(['meson', 'setup', f'--prefix={install_path}', '-Dexamples=true', '-Ddocs=true', '-Dtests=true', build_dir], check=True)
+        
+        # Build the project
+        print("Building the project...")
+        subprocess.run(['ninja', '-C', build_dir], check=True)
+        
+        # Install the project
+        print("Installing the project...")
+        subprocess.run(['ninja', '-C', build_dir, 'install'], check=True)
+        
+        print("Installation complete.")
 
     def extract_icon_info(self, application_name):
         icon_name = None
