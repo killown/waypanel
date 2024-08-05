@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='waypanel',
-    version='0.8.0',
+    version='0.8.2',
     author='killown',
     author_email='systemofdown@gmail.com',
     description='A Wayfire panel that behaves like a shell',
