@@ -1,7 +1,4 @@
 from setuptools import setup
-from setuptools.command.install import install as _install
-import subprocess
-import os
 
 setup(
     name='waypanel',
