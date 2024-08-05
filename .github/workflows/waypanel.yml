@@ -19,7 +19,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libgobject-introspection-dev \
+            libgirepository1.0-dev \
             pkg-config \
             python3-dev \
             build-essential
@@ -52,7 +52,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libgobject-introspection-dev \
+            libgirepository1.0-dev \
             pkg-config \
             python3-dev \
             build-essential
