@@ -51,6 +51,21 @@ class Utils(Adw.Application):
             os.makedirs(self.config_path)
 
         self.is_scale_active = {}
+        self.terminal_emulators = [
+            "kitty",
+            "gnome-terminal",
+            "terminator",
+            "xterm",
+            "konsole",
+            "urxvt",
+            "alacritty",
+            "wezterm",
+            "lxterminal",
+            "xfce4-terminal",
+            "tilix",
+            "st",
+            "rxvt"
+        ]
         self.start_thread_compositor()
 
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
@@ -402,10 +417,11 @@ class Utils(Adw.Application):
 
     def get_icon(self, wm_class, initial_title, title):
         title = self.filter_utf8_for_gtk(title)
-        if "kitty" in wm_class and "kitty" not in title.lower():
-            title_icon = self.icon_exist(initial_title)
-            if title_icon:
-                return title_icon
+        for terminal in self.terminal_emulators:
+            if terminal in wm_class and terminal not in title.lower():
+                title_icon = self.icon_exist(initial_title)
+                if title_icon:
+                    return title_icon
 
         web_apps = {
             "chromium",

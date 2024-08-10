@@ -2,7 +2,8 @@ import gi
 import os
 import toml
 import sys
-
+from wayfire import WayfireSocket 
+sock = WayfireSocket()
 
 gi.require_version("Adw", "1")
 gi.require_version("Gtk4LayerShell", "1.0")
@@ -75,7 +76,7 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     # lets try to set monitor info from Gdk, if not, get the panel default info instead
     monitor = get_monitor_info()
     gdk_monitor = None
-    monitor_name = None
+    monitor_name = sock.list_outputs()[0]["name"]
     home = os.path.expanduser("~")
     config_path = os.path.join(home, ".config/waypanel")
     panel_config = os.path.join(config_path, "panel.toml")
@@ -90,6 +91,7 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     if len(argv) > 1:
         argv = sys.argv[1]
         monitor_name = argv
+
 
     if monitor_name in monitor:
         monitor = monitor[monitor_name]
