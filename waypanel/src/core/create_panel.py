@@ -80,6 +80,12 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     home = os.path.expanduser("~")
     config_path = os.path.join(home, ".config/waypanel")
     panel_config = os.path.join(config_path, "panel.toml")
+    full_path = os.path.abspath(__file__)
+    directory_path = os.path.dirname(full_path)
+    parent_directory_path = os.path.dirname(directory_path)
+    parent_directory_path = os.path.dirname(parent_directory_path)
+    if not os.path.exists(panel_config):
+        panel_config = os.path.join(parent_directory_path, "config/panel.toml")
     with open(panel_config) as panel_config:
         config = toml.load(panel_config)
 

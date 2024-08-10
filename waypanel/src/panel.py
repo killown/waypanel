@@ -205,18 +205,51 @@ class Panel(Adw.Application):
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
         self.home = os.path.expanduser("~")
+        full_path = os.path.abspath(__file__)
+        directory_path = os.path.dirname(full_path)
+        #get the parent directory, waypane/src will go for waypanel
+        directory_path = os.path.dirname(directory_path)
+
+        # Initial path setup
         self.scripts = os.path.join(self.home, ".config/waypanel/scripts")
+        if not self.file_exists(self.scripts): 
+            self.scripts = "../config/scripts"
+
         self.config_path = os.path.join(self.home, ".config/waypanel")
+
         self.dockbar_config = os.path.join(self.config_path, "dockbar.toml")
+        if not self.file_exists(self.dockbar_config):
+            self.dockbar_config = os.path.join(directory_path, "config/dockbar.toml")
+
         self.style_css_config = os.path.join(self.config_path, "style.css")
+        if not self.file_exists(self.style_css_config):
+            self.style_css_config = os.path.join(directory_path, "config/style.css")
+
         self.workspace_list_config = os.path.join(self.config_path, "workspacebar.toml")
+        if not self.file_exists(self.workspace_list_config):
+            self.workspace_list_config = os.path.join(directory_path, "config/workspacebar.toml")
+
         self.topbar_config = os.path.join(self.config_path, "panel.toml")
+        if not self.file_exists(self.topbar_config):
+            self.topbar_config = os.path.join(directory_path, "config/panel.toml")
+
         self.menu_config = os.path.join(self.config_path, "menu.toml")
+        if not self.file_exists(self.menu_config):
+            self.menu_config = os.path.join(directory_path, "config/menu.toml")
+
         self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
+        if not self.file_exists(self.window_notes_config):
+            self.window_notes_config = os.path.join(directory_path, "config/window-config.toml")
+
         self.cmd_config = os.path.join(self.config_path, "cmd.toml")
+        if not self.file_exists(self.cmd_config):
+            self.cmd_config = os.path.join(directory_path, "config/cmd.toml")
+
         self.topbar_launcher_config = os.path.join(
             self.config_path, "topbar-launcher.toml"
         )
+        if not self.file_exists(self.topbar_launcher_config):
+            self.topbar_launcher_config = os.path.join(directory_path, "config/topbar-launcher.toml")
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
         if not os.path.exists(self.config_path):
@@ -383,6 +416,9 @@ class Panel(Adw.Application):
             return True
         else:
             return False
+
+    def file_exists(self, full_path):
+        return os.path.exists(full_path)
 
     def handle_tilling_layout(self, view):
         if view["type"] == "toplevel" and view["parent"] == -1:
@@ -2005,9 +2041,17 @@ sock = WayfireSocket()
 home = os.path.expanduser("~")
 config_path = os.path.join(home, ".config/waypanel")
 panel_config = os.path.join(config_path, "panel.toml")
+full_path = os.path.abspath(__file__)
+directory_path = os.path.dirname(full_path)
+directory_path = os.path.dirname(directory_path)
+if not os.path.exists(panel_config): 
+    panel_config = os.path.join(directory_path, "config/panel.toml")
+    print(panel_config, directory_path)
+
 with open(panel_config) as panel_config:
     config = toml.load(panel_config)
 monitor_name = sock.list_outputs()[0]["name"]
+output_id = sock.list_outputs()[0]["id"]
 try:
     monitor_name = config["monitor"]["name"]
 except KeyError:

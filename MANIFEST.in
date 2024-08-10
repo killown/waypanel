@@ -1,6 +1,9 @@
 # Include all Python source files
 recursive-include waypanel/src *
 
+# Include all Python source files
+recursive-include waypanel/config *
+
 # Include README file
 include README.md
 
