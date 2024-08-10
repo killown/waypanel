@@ -103,7 +103,7 @@ class Panel(Adw.Application):
         self.waypanel_started_now = True
         self.window_title_from_topbar = None
         self.active_window = None
-        self.last_view_toplevel_focused = None
+        self.last_toplevel_focused_view = None
         self.last_focused_output = None
         self.is_scale_active = None
         self.focused_output = None
@@ -126,18 +126,18 @@ class Panel(Adw.Application):
         self.window_title_topbar_length = config["window_title_lenght"]["size"]
 
         # Monitor dimensions to set the panel size
-        self.monitor_width, self.monitor_height = 0, 0
+        monitor = sock.list_outputs()[0]
+        self.monitor_width, self.monitor_height = monitor["geometry"]["width"], monitor["geometry"]["height"]
         if "monitor" in config:
             self.monitor_width, self.monitor_height = (
                 config["monitor"]["width"],
                 config["monitor"]["height"],
             )
-        self.monitor_name = None
+        self.monitor_name = sock.list_outputs()[0]["name"]
         try:
             self.monitor_name = config["monitor"]["name"]
         except KeyError:
-            print("configure [monitor] in .config/panel.toml")
-            sys.exit()
+            print("using the first monitor from the list")
 
         with open(self.topbar_config, "r") as f:
             self.topbar_config_loaded = toml.load(f)
@@ -574,7 +574,7 @@ class Panel(Adw.Application):
         # in the top bar then you need a toplevel window to maximize_last_view
         # if not, it will try to maximize the LayerShell
         # big comment because I am sure I will forget why I did this
-        self.last_view_toplevel_focused = view_id
+        self.last_toplevel_focused_view = view_id
 
     def dpms_manager(self, timeout=0):
         # if timeout is zero, turn off all monitors and return false for probably glib.timeout
@@ -584,7 +584,7 @@ class Panel(Adw.Application):
             )
             # no dpms while the focused view is fullscreen
             if not self.wf_utils.is_focused_view_fullscreen():
-                self.wf_utils.dpms("off")
+                self.utils.dpms("off")
                 return False
             else:
                 return True
@@ -916,10 +916,10 @@ class Panel(Adw.Application):
         self.top_panel_box_full.add_controller(EventScroll)
 
     def maximize_last_focused_view(self, *_):
-        self.maximize(self.last_view_toplevel_focused)
+        self.wf_utils.maximize(self.last_toplevel_focused_view)
 
     def close_last_focused_view(self, *_):
-        self.sock.close_view(self.last_view_toplevel_focused)
+        self.sock.close_view(self.last_toplevel_focused_view)
 
     def close_fullscreen_buttons(self):
         # Creating close and full screen buttons for the top bar
@@ -951,10 +951,10 @@ class Panel(Adw.Application):
         self.cf_box.add_css_class("cf_box")
         self.top_panel_box_for_buttons.append(self.cf_box)
 
-    def minimize_view(self, *kargs):
-        view_id = self.sock.get_focused_view()["id"]
-        print(view_id)
-        self.sock.set_view_minimized(view_id, True)
+    def minimize_view(self, *_):
+        if not self.last_toplevel_focused_view:
+            return
+        self.sock.set_view_minimized(self.last_toplevel_focused_view, True)
 
     def right_position_launcher_topbar(self):
         # Creating close and full screen buttons for the top bar
@@ -1185,7 +1185,7 @@ class Panel(Adw.Application):
             )
 
         if is_mullvad_active:
-            vpn_menu.set_icon_name("mullvad-symbolic")
+            vpn_menu.set_icon_name("mullvad-vpn")
         else:
             vpn_menu.set_icon_name("stock_disconnect")
 
@@ -1530,13 +1530,13 @@ class Panel(Adw.Application):
     def bluetooth_manager(self):
         bt = BluetoothDashboard()
         bt = bt.create_menu_popover_bluetooth(self, app)
-        bt.set_icon_name("preferences-bluetooth-symbolic")
+        bt.set_icon_name("bluetooth")
         return bt
 
     def system_dashboard(self):
         s = SystemDashboard()
         s = s.create_menu_popover_system(self, app)
-        s.set_icon_name("shutdown_highlight-symbolic")
+        s.set_icon_name("system-shutdown")
         return s
 
     def volume_slider(self):
@@ -1636,7 +1636,6 @@ class Panel(Adw.Application):
         self.utils.run_app("swaync-client -t")
 
     def disk_usage_by_pid(self):
-        
         pid = self.wf_utils.get_focused_view_pid()
         p = psutil.Process(pid)
         io_counters = p.io_counters()
@@ -1659,7 +1658,7 @@ class Panel(Adw.Application):
         """
         # Retrieve information about the active window
         
-        view = self.sock.get_view(self.last_view_toplevel_focused)
+        view = self.sock.get_view(self.last_toplevel_focused_view)
         title = view["title"]
         title = self.utils.filter_utf8_for_gtk(title)
         wm_class = view["app-id"].lower()
@@ -2008,12 +2007,11 @@ config_path = os.path.join(home, ".config/waypanel")
 panel_config = os.path.join(config_path, "panel.toml")
 with open(panel_config) as panel_config:
     config = toml.load(panel_config)
-monitor_name = None
+monitor_name = sock.list_outputs()[0]["name"]
 try:
     monitor_name = config["monitor"]["name"]
 except KeyError:
-    print("configure [monitor] in .config/panel.toml")
-    sys.exit()
+    print("Using the first monitor from the list")
 
 argv = sys.argv
 if len(argv) > 0:

@@ -44,7 +44,7 @@ class SystemDashboard(Adw.Application):
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        self.menubutton_dashboard.set_icon_name("systemsettings")
+        self.menubutton_dashboard.set_icon_name("grub-customizer")
         return self.menubutton_dashboard
 
     def create_popover_system(self, *_):
