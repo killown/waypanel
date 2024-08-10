@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='waypanel',
@@ -23,5 +23,7 @@ setup(
             'waypanel=waypanel.main:Panel',
         ],
     },
+    packages=find_packages(),
+    include_package_data=True,  # Include files specified in MANIFEST.in
 )
 

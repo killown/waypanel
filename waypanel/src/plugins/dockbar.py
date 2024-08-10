@@ -38,13 +38,42 @@ class Dockbar(Adw.Application):
         self.home = os.path.expanduser("~")
         self.webapps_applications = os.path.join(self.home, ".local/share/applications")
         self.config_path = os.path.join(self.home, ".config/waypanel")
+
+        full_path = os.path.abspath(__file__)
+        directory_path = os.path.dirname(full_path)
+        parent_directory_path = os.path.dirname(directory_path)
+        parent_directory_path = os.path.dirname(parent_directory_path)
+
+        self.home = os.path.expanduser("~")
+        self.config_path = os.path.join(self.home, ".config/waypanel")
+
         self.dockbar_config = os.path.join(self.config_path, "dockbar.toml")
+        if not self.file_exists(self.dockbar_config):
+            self.dockbar_config = os.path.join(parent_directory_path, "config/dockbar.toml")
+
         self.style_css_config = os.path.join(self.config_path, "style.css")
+        if not self.file_exists(self.style_css_config):
+            self.style_css_config = os.path.join(parent_directory_path, "config/style.css")
+
         self.workspace_list_config = os.path.join(self.config_path, "workspacebar.toml")
+        if not self.file_exists(self.workspace_list_config):
+            self.workspace_list_config = os.path.join(parent_directory_path, "config/workspacebar.toml")
+
         self.topbar_config = os.path.join(self.config_path, "panel.toml")
+        if not self.file_exists(self.topbar_config):
+            self.topbar_config = os.path.join(parent_directory_path, "config/panel.toml")
+
         self.menu_config = os.path.join(self.config_path, "menu.toml")
+        if not self.file_exists(self.menu_config):
+            self.menu_config = os.path.join(parent_directory_path, "config/menu.toml")
+
         self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
+        if not self.file_exists(self.window_notes_config):
+            self.window_notes_config = os.path.join(parent_directory_path, "config/window-config.toml")
+
         self.cmd_config = os.path.join(self.config_path, "cmd.toml")
+        if not self.file_exists(self.cmd_config):
+            self.cmd_config = os.path.join(parent_directory_path, "config/cmd.toml")
         self.psutil_store = {}
         self.panel_cfg = self.utils.load_topbar_config()
         self.taskbar_list = [None]
@@ -144,6 +173,9 @@ class Dockbar(Adw.Application):
         # if not len(self.hyprinstance.get_windows()) == 0:
         # self.update_active_window_shell()
         print()
+
+    def file_exists(self, full_path):
+        return os.path.exists(full_path)
 
     def handle_view_event(self, msg, view):
         if "event" not in msg:
