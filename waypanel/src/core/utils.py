@@ -5,7 +5,7 @@ from waypanel.src.core.background import *
 import numpy as np
 from time import sleep
 import subprocess
-from gi.repository import Gtk, Adw, Gio, GObject
+from gi.repository import Gtk, Adw, Gio, Gdk
 from subprocess import Popen
 from subprocess import check_output
 import toml
@@ -27,21 +27,7 @@ gi.require_version("Adw", "1")
 class Utils(Adw.Application):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.home = os.path.expanduser("~")
-        self.webapps_applications = os.path.join(self.home, ".local/share/applications")
-        self.config_path = os.path.join(self.home, ".config/waypanel")
-        full_path = os.path.abspath(__file__)
-        directory_path = os.path.dirname(full_path)
-        parent_directory_path = os.path.dirname(directory_path)
-        parent_directory_path = os.path.dirname(parent_directory_path)
-        self.home = os.path.expanduser("~")
-        self.dockbar_config = os.path.join(parent_directory_path, "config/dockbar.toml")
-        self.style_css_config = os.path.join(parent_directory_path, "config/style.css")
-        self.workspace_list_config = os.path.join(parent_directory_path, "config/workspacebar.toml")
-        self.topbar_config = os.path.join(parent_directory_path, "config/panel.toml")
-        self.menu_config = os.path.join(parent_directory_path, "config/menu.toml")
-        self.window_notes_config = os.path.join(parent_directory_path, "config/window-config.toml")
-        self.cmd_config = os.path.join(parent_directory_path, "config/cmd.toml")
+        self._setup_config_paths()
         self.psutil_store = {}
         self.panel_cfg = self.load_topbar_config()
         self.icon_names = [icon for icon in Gtk.IconTheme().get_icon_names()]
@@ -74,7 +60,7 @@ class Utils(Adw.Application):
         self.start_thread_compositor()
 
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
-        if "kitty" in cmd and cmd_mode:
+        if [c for c in self.terminal_emulators if cmd in c] and cmd_mode:
             try:
                 Popen(cmd.split(), start_new_session=True)
             except Exception as e:
@@ -129,7 +115,6 @@ class Utils(Adw.Application):
             orientation = Gtk.Orientation.VERTICAL
 
         box = Gtk.Box(spacing=10, orientation=orientation)
-        box.add_css_class("box_from_dockbar")
 
         with open(config, "r") as f:
             config_data = toml.load(f)
@@ -175,6 +160,98 @@ class Utils(Adw.Application):
                 except KeyError:
                     return None
 
+    def get_monitor_info(self):
+        """
+        Retrieve information about the connected monitors.
+
+        This function retrieves information about the connected monitors,
+        such as their dimensions and names,
+        and returns the information as a dictionary.
+
+        Returns:
+            dict: A dictionary containing information
+            about the connected monitors.
+        """
+        # get default display and retrieve
+        # information about the connected monitors
+        screen = Gdk.Display.get_default()
+        monitors = screen.get_monitors()
+        monitor_info = {}
+        for monitor in monitors:
+            monitor_width = monitor.get_geometry().width
+            monitor_height = monitor.get_geometry().height
+            name = monitor.props.connector
+            monitor_info[name] = [monitor_width, monitor_height]
+
+        return monitor_info
+
+    def get_workspaces_with_views(self):
+        focused_output = self.sock.get_focused_output()
+        monitor = focused_output["geometry"]
+        ws_with_views = []
+        views = self.wf_utils.focused_output_views()
+
+        if views:
+            views = [
+                view for view in views
+                if view["role"] == "toplevel" and not view["minimized"] and view["app-id"] != "nil" and view["pid"] > 0
+            ]
+
+            if views:
+                grid_width = focused_output["workspace"]["grid_width"]
+                grid_height = focused_output["workspace"]["grid_height"]
+                current_ws_x = focused_output["workspace"]["x"]
+                current_ws_y = focused_output["workspace"]["y"]
+
+                for ws_x in range(grid_width):
+                    for ws_y in range(grid_height):
+                        for view in views:
+                            if self.wf_utils.view_visible_on_workspace(
+                                view["geometry"],
+                                ws_x - current_ws_x,
+                                ws_y - current_ws_y,
+                                monitor
+                            ):
+                                ws_with_views.append({"x": ws_x, "y": ws_y, "view-id": view["id"]})
+                return ws_with_views
+        return []
+
+
+    def go_next_workspace_with_views(self):
+        workspaces = self.get_workspaces_with_views()
+        if not workspaces:
+            return
+
+        active_workspace = self.sock.get_focused_output()["workspace"]
+        active_workspace = {"x": active_workspace["x"], "y": active_workspace["y"]}
+
+        next_ws = self.wf_utils.get_next_workspace(workspaces, active_workspace)
+        if next_ws:
+            self.sock.set_workspace(next_ws)
+
+    def take_note_app(self, *_):
+        """
+        Open the note-taking application specified in the configuration file.
+
+        This function reads the configuration file to retrieve the command for
+        the note-taking application,
+        and then executes the command to open the application.
+
+        Args:
+            *_: Additional arguments (unused).
+
+        Returns:
+            None
+        """
+        # Read the configuration file and load the configuration
+        with open(self.topbar_config, "r") as f:
+            config = toml.load(f)
+
+        # Run the note-taking application using the specified command
+        self.utils.run_app(config["take_note_app"]["cmd"])
+
+
+
     def CreateFromAppList(
         self, config, orientation, class_style, callback=None, use_label=False
     ):
@@ -184,7 +261,6 @@ class Utils(Adw.Application):
             orientation = Gtk.Orientation.VERTICAL
 
         box = Gtk.Box(spacing=10, orientation=orientation)
-        box.add_css_class("box_from_dockbar")
 
         with open(config, "r") as f:
             config_data = toml.load(f)
@@ -350,16 +426,10 @@ class Utils(Adw.Application):
             if exist:
                 if hasattr(exist[0], "get_names"):
                     return exist[0].get_names()[0]
-                if hasattr(exist[0], "get_icon"):
-                    return exist[0].get_icon()
                 if hasattr(exist[0], "get_name"):
                     return exist[0].get_name()
-                else:
-                    # assume it's a string
-                    return exist[0]
             else:
                 exist = [name for name in self.icon_names if argument.lower() in name]
-                print(exist)
                 if exist:
                     exist = exist[0]
                     return exist
@@ -577,6 +647,94 @@ class Utils(Adw.Application):
         except Exception as e:
             print(e)
             return True
+ 
+    def file_exists(self, path):
+        return os.path.isfile(path)
+
+    def _setup_config_paths(self):
+        """Set up configuration paths based on the user's home directory."""
+        config_paths = self.setup_config_paths()
+        # Set instance variables from the dictionary
+        self.home = config_paths["home"]
+        self.webapps_applications = os.path.join(self.home, ".local/share/applications")
+        self.scripts = config_paths["scripts"]
+        self.config_path = config_paths["config_path"]
+        self.dockbar_config = config_paths["dockbar_config"]
+        self.style_css_config = config_paths["style_css_config"]
+        self.workspace_list_config = config_paths["workspace_list_config"]
+        self.topbar_config = config_paths["topbar_config"]
+        self.menu_config = config_paths["menu_config"]
+        self.window_notes_config = config_paths["window_notes_config"]
+        self.cmd_config = config_paths["cmd_config"]
+        self.topbar_launcher_config = config_paths["topbar_launcher_config"]
+        self.cache_folder = config_paths["cache_folder"]
+
+    def setup_config_paths(self):
+        home = os.path.expanduser("~")
+        full_path = os.path.abspath(__file__)
+        directory_path = os.path.dirname(full_path)
+        # Get the parent directory, waypane/src will go for waypanel
+        directory_path = os.path.dirname(directory_path)
+
+        # Initial path setup
+        scripts = os.path.join(home, ".config/waypanel/scripts")
+        if not self.file_exists(scripts):
+            scripts = "../config/scripts"
+
+        config_path = os.path.join(home, ".config/waypanel")
+
+        dockbar_config = os.path.join(config_path, "dockbar.toml")
+        if not self.file_exists(dockbar_config):
+            dockbar_config = os.path.join(directory_path, "config/dockbar.toml")
+
+        style_css_config = os.path.join(config_path, "style.css")
+        if not self.file_exists(style_css_config):
+            style_css_config = os.path.join(directory_path, "config/style.css")
+
+        workspace_list_config = os.path.join(config_path, "workspacebar.toml")
+        if not self.file_exists(workspace_list_config):
+            workspace_list_config = os.path.join(directory_path, "config/workspacebar.toml")
+
+        topbar_config = os.path.join(config_path, "panel.toml")
+        if not self.file_exists(topbar_config):
+            topbar_config = os.path.join(directory_path, "config/panel.toml")
+
+        menu_config = os.path.join(config_path, "menu.toml")
+        if not self.file_exists(menu_config):
+            menu_config = os.path.join(directory_path, "config/menu.toml")
+
+        window_notes_config = os.path.join(config_path, "window-config.toml")
+        if not self.file_exists(window_notes_config):
+            window_notes_config = os.path.join(directory_path, "config/window-config.toml")
+
+        cmd_config = os.path.join(config_path, "cmd.toml")
+        if not self.file_exists(cmd_config):
+            cmd_config = os.path.join(directory_path, "config/cmd.toml")
+
+        topbar_launcher_config = os.path.join(config_path, "topbar-launcher.toml")
+        if not self.file_exists(topbar_launcher_config):
+            topbar_launcher_config = os.path.join(directory_path, "config/topbar-launcher.toml")
+
+        cache_folder = os.path.join(home, ".cache/waypanel")
+        
+        if not os.path.exists(config_path):
+            os.makedirs(config_path)
+            os.makedirs(scripts)
+
+        return {
+            "home": home,
+            "scripts": scripts,
+            "config_path": config_path,
+            "dockbar_config": dockbar_config,
+            "style_css_config": style_css_config,
+            "workspace_list_config": workspace_list_config,
+            "topbar_config": topbar_config,
+            "menu_config": menu_config,
+            "window_notes_config": window_notes_config,
+            "cmd_config": cmd_config,
+            "topbar_launcher_config": topbar_launcher_config,
+            "cache_folder": cache_folder
+        }
 
     def filter_utf8_for_gtk(self, byte_string, encoding="utf-8"):
         if isinstance(byte_string, str):
