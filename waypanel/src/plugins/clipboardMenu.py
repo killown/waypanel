@@ -67,7 +67,7 @@ class MenuClipboard(Gtk.Application):
                 continue
             row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
             image_button = Gtk.Button()
-            image_button.set_icon_name("clipboard")
+            image_button.set_icon_name("edit-paste")
             image_button.connect("clicked", self.cliphist_delete_selected)
             spacer = Gtk.Label(label="    ")
             row_hbox.append(image_button)
@@ -88,7 +88,7 @@ class MenuClipboard(Gtk.Application):
         self.app = app
         self.menubutton_clipboard = Gtk.Button.new()
         self.menubutton_clipboard.connect("clicked", self.open_popover_clipboard)
-        self.menubutton_clipboard.set_icon_name("clipboard")
+        self.menubutton_clipboard.set_icon_name("edit-paste")
         obj.top_panel_box_systray.append(self.menubutton_clipboard)
 
     def create_popover_clipboard(self, *_):

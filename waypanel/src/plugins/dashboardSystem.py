@@ -44,7 +44,7 @@ class SystemDashboard(Adw.Application):
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        self.menubutton_dashboard.set_icon_name("grub-customizer")
+        self.menubutton_dashboard.set_icon_name("system-shutdown-symbolic")
         return self.menubutton_dashboard
 
     def create_popover_system(self, *_):
@@ -65,7 +65,7 @@ class SystemDashboard(Adw.Application):
         self.stack.props.hexpand = True
         self.stack.props.vexpand = True
         data_and_categories = {
-            ("Logout", "", "logout_highlight-symbolic"): "System Actions",
+            ("Logout", "", "gnome-logout"): "System Actions",
             ("Reboot", "", "system-reboot-symbolic"): "System Actions",
             ("Shutdown", "", "gnome-shutdown-symbolic"): "System Actions",
             ("Lock", "", "system-lock-screen-symbolic"): "System Actions",

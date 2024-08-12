@@ -133,7 +133,7 @@ class SoundCardDashboard(Adw.Application):
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        self.menubutton_dashboard.set_icon_name("icon_vol_slider")
+        self.menubutton_dashboard.set_icon_name("audio-volume-high")
         return self.menubutton_dashboard
 
     def create_popover_soundcard(self, *_):

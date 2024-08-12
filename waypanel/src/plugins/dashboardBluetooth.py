@@ -50,7 +50,7 @@ class BluetoothDashboard(Adw.Application):
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        self.menubutton_dashboard.set_icon_name("start-here-archlinux")
+        self.menubutton_dashboard.set_icon_name("preferences-bluetooth-symbolic")
         return self.menubutton_dashboard
 
     def CreateGesture(self, widget, mouse_button, arg):
@@ -87,9 +87,9 @@ class BluetoothDashboard(Adw.Application):
             self.bluetooth_buttons[device_name] = device_id
             bluetooth_button.set_label(device_name)
             if device_id in connected_devices:
-                bluetooth_button.set_icon_name("bluetooth-active")
+                bluetooth_button.set_icon_name("blueberry-tray")
             else:
-                bluetooth_button.set_icon_name("bluetooth-disabled")
+                bluetooth_button.set_icon_name("blueman-disabled-symbolic")
             gesture = Gtk.GestureClick.new()
             gesture.connect("released", self.on_bluetooth_clicked)
             gesture.set_button(1)

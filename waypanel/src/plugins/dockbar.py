@@ -35,45 +35,6 @@ class Dockbar(Adw.Application):
         super().__init__(**kwargs)
 
         self.utils = Utils()
-        self.home = os.path.expanduser("~")
-        self.webapps_applications = os.path.join(self.home, ".local/share/applications")
-        self.config_path = os.path.join(self.home, ".config/waypanel")
-
-        full_path = os.path.abspath(__file__)
-        directory_path = os.path.dirname(full_path)
-        parent_directory_path = os.path.dirname(directory_path)
-        parent_directory_path = os.path.dirname(parent_directory_path)
-
-        self.home = os.path.expanduser("~")
-        self.config_path = os.path.join(self.home, ".config/waypanel")
-
-        self.dockbar_config = os.path.join(self.config_path, "dockbar.toml")
-        if not self.file_exists(self.dockbar_config):
-            self.dockbar_config = os.path.join(parent_directory_path, "config/dockbar.toml")
-
-        self.style_css_config = os.path.join(self.config_path, "style.css")
-        if not self.file_exists(self.style_css_config):
-            self.style_css_config = os.path.join(parent_directory_path, "config/style.css")
-
-        self.workspace_list_config = os.path.join(self.config_path, "workspacebar.toml")
-        if not self.file_exists(self.workspace_list_config):
-            self.workspace_list_config = os.path.join(parent_directory_path, "config/workspacebar.toml")
-
-        self.topbar_config = os.path.join(self.config_path, "panel.toml")
-        if not self.file_exists(self.topbar_config):
-            self.topbar_config = os.path.join(parent_directory_path, "config/panel.toml")
-
-        self.menu_config = os.path.join(self.config_path, "menu.toml")
-        if not self.file_exists(self.menu_config):
-            self.menu_config = os.path.join(parent_directory_path, "config/menu.toml")
-
-        self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
-        if not self.file_exists(self.window_notes_config):
-            self.window_notes_config = os.path.join(parent_directory_path, "config/window-config.toml")
-
-        self.cmd_config = os.path.join(self.config_path, "cmd.toml")
-        if not self.file_exists(self.cmd_config):
-            self.cmd_config = os.path.join(parent_directory_path, "config/cmd.toml")
         self.psutil_store = {}
         self.panel_cfg = self.utils.load_topbar_config()
         self.taskbar_list = [None]
@@ -86,6 +47,27 @@ class Dockbar(Adw.Application):
         self.stored_windows = []
         self.window_created_now = None
         self.is_scale_active = {}
+        self._setup_config_paths()
+
+
+    def _setup_config_paths(self):
+        """Set up configuration paths based on the user's home directory."""
+        config_paths = self.utils.setup_config_paths()
+        
+        # Set instance variables from the dictionary
+        self.home = config_paths["home"]
+        self.webapps_applications = os.path.join(self.home, ".local/share/applications")
+        self.scripts = config_paths["scripts"]
+        self.config_path = config_paths["config_path"]
+        self.dockbar_config = config_paths["dockbar_config"]
+        self.style_css_config = config_paths["style_css_config"]
+        self.workspace_list_config = config_paths["workspace_list_config"]
+        self.topbar_config = config_paths["topbar_config"]
+        self.menu_config = config_paths["menu_config"]
+        self.window_notes_config = config_paths["window_notes_config"]
+        self.cmd_config = config_paths["cmd_config"]
+        self.topbar_launcher_config = config_paths["topbar_launcher_config"]
+        self.cache_folder = config_paths["cache_folder"]
 
     # Start the Dockbar application
     def do_start(self):
@@ -372,6 +354,8 @@ class Dockbar(Adw.Application):
         view_id,
         callback=None,
     ):
+        if not class_style:
+            class_style = "taskbar"
         if not self.id_exist(view_id):
             return
         if view_id in self.taskbar_list:
