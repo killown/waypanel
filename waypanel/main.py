@@ -2,6 +2,8 @@ import os
 import shutil
 import subprocess
 
+from gi import check_version
+
 def layer_shell_check():
     """Check if gtk4-layer-shell is installed, and install it if not."""
     # Define paths
@@ -45,23 +47,51 @@ def layer_shell_check():
     print("Installation complete.")
 
 
-def copy_directory_contents(src_dir, dest_dir):
+def create_first_config():
+    dest_dir = os.path.expanduser('~/.config/waypanel')
+    
+    # Ensure the destination directory exists
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
-    for item in os.listdir(src_dir):
-        src_path = os.path.join(src_dir, item)
-        dest_path = os.path.join(dest_dir, item)
 
-        if os.path.isdir(src_path):
-            shutil.copytree(src_path, dest_path, dirs_exist_ok=True)
-        else:
-            shutil.copy2(src_path, dest_path)
+    temp_dir = '/tmp/waypanel'
+    repo_url = 'https://github.com/killown/waypanel.git'
+    config_dir = 'waypanel/config'  # Updated config directory path
 
+    try:
+        # Clone the repository
+        print("Cloning the repository...")
+        subprocess.run(['git', 'clone', repo_url, temp_dir], check=True)
+
+        # Path to the config directory in the cloned repo
+        src_config_dir = os.path.join(temp_dir, config_dir)
+        
+        # Ensure the config directory exists; create it if not
+        if not os.path.exists(src_config_dir):
+            print(f"Config directory {src_config_dir} does not exist. Creating it...")
+            os.makedirs(src_config_dir)
+
+        # Copy the config directory to the destination
+        print(f"Copying config files from {src_config_dir} to {dest_dir}...")
+        shutil.copytree(src_config_dir, dest_dir, dirs_exist_ok=True)
+        
+    finally:
+        # Clean up the temporary directory
+        if os.path.exists(temp_dir):
+            print(f"Cleaning up temporary directory {temp_dir}...")
+            shutil.rmtree(temp_dir)
+
+    print("Configuration setup is complete.")
+ 
 def check_config_path():
     config_path =  os.path.expanduser('~/.config/waypanel')
+    
+    if os.path.exists(config_path) and not os.listdir(config_path):
+        print(f"{config_path} is empty. Removing it...")
+        os.rmdir(config_path)
+ 
     if not os.path.exists(config_path):
-        copy_directory_contents("config", config_path)
-
+        create_first_config()
 
 
 layer_shell_check()
