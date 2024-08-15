@@ -1,4 +1,10 @@
 from setuptools import setup, find_packages
+import pathlib
+
+# Read the requirements from the requirements.txt file
+def read_requirements():
+    with open('requirements.txt') as f:
+        return f.read().splitlines()
 
 setup(
     name='waypanel',
@@ -15,9 +21,7 @@ setup(
         'Operating System :: OS Independent',
     ],
     python_requires='>=3.6',
-    install_requires=[
-        # List your project dependencies here.
-    ],
+    install_requires=read_requirements(),  # Reading from requirements.txt
     entry_points={
         'console_scripts': [
             'waypanel=waypanel.main:Panel',
