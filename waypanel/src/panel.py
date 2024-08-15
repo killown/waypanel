@@ -716,13 +716,13 @@ class Panel(Adw.Application):
         #    GLib.timeout_add_seconds(1, self.update_background_panel)
         #    set_layer_position_exclusive(self.update_background_panel)
         self.is_scale_active = True
-        self.utils.run_app('wofi --yoffset 20 --search ....')
+        #self.utils.run_app('wofi --yoffset 20 --search ....')
 
     def on_scale_desactivated(self):
         #if self.background_panel_enabled:
         #    unset_layer_position_exclusive(self.update_background_panel)
         self.is_scale_active = False
-        self.utils.run_app("pkill wofi")
+        #self.utils.run_app("pkill wofi")
 
     def on_view_focused(self):
         self.update_title_topbar()
