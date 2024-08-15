@@ -243,6 +243,12 @@ class Dockbar(Adw.Application):
                         if "event" in msg:
                             self.handle_view_event(msg, view)
                             self.handle_plugin_event(msg)
+                            if msg["event"] == "view-geometry-changed":
+                                if "view" in msg:
+                                    view = msg["view"]
+                                    if view["layer"] != "workspace":
+                                        self.taskbar_remove(view["id"])
+
 
                     except Exception as e:
                         print(e)
@@ -363,6 +369,8 @@ class Dockbar(Adw.Application):
         view = self.sock.get_view(view_id)
         if view["type"] != "toplevel":
             return
+        if view["layer"] == "background":
+            return
         id = view["id"]
         title = view["title"]
         title = self.utils.filter_utf8_for_gtk(title)
@@ -391,11 +399,14 @@ class Dockbar(Adw.Application):
             return False
 
     def id_exist(self, id):
-        ids = self.wf_utils.list_ids()
+        ids = self.wf_utils.list_ids()        
         if id in ids:
+            layer = self.sock.get_view(id)["layer"]
+            if layer != "workspace":
+                return False
             return True
-        else:
-            return False
+        
+        return False
 
     def update_taskbar_list(self):
         self.Taskbar("h", "taskbar")
