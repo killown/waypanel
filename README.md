@@ -34,13 +34,8 @@ Method 1: Installing `waypanel` using `pip`
 
 After installation, you can run `waypanel` using:
 
-    waypanel
+    /path/to/waypanel-env/bin/waypanel
 
-### Step 3: Deactivate the Virtual Environment
-
-Once you are done, deactivate the virtual environment by typing:
-
-    deactivate
 
 ### Step 4:  Add Environment Activation to Shell Startup
 
@@ -69,7 +64,7 @@ Clone the `waypanel` repository from GitHub:
       source waypanel-env/bin/activate
       
 
-### Step 3: Install `waypanel` Locally
+### Step 3: Install `waypanel`
 
 Once the virtual environment is activated, install `waypanel` using the following command:
 
