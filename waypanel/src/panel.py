@@ -1,50 +1,19 @@
 #!/usr/bin/env python3
-import os
-from pathlib import Path
-
-
-from ctypes import CDLL
-
-CDLL("libgtk4-layer-shell.so")
-from subprocess import Popen
-from subprocess import check_output
-import gi
-
-import sys
-
-
-from waypanel.src.core.utils import Utils as utils
-from waypanel.src.core.create_panel import *
-from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
 import datetime
-import importlib
-from wayfire.ipc import *
 import netifaces
 import soundcard as sc
-
-gi.require_version("Gtk4LayerShell", "1.0")
-from gi.repository import Gtk4LayerShell as LayerShell
-
-spam_loader = importlib.util.find_spec("wayfire")
-found = spam_loader is not None
-
-sys.setrecursionlimit(1600)
-
-if not found:
-    print("Module wayfire not found, try | pip install wayfire | and try again")
-    sys.exit()
-
-spam_loader = importlib.util.find_spec("gi")
-found = spam_loader is not None
-
-if not found:
-    print("Module 'gi' not found, install python gobject")
-
+import os
+from pathlib import Path
+from subprocess import Popen
+from subprocess import check_output
+import sys
 import psutil
 import pulsectl
 import toml
 from collections import ChainMap
-
+from waypanel.src.core.utils import Utils as utils
+from waypanel.src.core.create_panel import CreatePanel
+from gi.repository import Gtk, Adw, GLib, Gio, Gdk
 from waypanel.src.plugins.dockbar import Dockbar
 from waypanel.src.plugins.bookmarksPopover import PopoverBookmarks
 from waypanel.src.plugins.dashboardPopover import PopoverDashboard
@@ -55,10 +24,11 @@ from waypanel.src.plugins.folders import PopoverFolders
 from waypanel.src.plugins.clipboardMenu import MenuClipboard
 from waypanel.src.plugins.launcherMenu import MenuLauncher
 from waypanel.src.core.utils import Utils
-from waypanel.src.core.background import *
+from waypanel.src.core.background import Background
 from wayfire.ipc import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
 
+app = None 
 
 class Panel(Adw.Application):
     def __init__(self, application_id):
@@ -123,14 +93,14 @@ class Panel(Adw.Application):
         self.window_title_topbar_length = config["window_title_lenght"]["size"]
 
         # Monitor dimensions to set the panel size
-        monitor = sock.list_outputs()[0]
+        monitor = self.sock.list_outputs()[0]
         self.monitor_width, self.monitor_height = monitor["geometry"]["width"], monitor["geometry"]["height"]
         if "monitor" in config:
             self.monitor_width, self.monitor_height = (
                 config["monitor"]["width"],
                 config["monitor"]["height"],
             )
-        self.monitor_name = sock.list_outputs()[0]["name"]
+        self.monitor_name = self.sock.list_outputs()[0]["name"]
         try:
             self.monitor_name = config["monitor"]["name"]
         except KeyError:
@@ -248,23 +218,22 @@ class Panel(Adw.Application):
             "scale",
         ]
 
-        #extra_features = ExtraFeatures()
-        #enabled_plugins = extra_features.list_enabled_plugins()
+        enabled_plugins = self.sock.get_option_value("core/plugins")["value"].split()
 
         COLOR_RESET = "\033[0m"
         COLOR_RED = "\033[91m"
 
-        #for plugin in required_plugins:
-        #    if plugin not in enabled_plugins:
-        #        print(
-        #            "\n{0}ERROR:{2} The plugin: {0}'{1}'{2} is required to start the shell!!!!".format(
-        #                COLOR_RED,
-        #                plugin,
-        #                COLOR_RESET,
-        #            )
-        #        )
-        #        print("Required Plugin List: {}".format(required_plugins))
-        #        sys.exit()
+        for plugin in required_plugins:
+            if plugin not in enabled_plugins:
+                print(
+                    "\n{0}ERROR:{2} The plugin: {0}'{1}'{2} is required to start the shell!!!!".format(
+                        COLOR_RED,
+                        plugin,
+                        COLOR_RESET,
+                    )
+                )
+                print("Required Plugin List: {}".format(required_plugins))
+                sys.exit()
 
         # plugins
         self.MenuLauncher = MenuLauncher()
@@ -1921,37 +1890,39 @@ class Panel(Adw.Application):
         self.volume_watch()
 
 
+def start_panel():
+    sock = WayfireSocket()
+    home = os.path.expanduser("~")
+    config_path = os.path.join(home, ".config/waypanel")
+    panel_config = os.path.join(config_path, "panel.toml")
+    full_path = os.path.abspath(__file__)
+    directory_path = os.path.dirname(full_path)
+    directory_path = os.path.dirname(directory_path)
+    if not os.path.exists(panel_config): 
+        panel_config = os.path.join(directory_path, "config/panel.toml")
+        print(panel_config, directory_path)
 
+    with open(panel_config) as panel_config:
+        config = toml.load(panel_config)
+    monitor_name = sock.list_outputs()[0]["name"]
+    try:
+        monitor_name = config["monitor"]["name"]
+    except KeyError:
+        print("No monitor found in config, using the default output {}".format(monitor_name))
 
-sock = WayfireSocket()
-home = os.path.expanduser("~")
-config_path = os.path.join(home, ".config/waypanel")
-panel_config = os.path.join(config_path, "panel.toml")
-full_path = os.path.abspath(__file__)
-directory_path = os.path.dirname(full_path)
-directory_path = os.path.dirname(directory_path)
-if not os.path.exists(panel_config): 
-    panel_config = os.path.join(directory_path, "config/panel.toml")
-    print(panel_config, directory_path)
+    argv = sys.argv
+    if monitor_name is None and len(argv) > 0:
+        monitor_name = argv[-1].strip()
+    global app
+    app_name = "com.waypanel.{0}".format(monitor_name) 
+    app = Panel(application_id=app_name)
+    app.run(None)
+    sock.watch(["event"])
+    while True:
+        msg = sock.read_message()
+        if "output" not in msg:
+            continue
+        if monitor_name == msg["output-data"]["name"]:
+            if msg["event"] == "output-added":
+                app.run(None)
 
-with open(panel_config) as panel_config:
-    config = toml.load(panel_config)
-monitor_name = sock.list_outputs()[0]["name"].replace("-","")
-output_id = sock.list_outputs()[0]["id"]
-try:
-    monitor_name = config["monitor"]["name"]
-except KeyError:
-    print("Using the first monitor from the list")
-
-argv = sys.argv
-if len(argv) > 0:
-    monitor_name = argv[0].strip()
-
-app = Panel(application_id="com.waypanel.{0}".format(monitor_name))
-app.run(None)
-sock.watch(["event"])
-while True:
-    msg = sock.read_message()
-    if monitor_name == msg["output"]["name"]:
-        if msg["event"] == "output-added":
-            app.run(None) 
