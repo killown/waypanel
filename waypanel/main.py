@@ -45,7 +45,27 @@ def layer_shell_check():
     print("Installation complete.")
 
 
+def copy_directory_contents(src_dir, dest_dir):
+    if not os.path.exists(dest_dir):
+        os.makedirs(dest_dir)
+    for item in os.listdir(src_dir):
+        src_path = os.path.join(src_dir, item)
+        dest_path = os.path.join(dest_dir, item)
+
+        if os.path.isdir(src_path):
+            shutil.copytree(src_path, dest_path, dirs_exist_ok=True)
+        else:
+            shutil.copy2(src_path, dest_path)
+
+def check_config_path():
+    config_path =  os.path.expanduser('~/.config/waypanel')
+    if not os.path.exists(config_path):
+        copy_directory_contents("config", config_path)
+
+
+
 layer_shell_check()
+check_config_path()
 
 from waypanel.src.panel import *
 
