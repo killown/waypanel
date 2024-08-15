@@ -6,20 +6,74 @@
 
 The core of this panel lies in leveraging a shell overview, reminiscent of GNOME, to elegantly showcase all windows, dock bars, and more. Its primary goal is to optimize CPU usage exclusively during non-overview mode. The panel actively monitors command output, title changes, and widgets only when the overview is active in the background. This means that no unnecessary checks will occur, ensuring that CPU usage remains as low as possible.
 
-### How to Install
+How to Install `waypanel`
+=========================
 
-```
-pip install wayfire
-git clone https://github.com/killown/waypanel
-cd waypanel
-sh install
-mkdir ~/.config/waypanel; cp config/* ~/.config/waypanel
+This guide provides step-by-step instructions to install `waypanel`, both using `pip` and via `git`. It also includes instructions for setting up a virtual environment.
 
-```
+Method 1: Installing `waypanel` using `pip`
+-------------------------------------------
 
-### Start the panel
 
-/usr/bin/waypanel
+### Step 1: Set Up a Virtual Environment (Recommended)
+
+  **Create a virtual environment**:
+    
+    python3 -m venv waypanel-env
+    
+  **Activate the virtual environment**:
+        
+    source waypanel-env/bin/activate
+        
+  **Install `waypanel`**:
+    
+    pip install waypanel
+    
+
+### Step 2: Run `waypanel`
+
+After installation, you can run `waypanel` using:
+
+    waypanel
+
+### Step 3: Deactivate the Virtual Environment
+
+Once you are done, deactivate the virtual environment by typing:
+
+    deactivate
+
+### Step 4:  Add Environment Activation to Shell Startup
+
+To automatically activate the virtual environment when you navigate to your project directory, you can add the following lines to your `.bashrc`, `.zshrc`, or equivalent shell configuration file:
+
+    source /path/to/waypanel-env/bin/activate
+
+Method 2: Installing `waypanel` from github Source
+-------------------------------------------------
+
+### Step 1: Clone the `waypanel` Repository
+
+Clone the `waypanel` repository from GitHub:
+
+    git clone https://github.com/killown/waypanel.git
+    cd waypanel
+
+### Step 2: Set Up a Virtual Environment (Recommended)
+
+  **Create a virtual environment**:
+    
+      python3 -m venv waypanel-env
+    
+  **Activate the virtual environment**:
+       
+      source waypanel-env/bin/activate
+      
+
+### Step 3: Install `waypanel` Locally
+
+Once the virtual environment is activated, install `waypanel` using the following command:
+
+    python3 -m pip install .
 
 ### wayfire.ini
 
