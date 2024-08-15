@@ -803,7 +803,7 @@ class Panel(Adw.Application):
             txt = open(todo, "r").readlines()[-1]
             self.todo_button.set_label(txt.strip())
             # GLib.timeout_add(600000, self.todo_txt)
-        except IndexError:
+        except:
             print("todo.txt is empity or does not exist")
 
         self.tbbox = Gtk.Box(spacing=20)
