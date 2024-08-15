@@ -1,9 +1,5 @@
 import os
-import gi
-
-gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Adw
-from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen, check_output
 from ..core.utils import Utils
 

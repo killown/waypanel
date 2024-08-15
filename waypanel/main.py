@@ -1,8 +1,8 @@
 import os
 import shutil
 import subprocess
-
-from gi import check_version
+from ctypes import CDLL
+import gi
 
 def layer_shell_check():
     """Check if gtk4-layer-shell is installed, and install it if not."""
@@ -114,16 +114,18 @@ def set_gi_typelib_path(primary_path, fallback_path):
         else:
             print(f"Error: Neither the primary path '{primary_path}' nor the fallback path '{fallback_path}' contain any '.typelib' files. Please install the required library.")
 
-
 layer_shell_check()
 check_config_path()
 primary_path = os.path.expanduser('~/.local/lib/gtk4-layer-shell/lib/girepository-1.0')
 fallback_path = os.path.expanduser('~/.local/lib/gtk4-layer-shell/lib64/girepository-1.0')
 set_gi_typelib_path(primary_path, fallback_path)
-
-
-
-from waypanel.src.panel import *
+CDLL("libgtk4-layer-shell.so")
+gi.require_version("Gtk4LayerShell", "1.0")
+gi.require_version('Gtk', '4.0')
+gi.require_version('Playerctl', '2.0')
+gi.require_version('Adw', '1')
+from waypanel.src.panel import start_panel 
+start_panel()
 
 
 
