@@ -261,6 +261,9 @@ class Dockbar(Adw.Application):
     def on_expo_activated(self):
         return
 
+    def on_moving_view(self):
+        return 
+
     def on_expo_desactivated(self):
         return
 
