@@ -94,8 +94,34 @@ def check_config_path():
         create_first_config()
 
 
+def find_typelib_path(base_path):
+    for root, dirs, files in os.walk(base_path):
+        for file in files:
+            if file.endswith('.typelib'):
+                return root
+    return None
+
+def set_gi_typelib_path(primary_path, fallback_path):
+    primary_typelib_path = find_typelib_path(primary_path)
+    if primary_typelib_path:
+        os.environ["GI_TYPELIB_PATH"] = primary_typelib_path
+        print(f"GI_TYPELIB_PATH set to: {primary_typelib_path}")
+    else:
+        fallback_typelib_path = find_typelib_path(fallback_path)
+        if fallback_typelib_path:
+            os.environ["GI_TYPELIB_PATH"] = fallback_typelib_path
+            print(f"GI_TYPELIB_PATH set to fallback path: {fallback_typelib_path}")
+        else:
+            print(f"Error: Neither the primary path '{primary_path}' nor the fallback path '{fallback_path}' contain any '.typelib' files. Please install the required library.")
+
+
 layer_shell_check()
 check_config_path()
+primary_path = os.path.expanduser('~/.local/lib/gtk4-layer-shell/lib/girepository-1.0')
+fallback_path = os.path.expanduser('~/.local/lib/gtk4-layer-shell/lib64/girepository-1.0')
+set_gi_typelib_path(primary_path, fallback_path)
+
+
 
 from waypanel.src.panel import *
 

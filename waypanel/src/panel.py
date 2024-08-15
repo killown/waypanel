@@ -3,8 +3,6 @@ import os
 from pathlib import Path
 
 
-os.environ["GI_TYPELIB_PATH"] = os.path.expanduser('~/.local/lib/gtk4-layer-shell/lib/girepository-1.0')
-
 from ctypes import CDLL
 
 CDLL("libgtk4-layer-shell.so")
