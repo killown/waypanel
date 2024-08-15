@@ -12,6 +12,8 @@ random2
 wayfire
 requests
 bs4
+setuptools
+meson
 # Third-party library imports
 pygobject
 
