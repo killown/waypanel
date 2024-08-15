@@ -4,6 +4,7 @@ from gi.repository import Gio, Gtk, Adw
 from gi.repository import Gtk4LayerShell as LayerShell
 from ..core.utils import Utils
 from subprocess import check_output
+from gi.repository import Playerctl, GLib
 
 
 class PopoverDashboard(Adw.Application):
@@ -17,6 +18,11 @@ class PopoverDashboard(Adw.Application):
         self.left_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.right_label = Gtk.Label()
+        # Connect the Playerctl manager signals
+        self.manager = Playerctl.PlayerManager()
+        self.manager.connect('name-appeared', self.on_name_appeared)
+        self.manager.connect('player-vanished', self.on_player_vanished)
+        self.button = None
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -82,7 +88,7 @@ class PopoverDashboard(Adw.Application):
         self.left_box.append(left_label)
 
         # Add the left box to the grid
-        # grid.attach(self.left_box, 0, 0, 1, 2)
+        grid.attach(self.left_box, 0, 0, 1, 1)
 
         # Create a calendar for the right side
         calendar = Gtk.Calendar()
@@ -118,3 +124,41 @@ class PopoverDashboard(Adw.Application):
 
     def popover_is_closed(self, *_):
         return
+ 
+    def on_play(self, player, status, manager):
+        print('player is playing: {}'.format(player.props.player_name))
+
+
+    def on_metadata(self, player, metadata, manager):
+        keys = metadata.keys()
+        if not metadata:
+            return
+        if  "mpris:artUrl" in keys:
+            art_url = metadata["mpris:artUrl"] 
+            #image = Gtk.Image.new_from_file(art_url)
+            #button = Gtk.Button()
+            #button.set_child(image)
+
+        if 'xesam:artist' in keys and 'xesam:title' in keys:
+            print('{} - {}'.format(metadata['xesam:artist'], metadata['xesam:title'] ))
+            #self.button = Gtk.Button()
+            #self.button.set_label(metadata['xesam:title'])
+            #self.left_box.append(self.button)
+
+
+    def init_player(self, name):
+        # choose if you want to manage the player based on the name
+            player = Playerctl.Player.new_from_name(name)
+            player.connect('playback-status::playing', self.on_play, self.manager)
+            player.connect('metadata', self.on_metadata, self.manager)
+            self.manager.manage_player(player)
+
+
+    def on_name_appeared(self, manager, name):
+        self.init_player(name)
+
+
+    def on_player_vanished(self, manager, player):
+        if self.button:
+            self.button.destroy()
+        print('player has exited: {}'.format(player.props.player_name))
