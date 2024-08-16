@@ -271,7 +271,7 @@ class Dockbar(Adw.Application):
         return
 
     def on_app_id_changed(self, view):
-        self.update_taskbar_list()
+        self.update_taskbar_list(view)
         self.new_taskbar_view("h", "taskbar", view["id"])
 
     # events that will make the panel clickable or not
@@ -288,11 +288,11 @@ class Dockbar(Adw.Application):
         return
 
     def on_view_created(self, view):
-        self.update_taskbar_list()
+        self.update_taskbar_list(view)
         self.new_taskbar_view("h", "taskbar", view["id"])
 
     def on_view_destroyed(self, view):
-        self.update_taskbar_list()
+        self.update_taskbar_list(view)
 
     def on_view_wset_changed(self, view):
         self.update_taskbar(view)
@@ -365,14 +365,14 @@ class Dockbar(Adw.Application):
     ):
         if not class_style:
             class_style = "taskbar"
-        if not self.id_exist(view_id):
+        if not self.view_exist(view_id):
             return
         if view_id in self.taskbar_list:
             return
         view = self.sock.get_view(view_id)
         if view["type"] != "toplevel":
             return
-        if view["layer"] == "background":
+        if view["layer"] != "workspace":
             return
         id = view["id"]
         title = view["title"]
@@ -401,17 +401,25 @@ class Dockbar(Adw.Application):
         else:
             return False
 
-    def id_exist(self, id):
-        ids = self.wf_utils.list_ids()        
+    def view_exist(self, id):
+        ids = self.wf_utils.list_ids()
         if id in ids:
-            layer = self.sock.get_view(id)["layer"]
-            if layer != "workspace":
+            view = self.sock.get_view(id)
+            layer = view["layer"] != "workspace"
+            role = view["role"] != "toplevel"
+            mapped = view["mapped"] is False
+            app_id = view["app-id"] == "nil"
+            pid = view["pid"] == -1
+            view_type = view["type"] != "toplevel"
+            if layer or role or mapped or app_id or pid or view_type:
                 return False
             return True
         
         return False
 
-    def update_taskbar_list(self):
+    def update_taskbar_list(self, view):
+        if not self.view_exist(view["id"]):
+            self.taskbar_remove(view["id"])
         self.Taskbar("h", "taskbar")
         ids = self.wf_utils.list_ids()
         button_ids = self.buttons_id.copy()
@@ -429,7 +437,7 @@ class Dockbar(Adw.Application):
         del self.buttons_id[id]
 
     def taskbar_remove(self, id=None):
-        if self.id_exist(id):
+        if self.view_exist(id):
             return
         button = self.buttons_id[id][0]
         if not self.utils.widget_exists(button):
