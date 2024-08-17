@@ -25,10 +25,23 @@ from waypanel.src.plugins.clipboardMenu import MenuClipboard
 from waypanel.src.plugins.launcherMenu import MenuLauncher
 from waypanel.src.core.utils import Utils
 from waypanel.src.core.background import Background
-from wayfire.ipc import WayfireSocket
+from wayfire import WayfireSocket as OriginalWayfireSocket
+from wayfire.core.template import get_msg_template
 from wayfire.extra.ipc_utils import WayfireUtils
 
 app = None 
+
+class WayfireSocket(OriginalWayfireSocket):
+
+    def hide_view(self, view_id):
+        message = get_msg_template("hide-view/hide")
+        message["data"]["view-id"] = view_id
+        self.send_json(message)
+
+    def unhide_view(self, view_id):
+        message = get_msg_template("hide-view/unhide")
+        message["data"]["view-id"] = view_id
+        self.send_json(message)
 
 class Panel(Adw.Application):
     def __init__(self, application_id):
@@ -900,8 +913,38 @@ class Panel(Adw.Application):
     def maximize_last_focused_view(self, *_):
         self.wf_utils.maximize(self.last_toplevel_focused_view)
 
+    def next_visibe_view_active_workspace(self):
+        view_ids = self.wf_utils.get_views_from_active_workspace()
+        views = [i["id"] for i in self.sock.list_views() if i["id"] in view_ids and i["role"] == "toplevel"]
+        if views:
+            view_id = views[0]
+            if view_id:
+                return view_id
+
     def close_last_focused_view(self, *_):
-        self.sock.close_view(self.last_toplevel_focused_view)
+        #need implement a way to detect if hide-view is active, if not, just use normal close view
+        # **Notes**
+        #self.sock.close_view(self.last_toplevel_focused_view)
+
+        # this will freeze the panel if trying to add a button for a wrong non toplevel view
+        # **FIXME**
+        if self.last_toplevel_focused_view:
+            view = self.sock.get_view(self.last_toplevel_focused_view)
+            if view:
+                if view["role"] != "toplevel":
+                    return
+                button = Gtk.Button()
+                button.set_icon_name(view["app-id"])
+                button.connect("clicked", lambda widget: self.on_hidden_view(widget, view))
+                self.top_panel_box_widgets_left.append(button)
+                self.sock.hide_view(self.last_toplevel_focused_view)
+
+    def on_hidden_view(self, widget, view):
+        id = view["id"]
+        self.sock.unhide_view(id)
+        self.sock.set_focus(id)
+        print("why this is not removing the icon")
+        self.top_panel_box_widgets_left.remove(widget)
 
     def close_fullscreen_buttons(self):
         # Creating close and full screen buttons for the top bar
