@@ -1,7 +1,7 @@
 import os
 import random
 import gi
-from gi.repository import Gio, Gtk, Adw, Gdk
+from gi.repository import Gio, Gtk, Adw, GLib
 import cairo
 from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen
@@ -14,6 +14,8 @@ class MenuLauncher(Adw.Application):
         super().__init__(**kwargs)
         self.popover_launcher = None
         self.app = None
+        self.widgets_dict = {}
+        self.all_apps = None
         self.top_panel = None
         self._setup_config_paths()
         self.recent_apps_file = os.path.expanduser("~/config/waypanel/recent-apps.lst")
@@ -72,7 +74,7 @@ class MenuLauncher(Adw.Application):
         self.main_box.append(self.searchbar)
         self.flowbox = Gtk.FlowBox()
         self.flowbox.set_valign(Gtk.Align.START)
-        self.flowbox.set_max_children_per_line(4)
+        self.flowbox.set_max_children_per_line(1)
         self.flowbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.flowbox.set_activate_on_single_click(True)
         self.flowbox.connect("child-activated", self.run_app_from_launcher)
@@ -88,11 +90,106 @@ class MenuLauncher(Adw.Application):
         dockbar_apps = [dockbar_toml[i] for i in dockbar_toml]
         dockbar_names = [dockbar_toml[i]["name"] for i in dockbar_toml]
         dockbar_desktop = [dockbar_toml[i]["desktop_file"] for i in dockbar_toml]
-        all_apps = [i for i in all_apps if i.get_id() not in dockbar_desktop]
+        self.all_apps = [i for i in all_apps if i.get_id() not in dockbar_desktop]
 
         # recent apps have a list of last apps started from the launcher
         recent_apps = self.get_recent_apps()
+        for i in self.all_apps:
+            name = i.get_name()
+            if name not in recent_apps:
+                continue
+            keywords = " ".join(i.get_keywords())
+            if not name:
+                name = i.get_name()
+
+            if name.count(" ") > 2:
+                name = " ".join(name.split()[:3])
+            icon = i.get_icon()
+            cmd = i.get_id()
+            if icon is None:
+                continue
+            self.row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+            self.widgets_dict[i.get_id()] = self.row_hbox
+            self.row_hbox.MYTEXT = name, cmd, keywords
+            line = Gtk.Label.new()
+            line.add_css_class("label_from_popover_launcher")
+            line.set_label(name)
+            line.props.margin_start = 5
+            line.props.hexpand = True
+            line.set_halign(Gtk.Align.START)
+            image = Gtk.Image.new_from_gicon(icon)
+            image.add_css_class("icon_from_popover_launcher")
+            image.props.margin_end = 5
+            image.set_halign(Gtk.Align.END)
+            self.row_hbox.append(image)
+            self.row_hbox.append(line)
+            self.flowbox.append(self.row_hbox)
+
+        for i in self.all_apps:
+            name = i.get_name()
+            if name in recent_apps:
+                continue
+            keywords = " ".join(i.get_keywords())
+
+            if name.count(" ") > 2:
+                name = " ".join(name.split()[:3])
+            icon = i.get_icon()
+            cmd = i.get_id()
+            if icon is None:
+                continue
+            self.row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+            self.widgets_dict[i.get_id()] = self.row_hbox
+            self.row_hbox.MYTEXT = name, cmd, keywords
+            line = Gtk.Label.new()
+            line.add_css_class("label_from_popover_launcher")
+            line.set_label(name)
+            line.props.margin_start = 5
+            line.props.hexpand = True
+            line.set_halign(Gtk.Align.START)
+            image = Gtk.Image.new_from_gicon(icon)
+            image.add_css_class("icon_from_popover_launcher")
+            image.props.margin_end = 5
+            image.set_halign(Gtk.Align.END)
+            self.row_hbox.append(image)
+            self.row_hbox.append(line)
+            self.flowbox.append(self.row_hbox)
+        self.flowbox.set_filter_func(self.on_filter_invalidate)
+        # Connect signal for selecting a row
+        width = self.flowbox.get_preferred_size().natural_size.width
+        self.scrolled_window.set_min_content_width(width)
+        self.scrolled_window.set_min_content_height(600)
+        self.popover_launcher.set_parent(self.menubutton_launcher)
+        self.popover_launcher.popup()
+        return self.popover_launcher
+
+
+    def update_flowbox(self):
+        all_apps = Gio.AppInfo.get_all()
+        if all_apps == self.all_apps:
+            return
+
+        with open(self.dockbar_config, "r") as f:
+            dockbar_toml = toml.load(f)
+
+        dockbar_desktop = [dockbar_toml[i]["desktop_file"] for i in dockbar_toml]
+        all_apps = [i for i in all_apps if i.get_id() not in dockbar_desktop]
+        
+        # remove widgets from uninstalled apps
+        app_ids = [i.get_id() for i in all_apps]
+        for app in self.all_apps:
+            id = app.get_id()
+            if id not in app_ids:
+                try:
+                    self.flowbox.remove(self.widgets_dict[id])
+                except KeyError:
+                    pass
+
+        # add new row if there is a new app installed
+        recent_apps = self.get_recent_apps()
         for i in all_apps:
+            if i in self.all_apps:
+                continue
+
             name = i.get_name()
             if name not in recent_apps:
                 continue
@@ -124,6 +221,8 @@ class MenuLauncher(Adw.Application):
             self.flowbox.append(self.row_hbox)
 
         for i in all_apps:
+            if i in self.all_apps:
+                continue
             name = i.get_name()
             if name in recent_apps:
                 continue
@@ -150,14 +249,8 @@ class MenuLauncher(Adw.Application):
             self.row_hbox.append(image)
             self.row_hbox.append(line)
             self.flowbox.append(self.row_hbox)
-        self.flowbox.set_filter_func(self.on_filter_invalidate)
-        # Connect signal for selecting a row
-        width = self.flowbox.get_preferred_size().natural_size.width
-        self.scrolled_window.set_min_content_width(width * 4)
-        self.scrolled_window.set_min_content_height(600)
-        self.popover_launcher.set_parent(self.menubutton_launcher)
-        self.popover_launcher.popup()
-        return self.popover_launcher
+
+        self.all_apps = all_apps
 
     def add_recent_app(self, app_name):
         os.makedirs(os.path.dirname(self.recent_apps_file), exist_ok=True)
@@ -194,6 +287,7 @@ class MenuLauncher(Adw.Application):
         if self.popover_launcher and self.popover_launcher.is_visible():
             self.popover_launcher.popdown()
         if self.popover_launcher and not self.popover_launcher.is_visible():
+            self.update_flowbox()
             self.popover_launcher.popup()
         if not self.popover_launcher:
             self.popover_launcher = self.create_popover_launcher(self.app)
@@ -215,6 +309,18 @@ class MenuLauncher(Adw.Application):
         self.searchentry.grab_focus()
         print("search entry is focused: {}".format(self.searchentry.is_focus()))
 
+    def select_first_visible_child(self):
+        """Select the first visible child in the flowbox."""
+        def on_child(child):
+            if child.is_visible():
+                self.flowbox.select_child(child)
+                return True  # Stop iteration after selecting the first visible child
+            return False  # Continue iteration
+        
+        # Iterate over visible children and select the first one
+        self.flowbox.selected_foreach(on_child)
+        return False  # Stops the GLib.idle_add loop
+
     def on_search_entry_changed(self, searchentry):
         """The filter_func will be called for each row after the call,
         and it will continue to be called each time a row changes (via [method`Gtk`.ListBoxRow.changed])
@@ -222,7 +328,8 @@ class MenuLauncher(Adw.Application):
         searchentry.grab_focus()
         # run filter (run self.on_filter_invalidate look at self.listbox.set_filter_func(self.on_filter_invalidate) )
         self.flowbox.invalidate_filter()
-
+        GLib.idle_add(self.select_first_visible_child)
+       
     def on_filter_invalidate(self, row):
         text_to_search = self.searchbar.get_text().strip()
         if not isinstance(row, str):

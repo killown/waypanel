@@ -922,19 +922,18 @@ class Panel(Adw.Application):
                 return view_id
 
     def close_last_focused_view(self, *_):
-        #need implement a way to detect if hide-view is active, if not, just use normal close view
-        # **Notes**
-        #self.sock.close_view(self.last_toplevel_focused_view)
+        # if the lib from plugin hide-view is not found then use old close view method
+        if not self.utils.find_wayfire_lib("libhide-view.so"):
+            return
 
-        # this will freeze the panel if trying to add a button for a wrong non toplevel view
-        # **FIXME**
+        #need someway to bring the hidden views into icons in case the panel is restarted
         if self.last_toplevel_focused_view:
             view = self.sock.get_view(self.last_toplevel_focused_view)
             if view:
                 if view["role"] != "toplevel":
                     return
                 button = Gtk.Button()
-                button.set_icon_name(view["app-id"])
+                self.utils.handle_icon_for_button(view, button)
                 button.connect("clicked", lambda widget: self.on_hidden_view(widget, view))
                 self.top_panel_box_widgets_left.append(button)
                 self.sock.hide_view(self.last_toplevel_focused_view)

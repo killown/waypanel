@@ -330,13 +330,15 @@ class Dockbar(Adw.Application):
                 image.set_from_gicon(icon)
             else:
                 image.set_from_icon_name(icon)
-        if title:
-            output_name = self.wf_utils.get_view_output_name(view["id"])
-            default_output = self.get_default_monitor_name()
 
-            if output_name != default_output:
-                title = "({0}) {1}".format(output_name, title)
-            label.set_label(title)
+            #this part enables output name in taskbar list buttons
+            #if title:
+            #  output_name = self.wf_utils.get_view_output_name(view["id"])
+            #default_output = self.get_default_monitor_name()
+
+            # if output_name != default_output:
+            #   title = "({0}) {1}".format(output_name, title)
+            # label.set_label(title)
 
     def Taskbar(self, orientation, class_style, update_button=False, callback=None):
         # Load configuration from dockbar_config file

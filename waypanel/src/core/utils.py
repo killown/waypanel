@@ -9,10 +9,12 @@ from gi.repository import Gtk, Adw, Gio, Gdk
 from subprocess import Popen
 from subprocess import check_output
 import toml
+import aiohttp
+import asyncio
+from aiohttp import ClientTimeout
+from bs4 import BeautifulSoup
 from wayfire.ipc import WayfireSocket
-
 from wayfire.ipc import *
-
 from wayfire.extra.ipc_utils import WayfireUtils
 import shlex
 from subprocess import call
@@ -469,13 +471,19 @@ class Utils(Adw.Application):
         view_id,
         callback=None,
     ):
-        title = self.filter_utf8_for_gtk(title)
         if orientation == "h":
             orientation = Gtk.Orientation.HORIZONTAL
         elif orientation == "v":
             orientation = Gtk.Orientation.VERTICAL
 
-        icon = self.get_icon(wmclass, initial_title, title)
+        if "proton" in wmclass or wmclass == "wine":
+           game_image = self.get_game_image(title)
+           filename = os.path.join("/tmp", wmclass + ".png")
+           if filename:
+               icon = self.download_image(game_image, filename)
+        else:
+            title = self.filter_utf8_for_gtk(title)
+            icon = self.get_icon(wmclass, initial_title, title)
 
         button = self.create_clickable_image(
             icon, class_style, wmclass, title, initial_title, view_id
@@ -538,8 +546,8 @@ class Utils(Adw.Application):
         if class_style is not None:
             box.add_css_class(class_style)
 
-        output_name = self.wf_utils.get_view_output_name(view_id)
-        default_output = self.get_default_monitor_name(self.topbar_config)
+        #output_name = self.wf_utils.get_view_output_name(view_id)
+        #default_output = self.get_default_monitor_name(self.topbar_config)
 
         use_this_title = title[:30]
 
@@ -547,10 +555,13 @@ class Utils(Adw.Application):
         if first_word_length > 13:
             use_this_title = title.split()[0]
 
-        if output_name != default_output:
-            use_this_title = "({0}) {1}".format(output_name, use_this_title)
+        #if output_name != default_output:
+        #    use_this_title = "({0}) {1}".format(output_name, use_this_title)
         label = Gtk.Label.new(use_this_title)
         label.add_css_class("label_from_clickable_image")
+
+        if icon_name.endswith(".png"):
+            image = Gtk.image.new_from_file(icon_name)
 
         if isinstance(icon_name, Gio.FileIcon):
             # If icon_name is a FileIcon object, directly use it
@@ -576,6 +587,197 @@ class Utils(Adw.Application):
         self.create_gesture(box, 3, lambda *_: self.set_view_active_workspace(view_id))
 
         return box
+
+
+
+    def normalize_icon_name(self, app_id):
+        if '.' in app_id:
+            return app_id.split('.')[-1]  # Extract the last part
+        return app_id
+
+    #this function is useful because it will handle icon_name and icon_path
+    def handle_icon_for_button(self, view, button):
+        icon_path = self.find_icon(view["app-id"])
+
+        web_apps = {
+            "chromium",
+            "microsoft-edge",
+            "microsoft-edge-dev",
+            "microsoft-edge-beta",
+        }
+        if any(app in view["app-id"].lower() for app in web_apps):
+            desk_local = self.search_local_desktop(view["title"].split()[0])
+
+            if desk_local and desk_local.endswith("-Default.desktop"):
+                if desk_local.startswith("msedge-") or desk_local.startswith("chrome-"):
+                    icon_path = desk_local.split(".desktop")[0]
+ 
+        if icon_path:
+            if icon_path.startswith('/'):
+                try:
+                    image = Gtk.Image.new_from_file(icon_path)
+                    button.set_image(image)
+                    button.set_always_show_image(True)
+                except Exception as e:
+                    print(f"Error loading icon from file: {e}")
+                    button.set_icon_name("default-icon-name")
+            else:
+                button.set_child(None)
+                button.set_icon_name(icon_path)
+        else:
+            button.set_child(None)
+            button.set_icon_name("default-icon-name")
+
+    def find_icon_for_app_id(self, app_id):
+        app_id = app_id.lower()
+        app_list = Gio.AppInfo.get_all()
+        normalized_app_id = self.normalize_icon_name(app_id)
+        for app in app_list:
+            app_info_id = app.get_id().lower()
+            if app_info_id and (app_info_id.startswith(normalized_app_id) or normalized_app_id in app_info_id):
+                icon = app.get_icon()
+                if icon:
+                    if isinstance(icon, Gio.ThemedIcon):
+                        icon_names = icon.get_names()
+                        return icon_names[0] if icon_names else None
+                    elif isinstance(icon, Gio.FileIcon):
+                        return icon.get_file().get_path()
+        return None
+
+    def find_icon(self, app_id):
+        return self.find_icon_for_app_id(app_id)
+
+
+    async def get_steam_game_pic(self, game_title):
+        REQUEST_TIMEOUT = 10  # seconds
+        search_url = "https://store.steampowered.com/search/"
+        params = {"term": game_title}
+
+        # Set timeout for the session
+        timeout = ClientTimeout(total=REQUEST_TIMEOUT)
+
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            try:
+                async with session.get(search_url, params=params) as response:
+                    if response.status != 200:
+                        print("Failed to retrieve search results.")
+                        return None
+
+                    text = await response.text()
+                    soup = BeautifulSoup(text, "html.parser")
+                    results = soup.find_all("a", href=True, class_="search_result_row")
+
+                    if not results:
+                        print("Game not found.")
+                        return None
+
+                    # Assume the first result is the desired game
+                    game_url = results[0]['href']
+
+                    try:
+                        async with session.get(game_url) as game_response:
+                            if game_response.status != 200:
+                                print("Failed to retrieve game page.")
+                                return None
+
+                            game_text = await game_response.text()
+                            game_soup = BeautifulSoup(game_text, "html.parser")
+
+                            # Find the image URL
+                            img_tag = game_soup.find("img", {"class": "game_header_image_full"})
+                            if img_tag and img_tag['src']:
+                                return img_tag['src']
+                            else:
+                                print("Image not found.")
+                                return None
+                    except asyncio.TimeoutError:
+                        print("Timed out while retrieving game page.")
+                        return None
+            except asyncio.TimeoutError:
+                print("Timed out while retrieving search results.")
+                return None
+            except aiohttp.ClientError as e:
+                print(f"HTTP error occurred: {e}")
+                return None
+
+    async def main_get_steam_game_image(self, game_title):
+        image_url = await self.get_steam_game_pic(game_title)
+        if image_url:
+            return image_url
+
+    def get_game_image(self, game_title):
+        asyncio.run(self.main_get_steam_game_image(game_title))
+
+    async def download_image(self, url, filename):
+        cache_dir = os.path.expanduser("~/.cache")
+        os.makedirs(cache_dir, exist_ok=True)
+        file_path = os.path.join(cache_dir, filename)
+        timeout = ClientTimeout(total=10)
+
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            try:
+                async with session.get(url) as response:
+                    if response.status != 200:
+                        print("Failed to download image.")
+                        return None
+                    
+                    with open(file_path, "wb") as file:
+                        file.write(await response.read())
+                    
+                    return file_path
+            except asyncio.TimeoutError:
+                print("Timed out while downloading image.")
+                return None
+            except aiohttp.ClientError as e:
+                print(f"HTTP error occurred: {e}")
+                return None
+
+    def get_wayfire_pid(self):
+       for entry in os.listdir('/proc'):
+           if entry.isdigit():
+               try:
+                   with open(f'/proc/{entry}/comm', 'r') as comm_file:
+                       command_name = comm_file.read().strip()
+                       if 'wayfire' in command_name:
+                           return entry
+               except IOError:
+                   continue
+       return None
+
+    def list_libs_in_process(self, pid):
+        libs = []
+        maps_file = f"/proc/{pid}/maps"
+        
+        try:
+            with open(maps_file, 'r') as f:
+                for line in f:
+                    if 'so' in line:
+                        lib_path = line.split()[-1]
+                        if os.path.isfile(lib_path) and lib_path not in libs:
+                            libs.append(lib_path)
+        except FileNotFoundError:
+            pass
+
+        return libs
+
+    def check_lib_in_wayfire(self, lib_name):
+        pid = self.get_wayfire_pid()
+        if not pid:
+            print("Wayfire process not found.")
+            return False
+
+        libs = self.list_libs_in_process(pid)
+        for lib in libs:
+            if lib_name in lib:
+                return True
+
+        return False
+
+    def find_wayfire_lib(self, lib_name):
+        if self.check_lib_in_wayfire(lib_name):
+            return True
+        else:
+            return False
 
     def get_default_monitor_name(self, config_file_path):
         try:
