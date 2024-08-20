@@ -925,13 +925,16 @@ class Panel(Adw.Application):
         print(f"Child widget: {widget}")
  
     def close_last_focused_view(self, *_):
+        view = self.sock.get_view(self.last_toplevel_focused_view)
+  
         # if the lib from plugin hide-view is not found then use old close view method
         if not self.utils.find_wayfire_lib("libhide-view.so"):
-            return
+            if self.last_toplevel_focused_view:
+                self.sock.close_view(self.last_toplevel_focused_view)
+                return
 
         #need someway to bring the hidden views into icons in case the panel is restarted
         if self.last_toplevel_focused_view:
-            view = self.sock.get_view(self.last_toplevel_focused_view)
             if view:
                 if view["role"] != "toplevel":
                     return
