@@ -169,6 +169,7 @@ class Dockbar(Adw.Application):
         if view is None:
             return
 
+
         if view["pid"] == -1:
             return
 
@@ -208,6 +209,7 @@ class Dockbar(Adw.Application):
         if msg["event"] == "view-wset-changed":
             self.update_taskbar(view)
 
+
     def handle_plugin_event(self, msg):
         if "event" not in msg:
             return
@@ -241,13 +243,16 @@ class Dockbar(Adw.Application):
                             view = msg["view"]
 
                         if "event" in msg:
-                            self.handle_view_event(msg, view)
-                            self.handle_plugin_event(msg)
                             if msg["event"] == "view-geometry-changed":
                                 if "view" in msg:
                                     view = msg["view"]
                                     if view["layer"] != "workspace":
                                         self.taskbar_remove(view["id"])
+
+                            if msg["event"] == "output-gain-focus":
+                                pass
+                            self.handle_view_event(msg, view)
+                            self.handle_plugin_event(msg)
 
 
                     except Exception as e:
@@ -279,6 +284,7 @@ class Dockbar(Adw.Application):
         set_layer_position_exclusive(self.left_panel)
         # set_layer_position_exclusive(self.right_panel)
         set_layer_position_exclusive(self.bottom_panel)
+        self.update_taskbar_for_hidden_views()
         return
 
     def on_scale_desactivated(self):
@@ -386,8 +392,15 @@ class Dockbar(Adw.Application):
         )
         if not self.utils.widget_exists(button):
             return
-        # Append the button to the taskbar
-        self.taskbar.append(button)
+       
+        # If the function returns None (for example, if pid == -1), 
+        # clickable_image_box will be None, and nothing will be appended on to the taskbar
+        # Premature Widget Addition: If you try to append the box to the AdwWindow before 
+        # the window has been fully realized (allocated size and position), this could trigger the warning.
+        # like that:  Trying to snapshot AdwWindow ..... without a current allocation ?
+        # so that explains the use of GLib.idle_add() 
+        # to ensure the UI loop has time to process allocations first.
+        GLib.idle_add(lambda: self.utils.append_clickable_image(self.taskbar, button))
 
         # Store button information in dictionaries for easy access
         self.buttons_id[id] = [button, initial_title, id]
@@ -416,12 +429,29 @@ class Dockbar(Adw.Application):
             if layer or role or mapped or app_id or pid or view_type:
                 return False
             return True
-        
         return False
+
+    def update_taskbar_for_hidden_views(self):
+        #the goal of this function is to catch taskbar buttons which is not toplevel 
+        #and should be in the task list, happens that sometimes there is not enough events 
+        #to remove the button on the fly
+        #this a made for hide view plugin which hide a view but still has no event to trigger
+        #the taskbar button removal
+        for button_id in self.buttons_id:
+            view = self.sock.get_view(button_id)
+            if view["role"] == "desktop-environment":
+                self.remove_button(view["id"])
+        #also update the view when unhide
+        for view in self.sock.list_views():
+            if view["role"] == "toplevel":
+                if view["id"] not in self.buttons_id:
+                    self.new_taskbar_view("h", "taskbar", view["id"])
+
 
     def update_taskbar_list(self, view):
         if not self.view_exist(view["id"]):
             self.taskbar_remove(view["id"])
+
         self.Taskbar("h", "taskbar")
         ids = self.wf_utils.list_ids()
         button_ids = self.buttons_id.copy()

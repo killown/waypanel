@@ -512,7 +512,7 @@ class Panel(Adw.Application):
         if event == "view-mapped":
             self.on_view_created(view)
 
-    def set_previous_workspace_with_views(self, msg):       
+    def set_previous_workspace_with_views(self, msg):
         focused_output = self.wf_utils.get_focused_output_name()
         wviews = self.wf_utils.get_workspaces_with_views()
         pw = msg["previous-workspace"]
@@ -553,7 +553,7 @@ class Panel(Adw.Application):
                         self.dpms_monitors_timeout, self.dpms_manager
                     )
                     self.handle_view_event(msg)
-                    self.handle_tilling_layout(msg)
+                    #self.handle_tilling_layout(msg)
                     self.handle_output_events(msg)
                     self.handle_plugin_event(msg)
                     self.handle_workspace_events(msg)
@@ -643,7 +643,7 @@ class Panel(Adw.Application):
         # 
         # view_id = view["id"]
         # config_path = os.path.join(self.home, ".config/waypanel/")
-        shader = os.path.join(config_path, "shaders/border")
+        #shader = os.path.join(self.config_path, "shaders/border")
         # if os.path.exists(shader):
         #    sock.set_view_shader(view_id, shader)
 
@@ -921,6 +921,9 @@ class Panel(Adw.Application):
             if view_id:
                 return view_id
 
+    def on_child(self, widget, data):
+        print(f"Child widget: {widget}")
+ 
     def close_last_focused_view(self, *_):
         # if the lib from plugin hide-view is not found then use old close view method
         if not self.utils.find_wayfire_lib("libhide-view.so"):
@@ -933,17 +936,18 @@ class Panel(Adw.Application):
                 if view["role"] != "toplevel":
                     return
                 button = Gtk.Button()
-                self.utils.handle_icon_for_button(view, button)
                 button.connect("clicked", lambda widget: self.on_hidden_view(widget, view))
-                self.top_panel_box_widgets_left.append(button)
+                self.top_panel_box_systray.append(button)
+                self.utils.handle_icon_for_button(view, button)
                 self.sock.hide_view(self.last_toplevel_focused_view)
+                self.sock.set_focus(view["id"])
 
     def on_hidden_view(self, widget, view):
         id = view["id"]
-        self.sock.unhide_view(id)
-        self.sock.set_focus(id)
-        print("why this is not removing the icon")
-        self.top_panel_box_widgets_left.remove(widget)
+        if id in self.wf_utils.list_ids():
+            self.sock.unhide_view(id)
+            if self.utils.widget_exists(widget):
+                self.top_panel_box_systray.remove(widget)
 
     def close_fullscreen_buttons(self):
         # Creating close and full screen buttons for the top bar
@@ -1789,7 +1793,7 @@ class Panel(Adw.Application):
         try:
             title = self.focused_view_title()
             if not title:
-                return True
+                return
             initial_title = title.split()
             if initial_title:
                 initial_title = initial_title[0]
@@ -1807,7 +1811,6 @@ class Panel(Adw.Application):
             self.update_title_and_icons(title, wclass, initial_title)
         except Exception as e:
             print(e)
-        return True
 
     def update_widgets(self, title, wm_class, initial_title, pid, workspace_id):
         is_fullscreen = self.wf_utils.is_focused_view_fullscreen()
@@ -1901,18 +1904,15 @@ class Panel(Adw.Application):
 
         return title
 
+
     def update_title_and_icons(self, title, wm_class, initial_title):
         """Update title and icons."""
         # some classes and initial titles has whitespaces which will lead to not found icons
         title = self.utils.filter_utf8_for_gtk(title)
         icon = self.get_icon(wm_class, initial_title, title)
-        if icon:
-            self.window_title.set_icon_name(icon)
-            #this is from background panel
-            #self.tbclass.set_icon_name(icon)
-
-        # Set window label
-        self.window_title.set_label(title)
+        if icon and title:
+            #self.window_title.set_icon_name(icon)
+            self.window_title.set_label(title)
 
     def update_widget_labels(self, workspace_id, pid, wclass, mem_usage, exe):
         """Update widget labels."""
