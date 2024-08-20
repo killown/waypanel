@@ -274,6 +274,11 @@ class Panel(Adw.Application):
         # system dashboard
         self.top_panel_box_systray.append(self.system_dashboard())
 
+        for view in self.sock.list_views():
+            if view["role"] == "desktop-environment":
+                if view["type"] == "unknown":
+                    self.hide_view_instead_closing(view, ignore_toplevel=True)
+
         # the title is only updated when a event happens, so needed to update in the panel start
         self.update_title_topbar()
         self.start_thread_all_events()
@@ -924,31 +929,34 @@ class Panel(Adw.Application):
     def on_child(self, widget, data):
         print(f"Child widget: {widget}")
  
-    def close_last_focused_view(self, *_):
-        view = self.sock.get_view(self.last_toplevel_focused_view)
-  
-        # if the lib from plugin hide-view is not found then use old close view method
-        if not self.utils.find_wayfire_lib("libhide-view.so"):
-            if self.last_toplevel_focused_view:
-                self.sock.close_view(self.last_toplevel_focused_view)
+    def hide_view_instead_closing(self, view, ignore_toplevel=None):
+        if view:
+            if view["role"] != "toplevel" and ignore_toplevel is None:
                 return
+            button = Gtk.Button()
+            button.connect("clicked", lambda widget: self.on_hidden_view(widget, view))
+            self.top_panel_box_systray.append(button)
+            self.utils.handle_icon_for_button(view, button)
+            self.sock.hide_view(view["id"])
+            self.sock.set_focus(view["id"])
 
-        #need someway to bring the hidden views into icons in case the panel is restarted
+
+    def close_last_focused_view(self, *_):
         if self.last_toplevel_focused_view:
-            if view:
-                if view["role"] != "toplevel":
+            view = self.sock.get_view(self.last_toplevel_focused_view)
+  
+            # if the lib from plugin hide-view is not found then use old close view method
+            if not self.utils.find_wayfire_lib("libhide-view.so"):
+                    self.sock.close_view(self.last_toplevel_focused_view)
                     return
-                button = Gtk.Button()
-                button.connect("clicked", lambda widget: self.on_hidden_view(widget, view))
-                self.top_panel_box_systray.append(button)
-                self.utils.handle_icon_for_button(view, button)
-                self.sock.hide_view(self.last_toplevel_focused_view)
-                self.sock.set_focus(view["id"])
+            self.hide_view_instead_closing(view)
 
     def on_hidden_view(self, widget, view):
         id = view["id"]
         if id in self.wf_utils.list_ids():
             self.sock.unhide_view(id)
+            # to implement set_focus here use GLib.idle_add 
+            # because the unhide is not as fast as set focus
             if self.utils.widget_exists(widget):
                 self.top_panel_box_systray.remove(widget)
 
