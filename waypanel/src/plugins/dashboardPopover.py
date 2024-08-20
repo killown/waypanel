@@ -88,13 +88,14 @@ class PopoverDashboard(Adw.Application):
         self.left_box.append(left_label)
 
         # Add the left box to the grid
-        grid.attach(self.left_box, 0, 0, 1, 1)
+        #grid.attach(self.left_box, 0, 0, 1, 1)
 
         # Create a calendar for the right side
-        calendar = Gtk.Calendar()
+        self.calendar = Gtk.Calendar()
 
         # Add the calendar to the grid
-        grid.attach(calendar, 1, 0, 1, 1)
+        grid.attach(self.calendar, 1, 0, 1, 1)
+        self.calendar.connect("day-selected", self.on_day_selected)
 
         # Create a box for the right side below the calendar
         self.right_label = Gtk.Label(label="")
@@ -110,6 +111,10 @@ class PopoverDashboard(Adw.Application):
         self.popover_dashboard.set_parent(self.menubutton_dashboard)
         self.popover_dashboard.popup()
         return self.popover_dashboard
+
+    def on_day_selected(self, calendar):
+        day = calendar.get_day()
+        print(f"Day selected: {day}")
 
     def open_popover_dashboard(self, *_):
         if self.popover_dashboard and self.popover_dashboard.is_visible():

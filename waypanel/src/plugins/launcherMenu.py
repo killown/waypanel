@@ -165,9 +165,6 @@ class MenuLauncher(Adw.Application):
 
     def update_flowbox(self):
         all_apps = Gio.AppInfo.get_all()
-        if all_apps == self.all_apps:
-            return
-
         with open(self.dockbar_config, "r") as f:
             dockbar_toml = toml.load(f)
 
@@ -176,6 +173,12 @@ class MenuLauncher(Adw.Application):
         
         # remove widgets from uninstalled apps
         app_ids = [i.get_id() for i in all_apps]
+        should_continue = [i.get_id() for i in self.all_apps if i.get_id() not in app_ids]
+      
+        # if all app_ids match in both all updated apps along with old self all apps
+        if not should_continue: 
+            return 
+
         for app in self.all_apps:
             id = app.get_id()
             if id not in app_ids:
@@ -187,9 +190,6 @@ class MenuLauncher(Adw.Application):
         # add new row if there is a new app installed
         recent_apps = self.get_recent_apps()
         for i in all_apps:
-            if i in self.all_apps:
-                continue
-
             name = i.get_name()
             if name not in recent_apps:
                 continue

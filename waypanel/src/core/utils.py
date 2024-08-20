@@ -63,22 +63,9 @@ class Utils(Adw.Application):
 
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
         if [c for c in self.terminal_emulators if cmd in c] and cmd_mode:
-            try:
-                Popen(cmd.split(), start_new_session=True)
-            except Exception as e:
-                print(e)
-            return
-        if ";" in cmd:
-            for c in cmd.split(";"):
-                try:
-                    Popen(c.split(), start_new_session=True)
-                except Exception as e:
-                    print(e)
-        else:
-            try:
-                Popen(cmd.split(), start_new_session=True)
-            except Exception as e:
-                print(e)
+            #**note-taking**
+            #replace this function with stipc
+            self.stipc.run_cmd(cmd)
 
     def find_view_middle_cursor_position(self, view_geometry, monitor_geometry):
         # Calculate the middle position of the view
@@ -476,14 +463,14 @@ class Utils(Adw.Application):
         elif orientation == "v":
             orientation = Gtk.Orientation.VERTICAL
 
-        if "proton" in wmclass or wmclass == "wine":
-           game_image = self.get_game_image(title)
-           filename = os.path.join("/tmp", wmclass + ".png")
-           if filename:
-               icon = self.download_image(game_image, filename)
-        else:
-            title = self.filter_utf8_for_gtk(title)
-            icon = self.get_icon(wmclass, initial_title, title)
+        #if "proton" in wmclass or wmclass == "wine":
+        #   game_image = self.get_game_image(title)
+        #   filename = os.path.join("/tmp", wmclass + ".png")
+        #  if filename:
+        #       icon = self.download_image(game_image, filename)
+        #else:
+        title = self.filter_utf8_for_gtk(title)
+        icon = self.get_icon(wmclass, initial_title, title)
 
         button = self.create_clickable_image(
             icon, class_style, wmclass, title, initial_title, view_id
@@ -524,7 +511,7 @@ class Utils(Adw.Application):
         if found_icon:
             return found_icon
 
-        return ""
+        return None
 
     # FIXME: panel will crash if started app has some random errors in output
     # that means, the panels bellow will be always on top and no clickable anymore
@@ -588,7 +575,10 @@ class Utils(Adw.Application):
 
         return box
 
-
+    def append_clickable_image(self, box, clickable_image_box):
+        if clickable_image_box is not None:
+            box.append(clickable_image_box)
+        return False 
 
     def normalize_icon_name(self, app_id):
         if '.' in app_id:
@@ -597,22 +587,12 @@ class Utils(Adw.Application):
 
     #this function is useful because it will handle icon_name and icon_path
     def handle_icon_for_button(self, view, button):
-        icon_path = self.find_icon(view["app-id"])
-
-        web_apps = {
-            "chromium",
-            "microsoft-edge",
-            "microsoft-edge-dev",
-            "microsoft-edge-beta",
-        }
-        if any(app in view["app-id"].lower() for app in web_apps):
-            desk_local = self.search_local_desktop(view["title"].split()[0])
-
-            if desk_local and desk_local.endswith("-Default.desktop"):
-                if desk_local.startswith("msedge-") or desk_local.startswith("chrome-"):
-                    icon_path = desk_local.split(".desktop")[0]
- 
+        title = view["title"]
+        initial_title = title.split()[0]
+        wmclass = view["app-id"]
+        icon_path = self.get_icon(wmclass, title, initial_title)
         if icon_path:
+            print(icon_path)
             if icon_path.startswith('/'):
                 try:
                     image = Gtk.Image.new_from_file(icon_path)
@@ -622,10 +602,8 @@ class Utils(Adw.Application):
                     print(f"Error loading icon from file: {e}")
                     button.set_icon_name("default-icon-name")
             else:
-                button.set_child(None)
                 button.set_icon_name(icon_path)
         else:
-            button.set_child(None)
             button.set_icon_name("default-icon-name")
 
     def find_icon_for_app_id(self, app_id):

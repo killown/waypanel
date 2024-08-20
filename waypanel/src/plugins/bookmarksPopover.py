@@ -69,7 +69,7 @@ class PopoverBookmarks(Adw.Application):
         # Create and configure flow box
         self.flowbox = Gtk.FlowBox()
         self.flowbox.set_valign(Gtk.Align.START)
-        self.flowbox.set_max_children_per_line(4)
+        self.flowbox.set_max_children_per_line(2)
         self.flowbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.flowbox.set_activate_on_single_click(True)
         self.flowbox.connect("child-activated", self.open_url_from_bookmarks)
@@ -144,8 +144,8 @@ class PopoverBookmarks(Adw.Application):
         # Connect signal for selecting a row
         height = self.flowbox.get_preferred_size().natural_size.height
         width = self.flowbox.get_preferred_size().natural_size.width
-        self.scrolled_window.set_min_content_width(height)
-        self.scrolled_window.set_min_content_height(width)
+        self.scrolled_window.set_min_content_width(width * 2)
+        self.scrolled_window.set_min_content_height(height / 1.9)
 
         # Set the parent and display the popover
         self.popover_bookmarks.set_parent(self.menubutton_bookmarks)
