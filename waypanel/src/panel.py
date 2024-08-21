@@ -28,6 +28,7 @@ from waypanel.src.core.background import Background
 from wayfire import WayfireSocket as OriginalWayfireSocket
 from wayfire.core.template import get_msg_template
 from wayfire.extra.ipc_utils import WayfireUtils
+from wayfire.extra.stipc import Stipc
 
 app = None 
 
@@ -69,6 +70,7 @@ class Panel(Adw.Application):
 
 
         self.utils = utils()
+        self.stipc = Stipc(self.sock)
 
         self.get_icon = self.utils.get_icon
         self.active_window_changed = None
@@ -1317,9 +1319,9 @@ class Panel(Adw.Application):
         """
         # Check the direction of the scroll and adjust the volume using the "pactl" command
         if dy > 0:
-            self.utils.run_app("pactl -- set-sink-volume @DEFAULT_SINK@  -8%")
+            self.stipc.run_cmd("pactl -- set-sink-volume @DEFAULT_SINK@  -8%")
         else:
-            self.utils.run_app("pactl -- set-sink-volume @DEFAULT_SINK@  +8%")
+            self.stipc.run_cmd("pactl -- set-sink-volume @DEFAULT_SINK@  +8%")
 
         with pulsectl.Pulse("volume-increaser") as pulse:
             # Iterate through all the audio sinks

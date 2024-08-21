@@ -74,66 +74,78 @@ class Dockbar(Adw.Application):
         self.start_thread_compositor()
         self.stored_windows = [i["id"] for i in self.sock.list_views()]
 
-        # Read configuration from topbar toml
-        with open(self.topbar_config, "r") as f:
-            panel_toml = toml.load(f)
+        # Read configuration from the topbar TOML file
+        panel_toml = self._load_panel_config(self.topbar_config)
 
-            for p in panel_toml:
-                if "left" == p:
-                    exclusive = panel_toml[p]["Exclusive"] == "True"
-                    position = panel_toml[p]["position"]
+        # Set up panels based on the configuration
+        self._setup_panels(panel_toml)
 
-                    # Create a left panel and associated components
-                    self.left_panel = CreatePanel(
-                        self, "LEFT", position, exclusive, 32, 0, "LeftBar"
-                    )
-                    self.dockbar = self.utils.CreateFromAppList(
-                        self.dockbar_config, "v", "LeftBar", self.join_windows
-                    )
-                    self.add_launcher = Gtk.Button()
-                    self.add_launcher.set_icon_name("tab-new-symbolic")
-                    self.add_launcher.connect("clicked", self.dockbar_append)
-                    self.dockbar.append(self.add_launcher)
-                    self.left_panel.set_content(self.dockbar)
-                    self.left_panel.present()
+    def _load_panel_config(self, config_file):
+        """Load and return panel configuration from the given TOML file."""
+        with open(config_file, "r") as f:
+            return toml.load(f)
 
-                # if "right" == p:
-                #     exclusive = panel_toml[p]["Exclusive"] == "True"
-                #     position = panel_toml[p]["position"]
-                #     # Create a right panel and associated components
-                #     self.right_panel = CreatePanel(
-                #         self, "RIGHT", position, exclusive, 32, 0, "RightBar"
-                #     )
-                #     workspace_buttons = self.utils.CreateFromAppList(
-                #         self.workspace_list_config, "v", "RightBar", None, True
-                #     )
-                #     self.right_panel.set_content(workspace_buttons)
-                #     # self.right_panel.present()
+    def _setup_panels(self, panel_toml):
+        """Set up panels based on the provided configuration."""
+        for p in panel_toml:
+            if p == "left":
+                self._setup_left_panel(panel_toml[p])
+            elif p == "bottom":
+                self._setup_bottom_panel(panel_toml[p])
+            # Uncomment and implement if needed
+            # elif p == "right":
+            #     self._setup_right_panel(panel_toml[p])
 
-                if "bottom" == p:
-                    print()
-                    exclusive = panel_toml[p]["Exclusive"] == "True"
-                    position = panel_toml[p]["position"]
+    def _setup_left_panel(self, config):
+        """Create and configure the left panel."""
+        exclusive = config["Exclusive"] == "True"
+        position = config["position"]
 
-                    # Create a bottom panel and associated components
-                    self.bottom_panel = CreatePanel(
-                        self, "BOTTOM", position, exclusive, 32, 0, "BottomBar"
-                    )
-                    self.add_launcher = Gtk.Button()
-                    self.add_launcher.set_icon_name("tab-new-symbolic")
-                    self.add_launcher.connect("clicked", self.dockbar_append)
-                    self.taskbar = Gtk.Box()
-                    self.taskbar.append(self.add_launcher)
-                    self.taskbar.add_css_class("taskbar")
-                    self.bottom_panel.set_content(self.taskbar)
-                    self.bottom_panel.present()
+        self.left_panel = CreatePanel(
+            self, "LEFT", position, exclusive, 32, 0, "LeftBar"
+        )
+        self.dockbar = self.utils.CreateFromAppList(
+            self.dockbar_config, "v", "LeftBar", self.join_windows
+        )
+        self.add_launcher = Gtk.Button()
+        self.add_launcher.set_icon_name("tab-new-symbolic")
+        self.add_launcher.connect("clicked", self.dockbar_append)
+        self.dockbar.append(self.add_launcher)
+        self.left_panel.set_content(self.dockbar)
+        self.left_panel.present()
 
-                    # Start the taskbar list for the bottom panel
-                    # Remaining check pids will be handled later
-                    self.Taskbar("h", "taskbar")
+    def _setup_bottom_panel(self, config):
+        """Create and configure the bottom panel."""
+        exclusive = config["Exclusive"] == "True"
+        position = config["position"]
 
-            # LayerShell.set_layer(self.left_panel, LayerShell.Layer.TOP)
-            # LayerShell.set_layer(self.bottom_panel, LayerShell.Layer.TOP)
+        self.bottom_panel = CreatePanel(
+            self, "BOTTOM", position, exclusive, 32, 0, "BottomBar"
+        )
+        self.add_launcher = Gtk.Button()
+        self.add_launcher.set_icon_name("tab-new-symbolic")
+        self.add_launcher.connect("clicked", self.dockbar_append)
+        self.scrolled_window = Gtk.ScrolledWindow()
+        get_first_monitor = self.sock.list_outputs()[0]
+        monitor_width = get_first_monitor["geometry"]["width"]
+        # should be handled by the toml conf 
+        # fix this later
+        # the issue is that multi monitors can have multiple resolutions
+        # if the first monitor from the list has a width greater than the monitor set for the panel 
+        # the scrolled_window may get greater width than it should
+        self.scrolled_window.set_size_request(monitor_width / 1.2, 64)
+        self.bottom_panel.set_content(self.scrolled_window)
+        
+        self.taskbar = Gtk.Box()
+        self.taskbar.set_halign(Gtk.Align.CENTER)  # Center horizontally
+        self.taskbar.set_valign(Gtk.Align.CENTER)  # Center vertically
+        self.scrolled_window.set_child(self.taskbar)
+        self.taskbar.append(self.add_launcher)
+        self.taskbar.add_css_class("taskbar")
+        self.bottom_panel.present()
+
+        # Start the taskbar list for the bottom panel
+        self.Taskbar("h", "taskbar")
 
     def on_compositor_finished(self):
         # non working code
