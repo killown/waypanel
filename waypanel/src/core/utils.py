@@ -547,8 +547,6 @@ class Utils(Adw.Application):
         label = Gtk.Label.new(use_this_title)
         label.add_css_class("label_from_clickable_image")
 
-        if icon_name.endswith(".png"):
-            image = Gtk.image.new_from_file(icon_name)
 
         if isinstance(icon_name, Gio.FileIcon):
             # If icon_name is a FileIcon object, directly use it
