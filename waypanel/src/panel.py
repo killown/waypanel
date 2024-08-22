@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import abc
 import datetime
 import netifaces
 import soundcard as sc
@@ -10,6 +11,7 @@ import sys
 import psutil
 import pulsectl
 import toml
+import time
 from collections import ChainMap
 from waypanel.src.core.utils import Utils as utils
 from waypanel.src.core.create_panel import CreatePanel
@@ -305,7 +307,14 @@ class Panel(Adw.Application):
         self.turn_off_monitor_timeout = timeout_single
 
     def do_activate(self):
-        self.show_panels()
+        #activate auto start apps
+        #GLib.timeout_add(4000, self.autostart)
+        self.load_css_from_file()
+        # Start monitoring CSS file for changes
+        self.monitor = Gio.File.new_for_path(self.style_css_config).monitor(
+            Gio.FileMonitorFlags.NONE, None
+        )
+        self.monitor.connect("changed", self.on_css_file_changed)
         self.top_panel_box_left.add_css_class("top_panel_box_left")
         self.top_panel_box_window_title.add_css_class("top_panel_box_window_title")
         self.top_panel_box_widgets_left.add_css_class("top_panel_box_widgets_left")
@@ -313,12 +322,23 @@ class Panel(Adw.Application):
         self.top_panel_box_systray.add_css_class("top_panel_box_systray")
         self.top_panel_box_center.add_css_class("top_panel_box_center")
         self.top_panel_box_full.add_css_class("top_panel_box_full")
-        self.load_css_from_file()
-        # Start monitoring CSS file for changes
-        self.monitor = Gio.File.new_for_path(self.style_css_config).monitor(
-            Gio.FileMonitorFlags.NONE, None
-        )
-        self.monitor.connect("changed", self.on_css_file_changed)
+        self.show_panels()
+
+
+    def autostart(self):
+        # auto start some apps in systray
+        autostart = {"thunderbird":"thunderbird"}
+        for app in autostart.keys():
+            self.stipc.run_cmd(app)
+            counter = 0 
+            while counter <= 10: # 10 seconds limit
+                print("asdf")
+                view = [i for i in self.sock.list_views() if autostart[app].lower() in i["app-id"].lower()]
+                if view:
+                    self.hide_view_instead_closing(view[-1])
+                    break
+                counter += 1
+                time.sleep(1)
 
     # def freedesktop_notifications(self):
     # DBusGMainLoop(set_as_default=True)
@@ -519,25 +539,9 @@ class Panel(Adw.Application):
         if event == "view-mapped":
             self.on_view_created(view)
 
-    def set_previous_workspace_with_views(self, msg):
-        focused_output = self.wf_utils.get_focused_output_name()
-        wviews = self.wf_utils.get_workspaces_with_views()
-        pw = msg["previous-workspace"]
-
-        # only set previous workspaces that has views
-        if any(i for i in wviews if pw["x"] == i["x"] and pw["y"] == i["y"]):
-            self.previous_workspace[focused_output] = pw
-        else:
-            wviews = self.wf_utils.get_workspaces_with_views()
-            wviews = {"x": wviews[-1]["x"], "y": wviews[-1]["y"]}
-            self.previous_workspace[focused_output] = wviews
-
     def handle_workspace_events(self, msg):
         if "event" not in msg:
             return
-
-        if msg["event"] == "wset-workspace-changed":
-            self.set_previous_workspace_with_views(msg)
 
     def handle_output_events(self, msg):
         if "event" not in msg:
@@ -691,7 +695,6 @@ class Panel(Adw.Application):
         # isn't the panel goal to change compositor behaviour
         # but for some a nice quick fix, if you dont need this
         # just disable this function call
-        self.maximize_last_view_on_expo_desactivated()
         return
 
     def on_scale_activated(self):
@@ -716,29 +719,6 @@ class Panel(Adw.Application):
     def on_view_focused(self):
         self.update_title_topbar()
 
-    def maximize_last_view_on_expo_desactivated(self):
-        if self.maximize_views_on_expo_enabled == "False":
-            return
-        if self.wf_utils.is_focused_view_fullscreen:
-            return
-        # check if the workspace has only one view so maximize this view
-        ws_info = self.get_active_workspace_info()
-        ws_with_views = [
-            i
-            for i in self.utils.get_workspaces_with_views()
-            if i["x"] == ws_info["x"] and i["y"] == ws_info["y"]
-        ]
-        ws_count = len(ws_with_views)
-        if ws_count != 1:
-            return
-        id = ws_with_views[0]["view-id"]
-        if ws_count == 1:
-            self.maximize(id)
-        # id = self.last_view_toplevel_focused
-        # 
-        # sock.maximize(id)
-        return
-
     def start_thread_all_events(self):
         self.all_events = Background(
             self.all_events_watch, lambda: self.on_compositor_finished
@@ -751,10 +731,6 @@ class Panel(Adw.Application):
             self.all_events_watch.finish()
         except Exception as err:
             print(err)
-
-    def focused_window_info(self):
-        
-        return self.sock.get_focused_view()
 
     def list_views(self):
         
@@ -1119,6 +1095,7 @@ class Panel(Adw.Application):
 
         # setup window title
         self.window_title = Adw.ButtonContent()
+        self.window_title.set_icon_name("add-subtitle-symbolic")
         self.top_panel_box_window_title.append(self.window_title)
         self.window_title.add_css_class("WindowTitle")
 
@@ -1341,7 +1318,7 @@ class Panel(Adw.Application):
         self.utils.run_app(cmd, True)
 
     def left_gesture_right_click(self, *_):
-        self.utils.go_next_workspace_with_views()
+        self.wf_utils.go_next_workspace_with_views()
         # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
         # self.utils.run_app(cmd, True)
 
@@ -1363,7 +1340,7 @@ class Panel(Adw.Application):
         # self.utils.run_app(cmd, True)
 
     def center_gesture_right_click(self, *_):
-        self.utils.go_next_workspace_with_views()
+        self.wf_utils.go_next_workspace_with_views()
         # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
         # self.utils.run_app(cmd, True)
 
@@ -1498,8 +1475,8 @@ class Panel(Adw.Application):
         cmd = "kill -9 {0}".format(pid)
         self.utils.run_app(cmd)
 
-    def menu_run_action(self, action, param):
-        self.utils.run_app(param.get_string())
+    def menu_run_action(self, _, param):
+        self.stipc.run_cmd(param.get_string())
 
     def load_topbar_config(self):
         with open(self.topbar_config, "r") as f:
@@ -1924,6 +1901,10 @@ class Panel(Adw.Application):
         title = self.utils.filter_utf8_for_gtk(title)
         icon = self.get_icon(wm_class, initial_title, title)
         if icon and title:
+            # this will freeze some parts of panel with add snapshot view thing 
+            # better handle this with GLib.idle_add or whatever way 
+            # probably the icon is not ready to set causing the issue
+            # only uncomment after find a solution
             #self.window_title.set_icon_name(icon)
             self.window_title.set_label(title)
 
