@@ -174,49 +174,6 @@ class Utils(Adw.Application):
 
         return monitor_info
 
-    def get_workspaces_with_views(self):
-        focused_output = self.sock.get_focused_output()
-        monitor = focused_output["geometry"]
-        ws_with_views = []
-        views = self.wf_utils.focused_output_views()
-
-        if views:
-            views = [
-                view for view in views
-                if view["role"] == "toplevel" and not view["minimized"] and view["app-id"] != "nil" and view["pid"] > 0
-            ]
-
-            if views:
-                grid_width = focused_output["workspace"]["grid_width"]
-                grid_height = focused_output["workspace"]["grid_height"]
-                current_ws_x = focused_output["workspace"]["x"]
-                current_ws_y = focused_output["workspace"]["y"]
-
-                for ws_x in range(grid_width):
-                    for ws_y in range(grid_height):
-                        for view in views:
-                            if self.wf_utils.view_visible_on_workspace(
-                                view["geometry"],
-                                ws_x - current_ws_x,
-                                ws_y - current_ws_y,
-                                monitor
-                            ):
-                                ws_with_views.append({"x": ws_x, "y": ws_y, "view-id": view["id"]})
-                return ws_with_views
-        return []
-
-
-    def go_next_workspace_with_views(self):
-        workspaces = self.get_workspaces_with_views()
-        if not workspaces:
-            return
-
-        active_workspace = self.sock.get_focused_output()["workspace"]
-        active_workspace = {"x": active_workspace["x"], "y": active_workspace["y"]}
-
-        next_ws = self.wf_utils.get_next_workspace(workspaces, active_workspace)
-        if next_ws:
-            self.sock.set_workspace(next_ws)
 
     def take_note_app(self, *_):
         """
@@ -513,41 +470,40 @@ class Utils(Adw.Application):
 
         return None
 
+    def list_app_ids(self):
+        views = self.sock.list_views()
+        return [i["app-id"].lower() for i in views if i["app-id"] != "nil"]
+
     # FIXME: panel will crash if started app has some random errors in output
     # that means, the panels bellow will be always on top and no clickable anymore
     # example of apps with errors, nautilus, element, chromium etc.
+    #
+
+
     def create_clickable_image(
         self, icon_name, class_style, wclass, title, initial_title, view_id
     ):
-        # this is creating empty box in case you can't find any app-id
-        if wclass == "nil":
-            return Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
-
-        # no pid no new taskbar button, that will crash the panel
-        pid = self.wf_utils.get_view_pid(view_id)
-        if pid == -1:
-            return
-
+        # Filter title for UTF-8 compatibility
         title = self.filter_utf8_for_gtk(title)
+        
+        # Create the main container box
         box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
+        assert box is not None, "Box creation failed"
         if class_style is not None:
             box.add_css_class(class_style)
 
-        #output_name = self.wf_utils.get_view_output_name(view_id)
-        #default_output = self.get_default_monitor_name(self.topbar_config)
-
+        # Determine title to use based on its length
         use_this_title = title[:30]
-
         first_word_length = len(title.split()[0])
         if first_word_length > 13:
             use_this_title = title.split()[0]
 
-        #if output_name != default_output:
-        #    use_this_title = "({0}) {1}".format(output_name, use_this_title)
+        # Create a label for the title
         label = Gtk.Label.new(use_this_title)
+        assert label is not None, "Label creation failed"
         label.add_css_class("label_from_clickable_image")
 
-
+        # Create an image for the icon
         if isinstance(icon_name, Gio.FileIcon):
             # If icon_name is a FileIcon object, directly use it
             image = Gtk.Image.new_from_gicon(icon_name)
@@ -558,20 +514,30 @@ class Utils(Adw.Application):
                 image = Gtk.Image.new_from_icon_name(dock_icon)
             else:
                 image = Gtk.Image.new_from_icon_name(icon_name)
-
+        
+        assert image is not None, "Image creation failed"
         image.props.margin_end = 5
         image.set_halign(Gtk.Align.END)
         image.add_css_class("icon_from_clickable_image")
 
+        # Append the image and label to the box
         box.append(image)
         box.append(label)
         box.add_css_class("box_from_clickable_image")
 
+        # Create gesture handlers for the box
         self.create_gesture(box, 1, lambda *_: self.set_view_focus(view_id))
-        self.create_gesture(box, 2, lambda *_: self.wf_utils.close_view(view_id))
+        self.create_gesture(box, 2, lambda *_: self.sock.close_view(view_id))
         self.create_gesture(box, 3, lambda *_: self.set_view_active_workspace(view_id))
 
         return box
+
+    def set_view_active_workspace(self, view_id: int):
+        active_workspace = self.wf_utils.get_active_workspace()
+        if active_workspace:
+            workspace_x, workspace_y = active_workspace.values()
+            self.sock.set_workspace(workspace_x, workspace_y, view_id)
+            self.wf_utils.find_views()
 
     def append_clickable_image(self, box, clickable_image_box):
         if clickable_image_box is not None:
@@ -767,15 +733,6 @@ class Utils(Adw.Application):
             print(f"Config file '{config_file_path}' not found.")
             return None
 
-    def set_view_active_workspace(self, view_id):
-        self.wf_utils.scale_toggle()
-        active_workspace = self.wf_utils.get_active_workspace()
-        output_id = self.wf_utils.get_focused_output_id()
-        self.wf_utils.set_workspace(active_workspace, view_id=view_id, output_id=output_id)
-
-    def close_view(self, view_id):
-        self.wf_utils.close_view(view_id)
-
     def view_focus_indicator_effect(self, view_id):
         precision = 1
         values = np.arange(0.1, 1, 0.1)
@@ -783,11 +740,11 @@ class Utils(Adw.Application):
         original_alpha = self.sock.get_view_alpha(view_id)["alpha"]
         for f in float_sequence:
             try:
-                self.wf_utils.set_view_alpha(view_id, f)
+                self.sock.set_view_alpha(view_id, f)
                 sleep(0.04)
             except Exception as e:
                 print(e)
-        self.wf_utils.set_view_alpha(view_id, original_alpha)
+        self.sock.set_view_alpha(view_id, original_alpha)
 
     def set_view_focus(self, view_id):
         try:
@@ -813,14 +770,14 @@ class Utils(Adw.Application):
                     # FIXME: better get animation speed from the conf so define a proper sleep
                     sleep(0.2)
                     self.wf_utils.go_workspace_set_focus(view_id)
-                    self.move_cursor_middle(view_id)
+                    self.wf_utils.center_cursor_on_view(view_id)
                 else:
                     self.wf_utils.go_workspace_set_focus(view_id)
-                    self.move_cursor_middle(view_id)
+                    self.wf_utils.center_cursor_on_view(view_id)
             else:
                 self.wf_utils.go_workspace_set_focus(view_id)
-                self.move_cursor_middle(view_id)
-                #self.wf_utils.view_focus_indicator_effect(view_id)
+                self.wf_utils.center_cursor_on_view(view_id)
+                self.view_focus_indicator_effect(view_id)
 
         except Exception as e:
             print(e)
@@ -933,32 +890,45 @@ class Utils(Adw.Application):
         use_label=False,
         use_function=False,
     ):
+        # Create the main container box
         box = Gtk.Box(spacing=2)
+        assert box is not None, "Box creation failed"
         box.add_css_class(Class_Style)
         box.set_can_focus(False)
         box.set_focusable(False)
         box.set_focus_on_click(False)
+
+        # Create the button content
         button = Adw.ButtonContent()
+        assert button is not None, "Button content creation failed"
         button.set_can_focus(False)
         button.set_focusable(False)
         button.set_focus_on_click(False)
+
+        # Set label or icon for the button
         if use_label:
             button.set_label(icon_name)
         else:
             button.add_css_class("hvr-grow")
             button.set_icon_name(icon_name)
 
-        button.add_css_class("{}-button".format(Class_Style))
+        button.add_css_class(f"{Class_Style}-button")
+
+        # If cmd is NULL, disable the button and return it
         if cmd == "NULL":
             button.set_sensitive(False)
             return button
-        if use_function is False:
+
+        # Handle gestures based on whether a custom function is used
+        if not use_function:
             self.create_gesture(button, 1, lambda *_: self.run_cmd(cmd))
             self.create_gesture(button, 3, lambda *_: self.dockbar_remove(icon_name))
         else:
             self.create_gesture(button, 1, use_function)
 
         return button
+
+
 
     def load_topbar_config(self):
         with open(self.topbar_config, "r") as f:
