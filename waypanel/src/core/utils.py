@@ -1,7 +1,7 @@
 import os
 import math
 import gi
-from waypanel.src.core.background import *
+from waypanel.src.core.background import Background
 import numpy as np
 from time import sleep
 import subprocess
@@ -13,18 +13,14 @@ import aiohttp
 import asyncio
 from aiohttp import ClientTimeout
 from bs4 import BeautifulSoup
-from wayfire.ipc import WayfireSocket
-from wayfire.ipc import *
+from wayfire import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
+from wayfire.extra.stipc import Stipc
 import shlex
 from subprocess import call
-from wayfire.extra.stipc import Stipc
-
-
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-
 
 class Utils(Adw.Application):
     def __init__(self, **kwargs):
@@ -528,16 +524,14 @@ class Utils(Adw.Application):
         # Create gesture handlers for the box
         self.create_gesture(box, 1, lambda *_: self.set_view_focus(view_id))
         self.create_gesture(box, 2, lambda *_: self.sock.close_view(view_id))
-        self.create_gesture(box, 3, lambda *_: self.set_view_active_workspace(view_id))
-
+        self.create_gesture(box, 3, lambda *_: self.move_view_to_empty_workspace(view_id))
         return box
 
-    def set_view_active_workspace(self, view_id: int):
-        active_workspace = self.wf_utils.get_active_workspace()
-        if active_workspace:
-            workspace_x, workspace_y = active_workspace.values()
-            self.sock.set_workspace(workspace_x, workspace_y, view_id)
-            self.wf_utils.find_views()
+    def move_view_to_empty_workspace(self, view_id):
+        ws = self.wf_utils.get_active_workspace()
+        if ws:
+            x, y = ws.values()
+            self.sock.set_workspace(x, y, view_id)
 
     def append_clickable_image(self, box, clickable_image_box):
         if clickable_image_box is not None:
