@@ -126,16 +126,24 @@ class Dockbar(Adw.Application):
         self.add_launcher.set_icon_name("tab-new-symbolic")
         self.add_launcher.connect("clicked", self.dockbar_append)
         self.scrolled_window = Gtk.ScrolledWindow()
-        get_first_monitor = self.sock.list_outputs()[0]
-        monitor_width = get_first_monitor["geometry"]["width"]
-        # should be handled by the toml conf 
-        # fix this later
-        # the issue is that multi monitors can have multiple resolutions
-        # if the first monitor from the list has a width greater than the monitor set for the panel 
-        # the scrolled_window may get greater width than it should
-        self.scrolled_window.set_size_request(monitor_width / 1.2, 64)
+        output = os.getenv("waypanel")
+        output_name = None
+        geometry = None
+
+        if output:
+            output_name = json.loads(output)
+            output_name = output_name["output_name"]
+
+        if output_name:
+            output_id = self.wf_utils.get_output_id_by_name(output_name)
+            if output_id:
+                geometry = self.wf_utils.get_output_geometry(output_id)
+
+        if geometry:
+            monitor_width = geometry["width"]
+            self.scrolled_window.set_size_request(monitor_width / 1.2, 64)
+
         self.bottom_panel.set_content(self.scrolled_window)
-        
         self.taskbar = Gtk.Box()
         self.taskbar.set_halign(Gtk.Align.CENTER)  # Center horizontally
         self.taskbar.set_valign(Gtk.Align.CENTER)  # Center vertically
@@ -458,7 +466,6 @@ class Dockbar(Adw.Application):
             if view["role"] == "toplevel":
                 if view["id"] not in self.buttons_id:
                     self.new_taskbar_view("h", "taskbar", view["id"])
-
 
     def update_taskbar_list(self, view):
         if not self.view_exist(view["id"]):

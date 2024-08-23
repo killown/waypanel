@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import abc
+import json
 import datetime
 import netifaces
 import soundcard as sc
@@ -373,7 +373,6 @@ class Panel(Adw.Application):
         )
 
     def update_background_panel(self):
-        
         # if sock.is_focused_view_fullscreen():
         #    return True
         view = self.sock.get_focused_view()
@@ -425,15 +424,15 @@ class Panel(Adw.Application):
                 wy = ws["y"]
 
             wset = self.sock.get_focused_view()["wset-index"]
-            layout = self.sock.get_tiling_layout(wset, wx, wy)
-            all_views = self.wf_utils.tile_list_views(layout)
+            layout = self.wf_utils.get_current_tiling_layout()
+            all_views = self.wf_utils.get_tile_list_views(layout)
             output = self.sock.get_focused_output()
             desired_layout = {}
             if not all_views or (len(all_views) == 1 and all_views[0][0] == view["id"]):
                 desired_layout = {
                     "vertical-split": [{"view-id": view["id"], "weight": 1}]
                 }
-                self.sock.set_tiling_layout(wset, wx, wy, desired_layout)
+                self.wf_utils.set_current_tiling_layout(desired_layout)
                 return
 
             main_view = all_views[0][0]
@@ -454,7 +453,7 @@ class Panel(Adw.Application):
                         {"view-id": view["id"], "weight": 1},
                     ]
                 }
-                self.sock.set_tiling_layout(wset,wx,wy,desired_layout)
+                self.wf_utils.set_current_tiling_layout(desired_layout)
                 return
 
             stack = [{"view-id": v[0], "weight": v[2]} for v in stack_views_old]
@@ -473,7 +472,7 @@ class Panel(Adw.Application):
                 ]
             }
 
-            self.sock.set_tiling_layout(wset, wx, wy, desired_layout)
+            self.wf_utils.set_current_tiling_layout(desired_layout)
 
     def handle_plugin_event(self, msg):
         if "event" not in msg:
@@ -525,8 +524,7 @@ class Panel(Adw.Application):
             self.on_title_changed()
 
         if event == "view-tiled" and view:
-            if self.wf_utils.is_view_maximized(view["id"]):
-                self.was_last_focused_view_maximized = True
+            pass
 
         if event == "app-id-changed":
             self.on_app_id_changed()
@@ -564,7 +562,7 @@ class Panel(Adw.Application):
                         self.dpms_monitors_timeout, self.dpms_manager
                     )
                     self.handle_view_event(msg)
-                    #self.handle_tilling_layout(msg)
+                    self.handle_tilling_layout(msg)
                     self.handle_output_events(msg)
                     self.handle_plugin_event(msg)
                     self.handle_workspace_events(msg)
@@ -657,12 +655,6 @@ class Panel(Adw.Application):
         #shader = os.path.join(self.config_path, "shaders/border")
         # if os.path.exists(shader):
         #    sock.set_view_shader(view_id, shader)
-
-        # 
-        # if self.tilling_enabled == "False":
-        #    return
-        # if sock.is_view_maximized(view["id"]):
-        #    sock.tilling()
         return
 
     def on_view_destroyed(self):
@@ -1927,7 +1919,18 @@ class Panel(Adw.Application):
 
 
 def start_panel():
+    def append_to_env(app_name, monitor_name, env_var='waypanel'):
+        existing_env = os.getenv(env_var)
+
+        if existing_env:
+            env_dict = json.loads(existing_env)
+        else:
+            env_dict = {}
+        env_dict.update({app_name: monitor_name})
+        os.environ[env_var] = json.dumps(env_dict)
+
     sock = WayfireSocket()
+    utils = WayfireUtils(sock)
     home = os.path.expanduser("~")
     config_path = os.path.join(home, ".config/waypanel")
     panel_config = os.path.join(config_path, "panel.toml")
@@ -1950,8 +1953,10 @@ def start_panel():
     if monitor_name is None and len(argv) > 0:
         monitor_name = argv[-1].strip()
     global app
-    app_name = "com.waypanel.{0}".format(monitor_name) 
+    app_name = "com.waypanel.{0}".format(monitor_name)
     app = Panel(application_id=app_name)
+    append_to_env("output_name", monitor_name)
+    append_to_env("output_id", utils.get_output_id_by_name(monitor_name))
     app.run(None)
     sock.watch(["event"])
     while True:
