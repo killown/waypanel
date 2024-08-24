@@ -75,7 +75,8 @@ class MenuClipboard(Gtk.Application):
             row_hbox.MYTEXT = i
             self.listbox.append(row_hbox)
             line = Gtk.Label.new()
-            line.set_label(i)
+            line.set_markup('<span font="DejaVu Sans Mono">{}</span>'.format(i))
+            #line.set_label(i)
             line.props.margin_end = 5
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)
@@ -159,7 +160,8 @@ class MenuClipboard(Gtk.Application):
             row_hbox.MYTEXT = i
             self.listbox.append(row_hbox)
             line = Gtk.Label.new()
-            line.set_label(i)
+            line.set_markup('<span font="DejaVu Sans Mono">{}</span>'.format(i))
+            #line.set_label(i)
             line.props.margin_end = 5
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)

@@ -110,7 +110,7 @@ class Panel(Adw.Application):
         self.window_title_topbar_length = config["window_title_lenght"]["size"]
 
         # Monitor dimensions to set the panel size
-        monitor = self.sock.list_outputs()[0]
+        monitor = next((output for output in self.sock.list_outputs() if "-1" in output['name'] ), self.sock.list_outputs()[0])
         self.monitor_width, self.monitor_height = monitor["geometry"]["width"], monitor["geometry"]["height"]
         if "monitor" in config:
             self.monitor_width, self.monitor_height = (
@@ -1943,7 +1943,8 @@ def start_panel():
 
     with open(panel_config) as panel_config:
         config = toml.load(panel_config)
-    monitor_name = sock.list_outputs()[0]["name"]
+    monitor = next((output for output in sock.list_outputs() if "-1" in output['name'] ), sock.list_outputs()[0])
+    monitor_name = monitor["name"]
     try:
         monitor_name = config["monitor"]["name"]
     except KeyError:
