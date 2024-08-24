@@ -76,7 +76,8 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     # lets try to set monitor info from Gdk, if not, get the panel default info instead
     monitor = get_monitor_info()
     gdk_monitor = None
-    monitor_name = sock.list_outputs()[0]["name"]
+    print(type(monitor))
+    monitor_name = next((name for name in monitor if name.endswith('-1')), None)
     home = os.path.expanduser("~")
     config_path = os.path.join(home, ".config/waypanel")
     panel_config = os.path.join(config_path, "panel.toml")
