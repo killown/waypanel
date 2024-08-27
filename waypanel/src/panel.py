@@ -85,7 +85,7 @@ class Panel(Adw.Application):
         self.clipboard_text_copy = None
         self.active_window_changed = None
         self.waypanel_started_now = True
-        self.window_title_from_topbar = None
+        self.view_title_top_panel = None
         self.active_window = None
         self.last_toplevel_focused_view = None
         self.last_focused_output = None
@@ -104,7 +104,7 @@ class Panel(Adw.Application):
         with open(self.topbar_config) as topbar_config:
             config = toml.load(topbar_config)
 
-        self.tilling_enabled = config["views"]["tilling"]
+        self.simple_title_enabled = config["views"]["tilling"]
         self.maximize_views_on_expo_enabled = config["views"]["maximize_views_on_expo"]
 
         self.window_title_topbar_length = config["window_title_lenght"]["size"]
@@ -284,7 +284,7 @@ class Panel(Adw.Application):
                     self.hide_view_instead_closing(view, ignore_toplevel=True)
 
         # the title is only updated when a event happens, so needed to update in the panel start
-        self.update_title_topbar()
+        self.update_title_top_panel()
         self.start_thread_all_events()
 
 
@@ -347,6 +347,7 @@ class Panel(Adw.Application):
     # bus.add_match_string(string)
     # bus.add_message_filter(self.notification_msg)
 
+ 
     def get_folder_location(self, folder_name):
         """
         Get the location of a specified folder for the current user.
@@ -367,14 +368,7 @@ class Panel(Adw.Application):
 
         return folder_location.get_path() if folder_location else None
 
-    def wayland_instance_watch(self):
-        self.wayinstance.signal_active_window_changed.connect(
-            self.wayland_window_changed
-        )
-
     def update_background_panel(self):
-        # if sock.is_focused_view_fullscreen():
-        #    return True
         view = self.sock.get_focused_view()
         title = view["title"]
         title = self.utils.filter_utf8_for_gtk(title)
@@ -553,7 +547,6 @@ class Panel(Adw.Application):
             try:
                 sock = WayfireSocket()
                 sock.watch(["event"])
-                view = None
                 while True:
                     msg = sock.read_message()
                     # dpms counter
@@ -584,13 +577,7 @@ class Panel(Adw.Application):
             print(
                 "{self.dpms_monitors_timeout} hour of inactivity. Turning off monitor(s)..."
             )
-            # no dpms while the focused view is fullscreen
-            if not self.wf_utils.is_focused_view_fullscreen():
-                self.utils.dpms("off")
-                return False
-            else:
-                return True
-
+            self.utils.dpms("off")
         monitors = self.utils.dpms_status()
         focused_monitor = self.wf_utils.get_focused_output_name()
         self.cancel_timeout_if_monitor_has_focus(focused_monitor)
@@ -645,7 +632,7 @@ class Panel(Adw.Application):
         return
 
     def on_title_changed(self):
-        self.update_title_topbar()
+        self.update_title_top_panel()
 
     # created view must start as maximized to auto tilling works
     def on_view_created(self, view):
@@ -677,7 +664,7 @@ class Panel(Adw.Application):
         return
 
     def on_app_id_changed(self):
-        self.update_title_topbar()
+        self.update_title_top_panel()
 
     def on_expo_activated(self):
         return
@@ -709,15 +696,15 @@ class Panel(Adw.Application):
         #self.utils.run_app("pkill wofi")
 
     def on_view_focused(self):
-        self.update_title_topbar()
+        self.update_title_top_panel()
 
     def start_thread_all_events(self):
         self.all_events = Background(
-            self.all_events_watch, lambda: self.on_compositor_finished
+            self.all_events_watch, lambda: self.on_events_finished
         )
         self.all_events.start()
 
-    def on_compositor_finished(self):
+    def on_events_finished(self):
         # non working code
         try:
             self.all_events_watch.finish()
@@ -758,7 +745,8 @@ class Panel(Adw.Application):
             txt = open(todo, "r").readlines()[-1]
             self.todo_button.set_label(txt.strip())
             # GLib.timeout_add(600000, self.todo_txt)
-        except:
+        except Exception as e:
+            print(e)
             print("todo.txt is empity or does not exist")
 
         self.tbbox = Gtk.Box(spacing=20)
@@ -846,29 +834,29 @@ class Panel(Adw.Application):
 
         # Gestures for top panel
         self.utils.create_gesture(
-            self.top_panel_box_left, 2, self.left_gesture_middle_click
+            self.top_panel_box_left, 2, self.top_panel_left_gesture_mclick
         )
         self.utils.create_gesture(
-            self.top_panel_box_left, 3, self.left_gesture_right_click
+            self.top_panel_box_left, 3, self.top_panel_left_gesture_rclick
         )
 
         # Gestures for center panel
         self.utils.create_gesture(
-            self.top_panel_box_center, 2, self.center_gesture_middle_click
+            self.top_panel_box_center, 2, self.top_panel_center_gesture_mclick
         )
         self.utils.create_gesture(
-            self.top_panel_box_center, 3, self.center_gesture_right_click
+            self.top_panel_box_center, 3, self.top_panel_center_gesture_rclick
         )
 
         # Gestures for right panel
         self.utils.create_gesture(
-            self.top_panel_box_right, 1, self.right_gesture_left_click
+            self.top_panel_box_right, 1, self.top_panel_right_gesture_lclick
         )
         self.utils.create_gesture(
-            self.top_panel_box_right, 2, self.left_gesture_middle_click
+            self.top_panel_box_right, 2, self.top_panel_left_gesture_mclick
         )
         self.utils.create_gesture(
-            self.top_panel_box_right, 3, self.left_gesture_right_click
+            self.top_panel_box_right, 3, self.top_panel_left_gesture_rclick
         )
 
         self.utils.create_gesture(self.top_panel_box_systray, 3, self.notify_client)
@@ -908,7 +896,6 @@ class Panel(Adw.Application):
             self.top_panel_box_systray.append(button)
             self.utils.handle_icon_for_button(view, button)
             self.sock.hide_view(view["id"])
-            self.sock.set_focus(view["id"])
 
 
     def close_last_focused_view(self, *_):
@@ -925,8 +912,9 @@ class Panel(Adw.Application):
         id = view["id"]
         if id in self.wf_utils.list_ids():
             self.sock.unhide_view(id)
-            # to implement set_focus here use GLib.idle_add 
-            # because the unhide is not as fast as set focus
+            #***Warning*** this was freezing the panel
+            #set focus will return an Exception in case the view is not toplevel
+            GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))
             if self.utils.widget_exists(widget):
                 self.top_panel_box_systray.remove(widget)
 
@@ -1086,10 +1074,9 @@ class Panel(Adw.Application):
         self.top_panel_box_right.set_hexpand(True)
 
         # setup window title
-        self.window_title = Adw.ButtonContent()
-        self.window_title.set_icon_name("add-subtitle-symbolic")
+        self.window_title_content = self.create_button_content()
+        self.window_title = self.window_title_content[0]
         self.top_panel_box_window_title.append(self.window_title)
-        self.window_title.add_css_class("WindowTitle")
 
         if "--custom" in self.args:
             self.default_panel = False
@@ -1304,50 +1291,46 @@ class Panel(Adw.Application):
                     self.tbvol.set_label("{0}%".format(volume))
                     self.vol_slider.set_value(volume)
 
-    def left_gesture_left_click(self, *_):
+    def top_panel_left_gesture_lclick(self, *_):
         # data format is (self, gesture, data, x, y)
         cmd = self.panel_cfg["left_side_gestures"]["left_click"]
         self.utils.run_app(cmd, True)
 
-    def left_gesture_right_click(self, *_):
+    def top_panel_left_gesture_rclick(self, *_):
         self.wf_utils.go_next_workspace_with_views()
         # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
         # self.utils.run_app(cmd, True)
 
-    def left_gesture_middle_click(self, *_):     
+    def top_panel_left_gesture_mclick(self, *_):
         self.sock.toggle_expo()
         # cmd = self.panel_cfg["left_side_gestures"]["middle_click"]
         # self.utils.run_app(cmd, True)
 
-    def center_gesture_left_click(self, *_):
-        
+    def top_panel_center_gesture_lclick(self, *_):
         self.sock.toggle_expo()
         # cmd = self.panel_cfg["center_side_gestures"]["left_click"]
         # self.utils.run_app(cmd, True)
 
-    def center_gesture_middle_click(self, *_):
-        
+    def top_panel_center_gesture_mclick(self, *_):
         self.sock.toggle_expo()
         # cmd = self.panel_cfg["center_side_gestures"]["middle_click"]
         # self.utils.run_app(cmd, True)
 
-    def center_gesture_right_click(self, *_):
+    def top_panel_center_gesture_rclick(self, *_):
         self.wf_utils.go_next_workspace_with_views()
         # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
         # self.utils.run_app(cmd, True)
 
-    def right_gesture_left_click(self, *_):
+    def top_panel_right_gesture_lclick(self, *_):
         cmd = self.panel_cfg["right_side_gestures"]["left_click"]
         self.utils.run_app(cmd, True)
 
-    def right_gesture_right_click(self, *_):
-        
+    def top_panel_right_gesture_rclick(self, *_):
         self.sock.toggle_expo()
         # cmd = self.panel_cfg["right_side_gestures"]["right_click"]
         # self.utils.run_app(cmd, True)
 
-    def right_gesture_middle_click(self, *_):
-        
+    def top_panel_right_gesture_mclick(self, *_):
         self.sock.toggle_expo()
         # cmd = self.panel_cfg["right_side_gestures"]["middle_click"]
         # self.utils.run_app(cmd, True)
@@ -1461,7 +1444,7 @@ class Panel(Adw.Application):
         # Return the dictionary containing the menu buttons
         return menu_buttons
 
-    def sigkill_activewindow(self, *_):
+    def sigkill_focused_view(self, *_):
         active_window = self.get_wayland_active_window()
         pid = active_window.pid
         cmd = "kill -9 {0}".format(pid)
@@ -1507,11 +1490,11 @@ class Panel(Adw.Application):
         # self.vol_slider.set_draw_value(True)
         self.vol_slider.set_value(50)
         self.vol_slider.set_value_pos(Gtk.PositionType.RIGHT)
-        self.vol_slider.connect("value-changed", self.on_slider_changed)
+        self.vol_slider.connect("value-changed", self.on_volume_slider_changed)
         self.vol_slider_box.append(self.vol_slider)
         return self.vol_slider_box
 
-    def on_slider_changed(self, slider):
+    def on_volume_slider_changed(self, slider):
         vol = int(slider.get_value())
 
         if self.is_volume_muted:
@@ -1771,7 +1754,7 @@ class Panel(Adw.Application):
                     # Update the card label with the description of the active audio sink
                     self.tbcard.set_label("{0}".format(sink.description))
 
-    def update_title_topbar(self):
+    def update_title_top_panel(self):
         try:
             title = self.focused_view_title()
             if not title:
@@ -1780,7 +1763,7 @@ class Panel(Adw.Application):
             if initial_title:
                 initial_title = initial_title[0]
             wclass = self.sock.get_focused_view()["app-id"]
-            title = self.modify_title(title)
+            title = self.filter_title(title)
 
             # Limit the title length
             title = title[: self.window_title_topbar_length]
@@ -1790,20 +1773,19 @@ class Panel(Adw.Application):
             if custom_icon:
                 wclass = custom_icon
             # Update title and icon
-            self.update_title_and_icons(title, wclass, initial_title)
+            self.update_title_icon_top_panel(title, wclass, initial_title)
         except Exception as e:
             print(e)
 
     def update_widgets(self, title, wm_class, initial_title, pid, workspace_id):
-        is_fullscreen = self.wf_utils.is_focused_view_fullscreen()
-        if is_fullscreen:
+        if not self.is_scale_active:
             return True
         # Modify title based on certain patterns
-        title = self.modify_title(title)
+        title = self.filter_title(title)
         # Limit the title length
         title = title[: self.window_title_topbar_length]
 
-        self.update_title_and_icons(title, wm_class, initial_title)
+        self.update_title_icon_top_panel(title, wm_class, initial_title)
 
         gws = netifaces.gateways()
         if gws["default"]:
@@ -1818,7 +1800,7 @@ class Panel(Adw.Application):
         # Fetch and format process information
         mem_usage, exe, cpu_usage = self.fetch_process_info(pid)
         # Update widget labels and icons
-        self.update_widget_labels(workspace_id, pid, wm_class, mem_usage, exe)
+        self.update_widgets_background_panel(workspace_id, pid, wm_class, mem_usage, exe)
 
     def apply_custom_icon(self, wclass):
         """Apply custom icon if available."""
@@ -1871,7 +1853,7 @@ class Panel(Adw.Application):
         else:
             return False
 
-    def modify_title(self, title):
+    def filter_title(self, title):
         """Modify title based on certain patterns."""
         title = self.utils.filter_utf8_for_gtk(title)
         if "." in title:
@@ -1887,20 +1869,50 @@ class Panel(Adw.Application):
         return title
 
 
-    def update_title_and_icons(self, title, wm_class, initial_title):
+    def update_title_icon_top_panel(self, title, wm_class, initial_title):
         """Update title and icons."""
         # some classes and initial titles has whitespaces which will lead to not found icons
         title = self.utils.filter_utf8_for_gtk(title)
         icon = self.get_icon(wm_class, initial_title, title)
         if icon and title:
-            # this will freeze some parts of panel with add snapshot view thing 
-            # better handle this with GLib.idle_add or whatever way 
-            # probably the icon is not ready to set causing the issue
-            # only uncomment after find a solution
-            #self.window_title.set_icon_name(icon)
-            self.window_title.set_label(title)
 
-    def update_widget_labels(self, workspace_id, pid, wclass, mem_usage, exe):
+            # Adw.ButtonContent will freeze some parts of panel with add snapshot view thing
+            # because it will try to add content while the widget is not ready 
+            # the solution now is create a clickable box with image/label/append/remove
+            self.top_panel_box_window_title.remove(self.window_title)
+            self.window_title_content = self.create_button_content()
+            self.window_title = self.window_title_content[0]
+            image = self.window_title_content[1]
+            label = self.window_title_content[2]
+            image.set_from_icon_name(icon)
+            label.set_label(title)
+            self.top_panel_box_window_title.append(self.window_title)
+
+
+
+    def create_button_content(self):
+        # Create the main container box
+        box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
+        box.add_css_class("box_from_window_title")
+
+        # Create a label for the title
+        label = Gtk.Label()
+        label.add_css_class("label_from_window_title")
+
+        icon_name = "view-column-symbolic"
+        # Create an image for the icon
+        image = Gtk.Image.new_from_icon_name(icon_name)
+        image.props.margin_end = 5
+        image.set_halign(Gtk.Align.END)
+        image.add_css_class("icon_from_window_title")
+
+        # Append the image and label to the box
+        box.append(image)
+        box.append(label)
+        box.add_css_class("box_from_window_title")
+        return [box, image, label]
+ 
+    def update_widgets_background_panel(self, workspace_id, pid, wclass, mem_usage, exe):
         """Update widget labels."""
 
         # Only update labels related to window details if the window has changed
@@ -1918,53 +1930,57 @@ class Panel(Adw.Application):
         self.volume_watch()
 
 
+def append_to_env(app_name, monitor_name, env_var='waypanel'):
+    existing_env = os.getenv(env_var, '{}')
+    env_dict = json.loads(existing_env)
+    env_dict[app_name] = monitor_name
+    os.environ[env_var] = json.dumps(env_dict)
+
+def load_config(config_path):
+    with open(config_path) as panel_config_file:
+        return toml.load(panel_config_file)
+
+def get_monitor_name(config, sock):
+    monitor = next((output for output in sock.list_outputs() if "-1" in output['name']), sock.list_outputs()[0])
+    monitor_name = monitor.get("name")
+ 
+    return config.get("monitor", {}).get("name", monitor_name)
+
+def find_config_path():
+    home_config_path = os.path.join(os.path.expanduser("~"), ".config/waypanel", "panel.toml")
+    if os.path.exists(home_config_path):
+        return home_config_path
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    default_config_path = os.path.join(os.path.dirname(script_dir), "config/panel.toml")
+    print(f"Using default config path: {default_config_path}")
+
+    return default_config_path
+
 def start_panel():
-    def append_to_env(app_name, monitor_name, env_var='waypanel'):
-        existing_env = os.getenv(env_var)
-
-        if existing_env:
-            env_dict = json.loads(existing_env)
-        else:
-            env_dict = {}
-        env_dict.update({app_name: monitor_name})
-        os.environ[env_var] = json.dumps(env_dict)
-
     sock = WayfireSocket()
     utils = WayfireUtils(sock)
-    home = os.path.expanduser("~")
-    config_path = os.path.join(home, ".config/waypanel")
-    panel_config = os.path.join(config_path, "panel.toml")
-    full_path = os.path.abspath(__file__)
-    directory_path = os.path.dirname(full_path)
-    directory_path = os.path.dirname(directory_path)
-    if not os.path.exists(panel_config): 
-        panel_config = os.path.join(directory_path, "config/panel.toml")
-        print(panel_config, directory_path)
 
-    with open(panel_config) as panel_config:
-        config = toml.load(panel_config)
-    monitor = next((output for output in sock.list_outputs() if "-1" in output['name'] ), sock.list_outputs()[0])
-    monitor_name = monitor["name"]
-    try:
-        monitor_name = config["monitor"]["name"]
-    except KeyError:
-        print("No monitor found in config, using the default output {}".format(monitor_name))
+    config_path = find_config_path()
+    config = load_config(config_path)
 
-    argv = sys.argv
-    if monitor_name is None and len(argv) > 0:
-        monitor_name = argv[-1].strip()
+    monitor_name = get_monitor_name(config, sock)
+    if len(sys.argv) > 1:
+        monitor_name = sys.argv[-1].strip()
+
+    app_name = f"com.waypanel.{monitor_name}"
     global app
-    app_name = "com.waypanel.{0}".format(monitor_name)
     app = Panel(application_id=app_name)
+
     append_to_env("output_name", monitor_name)
     append_to_env("output_id", utils.get_output_id_by_name(monitor_name))
+
     app.run(None)
     sock.watch(["event"])
+
     while True:
         msg = sock.read_message()
-        if "output" not in msg:
-            continue
-        if monitor_name == msg["output-data"]["name"]:
+        if "output" in msg and monitor_name == msg["output-data"]["name"]:
             if msg["event"] == "output-added":
                 app.run(None)
 

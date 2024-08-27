@@ -527,6 +527,13 @@ class Utils(Adw.Application):
         self.create_gesture(box, 3, lambda *_: self.move_view_to_empty_workspace(view_id))
         return box
 
+    def focus_view_when_ready(self, view):
+        """this function is meant to be used with GLib timeout or idle_add"""
+        if view["role"] == "toplevel" and view["focusable"] is True:
+            self.sock.set_focus(view["id"])
+            return False  # Stop idle processing
+        return True  # Continue idle processing
+
     def move_view_to_empty_workspace(self, view_id):
         ws = self.wf_utils.get_active_workspace()
         if ws:

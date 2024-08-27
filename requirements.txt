@@ -1,19 +1,11 @@
-# This file lists all Python packages required by the script
-
-# Standard library imports
-importlib-metadata
-netifaces
-psutil
-pulsectl
-soundcard
-toml
-numpy
-random2
-wayfire
-requests
-bs4
-setuptools
-meson
-# Third-party library imports
-pygobject
-
+aiohttp==3.10.5
+beautifulsoup4==4.12.3
+netifaces==0.11.0
+numpy==2.1.0
+psutil==6.0.0
+pulsectl==24.4.0
+Requests==2.32.3
+setuptools==69.5.1
+SoundCard==0.4.3
+toml==0.10.2
+wayfire==2.0
