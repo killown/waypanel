@@ -1,6 +1,7 @@
 ## waypanel
 
-![output-DP-1](https://github.com/user-attachments/assets/5eb066b9-381b-4964-b941-0a1a115897f4)
+![output-DP-1](https://github.com/user-attachments/assets/8741fe12-4395-4286-b07c-1b40ec665431)
+
 
 
 ##### _Gtk4/Adwaita panel made for wayfire_
