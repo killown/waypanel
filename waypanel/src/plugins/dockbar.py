@@ -126,6 +126,7 @@ class Dockbar(Adw.Application):
         self.add_launcher.set_icon_name("tab-new-symbolic")
         self.add_launcher.connect("clicked", self.dockbar_append)
         self.scrolled_window = Gtk.ScrolledWindow()
+        self.scrolled_window.add_css_class("scrolled_window_bottom_bar")
         output = os.getenv("waypanel")
         output_name = None
         geometry = None

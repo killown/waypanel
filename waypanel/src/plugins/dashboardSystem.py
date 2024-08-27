@@ -1,4 +1,6 @@
 import os
+import psutil
+from subprocess import Popen
 from gi.repository import Gtk, Adw
 from subprocess import Popen, check_output
 from ..core.utils import Utils
@@ -51,7 +53,7 @@ class SystemDashboard(Adw.Application):
         self.popover_dashboard.connect("notify::visible", self.popover_is_open)
         # Set width and height of the popover dashboard
         self.popover_dashboard.set_size_request(
-            600, 266
+            400, 440
         )  # Set width to 600 and height to 400
 
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
@@ -66,6 +68,8 @@ class SystemDashboard(Adw.Application):
             ("Shutdown", "", "gnome-shutdown-symbolic"): "System Actions",
             ("Lock", "", "system-lock-screen-symbolic"): "System Actions",
             ("Turn Off Monitors", "", "display-symbolic"): "System Actions",
+            ("Exit Waypanel", "", "display-symbolic"): "System Actions",
+            ("Restart Waypanel", "", "display-symbolic"): "System Actions",
         }
         done = []
         for data, category in data_and_categories.items():
@@ -157,10 +161,29 @@ class SystemDashboard(Adw.Application):
         if not self.popover_dashboard:
             self.popover_dashboard = self.create_popover_system(self.app)
 
+    def kill_process_by_name(self, name):
+        # Iterate over all running processes
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                # Check if the process name matches
+                if name in proc.info['name']:
+                    proc.kill()
+                    print(f"Killed process {proc.info['name']} with PID {proc.info['pid']}")
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+    def run_later(self, command, delay):
+        # Schedule the command to run after `delay` seconds
+        Popen(['bash', '-c', f'sleep {delay} && {command}'])
+        
     def on_action(self, button, action):
         if action == "Exit Waypanel":
             # FIXME: need a better way to exit the panel
-            Popen("killall -9 waypanel.bin".split())
+            self.kill_process_by_name("waypanel")
+        if action == "Restart Waypanel":
+            # FIXME: need a better way to exit the panel
+            self.run_later("/home/neo/.local/bin/waypanel&", 0.4)
+            self.kill_process_by_name("waypanel")
+
         if action == "Logout":
             Popen("wayland-logout".split())
         if action == "Shutdown":
@@ -180,10 +203,6 @@ class SystemDashboard(Adw.Application):
                     --inside-color 00000088 --separator-color 00000000
                     --grace 2 --fade-in 4""".split()
             )
-        if action == "Restart Waypanel":
-            # FIXME: need a better way to exit the panel
-            Popen("killall -9 waypanel.bin".split())
-            Popen("/opt/waypanel/waypanel.bin".split())
 
     def popover_is_open(self, *_):
         return
