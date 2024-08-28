@@ -181,6 +181,7 @@ class PopoverFolders(Adw.Application):
         if self.popover_folders and self.popover_folders.is_visible():
             self.popover_folders.popdown()
         if self.popover_folders and not self.popover_folders.is_visible():
+            self.listbox.unselect_all()
             self.popover_folders.popup()
         if not self.popover_folders:
             self.popover_folders = self.create_popover_folders(self.app)
