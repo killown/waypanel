@@ -210,9 +210,7 @@ class Dockbar(Adw.Application):
             self.on_title_changed(view)
 
         if msg["event"] == "view-tiled" and view:
-            if self.wf_utils.is_view_maximized(view["id"]):
-                self.was_last_focused_view_maximized = True
-
+            pass
         if msg["event"] == "app-id-changed":
             self.on_app_id_changed(msg["view"])
 
