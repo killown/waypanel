@@ -17,6 +17,8 @@ class MenuLauncher(Adw.Application):
         self.widgets_dict = {}
         self.all_apps = None
         self.top_panel = None
+        self.search_get_child = None
+        self.search_row = []
         self._setup_config_paths()
         self.recent_apps_file = os.path.expanduser("~/config/waypanel/recent-apps.lst")
         self.utils = Utils(application_id="com.github.utils")
@@ -67,6 +69,10 @@ class MenuLauncher(Adw.Application):
         self.searchbar = Gtk.SearchEntry.new()
         self.searchbar.grab_focus()
         self.searchbar.connect("search_changed", self.on_search_entry_changed)
+        
+        # press enter
+        self.searchbar.connect("activate", self.on_keypress)
+      
         self.searchbar.set_focus_on_click(True)
         # self.searchbar.props.hexpand = False
         # self.searchbar.props.vexpand = True
@@ -162,6 +168,11 @@ class MenuLauncher(Adw.Application):
         self.popover_launcher.popup()
         return self.popover_launcher
 
+
+    # this is where pressing enter will take effect
+    def on_keypress(self, *_):
+        cmd = "gtk-launch {}".format(self.search_get_child).split()
+        Popen(cmd)
 
     def update_flowbox(self):
         all_apps = Gio.AppInfo.get_all()
@@ -288,6 +299,7 @@ class MenuLauncher(Adw.Application):
             self.popover_launcher.popdown()
         if self.popover_launcher and not self.popover_launcher.is_visible():
             self.update_flowbox()
+            self.flowbox.unselect_all()
             self.popover_launcher.popup()
         if not self.popover_launcher:
             self.popover_launcher = self.create_popover_launcher(self.app)
@@ -307,7 +319,6 @@ class MenuLauncher(Adw.Application):
 
     def search_entry_grab_focus(self):
         self.searchentry.grab_focus()
-        print("search entry is focused: {}".format(self.searchentry.is_focus()))
 
     def select_first_visible_child(self):
         """Select the first visible child in the flowbox."""
@@ -328,16 +339,24 @@ class MenuLauncher(Adw.Application):
         searchentry.grab_focus()
         # run filter (run self.on_filter_invalidate look at self.listbox.set_filter_func(self.on_filter_invalidate) )
         self.flowbox.invalidate_filter()
-        GLib.idle_add(self.select_first_visible_child)
-       
+
     def on_filter_invalidate(self, row):
+        # get the Entry search
         text_to_search = self.searchbar.get_text().strip()
         if not isinstance(row, str):
+            # the line searched for, it will return every line that matches the search
             row = row.get_child().MYTEXT
-            # using get_name + get_keywords from Gio.AppInfo.get_all()
-            row = "{0} {1} {2}".format(row[0], row[1], row[2])
+            # this is to store all rows that match the search and get the first one 
+            # then we can use on_keypress to start the app
+            self.search_row.append(row[1])
 
-        row = row.lower().strip()
-        if text_to_search.lower() in row:
+        r = row.lower().strip()
+        # checking if the search is valid
+        if text_to_search.lower() in r:
+            # [-1] is the first item from the search, means first row searched
+            # [1] is the desktop file, example.desktop
+            self.search_get_child = self.search_row[-1]
+            # clean up because we only need the list to get the first row
+            self.search_row = []
             return True
         return False
