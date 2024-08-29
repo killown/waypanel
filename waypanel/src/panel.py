@@ -32,6 +32,9 @@ from wayfire.core.template import get_msg_template
 from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.extra.stipc import Stipc
 
+#to get the gtk and gdk completions
+#pip install pygobject-stubs --no-cache-dir --config-settings=config=Gtk4,Gdk
+
 app = None 
 
 class WayfireSocket(OriginalWayfireSocket):
@@ -188,7 +191,6 @@ class Panel(Adw.Application):
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
         config_paths = self.utils.setup_config_paths()
-        
         # Set instance variables from the dictionary
         self.home = config_paths["home"]
         self.scripts = config_paths["scripts"]
@@ -368,6 +370,16 @@ class Panel(Adw.Application):
 
         return folder_location.get_path() if folder_location else None
 
+    @staticmethod
+    def handle_exceptions(func):
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                print(f"An error occurred in {func.__name__}: {e}")
+                return None
+        return wrapper
+ 
     def update_background_panel(self):
         view = self.sock.get_focused_view()
         title = view["title"]
@@ -874,7 +886,7 @@ class Panel(Adw.Application):
         self.top_panel_box_full.add_controller(EventScroll)
 
     def maximize_last_focused_view(self, *_):
-        self.wf_utils.maximize(self.last_toplevel_focused_view)
+        pass
 
     def next_visibe_view_active_workspace(self):
         view_ids = self.wf_utils.get_views_from_active_workspace()
@@ -1058,12 +1070,6 @@ class Panel(Adw.Application):
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
         )
 
-    def on_waywatch_finished(self, task):
-        try:
-            task.finish()
-        except Exception as err:
-            print("Unhandled exception occured!", err.message)
-
     def setup_panels(self):
         self.panel_on_top = "TOP"
         self.exclusive = True
@@ -1074,8 +1080,9 @@ class Panel(Adw.Application):
         self.top_panel_box_right.set_hexpand(True)
 
         # setup window title
-        self.window_title_content = self.create_button_content()
-        self.window_title = self.window_title_content[0]
+        #self.window_title_content = self.create_button_content()
+        #self.window_title = self.window_title_content[0]
+        self.window_title = Adw.ButtonContent()
         self.top_panel_box_window_title.append(self.window_title)
 
         if "--custom" in self.args:
@@ -1445,8 +1452,8 @@ class Panel(Adw.Application):
         return menu_buttons
 
     def sigkill_focused_view(self, *_):
-        active_window = self.get_wayland_active_window()
-        pid = active_window.pid
+        active_window = self.sock.get_focused_view()
+        pid = active_window["pid"]
         cmd = "kill -9 {0}".format(pid)
         self.utils.run_app(cmd)
 
@@ -1459,8 +1466,8 @@ class Panel(Adw.Application):
 
     def copy_to_clipboard(self, *_):
         # lazy to not use wl-copy
-        active_window = self.get_wayland_active_window()
-        self.utils.run_app("wl-copy {0}".format(active_window.pid))
+        active_window = self.sock.get_focused_view()
+        self.utils.run_app("wl-copy {0}".format(active_window["pid"]))
         self.utils.run_app("kitty --hold -- htop -p {0}".format(active_window.pid))
 
     def bluetooth_manager(self):
@@ -1593,7 +1600,7 @@ class Panel(Adw.Application):
             None
         """
         # Retrieve information about the active window
-        
+
         view = self.sock.get_view(self.last_toplevel_focused_view)
         title = self.utils.filter_utf8_for_gtk(view["title"])
         wm_class = view["app-id"].lower()
@@ -1814,7 +1821,7 @@ class Panel(Adw.Application):
 
     def fetch_process_info(self, pid):
         """Fetch and return process information."""
-        if pid not in self.psutil_store.keys():
+        if pid not in self.wf_utils.list_pids():
             process = psutil.Process(pid)
             self.psutil_store[pid] = process
         mem_usage = self.utils.convert_size(
@@ -1868,7 +1875,9 @@ class Panel(Adw.Application):
 
         return title
 
-
+ 
+    # this code is still cause of crashes and freezes in the panel
+    @handle_exceptions
     def update_title_icon_top_panel(self, title, wm_class, initial_title):
         """Update title and icons."""
         # some classes and initial titles has whitespaces which will lead to not found icons
@@ -1879,16 +1888,23 @@ class Panel(Adw.Application):
             # Adw.ButtonContent will freeze some parts of panel with add snapshot view thing
             # because it will try to add content while the widget is not ready 
             # the solution now is create a clickable box with image/label/append/remove
-            self.top_panel_box_window_title.remove(self.window_title)
-            self.window_title_content = self.create_button_content()
-            self.window_title = self.window_title_content[0]
-            image = self.window_title_content[1]
-            label = self.window_title_content[2]
-            image.set_from_icon_name(icon)
-            label.set_label(title)
-            self.top_panel_box_window_title.append(self.window_title)
+            #if self.utils.widget_exists(self.window_title):
+            #    self.top_panel_box_window_title.remove(self.window_title)
 
-
+            #self.window_title_content = self.create_button_content()
+            #self.window_title = self.window_title_content[0]
+            #image = self.window_title_content[1]
+            #label = self.window_title_content[2]
+            #if self.utils.widget_exists(image):
+            #     image.set_from_icon_name(icon)
+            #if self.utils.widget_exists(label):
+            #   label.set_label(title)
+            self.window_title.set_label(title)
+            self.window_title.set_icon_name(icon)
+            self.window_title.add_css_class("box_from_window_title")
+            #self.utils.append_widget_if_ready(self.top_panel_box_window_title,
+            #                                  self.window_title,
+            #                                 )
 
     def create_button_content(self):
         # Create the main container box
