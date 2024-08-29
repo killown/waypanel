@@ -1083,6 +1083,7 @@ class Panel(Adw.Application):
         #self.window_title_content = self.create_button_content()
         #self.window_title = self.window_title_content[0]
         self.window_title = Adw.ButtonContent()
+        self.window_title.add_css_class("box_from_window_title")
         self.top_panel_box_window_title.append(self.window_title)
 
         if "--custom" in self.args:
@@ -1901,7 +1902,6 @@ class Panel(Adw.Application):
             #   label.set_label(title)
             self.window_title.set_label(title)
             self.window_title.set_icon_name(icon)
-            self.window_title.add_css_class("box_from_window_title")
             #self.utils.append_widget_if_ready(self.top_panel_box_window_title,
             #                                  self.window_title,
             #                                 )
