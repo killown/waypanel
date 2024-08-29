@@ -173,6 +173,7 @@ class MenuLauncher(Adw.Application):
     def on_keypress(self, *_):
         cmd = "gtk-launch {}".format(self.search_get_child).split()
         Popen(cmd)
+        self.popover_launcher.popdown()
 
     def update_flowbox(self):
         all_apps = Gio.AppInfo.get_all()
@@ -297,10 +298,14 @@ class MenuLauncher(Adw.Application):
     def open_popover_launcher(self, *_):
         if self.popover_launcher and self.popover_launcher.is_visible():
             self.popover_launcher.popdown()
+            self.popover_is_closed()
         if self.popover_launcher and not self.popover_launcher.is_visible():
             self.update_flowbox()
             self.flowbox.unselect_all()
             self.popover_launcher.popup()
+            self.searchbar.set_text("")
+            self.popover_is_open()
+
         if not self.popover_launcher:
             self.popover_launcher = self.create_popover_launcher(self.app)
 
@@ -349,6 +354,7 @@ class MenuLauncher(Adw.Application):
             # this is to store all rows that match the search and get the first one 
             # then we can use on_keypress to start the app
             self.search_row.append(row[1])
+            row = f"{row[0]} {row[1]} {row[2]}"
 
         r = row.lower().strip()
         # checking if the search is valid

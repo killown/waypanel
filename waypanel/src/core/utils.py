@@ -91,6 +91,43 @@ class Utils(Adw.Application):
     def widget_exists(self, widget):
         return widget is not None and isinstance(widget, Gtk.Widget)
 
+    def is_widget_ready_to_append(self, container):
+        """
+        Check if the container and widget are both ready for appending.
+
+        Args:
+            container (Gtk.Widget): The container to which the widget will be appended.
+            widget (Gtk.Widget): The widget to be appended.
+
+        Returns:
+            bool: True if the container and widget are both valid, realized, and visible.
+        """
+        # Check if both the container and widget are not None and are instances of Gtk.Widget
+        if not self.widget_exists(container):
+            return False
+ 
+        # Check if the container is realized and visible
+        if not Gtk.Widget.get_realized(container) or not Gtk.Widget.get_visible(container):
+            return False
+
+        return True
+ 
+    def append_widget_if_ready(self, container, widget):
+        """
+        Append a widget to a container if both the container and widget are in a proper state.
+
+        Args:
+            container (Gtk.Widget): The container to which the widget will be appended.
+            widget (Gtk.Widget): The widget to append to the container.
+
+        Returns:
+            bool: True if the widget was appended, False otherwise.
+        """
+        if self.is_widget_ready_to_append(container):
+            container.append(widget)
+            return True
+        return False
+
     def CreateWorkspacePanel(
         self, config, orientation, class_style, callback=None, use_label=False
     ):
@@ -542,8 +579,9 @@ class Utils(Adw.Application):
 
     def append_clickable_image(self, box, clickable_image_box):
         if clickable_image_box is not None:
-            box.append(clickable_image_box)
-        return False 
+            if self.is_widget_ready_to_append(box):
+                box.append(clickable_image_box)
+        return False
 
     def normalize_icon_name(self, app_id):
         if '.' in app_id:
