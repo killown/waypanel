@@ -1,44 +1,31 @@
 import os
 import toml
-import gi
 import json
-from subprocess import Popen, call, check_output as out
+from subprocess import call, check_output as out
 from collections import ChainMap
-from waypanel.src.core.create_panel import (
-    set_layer_position_exclusive,
-    unset_layer_position_exclusive,
-)
-
-gi.require_version("Gtk", "4.0")
-gi.require_version("Adw", "1")
-gi.require_version("Gtk4LayerShell", "1.0")
-from gi.repository import Gtk4LayerShell as LayerShell
-from gi.repository import Gtk, Adw, GLib, Gio, GObject, Gio
+import sys
+from gi.repository import Gtk, Adw, GLib
 from ..core.create_panel import (
     CreatePanel,
     set_layer_position_exclusive,
     unset_layer_position_exclusive,
 )
 from ..core.utils import Utils
-import numpy as np
-import sys
-from waypanel.src.core.background import *
 from wayfire.ipc import WayfireSocket
 from  wayfire.extra.ipc_utils import WayfireUtils
 
 
 sys.path.append("/usr/lib/waypanel/")
 
-
 class Dockbar(Adw.Application):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
         self.utils = Utils()
         self.psutil_store = {}
         self.panel_cfg = self.utils.load_topbar_config()
         self.taskbar_list = [None]
         self.sock = WayfireSocket()
+        self.socket_event = None
         self.wf_utils = WayfireUtils(self.sock)
         self.all_pids = [i["id"] for i in self.sock.list_views()]
         self.timeout_taskbar = None
@@ -71,7 +58,7 @@ class Dockbar(Adw.Application):
 
     # Start the Dockbar application
     def do_start(self):
-        self.start_thread_compositor()
+        self.setup_event_watch()
         self.stored_windows = [i["id"] for i in self.sock.list_views()]
 
         # Read configuration from the topbar TOML file
@@ -102,10 +89,10 @@ class Dockbar(Adw.Application):
         position = config["position"]
 
         self.left_panel = CreatePanel(
-            self, "LEFT", position, exclusive, 32, 0, "LeftBar"
+            self, "LEFT", position, exclusive, 32, 0, "dockbar-left"
         )
         self.dockbar = self.utils.CreateFromAppList(
-            self.dockbar_config, "v", "LeftBar", self.join_windows
+            self.dockbar_config, "v", "dockbar-left-button", self.join_windows
         )
         self.add_launcher = Gtk.Button()
         self.add_launcher.set_icon_name("tab-new-symbolic")
@@ -156,27 +143,6 @@ class Dockbar(Adw.Application):
         # Start the taskbar list for the bottom panel
         self.Taskbar("h", "taskbar")
 
-    def on_compositor_finished(self):
-        # non working code
-        try:
-            self.taskbarwatch_task.finish()
-        except Exception as err:
-            print(err)
-
-    def start_thread_compositor(self):
-        self.taskbarwatch_task = Background(
-            self.TaskbarWatch, lambda: self.on_compositor_finished
-        )
-        self.taskbarwatch_task.start()
-
-    def compositor_window_changed(self):
-        # if no windows, window_created signal will conflict with window_changed
-        # the issue will be no new button will be appended to the taskbar
-        # necessary to check if the window list is empity
-        # if not len(self.hyprinstance.get_windows()) == 0:
-        # self.update_active_window_shell()
-        print()
-
     def file_exists(self, full_path):
         return os.path.exists(full_path)
 
@@ -189,7 +155,6 @@ class Dockbar(Adw.Application):
 
         if view is None:
             return
-
 
         if view["pid"] == -1:
             return
@@ -246,38 +211,40 @@ class Dockbar(Adw.Application):
                 if msg["plugin"] == "scale":
                     self.on_scale_desactivated()
 
-    def TaskbarWatch(self):
-        # evets should ever stop, if it breaks the loop
-        # lets start a new one
-        while True:
-            try:
-                # FIXME: create a file dedicated for watching events
-                sock = WayfireSocket()
-                sock.watch()
-                view = None
-                while True:
-                    try:
-                        msg = sock.read_message()
-                        if "view" in msg:
-                            view = msg["view"]
+    def setup_event_watch(self):
+        self.socket_event = WayfireSocket()
+        self.socket_event.watch(["event"])
+        fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
+        GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
-                        if "event" in msg:
-                            if msg["event"] == "view-geometry-changed":
-                                if "view" in msg:
-                                    view = msg["view"]
-                                    if view["layer"] != "workspace":
-                                        self.taskbar_remove(view["id"])
+    def on_event_ready(self, fd, condition):
+        # This function is called when the file descriptor is ready for reading
+        try:
+            msg = self.socket_event.read_next_event()
+            if msg is not None:
+                self.handle_event(msg)
+        except Exception as e:
+            print(f"Error processing Wayfire events: {e}")
 
-                            if msg["event"] == "output-gain-focus":
-                                pass
-                            self.handle_view_event(msg, view)
-                            self.handle_plugin_event(msg)
+        # Return True to continue calling this function
+        return True
 
+    def handle_event(self, msg):
+        view = None
+        if "view" in msg:
+            view = msg["view"]
 
-                    except Exception as e:
-                        print(e)
-            except Exception as e:
-                print(e)
+        if "event" in msg:
+            if msg["event"] == "view-geometry-changed":
+                if "view" in msg:
+                    view = msg["view"]
+                    if view["layer"] != "workspace":
+                        self.taskbar_remove(view["id"])
+
+            if msg["event"] == "output-gain-focus":
+                pass
+            self.handle_view_event(msg, view)
+            self.handle_plugin_event(msg)
 
     def on_view_role_toplevel_focused(self, view):
         return
@@ -348,13 +315,8 @@ class Dockbar(Adw.Application):
         initial_title = title.split()[0]
         icon = self.utils.get_icon(view["app-id"], initial_title, title)
         button = self.buttons_id[view["id"]][0]
-        image = button.get_first_child()
-        label = button.get_last_child()
         if icon:
-            if isinstance(icon, Gio.FileIcon):
-                image.set_from_gicon(icon)
-            else:
-                image.set_from_icon_name(icon)
+            button.set_icon_name(icon)
 
             #this part enables output name in taskbar list buttons
             #if title:
@@ -411,15 +373,8 @@ class Dockbar(Adw.Application):
         )
         if not self.utils.widget_exists(button):
             return
-       
-        # If the function returns None (for example, if pid == -1), 
-        # clickable_image_box will be None, and nothing will be appended on to the taskbar
-        # Premature Widget Addition: If you try to append the box to the AdwWindow before 
-        # the window has been fully realized (allocated size and position), this could trigger the warning.
-        # like that:  Trying to snapshot AdwWindow ..... without a current allocation ?
-        # so that explains the use of GLib.idle_add() 
-        # to ensure the UI loop has time to process allocations first.
-        GLib.idle_add(lambda: self.utils.append_clickable_image(self.taskbar, button))
+
+        self.taskbar.append(button)
 
         # Store button information in dictionaries for easy access
         self.buttons_id[id] = [button, initial_title, id]
