@@ -1,8 +1,8 @@
-.WindowTitle {
-  background-color: #282828;
+.title_button_view {
+  background-color: #1d2021;
   border-radius: 8px;
   border-width: 0;
-  margin-top: 2px;
+  margin-top: 4px;
   color: #ebdbb2;
   font-size: 16px;
   text-decoration: none;
@@ -11,9 +11,13 @@
     transform 0.15s;
   padding-left: 6px;
   padding-right: 6px;
+  box-shadow:
+    rgba(0, 0, 0, 0.507) 0 1px 1px,
+    rgba(0, 0, 0, 0.555) 0 1px 1px,
+    #00000075 0 -4px 0 inset;
 }
 
-.LeftBar {
+.dockbar-left {
   -gtk-icon-size: 42px;
   background: #d3d3d300;
 }
@@ -25,14 +29,14 @@
   transition-property: transform;
 }
 
-.LeftBar-button {
+.dockbar-left-button {
   padding-left: 8px;
   padding-right: 8px;
   padding-top: 8px;
   padding-bottom: 8px;
   margin-left: 8px;
   margin-right: 8px;
-  background-color: #282828;
+  background-color: #1d2021;
   border-radius: 8px;
   border-width: 0;
   color: #ebdbb2;
@@ -50,7 +54,7 @@
 }
 
 .RightBar-button {
-  background-color: #282828;
+  background-color: #1d2021;
   border-radius: 4px;
   border-width: 0;
   box-shadow:
@@ -86,11 +90,12 @@
   background: rgba(36, 40, 59, 0);
   padding: 2px 4px 2px 4px;
   margin: 1px 1px 1px 1px;
+  margin-top: 4px;
 }
 
 .close-button {
   -gtk-icon-size: 22px;
-  background-color: #282828;
+  background-color: #1d2021;
   border-radius: 4px;
   border-width: 0;
   box-shadow:
@@ -108,7 +113,7 @@
 
 .maximize-button {
   -gtk-icon-size: 22px;
-  background-color: #282828;
+  background-color: #1d2021;
   border-radius: 4px;
   border-width: 0;
   box-shadow:
@@ -126,7 +131,7 @@
 
 .minimize-button {
   -gtk-icon-size: 22px;
-  background-color: #282828;
+  background-color: #1d2021;
   border-radius: 4px;
   border-width: 0;
   box-shadow:
@@ -143,9 +148,9 @@
 }
 
 .top_panel_box_widgets_left {
-  background-color: #282828;
+  background-color: #1d2021;
   border-radius: 8px;
-  margin-top: 2px;
+  margin-top: 4px;
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
@@ -223,14 +228,6 @@ scale {
   box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
 }
 
-.icon_from_clickable_image {
-  -gtk-icon-size: 32px;
-}
-
-.label_from_clickable_image {
-  color: #ebdbb2;
-}
-
 /*icons from bookbarks menu*/
 .icon_from_popover_launcher {
   -gtk-icon-size: 36px;
@@ -252,15 +249,6 @@ scale {
 }
 .icon_from_folders {
   -gtk-icon-size: 42px;
-}
-
-.box_from_clickable_image {
-  background-color: #282828;
-  color: #ebdbb2;
-  border-radius: 8px;
-  border-style: solid;
-  border-width: 1px;
-  margin: 4px 4px 4px 4px;
 }
 
 .label_from_popover_launcher {
@@ -288,15 +276,18 @@ scale {
 }
 
 .Clock {
-  background-color: #282828;
+  background-color: #1d2021;
   border-radius: 8px;
-  margin-top: 2px;
   color: #ebdbb2;
-  padding: 0px 4px 2px 4px;
+  margin-top: 4px;
   text-decoration: none;
   transition:
     box-shadow 0.15s,
     transform 0.15s;
+  box-shadow:
+    rgba(0, 0, 0, 0.507) 0 1px 1px,
+    rgba(0, 0, 0, 0.555) 0 1px 1px,
+    #00000075 0 -4px 0 inset;
 }
 
 .wallpaper {
@@ -346,8 +337,8 @@ scale {
 
 .top_panel_box_systray {
   -gtk-icon-size: 22px;
-  margin-top: 2px;
-  background-color: #282828;
+  margin-top: 4px;
+  background-color: #1d2021;
   border-radius: 8px;
   border-width: 0;
   color: #ebdbb2;
@@ -355,6 +346,10 @@ scale {
   transition:
     box-shadow 0.15s,
     transform 0.15s;
+  box-shadow:
+    rgba(0, 0, 0, 0.507) 0 1px 1px,
+    rgba(0, 0, 0, 0.555) 0 1px 1px,
+    #00000075 0 -4px 0 inset;
 }
 
 .top_panel_box_center {
@@ -364,10 +359,6 @@ scale {
 
 .todo_label {
   font-size: 15px;
-}
-
-.clickable_image_label {
-  color: #ebdbb2;
 }
 
 .TopBarBackground {
@@ -385,29 +376,36 @@ scale {
 .BottomBar {
   background-color: #00000000;
   margin: 6px 8px 6px 8px;
-  color: #ebdbb2;
+
 }
 
 .taskbar {
   border-radius: 8px;
   border-width: 0;
-  box-shadow:
-    rgba(0, 0, 0, 0.507) 0 1px 1px,
-    rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -4px 0 inset;
-
-  font-size: 16px;
-  color: #ebdbb2;
-  padding: 4px 8px 8px 8px;
 }
 
-.box_from_clickable_image:hover {
+.taskbar_button {
+  background-color: #1d2021;
   color: #ebdbb2;
-  background-color: #000000;
+  border-radius: 8px;
+  border-style: none;
+  border-width: 1px;
+  margin: 4px 4px 4px 4px;
+  padding: 4px 4px 4px 4px;
+  box-shadow:
+  rgba(0, 0, 0, 0.507) 0 2px 0px,
+  rgba(0, 0, 0, 0.555) 0 2px 0px,
+  #00000075 0 -4px 0 inset;
+  -gtk-icon-size: 32px;
+}
+
+
+.taskbar_button:hover {
+  background-color: #282828;
 }
 
 .hvr-grow:hover {
   color: #ebdbb2;
-  background: #b5b3b0;
+  background: #ebdbb2;
   text-shadow: rgb(9, 5, 5) 0.006em 0.006em 0.007em;
 }
