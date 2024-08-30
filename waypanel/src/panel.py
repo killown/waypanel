@@ -71,7 +71,8 @@ class Panel(Adw.Application):
         self.panel_cfg = self.load_topbar_config()
 
         self.sock = WayfireSocket()
-        self.socket_event = None
+        self.socket_event = WayfireSocket()
+        self.socket_event.watch()
         self.wf_utils = WayfireUtils(self.sock)
 
 
@@ -310,6 +311,29 @@ class Panel(Adw.Application):
         )
         self.turn_off_monitor_timeout = timeout_single
 
+    def check_widgets_ready(self):
+        if (self.utils.is_widget_ready(self.top_panel_box_left) and
+            self.utils.is_widget_ready(self.top_panel_box_window_title) and
+            self.utils.is_widget_ready(self.top_panel_box_widgets_left) and
+            self.utils.is_widget_ready(self.top_panel_box_right) and
+            self.utils.is_widget_ready(self.top_panel_box_systray) and
+            self.utils.is_widget_ready(self.top_panel_box_center) and
+            self.utils.is_widget_ready(self.top_panel_box_full)):
+
+            # Apply CSS classes
+            self.top_panel_box_left.add_css_class("top_panel_box_left")
+            self.top_panel_box_window_title.add_css_class("top_panel_box_window_title")
+            self.top_panel_box_widgets_left.add_css_class("top_panel_box_widgets_left")
+            self.top_panel_box_right.add_css_class("top_panel_box_right")
+            self.top_panel_box_systray.add_css_class("top_panel_box_systray")
+            self.top_panel_box_center.add_css_class("top_panel_box_center")
+            self.top_panel_box_full.add_css_class("top_panel_box_full")
+            return False
+        else:
+            # Retry after a delay
+            GLib.timeout_add(1, self.check_widgets_ready)
+            return True
+
     def do_activate(self):
         #activate auto start apps
         #GLib.timeout_add(4000, self.autostart)
@@ -319,15 +343,8 @@ class Panel(Adw.Application):
             Gio.FileMonitorFlags.NONE, None
         )
         self.monitor.connect("changed", self.on_css_file_changed)
-        self.top_panel_box_left.add_css_class("top_panel_box_left")
-        self.top_panel_box_window_title.add_css_class("top_panel_box_window_title")
-        self.top_panel_box_widgets_left.add_css_class("top_panel_box_widgets_left")
-        self.top_panel_box_right.add_css_class("top_panel_box_right")
-        self.top_panel_box_systray.add_css_class("top_panel_box_systray")
-        self.top_panel_box_center.add_css_class("top_panel_box_center")
-        self.top_panel_box_full.add_css_class("top_panel_box_full")
+        self.check_widgets_ready()
         self.show_panels()
-
 
     def autostart(self):
         # auto start some apps in systray
@@ -559,7 +576,8 @@ class Panel(Adw.Application):
     def setup_event_watch(self):
         self.socket_event = WayfireSocket()
         self.socket_event.watch(["event"])
-        fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
+        self.sock.watch()
+        fd = self.socket_event.client.fileno()
         GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
     def on_event_ready(self, fd, condition):
@@ -1847,7 +1865,6 @@ class Panel(Adw.Application):
         return mem_usage, exe, cpu_usage
 
     def set_cpu_usage(self):
-        
         pid = self.sock.get_focused_view()["pid"]
         allow_to_set_zero = False
         """Fetch and return process information."""
