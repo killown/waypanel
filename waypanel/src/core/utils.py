@@ -1,11 +1,10 @@
 import os
 import math
 import gi
-from waypanel.src.core.background import Background
 import numpy as np
 from time import sleep
 import subprocess
-from gi.repository import Gtk, Adw, Gio, Gdk
+from gi.repository import Gtk, Adw, Gio, Gdk, GLib
 from subprocess import Popen
 from subprocess import check_output
 import toml
@@ -55,7 +54,7 @@ class Utils(Adw.Application):
             "st",
             "rxvt"
         ]
-        self.start_thread_compositor()
+        self.setup_event_watch()
 
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
         if [c for c in self.terminal_emulators if cmd in c] and cmd_mode:
@@ -91,7 +90,7 @@ class Utils(Adw.Application):
     def widget_exists(self, widget):
         return widget is not None and isinstance(widget, Gtk.Widget)
 
-    def is_widget_ready_to_append(self, container):
+    def is_widget_ready(self, container):
         """
         Check if the container and widget are both ready for appending.
 
@@ -123,7 +122,7 @@ class Utils(Adw.Application):
         Returns:
             bool: True if the widget was appended, False otherwise.
         """
-        if self.is_widget_ready_to_append(container):
+        if self.is_widget_ready(container):
             container.append(widget)
             return True
         return False
@@ -166,7 +165,6 @@ class Utils(Adw.Application):
 
         return box
 
-
     def find_dock_icon(self, app_id):
         with open(self.dockbar_config, "r") as f:
             config_data = toml.load(f)
@@ -206,7 +204,6 @@ class Utils(Adw.Application):
             monitor_info[name] = [monitor_width, monitor_height]
 
         return monitor_info
-
 
     def take_note_app(self, *_):
         """
@@ -253,7 +250,7 @@ class Utils(Adw.Application):
                 except KeyError:
                     pass
 
-                button = self.CreateButton(
+                button = self.create_button(
                     config_data[app]["icon"],
                     config_data[app]["cmd"],
                     class_style,
@@ -269,35 +266,32 @@ class Utils(Adw.Application):
 
         return box
 
-    def on_compositor_finished(self):
+    def setup_event_watch(self):
+        self.socket_event = WayfireSocket()
+        self.socket_event.watch(["event"])
+        fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
+        GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
+
+    def on_event_ready(self, fd, condition):
+        # This function is called when the file descriptor is ready for reading
         try:
-            self.watch_task.finish()
-        except Exception as err:
-            print(err)
+            msg = self.socket_event.read_next_event()
+            if msg is not None:
+                self.handle_event(msg)
+        except Exception as e:
+            print(f"Error processing Wayfire events: {e}")
 
-    def start_thread_compositor(self):
-        self.watch_task = Background(self.watch_events, self.on_compositor_finished)
-        self.watch_task.start()
+        # Return True to continue calling this function
+        return True
 
-    def compositor_window_changed(self):
-        pass
-
-    def watch_events(self):
-        sock = WayfireSocket()
-        sock.watch()
-        while True:
-            try:
-                msg = sock.read_message()
-                if "event" in msg:
-                    if msg["event"] == "plugin-activation-state-changed":
-                        if msg["state"] is True:
-                            if msg["plugin"] == "scale":
-                                self.is_scale_active[msg["output"]] = True
-                        if msg["state"] is False:
-                            if msg["plugin"] == "scale":
-                                self.is_scale_active[msg["output"]] = False
-            except Exception as e:
-                print(e)
+    def handle_event(self, msg):
+        if msg["event"] == "plugin-activation-state-changed":
+            if msg["state"] is True:
+                if msg["plugin"] == "scale":
+                    self.is_scale_active[msg["output"]] = True
+            if msg["state"] is False:
+                if msg["plugin"] == "scale":
+                    self.is_scale_active[msg["output"]] = False
 
     def search_local_desktop(self, initial_title):
         for deskfile in os.listdir(self.webapps_applications):
@@ -424,11 +418,11 @@ class Utils(Adw.Application):
 
     def dpms(self, state, output_name=None):
         if state == "off" and output_name is None:
-            outputs = [output["name"] for output in self.list_outputs()]
+            outputs = [output["name"] for output in self.sock.list_outputs()]
             for output in outputs:
                 call("wlopm --off {}".format(output).split())
         if state == "on" and output_name is None:
-            outputs = [output["name"] for output in self.list_outputs()]
+            outputs = [output["name"] for output in self.sock.list_outputs()]
             for output in outputs:
                 call("wlopm --on {}".format(output).split())
         if state == "on":
@@ -462,9 +456,7 @@ class Utils(Adw.Application):
         title = self.filter_utf8_for_gtk(title)
         icon = self.get_icon(wmclass, initial_title, title)
 
-        button = self.create_clickable_image(
-            icon, class_style, wmclass, title, initial_title, view_id
-        )
+        button = self.create_taskbar_button(title, icon, view_id)
         return button
 
     def search_str_inside_file(self, file_path, word):
@@ -507,62 +499,24 @@ class Utils(Adw.Application):
         views = self.sock.list_views()
         return [i["app-id"].lower() for i in views if i["app-id"] != "nil"]
 
-    # FIXME: panel will crash if started app has some random errors in output
-    # that means, the panels bellow will be always on top and no clickable anymore
-    # example of apps with errors, nautilus, element, chromium etc.
-    #
-
-
-    def create_clickable_image(
-        self, icon_name, class_style, wclass, title, initial_title, view_id
-    ):
+    def create_taskbar_button(self, title, icon_name, view_id):
+        button = Adw.ButtonContent()
         # Filter title for UTF-8 compatibility
         title = self.filter_utf8_for_gtk(title)
-        
-        # Create the main container box
-        box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
-        assert box is not None, "Box creation failed"
-        if class_style is not None:
-            box.add_css_class(class_style)
-
         # Determine title to use based on its length
         use_this_title = title[:30]
         first_word_length = len(title.split()[0])
         if first_word_length > 13:
             use_this_title = title.split()[0]
+        button.set_icon_name(icon_name)
+        button.set_label(use_this_title)
+        button.add_css_class("taskbar_button")
 
-        # Create a label for the title
-        label = Gtk.Label.new(use_this_title)
-        assert label is not None, "Label creation failed"
-        label.add_css_class("label_from_clickable_image")
-
-        # Create an image for the icon
-        if isinstance(icon_name, Gio.FileIcon):
-            # If icon_name is a FileIcon object, directly use it
-            image = Gtk.Image.new_from_gicon(icon_name)
-        else:
-            # Otherwise, treat icon_name as a string representing the icon name
-            dock_icon = self.find_dock_icon(wclass)
-            if dock_icon:
-                image = Gtk.Image.new_from_icon_name(dock_icon)
-            else:
-                image = Gtk.Image.new_from_icon_name(icon_name)
-        
-        assert image is not None, "Image creation failed"
-        image.props.margin_end = 5
-        image.set_halign(Gtk.Align.END)
-        image.add_css_class("icon_from_clickable_image")
-
-        # Append the image and label to the box
-        box.append(image)
-        box.append(label)
-        box.add_css_class("box_from_clickable_image")
-
-        # Create gesture handlers for the box
-        self.create_gesture(box, 1, lambda *_: self.set_view_focus(view_id))
-        self.create_gesture(box, 2, lambda *_: self.sock.close_view(view_id))
-        self.create_gesture(box, 3, lambda *_: self.move_view_to_empty_workspace(view_id))
-        return box
+        # Create gesture handlers for the button
+        self.create_gesture(button, 1, lambda *_: self.set_view_focus(view_id))
+        self.create_gesture(button, 2, lambda *_: self.sock.close_view(view_id))
+        self.create_gesture(button, 3, lambda *_: self.move_view_to_empty_workspace(view_id))
+        return button
 
     def focus_view_when_ready(self, view):
         """this function is meant to be used with GLib timeout or idle_add"""
@@ -576,12 +530,6 @@ class Utils(Adw.Application):
         if ws:
             x, y = ws.values()
             self.sock.set_workspace(x, y, view_id)
-
-    def append_clickable_image(self, box, clickable_image_box):
-        if clickable_image_box is not None:
-            if self.is_widget_ready_to_append(box):
-                box.append(clickable_image_box)
-        return False
 
     def normalize_icon_name(self, app_id):
         if '.' in app_id:
@@ -799,15 +747,10 @@ class Utils(Adw.Application):
             output_id = view["output-id"]
 
             if output_id in self.is_scale_active:
-                # there is an issue depending on the scale animation duration
-                # the panel will freeze while the layzer shell will keep on top of the views because it enter in a infinite recursion
-                # the conflict happens with go_workspace_set_focus while the animation of scale is still happening
-                # another issue with scale is, if you enable close on new views option it will close faster than you set layer on bottom
-                # thus will produce the same kind of issue
                 if self.is_scale_active[output_id] is True:
                     self.sock.scale_toggle()
                     # FIXME: better get animation speed from the conf so define a proper sleep
-                    sleep(0.2)
+                    #sleep(0.2)
                     self.wf_utils.go_workspace_set_focus(view_id)
                     self.wf_utils.center_cursor_on_view(view_id)
                 else:
@@ -919,7 +862,7 @@ class Utils(Adw.Application):
             decoded_text = byte_string.decode(encoding, errors="ignore")
         return decoded_text
 
-    def CreateButton(
+    def create_button(
         self,
         icon_name,
         cmd,
@@ -951,7 +894,7 @@ class Utils(Adw.Application):
             button.add_css_class("hvr-grow")
             button.set_icon_name(icon_name)
 
-        button.add_css_class(f"{Class_Style}-button")
+        button.add_css_class(Class_Style)
 
         # If cmd is NULL, disable the button and return it
         if cmd == "NULL":

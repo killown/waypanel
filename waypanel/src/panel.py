@@ -63,7 +63,7 @@ class Panel(Adw.Application):
         self.volume = 0
         self.clock_box = Gtk.Box()
         self.args = sys.argv
-
+        self.source_id = None  # Store the source ID for the GLib.timeout
         # Configuration paths
         self._setup_config_paths()
 
@@ -71,6 +71,7 @@ class Panel(Adw.Application):
         self.panel_cfg = self.load_topbar_config()
 
         self.sock = WayfireSocket()
+        self.socket_event = None
         self.wf_utils = WayfireUtils(self.sock)
 
 
@@ -287,7 +288,8 @@ class Panel(Adw.Application):
 
         # the title is only updated when a event happens, so needed to update in the panel start
         self.update_title_top_panel()
-        self.start_thread_all_events()
+        #self.start_thread_all_events()
+        self.setup_event_watch()
 
 
 
@@ -403,7 +405,7 @@ class Panel(Adw.Application):
 
     def file_exists(self, full_path):
         return os.path.exists(full_path)
-    
+
     def focused_view_title(self):
         view =  self.sock.get_focused_view()
         if view:
@@ -554,25 +556,37 @@ class Panel(Adw.Application):
             self.output_get_focus()
             return
 
-    def all_events_watch(self):
-        while True:
-            try:
-                sock = WayfireSocket()
-                sock.watch(["event"])
-                while True:
-                    msg = sock.read_message()
-                    # dpms counter
-                    GLib.source_remove(self.turn_off_monitors_timeout)
-                    self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
-                        self.dpms_monitors_timeout, self.dpms_manager
-                    )
-                    self.handle_view_event(msg)
-                    self.handle_tilling_layout(msg)
-                    self.handle_output_events(msg)
-                    self.handle_plugin_event(msg)
-                    self.handle_workspace_events(msg)
-            except Exception as e:
-                print(e)
+    def setup_event_watch(self):
+        self.socket_event = WayfireSocket()
+        self.socket_event.watch(["event"])
+        fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
+        GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
+
+    def on_event_ready(self, fd, condition):
+        # This function is called when the file descriptor is ready for reading
+        try:
+            msg = self.socket_event.read_next_event()
+            if msg is not None:
+                self.handle_event(msg)
+        except Exception as e:
+            print(f"Error processing Wayfire events: {e}")
+
+        # Return True to continue calling this function
+        return True
+
+    def handle_event(self, msg):
+        #print(f"Received event: {msg}")
+        self.handle_view_event(msg)
+        self.handle_tilling_layout(msg)
+        self.handle_output_events(msg)
+        self.handle_plugin_event(msg)
+        self.handle_workspace_events(msg)
+        self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
+             self.dpms_monitors_timeout, self.dpms_manager
+                )
+
+        if self.turn_off_monitors_timeout:
+            GLib.source_remove(self.turn_off_monitors_timeout)
 
     def on_view_role_toplevel_focused(self, view_id):
         # last view focus only for top level Windows
@@ -933,24 +947,24 @@ class Panel(Adw.Application):
     def close_fullscreen_buttons(self):
         # Creating close and full screen buttons for the top bar
         self.cf_box = Gtk.Box()
-        self.maximize_button = self.utils.CreateButton(
+        self.maximize_button = self.utils.create_button(
             "window-maximize-symbolic",
             None,
-            "maximize",
+            "maximize-button",
             None,
             use_function=self.maximize_last_focused_view,
         )
-        self.close_button = self.utils.CreateButton(
+        self.close_button = self.utils.create_button(
             "window-close-symbolic",
             None,
-            "close",
+            "close-button",
             None,
             use_function=self.close_last_focused_view,
         )
-        self.minimize_button = self.utils.CreateButton(
+        self.minimize_button = self.utils.create_button(
             "window-minimize-symbolic",
             None,
-            "minimize",
+            "minimize-button",
             None,
             use_function=self.minimize_view,
         )
@@ -1083,7 +1097,7 @@ class Panel(Adw.Application):
         #self.window_title_content = self.create_button_content()
         #self.window_title = self.window_title_content[0]
         self.window_title = Adw.ButtonContent()
-        self.window_title.add_css_class("box_from_window_title")
+        self.window_title.add_css_class("title_button_view")
         self.top_panel_box_window_title.append(self.window_title)
 
         if "--custom" in self.args:
@@ -1900,8 +1914,10 @@ class Panel(Adw.Application):
             #     image.set_from_icon_name(icon)
             #if self.utils.widget_exists(label):
             #   label.set_label(title)
-            self.window_title.set_label(title)
-            self.window_title.set_icon_name(icon)
+
+            if self.utils.is_widget_ready(self.window_title):
+                self.window_title.set_label(title)
+                self.window_title.set_icon_name(icon)
             #self.utils.append_widget_if_ready(self.top_panel_box_window_title,
             #                                  self.window_title,
             #                                 )
