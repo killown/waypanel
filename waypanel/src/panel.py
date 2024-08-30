@@ -576,7 +576,12 @@ class Panel(Adw.Application):
     def setup_event_watch(self):
         self.socket_event = WayfireSocket()
         self.socket_event.watch(["event"])
+
+        # for some unknow reason, without this, wont start watching
+        # maybe because we are calling self.sock = WayfireSocket()
+        # first than socket_event
         self.sock.watch()
+
         fd = self.socket_event.client.fileno()
         GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
