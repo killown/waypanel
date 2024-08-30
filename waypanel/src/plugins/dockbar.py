@@ -25,7 +25,9 @@ class Dockbar(Adw.Application):
         self.panel_cfg = self.utils.load_topbar_config()
         self.taskbar_list = [None]
         self.sock = WayfireSocket()
-        self.socket_event = None
+        self.sock.watch()
+        self.socket_event = WayfireSocket()
+        self.socket_event.watch()
         self.wf_utils = WayfireUtils(self.sock)
         self.all_pids = [i["id"] for i in self.sock.list_views()]
         self.timeout_taskbar = None

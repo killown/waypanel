@@ -31,6 +31,9 @@ class Utils(Adw.Application):
         self.gio_icon_list = Gio.AppInfo.get_all()
         self.gestures = {}
         self.sock = WayfireSocket()
+        self.sock.watch()
+        self.socket_event = WayfireSocket()
+        self.socket_event.watch()
         self.wf_utils = WayfireUtils(self.sock)
         self.stipc = Stipc(self.sock)
 
@@ -149,7 +152,7 @@ class Utils(Adw.Application):
                 except KeyError:
                     pass
 
-                button = self.CreateButton(
+                button = self.create_button(
                     config_data[app]["icon"],
                     config_data[app]["cmd"],
                     class_style,
@@ -750,7 +753,7 @@ class Utils(Adw.Application):
                 if self.is_scale_active[output_id] is True:
                     self.sock.scale_toggle()
                     # FIXME: better get animation speed from the conf so define a proper sleep
-                    #sleep(0.2)
+                    sleep(0.2)
                     self.wf_utils.go_workspace_set_focus(view_id)
                     self.wf_utils.center_cursor_on_view(view_id)
                 else:
