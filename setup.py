@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-import pathlib
 
 # Read the requirements from the requirements.txt file
 def read_requirements():
@@ -8,7 +7,7 @@ def read_requirements():
 
 setup(
     name='waypanel',
-    version='0.9.8',
+    version='0.10.0',
     author='killown',
     author_email='systemofdown@gmail.com',
     description='A Wayfire panel that behaves like a shell',
