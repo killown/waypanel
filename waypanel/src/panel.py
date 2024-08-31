@@ -586,30 +586,35 @@ class Panel(Adw.Application):
         GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
     def on_event_ready(self, fd, condition):
-        # This function is called when the file descriptor is ready for reading
         try:
             msg = self.socket_event.read_next_event()
-            if msg is not None:
-                self.handle_event(msg)
+            if isinstance(msg, dict):  # Check if msg is already a dictionary
+                if "event" in msg:
+                    self.handle_event(msg)
+            else:
+                print(f"Unexpected message format: {msg}")
         except Exception as e:
             print(f"Error processing Wayfire events: {e}")
 
-        # Return True to continue calling this function
         return True
 
     def handle_event(self, msg):
-        #print(f"Received event: {msg}")
-        self.handle_view_event(msg)
-        self.handle_tilling_layout(msg)
-        self.handle_output_events(msg)
-        self.handle_plugin_event(msg)
-        self.handle_workspace_events(msg)
-        self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
-             self.dpms_monitors_timeout, self.dpms_manager
-                )
+        try:
+            self.handle_view_event(msg)
+            self.handle_tilling_layout(msg)
+            self.handle_output_events(msg)
+            self.handle_plugin_event(msg)
+            self.handle_workspace_events(msg)
+            self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
+                 self.dpms_monitors_timeout, self.dpms_manager
+                    )
 
-        if self.turn_off_monitors_timeout:
-            GLib.source_remove(self.turn_off_monitors_timeout)
+            if self.turn_off_monitors_timeout:
+                GLib.source_remove(self.turn_off_monitors_timeout)
+        except Exception as e:
+            print(e)
+
+        return True
 
     def on_view_role_toplevel_focused(self, view_id):
         # last view focus only for top level Windows

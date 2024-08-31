@@ -1,6 +1,8 @@
 import os
+from attr import attrib
 import toml
 import json
+import asyncio
 from subprocess import call, check_output as out
 from collections import ChainMap
 import sys
@@ -13,7 +15,6 @@ from ..core.create_panel import (
 from ..core.utils import Utils
 from wayfire.ipc import WayfireSocket
 from  wayfire.extra.ipc_utils import WayfireUtils
-
 
 sys.path.append("/usr/lib/waypanel/")
 
@@ -145,6 +146,16 @@ class Dockbar(Adw.Application):
         # Start the taskbar list for the bottom panel
         self.Taskbar("h", "taskbar")
 
+    @staticmethod
+    def handle_exceptions(func):
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                print(f"An error occurred in {func.__name__}: {e}")
+                return None
+        return wrapper
+
     def file_exists(self, full_path):
         return os.path.exists(full_path)
 
@@ -216,37 +227,47 @@ class Dockbar(Adw.Application):
     def setup_event_watch(self):
         self.socket_event = WayfireSocket()
         self.socket_event.watch(["event"])
+
+        # for some unknow reason, without this, wont start watching
+        # maybe because we are calling self.sock = WayfireSocket()
+        # first than socket_event
+        self.sock.watch()
+
         fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
         GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
     def on_event_ready(self, fd, condition):
-        # This function is called when the file descriptor is ready for reading
         try:
             msg = self.socket_event.read_next_event()
-            if msg is not None:
-                self.handle_event(msg)
+            if isinstance(msg, dict):  # Check if msg is already a dictionary
+                if "event" in msg:
+                    self.handle_event(msg)
+            else:
+                print(f"Unexpected message format: {msg}")
         except Exception as e:
             print(f"Error processing Wayfire events: {e}")
-
-        # Return True to continue calling this function
         return True
 
     def handle_event(self, msg):
-        view = None
-        if "view" in msg:
-            view = msg["view"]
+        try:
+            view = None
+            if "view" in msg:
+                view = msg["view"]
 
-        if "event" in msg:
-            if msg["event"] == "view-geometry-changed":
-                if "view" in msg:
-                    view = msg["view"]
-                    if view["layer"] != "workspace":
-                        self.taskbar_remove(view["id"])
+            if "event" in msg:
+                if msg["event"] == "view-geometry-changed":
+                    if "view" in msg:
+                        view = msg["view"]
+                        if view["layer"] != "workspace":
+                            self.taskbar_remove(view["id"])
 
-            if msg["event"] == "output-gain-focus":
-                pass
-            self.handle_view_event(msg, view)
-            self.handle_plugin_event(msg)
+                if msg["event"] == "output-gain-focus":
+                    pass
+                self.handle_view_event(msg, view)
+                self.handle_plugin_event(msg)
+        except Exception as e:
+            print(e)
+        return True
 
     def on_view_role_toplevel_focused(self, view):
         return
@@ -267,18 +288,30 @@ class Dockbar(Adw.Application):
         self.update_taskbar_list(view)
         self.new_taskbar_view("h", "taskbar", view["id"])
 
-    # events that will make the panel clickable or not
+    # events that will make the dockbars clickable or not
     def on_scale_activated(self):
-        set_layer_position_exclusive(self.left_panel)
-        # set_layer_position_exclusive(self.right_panel)
-        set_layer_position_exclusive(self.bottom_panel)
-        self.update_taskbar_for_hidden_views()
+        output = os.getenv("waypanel")
+        output_name = None
+        if output:
+            output_name = json.loads(output)
+            output_name = output_name["output_name"]
+        if self.sock.get_focused_output()["name"] == output_name:
+            set_layer_position_exclusive(self.left_panel)
+            # set_layer_position_exclusive(self.right_panel)
+            set_layer_position_exclusive(self.bottom_panel)
+            self.update_taskbar_for_hidden_views()
         return
 
     def on_scale_desactivated(self):
-        unset_layer_position_exclusive(self.left_panel)
-        # unset_layer_position_exclusive(self.right_panel)
-        unset_layer_position_exclusive(self.bottom_panel)
+        output = os.getenv("waypanel")
+        output_name = None
+        if output:
+            output_name = json.loads(output)
+            output_name = output_name["output_name"]
+        if self.sock.get_focused_output()["name"] == output_name:
+            unset_layer_position_exclusive(self.left_panel)
+            # unset_layer_position_exclusive(self.right_panel)
+            unset_layer_position_exclusive(self.bottom_panel)
         return
 
     def on_view_created(self, view):
