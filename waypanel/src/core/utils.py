@@ -1,6 +1,7 @@
 import os
 import math
 import gi
+import json
 import numpy as np
 from time import sleep
 import subprocess
@@ -58,6 +59,16 @@ class Utils(Adw.Application):
             "rxvt"
         ]
         self.setup_event_watch()
+
+    @staticmethod
+    def handle_exceptions(func):
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                print(f"An error occurred in {func.__name__}: {e}")
+                return None
+        return wrapper
 
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
         if [c for c in self.terminal_emulators if cmd in c] and cmd_mode:
@@ -272,29 +283,41 @@ class Utils(Adw.Application):
     def setup_event_watch(self):
         self.socket_event = WayfireSocket()
         self.socket_event.watch(["event"])
+
+        # for some unknow reason, without this, wont start watching
+        # maybe because we are calling self.sock = WayfireSocket()
+        # first than socket_event
+        self.sock.watch()
+
         fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
         GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
     def on_event_ready(self, fd, condition):
-        # This function is called when the file descriptor is ready for reading
         try:
             msg = self.socket_event.read_next_event()
-            if msg is not None:
-                self.handle_event(msg)
+            if isinstance(msg, dict):  # Check if msg is already a dictionary
+                if "event" in msg:
+                    self.handle_event(msg)
+            else:
+                print(f"Unexpected message format: {msg}")
         except Exception as e:
             print(f"Error processing Wayfire events: {e}")
+            return True
 
-        # Return True to continue calling this function
         return True
 
     def handle_event(self, msg):
-        if msg["event"] == "plugin-activation-state-changed":
-            if msg["state"] is True:
-                if msg["plugin"] == "scale":
-                    self.is_scale_active[msg["output"]] = True
-            if msg["state"] is False:
-                if msg["plugin"] == "scale":
-                    self.is_scale_active[msg["output"]] = False
+        try:
+            if msg["event"] == "plugin-activation-state-changed":
+                if msg["state"] is True:
+                    if msg["plugin"] == "scale":
+                        self.is_scale_active[msg["output"]] = True
+                if msg["state"] is False:
+                    if msg["plugin"] == "scale":
+                        self.is_scale_active[msg["output"]] = False
+        except Exception as e:
+            print(e)
+        return True
 
     def search_local_desktop(self, initial_title):
         for deskfile in os.listdir(self.webapps_applications):
