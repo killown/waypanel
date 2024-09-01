@@ -293,19 +293,25 @@ class Utils(Adw.Application):
         fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
         self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
-    def on_event_ready(self, fd, condition):
-        msg = None
+    def try_read_next_event(self):
         try:
             msg = self.socket_event.read_next_event()
-        except Exception as e:
-            print(f"utils.py read_next_event failed with {e}")
-            return True
+            if isinstance(msg, dict):
+                return msg 
+        except Exception as e: 
+            print(f"error from utils.py, from try_read_nex_event: {e}")
+            return None
+
+    def on_event_ready(self, fd, condition):
+        msg = self.try_read_next_event()
         try:
+            if msg is None:
+                return
             if isinstance(msg, dict):  # Check if msg is already a dictionary
                 if "event" in msg:
                     self.handle_event(msg)
             else:
-                print(f"Unexpected message format: {msg}")
+                print(f"utils.py: Unexpected message format: {msg}")
             return True
         except Exception as e:
             print(f"Error processing Wayfire events utils.py: {e}")
@@ -768,7 +774,7 @@ class Utils(Adw.Application):
         for f in float_sequence:
             try:
                 self.sock.set_view_alpha(view_id, f)
-                sleep(0.04)
+                sleep(0.02)
             except Exception as e:
                 print(e)
         self.sock.set_view_alpha(view_id, original_alpha)
@@ -799,7 +805,7 @@ class Utils(Adw.Application):
                 if self.is_scale_active[output_id] is True:
                     self.sock.scale_toggle()
                     # FIXME: better get animation speed from the conf so define a proper sleep
-                    sleep(0.2)
+                    sleep(0.4)
                     self.wf_utils.go_workspace_set_focus(view_id)
                     self.wf_utils.center_cursor_on_view(view_id)
                 else:
