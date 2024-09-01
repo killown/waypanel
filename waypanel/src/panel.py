@@ -591,8 +591,7 @@ class Panel(Adw.Application):
             msg = self.socket_event.read_next_event()
         except Exception as e:
             print(f"read_next_event failed with {e}")
-            self.reset_watch()
-            return False
+            return True
         try:
             if isinstance(msg, dict):  # Check if msg is already a dictionary
                 if "event" in msg:

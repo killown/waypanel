@@ -299,8 +299,7 @@ class Utils(Adw.Application):
             msg = self.socket_event.read_next_event()
         except Exception as e:
             print(f"utils.py read_next_event failed with {e}")
-            self.reset_watch()
-            return False
+            return True
         try:
             if isinstance(msg, dict):  # Check if msg is already a dictionary
                 if "event" in msg:
@@ -776,6 +775,9 @@ class Utils(Adw.Application):
 
     def set_view_focus(self, view_id):
         try:
+            views = [i["id"] for i in self.sock.list_views()]
+            if view_id not in views:
+                return
             view = self.sock.get_view(view_id)
             if view is None:
                 return
@@ -786,6 +788,12 @@ class Utils(Adw.Application):
 
             view_id = view["id"]
             output_id = view["output-id"]
+
+            #sometimes the view is so small that we should resize it
+            viewgeo = self.wf_utils.get_view_geometry(view_id)
+            if viewgeo:
+                if viewgeo["width"] < 100 or viewgeo["height"] < 100:
+                    self.sock.configure_view(view_id, viewgeo["x"], viewgeo["y"], 400, 400)
 
             if output_id in self.is_scale_active:
                 if self.is_scale_active[output_id] is True:

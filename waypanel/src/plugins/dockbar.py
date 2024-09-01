@@ -237,36 +237,34 @@ class Dockbar(Adw.Application):
         fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
         self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
-    def on_event_ready(self, fd, condition):
-        msg = None 
+    def try_read_nex_event(self):
         try:
             msg = self.socket_event.read_next_event()
-        except Exception as e:
-            print(f"read_next_event failed with {e}")
-            self.reset_watch()
-            return True
+            return msg 
+        except Exception as e: 
+            print(f"error from dockbar.py, from try_read_nex_event: {e}")
+            return None
+
+    def on_event_ready(self, fd, condition):
         try:
+            msg = self.try_read_nex_event()
             if isinstance(msg, dict):  # Check if msg is already a dictionary
                 if "event" in msg:
                     self.handle_event(msg)
-            else:
-                print(f"Unexpected message format from dockbar.py: {msg}")
-            return True
         except Exception as e:
             print(f"Error processing Wayfire events from dockbar.py: {e}")
             return True
 
-    def reset_watch(self):
+        return True
+
+    def reset_watch(self, fd):
         if self.watch_id is not None:
             GLib.source_remove(self.watch_id)  # Remove the previous watch
             self.watch_id = None  # Reset the watch ID
-        self.socket_event = WayfireSocket()
+        self.socket_event.read_exact(1)
         self.socket_event.watch(["event"])
-        self.sock.watch()
-        fd = self.socket_event.client.fileno()
-        self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
-        print(fd)
- 
+        GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
+
     def handle_event(self, msg):
         try:
             view = None
