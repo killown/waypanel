@@ -541,7 +541,7 @@ class Utils(Adw.Application):
         # Create gesture handlers for the button
         self.create_gesture(button, 1, lambda *_: self.set_view_focus(view_id))
         self.create_gesture(button, 2, lambda *_: self.sock.close_view(view_id))
-        self.create_gesture(button, 3, lambda *_: self.move_view_to_empty_workspace(view_id))
+        self.create_gesture(button, 3, lambda *_: self.wf_utils.move_view_to_empty_workspace(view_id))
         return button
 
     def focus_view_when_ready(self, view):
@@ -880,13 +880,34 @@ class Utils(Adw.Application):
         }
 
     def filter_utf8_for_gtk(self, byte_string, encoding="utf-8"):
+        """
+        Safely decode a byte string to UTF-8, handling all encoding issues.
+
+        Args:
+            byte_string (bytes or str): The input byte string to be filtered.
+            encoding (str): The encoding to use if byte_string is not in bytes. Default is 'utf-8'.
+
+        Returns:
+            str: The decoded string with invalid characters replaced or ignored.
+        """
         if isinstance(byte_string, str):
-            return byte_string  # For Python 3, assume the string is already decoded
-        try:
-            decoded_text = byte_string.decode(encoding)
-        except AttributeError:
-            decoded_text = byte_string.decode(encoding, errors="ignore")
+            # If input is already a string, return it as-is
+            return byte_string
+
+        if isinstance(byte_string, bytes):
+            try:
+                # Attempt to decode bytes to a string using the specified encoding
+                decoded_text = byte_string.decode(encoding, errors='replace')
+            except (UnicodeDecodeError, AttributeError) as e:
+                print(e)
+                # Handle any errors during decoding and log the error
+                decoded_text = byte_string.decode(encoding, errors='replace')
+        else:
+            # Handle unexpected input types
+            raise TypeError("Input must be a bytes object or a string.")
+
         return decoded_text
+
 
     def create_button(
         self,

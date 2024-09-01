@@ -342,7 +342,6 @@ class Dockbar(Adw.Application):
     def update_taskbar(self, view):
         title = self.utils.filter_utf8_for_gtk(view["title"])
         title = title[:20]
-
         first_word_length = len(title.split()[0])
         if first_word_length > 10:
             title = title.split()[0]
@@ -350,6 +349,8 @@ class Dockbar(Adw.Application):
         initial_title = title.split()[0]
         icon = self.utils.get_icon(view["app-id"], initial_title, title)
         button = self.buttons_id[view["id"]][0]
+
+        button.set_label(title)
         if icon:
             button.set_icon_name(icon)
 
@@ -497,7 +498,7 @@ class Dockbar(Adw.Application):
 
         # Adjusting for special cases like zsh or bash
         if initial_title in ["zsh", "bash", "fish"]:
-            title = self.get_focused_view_title().split()[0]
+            title = self.wf_utils.get_focused_view_title().split()[0]
             title = self.utils.filter_utf8_for_gtk(title)
             cmd = f"kitty --hold {title}"
             icon = wclass
@@ -550,7 +551,7 @@ class Dockbar(Adw.Application):
             toml.dump(updated_data, f)
 
         # Create and append button to the dockbar
-        button = self.utils.CreateButton(
+        button = self.utils.create_button(
             icon, cmd, initial_title, wclass, initial_title
         )
         self.dockbar.append(button)
