@@ -402,7 +402,7 @@ class Panel(Adw.Application):
     def update_background_panel(self):
         view = self.sock.get_focused_view()
         title = view["title"]
-        title = self.utils.filter_utf8_for_gtk(title)
+        title = self.utils.filter_utf_for_gtk(title)
         workspace_id = self.wf_utils.get_active_workspace_number()
         pid = view["pid"]
         wclass = view["app-id"]
@@ -426,7 +426,7 @@ class Panel(Adw.Application):
     def focused_view_title(self):
         view =  self.sock.get_focused_view()
         if view:
-            return self.utils.filter_utf8_for_gtk(view["title"])
+            return self.utils.filter_utf_for_gtk(view["title"])
 
     def handle_tilling_layout(self, msg):
         view = None
@@ -582,21 +582,38 @@ class Panel(Adw.Application):
         # first than socket_event
         self.sock.watch()
 
-        fd = self.socket_event.client.fileno()
-        GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
+        fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
+        self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
     def on_event_ready(self, fd, condition):
+        msg = None 
         try:
             msg = self.socket_event.read_next_event()
+        except Exception as e:
+            print(f"read_next_event failed with {e}")
+            self.reset_watch()
+            return False
+        try:
             if isinstance(msg, dict):  # Check if msg is already a dictionary
                 if "event" in msg:
                     self.handle_event(msg)
             else:
                 print(f"Unexpected message format: {msg}")
+            return True
         except Exception as e:
-            print(f"Error processing Wayfire events: {e}")
+            print(f"Error processing Wayfire events from panel.py: {e}")
+            return True
 
-        return True
+    def reset_watch(self):
+        if self.watch_id is not None:
+            GLib.source_remove(self.watch_id)  # Remove the previous watch
+            self.watch_id = None  # Reset the watch ID
+        self.socket_event = WayfireSocket()
+        self.socket_event.watch(["event"])
+        self.sock.watch()
+        fd = self.socket_event.client.fileno()
+        self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
+        print(fd)
 
     def handle_event(self, msg):
         try:
@@ -1645,7 +1662,7 @@ class Panel(Adw.Application):
         # Retrieve information about the active window
 
         view = self.sock.get_view(self.last_toplevel_focused_view)
-        title = self.utils.filter_utf8_for_gtk(view["title"])
+        title = self.utils.filter_utf_for_gtk(view["title"])
         wm_class = view["app-id"].lower()
         initial_title = title.split()[0].lower()
 
@@ -1904,7 +1921,7 @@ class Panel(Adw.Application):
 
     def filter_title(self, title):
         """Modify title based on certain patterns."""
-        title = self.utils.filter_utf8_for_gtk(title)
+        title = self.utils.filter_utf_for_gtk(title)
         if "." in title:
             parts = title.split(" ", 1)
             if parts[0].startswith("www."):
@@ -1923,7 +1940,7 @@ class Panel(Adw.Application):
     def update_title_icon_top_panel(self, title, wm_class, initial_title):
         """Update title and icons."""
         # some classes and initial titles has whitespaces which will lead to not found icons
-        title = self.utils.filter_utf8_for_gtk(title)
+        title = self.utils.filter_utf_for_gtk(title)
         icon = self.get_icon(wm_class, initial_title, title)
         if icon and title:
 
