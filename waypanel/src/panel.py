@@ -585,23 +585,23 @@ class Panel(Adw.Application):
         fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
         self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
-    def on_event_ready(self, fd, condition):
-        msg = None 
+    def try_read_next_event(self):
         try:
             msg = self.socket_event.read_next_event()
-        except Exception as e:
-            print(f"read_next_event failed with {e}")
-            return True
-        try:
-            if isinstance(msg, dict):  # Check if msg is already a dictionary
-                if "event" in msg:
-                    self.handle_event(msg)
-            else:
-                print(f"Unexpected message format: {msg}")
-            return True
-        except Exception as e:
-            print(f"Error processing Wayfire events from panel.py: {e}")
-            return True
+            if isinstance(msg, dict):
+                return msg 
+        except Exception as e: 
+            print(f"error from utils.py, from try_read_nex_event: {e}")
+            return None
+
+    def on_event_ready(self, fd, condition):
+        msg = self.try_read_next_event()
+        if msg is None:
+            return
+        if isinstance(msg, dict):  # Check if msg is already a dictionary
+            if "event" in msg:
+                self.handle_event(msg)
+        return True
 
     def reset_watch(self):
         if self.watch_id is not None:
