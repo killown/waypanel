@@ -31,6 +31,7 @@ class Utils(Adw.Application):
         self.icon_names = [icon for icon in Gtk.IconTheme().get_icon_names()]
         self.gio_icon_list = Gio.AppInfo.get_all()
         self.gestures = {}
+        self.watch_id = None
         self.sock = WayfireSocket()
         self.sock.watch()
         self.socket_event = WayfireSocket()
@@ -238,7 +239,7 @@ class Utils(Adw.Application):
             config = toml.load(f)
 
         # Run the note-taking application using the specified command
-        self.utils.run_app(config["take_note_app"]["cmd"])
+        self.run_app(config["take_note_app"]["cmd"])
 
 
 
@@ -290,21 +291,35 @@ class Utils(Adw.Application):
         self.sock.watch()
 
         fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
-        GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
+        self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
     def on_event_ready(self, fd, condition):
+        msg = None
         try:
             msg = self.socket_event.read_next_event()
+        except Exception as e:
+            print(f"utils.py read_next_event failed with {e}")
+            self.reset_watch()
+            return False
+        try:
             if isinstance(msg, dict):  # Check if msg is already a dictionary
                 if "event" in msg:
                     self.handle_event(msg)
             else:
                 print(f"Unexpected message format: {msg}")
+            return True
         except Exception as e:
-            print(f"Error processing Wayfire events: {e}")
+            print(f"Error processing Wayfire events utils.py: {e}")
             return True
 
-        return True
+    def reset_watch(self):
+        if self.watch_id is not None:
+            GLib.source_remove(self.watch_id)  # Remove the previous watch
+        self.socket_event = WayfireSocket()
+        self.socket_event.watch(["event"])
+        self.sock.watch()
+        fd = self.socket_event.client.fileno()
+        self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
     def handle_event(self, msg):
         try:
@@ -479,7 +494,7 @@ class Utils(Adw.Application):
         #  if filename:
         #       icon = self.download_image(game_image, filename)
         #else:
-        title = self.filter_utf8_for_gtk(title)
+        title = self.filter_utf_for_gtk(title)
         icon = self.get_icon(wmclass, initial_title, title)
 
         button = self.create_taskbar_button(title, icon, view_id)
@@ -494,7 +509,7 @@ class Utils(Adw.Application):
                 return False
 
     def get_icon(self, wm_class, initial_title, title):
-        title = self.filter_utf8_for_gtk(title)
+        title = self.filter_utf_for_gtk(title)
         for terminal in self.terminal_emulators:
             if terminal in wm_class and terminal not in title.lower():
                 title_icon = self.icon_exist(initial_title)
@@ -528,7 +543,7 @@ class Utils(Adw.Application):
     def create_taskbar_button(self, title, icon_name, view_id):
         button = Adw.ButtonContent()
         # Filter title for UTF-8 compatibility
-        title = self.filter_utf8_for_gtk(title)
+        title = self.filter_utf_for_gtk(title)
         # Determine title to use based on its length
         use_this_title = title[:30]
         first_word_length = len(title.split()[0])
@@ -879,35 +894,42 @@ class Utils(Adw.Application):
             "cache_folder": cache_folder
         }
 
-    def filter_utf8_for_gtk(self, byte_string, encoding="utf-8"):
+
+    def filter_utf_for_gtk(self, byte_string):
         """
-        Safely decode a byte string to UTF-8, handling all encoding issues.
+        Safely decode a byte string to UTF-8, handling all encoding issues, with priority to UTF-8.
 
         Args:
             byte_string (bytes or str): The input byte string to be filtered.
-            encoding (str): The encoding to use if byte_string is not in bytes. Default is 'utf-8'.
 
         Returns:
             str: The decoded string with invalid characters replaced or ignored.
         """
         if isinstance(byte_string, str):
-            # If input is already a string, return it as-is
             return byte_string
 
         if isinstance(byte_string, bytes):
+            encodings = ['utf-8', 'utf-16', 'utf-32', 'utf-16-le', 'utf-16-be', 'utf-32-le', 'utf-32-be']
+
+            # Try UTF-8 first
             try:
-                # Attempt to decode bytes to a string using the specified encoding
-                decoded_text = byte_string.decode(encoding, errors='replace')
-            except (UnicodeDecodeError, AttributeError) as e:
-                print(e)
-                # Handle any errors during decoding and log the error
-                decoded_text = byte_string.decode(encoding, errors='replace')
-        else:
-            # Handle unexpected input types
-            raise TypeError("Input must be a bytes object or a string.")
+                return byte_string.decode('utf-8', errors='replace')
+            except UnicodeDecodeError as e:
+                print(f"UTF-8 decoding error: {e}")
 
-        return decoded_text
+            # Try other UTF encodings if UTF-8 fails
+            for encoding in encodings[1:]:  # Skip 'utf-8' as it's already tried
+                try:
+                    return byte_string.decode(encoding, errors='replace')
+                except UnicodeDecodeError as e:
+                    print(f"{encoding} decoding error: {e}")
 
+            # If all UTF decoding attempts fail, fallback to a last-resort encoding like 'latin-1'
+            print("All UTF decoding attempts failed, falling back to 'latin-1'.")
+            return byte_string.decode('latin-1', errors='replace')
+
+        raise TypeError("Input must be a bytes object or a string.")
+ 
 
     def create_button(
         self,

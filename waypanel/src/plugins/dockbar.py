@@ -33,6 +33,7 @@ class Dockbar(Adw.Application):
         self.all_pids = [i["id"] for i in self.sock.list_views()]
         self.timeout_taskbar = None
         self.buttons_id = {}
+        self.watch_id = None
         self.has_taskbar_started = False
         self.stored_windows = []
         self.window_created_now = None
@@ -234,20 +235,38 @@ class Dockbar(Adw.Application):
         self.sock.watch()
 
         fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
-        GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
+        self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
     def on_event_ready(self, fd, condition):
+        msg = None 
         try:
             msg = self.socket_event.read_next_event()
+        except Exception as e:
+            print(f"read_next_event failed with {e}")
+            self.reset_watch()
+            return True
+        try:
             if isinstance(msg, dict):  # Check if msg is already a dictionary
                 if "event" in msg:
                     self.handle_event(msg)
             else:
-                print(f"Unexpected message format: {msg}")
+                print(f"Unexpected message format from dockbar.py: {msg}")
+            return True
         except Exception as e:
-            print(f"Error processing Wayfire events: {e}")
-        return True
+            print(f"Error processing Wayfire events from dockbar.py: {e}")
+            return True
 
+    def reset_watch(self):
+        if self.watch_id is not None:
+            GLib.source_remove(self.watch_id)  # Remove the previous watch
+            self.watch_id = None  # Reset the watch ID
+        self.socket_event = WayfireSocket()
+        self.socket_event.watch(["event"])
+        self.sock.watch()
+        fd = self.socket_event.client.fileno()
+        self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
+        print(fd)
+ 
     def handle_event(self, msg):
         try:
             view = None
@@ -340,7 +359,7 @@ class Dockbar(Adw.Application):
             return None
 
     def update_taskbar(self, view):
-        title = self.utils.filter_utf8_for_gtk(view["title"])
+        title = self.utils.filter_utf_for_gtk(view["title"])
         title = title[:20]
         first_word_length = len(title.split()[0])
         if first_word_length > 10:
@@ -401,7 +420,7 @@ class Dockbar(Adw.Application):
             return
         id = view["id"]
         title = view["title"]
-        title = self.utils.filter_utf8_for_gtk(title)
+        title = self.utils.filter_utf_for_gtk(title)
         wm_class = view["app-id"]
         initial_title = title.split(" ")[0].lower()
         button = self.utils.create_taskbar_launcher(
@@ -499,7 +518,7 @@ class Dockbar(Adw.Application):
         # Adjusting for special cases like zsh or bash
         if initial_title in ["zsh", "bash", "fish"]:
             title = self.wf_utils.get_focused_view_title().split()[0]
-            title = self.utils.filter_utf8_for_gtk(title)
+            title = self.utils.filter_utf_for_gtk(title)
             cmd = f"kitty --hold {title}"
             icon = wclass
 
