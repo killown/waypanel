@@ -28,7 +28,7 @@ def set_layer_position_exclusive(window):
     # LayerShell.set_exclusive_zone(window, 64)
     if window:
         LayerShell.set_layer(window, LayerShell.Layer.TOP)
-    # window.set_visible(True)
+        #window.set_visible(True)
     return
 
 
@@ -37,7 +37,7 @@ def unset_layer_position_exclusive(window):
     # print(LayerShell.get_exclusive_zone(window))
     if window:
         LayerShell.set_layer(window, LayerShell.Layer.BOTTOM)
-    # window.set_visible(False)
+        #window.set_visible(False)
     return
 
 

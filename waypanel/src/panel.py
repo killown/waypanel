@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json
+import orjson as json
 import datetime
 import netifaces
 import soundcard as sc
@@ -573,6 +573,26 @@ class Panel(Adw.Application):
             self.output_get_focus()
             return
 
+    def try_decode(self, data, encodings=None):
+        if encodings is None:
+            encodings = [
+                'utf-8',         # Default UTF-8
+                'utf-16',        # UTF-16 with BOM
+                'utf-16-le',     # Little-endian UTF-16
+                'utf-16-be',     # Big-endian UTF-16
+                'utf-32',        # UTF-32 with BOM
+                'utf-32-le',     # Little-endian UTF-32
+                'utf-32-be',     # Big-endian UTF-32
+                'latin-1'        # ISO 8859-1 (Latin-1)
+            ]
+
+        for encoding in encodings:
+            try:
+                return data.decode(encoding)
+            except UnicodeDecodeError:
+                continue
+        raise UnicodeDecodeError("All provided encodings failed to decode the data.")
+
     def setup_event_watch(self):
         self.socket_event = WayfireSocket()
         self.socket_event.watch(["event"])
@@ -587,12 +607,21 @@ class Panel(Adw.Application):
 
     def try_read_next_event(self):
         try:
-            msg = self.socket_event.read_next_event()
-            if isinstance(msg, dict):
-                return msg 
-        except Exception as e: 
-            print(f"error from utils.py, from try_read_nex_event: {e}")
-            return None
+            length_prefix = self.socket_event.read_exact(4)
+            if not length_prefix:
+                return None
+
+            message_length = int.from_bytes(length_prefix, byteorder="little")
+            message_data = self.socket_event.read_exact(message_length)
+
+            if message_data:
+                msg = self.try_decode(message_data)
+                msg = json.loads(message_data)
+                if isinstance(msg, dict):
+                    return msg
+        except Exception as e:
+            print(f"error from utils.py, from try_read_next_event: {e}")
+        return None
 
     def on_event_ready(self, fd, condition):
         msg = self.try_read_next_event()
@@ -2009,7 +2038,7 @@ def append_to_env(app_name, monitor_name, env_var='waypanel'):
     existing_env = os.getenv(env_var, '{}')
     env_dict = json.loads(existing_env)
     env_dict[app_name] = monitor_name
-    os.environ[env_var] = json.dumps(env_dict)
+    os.environ[env_var] = json.dumps(env_dict).decode('utf-8')
 
 def load_config(config_path):
     with open(config_path) as panel_config_file:
