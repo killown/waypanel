@@ -1,7 +1,7 @@
 import os
 import math
 import gi
-import json
+import orjson as json
 import numpy as np
 from time import sleep
 import subprocess
@@ -295,12 +295,20 @@ class Utils(Adw.Application):
 
     def try_read_next_event(self):
         try:
-            msg = self.socket_event.read_next_event()
-            if isinstance(msg, dict):
-                return msg 
-        except Exception as e: 
-            print(f"error from utils.py, from try_read_nex_event: {e}")
-            return None
+            length_prefix = self.socket_event.read_exact(4)
+            if not length_prefix:
+                return None
+
+            message_length = int.from_bytes(length_prefix, byteorder="little")
+            message_data = self.socket_event.read_exact(message_length)
+
+            if message_data:
+                msg = json.loads(message_data)
+                if isinstance(msg, dict):
+                    return msg
+        except Exception as e:
+            print(f"error from utils.py, from try_read_next_event: {e}")
+        return None
 
     def on_event_ready(self, fd, condition):
         msg = self.try_read_next_event()
@@ -546,6 +554,8 @@ class Utils(Adw.Application):
         return [i["app-id"].lower() for i in views if i["app-id"] != "nil"]
 
     def create_taskbar_button(self, title, icon_name, view_id):
+        if icon_name is None:
+            return
         button = Adw.ButtonContent()
         # Filter title for UTF-8 compatibility
         title = self.filter_utf_for_gtk(title)
@@ -779,17 +789,24 @@ class Utils(Adw.Application):
                 print(e)
         self.sock.set_view_alpha(view_id, original_alpha)
 
+    def is_view_valid(self, view_id):
+        views = [i["id"] for i in self.sock.list_views()]
+        if view_id not in views:
+            return
+        view = self.sock.get_view(view_id)
+        if view["role"] != "toplevel":
+            return False 
+        if view["pid"] == -1:
+            return False 
+        if view["app-id"] == "" or view["app-id"] == "nil":
+            return False
+        return self.sock.get_view(view_id)
+
     def set_view_focus(self, view_id):
         try:
-            views = [i["id"] for i in self.sock.list_views()]
-            if view_id not in views:
-                return
-            view = self.sock.get_view(view_id)
-            if view is None:
-                return
+            view = self.is_view_valid(view_id)
 
-            # why foucs an app with no app-id
-            if view["app-id"] == "nil":
+            if not view:
                 return
 
             view_id = view["id"]
@@ -805,7 +822,7 @@ class Utils(Adw.Application):
                 if self.is_scale_active[output_id] is True:
                     self.sock.scale_toggle()
                     # FIXME: better get animation speed from the conf so define a proper sleep
-                    sleep(0.4)
+                    #sleep(0.4)
                     self.wf_utils.go_workspace_set_focus(view_id)
                     self.wf_utils.center_cursor_on_view(view_id)
                 else:
