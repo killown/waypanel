@@ -596,11 +596,6 @@ class Panel(Adw.Application):
     def setup_event_watch(self):
         self.socket_event = WayfireSocket()
         self.socket_event.watch(["event"])
-
-        # for some unknow reason, without this, wont start watching
-        # maybe because we are calling self.sock = WayfireSocket()
-        # first than socket_event
-
         self.fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
         self.watch_id = GLib.io_add_watch(self.fd, GLib.IO_IN, self.on_event_ready)
 
@@ -645,19 +640,6 @@ class Panel(Adw.Application):
             if "event" in msg:
                 self.handle_event(msg)
         return True
-
-    def reset_watch(self):
-        if self.watch_id is not None:
-            GLib.source_remove(self.watch_id)  # Remove the previous watch
-
-        if self.socket_event:
-            self.socket_event.close()  # Ensure the old socket is properly closed
-
-        self.socket_event = WayfireSocket()
-        self.socket_event.watch(["event"])
-        self.sock.watch()
-        fd = self.socket_event.client.fileno()
-        self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
     def handle_event(self, msg):
         try:
