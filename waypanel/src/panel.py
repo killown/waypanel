@@ -14,7 +14,7 @@ import toml
 import time
 from collections import ChainMap
 from waypanel.src.core.utils import Utils as utils
-from waypanel.src.core.create_panel import CreatePanel
+from waypanel.src.core.create_panel import CreatePanel, set_layer_position_exclusive
 from gi.repository import Gtk, Adw, GLib, Gio, Gdk
 from waypanel.src.plugins.dockbar import Dockbar
 from waypanel.src.plugins.bookmarksPopover import PopoverBookmarks
@@ -293,8 +293,6 @@ class Panel(Adw.Application):
         #self.start_thread_all_events()
         self.setup_event_watch()
 
-
-
         self.get_focused_output = self.sock.get_focused_output()
 
         self.output_is_ready_to_dpms_off = {}
@@ -345,6 +343,7 @@ class Panel(Adw.Application):
         )
         self.monitor.connect("changed", self.on_css_file_changed)
         self.check_widgets_ready()
+        # set layer exclusive 
         self.show_panels()
 
     def autostart(self):
@@ -1206,9 +1205,11 @@ class Panel(Adw.Application):
                         self.exclusive = False
 
                     position = panel_toml[p]["position"]
+                    size = panel_toml[p]["size"]
                     self.bottom_panel = CreatePanel(
-                        app, "BOTTOM", position, self.exclusive, 48, 0, "BottomBar"
+                        app, "BOTTOM", position, self.exclusive, width=size, height=0, class_style="BottomBar"
                     )
+
                 if "right" == p:
                     self.exclusive = True
                     if panel_toml[p]["Exclusive"] == "False":
@@ -1222,21 +1223,24 @@ class Panel(Adw.Application):
                     if panel_toml[p]["Exclusive"] == "False":
                         self.exclusive = False
                     position = panel_toml[p]["position"]
+                    size = panel_toml[p]["size"]
                     self.left_panel = CreatePanel(
-                        app, "LEFT", position, self.exclusive, 0, 48, "LeftBar"
+                        app, "LEFT", position, self.exclusive, 0, size, "LeftBar"
                     )
+
                 if "top" == p:
                     self.exclusive = True
                     if panel_toml[p]["Exclusive"] == "False":
                         self.exclusive = False
                     position = panel_toml[p]["position"]
+                    size = panel_toml[p]["size"]
                     self.top_panel = CreatePanel(
                         app,
                         "TOP",
                         position,
                         self.exclusive,
                         self.monitor_width,
-                        24,
+                        size,
                         "TopBar",
                     )
                 if "top_background" == p:

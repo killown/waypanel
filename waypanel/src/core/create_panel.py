@@ -13,7 +13,7 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Adw, Gdk
 
 
-def set_layer_position_exclusive(window):
+def set_layer_position_exclusive(window, size):
     """
     Sets the layer position exclusively for the given window.
 
@@ -25,18 +25,20 @@ def set_layer_position_exclusive(window):
     The panel is hidden by default. This function makes it visible.
     If visibility doesn't take effect, the panel will remain hidden until IPC is ready.
     """
-    # LayerShell.set_exclusive_zone(window, 64)
+    LayerShell.set_exclusive_zone(window, size)
     if window:
-        LayerShell.set_layer(window, LayerShell.Layer.TOP)
+        pass
+        #LayerShell.set_layer(window, LayerShell.Layer.TOP)
         #window.set_visible(True)
     return
 
 
 def unset_layer_position_exclusive(window):
-    # LayerShell.set_exclusive_zone(window, 0)
+    #LayerShell.set_exclusive_zone(window, 0)
     # print(LayerShell.get_exclusive_zone(window))
     if window:
-        LayerShell.set_layer(window, LayerShell.Layer.BOTTOM)
+        pass
+        #LayerShell.set_layer(window, LayerShell.Layer.BOTTOM)
         #window.set_visible(False)
     return
 
@@ -117,7 +119,6 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     if layer == "TOP":
         window.set_default_size(monitor["width"], height)
         LayerShell.set_layer(window, LayerShell.Layer.TOP)
-        LayerShell.set_exclusive_zone(window, 24)
 
     if anchor == "LEFT":
         LayerShell.set_anchor(window, LayerShell.Edge.LEFT, True)
