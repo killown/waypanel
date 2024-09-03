@@ -166,7 +166,7 @@ class Dockbar(Adw.Application):
 
     def handle_view_event(self, msg, view):
         if "event" not in msg:
-            return
+            return True
 
         # this event match must be here 
         # because if not, role != toplevel will make it never match
@@ -180,22 +180,22 @@ class Dockbar(Adw.Application):
             self.on_view_destroyed(view)
  
         if view is None:
-            return
+            return True
 
         if view["pid"] == -1:
-            return
+            return True
 
         if "role" not in view:
-            return
+            return True
 
         if view["role"] != "toplevel":
-            return
+            return True
 
         if view["app-id"] == "":
-            return
+            return True
 
         if view["app-id"] == "nil":
-            return
+            return True
  
         if msg["event"] == "view-title-changed":
             self.on_title_changed(view)
@@ -216,11 +216,12 @@ class Dockbar(Adw.Application):
         if msg["event"] == "view-unmapped":
             self.on_view_destroyed(msg["view"])
 
+        return True
+
     def handle_plugin_event(self, msg):
         if "event" not in msg:
-            return
+            return True
         if msg["event"] == "plugin-activation-state-changed":
-
             if msg["state"] is True:
                 if msg["plugin"] == "expo":
                     self.on_expo_activated()
@@ -234,6 +235,7 @@ class Dockbar(Adw.Application):
                     self.on_expo_desactivated()
                 if msg["plugin"] == "scale":
                     self.on_scale_desactivated()
+        return True
 
 
     def try_decode(self, data, encodings=None):
@@ -337,19 +339,19 @@ class Dockbar(Adw.Application):
         return True
 
     def on_view_role_toplevel_focused(self, view):
-        return
+        return True
 
     def on_expo_activated(self):
-        return
+        return True
 
     def on_moving_view(self):
-        return 
+        return True
 
     def on_expo_desactivated(self):
-        return
+        return True
 
     def on_view_focused(self):
-        return
+        return True
 
     def on_app_id_changed(self, view):
         self.update_taskbar_list(view)

@@ -528,22 +528,22 @@ class Panel(Adw.Application):
             self.on_view_destroyed()
 
         if view is None:
-            return
+            return True
 
         if view["pid"] == -1:
-            return
+            return True
 
         if "role" not in view:
-            return
+            return True
 
         if view["role"] != "toplevel":
-            return
+            return True
 
         if view["app-id"] == "":
-            return
+            return True
 
         if view["app-id"] == "nil":
-            return
+            return True
 
         if event == "view-title-changed":
             self.on_title_changed()
@@ -561,6 +561,8 @@ class Panel(Adw.Application):
 
         if event == "view-mapped":
             self.on_view_created(view)
+
+        return True
 
     def handle_workspace_events(self, msg):
         if "event" not in msg:
@@ -601,7 +603,7 @@ class Panel(Adw.Application):
 
     def try_read_next_event(self):
         if not self.fd:
-            return
+            return True
         try:
             # Use self.fd to perform operations
             # Read the length prefix (assuming it's 4 bytes as an integer)
@@ -635,7 +637,7 @@ class Panel(Adw.Application):
     def on_event_ready(self, fd, condition):
         msg = self.try_read_next_event()
         if msg is None:
-            return
+            return True
         if isinstance(msg, dict):  # Check if msg is already a dictionary
             if "event" in msg:
                 self.handle_event(msg)
@@ -699,10 +701,10 @@ class Panel(Adw.Application):
 
     def set_output_ready_for_dpms_off(self, mon):
         if self.monitor_has_focus(mon):
-            return
+            return True
         monitor_id = self.wf_utils.get_output_id_by_name(mon)
         if self.wf_utils.has_ouput_fullscreen_view(monitor_id):
-            return
+            return True
         self.utils.dpms("off", mon)
         # Remove the timeout ID from the dictionary
         self.timeout_ids.pop(mon, None)
@@ -726,7 +728,7 @@ class Panel(Adw.Application):
             self.dpms_manager(self.turn_off_monitor_timeout)
 
     def on_moving_view(self):
-        return
+        return True
 
     def on_title_changed(self):
         self.update_title_top_panel()
@@ -739,7 +741,7 @@ class Panel(Adw.Application):
         #shader = os.path.join(self.config_path, "shaders/border")
         # if os.path.exists(shader):
         #    sock.set_view_shader(view_id, shader)
-        return
+        return True
 
     def on_view_destroyed(self):
         # FIXME: awaiting a fix in wayfire that is spamming unmapped views when switching tabs
@@ -758,20 +760,20 @@ class Panel(Adw.Application):
         #    sock.go_next_workspace_with_views()
         # sock.focus_next_view_from_active_workspace()
 
-        return
+        return True
 
     def on_app_id_changed(self):
         self.update_title_top_panel()
 
     def on_expo_activated(self):
-        return
+        return True
 
     def on_expo_desactivated(self):
         # when you move a view in expo, it sometimes will leave workspace area
         # isn't the panel goal to change compositor behaviour
         # but for some a nice quick fix, if you dont need this
         # just disable this function call
-        return
+        return True
 
     def on_scale_activated(self):
         # call it once to update without waiting timeout_add
