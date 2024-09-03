@@ -90,27 +90,30 @@ class Dockbar(Adw.Application):
         """Create and configure the left panel."""
         exclusive = config["Exclusive"] == "True"
         position = config["position"]
-
+        size = config["size"]
+        enabled = config["enabled"]
         self.left_panel = CreatePanel(
-            self, "LEFT", position, exclusive, 32, 0, "dockbar-left"
+            self, "LEFT", position, exclusive, size, 0, "dockbar-left"
         )
         self.dockbar = self.utils.CreateFromAppList(
             self.dockbar_config, "v", "dockbar-left-button", self.join_windows
         )
-        self.add_launcher = Gtk.Button()
-        self.add_launcher.set_icon_name("tab-new-symbolic")
-        self.add_launcher.connect("clicked", self.dockbar_append)
-        self.dockbar.append(self.add_launcher)
+        #self.add_launcher = Gtk.Button()
+        #self.add_launcher.set_icon_name("tab-new-symbolic")
+        #self.add_launcher.connect("clicked", self.dockbar_append)
+        #self.dockbar.append(self.add_launcher)
         self.left_panel.set_content(self.dockbar)
-        self.left_panel.present()
+        if enabled == "True":
+            self.left_panel.present()
 
     def _setup_bottom_panel(self, config):
         """Create and configure the bottom panel."""
         exclusive = config["Exclusive"] == "True"
         position = config["position"]
-
+        size = config["size"]
+        enabled = config["enabled"]
         self.bottom_panel = CreatePanel(
-            self, "BOTTOM", position, exclusive, 32, 0, "BottomBar"
+            self, "BOTTOM", position, exclusive, 0, size, "BottomBar"
         )
         self.add_launcher = Gtk.Button()
         self.add_launcher.set_icon_name("tab-new-symbolic")
@@ -141,10 +144,12 @@ class Dockbar(Adw.Application):
         self.scrolled_window.set_child(self.taskbar)
         self.taskbar.append(self.add_launcher)
         self.taskbar.add_css_class("taskbar")
-        self.bottom_panel.present()
+        if enabled == "True":
+            self.bottom_panel.present()
 
         # Start the taskbar list for the bottom panel
         self.Taskbar("h", "taskbar")
+        set_layer_position_exclusive(self.bottom_panel, size)
 
     @staticmethod
     def handle_exceptions(func):
@@ -163,9 +168,17 @@ class Dockbar(Adw.Application):
         if "event" not in msg:
             return
 
+        # this event match must be here 
+        # because if not, role != toplevel will make it never match
+        if msg["event"] == "view-wset-changed":
+            self.update_taskbar_for_hidden_views(view)
+
+        # this must be here
+        # an unmapedd view is view None 
+        # must be above if view is None
         if msg["event"] == "view-unmapped":
             self.on_view_destroyed(view)
-
+ 
         if view is None:
             return
 
@@ -183,7 +196,7 @@ class Dockbar(Adw.Application):
 
         if view["app-id"] == "nil":
             return
-
+ 
         if msg["event"] == "view-title-changed":
             self.on_title_changed(view)
 
@@ -202,10 +215,6 @@ class Dockbar(Adw.Application):
 
         if msg["event"] == "view-unmapped":
             self.on_view_destroyed(msg["view"])
-
-        if msg["event"] == "view-wset-changed":
-            self.update_taskbar(view)
-
 
     def handle_plugin_event(self, msg):
         if "event" not in msg:
@@ -365,14 +374,16 @@ class Dockbar(Adw.Application):
     # events that will make the dockbars clickable or not
     def on_scale_activated(self):
         if self.panel_output_is_focused_output():
-            set_layer_position_exclusive(self.left_panel)
-            set_layer_position_exclusive(self.bottom_panel)
-            self.update_taskbar_for_hidden_views()
+            pass
+            #set_layer_position_exclusive(self.left_panel, 54)
+            #set_layer_position_exclusive(self.bottom_panel, 48)
+            #self.update_taskbar_for_hidden_views()
 
     def on_scale_desactivated(self):
         if self.panel_output_is_focused_output():
-            unset_layer_position_exclusive(self.left_panel)
-            unset_layer_position_exclusive(self.bottom_panel)
+            pass
+            #unset_layer_position_exclusive(self.left_panel)
+            #unset_layer_position_exclusive(self.bottom_panel)
 
     def on_view_created(self, view):
         self.update_taskbar_list(view)
@@ -451,6 +462,8 @@ class Dockbar(Adw.Application):
         # Return True to indicate successful execution of the Taskbar function
         return True
 
+    # **FIXME** 
+    #the first button will lead to panel freeze sometimes, need to debug
     def new_taskbar_view(
         self,
         orientation,
@@ -511,20 +524,18 @@ class Dockbar(Adw.Application):
             return True
         return False
 
-    def update_taskbar_for_hidden_views(self):
+    def update_taskbar_for_hidden_views(self, view):
         #the goal of this function is to catch taskbar buttons which is not toplevel 
         #and should be in the task list, happens that sometimes there is not enough events 
         #to remove the button on the fly
         #this a made for hide view plugin which hide a view but still has no event to trigger
         #the taskbar button removal
-        for button_id in self.buttons_id:
-            view = self.sock.get_view(button_id)
-            if view["role"] == "desktop-environment":
-                self.remove_button(view["id"])
+        if view["role"] == "desktop-environment":
+            self.remove_button(view["id"])
         #also update the view when unhide
-        for view in self.sock.list_views():
-            if view["role"] == "toplevel":
-                if view["id"] not in self.buttons_id:
+        for v in self.sock.list_views():
+            if v["role"] == "toplevel":
+                if v["id"] not in self.buttons_id:
                     self.new_taskbar_view("h", "taskbar", view["id"])
 
     def update_taskbar_list(self, view):
@@ -556,13 +567,11 @@ class Dockbar(Adw.Application):
                 return
             self.remove_button(id)
 
-    # Append a window to the Dockbar
-    # this whole function is a mess, this was based in another compositor
-    # so need a rework
+    # Append an app to the Dockbar
     def dockbar_append(self, *_):
-        wclass = self.wf_utils.get_focused_view_app_id().lower()
+        wclass = self.sock.get_focused_view()["app-id"].lower()
         wclass = "".join(wclass)
-        initial_title = wclass
+        initial_title = wclass.split()[0]
         icon = wclass
         cmd = initial_title
         desktop_file = ""
@@ -626,15 +635,7 @@ class Dockbar(Adw.Application):
             icon, cmd, initial_title, wclass, initial_title
         )
         self.dockbar.append(button)
-
-    # Remove a command from the dockbar configuration
-    def dockbar_remove(self, cmd):
-        with open(self.dockbar_config, "r") as f:
-            config = toml.load(f)
-        del config[cmd]
-        with open(self.dockbar_config, "w") as f:
-            toml.dump(config, f)
-
+ 
     # Join multiple windows of the same class into one workspace
     def join_windows(self, *_):
         activewindow = out("hyprctl activewindow".split()).decode()

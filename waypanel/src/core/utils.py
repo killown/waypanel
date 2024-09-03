@@ -100,8 +100,10 @@ class Utils(Adw.Application):
         self.stipc.move_cursor(cursor_x, cursor_y)
 
     def run_cmd(self, command):
-        command = shlex.split(command)
-        Popen(command)
+        try:
+            self.stipc.run_cmd(command)
+        except Exception as e:
+            print(f"utils: self.run_cmd: {e}")
 
     def widget_exists(self, widget):
         return widget is not None and isinstance(widget, Gtk.Widget)
@@ -1026,7 +1028,13 @@ class Utils(Adw.Application):
 
         return button
 
-
+    # Remove a command from the dockbar configuration
+    def dockbar_remove(self, cmd):
+        with open(self.dockbar_config, "r") as f:
+            config = toml.load(f)
+        del config[cmd]
+        with open(self.dockbar_config, "w") as f:
+            toml.dump(config, f)
 
     def load_topbar_config(self):
         with open(self.topbar_config, "r") as f:
