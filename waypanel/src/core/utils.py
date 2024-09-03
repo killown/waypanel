@@ -293,13 +293,13 @@ class Utils(Adw.Application):
 
     def try_read_next_event(self):
         if not self.fd:
-            return
+            return True
         try:
             # Use self.fd to perform operations
             # Read the length prefix (assuming it's 4 bytes as an integer)
             length_prefix = os.read(self.fd, 4)
             if not length_prefix:
-                return None
+                return True
 
             # Convert length prefix to an integer
             message_length = int.from_bytes(length_prefix, byteorder="little")
@@ -316,6 +316,7 @@ class Utils(Adw.Application):
 
             # Once we have the full message, decode it with orjson (imported as json)
             if message_data:
+                print(message_data)
                 msg = json.loads(message_data)
                 if isinstance(msg, dict):
                     return msg
@@ -328,7 +329,7 @@ class Utils(Adw.Application):
         msg = self.try_read_next_event()
         try:
             if msg is None:
-                return
+                return True
             if isinstance(msg, dict):  # Check if msg is already a dictionary
                 if "event" in msg:
                     self.handle_event(msg)
