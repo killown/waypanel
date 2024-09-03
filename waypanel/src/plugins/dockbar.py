@@ -32,6 +32,7 @@ class Dockbar(Adw.Application):
         self.timeout_taskbar = None
         self.buttons_id = {}
         self.watch_id = None
+        self.fd = None
         self.has_taskbar_started = False
         self.stored_windows = []
         self.window_created_now = None
@@ -250,30 +251,40 @@ class Dockbar(Adw.Application):
         self.socket_event = WayfireSocket()
         self.socket_event.watch(["event"])
 
-        # for some unknow reason, without this, wont start watching
-        # maybe because we are calling self.sock = WayfireSocket()
-        # first than socket_event
-        self.sock.watch()
-
-        fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
-        self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
-
+        self.fd = self.socket_event.client.fileno() 
+        self.watch_id = GLib.io_add_watch(self.fd, GLib.IO_IN, self.on_event_ready)
+ 
     def try_read_next_event(self):
+        if not self.fd:
+            return
         try:
-            length_prefix = self.socket_event.read_exact(4)
+            # Use self.fd to perform operations
+            # Read the length prefix (assuming it's 4 bytes as an integer)
+            length_prefix = os.read(self.fd, 4)
             if not length_prefix:
                 return None
 
+            # Convert length prefix to an integer
             message_length = int.from_bytes(length_prefix, byteorder="little")
-            message_data = self.socket_event.read_exact(message_length)
 
+            # Initialize the buffer
+            message_data = b""
+
+            # Read data until we get the full message
+            while len(message_data) < message_length:
+                chunk = os.read(self.fd, message_length - len(message_data))
+                if not chunk:
+                    raise Exception("Connection closed while reading message")
+                message_data += chunk
+
+            # Once we have the full message, decode it with orjson (imported as json)
             if message_data:
-                msg = self.try_decode(message_data)
                 msg = json.loads(message_data)
                 if isinstance(msg, dict):
                     return msg
+
         except Exception as e:
-            print(f"error from utils.py, from try_read_next_event: {e}")
+            print(f"Error from utils.py in try_read_next_event: {e}")
         return None
 
     def on_event_ready(self, fd, condition):
@@ -285,13 +296,18 @@ class Dockbar(Adw.Application):
                 self.handle_event(msg)
         return True
 
-    def reset_watch(self, fd):
+    def reset_watch(self):
         if self.watch_id is not None:
             GLib.source_remove(self.watch_id)  # Remove the previous watch
-            self.watch_id = None  # Reset the watch ID
-        self.socket_event.read_exact(1)
+
+        if self.socket_event:
+            self.socket_event.close()  # Ensure the old socket is properly closed
+
+        self.socket_event = WayfireSocket()
         self.socket_event.watch(["event"])
-        GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
+        self.sock.watch()
+        fd = self.socket_event.client.fileno()
+        self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
     def handle_event(self, msg):
         view = None
@@ -400,7 +416,9 @@ class Dockbar(Adw.Application):
             return
 
         icon = self.utils.get_icon(view["app-id"], initial_title, title)
-        button = self.buttons_id[view["id"]][0]
+        button = self.buttons_id[view["id"]]
+        if button:
+            button = button[0]
 
         button.set_label(title)
         if icon:
@@ -478,10 +496,10 @@ class Dockbar(Adw.Application):
         else:
             return False
 
-    def view_exist(self, id):
-        ids = self.wf_utils.list_ids()
-        if id in ids:
-            view = self.sock.get_view(id)
+    def view_exist(self, view_id):
+        exist = view_id in self.wf_utils.list_ids()
+        if exist:
+            view = self.sock.get_view(view_id)
             layer = view["layer"] != "workspace"
             role = view["role"] != "toplevel"
             mapped = view["mapped"] is False
