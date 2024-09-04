@@ -25,10 +25,9 @@ def set_layer_position_exclusive(window, size):
     The panel is hidden by default. This function makes it visible.
     If visibility doesn't take effect, the panel will remain hidden until IPC is ready.
     """
-    LayerShell.set_exclusive_zone(window, size)
+    #LayerShell.set_exclusive_zone(window, size)
     if window:
-        pass
-        #LayerShell.set_layer(window, LayerShell.Layer.TOP)
+        LayerShell.set_layer(window, LayerShell.Layer.TOP)
         #window.set_visible(True)
     return
 
@@ -37,8 +36,7 @@ def unset_layer_position_exclusive(window):
     #LayerShell.set_exclusive_zone(window, 0)
     # print(LayerShell.get_exclusive_zone(window))
     if window:
-        pass
-        #LayerShell.set_layer(window, LayerShell.Layer.BOTTOM)
+        LayerShell.set_layer(window, LayerShell.Layer.BOTTOM)
         #window.set_visible(False)
     return
 

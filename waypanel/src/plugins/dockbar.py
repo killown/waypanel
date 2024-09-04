@@ -25,8 +25,6 @@ class Dockbar(Adw.Application):
         self.taskbar_list = [None]
         self.sock = WayfireSocket()
         self.sock.watch()
-        self.socket_event = WayfireSocket()
-        self.socket_event.watch()
         self.wf_utils = WayfireUtils(self.sock)
         self.all_pids = [i["id"] for i in self.sock.list_views()]
         self.timeout_taskbar = None
@@ -39,6 +37,8 @@ class Dockbar(Adw.Application):
         self.is_scale_active = {}
         self._setup_config_paths()
 
+        # Setup GLib watch to monitor socket events
+        GLib.io_add_watch(self.sock.client, GLib.IO_IN, self.on_event_ready)
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -61,7 +61,6 @@ class Dockbar(Adw.Application):
 
     # Start the Dockbar application
     def do_start(self):
-        self.setup_event_watch()
         self.stored_windows = [i["id"] for i in self.sock.list_views()]
 
         # Read configuration from the topbar TOML file
@@ -237,88 +236,14 @@ class Dockbar(Adw.Application):
                     self.on_scale_desactivated()
         return True
 
-
-    def try_decode(self, data, encodings=None):
-        if encodings is None:
-            encodings = [
-                'utf-8',         # Default UTF-8
-                'utf-16',        # UTF-16 with BOM
-                'utf-16-le',     # Little-endian UTF-16
-                'utf-16-be',     # Big-endian UTF-16
-                'utf-32',        # UTF-32 with BOM
-                'utf-32-le',     # Little-endian UTF-32
-                'utf-32-be',     # Big-endian UTF-32
-                'latin-1'        # ISO 8859-1 (Latin-1)
-            ]
-
-        for encoding in encodings:
-            try:
-                return data.decode(encoding)
-            except UnicodeDecodeError:
-                continue
-        raise UnicodeDecodeError("All provided encodings failed to decode the data.")
-
-    def setup_event_watch(self):
-        self.socket_event = WayfireSocket()
-        self.socket_event.watch(["event"])
-
-        self.fd = self.socket_event.client.fileno() 
-        self.watch_id = GLib.io_add_watch(self.fd, GLib.IO_IN, self.on_event_ready)
- 
-    def try_read_next_event(self):
-        if not self.fd:
-            return
-        try:
-            # Use self.fd to perform operations
-            # Read the length prefix (assuming it's 4 bytes as an integer)
-            length_prefix = os.read(self.fd, 4)
-            if not length_prefix:
-                return None
-
-            # Convert length prefix to an integer
-            message_length = int.from_bytes(length_prefix, byteorder="little")
-
-            # Initialize the buffer
-            message_data = b""
-
-            # Read data until we get the full message
-            while len(message_data) < message_length:
-                chunk = os.read(self.fd, message_length - len(message_data))
-                if not chunk:
-                    raise Exception("Connection closed while reading message")
-                message_data += chunk
-
-            # Once we have the full message, decode it with orjson (imported as json)
-            if message_data:
-                msg = json.loads(message_data)
-                if isinstance(msg, dict):
-                    return msg
-
-        except Exception as e:
-            print(f"Error from utils.py in try_read_next_event: {e}")
-        return None
-
     def on_event_ready(self, fd, condition):
-        msg = self.try_read_next_event()
+        msg = self.sock.read_next_event()
         if msg is None:
-            return
+            return True
         if isinstance(msg, dict):  # Check if msg is already a dictionary
             if "event" in msg:
                 self.handle_event(msg)
         return True
-
-    def reset_watch(self):
-        if self.watch_id is not None:
-            GLib.source_remove(self.watch_id)  # Remove the previous watch
-
-        if self.socket_event:
-            self.socket_event.close()  # Ensure the old socket is properly closed
-
-        self.socket_event = WayfireSocket()
-        self.socket_event.watch(["event"])
-        self.sock.watch()
-        fd = self.socket_event.client.fileno()
-        self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
 
     def handle_event(self, msg):
         view = None
@@ -375,17 +300,18 @@ class Dockbar(Adw.Application):
 
     # events that will make the dockbars clickable or not
     def on_scale_activated(self):
-        if self.panel_output_is_focused_output():
-            pass
-            #set_layer_position_exclusive(self.left_panel, 54)
-            #set_layer_position_exclusive(self.bottom_panel, 48)
-            #self.update_taskbar_for_hidden_views()
+        #the issue with this focused output thing 
+        #if you have multi monitor setup, scale first monitor with dockbar 
+        #then scale another monitor without the dockbar
+        #the dockbar will not get layer exclusive when you move mouse from the
+        #monitor which doesn't contain the panel to the monitor which contains it
+        #if self.panel_output_is_focused_output():
+        set_layer_position_exclusive(self.left_panel, 64)
+        set_layer_position_exclusive(self.bottom_panel, 48)
 
     def on_scale_desactivated(self):
-        if self.panel_output_is_focused_output():
-            pass
-            #unset_layer_position_exclusive(self.left_panel)
-            #unset_layer_position_exclusive(self.bottom_panel)
+            unset_layer_position_exclusive(self.left_panel)
+            unset_layer_position_exclusive(self.bottom_panel)
 
     def on_view_created(self, view):
         self.update_taskbar_list(view)
@@ -429,22 +355,25 @@ class Dockbar(Adw.Application):
             return
 
         icon = self.utils.get_icon(view["app-id"], initial_title, title)
-        button = self.buttons_id[view["id"]]
+        id = view["id"]
+        button = None
+        if id in self.buttons_id:
+            button = self.buttons_id[view["id"]]
         if button:
             button = button[0]
+            button.set_label(title)
 
-        button.set_label(title)
-        if icon:
-            button.set_icon_name(icon)
+            if icon:
+                button.set_icon_name(icon)
 
-            #this part enables output name in taskbar list buttons
-            #if title:
-            #  output_name = self.wf_utils.get_view_output_name(view["id"])
-            #default_output = self.get_default_monitor_name()
+                #this part enables output name in taskbar list buttons
+                #if title:
+                #  output_name = self.wf_utils.get_view_output_name(view["id"])
+                #default_output = self.get_default_monitor_name()
 
-            # if output_name != default_output:
-            #   title = "({0}) {1}".format(output_name, title)
-            # label.set_label(title)
+                # if output_name != default_output:
+                #   title = "({0}) {1}".format(output_name, title)
+                # label.set_label(title)
 
     def Taskbar(self, orientation, class_style, update_button=False, callback=None):
         # Load configuration from dockbar_config file
@@ -475,10 +404,16 @@ class Dockbar(Adw.Application):
     ):
         if not class_style:
             class_style = "taskbar"
+
         if not self.view_exist(view_id):
             return
+
         if view_id in self.taskbar_list:
             return
+
+        if view_id not in self.wf_utils.list_ids():
+            return 
+
         view = self.sock.get_view(view_id)
         if view["type"] != "toplevel":
             return
@@ -495,14 +430,15 @@ class Dockbar(Adw.Application):
         if not self.utils.widget_exists(button):
             return
 
-        self.taskbar.append(button)
+        if button:
+            self.taskbar.append(button)
 
-        # Store button information in dictionaries for easy access
-        self.buttons_id[id] = [button, initial_title, id]
+            # Store button information in dictionaries for easy access
+            self.buttons_id[id] = [button, initial_title, id]
 
-        self.taskbar_list.append(id)
+            self.taskbar_list.append(id)
 
-        return True
+            return True
 
     def pid_exist(self, id):
         pid = self.wf_utils.get_view_pid(id)
@@ -552,13 +488,15 @@ class Dockbar(Adw.Application):
                 self.taskbar_remove(button_id)
 
     def remove_button(self, id):
-        button = self.buttons_id[id][0]
-        if not self.utils.widget_exists(button):
-            return
-        self.taskbar.remove(button)
-        self.taskbar_list.remove(id)
-        self.utils.remove_gesture(button)
-        del self.buttons_id[id]
+        if id in self.buttons_id:
+            if id not in self.wf_utils.list_ids():
+                button = self.buttons_id[id][0]
+                if not self.utils.widget_exists(button):
+                    return
+                self.taskbar.remove(button)
+                self.taskbar_list.remove(id)
+                self.utils.remove_gesture(button)
+                del self.buttons_id[id]
 
     def taskbar_remove(self, id=None):
         if self.view_exist(id):

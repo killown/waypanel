@@ -71,8 +71,8 @@ class Panel(Adw.Application):
         self.panel_cfg = self.load_topbar_config()
 
         self.sock = WayfireSocket()
-        self.socket_event = WayfireSocket()
-        self.socket_event.watch()
+        self.sock.watch()
+        GLib.io_add_watch(self.sock.client, GLib.IO_IN, self.on_event_ready)
         self.wf_utils = WayfireUtils(self.sock)
 
         self.fd = None
@@ -291,7 +291,6 @@ class Panel(Adw.Application):
         # the title is only updated when a event happens, so needed to update in the panel start
         self.update_title_top_panel()
         #self.start_thread_all_events()
-        self.setup_event_watch()
 
         self.get_focused_output = self.sock.get_focused_output()
 
@@ -575,67 +574,8 @@ class Panel(Adw.Application):
             self.output_get_focus()
             return
 
-    def try_decode(self, data, encodings=None):
-        if encodings is None:
-            encodings = [
-                'utf-8',         # Default UTF-8
-                'utf-16',        # UTF-16 with BOM
-                'utf-16-le',     # Little-endian UTF-16
-                'utf-16-be',     # Big-endian UTF-16
-                'utf-32',        # UTF-32 with BOM
-                'utf-32-le',     # Little-endian UTF-32
-                'utf-32-be',     # Big-endian UTF-32
-                'latin-1'        # ISO 8859-1 (Latin-1)
-            ]
-
-        for encoding in encodings:
-            try:
-                return data.decode(encoding)
-            except UnicodeDecodeError:
-                continue
-        raise UnicodeDecodeError("All provided encodings failed to decode the data.")
-
-    def setup_event_watch(self):
-        self.socket_event = WayfireSocket()
-        self.socket_event.watch(["event"])
-        self.fd = self.socket_event.client.fileno()  # Get the file descriptor from the WayfireSocket instance
-        self.watch_id = GLib.io_add_watch(self.fd, GLib.IO_IN, self.on_event_ready)
-
-    def try_read_next_event(self):
-        if not self.fd:
-            return True
-        try:
-            # Use self.fd to perform operations
-            # Read the length prefix (assuming it's 4 bytes as an integer)
-            length_prefix = os.read(self.fd, 4)
-            if not length_prefix:
-                return None
-
-            # Convert length prefix to an integer
-            message_length = int.from_bytes(length_prefix, byteorder="little")
-
-            # Initialize the buffer
-            message_data = b""
-
-            # Read data until we get the full message
-            while len(message_data) < message_length:
-                chunk = os.read(self.fd, message_length - len(message_data))
-                if not chunk:
-                    raise Exception("Connection closed while reading message")
-                message_data += chunk
-
-            # Once we have the full message, decode it with orjson (imported as json)
-            if message_data:
-                msg = json.loads(message_data)
-                if isinstance(msg, dict):
-                    return msg
-
-        except Exception as e:
-            print(f"Error from utils.py in try_read_next_event: {e}")
-        return None
-
     def on_event_ready(self, fd, condition):
-        msg = self.try_read_next_event()
+        msg = self.sock.read_next_event()
         if msg is None:
             return True
         if isinstance(msg, dict):  # Check if msg is already a dictionary
@@ -1999,28 +1939,6 @@ class Panel(Adw.Application):
             #                                  self.window_title,
             #                                 )
 
-    def create_button_content(self):
-        # Create the main container box
-        box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=6)
-        box.add_css_class("box_from_window_title")
-
-        # Create a label for the title
-        label = Gtk.Label()
-        label.add_css_class("label_from_window_title")
-
-        icon_name = "view-column-symbolic"
-        # Create an image for the icon
-        image = Gtk.Image.new_from_icon_name(icon_name)
-        image.props.margin_end = 5
-        image.set_halign(Gtk.Align.END)
-        image.add_css_class("icon_from_window_title")
-
-        # Append the image and label to the box
-        box.append(image)
-        box.append(label)
-        box.add_css_class("box_from_window_title")
-        return [box, image, label]
- 
     def update_widgets_background_panel(self, workspace_id, pid, wclass, mem_usage, exe):
         """Update widget labels."""
 
@@ -2037,7 +1955,6 @@ class Panel(Adw.Application):
 
         # Update volume information
         self.volume_watch()
-
 
 def append_to_env(app_name, monitor_name, env_var='waypanel'):
     existing_env = os.getenv(env_var, '{}')
