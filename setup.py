@@ -7,7 +7,7 @@ def read_requirements():
 
 setup(
     name='waypanel',
-    version='0.10.2',
+    version='0.10.4',
     author='killown',
     author_email='systemofdown@gmail.com',
     description='A Wayfire panel that behaves like a shell',
