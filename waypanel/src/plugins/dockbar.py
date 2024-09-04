@@ -489,14 +489,13 @@ class Dockbar(Adw.Application):
 
     def remove_button(self, id):
         if id in self.buttons_id:
-            if id not in self.wf_utils.list_ids():
-                button = self.buttons_id[id][0]
-                if not self.utils.widget_exists(button):
-                    return
-                self.taskbar.remove(button)
-                self.taskbar_list.remove(id)
-                self.utils.remove_gesture(button)
-                del self.buttons_id[id]
+            button = self.buttons_id[id][0]
+            if not self.utils.widget_exists(button):
+                return
+            self.taskbar.remove(button)
+            self.taskbar_list.remove(id)
+            self.utils.remove_gesture(button)
+            del self.buttons_id[id]
 
     def taskbar_remove(self, id=None):
         if self.view_exist(id):
