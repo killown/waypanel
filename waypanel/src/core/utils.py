@@ -4,6 +4,7 @@ import gi
 import orjson as json
 import numpy as np
 from time import sleep
+from typing import Any, List, Optional
 import subprocess
 from gi.repository import Gtk, Adw, Gio, Gdk, GLib
 from subprocess import Popen
@@ -22,6 +23,37 @@ from subprocess import call
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
+
+class GLibWayfireSocket(WayfireSocket):
+    def __init__(self, socket_name: Optional[str] = None, allow_manual_search=False):
+        super().__init__(socket_name, allow_manual_search)
+        self.is_scale_active = {}
+        # Integrate GLib event loop with the socket
+        GLib.io_add_watch(self.client, GLib.IO_IN, self._on_socket_data)
+
+    def _on_socket_data(self, source, condition):
+        try:
+            event = self.read_next_event()
+            self.handle_event(event)
+        except Exception as e:
+            print(f"Error reading from socket: {e}")
+            return False  # Stop watching the socket in case of error
+
+        return True  # Continue watching the socket
+ 
+    def handle_event(self, msg):
+        try:
+            if msg["event"] == "plugin-activation-state-changed":
+                if msg["state"] is True:
+                    if msg["plugin"] == "scale":
+                        self.is_scale_active[msg["output"]] = True
+                if msg["state"] is False:
+                    if msg["plugin"] == "scale":
+                        self.is_scale_active[msg["output"]] = False
+        except Exception as e:
+            print(e)
+        return True
+
 class Utils(Adw.Application):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -33,7 +65,7 @@ class Utils(Adw.Application):
         self.gestures = {}
         self.fd = None
         self.watch_id = None
-        self.sock = WayfireSocket()
+        self.sock = GLibWayfireSocket(allow_manual_search=True)
         self.sock.watch()
         self.socket_event = WayfireSocket()
         self.socket_event.watch()
@@ -60,7 +92,6 @@ class Utils(Adw.Application):
             "st",
             "rxvt"
         ]
-        self.setup_event_watch()
 
     @staticmethod
     def handle_exceptions(func):
@@ -244,8 +275,6 @@ class Utils(Adw.Application):
         # Run the note-taking application using the specified command
         self.run_app(config["take_note_app"]["cmd"])
 
-
-
     def CreateFromAppList(
         self, config, orientation, class_style, callback=None, use_label=False
     ):
@@ -283,88 +312,6 @@ class Utils(Adw.Application):
                 box.append(button)
 
         return box
-
-    def setup_event_watch(self):
-        self.socket_event = WayfireSocket()
-        self.socket_event.watch(["event"])
-
-        self.fd = self.socket_event.client.fileno()
-        self.watch_id = GLib.io_add_watch(self.fd, GLib.IO_IN, self.on_event_ready)
-
-    def try_read_next_event(self):
-        if not self.fd:
-            return True
-        try:
-            # Use self.fd to perform operations
-            # Read the length prefix (assuming it's 4 bytes as an integer)
-            length_prefix = os.read(self.fd, 4)
-            if not length_prefix:
-                return True
-
-            # Convert length prefix to an integer
-            message_length = int.from_bytes(length_prefix, byteorder="little")
-
-            # Initialize the buffer
-            message_data = b""
-
-            # Read data until we get the full message
-            while len(message_data) < message_length:
-                chunk = os.read(self.fd, message_length - len(message_data))
-                if not chunk:
-                    raise Exception("Connection closed while reading message")
-                message_data += chunk
-
-            # Once we have the full message, decode it with orjson (imported as json)
-            if message_data:
-                print(message_data)
-                msg = json.loads(message_data)
-                if isinstance(msg, dict):
-                    return msg
-
-        except Exception as e:
-            print(f"Error from utils.py in try_read_next_event: {e}")
-        return None
-
-    def on_event_ready(self, fd, condition):
-        msg = self.try_read_next_event()
-        try:
-            if msg is None:
-                return True
-            if isinstance(msg, dict):  # Check if msg is already a dictionary
-                if "event" in msg:
-                    self.handle_event(msg)
-            else:
-                print(f"utils.py: Unexpected message format: {msg}")
-            return True
-        except Exception as e:
-            print(f"Error processing Wayfire events utils.py: {e}")
-            return True
-
-    def reset_watch(self):
-        if self.watch_id is not None:
-            GLib.source_remove(self.watch_id)  # Remove the previous watch
-
-        if self.socket_event:
-            self.socket_event.close()  # Ensure the old socket is properly closed
-
-        self.socket_event = WayfireSocket()
-        self.socket_event.watch(["event"])
-        self.sock.watch()
-        fd = self.socket_event.client.fileno()
-        self.watch_id = GLib.io_add_watch(fd, GLib.IO_IN, self.on_event_ready)
-
-    def handle_event(self, msg):
-        try:
-            if msg["event"] == "plugin-activation-state-changed":
-                if msg["state"] is True:
-                    if msg["plugin"] == "scale":
-                        self.is_scale_active[msg["output"]] = True
-                if msg["state"] is False:
-                    if msg["plugin"] == "scale":
-                        self.is_scale_active[msg["output"]] = False
-        except Exception as e:
-            print(e)
-        return True
 
     def search_local_desktop(self, initial_title):
         for deskfile in os.listdir(self.webapps_applications):
