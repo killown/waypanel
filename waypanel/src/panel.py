@@ -219,7 +219,7 @@ class Panel(Adw.Application):
         self.right_position_launcher_topbar()
         self.setup_panels()
         self.setup_clock_widget()
-        #self.update_widget_with_timeout()
+        self.update_widget_with_timeout()
         #self.setup_background_panel_widgets()
         self.setup_panel_buttons()
         self.setup_panel_position()
