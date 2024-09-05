@@ -99,6 +99,7 @@ class Panel(Adw.Application):
         self.focused_output = None
         self.dpms_monitors_timeout = 3600
         self.vol_slider = None
+        self.dockbar_pending_events = []
         self.icon_vol_slider = None
         self.workspace_empty = None
         self.timeout_ids = {}
@@ -218,11 +219,10 @@ class Panel(Adw.Application):
         self.right_position_launcher_topbar()
         self.setup_panels()
         self.setup_clock_widget()
-        self.update_widget_with_timeout()
-        self.setup_background_panel_widgets()
+        #self.update_widget_with_timeout()
+        #self.setup_background_panel_widgets()
         self.setup_panel_buttons()
         self.setup_panel_position()
-        self.setup_gestures()
 
         required_plugins = [
             "stipc",
@@ -342,7 +342,8 @@ class Panel(Adw.Application):
         )
         self.monitor.connect("changed", self.on_css_file_changed)
         self.check_widgets_ready()
-        # set layer exclusive 
+        #setup gestures after widgets is ready
+        self.setup_gestures()
         self.show_panels()
 
     def autostart(self):
@@ -863,13 +864,13 @@ class Panel(Adw.Application):
 
     def setup_gestures(self):
         # Setting up gestures for various UI components
-        self.utils.create_gesture(self.todo_button, 1, self.utils.take_note_app)
+        #self.utils.create_gesture(self.todo_button, 1, self.utils.take_note_app)
         # self.utils.create_gesture(self.clock_box, 1, self.clock_dashboard)
         self.utils.create_gesture(self.window_title, 1, self.manage_window_notes)
-        self.utils.create_gesture(self.tbclass, 1, self.dock.dockbar_append)
+        #self.utils.create_gesture(self.tbclass, 1, self.dock.dockbar_append)
         # self.utils.create_gesture(self.tbclass, 3, self.dock.join_windows)
         # self.utils.create_gesture(self.tbSIGKILL, 1, self.sigkill_activewindow)
-        self.utils.create_gesture(self.tbvol, 1, self.toggle_mute_from_sink)
+        #self.utils.create_gesture(self.tbvol, 1, self.toggle_mute_from_sink)
 
         # Gestures for top panel
         self.utils.create_gesture(
@@ -901,9 +902,9 @@ class Panel(Adw.Application):
         self.utils.create_gesture(self.top_panel_box_systray, 3, self.notify_client)
 
         # click will copy pid to clipboard
-        self.tbpid_gesture = self.utils.create_gesture(
-            self.tbpid, 1, self.copy_to_clipboard
-        )
+        #self.tbpid_gesture = self.utils.create_gesture(
+        #    self.tbpid, 1, self.copy_to_clipboard
+        #)
 
         # Adding scroll event to the full panel
         EventScroll = Gtk.EventControllerScroll.new(
@@ -932,7 +933,7 @@ class Panel(Adw.Application):
                 return
             button = Gtk.Button()
             button.connect("clicked", lambda widget: self.on_hidden_view(widget, view))
-            self.top_panel_box_systray.append(button)
+            self.clock_box.append(button)
             self.utils.handle_icon_for_button(view, button)
             self.sock.hide_view(view["id"])
 
@@ -955,7 +956,7 @@ class Panel(Adw.Application):
             #set focus will return an Exception in case the view is not toplevel
             GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))
             if self.utils.widget_exists(widget):
-                self.top_panel_box_systray.remove(widget)
+                self.clock_box.remove(widget)
 
     def close_fullscreen_buttons(self):
         # Creating close and full screen buttons for the top bar
