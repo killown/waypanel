@@ -165,7 +165,7 @@ class Dockbar(Adw.Application):
 
     def handle_view_event(self, msg, view):
         if "event" not in msg:
-            return True
+            return
 
         # this event match must be here 
         # because if not, role != toplevel will make it never match
@@ -179,23 +179,23 @@ class Dockbar(Adw.Application):
             self.on_view_destroyed(view)
  
         if view is None:
-            return True
+            return
 
         if view["pid"] == -1:
-            return True
+            return 
 
         if "role" not in view:
-            return True
+            return
 
         if view["role"] != "toplevel":
-            return True
+            return 
 
         if view["app-id"] == "":
-            return True
+            return 
 
         if view["app-id"] == "nil":
-            return True
- 
+            return 
+
         if msg["event"] == "view-title-changed":
             self.on_title_changed(view)
 
@@ -240,7 +240,7 @@ class Dockbar(Adw.Application):
         msg = self.sock.read_next_event()
         if msg is None:
             return True
-        if isinstance(msg, dict):  # Check if msg is already a dictionary
+        if isinstance(msg, dict):
             if "event" in msg:
                 self.handle_event(msg)
         return True
@@ -448,8 +448,7 @@ class Dockbar(Adw.Application):
             return False
 
     def view_exist(self, view_id):
-        exist = view_id in self.wf_utils.list_ids()
-        if exist:
+        try:
             view = self.sock.get_view(view_id)
             layer = view["layer"] != "workspace"
             role = view["role"] != "toplevel"
@@ -460,7 +459,8 @@ class Dockbar(Adw.Application):
             if layer or role or mapped or app_id or pid or view_type:
                 return False
             return True
-        return False
+        except Exception:
+            return False
 
     def update_taskbar_for_hidden_views(self, view):
         #the goal of this function is to catch taskbar buttons which is not toplevel 

@@ -1,13 +1,10 @@
 import os
 import math
 import gi
-import orjson as json
 import numpy as np
 from time import sleep
-from typing import Any, List, Optional
 import subprocess
 from gi.repository import Gtk, Adw, Gio, Gdk, GLib
-from subprocess import Popen
 from subprocess import check_output
 import toml
 import aiohttp
@@ -17,42 +14,11 @@ from bs4 import BeautifulSoup
 from wayfire import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.extra.stipc import Stipc
-import shlex
 from subprocess import call
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-
-class GLibWayfireSocket(WayfireSocket):
-    def __init__(self, socket_name: Optional[str] = None, allow_manual_search=False):
-        super().__init__(socket_name, allow_manual_search)
-        self.is_scale_active = {}
-        # Integrate GLib event loop with the socket
-        GLib.io_add_watch(self.client, GLib.IO_IN, self._on_socket_data)
-
-    def _on_socket_data(self, source, condition):
-        try:
-            event = self.read_next_event()
-            self.handle_event(event)
-        except Exception as e:
-            print(f"Error reading from socket: {e}")
-            return False  # Stop watching the socket in case of error
-
-        return True  # Continue watching the socket
- 
-    def handle_event(self, msg):
-        try:
-            if msg["event"] == "plugin-activation-state-changed":
-                if msg["state"] is True:
-                    if msg["plugin"] == "scale":
-                        self.is_scale_active[msg["output"]] = True
-                if msg["state"] is False:
-                    if msg["plugin"] == "scale":
-                        self.is_scale_active[msg["output"]] = False
-        except Exception as e:
-            print(e)
-        return True
 
 class Utils(Adw.Application):
     def __init__(self, **kwargs):
@@ -65,10 +31,9 @@ class Utils(Adw.Application):
         self.gestures = {}
         self.fd = None
         self.watch_id = None
-        self.sock = GLibWayfireSocket(allow_manual_search=True)
+        self.sock = WayfireSocket()
         self.sock.watch()
-        self.socket_event = WayfireSocket()
-        self.socket_event.watch()
+        GLib.io_add_watch(self.sock.client, GLib.IO_IN, self.on_event_ready)
         self.wf_utils = WayfireUtils(self.sock)
         self.stipc = Stipc(self.sock)
 
@@ -274,6 +239,29 @@ class Utils(Adw.Application):
 
         # Run the note-taking application using the specified command
         self.run_app(config["take_note_app"]["cmd"])
+ 
+    def on_event_ready(self, fd, condition):
+        msg = self.sock.read_next_event()
+        if msg is None:
+            return True
+        if isinstance(msg, dict):  # Check if msg is already a dictionary
+            if "event" in msg:
+                self.handle_event(msg)
+        return True
+ 
+    def handle_event(self, msg):
+        try:
+            if msg["event"] == "plugin-activation-state-changed":
+                if msg["state"] is True:
+                    if msg["plugin"] == "scale":
+                        self.is_scale_active[msg["output"]] = True
+                if msg["state"] is False:
+                    if msg["plugin"] == "scale":
+                        self.is_scale_active[msg["output"]] = False
+        except Exception as e:
+            print(e)
+        return True
+
 
     def CreateFromAppList(
         self, config, orientation, class_style, callback=None, use_label=False
