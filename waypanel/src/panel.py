@@ -4,6 +4,7 @@ import datetime
 import netifaces
 import soundcard as sc
 import os
+import socket
 from pathlib import Path
 from subprocess import Popen
 from subprocess import check_output
@@ -14,7 +15,7 @@ import toml
 import time
 from collections import ChainMap
 from waypanel.src.core.utils import Utils as utils
-from waypanel.src.core.create_panel import CreatePanel, set_layer_position_exclusive
+from waypanel.src.core.create_panel import CreatePanel, set_layer_position_exclusive, unset_layer_position_exclusive
 from gi.repository import Gtk, Adw, GLib, Gio, Gdk
 from waypanel.src.plugins.dockbar import Dockbar
 from waypanel.src.plugins.bookmarksPopover import PopoverBookmarks
@@ -26,11 +27,11 @@ from waypanel.src.plugins.folders import PopoverFolders
 from waypanel.src.plugins.clipboardMenu import MenuClipboard
 from waypanel.src.plugins.launcherMenu import MenuLauncher
 from waypanel.src.core.utils import Utils
-from waypanel.src.core.background import Background
 from wayfire import WayfireSocket as OriginalWayfireSocket
 from wayfire.core.template import get_msg_template
 from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.extra.stipc import Stipc
+from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
 
 #to get the gtk and gdk completions
 #pip install pygobject-stubs --no-cache-dir --config-settings=config=Gtk4,Gdk
@@ -71,9 +72,12 @@ class Panel(Adw.Application):
         self.panel_cfg = self.load_topbar_config()
 
         self.sock = WayfireSocket()
-        self.sock.watch()
-        GLib.io_add_watch(self.sock.client, GLib.IO_IN, self.on_event_ready)
+        #self.sock.watch()
+        #GLib.io_add_watch(self.sock.client, GLib.IO_IN, self.on_event_ready)
         self.wf_utils = WayfireUtils(self.sock)
+        self.ipc_client = WayfireClientIPC(self.handle_event)
+        # here is where the ipc events happen
+        self.ipc_client.wayfire_events_setup("/tmp/waypanel.sock")
 
         self.fd = None
 
@@ -716,43 +720,17 @@ class Panel(Adw.Application):
         # just disable this function call
         return True
 
+    # events that will make the dockbars clickable or not
     def on_scale_activated(self):
-        # call it once to update without waiting timeout_add
-        # then timeout_add until scale is false
-
-        #if self.background_panel_enabled:
-        #    self.update_background_panel()
-        #    self.set_cpu_usage()
-        #    GLib.timeout_add_seconds(1, self.set_cpu_usage)
-        #    GLib.timeout_add_seconds(1, self.update_background_panel)
-        #    set_layer_position_exclusive(self.update_background_panel)
         self.is_scale_active = True
-        #self.utils.run_app('wofi --yoffset 20 --search ....')
 
     def on_scale_desactivated(self):
-        #if self.background_panel_enabled:
-        #    unset_layer_position_exclusive(self.update_background_panel)
         self.is_scale_active = False
-        #self.utils.run_app("pkill wofi")
 
     def on_view_focused(self):
         self.update_title_top_panel()
 
-    def start_thread_all_events(self):
-        self.all_events = Background(
-            self.all_events_watch, lambda: self.on_events_finished
-        )
-        self.all_events.start()
-
-    def on_events_finished(self):
-        # non working code
-        try:
-            self.all_events_watch.finish()
-        except Exception as err:
-            print(err)
-
     def list_views(self):
-        
         return self.sock.list_views()
 
     # this function need a rework, get active monitor
@@ -2003,7 +1981,7 @@ def start_panel():
     append_to_env("output_id", utils.get_output_id_by_name(monitor_name))
 
     app.run(None)
-    sock.watch(["event"])
+    #sock.watch(["event"])
 
     while True:
         msg = sock.read_message()
