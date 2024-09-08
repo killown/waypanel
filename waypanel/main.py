@@ -1,8 +1,15 @@
 import os
+import pkg_resources
 import shutil
 import subprocess
 from ctypes import CDLL
 import gi
+
+subprocess.call(['pkill', '-f', 'waypanel/src/ipc_server/ipc-async-server.py'])
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+script_path = pkg_resources.resource_filename('waypanel', 'src/ipc_server/ipc-async-server.py')
+subprocess.Popen(['python', script_path], start_new_session=True)
 
 def layer_shell_check():
     """Check if gtk4-layer-shell is installed, and install it if not."""
