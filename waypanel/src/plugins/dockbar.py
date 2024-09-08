@@ -1,5 +1,6 @@
 import os
 import toml
+import socket
 import orjson as json
 from subprocess import call, check_output as out
 from collections import ChainMap
@@ -13,6 +14,7 @@ from ..core.create_panel import (
 from ..core.utils import Utils
 from wayfire.ipc import WayfireSocket
 from  wayfire.extra.ipc_utils import WayfireUtils
+from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
 
 sys.path.append("/usr/lib/waypanel/")
 
@@ -24,11 +26,13 @@ class Dockbar(Adw.Application):
         self.panel_cfg = self.utils.load_topbar_config()
         self.taskbar_list = [None]
         self.sock = WayfireSocket()
-        self.sock.watch()
+        #self.saock.watch()
         self.wf_utils = WayfireUtils(self.sock)
         self.all_pids = [i["id"] for i in self.sock.list_views()]
         self.timeout_taskbar = None
         self.buttons_id = {}
+        self.left_panel = None
+        self.bottom_panel = None
         self.watch_id = None
         self.fd = None
         self.has_taskbar_started = False
@@ -37,8 +41,9 @@ class Dockbar(Adw.Application):
         self.is_scale_active = {}
         self._setup_config_paths()
 
-        # Setup GLib watch to monitor socket events
-        GLib.io_add_watch(self.sock.client, GLib.IO_IN, self.on_event_ready)
+        self.ipc_client = WayfireClientIPC(self.handle_event)
+        # here is where the ipc events happen
+        self.ipc_client.wayfire_events_setup("/tmp/waypanel.sock")
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -236,15 +241,6 @@ class Dockbar(Adw.Application):
                     self.on_scale_desactivated()
         return True
 
-    def on_event_ready(self, fd, condition):
-        msg = self.sock.read_next_event()
-        if msg is None:
-            return True
-        if isinstance(msg, dict):
-            if "event" in msg:
-                self.handle_event(msg)
-        return True
-
     def handle_event(self, msg):
         view = None
         if "view" in msg:
@@ -308,6 +304,7 @@ class Dockbar(Adw.Application):
         #if self.panel_output_is_focused_output():
         set_layer_position_exclusive(self.left_panel, 64)
         set_layer_position_exclusive(self.bottom_panel, 48)
+        self.update_taskbar_on_scale()
 
     def on_scale_desactivated(self):
             unset_layer_position_exclusive(self.left_panel)
@@ -374,6 +371,10 @@ class Dockbar(Adw.Application):
                 # if output_name != default_output:
                 #   title = "({0}) {1}".format(output_name, title)
                 # label.set_label(title)
+
+    def update_taskbar_on_scale(self):
+        for view in self.sock.list_views():
+            self.update_taskbar(view)
 
     def Taskbar(self, orientation, class_style, update_button=False, callback=None):
         # Load configuration from dockbar_config file

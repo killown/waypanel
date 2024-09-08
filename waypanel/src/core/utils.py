@@ -1,12 +1,14 @@
 import os
 import math
 import gi
+import orjson as json
 import numpy as np
 from time import sleep
 import subprocess
 from gi.repository import Gtk, Adw, Gio, Gdk, GLib
 from subprocess import check_output
 import toml
+import socket
 import aiohttp
 import asyncio
 from aiohttp import ClientTimeout
@@ -15,6 +17,7 @@ from wayfire import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.extra.stipc import Stipc
 from subprocess import call
+from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -32,8 +35,11 @@ class Utils(Adw.Application):
         self.fd = None
         self.watch_id = None
         self.sock = WayfireSocket()
-        self.sock.watch()
-        GLib.io_add_watch(self.sock.client, GLib.IO_IN, self.on_event_ready)
+
+        self.ipc_client = WayfireClientIPC(self.handle_event)
+        # here is where the ipc events happen
+        self.ipc_client.wayfire_events_setup("/tmp/waypanel-utils.sock")
+
         self.wf_utils = WayfireUtils(self.sock)
         self.stipc = Stipc(self.sock)
 
@@ -67,6 +73,55 @@ class Utils(Adw.Application):
                 print(f"An error occurred in {func.__name__}: {e}")
                 return None
         return wrapper
+
+    def connect_socket(self):
+        """Establish a connection to the Unix socket."""
+        socket_path = "/tmp/waypanel-utils.sock"
+        self.client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.client_socket.connect(socket_path)
+
+        # Create a GLib IO Watcher
+        self.source = GLib.io_add_watch(self.client_socket, GLib.PRIORITY_DEFAULT, GLib.IO_IN, self.handle_socket_event)
+
+    def handle_socket_event(self, fd, condition):
+        """Read from the socket and process events."""
+        chunk = fd.recv(1024).decode()
+        if not chunk:
+            return GLib.SOURCE_REMOVE  # Remove source if no data is received
+
+        self.buffer += chunk
+
+        # Process the complete events in the buffer
+        while '\n' in self.buffer:
+            event_str, self.buffer = self.buffer.split('\n', 1)
+            if event_str:
+                try:
+                    event = json.loads(event_str)
+                    self.process_event(event)
+                except json.JSONDecodeError as e:
+                    print(f"JSON decode error: {e}")
+
+        return GLib.SOURCE_CONTINUE  # Continue receiving data
+
+    def process_event(self, event):
+        """Process the event dictionary."""
+        print(f"Received event: {event}")
+        self.handle_event(event)
+
+    def disconnect_socket(self):
+        """Clean up resources."""
+        if self.source:
+            self.source.remove()  # Remove the source when done
+        if self.client_socket:
+            self.client_socket.close()
+    def wayfire_events_setup(self):
+        """Initialize the Wayfire event listener within a GTK application."""
+        # Create a GTK application
+        app = Gtk.Application(application_id="com.example.GtkApplication")
+
+        # Define the path for the Unix socket
+        self.connect_socket()
+
 
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
         if [c for c in self.terminal_emulators if cmd in c] and cmd_mode:
@@ -240,6 +295,13 @@ class Utils(Adw.Application):
         # Run the note-taking application using the specified command
         self.run_app(config["take_note_app"]["cmd"])
  
+    def reconnect_client(self, socket):
+        socket.close()
+        sock = WayfireSocket()
+        utils = WayfireUtils(sock)
+        stipc = Stipc(sock)
+        return sock, utils, stipc
+
     def on_event_ready(self, fd, condition):
         msg = self.sock.read_next_event()
         if msg is None:
