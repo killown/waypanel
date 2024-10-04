@@ -14,7 +14,8 @@ How to Install `waypanel`
 This guide provides step-by-step instructions to install `waypanel`, both using `pip` and via `git`. It also includes instructions for setting up a virtual environment.
 
 #### archlinux
-pacman -S gtk4-layer-shell gobject-introspection vala playerctl
+    
+    pacman -S gtk4-layer-shell gobject-introspection vala playerctl
 
 
 Method 1: Installing `waypanel` using `pip`
