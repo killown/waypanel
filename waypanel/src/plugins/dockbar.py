@@ -1,6 +1,5 @@
 import os
 import toml
-import socket
 import orjson as json
 from subprocess import call, check_output as out
 from collections import ChainMap
@@ -26,7 +25,6 @@ class Dockbar(Adw.Application):
         self.panel_cfg = self.utils.load_topbar_config()
         self.taskbar_list = [None]
         self.sock = WayfireSocket()
-        #self.saock.watch()
         self.wf_utils = WayfireUtils(self.sock)
         self.all_pids = [i["id"] for i in self.sock.list_views()]
         self.timeout_taskbar = None

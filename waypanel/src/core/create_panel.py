@@ -10,7 +10,8 @@ gi.require_version("Gtk4LayerShell", "1.0")
 from gi.repository import Gtk4LayerShell as LayerShell
 
 gi.require_version("Gdk", "4.0")
-from gi.repository import Adw, Gdk
+gi.require_version("Gtk", "4.0")
+from gi.repository import Adw, Gdk, Gtk
 
 
 def set_layer_position_exclusive(window, size):
@@ -55,6 +56,9 @@ def get_monitor_info():
     """
     # get default display and retrieve
     # information about the connected monitors
+    # # Initialize GTK
+    Gtk.init()
+
     screen = Gdk.Display.get_default()
     monitors = screen.get_monitors()
     monitor_info = {}
@@ -117,9 +121,12 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     if layer == "TOP":
         window.set_default_size(monitor["width"], height)
         LayerShell.set_layer(window, LayerShell.Layer.TOP)
+        window.set_size_request(10,10)
 
     if anchor == "LEFT":
         LayerShell.set_anchor(window, LayerShell.Edge.LEFT, True)
+        window.set_size_request(10,10)
+
         if exclusive:
             LayerShell.auto_exclusive_zone_enable(window)
 
@@ -135,6 +142,7 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
 
     if anchor == "BOTTOM":
         LayerShell.set_anchor(window, LayerShell.Edge.BOTTOM, True)
+        window.set_size_request(10,10)
         if exclusive:
             LayerShell.auto_exclusive_zone_enable(window)
 

@@ -134,6 +134,7 @@ gi.require_version('Gio', '2.0')
 CDLL("libgtk4-layer-shell.so")
 gi.require_version("Gtk4LayerShell", "1.0")
 gi.require_version('Gtk', '4.0')
+gi.require_version('Gdk', '4.0')
 gi.require_version('Playerctl', '2.0')
 gi.require_version('Adw', '1')
 from waypanel.src.panel import start_panel 

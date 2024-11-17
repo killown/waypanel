@@ -55,12 +55,17 @@ class MenuClipboard(Gtk.Application):
         # Repopulate the list with updated clipboard history
         clipboard_history = "\n"
         if self.clipboard_cmd_exist:
-            clipboard_history = (
+            clipboard_history = ''
+            try:
+                clipboard_history = (
                 check_output("cliphist list".split())
                 .decode("latin-1")
                 .encode("utf-8")
                 .decode()
             )
+            except Exception as e:
+                print(e)
+
         clipboard_history = clipboard_history.split("\n")
         for i in clipboard_history:
             if not i:

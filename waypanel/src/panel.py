@@ -4,7 +4,6 @@ import datetime
 import netifaces
 import soundcard as sc
 import os
-import socket
 from pathlib import Path
 from subprocess import Popen
 from subprocess import check_output
@@ -307,11 +306,11 @@ class Panel(Adw.Application):
 
         timeout_all = panel_toml["dpms"]["timeout_all"]
         timeout_single = panel_toml["dpms"]["timeout_single"]
-        self.dpms_enabled = panel_toml["dpms"]["enabled"]
-        self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
-            timeout_all, self.dpms_manager
-        )
-        self.turn_off_monitor_timeout = timeout_single
+        #self.dpms_enabled = panel_toml["dpms"]["enabled"]
+        #self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
+        #    timeout_all, self.dpms_manager
+        #)
+        #self.turn_off_monitor_timeout = timeout_single
 
     def check_widgets_ready(self):
         if (self.utils.is_widget_ready(self.top_panel_box_left) and
@@ -595,12 +594,12 @@ class Panel(Adw.Application):
             self.handle_output_events(msg)
             self.handle_plugin_event(msg)
             self.handle_workspace_events(msg)
-            self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
-                 self.dpms_monitors_timeout, self.dpms_manager
-                    )
+            #self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
+            #     self.dpms_monitors_timeout, self.dpms_manager
+            #        )
 
-            if self.turn_off_monitors_timeout:
-                GLib.source_remove(self.turn_off_monitors_timeout)
+            #if self.turn_off_monitors_timeout:
+            #    GLib.source_remove(self.turn_off_monitors_timeout)
         except Exception as e:
             print(e)
 
