@@ -1,15 +1,13 @@
 import os
-import random
-import gi
 from gi.repository import Gio, Gtk, Adw
 from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen, check_output
 from ..core.utils import Utils
-import toml
 import soundcard as sc
 import pulsectl
 
 from wayfire.ipc import WayfireSocket
+
 addr = os.getenv("WAYFIRE_SOCKET")
 sock = WayfireSocket(addr)
 
@@ -17,6 +15,9 @@ class SoundCardDashboard(Adw.Application):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.popover_dashboard = None
+        self.soundcard_combobox = None
+        self.mic_combobox = None
+        self.menubutton_dashboard = None
         self.app = None
         self.top_panel = None
         self._setup_config_paths()
@@ -35,9 +36,7 @@ class SoundCardDashboard(Adw.Application):
         self.menu_config = os.path.join(self.config_path, "menu.toml")
         self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
         self.cmd_config = os.path.join(self.config_path, "cmd.toml")
-        self.topbar_dashboard_config = os.path.join(
-            self.config_path, "topbar-launcher.toml"
-        )
+        self.topbar_dashboard_config = os.path.join(self.config_path, "topbar-launcher.toml")
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
 
@@ -83,8 +82,6 @@ class SoundCardDashboard(Adw.Application):
     def get_mic_list_names(self):
         mic_list = []
         default_mic = self.get_default_mic_name()
-        # sometimes it will return a non existent default mic
-        # and in the mic list hold the right inputs available
         mic_list_names = [mic.name for mic in self.get_mic_list()]
         if default_mic in mic_list_names:
             mic_list.append(default_mic)
@@ -133,98 +130,89 @@ class SoundCardDashboard(Adw.Application):
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        self.menubutton_dashboard.set_icon_name("audio-volume-high")
+        self.menubutton_dashboard.set_icon_name("icon_vol_slider")
         return self.menubutton_dashboard
 
     def create_popover_soundcard(self, *_):
-        # FIXME: the popup does not update the list of cards
+        # Create the popover dashboard if it doesn't exist yet
+        if self.popover_dashboard is None:
+            # Create the popover dashboard once
+            self.popover_dashboard = Gtk.Popover.new()
+            self.popover_dashboard.set_has_arrow(False)
+            self.popover_dashboard.connect("closed", self.popover_is_closed)
+            self.popover_dashboard.connect("notify::visible", self.popover_is_open)
 
-        self.popover_dashboard = Gtk.Popover.new()
-        self.popover_dashboard.set_has_arrow(False)
-        self.popover_dashboard.connect("closed", self.popover_is_closed)
-        self.popover_dashboard.connect("notify::visible", self.popover_is_open)
+            # Create a box to hold the elements vertically
+            box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            box.set_margin_start(12)
+            box.set_margin_end(12)
+            box.set_margin_top(12)
+            box.set_margin_bottom(12)
 
-        # Set width and height of the popover dashboard
-        # self.popover_dashboard.set_size_request(600, 400)
+            # Create a horizontal box to hold the sound card icon and ComboBox
+            sc_hbox = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
 
-        # Create a box to hold the elements vertically
-        box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        box.set_margin_start(12)
-        box.set_margin_end(12)
-        box.set_margin_top(12)
-        box.set_margin_bottom(12)
+            # Create the sound card icon
+            sound_card_icon = Gtk.Image.new_from_icon_name("audio-card-symbolic")
 
-        # Create a horizontal box to hold the sound card icon and ComboBox
-        sc_hbox = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            # Create the soundcard ComboBox if it doesn't exist
+            if self.soundcard_combobox is None:
+                self.soundcard_combobox = Gtk.ComboBoxText()
+                self.soundcard_combobox.set_active(0)
+                self.soundcard_combobox.connect("changed", self.on_soundcard_changed)
 
-        # Create the sound card icon
-        sound_card_icon = Gtk.Image.new_from_icon_name("audio-card-symbolic")
+            # Create a horizontal box to hold the microphone icon and ComboBox
+            mic_hbox = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
 
-        # Create a ComboBox
-        soundcard_combobox = Gtk.ComboBoxText()
+            # Create the microphone icon
+            mic_icon = Gtk.Image.new_from_icon_name("audio-input-microphone-symbolic")
 
-        # Populate ComboBox with audio options
-        for soundcard in self.get_soundcard_list_names():
-            soundcard_combobox.append_text(soundcard)
+            # Create the microphone ComboBox if it doesn't exist
+            if self.mic_combobox is None:
+                self.mic_combobox = Gtk.ComboBoxText()
+                self.mic_combobox.set_active(0)
+                self.mic_combobox.connect("changed", self.on_mic_changed)
 
-        # Set the first option as active
-        soundcard_combobox.set_active(0)
+            # Add icon and ComboBox to the horizontal boxes
+            sc_hbox.append(self.soundcard_combobox)
+            sc_hbox.append(sound_card_icon)
+            mic_hbox.append(self.mic_combobox)
+            mic_hbox.append(mic_icon)
 
-        # Connect the changed signal to a callback function
-        soundcard_combobox.connect("changed", self.on_soundcard_changed)
+            # Add the horizontal boxes to the vertical box
+            box.append(sc_hbox)
+            box.append(mic_hbox)
 
-        # Create a horizontal box to hold the sound card icon and ComboBox
-        mic_hbox = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            self.soundcard_combobox.set_active(0)
+            self.mic_combobox.set_active(0)
 
-        # Create the sound card icon
-        mic_icon = Gtk.Image.new_from_icon_name("audio-input-microphone-symbolic")
+            # Set the box as the child of the popover
+            self.popover_dashboard.set_child(box)
 
-        # Create a ComboBox
-        mic_combobox = Gtk.ComboBoxText()
-
-        # Populate ComboBox with audio options
-        for mic in self.get_mic_list_names():
-            mic_combobox.append_text(mic)
-
-        # Set the first option as active
-        mic_combobox.set_active(0)
-
-        # Connect the changed signal to a callback function
-        mic_combobox.connect("changed", self.on_mic_changed)
-
-        # Add icon and ComboBox to the horizontal box
-        sc_hbox.append(soundcard_combobox)
-        sc_hbox.append(sound_card_icon)
-        mic_hbox.append(mic_combobox)
-        mic_hbox.append(mic_icon)
-
-        # Add the horizontal box to the vertical box
-        box.append(sc_hbox)
-        box.append(mic_hbox)
-
-        # apps_playing = self.get_active_audio_app_info()
-        # for playing in apps_playing:
-        #     title = apps_playing[playing]["application_name"]
-        #     view_id = apps_playing[playing]["view_id"]
-        #     # button.connect(
-        #     #    "clicked", lambda *_: self.sock.go_workspace_set_focus(view_id)
-        #     # )
-        #     app_id = self.sock.get_view(view_id)["app-id"]
-        #     icon = self.utils.get_icon(app_id, title, title)
-        #     button = self.utils.create_clickable_image(
-        #         icon, None, app_id, title, title, view_id
-        #     )
-        #
-        #     box.append(button)
-
-        # Set the box as the child of the popover
-        self.popover_dashboard.set_child(box)
+        # Update the soundcard and mic lists every time the popover is opened
+        self.update_soundcard_list()
+        self.update_mic_list()
 
         # Set the parent widget of the popover and display it
         self.popover_dashboard.set_parent(self.menubutton_dashboard)
         self.popover_dashboard.popup()
 
         return self.popover_dashboard
+
+
+    def update_soundcard_list(self):
+        """Update the soundcard list in the combobox."""
+        self.soundcard_combobox.remove_all()
+        for soundcard in self.get_soundcard_list_names():
+            self.soundcard_combobox.append_text(soundcard)
+        self.soundcard_combobox.set_active(0)
+
+    def update_mic_list(self):
+        """Update the microphone list in the combobox."""
+        self.mic_combobox.remove_all()
+        for mic in self.get_mic_list_names():
+            self.mic_combobox.append_text(mic)
+        self.mic_combobox.set_active(0)
 
     def on_soundcard_changed(self, combobox):
         selected_option = combobox.get_active_text()
@@ -243,24 +231,24 @@ class SoundCardDashboard(Adw.Application):
     def run_app_from_dashboard(self, x):
         selected_text, filename = x.get_child().MYTEXT
         cmd = "gtk-launch {}".format(filename)
-        self.utils.run_app(cmd)
-        self.popover_dashboard.popdown()
+        print(cmd)
+        Popen(cmd)
 
     def open_popover_dashboard(self, *_):
-        if self.popover_dashboard and self.popover_dashboard.is_visible():
-            self.popover_dashboard.popdown()
-        if self.popover_dashboard and not self.popover_dashboard.is_visible():
-            self.popover_dashboard.popup()
-        if not self.popover_dashboard:
-            self.popover_dashboard = self.create_popover_soundcard(self.app)
+        self.create_popover_soundcard()
 
     def popover_is_open(self, *_):
-        return
+        print("Popover is open")
 
     def popover_is_closed(self, *_):
-        return
+        print("Popover is closed")
 
-    def on_show_searchbar_action_actived(self, action, parameter):
-        self.searchbar.set_search_mode(
-            True
-        )  # Ctrl+F To Active show_searchbar and show searchbar
+    def show_audio_info(self):
+        audio_apps = self.get_active_audio_app_info()
+        for app_info in audio_apps.values():
+            print(app_info["application_name"])
+
+    def on_start(self):
+        pass
+
+

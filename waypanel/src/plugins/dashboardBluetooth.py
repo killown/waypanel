@@ -38,10 +38,11 @@ class BluetoothDashboard(Adw.Application):
 
     def get_bluetooth_list(self):
         devices = (
-            check_output("bluetoothctl devices".split()).decode().strip().split("\n")
+            check_output("bluetoothctl devices".split()).decode().strip()
         )
-
-        devices = [" ".join(i.split(" ")[1:]) for i in devices]
+        if not devices:
+            return
+        devices = [" ".join(i.split(" ")[1:]) for i in devices.split("\n")]
         print(devices)
         return devices
 
@@ -61,6 +62,11 @@ class BluetoothDashboard(Adw.Application):
         return widget
 
     def create_popover_bluetooth(self, *_):
+        #FIXME: need to add nothing paired to the popup in case there is no devices
+        devices =  self.get_bluetooth_list()
+        if not devices:
+            return
+
         # Create a popover
         self.popover_dashboard = Gtk.Popover.new()
         self.popover_dashboard.set_has_arrow(False)
@@ -79,7 +85,7 @@ class BluetoothDashboard(Adw.Application):
         except Exception as e:
             print(e)
 
-        for device in self.get_bluetooth_list():
+        for device in devices:
             bluetooth_button = Adw.ButtonContent()
             bluetooth_button.add_css_class("bluetooth-dashboard-buttons")
             device_id = device.split()[0]

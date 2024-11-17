@@ -575,6 +575,8 @@ class Utils(Adw.Application):
         button = Adw.ButtonContent()
         # Filter title for UTF-8 compatibility
         title = self.filter_utf_for_gtk(title)
+        if not title:
+            return None
         # Determine title to use based on its length
         use_this_title = title[:30]
         first_word_length = len(title.split()[0])

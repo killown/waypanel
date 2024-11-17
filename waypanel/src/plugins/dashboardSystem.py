@@ -63,13 +63,13 @@ class SystemDashboard(Adw.Application):
         self.stack.props.hexpand = True
         self.stack.props.vexpand = True
         data_and_categories = {
-            ("Logout", "", "gnome-logout-symbolic"): "System Actions",
-            ("Reboot", "", "system-reboot-symbolic"): "System Actions",
-            ("Shutdown", "", "gnome-shutdown-symbolic"): "System Actions",
-            ("Lock", "", "system-lock-screen-symbolic"): "System Actions",
-            ("Turn Off Monitors", "", "display-symbolic"): "System Actions",
-            ("Exit Waypanel", "", "display-symbolic"): "System Actions",
-            ("Restart Waypanel", "", "display-symbolic"): "System Actions",
+            ("Logout", "", "gnome-logout-symbolic"): "",
+            ("Reboot", "", "system-reboot-symbolic"): "",
+            ("Shutdown", "", "gnome-shutdown-symbolic"): "",
+            ("Lock", "", "system-lock-screen-symbolic"): "",
+            ("Turn Off Monitors", "", "display-symbolic"): "",
+            ("Exit Waypanel", "", "display-symbolic"): "",
+            ("Restart Waypanel", "", "display-symbolic"): "",
         }
         done = []
         for data, category in data_and_categories.items():
