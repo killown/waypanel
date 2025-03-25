@@ -1,21 +1,26 @@
 import os
-import toml
-import orjson as json
-from subprocess import call, check_output as out
-from collections import ChainMap
+import re
+import subprocess
 import sys
-from gi.repository import Gtk, Adw, GLib
-from ..core.create_panel import (
-    CreatePanel,
-    set_layer_position_exclusive,
-    unset_layer_position_exclusive,
-)
-from ..core.utils import Utils
+from collections import ChainMap, defaultdict
+from subprocess import call
+from subprocess import check_output as out
+from subprocess import run
+
+import orjson as json
+import toml
+from gi.repository import Adw, GLib, Gtk
+from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.ipc import WayfireSocket
-from  wayfire.extra.ipc_utils import WayfireUtils
+
 from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
 
+from ..core.create_panel import (CreatePanel, set_layer_position_exclusive,
+                                 unset_layer_position_exclusive)
+from ..core.utils import Utils
+
 sys.path.append("/usr/lib/waypanel/")
+
 
 class Dockbar(Adw.Application):
     def __init__(self, **kwargs):
@@ -46,7 +51,7 @@ class Dockbar(Adw.Application):
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
         config_paths = self.utils.setup_config_paths()
-        
+
         # Set instance variables from the dictionary
         self.home = config_paths["home"]
         self.webapps_applications = os.path.join(self.home, ".local/share/applications")
@@ -100,10 +105,10 @@ class Dockbar(Adw.Application):
         self.dockbar = self.utils.CreateFromAppList(
             self.dockbar_config, "v", "dockbar-left-button", self.join_windows
         )
-        #self.add_launcher = Gtk.Button()
-        #self.add_launcher.set_icon_name("tab-new-symbolic")
-        #self.add_launcher.connect("clicked", self.dockbar_append)
-        #self.dockbar.append(self.add_launcher)
+        # self.add_launcher = Gtk.Button()
+        # self.add_launcher.set_icon_name("tab-new-symbolic")
+        # self.add_launcher.connect("clicked", self.dockbar_append)
+        # self.dockbar.append(self.add_launcher)
         self.left_panel.set_content(self.dockbar)
         if enabled == "True":
             self.left_panel.present()
@@ -170,34 +175,34 @@ class Dockbar(Adw.Application):
         if "event" not in msg:
             return
 
-        # this event match must be here 
+        # this event match must be here
         # because if not, role != toplevel will make it never match
         if msg["event"] == "view-wset-changed":
             self.update_taskbar_for_hidden_views(view)
 
         # this must be here
-        # an unmapedd view is view None 
+        # an unmapedd view is view None
         # must be above if view is None
         if msg["event"] == "view-unmapped":
             self.on_view_destroyed(view)
- 
+
         if view is None:
             return
 
         if view["pid"] == -1:
-            return 
+            return
 
         if "role" not in view:
             return
 
         if view["role"] != "toplevel":
-            return 
+            return
 
         if view["app-id"] == "":
-            return 
+            return
 
         if view["app-id"] == "nil":
-            return 
+            return
 
         if msg["event"] == "view-title-changed":
             self.on_title_changed(view)
@@ -289,24 +294,24 @@ class Dockbar(Adw.Application):
             output_name = json.loads(output)
             output_name = output_name["output_name"]
             if focused_output_name:
-               if focused_output_name == output_name:
+                if focused_output_name == output_name:
                     return True
 
     # events that will make the dockbars clickable or not
     def on_scale_activated(self):
-        #the issue with this focused output thing 
-        #if you have multi monitor setup, scale first monitor with dockbar 
-        #then scale another monitor without the dockbar
-        #the dockbar will not get layer exclusive when you move mouse from the
-        #monitor which doesn't contain the panel to the monitor which contains it
-        #if self.panel_output_is_focused_output():
+        # the issue with this focused output thing
+        # if you have multi monitor setup, scale first monitor with dockbar
+        # then scale another monitor without the dockbar
+        # the dockbar will not get layer exclusive when you move mouse from the
+        # monitor which doesn't contain the panel to the monitor which contains it
+        # if self.panel_output_is_focused_output():
         set_layer_position_exclusive(self.left_panel, 64)
         set_layer_position_exclusive(self.bottom_panel, 48)
         self.update_taskbar_on_scale()
 
     def on_scale_desactivated(self):
-            unset_layer_position_exclusive(self.left_panel)
-            unset_layer_position_exclusive(self.bottom_panel)
+        unset_layer_position_exclusive(self.left_panel)
+        unset_layer_position_exclusive(self.bottom_panel)
 
     def on_view_created(self, view):
         self.update_taskbar_list(view)
@@ -321,7 +326,6 @@ class Dockbar(Adw.Application):
     def on_title_changed(self, view):
         self.update_taskbar(view)
 
-
     def get_default_monitor_name(self):
         try:
             with open(self.topbar_config, "r") as file:
@@ -332,6 +336,83 @@ class Dockbar(Adw.Application):
                     return None
         except FileNotFoundError:
             return None
+
+    def get_audio_apps_with_titles(self):
+        try:
+            # Get sink inputs from PulseAudio
+            pactl_output = subprocess.run(
+                ['pactl', 'list', 'sink-inputs'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=True
+            ).stdout
+
+            # Parse sink inputs
+            apps = []
+            current_app = {}
+
+            for line in pactl_output.splitlines():
+                if line.startswith('Sink Input #'):
+                    if current_app:
+                        apps.append(current_app)
+                        current_app = {}
+                elif '=' in line:
+                    key, value = map(str.strip, line.split('=', 1))
+                    current_app[key] = value.strip('"')
+
+            if current_app:
+                apps.append(current_app)
+
+            # Get window titles using wmctrl
+            try:
+                wmctrl_output = subprocess.run(
+                    ['wmctrl', '-lp'],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    check=True
+                ).stdout
+
+                # Create PID to window title mapping
+                pid_to_windows = defaultdict(list)
+                for wm_line in wmctrl_output.splitlines():
+                    parts = wm_line.split(maxsplit=4)
+                    if len(parts) >= 5:
+                        pid = parts[2]
+                        title = parts[4]
+                        pid_to_windows[pid].append(title)
+            except:
+                pid_to_windows = {}
+
+            # Prepare the result list
+            result = []
+
+            for app in apps:
+                pid = app.get('application.process.id')
+                if not pid:
+                    continue
+
+                # Try to get the best available title in this order:
+                # 1. Media title (song/video name)
+                # 2. Window title
+                # 3. Application name
+                title = (app.get('media.name') or
+                         app.get('xesam:title') or
+                         (pid_to_windows.get(pid, [''])[0] if pid in pid_to_windows else '') or
+                         app.get('application.name', ''))
+
+                if title:  # Only include if we found a title
+                    result.append({pid: title})
+
+            return result
+
+        except subprocess.CalledProcessError as e:
+            print(f"Error running command: {e.stderr}")
+            return []
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return []
 
     def update_taskbar(self, view):
         title = self.utils.filter_utf_for_gtk(view["title"])
@@ -356,15 +437,19 @@ class Dockbar(Adw.Application):
             button = self.buttons_id[view["id"]]
         if button:
             button = button[0]
+            apps_using_audio = self.get_audio_apps_with_titles()
+            pid = str(view["pid"])
+            if any(app for app in apps_using_audio if str(pid) in app and title in app[pid]):
+                title = title + " 🔊"
             button.set_label(title)
 
             if icon:
                 button.set_icon_name(icon)
 
-                #this part enables output name in taskbar list buttons
-                #if title:
+                # this part enables output name in taskbar list buttons
+                # if title:
                 #  output_name = self.wf_utils.get_view_output_name(view["id"])
-                #default_output = self.get_default_monitor_name()
+                # default_output = self.get_default_monitor_name()
 
                 # if output_name != default_output:
                 #   title = "({0}) {1}".format(output_name, title)
@@ -387,13 +472,13 @@ class Dockbar(Adw.Application):
             return
 
         for i in list_views:
-            self.new_taskbar_view(orientation,class_style, i["id"])
+            self.new_taskbar_view(orientation, class_style, i["id"])
 
         # Return True to indicate successful execution of the Taskbar function
         return True
 
-    # **FIXME** 
-    #the first button will lead to panel freeze sometimes, need to debug
+    # **FIXME**
+    # the first button will lead to panel freeze sometimes, need to debug
     def new_taskbar_view(
         self,
         orientation,
@@ -411,7 +496,7 @@ class Dockbar(Adw.Application):
             return
 
         if view_id not in self.wf_utils.list_ids():
-            return 
+            return
 
         view = self.sock.get_view(view_id)
         if view["type"] != "toplevel":
@@ -462,14 +547,14 @@ class Dockbar(Adw.Application):
             return False
 
     def update_taskbar_for_hidden_views(self, view):
-        #the goal of this function is to catch taskbar buttons which is not toplevel 
-        #and should be in the task list, happens that sometimes there is not enough events 
-        #to remove the button on the fly
-        #this a made for hide view plugin which hide a view but still has no event to trigger
-        #the taskbar button removal
+        # the goal of this function is to catch taskbar buttons which is not toplevel
+        # and should be in the task list, happens that sometimes there is not enough events
+        # to remove the button on the fly
+        # this a made for hide view plugin which hide a view but still has no event to trigger
+        # the taskbar button removal
         if view["role"] == "desktop-environment":
             self.remove_button(view["id"])
-        #also update the view when unhide
+        # also update the view when unhide
         for v in self.sock.list_views():
             if v["role"] == "toplevel":
                 if v["id"] not in self.buttons_id:
@@ -573,7 +658,7 @@ class Dockbar(Adw.Application):
             icon, cmd, initial_title, wclass, initial_title
         )
         self.dockbar.append(button)
- 
+
     # Join multiple windows of the same class into one workspace
     def join_windows(self, *_):
         activewindow = out("hyprctl activewindow".split()).decode()

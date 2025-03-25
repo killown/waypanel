@@ -1,41 +1,45 @@
 #!/usr/bin/env python3
-import orjson as json
 import datetime
-import netifaces
-import soundcard as sc
 import os
-from pathlib import Path
-from subprocess import Popen
-from subprocess import check_output
 import sys
-import psutil
-import pulsectl
-import toml
 import time
 from collections import ChainMap
-from waypanel.src.core.utils import Utils as utils
-from waypanel.src.core.create_panel import CreatePanel, set_layer_position_exclusive, unset_layer_position_exclusive
-from gi.repository import Gtk, Adw, GLib, Gio, Gdk
-from waypanel.src.plugins.dockbar import Dockbar
-from waypanel.src.plugins.bookmarksPopover import PopoverBookmarks
-from waypanel.src.plugins.dashboardPopover import PopoverDashboard
-from waypanel.src.plugins.dashboardSoundCard import SoundCardDashboard
-from waypanel.src.plugins.dashboardBluetooth import BluetoothDashboard
-from waypanel.src.plugins.dashboardSystem import SystemDashboard
-from waypanel.src.plugins.folders import PopoverFolders
-from waypanel.src.plugins.clipboardMenu import MenuClipboard
-from waypanel.src.plugins.launcherMenu import MenuLauncher
-from waypanel.src.core.utils import Utils
+from pathlib import Path
+from subprocess import Popen, check_output
+
+import netifaces
+import orjson as json
+import psutil
+import pulsectl
+import soundcard as sc
+import toml
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 from wayfire import WayfireSocket as OriginalWayfireSocket
 from wayfire.core.template import get_msg_template
 from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.extra.stipc import Stipc
+
+from waypanel.src.core.create_panel import (CreatePanel,
+                                            set_layer_position_exclusive,
+                                            unset_layer_position_exclusive)
+from waypanel.src.core.utils import Utils
+from waypanel.src.core.utils import Utils as utils
 from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
+from waypanel.src.plugins.bookmarksPopover import PopoverBookmarks
+from waypanel.src.plugins.clipboardMenu import MenuClipboard
+from waypanel.src.plugins.dashboardBluetooth import BluetoothDashboard
+from waypanel.src.plugins.dashboardPopover import PopoverDashboard
+from waypanel.src.plugins.dashboardSoundCard import SoundCardDashboard
+from waypanel.src.plugins.dashboardSystem import SystemDashboard
+from waypanel.src.plugins.dockbar import Dockbar
+from waypanel.src.plugins.folders import PopoverFolders
+from waypanel.src.plugins.launcherMenu import MenuLauncher
 
-#to get the gtk and gdk completions
-#pip install pygobject-stubs --no-cache-dir --config-settings=config=Gtk4,Gdk
+# to get the gtk and gdk completions
+# pip install pygobject-stubs --no-cache-dir --config-settings=config=Gtk4,Gdk
 
-app = None 
+app = None
+
 
 class WayfireSocket(OriginalWayfireSocket):
 
@@ -49,41 +53,47 @@ class WayfireSocket(OriginalWayfireSocket):
         message["data"]["view-id"] = view_id
         self.send_json(message)
 
+
 class Panel(Adw.Application):
     def __init__(self, application_id):
+        """
+        Initializes the application and sets up required configurations and components.
+
+        Args:
+            application_id (str): The application ID.
+        """
         super().__init__(application_id=application_id)
+
         # Initialize utilities and connect to activation event
         self._initialize_utilities()
         self.connect("activate", self.on_activate)
 
-        # Setup panel boxes
+        # Setup panel boxes and configuration paths
         self._setup_panel_boxes()
+        self._setup_config_paths()
 
+        # Initialize variables and configurations
         self.toggle_mute = {}
         self.volume = 0
         self.clock_box = Gtk.Box()
         self.args = sys.argv
         self.source_id = None  # Store the source ID for the GLib.timeout
-        # Configuration paths
-        self._setup_config_paths()
 
         # Load configurations
         self.panel_cfg = self.load_topbar_config()
 
+        # Initialize Wayfire components
         self.sock = WayfireSocket()
-        #self.sock.watch()
-        #GLib.io_add_watch(self.sock.client, GLib.IO_IN, self.on_event_ready)
         self.wf_utils = WayfireUtils(self.sock)
         self.ipc_client = WayfireClientIPC(self.handle_event)
-        # here is where the ipc events happen
         self.ipc_client.wayfire_events_setup("/tmp/waypanel.sock")
 
         self.fd = None
-
         self.utils = utils()
         self.stipc = Stipc(self.sock)
-
         self.get_icon = self.utils.get_icon
+
+        # Initialize state variables
         self.active_window_changed = None
         self.notifications = []
         self.popover_bookmarks = None
@@ -92,7 +102,6 @@ class Panel(Adw.Application):
         self.popover_clipboard = None
         self.set_cpu_usage_state = []
         self.clipboard_text_copy = None
-        self.active_window_changed = None
         self.waypanel_started_now = True
         self.view_title_top_panel = None
         self.active_window = None
@@ -111,33 +120,45 @@ class Panel(Adw.Application):
         self.was_last_focused_view_maximized = None
         self.previous_workspace = {}
         self.request_switch_keyboard_on_demand_to_none = None
+        self.maximize_button = None
+        self.minimize_button = None
+        self.monitor = None
+        self.get_focused_output = None
+        self.output_is_ready_to_dpms_off = None
+
+        # Load and apply configurations
         with open(self.topbar_config) as topbar_config:
             config = toml.load(topbar_config)
 
         self.simple_title_enabled = config["views"]["tilling"]
         self.maximize_views_on_expo_enabled = config["views"]["maximize_views_on_expo"]
-
         self.window_title_topbar_length = config["window_title_lenght"]["size"]
 
-        # Monitor dimensions to set the panel size
-        monitor = next((output for output in self.sock.list_outputs() if "-1" in output['name'] ), self.sock.list_outputs()[0])
-        self.monitor_width, self.monitor_height = monitor["geometry"]["width"], monitor["geometry"]["height"]
+        # Set monitor dimensions
+        monitor = next(
+            (output for output in self.sock.list_outputs() if "-1" in output["name"]),
+            self.sock.list_outputs()[0],
+        )
+        self.monitor_width, self.monitor_height = (
+            monitor["geometry"]["width"],
+            monitor["geometry"]["height"],
+        )
+
         if "monitor" in config:
             self.monitor_width, self.monitor_height = (
                 config["monitor"]["width"],
                 config["monitor"]["height"],
             )
-        self.monitor_name = self.sock.list_outputs()[0]["name"]
-        try:
-            self.monitor_name = config["monitor"]["name"]
-        except KeyError:
-            print("using the first monitor from the list")
 
+        self.monitor_name = self.sock.list_outputs()[0]["name"]
+        if "monitor" in config and "name" in config["monitor"]:
+            self.monitor_name = config["monitor"]["name"]
+        else:
+            print("Using the first monitor from the list.")
+
+        # Load additional configurations
         with open(self.topbar_config, "r") as f:
             self.topbar_config_loaded = toml.load(f)
-
-            #self.background_panel_enabled = self.topbar_config_loaded["background_panel"][
-            #"enabled"]
 
         with open(self.dockbar_config, "r") as f:
             self.dockbar_config_loaded = toml.load(f)
@@ -212,55 +233,38 @@ class Panel(Adw.Application):
         self.topbar_launcher_config = config_paths["topbar_launcher_config"]
         self.cache_folder = config_paths["cache_folder"]
 
-
     def on_activate(self, app):
-        # FIXME: need to create a way to allow setup positions of widgets
+        """
+        Initializes the shell and sets up all required components.
+
+        Args:
+            app: The application instance.
+        """
+        # Initialize monitor dimensions and UI components
         self.monitor_width_height()
-        # start cmd output session, cmd.toml
         self.cmd_output()
         self.close_fullscreen_buttons()
         self.right_position_launcher_topbar()
         self.setup_panels()
         self.setup_clock_widget()
         self.update_widget_with_timeout()
-        #self.setup_background_panel_widgets()
         self.setup_panel_buttons()
         self.setup_panel_position()
 
-        required_plugins = [
-            "stipc",
-            "ipc",
-            "ipc-rules",
-            "resize",
-            "window-rules",
-            "wsets",
-            "session-lock",
-            "wm-actions",
-            "move",
-            "vswitch",
-            "grid",
-            "place",
-            "scale",
-        ]
+        # Verify required plugins are enabled
+        required_plugins = {
+            "stipc", "ipc", "ipc-rules", "resize", "window-rules", "wsets",
+            "session-lock", "wm-actions", "move", "vswitch", "grid", "place", "scale"
+        }
+        enabled_plugins = set(self.sock.get_option_value("core/plugins")["value"].split())
 
-        enabled_plugins = self.sock.get_option_value("core/plugins")["value"].split()
+        missing_plugins = required_plugins - enabled_plugins
+        if missing_plugins:
+            print(f"\n\033[91mERROR:\033[0m The following plugins are required to start the shell: {missing_plugins}")
+            print(f"Required Plugin List: {required_plugins}")
+            sys.exit()
 
-        COLOR_RESET = "\033[0m"
-        COLOR_RED = "\033[91m"
-
-        for plugin in required_plugins:
-            if plugin not in enabled_plugins:
-                print(
-                    "\n{0}ERROR:{2} The plugin: {0}'{1}'{2} is required to start the shell!!!!".format(
-                        COLOR_RED,
-                        plugin,
-                        COLOR_RESET,
-                    )
-                )
-                print("Required Plugin List: {}".format(required_plugins))
-                sys.exit()
-
-        # plugins
+        # Initialize plugins and menus
         self.MenuLauncher = MenuLauncher()
         self.MenuLauncher.create_menu_popover_launcher(self, app)
 
@@ -268,49 +272,44 @@ class Panel(Adw.Application):
         if os.path.exists(bookmarks_file):
             self.PopoverBookmarks = PopoverBookmarks()
             self.PopoverBookmarks.create_menu_popover_bookmarks(self, app)
+
         self.PopoverFolders = PopoverFolders()
         self.PopoverFolders.create_menu_popover_folders(self, app)
+
         self.MenuClipboard = MenuClipboard()
         self.MenuClipboard.create_popover_menu_clipboard(self, app)
 
-        # bluetooth manager
+        # Add system tray components
         self.top_panel_box_systray.append(self.bluetooth_manager())
-
-        # volume
         self.top_panel_box_systray.append(self.volume_slider())
 
-        # menus
+        # Setup menus and system dashboard
         self.menus = self.create_new_menu()
         self.setup_menus()
-
-        # system dashboard
         self.top_panel_box_systray.append(self.system_dashboard())
 
+        # Hide desktop-environment views with unknown type
         for view in self.sock.list_views():
-            if view["role"] == "desktop-environment":
-                if view["type"] == "unknown":
-                    self.hide_view_instead_closing(view, ignore_toplevel=True)
+            if view["role"] == "desktop-environment" and view["type"] == "unknown":
+                self.hide_view_instead_closing(view, ignore_toplevel=True)
 
-        # the title is only updated when a event happens, so needed to update in the panel start
+        # Update panel title and initialize DPMS settings
         self.update_title_top_panel()
-        #self.start_thread_all_events()
-
         self.get_focused_output = self.sock.get_focused_output()
 
-        self.output_is_ready_to_dpms_off = {}
-        for output_name in self.wf_utils.list_outputs_names():
-            self.output_is_ready_to_dpms_off[output_name] = False
+        self.output_is_ready_to_dpms_off = {
+            output_name: False for output_name in self.wf_utils.list_outputs_names()
+        }
 
-        with open(self.topbar_config, "r") as f:
-            panel_toml = toml.load(f)
+        # Load DPMS settings from config
+        # with open(self.topbar_config, "r") as f:
+        #    panel_toml = toml.load(f)
 
-        timeout_all = panel_toml["dpms"]["timeout_all"]
-        timeout_single = panel_toml["dpms"]["timeout_single"]
-        #self.dpms_enabled = panel_toml["dpms"]["enabled"]
-        #self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
-        #    timeout_all, self.dpms_manager
-        #)
-        #self.turn_off_monitor_timeout = timeout_single
+        # timeout_all = panel_toml["dpms"]["timeout_all"]
+        # timeout_single = panel_toml["dpms"]["timeout_single"]
+        # self.dpms_enabled = panel_toml["dpms"]["enabled"]
+        # self.turn_off_monitors_timeout = GLib.timeout_add_seconds(timeout_all, self.dpms_manager)
+        # self.turn_off_monitor_timeout = timeout_single
 
     def check_widgets_ready(self):
         if (self.utils.is_widget_ready(self.top_panel_box_left) and
@@ -319,7 +318,7 @@ class Panel(Adw.Application):
             self.utils.is_widget_ready(self.top_panel_box_right) and
             self.utils.is_widget_ready(self.top_panel_box_systray) and
             self.utils.is_widget_ready(self.top_panel_box_center) and
-            self.utils.is_widget_ready(self.top_panel_box_full)):
+                self.utils.is_widget_ready(self.top_panel_box_full)):
 
             # Apply CSS classes
             self.top_panel_box_left.add_css_class("top_panel_box_left")
@@ -336,8 +335,8 @@ class Panel(Adw.Application):
             return True
 
     def do_activate(self):
-        #activate auto start apps
-        #GLib.timeout_add(4000, self.autostart)
+        # activate auto start apps
+        # GLib.timeout_add(4000, self.autostart)
         self.load_css_from_file()
         # Start monitoring CSS file for changes
         self.monitor = Gio.File.new_for_path(self.style_css_config).monitor(
@@ -345,17 +344,17 @@ class Panel(Adw.Application):
         )
         self.monitor.connect("changed", self.on_css_file_changed)
         self.check_widgets_ready()
-        #setup gestures after widgets is ready
+        # setup gestures after widgets is ready
         self.setup_gestures()
         self.show_panels()
 
     def autostart(self):
         # auto start some apps in systray
-        autostart = {"thunderbird":"thunderbird"}
+        autostart = {"thunderbird": "thunderbird"}
         for app in autostart.keys():
             self.stipc.run_cmd(app)
-            counter = 0 
-            while counter <= 10: # 10 seconds limit
+            counter = 0
+            while counter <= 10:  # 10 seconds limit
                 print("asdf")
                 view = [i for i in self.sock.list_views() if autostart[app].lower() in i["app-id"].lower()]
                 if view:
@@ -371,7 +370,6 @@ class Panel(Adw.Application):
     # bus.add_match_string(string)
     # bus.add_message_filter(self.notification_msg)
 
- 
     def get_folder_location(self, folder_name):
         """
         Get the location of a specified folder for the current user.
@@ -401,7 +399,7 @@ class Panel(Adw.Application):
                 print(f"An error occurred in {func.__name__}: {e}")
                 return None
         return wrapper
- 
+
     def update_background_panel(self):
         view = self.sock.get_focused_view()
         title = view["title"]
@@ -427,7 +425,7 @@ class Panel(Adw.Application):
         return os.path.exists(full_path)
 
     def focused_view_title(self):
-        view =  self.sock.get_focused_view()
+        view = self.sock.get_focused_view()
         if view:
             return self.utils.filter_utf_for_gtk(view["title"])
 
@@ -444,7 +442,7 @@ class Panel(Adw.Application):
             return
 
         if view["type"] == "toplevel" and view["parent"] == -1:
-            # this is needed, self.sock, if pass sock from watch, it will fail 
+            # this is needed, self.sock, if pass sock from watch, it will fail
             ws = self.wf_utils.get_active_workspace()
             wx, wy = [None, None]
             if ws:
@@ -523,7 +521,7 @@ class Panel(Adw.Application):
 
     def handle_view_event(self, msg):
         event = msg["event"]
-        view = None 
+        view = None
         if "view" in msg:
             view = msg["view"]
 
@@ -594,11 +592,11 @@ class Panel(Adw.Application):
             self.handle_output_events(msg)
             self.handle_plugin_event(msg)
             self.handle_workspace_events(msg)
-            #self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
+            # self.turn_off_monitors_timeout = GLib.timeout_add_seconds(
             #     self.dpms_monitors_timeout, self.dpms_manager
             #        )
 
-            #if self.turn_off_monitors_timeout:
+            # if self.turn_off_monitors_timeout:
             #    GLib.source_remove(self.turn_off_monitors_timeout)
         except Exception as e:
             print(e)
@@ -615,43 +613,63 @@ class Panel(Adw.Application):
         self.last_toplevel_focused_view = view_id
 
     def dpms_manager(self, timeout=0):
-        # if timeout is zero, turn off all monitors and return false for probably glib.timeout
+        """
+        Manages DPMS (Display Power Management Signaling) for monitors.
+        Args:
+            timeout (int): Time in seconds before monitors are turned off. 
+            If 0, monitors are turned off immediately.
+        """
+        # If timeout is zero, turn off all monitors and return False for GLib.timeout
         if timeout == 0:
-            print(
-                "{self.dpms_monitors_timeout} hour of inactivity. Turning off monitor(s)..."
-            )
+            print(f"{self.dpms_monitors_timeout} hour of inactivity. Turning off monitor(s)...")
             self.utils.dpms("off")
+            return False
+
+        # Get the current status of all monitors
         monitors = self.utils.dpms_status()
         focused_monitor = self.wf_utils.get_focused_output_name()
+
+        # Cancel timeout if the focused monitor is active
         self.cancel_timeout_if_monitor_has_focus(focused_monitor)
 
         # Turn on monitors that are currently off
-        for mon in monitors:
-            if monitors[mon] == "off":
-                self.utils.dpms("on", mon)
+        for monitor_name, status in monitors.items():
+            if status == "off":
+                self.utils.dpms("on", monitor_name)
 
         # Set up timeouts for monitors that are not focused and not already timed out
-        for mon in monitors:
-            if monitors[mon] != focused_monitor:
-                monitor_id = self.wf_utils.get_output_id_by_name(mon)
+        for monitor_name, status in monitors.items():
+            if monitor_name != focused_monitor:
+                monitor_id = self.wf_utils.get_output_id_by_name(monitor_name)
                 if not self.wf_utils.has_ouput_fullscreen_view(monitor_id):
-                    if (
-                        mon not in self.timeout_ids
-                    ):  # Check if timeout is not already set
+                    if monitor_name not in self.timeout_ids:  # Check if timeout is not already set
                         # Set up a GLib timeout and store its ID
-                        self.timeout_ids[mon] = GLib.timeout_add_seconds(
-                            timeout, self.set_output_ready_for_dpms_off, mon
+                        self.timeout_ids[monitor_name] = GLib.timeout_add_seconds(
+                            timeout, self.set_output_ready_for_dpms_off, monitor_name
                         )
 
     def set_output_ready_for_dpms_off(self, mon):
-        if self.monitor_has_focus(mon):
+        """
+        Checks if the monitor is ready for DPMS off and turns it off if conditions are met.
+
+        Args:
+            mon (str): The name of the monitor to check.
+
+        Returns:
+            bool: True if the monitor should not be turned off 
+            (e.g., it has focus or a fullscreen view),
+                  False if DPMS off was successfully triggered.
+        """
+        # Check if the monitor has focus or a fullscreen view
+        if self.monitor_has_focus(mon) or self.wf_utils.has_ouput_fullscreen_view(self.wf_utils.get_output_id_by_name(mon)):
             return True
-        monitor_id = self.wf_utils.get_output_id_by_name(mon)
-        if self.wf_utils.has_ouput_fullscreen_view(monitor_id):
-            return True
+
+        # Turn off DPMS for the monitor
         self.utils.dpms("off", mon)
+
         # Remove the timeout ID from the dictionary
         self.timeout_ids.pop(mon, None)
+
         return False
 
     def monitor_has_focus(self, mon):
@@ -679,10 +697,10 @@ class Panel(Adw.Application):
 
     # created view must start as maximized to auto tilling works
     def on_view_created(self, view):
-        # 
+        #
         # view_id = view["id"]
         # config_path = os.path.join(self.home, ".config/waypanel/")
-        #shader = os.path.join(self.config_path, "shaders/border")
+        # shader = os.path.join(self.config_path, "shaders/border")
         # if os.path.exists(shader):
         #    sock.set_view_shader(view_id, shader)
         return True
@@ -736,7 +754,7 @@ class Panel(Adw.Application):
     # remove manual query once you find a way to get active monitor
     def monitor_width_height(self):
         # get monitor info and set the width, height for the panela
-        
+
         focused_view = self.sock.get_focused_view()
         # there is no monitor focused output while there is no views
         if focused_view:
@@ -821,8 +839,8 @@ class Panel(Adw.Application):
         if self.all_panels_enabled:
             self.top_panel.present()
             self.dock.do_start()
-            #if self.background_panel_enabled:
-            #    self.top_panel_background.present()
+            # if self.background_panel_enabled:
+            # self.top_panel_background.present()
             # load the dockbar
 
     def setup_panel_buttons(self):
@@ -841,13 +859,13 @@ class Panel(Adw.Application):
 
     def setup_gestures(self):
         # Setting up gestures for various UI components
-        #self.utils.create_gesture(self.todo_button, 1, self.utils.take_note_app)
+        # self.utils.create_gesture(self.todo_button, 1, self.utils.take_note_app)
         # self.utils.create_gesture(self.clock_box, 1, self.clock_dashboard)
         self.utils.create_gesture(self.window_title, 1, self.manage_window_notes)
-        #self.utils.create_gesture(self.tbclass, 1, self.dock.dockbar_append)
+        # self.utils.create_gesture(self.tbclass, 1, self.dock.dockbar_append)
         # self.utils.create_gesture(self.tbclass, 3, self.dock.join_windows)
         # self.utils.create_gesture(self.tbSIGKILL, 1, self.sigkill_activewindow)
-        #self.utils.create_gesture(self.tbvol, 1, self.toggle_mute_from_sink)
+        # self.utils.create_gesture(self.tbvol, 1, self.toggle_mute_from_sink)
 
         # Gestures for top panel
         self.utils.create_gesture(
@@ -879,9 +897,9 @@ class Panel(Adw.Application):
         self.utils.create_gesture(self.top_panel_box_systray, 3, self.notify_client)
 
         # click will copy pid to clipboard
-        #self.tbpid_gesture = self.utils.create_gesture(
+        # self.tbpid_gesture = self.utils.create_gesture(
         #    self.tbpid, 1, self.copy_to_clipboard
-        #)
+        # )
 
         # Adding scroll event to the full panel
         EventScroll = Gtk.EventControllerScroll.new(
@@ -903,7 +921,7 @@ class Panel(Adw.Application):
 
     def on_child(self, widget, data):
         print(f"Child widget: {widget}")
- 
+
     def hide_view_instead_closing(self, view, ignore_toplevel=None):
         if view:
             if view["role"] != "toplevel" and ignore_toplevel is None:
@@ -914,23 +932,22 @@ class Panel(Adw.Application):
             self.utils.handle_icon_for_button(view, button)
             self.sock.hide_view(view["id"])
 
-
     def close_last_focused_view(self, *_):
         if self.last_toplevel_focused_view:
             view = self.sock.get_view(self.last_toplevel_focused_view)
-  
+
             # if the lib from plugin hide-view is not found then use old close view method
             if not self.utils.find_wayfire_lib("libhide-view.so"):
-                    self.sock.close_view(self.last_toplevel_focused_view)
-                    return
+                self.sock.close_view(self.last_toplevel_focused_view)
+                return
             self.hide_view_instead_closing(view)
 
     def on_hidden_view(self, widget, view):
         id = view["id"]
         if id in self.wf_utils.list_ids():
             self.sock.unhide_view(id)
-            #***Warning*** this was freezing the panel
-            #set focus will return an Exception in case the view is not toplevel
+            # ***Warning*** this was freezing the panel
+            # set focus will return an Exception in case the view is not toplevel
             GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))
             if self.utils.widget_exists(widget):
                 self.clock_box.remove(widget)
@@ -1085,8 +1102,8 @@ class Panel(Adw.Application):
         self.top_panel_box_right.set_hexpand(True)
 
         # setup window title
-        #self.window_title_content = self.create_button_content()
-        #self.window_title = self.window_title_content[0]
+        # self.window_title_content = self.create_button_content()
+        # self.window_title = self.window_title_content[0]
         self.window_title = Adw.ButtonContent()
         self.window_title.add_css_class("title_button_view")
         self.top_panel_box_window_title.append(self.window_title)
@@ -1195,28 +1212,27 @@ class Panel(Adw.Application):
 
         return True
 
-
     def create_widgets(self, orientation, class_style):
-            """
-            Create widgets based on the specified orientation and class style.
+        """
+        Create widgets based on the specified orientation and class style.
 
-            This function creates widgets, such as a dockbar and workspace buttons, based on the specified
-            orientation and class style, and returns the created widgets.
+        This function creates widgets, such as a dockbar and workspace buttons, based on the specified
+        orientation and class style, and returns the created widgets.
 
-            Args:
-                orientation (str): The orientation of the widgets (e.g., "horizontal", "vertical").
-                class_style (str): The class style of the widgets.
+        Args:
+            orientation (str): The orientation of the widgets (e.g., "horizontal", "vertical").
+            class_style (str): The class style of the widgets.
 
-            Returns:
-                tuple: A tuple containing the created dockbar and workspace buttons.
-            """
-            dockbar = self.utils.CreateFromAppList(
-                self.dockbar_config, orientation, class_style
-            )
-            workspace_buttons = self.utils.CreateFromAppList(
-                self.workspace_list_config, orientation, class_style
-            )
-            return dockbar, workspace_buttons
+        Returns:
+            tuple: A tuple containing the created dockbar and workspace buttons.
+        """
+        dockbar = self.utils.CreateFromAppList(
+            self.dockbar_config, orientation, class_style
+        )
+        workspace_buttons = self.utils.CreateFromAppList(
+            self.workspace_list_config, orientation, class_style
+        )
+        return dockbar, workspace_buttons
 
     def todo_txt(self):
         """
@@ -1272,7 +1288,7 @@ class Panel(Adw.Application):
         Returns:
             None
         """
-        
+
         self.sock.toggle_expo()
         # Popen("kitty".split())
 
@@ -1307,7 +1323,8 @@ class Panel(Adw.Application):
 
                     # Update the volume label with the current volume percentage
                     self.tbvol.set_label("{0}%".format(volume))
-                    self.vol_slider.set_value(volume)
+                    if self.vol_slider is not None:
+                        self.vol_slider.set_value(volume)
 
     def top_panel_left_gesture_lclick(self, *_):
         # data format is (self, gesture, data, x, y)
@@ -1375,7 +1392,8 @@ class Panel(Adw.Application):
         action.connect("activate", self.menu_run_action)
 
         # Add the action to the application
-        app.add_action(action)
+        if app is not None:
+            app.add_action(action)
 
     def create_menu_item(self, menu, name, cmd):
         """
@@ -1465,7 +1483,7 @@ class Panel(Adw.Application):
     def sigkill_focused_view(self, *_):
         active_window = self.sock.get_focused_view()
         pid = active_window["pid"]
-        cmd = "kill -9 {0}".format(pid)
+        cmd = f"kill -9 {pid}"
         self.utils.run_app(cmd)
 
     def menu_run_action(self, _, param):
@@ -1477,9 +1495,9 @@ class Panel(Adw.Application):
 
     def copy_to_clipboard(self, *_):
         # lazy to not use wl-copy
-        active_window = self.sock.get_focused_view()
-        self.utils.run_app("wl-copy {0}".format(active_window["pid"]))
-        self.utils.run_app("kitty --hold -- htop -p {0}".format(active_window.pid))
+        active_window_pid = self.sock.get_focused_view()["pid"]
+        self.utils.run_app(f"wl-copy {active_window_pid}")
+        self.utils.run_app(f"kitty --hold -- htop -p {active_window_pid}")
 
     def bluetooth_manager(self):
         bt = BluetoothDashboard()
@@ -1509,7 +1527,7 @@ class Panel(Adw.Application):
         self.vol_slider.set_value(50)
         self.vol_slider.set_value_pos(Gtk.PositionType.RIGHT)
         self.vol_slider.connect("value-changed", self.on_volume_slider_changed)
-        self.vol_slider_box.append(self.vol_slider)
+        # self.vol_slider_box.append(self.vol_slider)
         return self.vol_slider_box
 
     def on_volume_slider_changed(self, slider):
@@ -1532,7 +1550,7 @@ class Panel(Adw.Application):
 
                     # Update the volume label with the current volume percentage
                     self.tbvol.set_label("{0}%".format(volume))
-                    if volume == 0:
+                    if volume == 0 and self.icon_vol_slider is not None:
                         self.icon_vol_slider.set_icon_name(
                             "audio-volume-muted"
                         )
@@ -1576,7 +1594,7 @@ class Panel(Adw.Application):
         #     self.icon_vol_slider.set_icon_name("stock_volume-mute")
 
     def toggle_mute_from_sink(self, *_):
-        title = self.focused_view_title() 
+        title = self.focused_view_title()
         if not title:
             return
         info = self.sink_input_info()
@@ -1612,7 +1630,11 @@ class Panel(Adw.Application):
         """
         # Retrieve information about the active window
 
-        view = self.sock.get_view(self.last_toplevel_focused_view)
+        view = None
+        if self.last_toplevel_focused_view is not None:
+            view = self.sock.get_view(self.last_toplevel_focused_view)
+        if view is None:
+            return
         title = self.utils.filter_utf_for_gtk(view["title"])
         wm_class = view["app-id"].lower()
         initial_title = title.split()[0].lower()
@@ -1648,6 +1670,20 @@ class Panel(Adw.Application):
         # run the Markdown editor application
         self.utils.run_app(cmd)
 
+    def _exec_once(self, output, label):
+        """
+        Executes the output command once and updates the label.
+
+        Args:
+            output (str): The command whose output will be displayed in the label.
+            label (Gtk.Label): The label widget to update with the command output.
+
+        Returns:
+            bool: False to ensure the callback runs only once.
+        """
+        self.output_loop(output, label)
+        return False  # Ensure the callback runs only once
+
     def output_loop(self, output, label):
         """
         Update the label with the output of a command.
@@ -1668,18 +1704,12 @@ class Panel(Adw.Application):
         separator = " "
         label.set_markup(command_output + separator)
 
-        # Remove the previously scheduled source for single execution
-        GLib.Source.remove(self.exec_once)
-
         # Return True to indicate successful update
         return True
 
     def create_cmd_label(self, output, position, css_class, refresh):
         """
         Create and configure a label widget to display command output.
-
-        This function creates a label widget with the specified CSS class and adds it to a box container
-        based on the specified position. It also schedules periodic updates of the label content.
 
         Args:
             output (str): The command whose output will be displayed in the label.
@@ -1716,10 +1746,10 @@ class Panel(Adw.Application):
         elif position == "center":
             self.clock_box.append(box)
 
-        # Schedule the periodic updates of the label content
-        self.exec_once = GLib.timeout_add(
-            refresh, lambda: self.output_loop(output, label)
-        )
+        # Schedule the command to run once after 10 seconds
+        GLib.timeout_add(10 * 1000, lambda: self._exec_once(output, label))
+
+        # Schedule periodic updates of the label content
         GLib.timeout_add(refresh, lambda: self.output_loop(output, label))
 
     def cmd_output(self):
@@ -1784,7 +1814,7 @@ class Panel(Adw.Application):
             title = self.filter_title(title)
 
             # Limit the title length
-            title = title[: self.window_title_topbar_length]
+            title = title[:self.window_title_topbar_length]
 
             # Apply custom icon if available
             custom_icon = self.apply_custom_icon(wclass)
@@ -1845,7 +1875,6 @@ class Panel(Adw.Application):
     def set_cpu_usage(self):
         pid = self.sock.get_focused_view()["pid"]
         allow_to_set_zero = False
-        """Fetch and return process information."""
         if pid not in self.psutil_store.keys():
             process = psutil.Process(pid)
             self.psutil_store[pid] = process
@@ -1885,8 +1914,8 @@ class Panel(Adw.Application):
 
         return title
 
- 
     # this code is still cause of crashes and freezes in the panel
+
     @handle_exceptions
     def update_title_icon_top_panel(self, title, wm_class, initial_title):
         """Update title and icons."""
@@ -1896,43 +1925,70 @@ class Panel(Adw.Application):
         if icon and title:
 
             # Adw.ButtonContent will freeze some parts of panel with add snapshot view thing
-            # because it will try to add content while the widget is not ready 
+            # because it will try to add content while the widget is not ready
             # the solution now is create a clickable box with image/label/append/remove
-            #if self.utils.widget_exists(self.window_title):
+            # if self.utils.widget_exists(self.window_title):
             #    self.top_panel_box_window_title.remove(self.window_title)
 
-            #self.window_title_content = self.create_button_content()
-            #self.window_title = self.window_title_content[0]
-            #image = self.window_title_content[1]
-            #label = self.window_title_content[2]
-            #if self.utils.widget_exists(image):
+            # self.window_title_content = self.create_button_content()
+            # self.window_title = self.window_title_content[0]
+            # image = self.window_title_content[1]
+            # label = self.window_title_content[2]
+            # if self.utils.widget_exists(image):
             #     image.set_from_icon_name(icon)
-            #if self.utils.widget_exists(label):
+            # if self.utils.widget_exists(label):
             #   label.set_label(title)
+
+            browsers = [
+                "google-chrome",
+                "firefox",
+                "chromium",
+                "brave-browser",
+                "opera",
+                "vivaldi",
+                "microsoft-edge",
+                "tor-browser",
+                "falkon",
+                "midori",
+                "qutebrowser",
+                "konqueror",
+                "epiphany",
+                "lynx",
+                "links",
+                "w3m",
+                "librewolf",
+                "ungoogled-chromium",
+                "waterfox",
+                "palemoon"
+            ]
 
             if self.utils.is_widget_ready(self.window_title):
                 self.window_title.set_label(title)
                 self.window_title.set_icon_name(icon)
-            #self.utils.append_widget_if_ready(self.top_panel_box_window_title,
+                if wm_class in browsers:
+                    self.window_title.set_label(wm_class)
+
+            # self.utils.append_widget_if_ready(self.top_panel_box_window_title,
             #                                  self.window_title,
             #                                 )
 
-    def update_widgets_background_panel(self, workspace_id, pid, wclass, mem_usage, exe):
+    def update_widgets_background_panel(self, workspace_id, pid, wclass, mem_usage):
         """Update widget labels."""
 
         # Only update labels related to window details if the window has changed
-        self.tbpid.set_label("PID: {0}".format(pid))
-        self.tbclass.set_label("{0}".format(wclass))
+        self.tbpid.set_label(f"PID: {pid}")
+        self.tbclass.set_label(f"{wclass}")
         # self.tbexe.set_label("Exe: {0}".format(exe))
-        self.tbdiskusage.set_label("Disk: {0}MB".format(self.disk_usage_by_pid()))
+        self.tbdiskusage.set_label(f"Disk: {self.disk_usage_by_pid()}MB")
 
         # Update labels for general information
-        self.tbworkspace.set_label("Workspace: {0}".format(workspace_id))
+        self.tbworkspace.set_label(f"Workspace: {workspace_id}")
         # self.tbcpusage.set_label("CPU: {0}%".format(cpu_usage))
-        self.tbmemusage.set_label("MEM: {0}".format(mem_usage))
+        self.tbmemusage.set_label(f"MEM: {mem_usage}")
 
         # Update volume information
         self.volume_watch()
+
 
 def append_to_env(app_name, monitor_name, env_var='waypanel'):
     existing_env = os.getenv(env_var, '{}')
@@ -1940,15 +1996,18 @@ def append_to_env(app_name, monitor_name, env_var='waypanel'):
     env_dict[app_name] = monitor_name
     os.environ[env_var] = json.dumps(env_dict).decode('utf-8')
 
+
 def load_config(config_path):
     with open(config_path) as panel_config_file:
         return toml.load(panel_config_file)
 
+
 def get_monitor_name(config, sock):
     monitor = next((output for output in sock.list_outputs() if "-1" in output['name']), sock.list_outputs()[0])
     monitor_name = monitor.get("name")
- 
+
     return config.get("monitor", {}).get("name", monitor_name)
+
 
 def find_config_path():
     home_config_path = os.path.join(os.path.expanduser("~"), ".config/waypanel", "panel.toml")
@@ -1960,6 +2019,7 @@ def find_config_path():
     print(f"Using default config path: {default_config_path}")
 
     return default_config_path
+
 
 def start_panel():
     sock = WayfireSocket()
@@ -1980,11 +2040,10 @@ def start_panel():
     append_to_env("output_id", utils.get_output_id_by_name(monitor_name))
 
     app.run(None)
-    #sock.watch(["event"])
+    # sock.watch(["event"])
 
     while True:
         msg = sock.read_message()
         if "output" in msg and monitor_name == msg["output-data"]["name"]:
             if msg["event"] == "output-added":
                 app.run(None)
-

@@ -1,6 +1,8 @@
 import socket
+
 import orjson
 from gi.repository import GLib
+
 
 class WayfireClientIPC:
     def __init__(self, handle_event):
@@ -17,7 +19,7 @@ class WayfireClientIPC:
         self.source = GLib.io_add_watch(self.client_socket, GLib.PRIORITY_DEFAULT, GLib.IO_IN, self.handle_socket_event)
 
     def handle_socket_event(self, fd, condition):
-        # try decode before actually handle the event 
+        # try decode before actually handle the event
         # if the code fail, glib will stop watching
         try:
             chunk = fd.recv(1024).decode()
@@ -37,7 +39,6 @@ class WayfireClientIPC:
         except UnicodeDecodeError as e:
             print(f"{e}")
 
-
         return GLib.SOURCE_CONTINUE
 
     def process_event(self, event):
@@ -51,4 +52,3 @@ class WayfireClientIPC:
 
     def wayfire_events_setup(self, socket_path):
         self.connect_socket(socket_path)
-

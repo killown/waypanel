@@ -376,7 +376,6 @@ scale {
 .BottomBar {
   background-color: #00000000;
   margin: 6px 8px 6px 8px;
-
 }
 
 .taskbar {
@@ -393,12 +392,11 @@ scale {
   margin: 4px 4px 4px 4px;
   padding: 4px 4px 4px 4px;
   box-shadow:
-  rgba(0, 0, 0, 0.507) 0 2px 0px,
-  rgba(0, 0, 0, 0.555) 0 2px 0px,
-  #00000075 0 -4px 0 inset;
+    rgba(0, 0, 0, 0.507) 0 2px 0px,
+    rgba(0, 0, 0, 0.555) 0 2px 0px,
+    #00000075 0 -4px 0 inset;
   -gtk-icon-size: 32px;
 }
-
 
 .taskbar_button:hover {
   background-color: #282828;

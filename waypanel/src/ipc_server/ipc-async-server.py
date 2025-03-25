@@ -1,32 +1,50 @@
-import asyncio
 import os
+import asyncio
 import orjson as json
 import time
 from concurrent.futures import ThreadPoolExecutor
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 from wayfire import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
 
-
-#why forward ipc for socket files, why not just one?
-#because this is the most reliable way to provide ipc through GLib which in rare cases the code would break/hang
-#this is the best choice until there is a more reliable way to provide IPC without breaking the GTK main loop with freezing issues.
-
+# Remove existing socket files
 socket_paths = ['/tmp/waypanel.sock', '/tmp/waypanel-dockbar.sock', '/tmp/waypanel-utils.sock']
-
 for path in socket_paths:
     if os.path.exists(path):
         os.remove(path)
 
+# Initialize Wayfire socket and utils
 sock = WayfireSocket()
 utils = WayfireUtils(sock)
 sock.watch()
 
+# Thread pool for blocking operations
 executor = ThreadPoolExecutor()
 
+# Event queue for handling Wayfire events
 event_queue = asyncio.Queue()
 
+# Watchdog observer for monitoring wayfire.ini
+class ConfigChangeHandler(FileSystemEventHandler):
+    def __init__(self, callback):
+        super().__init__()
+        self.callback = callback
+
+    def on_modified(self, event):
+        if event.src_path == os.path.expanduser("~/.config/wayfire.ini"):
+            self.callback()
+
+def start_watchdog(callback):
+    observer = Observer()
+    event_handler = ConfigChangeHandler(callback)
+    observer.schedule(event_handler, path=os.path.dirname(os.path.expanduser("~/.config/wayfire.ini")), recursive=False)
+    observer.start()
+    return observer
 
 def reconnect_wayfire_socket():
+    global sock, utils
+    sock.close()
     sock = WayfireSocket()
     utils = WayfireUtils(sock)
     sock.watch()
@@ -36,7 +54,7 @@ def is_socket_active():
         try:
             reconnect_wayfire_socket()
         except Exception as e:
-            print(f"retrying in 10 seconds: {e}")
+            print(f"Retrying in 10 seconds: {e}")
             time.sleep(10)
             return False
     return True
@@ -47,13 +65,12 @@ def read_events():
             continue
 
         try:
-            event = sock.read_next_event()  # blocking call
+            event = sock.read_next_event()  # Blocking call
             asyncio.run_coroutine_threadsafe(event_queue.put(event), loop)
         except Exception as e:
-            print(f"skiping the event: {e}")
+            print(f"Skipping the event: {e}")
             continue
 
-# handle events and send them to connected clients
 async def handle_event(clients):
     while True:
         event = await event_queue.get()
@@ -64,7 +81,7 @@ async def handle_event(clients):
                 client.write((serialized_event + b'\n'))
                 await client.drain()
             except (ConnectionResetError, BrokenPipeError):
-                clients.remove(client)  # Remove clients that have disconnected
+                clients.remove(client)  # Remove disconnected clients
 
 async def handle_client(reader, writer, clients):
     clients.append(writer)
@@ -78,7 +95,6 @@ async def handle_client(reader, writer, clients):
         writer.close()
         await writer.wait_closed()
 
-# start a server for a given path
 async def start_server(path, clients):
     server = await asyncio.start_unix_server(lambda r, w: handle_client(r, w, clients), path=path)
     async with server:
@@ -87,12 +103,20 @@ async def start_server(path, clients):
 async def main():
     clients = []
     servers = [start_server(path, clients) for path in socket_paths]
+    
     # Start the event reader in a separate thread
     global loop
     loop = asyncio.get_running_loop()
     executor.submit(read_events)
-    await asyncio.gather(*servers, handle_event(clients))
+    
+    # Start the watchdog observer
+    watchdog_observer = start_watchdog(reconnect_wayfire_socket)
+    
+    try:
+        await asyncio.gather(*servers, handle_event(clients))
+    finally:
+        watchdog_observer.stop()
+        watchdog_observer.join()
 
 if __name__ == '__main__':
     asyncio.run(main())
-

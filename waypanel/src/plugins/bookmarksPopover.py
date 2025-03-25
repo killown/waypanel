@@ -214,12 +214,12 @@ class PopoverBookmarks(Adw.Application):
         sock = self.compositor()
         all_windows = sock.list_views()
         view = [
-            i["id"] for i in all_windows if "firefoxdeveloperedition" in i["app-id"]
+            i["id"] for i in all_windows if "librewolf" in i["app-id"]
         ]
         if view:
             sock.set_focus(view[0])
         cmd = [
-            "firefox-developer-edition",
+            "librewolf",
             "ext+container:name={0}&url={1}".format(container, url),
         ]
         Popen(cmd)
