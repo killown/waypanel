@@ -1,6 +1,8 @@
 ## waypanel
 
-![output-DP-1](https://github.com/user-attachments/assets/8741fe12-4395-4286-b07c-1b40ec665431)
+![test](https://github.com/user-attachments/assets/e0532323-8032-40d7-9dd4-e02ce41bd227)
+
+
 
 
 
