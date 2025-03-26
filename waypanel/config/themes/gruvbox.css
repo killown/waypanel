@@ -1,0 +1,417 @@
+.title_button_view {
+  background-color: #1d2021;
+  border-radius: 8px;
+  border-width: 0;
+  margin-top: 2px;
+  color: #ebdbb2;
+  font-size: 16px;
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+  padding-left: 6px;
+  padding-right: 6px;
+  box-shadow:
+    rgba(0, 0, 0, 0.507) 0 1px 1px,
+    rgba(0, 0, 0, 0.555) 0 1px 1px,
+    #00000075 0 -4px 0 inset;
+}
+
+.dockbar-left {
+  -gtk-icon-size: 42px;
+  background: #d3d3d300;
+}
+
+.hvr-grow {
+  transform: translateZ(0);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0);
+  transition-duration: 0.1s;
+  transition-property: transform;
+}
+
+.dockbar-left-button {
+  padding-left: 4px;
+  padding-right: 4px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  margin-left: 4px;
+  margin-right: 4px;
+  background-color: #1d2021;
+  border-radius: 8px;
+  border-width: 0;
+  color: #ebdbb2;
+  box-shadow:
+    rgba(0, 0, 0, 0.507) 0 1px 1px,
+    rgba(0, 0, 0, 0.555) 0 1px 1px,
+    #00000075 0 -4px 0 inset;
+  color: #ffffffd8;
+  font-size: 20px;
+  font-family: "Sriracha";
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+
+.RightBar-button {
+  background-color: #1d2021;
+  border-radius: 4px;
+  border-width: 0;
+  box-shadow:
+    rgba(0, 0, 0, 0.507) 0 1px 1px,
+    rgba(0, 0, 0, 0.555) 0 1px 1px,
+    #00000075 0 -4px 0 inset;
+  font-size: 20px;
+  font-family: "Sriracha";
+  line-height: 1;
+  padding-left: 6px;
+  padding-right: 12px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  margin-left: 1px;
+  margin-right: 1px;
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+
+.RightBar {
+  -gtk-icon-size: 0px;
+  margin-top: 2px;
+  color: #ffffff;
+  background: #00000000;
+  background-color: #00000000;
+}
+
+.cf_box {
+  margin-top: 2px;
+  border-style: solid;
+  background: rgba(36, 40, 59, 0);
+  padding: 2px 4px 2px 4px;
+  margin: 1px 1px 1px 1px;
+  margin-top: 2px;
+}
+
+.close-button {
+  -gtk-icon-size: 22px;
+  background-color: #1d2021;
+  border-radius: 4px;
+  border-width: 0;
+  box-shadow:
+    rgba(0, 0, 0, 0.507) 0 1px 1px,
+    rgba(0, 0, 0, 0.555) 0 1px 1px,
+    #00000075 0 -4px 0 inset;
+  padding: 2px 20px 2px 20px;
+  margin-left: 2px;
+  margin-right: 1px;
+  background-size: 100% auto;
+  color: #ebdbb2;
+  border-color: rgba(36, 40, 59, 0.744);
+  border-radius: 4px;
+}
+
+.maximize-button {
+  -gtk-icon-size: 22px;
+  background-color: #1d2021;
+  border-radius: 4px;
+  border-width: 0;
+  box-shadow:
+    rgba(0, 0, 0, 0.507) 0 1px 1px,
+    rgba(0, 0, 0, 0.555) 0 1px 1px,
+    #00000075 0 -4px 0 inset;
+  padding: 0px 14px 0px 14px;
+  margin-left: 1px;
+  margin-right: 1px;
+  background-size: 100% auto;
+  color: #ebdbb2;
+  border-color: rgba(36, 40, 59, 0.744);
+  border-radius: 6px;
+}
+
+.minimize-button {
+  -gtk-icon-size: 22px;
+  background-color: #1d2021;
+  border-radius: 4px;
+  border-width: 0;
+  box-shadow:
+    rgba(0, 0, 0, 0.507) 0 1px 1px,
+    rgba(0, 0, 0, 0.555) 0 1px 1px,
+    #00000075 0 -4px 0 inset;
+  padding: 2px 14px 2px 14px;
+  margin-left: 1px;
+  margin-right: 1px;
+  background-size: 100% auto;
+  color: #ebdbb2;
+  border-color: rgba(36, 40, 59, 0.744);
+  border-radius: 6px;
+}
+
+.top_panel_box_widgets_left {
+  background-color: #1d2021;
+  border-radius: 8px;
+  margin-top: 2px;
+  border-width: 0;
+  box-shadow:
+    rgba(0, 0, 0, 0.507) 0 1px 1px,
+    rgba(0, 0, 0, 0.555) 0 1px 1px,
+    #00000075 0 -4px 0 inset;
+  color: #ffffffd8;
+  font-size: 20px;
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+scale slider {
+  min-width: 20px;
+  min-height: 20px;
+  color: #ebdbb2;
+}
+
+scale {
+  min-width: 60px;
+}
+
+.weather {
+  font-size: 16px;
+  font-weight: bold;
+  background-color: #14151700;
+}
+
+.cripto {
+  font-size: 8px;
+  font-weight: bold;
+  background-color: #14151700;
+}
+
+/*this is for menubuttons from systray menus*/
+.image-button {
+  -gtk-icon-size: 22px;
+  background: rgb(0, 0, 0);
+  color: #ffffffd8;
+  background-color: #ffffff00;
+}
+
+.text-button {
+  border-radius: 80px;
+  background: rgb(0, 0, 0);
+  background-color: rgba(13, 61, 151, 0);
+  font-size: 20px;
+  color: #36395ad8;
+  border-style: solid;
+  border-width: 0.1px;
+  border-color: rgba(36, 40, 59, 0.744);
+}
+
+.bluetooth-dashboard-buttons {
+  border-radius: 8px;
+  font-size: 20px;
+  color: #ffffff;
+  background: rgba(42, 46, 68, 0.774);
+  background-color: rgba(42, 46, 68, 0.774);
+  border-style: solid;
+  border-width: 1px;
+  margin: 4px 4px 4px 4px;
+  padding: 2px 2px 2px 2px;
+  border-color: rgba(36, 40, 59, 0.744);
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+}
+
+.button_clear_from_clipboard {
+  border-radius: 8px;
+  font-size: 20px;
+  color: #ffffff;
+  background: rgba(36, 40, 59, 0.9);
+  background-color: rgba(36, 40, 59, 0.9);
+  border-style: solid;
+  border-width: 1px;
+  margin: 4px 4px 4px 4px;
+  border-color: rgba(36, 40, 59, 0.744);
+  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+}
+
+/*icons from bookbarks menu*/
+.icon_from_popover_launcher {
+  -gtk-icon-size: 36px;
+}
+
+.transparent-popover-launcher {
+  border-color: shade(@dark_bg_color, 0.8);
+  background-image: none;
+  background-color: @dark_bg_color;
+  color: @dark_fg_color;
+}
+
+.popover_launcher_flowbox {
+  background-color: transparent;
+}
+
+.popover_launcher_row_hbox {
+  background-color: transparent;
+}
+.icon_from_folders {
+  -gtk-icon-size: 42px;
+}
+
+.label_from_popover_launcher {
+  font-size: 20px;
+}
+
+.label_from_folders {
+  font-size: 20px;
+  font-family: "Sriracha";
+}
+
+.label_from_bookmarks {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.icon_from_bookmarks {
+  -gtk-icon-size: 28px;
+}
+
+.ClockButton {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ebdbb2;
+}
+
+.Clock {
+  background-color: #1d2021;
+  border-radius: 8px;
+  color: #ebdbb2;
+  margin-top: 2px;
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+  box-shadow:
+    rgba(0, 0, 0, 0.507) 0 1px 1px,
+    rgba(0, 0, 0, 0.555) 0 1px 1px,
+    #00000075 0 -4px 0 inset;
+}
+
+.wallpaper {
+  -gtk-icon-size: 400px;
+}
+
+.tbcpusage {
+  min-width: 120px;
+}
+
+.tbpid {
+  min-width: 80px;
+}
+
+.tbmemusage {
+  min-width: 140px;
+}
+
+.tbdiskusage {
+  min-width: 120px;
+}
+
+.tbclass {
+  min-width: 100px;
+}
+
+.TopBar {
+  color: #000000;
+  background-color: #00000000;
+  background: #00000000;
+  padding: 0px 2px 0px 2px;
+}
+
+.top_panel_box_left {
+  -gtk-icon-size: 28px;
+  padding: 0px 4px 2px 4px;
+}
+
+.top_panel_box_right {
+  padding: 0px 4px 2px 4px;
+}
+
+.top_left_widgets {
+  -gtk-icon-size: 32px;
+  padding: 0px 4px 2px 4px;
+}
+
+.top_panel_box_systray {
+  -gtk-icon-size: 22px;
+  margin-top: 2px;
+  background-color: #1d2021;
+  border-radius: 8px;
+  border-width: 0;
+  color: #ebdbb2;
+  padding: 2px 4px 2px 4px;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+  box-shadow:
+    rgba(0, 0, 0, 0.507) 0 1px 1px,
+    rgba(0, 0, 0, 0.555) 0 1px 1px,
+    #00000075 0 -4px 0 inset;
+}
+
+.top_panel_box_center {
+  -gtk-icon-size: 0px;
+  padding: 0px 4px 2px 4px;
+}
+
+.todo_label {
+  font-size: 15px;
+}
+
+.TopBarBackground {
+  -gtk-icon-size: 24px;
+  background-color: #000000;
+  color: #ebdbb2;
+  font-size: 20px;
+  line-height: 1;
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+
+.BottomBar {
+  background-color: #00000000;
+  margin: 1px 11px 1px 1px;
+  padding: 1px 1px 1px 1px;
+}
+
+.taskbar {
+  border-radius: 8px;
+  border-width: 0;
+}
+
+.taskbar_button {
+  background-color: #1d2021;
+  color: #ebdbb2;
+  border-radius: 8px;
+  border-style: none;
+  border-width: 1px;
+  margin: 4px 4px 4px 4px;
+  padding: 4px 4px 4px 4px;
+  box-shadow:
+    rgba(0, 0, 0, 0.507) 0 2px 0px,
+    rgba(0, 0, 0, 0.555) 0 2px 0px,
+    #00000075 0 -4px 0 inset;
+  -gtk-icon-size: 42px;
+  font-size: 16px;
+}
+
+.taskbar_button:hover {
+  background-color: #282828;
+}
+
+.hvr-grow:hover {
+  color: #ebdbb2;
+  background: #ebdbb2;
+  text-shadow: rgb(9, 5, 5) 0.006em 0.006em 0.007em;
+}

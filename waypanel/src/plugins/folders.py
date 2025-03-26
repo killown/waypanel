@@ -1,10 +1,11 @@
 import os
 import random
-import gi
-from gi.repository import Gio, Gtk, Adw
-from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen
+
+import gi
 import toml
+from gi.repository import Adw, Gio, Gtk
+from gi.repository import Gtk4LayerShell as LayerShell
 
 
 class PopoverFolders(Adw.Application):

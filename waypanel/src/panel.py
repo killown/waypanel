@@ -990,7 +990,7 @@ class Panel(Adw.Application):
     def right_position_launcher_topbar(self):
         # Creating close and full screen buttons for the top bar
         box = self.utils.CreateFromAppList(self.topbar_launcher_config, "h", "TopBar")
-        self.top_panel_box_systray.append(box)
+        # self.top_panel_box_systray.append(box)
 
     def get_soundcard_list(self):
         return sc.all_speakers()

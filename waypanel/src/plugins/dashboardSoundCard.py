@@ -1,15 +1,17 @@
 import os
-from gi.repository import Gio, Gtk, Adw
-from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen, check_output
-from ..core.utils import Utils
-import soundcard as sc
-import pulsectl
 
+import pulsectl
+import soundcard as sc
+from gi.repository import Adw, Gio, Gtk
+from gi.repository import Gtk4LayerShell as LayerShell
 from wayfire.ipc import WayfireSocket
+
+from ..core.utils import Utils
 
 addr = os.getenv("WAYFIRE_SOCKET")
 sock = WayfireSocket(addr)
+
 
 class SoundCardDashboard(Adw.Application):
     def __init__(self, **kwargs):
@@ -130,7 +132,7 @@ class SoundCardDashboard(Adw.Application):
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        self.menubutton_dashboard.set_icon_name("icon_vol_slider")
+        self.menubutton_dashboard.set_icon_name("audio-volume-high")
         return self.menubutton_dashboard
 
     def create_popover_soundcard(self, *_):
@@ -199,7 +201,6 @@ class SoundCardDashboard(Adw.Application):
 
         return self.popover_dashboard
 
-
     def update_soundcard_list(self):
         """Update the soundcard list in the combobox."""
         self.soundcard_combobox.remove_all()
@@ -250,5 +251,3 @@ class SoundCardDashboard(Adw.Application):
 
     def on_start(self):
         pass
-
-

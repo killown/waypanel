@@ -1,12 +1,13 @@
 import os
-import gi
-from gi.repository import Gio, Gtk, Adw, GdkPixbuf
-from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen
+
+import gi
+import requests
 import toml
 import wayfire.ipc as wayfire
-import requests
 from bs4 import BeautifulSoup
+from gi.repository import Adw, GdkPixbuf, Gio, Gtk
+from gi.repository import Gtk4LayerShell as LayerShell
 
 
 class PopoverBookmarks(Adw.Application):
@@ -42,7 +43,7 @@ class PopoverBookmarks(Adw.Application):
         self.app = app
         self.menubutton_bookmarks = Gtk.Button()
         self.menubutton_bookmarks.connect("clicked", self.open_popover_bookmarks)
-        self.menubutton_bookmarks.set_icon_name("firefox-developer-edition")
+        self.menubutton_bookmarks.set_icon_name("librewolf")
         self.menubutton_bookmarks.add_css_class("top_left_widgets")
         obj.top_panel_box_widgets_left.append(self.menubutton_bookmarks)
 
