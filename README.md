@@ -1,6 +1,8 @@
 ## waypanel
 
 ![test](https://github.com/user-attachments/assets/e0532323-8032-40d7-9dd4-e02ce41bd227)
+![test](https://github.com/user-attachments/assets/d38345e3-9c26-4f26-b9c4-8e7261466b28)
+
 
 
 
