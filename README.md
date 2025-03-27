@@ -76,6 +76,17 @@ Once the virtual environment is activated, install `waypanel` using the followin
 
     python3 -m pip install .
 
+
+
+### Theme Compatibility
+
+yay -S gruvbox-plus-icon-theme-git
+
+gsettings set org.gnome.desktop.interface icon-theme 'Gruvbox-Plus-Dark'
+
+
+
+
 ### wayfire.ini
 
 required plugins: stipc, scale, ipc, ipc-rules
