@@ -50,11 +50,12 @@ class MenuLauncher(Adw.Application):
         self.menubutton_launcher = Gtk.Button()
         self.menubutton_launcher.connect("clicked", self.open_popover_launcher)
         panel_config_path = os.path.join(self.config_path, "panel.toml")
-        menu_icon = get_nearest_icon_name("wayfire")
+        menu_icon = get_nearest_icon_name("archlinux")
         if os.path.exists(panel_config_path):
             with open(panel_config_path, "r") as f:
                 panel_config = toml.load(f)
-            menu_icon = panel_config.get("top", {}).get("menu_icon", "wayfire")
+            menu_icon = get_nearest_icon_name(panel_config.get(
+                "top", {}).get("menu_icon", get_nearest_icon_name("wayfire")))
 
         self.menubutton_launcher.set_icon_name(menu_icon)
         self.menubutton_launcher.add_css_class("top_left_widgets")

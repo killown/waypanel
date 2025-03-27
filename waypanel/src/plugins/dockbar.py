@@ -656,7 +656,7 @@ class Dockbar(Adw.Application):
 
         # Create and append button to the dockbar
         button = self.utils.create_button(
-            icon, cmd, initial_title, wclass, initial_title
+            get_nearest_icon_name(icon), cmd, initial_title, wclass, initial_title
         )
         self.dockbar.append(button)
 

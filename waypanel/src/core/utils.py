@@ -1,23 +1,27 @@
-import os
-import math
-import gi
-import orjson as json
-import numpy as np
-from time import sleep
-import subprocess
-from gi.repository import Gtk, Adw, Gio, Gdk, GLib
-from subprocess import check_output
-import toml
-import socket
-import aiohttp
 import asyncio
+import math
+import os
+import socket
+import subprocess
+from subprocess import call, check_output
+from time import sleep
+
+import aiohttp
+import gi
+import numpy as np
+import orjson as json
+import toml
 from aiohttp import ClientTimeout
 from bs4 import BeautifulSoup
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 from wayfire import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.extra.stipc import Stipc
-from subprocess import call
+
 from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
+from waypanel.src.plugins import icons
+
+from ..plugins.icons import get_nearest_icon_name
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -114,6 +118,7 @@ class Utils(Adw.Application):
             self.source.remove()  # Remove the source when done
         if self.client_socket:
             self.client_socket.close()
+
     def wayfire_events_setup(self):
         """Initialize the Wayfire event listener within a GTK application."""
         # Create a GTK application
@@ -122,11 +127,10 @@ class Utils(Adw.Application):
         # Define the path for the Unix socket
         self.connect_socket()
 
-
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
         if [c for c in self.terminal_emulators if cmd in c] and cmd_mode:
-            #**note-taking**
-            #replace this function with stipc
+            # **note-taking**
+            # replace this function with stipc
             self.stipc.run_cmd(cmd)
 
     def find_view_middle_cursor_position(self, view_geometry, monitor_geometry):
@@ -173,13 +177,13 @@ class Utils(Adw.Application):
         # Check if both the container and widget are not None and are instances of Gtk.Widget
         if not self.widget_exists(container):
             return False
- 
+
         # Check if the container is realized and visible
         if not Gtk.Widget.get_realized(container) or not Gtk.Widget.get_visible(container):
             return False
 
         return True
- 
+
     def append_widget_if_ready(self, container, widget):
         """
         Append a widget to a container if both the container and widget are in a proper state.
@@ -294,7 +298,7 @@ class Utils(Adw.Application):
 
         # Run the note-taking application using the specified command
         self.run_app(config["take_note_app"]["cmd"])
- 
+
     def reconnect_client(self, socket):
         socket.close()
         sock = WayfireSocket()
@@ -310,7 +314,7 @@ class Utils(Adw.Application):
             if "event" in msg:
                 self.handle_event(msg)
         return True
- 
+
     def handle_event(self, msg):
         try:
             if msg["event"] == "plugin-activation-state-changed":
@@ -323,7 +327,6 @@ class Utils(Adw.Application):
         except Exception as e:
             print(e)
         return True
-
 
     def CreateFromAppList(
         self, config, orientation, class_style, callback=None, use_label=False
@@ -348,7 +351,7 @@ class Utils(Adw.Application):
                     pass
 
                 button = self.create_button(
-                    config_data[app]["icon"],
+                    get_nearest_icon_name(config_data[app]["icon"]),
                     config_data[app]["cmd"],
                     class_style,
                     wclass,
@@ -385,38 +388,39 @@ class Utils(Adw.Application):
         temp_dir = '/tmp/gtk4-layer-shell'
         repo_url = 'https://github.com/wmww/gtk4-layer-shell.git'
         build_dir = 'build'
-        
+
         # Check if the library is installed
         if os.path.exists(installed_marker):
             print("gtk4-layer-shell is already installed.")
             return
-        
+
         # Proceed with installation if not installed
         print("gtk4-layer-shell is not installed. Installing...")
-        
+
         # Create a temporary directory
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
-        
+
         # Clone the repository
         print("Cloning the repository...")
         subprocess.run(['git', 'clone', repo_url, temp_dir], check=True)
-        
+
         # Change to the repository directory
         os.chdir(temp_dir)
-        
+
         # Set up the build directory with Meson
         print("Configuring the build environment...")
-        subprocess.run(['meson', 'setup', f'--prefix={install_path}', '-Dexamples=true', '-Ddocs=true', '-Dtests=true', build_dir], check=True)
-        
+        subprocess.run(['meson', 'setup', f'--prefix={install_path}',
+                       '-Dexamples=true', '-Ddocs=true', '-Dtests=true', build_dir], check=True)
+
         # Build the project
         print("Building the project...")
         subprocess.run(['ninja', '-C', build_dir], check=True)
-        
+
         # Install the project
         print("Installing the project...")
         subprocess.run(['ninja', '-C', build_dir, 'install'], check=True)
-        
+
         print("Installation complete.")
 
     def extract_icon_info(self, application_name):
@@ -517,12 +521,12 @@ class Utils(Adw.Application):
         elif orientation == "v":
             orientation = Gtk.Orientation.VERTICAL
 
-        #if "proton" in wmclass or wmclass == "wine":
+        # if "proton" in wmclass or wmclass == "wine":
         #   game_image = self.get_game_image(title)
         #   filename = os.path.join("/tmp", wmclass + ".png")
         #  if filename:
         #       icon = self.download_image(game_image, filename)
-        #else:
+        # else:
         title = self.filter_utf_for_gtk(title)
         icon = self.get_icon(wmclass, initial_title, title)
 
@@ -610,7 +614,7 @@ class Utils(Adw.Application):
             return app_id.split('.')[-1]  # Extract the last part
         return app_id
 
-    #this function is useful because it will handle icon_name and icon_path
+    # this function is useful because it will handle icon_name and icon_path
     def handle_icon_for_button(self, view, button):
         title = view["title"]
         initial_title = title.split()[0]
@@ -649,7 +653,6 @@ class Utils(Adw.Application):
 
     def find_icon(self, app_id):
         return self.find_icon_for_app_id(app_id)
-
 
     async def get_steam_game_pic(self, game_title):
         REQUEST_TIMEOUT = 10  # seconds
@@ -723,10 +726,10 @@ class Utils(Adw.Application):
                     if response.status != 200:
                         print("Failed to download image.")
                         return None
-                    
+
                     with open(file_path, "wb") as file:
                         file.write(await response.read())
-                    
+
                     return file_path
             except asyncio.TimeoutError:
                 print("Timed out while downloading image.")
@@ -736,21 +739,21 @@ class Utils(Adw.Application):
                 return None
 
     def get_wayfire_pid(self):
-       for entry in os.listdir('/proc'):
-           if entry.isdigit():
-               try:
-                   with open(f'/proc/{entry}/comm', 'r') as comm_file:
-                       command_name = comm_file.read().strip()
-                       if 'wayfire' in command_name:
-                           return entry
-               except IOError:
-                   continue
-       return None
+        for entry in os.listdir('/proc'):
+            if entry.isdigit():
+                try:
+                    with open(f'/proc/{entry}/comm', 'r') as comm_file:
+                        command_name = comm_file.read().strip()
+                        if 'wayfire' in command_name:
+                            return entry
+                except IOError:
+                    continue
+        return None
 
     def list_libs_in_process(self, pid):
         libs = []
         maps_file = f"/proc/{pid}/maps"
-        
+
         try:
             with open(maps_file, 'r') as f:
                 for line in f:
@@ -813,9 +816,9 @@ class Utils(Adw.Application):
             return
         view = self.sock.get_view(view_id)
         if view["role"] != "toplevel":
-            return False 
+            return False
         if view["pid"] == -1:
-            return False 
+            return False
         if view["app-id"] == "" or view["app-id"] == "nil":
             return False
         return self.sock.get_view(view_id)
@@ -830,7 +833,7 @@ class Utils(Adw.Application):
             view_id = view["id"]
             output_id = view["output-id"]
 
-            #sometimes the view is so small that we should resize it
+            # sometimes the view is so small that we should resize it
             viewgeo = self.wf_utils.get_view_geometry(view_id)
             if viewgeo:
                 if viewgeo["width"] < 100 or viewgeo["height"] < 100:
@@ -840,7 +843,7 @@ class Utils(Adw.Application):
                 if self.is_scale_active[output_id] is True:
                     self.sock.scale_toggle()
                     # FIXME: better get animation speed from the conf so define a proper sleep
-                    #sleep(0.4)
+                    # sleep(0.4)
                     self.wf_utils.go_workspace_set_focus(view_id)
                     self.wf_utils.center_cursor_on_view(view_id)
                 else:
@@ -854,7 +857,7 @@ class Utils(Adw.Application):
         except Exception as e:
             print(e)
             return True
- 
+
     def file_exists(self, path):
         return os.path.isfile(path)
 
@@ -923,7 +926,7 @@ class Utils(Adw.Application):
             topbar_launcher_config = os.path.join(directory_path, "config/topbar-launcher.toml")
 
         cache_folder = os.path.join(home, ".cache/waypanel")
-        
+
         if not os.path.exists(config_path):
             os.makedirs(config_path)
             os.makedirs(scripts)
@@ -942,7 +945,6 @@ class Utils(Adw.Application):
             "topbar_launcher_config": topbar_launcher_config,
             "cache_folder": cache_folder
         }
-
 
     def filter_utf_for_gtk(self, byte_string):
         """
@@ -978,7 +980,6 @@ class Utils(Adw.Application):
             return byte_string.decode('latin-1', errors='replace')
 
         raise TypeError("Input must be a bytes object or a string.")
- 
 
     def create_button(
         self,
