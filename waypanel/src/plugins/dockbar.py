@@ -18,6 +18,7 @@ from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
 from ..core.create_panel import (CreatePanel, set_layer_position_exclusive,
                                  unset_layer_position_exclusive)
 from ..core.utils import Utils
+from .icons import get_nearest_icon_name
 
 sys.path.append("/usr/lib/waypanel/")
 
@@ -123,7 +124,7 @@ class Dockbar(Adw.Application):
             self, "BOTTOM", position, exclusive, 0, size, "BottomBar"
         )
         self.add_launcher = Gtk.Button()
-        self.add_launcher.set_icon_name("tab-new-symbolic")
+        self.add_launcher.set_icon_name(get_nearest_icon_name("tab-new"))
         self.add_launcher.connect("clicked", self.dockbar_append)
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.add_css_class("scrolled_window_bottom_bar")
@@ -444,7 +445,7 @@ class Dockbar(Adw.Application):
             button.set_label(title)
 
             if icon:
-                button.set_icon_name(icon)
+                button.set_icon_name(get_nearest_icon_name(icon))
 
                 # this part enables output name in taskbar list buttons
                 # if title:
@@ -595,7 +596,7 @@ class Dockbar(Adw.Application):
         wclass = self.sock.get_focused_view()["app-id"].lower()
         wclass = "".join(wclass)
         initial_title = wclass.split()[0]
-        icon = wclass
+        icon = get_nearest_icon_name(wclass)
         cmd = initial_title
         desktop_file = ""
 

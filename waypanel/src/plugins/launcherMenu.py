@@ -9,6 +9,7 @@ from gi.repository import Adw, Gio, GLib, Gtk
 from gi.repository import Gtk4LayerShell as LayerShell
 
 from ..core.utils import Utils
+from .icons import get_nearest_icon_name
 
 
 class MenuLauncher(Adw.Application):
@@ -49,12 +50,12 @@ class MenuLauncher(Adw.Application):
         self.menubutton_launcher = Gtk.Button()
         self.menubutton_launcher.connect("clicked", self.open_popover_launcher)
         panel_config_path = os.path.join(self.config_path, "panel.toml")
+        menu_icon = get_nearest_icon_name("wayfire")
         if os.path.exists(panel_config_path):
             with open(panel_config_path, "r") as f:
                 panel_config = toml.load(f)
             menu_icon = panel_config.get("top", {}).get("menu_icon", "wayfire")
-        else:
-            menu_icon = "wayfire"
+
         self.menubutton_launcher.set_icon_name(menu_icon)
         self.menubutton_launcher.add_css_class("top_left_widgets")
         obj.top_panel_box_widgets_left.append(self.menubutton_launcher)

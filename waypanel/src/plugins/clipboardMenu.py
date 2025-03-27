@@ -1,13 +1,15 @@
 import os
 import random
-import gi
-from gi.repository import Gio, Gtk, Adw
-from gi.repository import Gtk4LayerShell as LayerShell
-from subprocess import Popen, check_output
 import subprocess
-from ..core.utils import Utils
 import threading
-from subprocess import check_output, PIPE
+from subprocess import PIPE, Popen, check_output
+
+import gi
+from gi.repository import Adw, Gio, Gtk
+from gi.repository import Gtk4LayerShell as LayerShell
+
+from ..core.utils import Utils
+from .icons import get_nearest_icon_name
 
 
 class MenuClipboard(Gtk.Application):
@@ -58,11 +60,11 @@ class MenuClipboard(Gtk.Application):
             clipboard_history = ''
             try:
                 clipboard_history = (
-                check_output("cliphist list".split())
-                .decode("latin-1")
-                .encode("utf-8")
-                .decode()
-            )
+                    check_output("cliphist list".split())
+                    .decode("latin-1")
+                    .encode("utf-8")
+                    .decode()
+                )
             except Exception as e:
                 print(e)
 
@@ -72,7 +74,7 @@ class MenuClipboard(Gtk.Application):
                 continue
             row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
             image_button = Gtk.Button()
-            image_button.set_icon_name("edit-paste")
+            image_button.set_icon_name(get_nearest_icon_name("paste"))
             image_button.connect("clicked", self.cliphist_delete_selected)
             spacer = Gtk.Label(label="    ")
             row_hbox.append(image_button)
@@ -81,7 +83,7 @@ class MenuClipboard(Gtk.Application):
             self.listbox.append(row_hbox)
             line = Gtk.Label.new()
             line.set_markup('<span font="DejaVu Sans Mono">{}</span>'.format(i))
-            #line.set_label(i)
+            # line.set_label(i)
             line.props.margin_end = 5
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)
@@ -166,7 +168,7 @@ class MenuClipboard(Gtk.Application):
             self.listbox.append(row_hbox)
             line = Gtk.Label.new()
             line.set_markup('<span font="DejaVu Sans Mono">{}</span>'.format(i))
-            #line.set_label(i)
+            # line.set_label(i)
             line.props.margin_end = 5
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)

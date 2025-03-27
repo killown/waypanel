@@ -1,11 +1,14 @@
 import os
+from subprocess import Popen, check_output
+
 import gi
+from gi.repository import Adw, Gtk
+from gi.repository import Gtk4LayerShell as LayerShell
+
+from ..core.utils import Utils
+from .icons import get_nearest_icon_name
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, Adw
-from gi.repository import Gtk4LayerShell as LayerShell
-from subprocess import Popen, check_output
-from ..core.utils import Utils
 
 
 class BluetoothDashboard(Adw.Application):
@@ -51,7 +54,7 @@ class BluetoothDashboard(Adw.Application):
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        self.menubutton_dashboard.set_icon_name("preferences-bluetooth-symbolic")
+        self.menubutton_dashboard.set_icon_name(get_nearest_icon_name("bluetooth"))
         return self.menubutton_dashboard
 
     def CreateGesture(self, widget, mouse_button, arg):
@@ -62,8 +65,8 @@ class BluetoothDashboard(Adw.Application):
         return widget
 
     def create_popover_bluetooth(self, *_):
-        #FIXME: need to add nothing paired to the popup in case there is no devices
-        devices =  self.get_bluetooth_list()
+        # FIXME: need to add nothing paired to the popup in case there is no devices
+        devices = self.get_bluetooth_list()
         if not devices:
             return
 

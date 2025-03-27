@@ -418,8 +418,7 @@ class Panel(Adw.Application):
         )
         if self.is_scale_active:
             return True
-        else:
-            return False
+        return False
 
     def file_exists(self, full_path):
         return os.path.exists(full_path)
@@ -989,8 +988,9 @@ class Panel(Adw.Application):
 
     def right_position_launcher_topbar(self):
         # Creating close and full screen buttons for the top bar
-        box = self.utils.CreateFromAppList(self.topbar_launcher_config, "h", "TopBar")
+        # box = self.utils.CreateFromAppList(self.topbar_launcher_config, "h", "TopBar")
         # self.top_panel_box_systray.append(box)
+        print()
 
     def get_soundcard_list(self):
         return sc.all_speakers()
@@ -1577,8 +1577,7 @@ class Panel(Adw.Application):
         ).decode()
         if "no" in volume_state.split()[-1]:
             return False
-        else:
-            return True
+        return True
 
     def on_toggle_volume(self, *_):
         # Creating clock label with current date and time
@@ -1896,8 +1895,7 @@ class Panel(Adw.Application):
 
         if self.is_scale_active:
             return True
-        else:
-            return False
+        return False
 
     def filter_title(self, title):
         """Modify title based on certain patterns."""

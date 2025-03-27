@@ -1,9 +1,11 @@
 import os
-import psutil
-from subprocess import Popen
-from gi.repository import Gtk, Adw
 from subprocess import Popen, check_output
+
+import psutil
+from gi.repository import Adw, Gtk
+
 from ..core.utils import Utils
+from .icons import get_nearest_icon_name
 
 
 class SystemDashboard(Adw.Application):
@@ -42,7 +44,7 @@ class SystemDashboard(Adw.Application):
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        self.menubutton_dashboard.set_icon_name("gshutdown-symbolic")
+        self.menubutton_dashboard.set_icon_name(get_nearest_icon_name("shutdown"))
         return self.menubutton_dashboard
 
     def create_popover_system(self, *_):
@@ -171,10 +173,11 @@ class SystemDashboard(Adw.Application):
                     print(f"Killed process {proc.info['name']} with PID {proc.info['pid']}")
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
+
     def run_later(self, command, delay):
         # Schedule the command to run after `delay` seconds
         Popen(['bash', '-c', f'sleep {delay} && {command}'])
-        
+
     def on_action(self, button, action):
         if action == "Exit Waypanel":
             # FIXME: need a better way to exit the panel
