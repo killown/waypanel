@@ -1,18 +1,18 @@
 [icons]
 #"System" = "system-shutdown-symbolic"
 
-[[VPN.item_1]]
-cmd = "/opt/waypanel/scripts/mullvad-random-br.py"
-name = "Change Server"
+#[[VPN.item_1]]
+#cmd = "/opt/waypanel/scripts/mullvad-random-br.py"
+#name = "Change Server"
 
-[[VPN.item_2]]
-cmd = "/opt/waypanel/scripts/mullvad-status.py"
-name = "Connection Status"
+#[[VPN.item_2]]
+#cmd = "/opt/waypanel/scripts/mullvad-status.py"
+#name = "Connection Status"
 
-[[VPN.item_3]]
-cmd = "/opt/waypanel/scripts/mullvad-disconnect.py"
-name = "Mullvad Disconnect"
+#[[VPN.item_3]]
+#cmd = "/opt/waypanel/scripts/mullvad-disconnect.py"
+#name = "Mullvad Disconnect"
 
-[[VPN.item_4]]
-cmd = "/opt/waypanel/scripts/mullvad-connect.py"
-name = "Mullvad Connect"
+#[[VPN.item_4]]
+#cmd = "/opt/waypanel/scripts/mullvad-connect.py"
+#name = "Mullvad Connect"
