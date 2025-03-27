@@ -1,13 +1,16 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 # Read the requirements from the requirements.txt file
+
+
 def read_requirements():
     with open('requirements.txt') as f:
         return f.read().splitlines()
 
+
 setup(
     name='waypanel',
-    version='0.11.0',
+    version='0.21.0',
     author='killown',
     author_email='systemofdown@gmail.com',
     description='A Wayfire panel that behaves like a shell',
@@ -29,4 +32,3 @@ setup(
     packages=find_packages(),
     include_package_data=True,  # Include files specified in MANIFEST.in
 )
-
