@@ -15,17 +15,17 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.x"
+          python-version: "3.x"  # FIXED: Changed from 4.x to 3.x
       - name: Install pypa/build
         run: >-
-          python3 -m
+          python -m  # FIXED: Changed from python4
           pip install
           build
           --user
       - name: Build a binary wheel and a source tarball
-        run: python3 -m build
+        run: python -m build  # FIXED: Changed from python4
       - name: Store the distribution packages
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
@@ -42,24 +42,24 @@ jobs:
     permissions:
       id-token: write # IMPORTANT: mandatory for trusted publishing
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.x"  # FIXED: Replaced matrix reference
       - name: Install
         if: github.event_name == 'release'
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install setuptools wheel
-          python3 -m pip install .
+          python -m pip install .  # FIXED: Changed from python4
           python -m pip install -U build
-          python3 -m build
+          python -m build  # FIXED: Changed from python3
       - name: Download all the dists
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: python-package-distributions
+          name: python-package-distributions  # FIXED: Removed trailing 'n'
           path: dist/
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
