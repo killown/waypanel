@@ -41,7 +41,13 @@ class PopoverFolders(Adw.Application):
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
         self.menubutton_folders = Gtk.Button()
         self.menubutton_folders.connect("clicked", self.open_popover_folders)
-        self.menubutton_folders.set_icon_name("folder")
+        panel_config_path = os.path.join(self.config_path, "panel.toml")
+        menu_icon = "folder"
+        if os.path.exists(panel_config_path):
+            with open(panel_config_path, "r") as f:
+                panel_config = toml.load(f)
+            menu_icon = panel_config.get("top", {}).get("folder_icon", "folder")
+        self.menubutton_folders.set_icon_name(menu_icon)
         self.menubutton_folders.add_css_class("top_left_widgets")
         obj.top_panel_box_widgets_left.append(self.menubutton_folders)
 

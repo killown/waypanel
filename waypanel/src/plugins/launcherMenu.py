@@ -1,12 +1,14 @@
 import os
 import random
-import gi
-from gi.repository import Gio, Gtk, Adw, GLib
-import cairo
-from gi.repository import Gtk4LayerShell as LayerShell
 from subprocess import Popen
-from ..core.utils import Utils
+
+import cairo
+import gi
 import toml
+from gi.repository import Adw, Gio, GLib, Gtk
+from gi.repository import Gtk4LayerShell as LayerShell
+
+from ..core.utils import Utils
 
 
 class MenuLauncher(Adw.Application):
@@ -46,7 +48,14 @@ class MenuLauncher(Adw.Application):
         self.app = app
         self.menubutton_launcher = Gtk.Button()
         self.menubutton_launcher.connect("clicked", self.open_popover_launcher)
-        self.menubutton_launcher.set_icon_name("wayfire")
+        panel_config_path = os.path.join(self.config_path, "panel.toml")
+        if os.path.exists(panel_config_path):
+            with open(panel_config_path, "r") as f:
+                panel_config = toml.load(f)
+            menu_icon = panel_config.get("top", {}).get("menu_icon", "wayfire")
+        else:
+            menu_icon = "wayfire"
+        self.menubutton_launcher.set_icon_name(menu_icon)
         self.menubutton_launcher.add_css_class("top_left_widgets")
         obj.top_panel_box_widgets_left.append(self.menubutton_launcher)
 
@@ -69,10 +78,10 @@ class MenuLauncher(Adw.Application):
         self.searchbar = Gtk.SearchEntry.new()
         self.searchbar.grab_focus()
         self.searchbar.connect("search_changed", self.on_search_entry_changed)
-        
+
         # press enter
         self.searchbar.connect("activate", self.on_keypress)
-      
+
         self.searchbar.set_focus_on_click(True)
         # self.searchbar.props.hexpand = False
         # self.searchbar.props.vexpand = True
@@ -168,8 +177,8 @@ class MenuLauncher(Adw.Application):
         self.popover_launcher.popup()
         return self.popover_launcher
 
-
     # this is where pressing enter will take effect
+
     def on_keypress(self, *_):
         cmd = "gtk-launch {}".format(self.search_get_child).split()
         Popen(cmd)
@@ -182,14 +191,14 @@ class MenuLauncher(Adw.Application):
 
         dockbar_desktop = [dockbar_toml[i]["desktop_file"] for i in dockbar_toml]
         all_apps = [i for i in all_apps if i.get_id() not in dockbar_desktop]
-        
+
         # remove widgets from uninstalled apps
         app_ids = [i.get_id() for i in all_apps]
         should_continue = [i.get_id() for i in self.all_apps if i.get_id() not in app_ids]
-      
+
         # if all app_ids match in both all updated apps along with old self all apps
-        if not should_continue: 
-            return 
+        if not should_continue:
+            return
 
         for app in self.all_apps:
             id = app.get_id()
@@ -332,7 +341,7 @@ class MenuLauncher(Adw.Application):
                 self.flowbox.select_child(child)
                 return True  # Stop iteration after selecting the first visible child
             return False  # Continue iteration
-        
+
         # Iterate over visible children and select the first one
         self.flowbox.selected_foreach(on_child)
         return False  # Stops the GLib.idle_add loop
@@ -351,7 +360,7 @@ class MenuLauncher(Adw.Application):
         if not isinstance(row, str):
             # the line searched for, it will return every line that matches the search
             row = row.get_child().MYTEXT
-            # this is to store all rows that match the search and get the first one 
+            # this is to store all rows that match the search and get the first one
             # then we can use on_keypress to start the app
             self.search_row.append(row[1])
             row = f"{row[0]} {row[1]} {row[2]}"

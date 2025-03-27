@@ -32,6 +32,8 @@ Exclusive = "False"
 size = 42
 
 [top]
+menu_icon = "archlinux"
+folder_icon = "folder"
 position = "TOP"
 Exclusive = "True"
 size = 12
