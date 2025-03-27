@@ -14,7 +14,7 @@ This guide provides step-by-step instructions to install `waypanel`, both using 
 
 #### archlinux
     
-    pacman -S gtk4-layer-shell gobject-introspection vala playerctl python-gobject wayland-protocols ninja mesa playerctl libadwaita
+    pacman -S gtk4-layer-shell gobject-introspection vala playerctl python-gobject wayland-protocols ninja mesa playerctl libadwaita bluez-tools
 
 
 Installing `waypanel` from github Source
