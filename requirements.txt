@@ -13,3 +13,4 @@ pygobject-stubs
 orjson
 cffi
 PyGObject
+watchdog
