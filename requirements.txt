@@ -12,3 +12,4 @@ wayfire
 pygobject-stubs
 orjson
 cffi
+PyGObject
