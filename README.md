@@ -17,39 +17,7 @@ This guide provides step-by-step instructions to install `waypanel`, both using 
     pacman -S gtk4-layer-shell gobject-introspection vala playerctl python-gobject wayland-protocols ninja mesa playerctl libadwaita
 
 
-Method 1: Installing `waypanel` using `pip`
--------------------------------------------
-
-
-### Step 1: Set Up a Virtual Environment (Recommended)
-
-  **Create a virtual environment**:
-    
-    python3 -m venv waypanel-env
-    
-  **Activate the virtual environment**:
-        
-    source waypanel-env/bin/activate
-        
-  **Install `waypanel`**:
-    
-    pip install waypanel
-    
-
-### Step 2: Run `waypanel`
-
-After installation, you can run `waypanel` using:
-
-    /path/to/waypanel-env/bin/waypanel
-
-
-### Step 4:  Add Environment Activation to Shell Startup
-
-To automatically activate the virtual environment when you navigate to your project directory, you can add the following lines to your `.bashrc`, `.zshrc`, or equivalent shell configuration file:
-
-    source /path/to/waypanel-env/bin/activate
-
-Method 2: Installing `waypanel` from github Source
+Installing `waypanel` from github Source
 -------------------------------------------------
 
 ### Step 1: Clone the `waypanel` Repository
