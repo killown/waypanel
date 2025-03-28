@@ -1,13 +1,18 @@
 import asyncio
+import io
+import mimetypes
 import os
+import subprocess
 from pathlib import Path
 from typing import List, Tuple
 
 import aiosqlite
 import gi
 import pyperclip
-from gi.repository import Adw, Gio, Gtk
+from gi.repository import Adw, GdkPixbuf, Gio, Gtk
 from gi.repository import Gtk4LayerShell as LayerShell
+from gi.repository import Pango
+from PIL import Image
 
 from ..core.utils import Utils
 from .clipboard_server import AsyncClipboardServer
@@ -118,15 +123,6 @@ async def _fetch_items():
         await manager.server.stop()
 
 
-def on_paste_clicked(manager: ClipboardManager, item_id: int):
-    """Standalone version requiring manager instance"""
-    if (item := manager.get_item_by_id_sync(item_id)):
-        _, content = item
-        pyperclip.copy(content)
-        return True  # Success
-    return False  # Item not found
-
-
 def get_clipboard_items_sync() -> List[Tuple[int, str]]:
     """One-line sync access to clipboard history"""
     return asyncio.run(_fetch_items())
@@ -161,6 +157,83 @@ class MenuClipboard(Gtk.Application):
         )
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
+
+    def is_image_content(self, content):
+        """Detect both image files AND raw image data"""
+        # Case 1: It's a file path that exists
+        if isinstance(content, str) and Path(content).exists():
+            mime = mimetypes.guess_type(content)[0]
+            return mime and mime.startswith('image/')
+
+        # Case 2: It's raw image data (from wl-copy)
+        if isinstance(content, bytes):
+            # Check magic numbers for common image formats
+            magic_numbers = {
+                b'\x89PNG': 'PNG',
+                b'\xff\xd8': 'JPEG',
+                b'GIF87a': 'GIF',
+                b'GIF89a': 'GIF',
+                b'BM': 'BMP',
+                b'RIFF....WEBP': 'WEBP'
+            }
+            return any(content.startswith(magic) for magic in magic_numbers.keys())
+
+        # Case 3: It's a base64 encoded image (common in clipboard)
+        if isinstance(content, str) and content.startswith(('data:image/png', 'data:image/jpeg')):
+            return True
+
+        return False
+
+    def on_paste_clicked(self, manager: ClipboardManager, item_id: int):
+        """Standalone version requiring manager instance"""
+        if (item := manager.get_item_by_id_sync(item_id)):
+            _, content = item
+            self.copy_to_clipboard(content)
+            return True  # Success
+        return False  # Item not found
+
+    def create_thumbnail(self, image_path, size=128):
+        """Generate larger GdkPixbuf thumbnail"""
+        try:
+            with Image.open(image_path) as img:
+                # Maintain aspect ratio while increasing size
+                img.thumbnail((size, size), Image.Resampling.LANCZOS)  # Better quality
+
+                # Create high-quality PNG
+                bio = io.BytesIO()
+                img.save(bio, format='PNG', quality=95)
+
+                # Load as Pixbuf
+                loader = GdkPixbuf.PixbufLoader.new_with_type('png')
+                loader.write(bio.getvalue())
+                loader.close()
+                return loader.get_pixbuf()
+        except Exception as e:
+            print(f"Thumbnail generation failed: {e}")
+            return None
+
+    def copy_to_clipboard(self, content):
+        """Universal copy function that handles both text and images"""
+        if self.is_image_content(content):
+            # Handle image copy
+            if Path(content).exists():  # It's a file path
+                try:
+                    # Use wl-copy for Wayland (most reliable)
+                    subprocess.run(
+                        ["wl-copy"],
+                        input=content.encode(),
+                        check=True
+                    )
+                    subprocess.run(
+                        ["wl-copy", "-t", "image/png"],
+                        stdin=open(content, "rb"),
+                        check=True
+                    )
+                except subprocess.CalledProcessError:
+                    print(f"Failed to copy image: {content}")
+        else:
+            # Handle text copy
+            pyperclip.copy(content)
 
     def update_clipboard_list(self):
         # Clear the existing list
@@ -199,6 +272,21 @@ class MenuClipboard(Gtk.Application):
                 item = item[:50]
             row_hbox.MYTEXT = f"{item_id} {item}"
             self.listbox.append(row_hbox)
+            if self.is_image_content(item):
+                # Create larger thumbnail (128px) with padding
+                thumb = self.create_thumbnail(item, size=128)
+                if thumb:
+                    # Create container for image + text
+                    image_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+
+                    # Bigger image display
+                    image_widget = Gtk.Image.new_from_pixbuf(thumb)
+                    image_widget.set_margin_end(10)
+                    image_widget.set_size_request(128, 128)
+                    image_box.append(image_widget)
+                    row_hbox.append(image_box)
+                    item = item.split("/")[-1]
+                    row_hbox.set_size_request(-1, 150)
             line = Gtk.Label.new()
             line.set_markup(f'<span font="DejaVu Sans Mono">{item_id} {item}</span>')
             line.props.margin_end = 5
@@ -266,7 +354,7 @@ class MenuClipboard(Gtk.Application):
         manager = ClipboardManager()
         asyncio.run(manager.initialize())
         item_id = int(selected_text.split()[0])
-        on_paste_clicked(manager,  item_id)
+        self.on_paste_clicked(manager,  item_id)
         self.popover_clipboard.popdown()
 
     def clear_clipboard(self, *_):
