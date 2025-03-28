@@ -1999,17 +1999,17 @@ def load_config(config_path):
 def get_monitor_name(config, sock):
     monitor = next((output for output in sock.list_outputs() if "-1" in output['name']), sock.list_outputs()[0])
     monitor_name = monitor.get("name")
-
     return config.get("monitor", {}).get("name", monitor_name)
 
 
 def find_config_path():
-    home_config_path = os.path.join(os.path.expanduser("~"), ".config/waypanel", "panel.toml")
+    home_config_path = os.path.join(os.path.expanduser("~"), ".config/waypanel", "waypanel.toml")
     if os.path.exists(home_config_path):
+        print(f"using {home_config_path}")
         return home_config_path
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    default_config_path = os.path.join(os.path.dirname(script_dir), "config/panel.toml")
+    default_config_path = os.path.join(os.path.dirname(script_dir), "config/waypanel.toml")
     print(f"Using default config path: {default_config_path}")
 
     return default_config_path
@@ -2020,7 +2020,7 @@ def start_panel():
     utils = WayfireUtils(sock)
 
     config_path = find_config_path()
-    config = load_config(config_path)
+    config = load_config(config_path)["panel"]
 
     monitor_name = get_monitor_name(config, sock)
     if len(sys.argv) > 1:

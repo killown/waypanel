@@ -1,17 +1,19 @@
-import gi
 import os
-import toml
 import sys
-from wayfire import WayfireSocket 
+
+import gi
+import toml
+from gi.repository import Adw, Gdk, Gtk
+from gi.repository import Gtk4LayerShell as LayerShell
+from wayfire import WayfireSocket
+
 sock = WayfireSocket()
 
 gi.require_version("Adw", "1")
 gi.require_version("Gtk4LayerShell", "1.0")
-from gi.repository import Gtk4LayerShell as LayerShell
 
 gi.require_version("Gdk", "4.0")
 gi.require_version("Gtk", "4.0")
-from gi.repository import Adw, Gdk, Gtk
 
 
 def set_layer_position_exclusive(window, size):
@@ -26,19 +28,19 @@ def set_layer_position_exclusive(window, size):
     The panel is hidden by default. This function makes it visible.
     If visibility doesn't take effect, the panel will remain hidden until IPC is ready.
     """
-    #LayerShell.set_exclusive_zone(window, size)
+    # LayerShell.set_exclusive_zone(window, size)
     if window:
         LayerShell.set_layer(window, LayerShell.Layer.TOP)
-        #window.set_visible(True)
+        # window.set_visible(True)
     return
 
 
 def unset_layer_position_exclusive(window):
-    #LayerShell.set_exclusive_zone(window, 0)
+    # LayerShell.set_exclusive_zone(window, 0)
     # print(LayerShell.get_exclusive_zone(window))
     if window:
         LayerShell.set_layer(window, LayerShell.Layer.BOTTOM)
-        #window.set_visible(False)
+        # window.set_visible(False)
     return
 
 
@@ -84,7 +86,7 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     monitor_name = next((name for name in monitor if name.endswith('-1')), None)
     home = os.path.expanduser("~")
     config_path = os.path.join(home, ".config/waypanel")
-    panel_config = os.path.join(config_path, "panel.toml")
+    panel_config = os.path.join(config_path, "waypanel.toml")
     full_path = os.path.abspath(__file__)
     directory_path = os.path.dirname(full_path)
     parent_directory_path = os.path.dirname(directory_path)
@@ -92,7 +94,7 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     if not os.path.exists(panel_config):
         panel_config = os.path.join(parent_directory_path, "config/panel.toml")
     with open(panel_config) as panel_config:
-        config = toml.load(panel_config)
+        config = toml.load(panel_config)["panel"]
 
     # Monitor dimensions to set the panel size
     if "monitor" in config:
@@ -103,7 +105,6 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
         argv = sys.argv[1]
         monitor_name = argv
 
-
     if monitor_name in monitor:
         monitor = monitor[monitor_name]
         gdk_monitor = monitor["monitor"]
@@ -112,8 +113,7 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     window.set_focus_on_click(False)
     LayerShell.init_for_window(window)
     LayerShell.set_namespace(window, "waypanel")
-    #LayerShell.set_keyboard_mode(window, 0)
-
+    # LayerShell.set_keyboard_mode(window, 0)
 
     if gdk_monitor is not None:
         LayerShell.set_monitor(window, gdk_monitor)
@@ -121,11 +121,11 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     if layer == "TOP":
         window.set_default_size(monitor["width"], height)
         LayerShell.set_layer(window, LayerShell.Layer.TOP)
-        window.set_size_request(10,10)
+        window.set_size_request(10, 10)
 
     if anchor == "LEFT":
         LayerShell.set_anchor(window, LayerShell.Edge.LEFT, True)
-        window.set_size_request(10,10)
+        window.set_size_request(10, 10)
 
         if exclusive:
             LayerShell.auto_exclusive_zone_enable(window)
@@ -142,7 +142,7 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
 
     if anchor == "BOTTOM":
         LayerShell.set_anchor(window, LayerShell.Edge.BOTTOM, True)
-        window.set_size_request(10,10)
+        window.set_size_request(10, 10)
         if exclusive:
             LayerShell.auto_exclusive_zone_enable(window)
 
