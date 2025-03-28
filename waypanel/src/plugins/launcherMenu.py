@@ -31,16 +31,9 @@ class MenuLauncher(Adw.Application):
         self.home = os.path.expanduser("~")
         self.scripts = os.path.join(self.home, ".config/hypr/scripts")
         self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.dockbar_config = os.path.join(self.config_path, "dockbar.toml")
+        self.waypanel_cfg = os.path.join(self.config_path, "waypanel.toml")
         self.style_css_config = os.path.join(self.config_path, "style.css")
-        self.workspace_list_config = os.path.join(self.config_path, "workspacebar.toml")
-        self.topbar_config = os.path.join(self.config_path, "panel.toml")
-        self.menu_config = os.path.join(self.config_path, "menu.toml")
         self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
-        self.cmd_config = os.path.join(self.config_path, "cmd.toml")
-        self.topbar_launcher_config = os.path.join(
-            self.config_path, "topbar-launcher.toml"
-        )
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
 
@@ -101,8 +94,8 @@ class MenuLauncher(Adw.Application):
         self.popover_launcher.set_child(self.main_box)
         all_apps = Gio.AppInfo.get_all()
         random.shuffle(all_apps)
-        with open(self.dockbar_config, "r") as f:
-            dockbar_toml = toml.load(f)
+        with open(self.waypanel_cfg, "r") as f:
+            dockbar_toml = toml.load(f)["dockbar"]
 
         dockbar_apps = [dockbar_toml[i] for i in dockbar_toml]
         dockbar_names = [dockbar_toml[i]["name"] for i in dockbar_toml]
@@ -188,8 +181,8 @@ class MenuLauncher(Adw.Application):
 
     def update_flowbox(self):
         all_apps = Gio.AppInfo.get_all()
-        with open(self.dockbar_config, "r") as f:
-            dockbar_toml = toml.load(f)
+        with open(self.waypanel_cfg, "r") as f:
+            dockbar_toml = toml.load(f)["dockbar"]
 
         dockbar_desktop = [dockbar_toml[i]["desktop_file"] for i in dockbar_toml]
         all_apps = [i for i in all_apps if i.get_id() not in dockbar_desktop]

@@ -145,8 +145,8 @@ class PopoverBookmarks(Adw.Application):
         # Connect signal for selecting a row
         height = self.flowbox.get_preferred_size().natural_size.height
         width = self.flowbox.get_preferred_size().natural_size.width
-        self.scrolled_window.set_min_content_width(width * 2)
-        self.scrolled_window.set_min_content_height(height / 1.9)
+        self.scrolled_window.set_min_content_width(width)
+        self.scrolled_window.set_min_content_height(height)
 
         # Set the parent and display the popover
         self.popover_bookmarks.set_parent(self.menubutton_bookmarks)

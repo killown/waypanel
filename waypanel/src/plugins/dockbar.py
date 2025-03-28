@@ -55,17 +55,12 @@ class Dockbar(Adw.Application):
 
         # Set instance variables from the dictionary
         self.home = config_paths["home"]
+        self.waypanel_cfg = os.path.join(self.home, ".config/waypanel/waypanel.toml")
         self.webapps_applications = os.path.join(self.home, ".local/share/applications")
         self.scripts = config_paths["scripts"]
         self.config_path = config_paths["config_path"]
-        self.dockbar_config = config_paths["dockbar_config"]
         self.style_css_config = config_paths["style_css_config"]
-        self.workspace_list_config = config_paths["workspace_list_config"]
-        self.topbar_config = config_paths["topbar_config"]
-        self.menu_config = config_paths["menu_config"]
         self.window_notes_config = config_paths["window_notes_config"]
-        self.cmd_config = config_paths["cmd_config"]
-        self.topbar_launcher_config = config_paths["topbar_launcher_config"]
         self.cache_folder = config_paths["cache_folder"]
 
     # Start the Dockbar application
@@ -73,7 +68,7 @@ class Dockbar(Adw.Application):
         self.stored_windows = [i["id"] for i in self.sock.list_views()]
 
         # Read configuration from the topbar TOML file
-        panel_toml = self._load_panel_config(self.topbar_config)
+        panel_toml = self._load_panel_config(self.waypanel_cfg)["panel"]
 
         # Set up panels based on the configuration
         self._setup_panels(panel_toml)
@@ -96,7 +91,7 @@ class Dockbar(Adw.Application):
 
     def _setup_left_panel(self, config):
         """Create and configure the left panel."""
-        exclusive = config["Exclusive"] == "True"
+        exclusive = config["Exclusive"] == True
         position = config["position"]
         size = config["size"]
         enabled = config["enabled"]
@@ -104,19 +99,19 @@ class Dockbar(Adw.Application):
             self, "LEFT", position, exclusive, size, 0, "dockbar-left"
         )
         self.dockbar = self.utils.CreateFromAppList(
-            self.dockbar_config, "v", "dockbar-left-button", self.join_windows
+            self.waypanel_cfg, "v", "dockbar-left-button", self.join_windows
         )
         # self.add_launcher = Gtk.Button()
         # self.add_launcher.set_icon_name("tab-new-symbolic")
         # self.add_launcher.connect("clicked", self.dockbar_append)
         # self.dockbar.append(self.add_launcher)
         self.left_panel.set_content(self.dockbar)
-        if enabled == "True":
+        if enabled == True:
             self.left_panel.present()
 
     def _setup_bottom_panel(self, config):
         """Create and configure the bottom panel."""
-        exclusive = config["Exclusive"] == "True"
+        exclusive = config["Exclusive"] == True
         position = config["position"]
         size = config["size"]
         enabled = config["enabled"]
@@ -152,7 +147,7 @@ class Dockbar(Adw.Application):
         self.scrolled_window.set_child(self.taskbar)
         self.taskbar.append(self.add_launcher)
         self.taskbar.add_css_class("taskbar")
-        if enabled == "True":
+        if enabled == True:
             self.bottom_panel.present()
 
         # Start the taskbar list for the bottom panel
@@ -462,8 +457,8 @@ class Dockbar(Adw.Application):
 
     def Taskbar(self, orientation, class_style, update_button=False, callback=None):
         # Load configuration from dockbar_config file
-        with open(self.dockbar_config, "r") as f:
-            config = toml.load(f)
+        with open(self.waypanel_cfg, "r") as f:
+            config = toml.load(f)["dockbar"]
 
         # Extract desktop_file paths from the configuration
         launchers_desktop_file = [config[i]["desktop_file"] for i in config]
@@ -638,8 +633,8 @@ class Dockbar(Adw.Application):
             print(e)
 
         # Update the dockbar configuration
-        with open(self.dockbar_config, "r") as f:
-            config = toml.load(f)
+        with open(self.waypanel_cfg, "r") as f:
+            config = toml.load(f)["dockbar"]
         new_data = {
             initial_title: {
                 "cmd": cmd,
@@ -651,8 +646,9 @@ class Dockbar(Adw.Application):
             }
         }
         updated_data = ChainMap(new_data, config)
-        with open(self.dockbar_config, "w") as f:
-            toml.dump(updated_data, f)
+        with open(self.waypanel_cfg, "w") as f:
+            # toml.dump(updated_data, f)
+            print('cannot dumb data, this will overwrite the whole file')
 
         # Create and append button to the dockbar
         button = self.utils.create_button(

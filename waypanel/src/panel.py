@@ -127,12 +127,12 @@ class Panel(Adw.Application):
         self.output_is_ready_to_dpms_off = None
 
         # Load and apply configurations
-        with open(self.topbar_config) as topbar_config:
+        with open(self.waypanel_cfg) as topbar_config:
             config = toml.load(topbar_config)
 
-        self.simple_title_enabled = config["views"]["tilling"]
-        self.maximize_views_on_expo_enabled = config["views"]["maximize_views_on_expo"]
-        self.window_title_topbar_length = config["window_title_lenght"]["size"]
+        self.simple_title_enabled = config["panel"]["views"]["tilling"]
+        self.maximize_views_on_expo_enabled = config["panel"]["views"]["maximize_views_on_expo"]
+        self.window_title_topbar_length = config["panel"]["window_title_lenght"]["size"]
 
         # Set monitor dimensions
         monitor = next(
@@ -157,10 +157,10 @@ class Panel(Adw.Application):
             print("Using the first monitor from the list.")
 
         # Load additional configurations
-        with open(self.topbar_config, "r") as f:
+        with open(self.waypanel_cfg, "r") as f:
             self.topbar_config_loaded = toml.load(f)
 
-        with open(self.dockbar_config, "r") as f:
+        with open(self.waypanel_cfg, "r") as f:
             self.dockbar_config_loaded = toml.load(f)
 
     def _initialize_utilities(self):
@@ -221,16 +221,11 @@ class Panel(Adw.Application):
         config_paths = self.utils.setup_config_paths()
         # Set instance variables from the dictionary
         self.home = config_paths["home"]
+        self.waypanel_cfg = os.path.join(self.home, ".config/waypanel/waypanel.toml")
         self.scripts = config_paths["scripts"]
         self.config_path = config_paths["config_path"]
-        self.dockbar_config = config_paths["dockbar_config"]
         self.style_css_config = config_paths["style_css_config"]
-        self.workspace_list_config = config_paths["workspace_list_config"]
-        self.topbar_config = config_paths["topbar_config"]
-        self.menu_config = config_paths["menu_config"]
         self.window_notes_config = config_paths["window_notes_config"]
-        self.cmd_config = config_paths["cmd_config"]
-        self.topbar_launcher_config = config_paths["topbar_launcher_config"]
         self.cache_folder = config_paths["cache_folder"]
 
     def on_activate(self, app):
@@ -1115,8 +1110,8 @@ class Panel(Adw.Application):
             self.exclusive = False
 
         self.default_panel = True
-        with open(self.topbar_config, "r") as f:
-            panel_toml = toml.load(f)
+        with open(self.waypanel_cfg, "r") as f:
+            panel_toml = toml.load(f)["panel"]
             for p in panel_toml:
                 if "bottom" == p:
                     self.exclusive = True
@@ -1227,12 +1222,12 @@ class Panel(Adw.Application):
             tuple: A tuple containing the created dockbar and workspace buttons.
         """
         dockbar = self.utils.CreateFromAppList(
-            self.dockbar_config, orientation, class_style
+            self.waypanel_cfg, orientation, class_style
         )
-        workspace_buttons = self.utils.CreateFromAppList(
-            self.workspace_list_config, orientation, class_style
-        )
-        return dockbar, workspace_buttons
+        # workspace_buttons = self.utils.CreateFromAppList(
+        #    self.workspace_list_config, orientation, class_style
+        # )
+        return dockbar
 
     def todo_txt(self):
         """
@@ -1436,8 +1431,9 @@ class Panel(Adw.Application):
             dict: A dictionary containing the menu buttons associated with the created menus.
         """
         # Read the menu configuration from the specified file
-        with open(self.menu_config, "r") as f:
-            menu_toml = toml.load(f)
+        with open(self.waypanel_cfg, "r") as f:
+            menu_toml = toml.load(f)["menu"]
+            print(menu_toml)
 
         # Initialize a dictionary to store the menu buttons
         menu_buttons = {}
@@ -1490,8 +1486,8 @@ class Panel(Adw.Application):
         self.stipc.run_cmd(param.get_string())
 
     def load_topbar_config(self):
-        with open(self.topbar_config, "r") as f:
-            return toml.load(f)
+        with open(self.waypanel_cfg, "r") as f:
+            return toml.load(f)["panel"]
 
     def copy_to_clipboard(self, *_):
         # lazy to not use wl-copy
@@ -1765,8 +1761,8 @@ class Panel(Adw.Application):
             None
         """
         # Read command settings from the configuration file
-        with open(self.cmd_config, "r") as config_file:
-            cmd_settings = toml.load(config_file)
+        with open(self.waypanel_cfg, "r") as config_file:
+            cmd_settings = toml.load(config_file)["cmd"]
 
         # Iterate through each command setting and create/configure the corresponding command label
         for label_key in cmd_settings:

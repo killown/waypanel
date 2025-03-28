@@ -108,7 +108,7 @@
 
 .maximize-button {
   -gtk-icon-size: 20px;
-  background-color: #ffbd2e; /* macOS yellow */
+  background-color: #28c940; /* macOS green */
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
@@ -125,7 +125,7 @@
 
 .minimize-button {
   -gtk-icon-size: 20px;
-  background-color: #28c940; /* macOS green */
+  background-color: #ffbd2e; /* macOS yellow */
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
@@ -138,6 +138,7 @@
   color: #ebdbb2;
   border-color: rgba(36, 40, 59, 0.744);
   border-radius: 4px;
+
 }
 
 /* Hover states */

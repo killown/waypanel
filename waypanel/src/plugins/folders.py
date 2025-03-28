@@ -23,17 +23,9 @@ class PopoverFolders(Adw.Application):
         self.home = os.path.expanduser("~")
         self.home_folders = os.listdir(self.home)
         self.scripts = os.path.join(self.home, ".config/hypr/scripts")
-        self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.dockbar_config = os.path.join(self.config_path, "dockbar.toml")
+        self.config_path = os.path.join(self.home, ".config/waypanel/")
         self.style_css_config = os.path.join(self.config_path, "style.css")
-        self.workspace_list_config = os.path.join(self.config_path, "workspacebar.toml")
-        self.topbar_config = os.path.join(self.config_path, "panel.toml")
-        self.menu_config = os.path.join(self.config_path, "menu.toml")
         self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
-        self.cmd_config = os.path.join(self.config_path, "cmd.toml")
-        self.topbar_folders_config = os.path.join(
-            self.config_path, "topbar-folders.toml"
-        )
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
 
@@ -43,11 +35,11 @@ class PopoverFolders(Adw.Application):
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
         self.menubutton_folders = Gtk.Button()
         self.menubutton_folders.connect("clicked", self.open_popover_folders)
-        panel_config_path = os.path.join(self.config_path, "panel.toml")
+        panel_config_path = os.path.join(self.config_path, "waypanel.toml")
         menu_icon = get_nearest_icon_name("folder")
         if os.path.exists(panel_config_path):
             with open(panel_config_path, "r") as f:
-                panel_config = toml.load(f)
+                panel_config = toml.load(f)["folders"]
             menu_icon = panel_config.get("top", {}).get("folder_icon", "folder")
         self.menubutton_folders.set_icon_name(menu_icon)
         self.menubutton_folders.add_css_class("top_left_widgets")
@@ -102,16 +94,15 @@ class PopoverFolders(Adw.Application):
         self.popover_folders.set_child(self.main_box)
 
         # Load folders from file
-        folders_path = os.path.join(self.config_path, "folders.toml")
+        folders_path = os.path.join(self.config_path, "waypanel.toml")
         with open(folders_path, "r") as f:
-            all_folders = toml.load(f)
+            all_folders = toml.load(f)["folders"]
         # Populate listbox with folders
         for folder in all_folders.items():
             name = folder[1]["name"]
             folders_path = folder[1]["path"]
             filemanager = folder[1]["filemanager"]
             icon = folder[1]["icon"]
-
             row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
             row_hbox.MYTEXT = folders_path, filemanager
 
