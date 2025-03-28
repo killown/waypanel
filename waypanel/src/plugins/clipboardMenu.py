@@ -1,15 +1,135 @@
+import asyncio
 import os
-import random
-import subprocess
-import threading
-from subprocess import PIPE, Popen, check_output
+from pathlib import Path
+from typing import List, Tuple
 
+import aiosqlite
 import gi
+import pyperclip
 from gi.repository import Adw, Gio, Gtk
 from gi.repository import Gtk4LayerShell as LayerShell
 
 from ..core.utils import Utils
+from .clipboard_server import AsyncClipboardServer
 from .icons import get_nearest_icon_name
+
+
+def run_server_in_background():
+    """Start the clipboard server without blocking main thread"""
+    async def _run_server():
+        server = AsyncClipboardServer()
+        await server.start()
+        print("🖥️ Clipboard server running in background")
+        while True:  # Keep alive
+            await asyncio.sleep(1)
+
+    # Run in dedicated thread
+    def _start_loop():
+        asyncio.run(_run_server())
+
+    import threading
+    thread = threading.Thread(target=_start_loop, daemon=True)
+    thread.start()
+    return thread
+
+
+server_thread = run_server_in_background()
+
+
+async def show_clipboard_popover():
+    server = AsyncClipboardServer()
+    items = await server.get_items()
+    # Display items in Waypanel's popover UI
+    for item_id, content in items:
+        print(f"{item_id}: {content[:50]}...")
+
+# Call this when the popover opens
+asyncio.run(show_clipboard_popover())
+
+
+class ClipboardManager:
+    def __init__(self):
+        self.server = AsyncClipboardServer()
+        self.db_path = self._default_db_path()
+
+    def _default_db_path(self):
+        return str(Path.home() / ".config" / "waypanel" / "clipboard_server.db")
+
+    async def initialize(self):
+        await self.server.start()
+
+    async def get_history(self) -> list[tuple[int, str]]:
+        """Returns all items as (id, content) tuples"""
+        return await self.server.get_items()
+
+    async def get_item_by_id(self, target_id: int) -> tuple[int, str] | None:
+        """Get specific item by its database ID (first tuple element)"""
+        items = await self.get_history()
+        for item_id, content in items:
+            if item_id == target_id:
+                return (item_id, content)
+        return None  # If ID not found
+
+    async def clear_history(self):
+        await self.server.clear_all()
+
+    async def reset_ids(self):
+        """Properly rebuild the table with sequential IDs"""
+        async with aiosqlite.connect(self.db_path) as db:
+            # Create new table with the same structure
+            await db.execute("""
+                CREATE TABLE new_clipboard_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    content TEXT NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # Copy all content in timestamp order (maintaining history order)
+            await db.execute("""
+                INSERT INTO new_clipboard_items (content, timestamp)
+                SELECT content, timestamp FROM clipboard_items 
+                ORDER BY timestamp DESC
+            """)
+
+            # Replace old table
+            await db.execute("DROP TABLE clipboard_items")
+            await db.execute("ALTER TABLE new_clipboard_items RENAME TO clipboard_items")
+            await db.commit()
+
+    async def delete_item(self, item_id: int):
+        await self.server.delete_item(item_id)
+
+    # Synchronous version
+    def get_item_by_id_sync(self, target_id: int) -> tuple[int, str] | None:
+        """Blocking version for non-async contexts"""
+        return asyncio.run(self.get_item_by_id(target_id))
+
+
+async def _fetch_items():
+    """Async helper that properly returns values"""
+    manager = ClipboardManager()
+    await manager.initialize()
+    try:
+        history = await manager.get_history()  # Get items
+        print(f"Debug: Fetched {len(history)} items")  # Optional logging
+        return history  # <- Explicit return
+    finally:
+        await manager.server.stop()
+
+
+def on_paste_clicked(manager: ClipboardManager, item_id: int):
+    """Standalone version requiring manager instance"""
+    if (item := manager.get_item_by_id_sync(item_id)):
+        _, content = item
+        pyperclip.copy(content)
+        return True  # Success
+    return False  # Item not found
+
+
+def get_clipboard_items_sync() -> List[Tuple[int, str]]:
+    """One-line sync access to clipboard history"""
+    return asyncio.run(_fetch_items())
 
 
 class MenuClipboard(Gtk.Application):
@@ -23,8 +143,6 @@ class MenuClipboard(Gtk.Application):
         self.find_text_using_button = {}
         self.row_content = None
         self.listbox = None
-        self.clipboard_cmd = "cliphist"
-        self.clipboard_cmd_exist = self.command_exists("cliphist")
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -44,46 +162,45 @@ class MenuClipboard(Gtk.Application):
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
 
-    def clear_clipboard(self, text_list):
-        # Clear the clipboard
-        echo = Popen(("echo", text_list), stdout=subprocess.PIPE)
-        echo.wait()
-        Popen(("cliphist", "delete"), stdin=echo.stdout)
-
     def update_clipboard_list(self):
         # Clear the existing list
-        self.listbox.remove_all()
+        if self.listbox is not None:
+            self.listbox.remove_all()
 
-        # Repopulate the list with updated clipboard history
-        clipboard_history = "\n"
-        if self.clipboard_cmd_exist:
-            clipboard_history = ''
-            try:
-                clipboard_history = (
-                    check_output("cliphist list".split())
-                    .decode("latin-1")
-                    .encode("utf-8")
-                    .decode()
-                )
-            except Exception as e:
-                print(e)
+        # Get items from manager
+        manager = ClipboardManager()
+        asyncio.run(manager.initialize())
+        items = asyncio.run(manager.get_history())
+        asyncio.run(manager.server.stop())
 
-        clipboard_history = clipboard_history.split("\n")
+        # Calculate needed height
+        line_height = 40  # Approx. height per row in pixels
+        padding = 20       # Additional padding
+        item_count = len(items)
+
+        # Calculate dynamic height (capped at 600px)
+        dynamic_height = min(item_count * line_height + padding, 600)
+        self.scrolled_window.set_min_content_height(dynamic_height)
+
+        clipboard_history = get_clipboard_items_sync()
         for i in clipboard_history:
             if not i:
                 continue
             row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
             image_button = Gtk.Button()
-            image_button.set_icon_name(get_nearest_icon_name("paste"))
-            image_button.connect("clicked", self.cliphist_delete_selected)
+            image_button.set_icon_name(get_nearest_icon_name("delete"))
+            image_button.connect("clicked", self.on_delete_selected)
             spacer = Gtk.Label(label="    ")
             row_hbox.append(image_button)
             row_hbox.append(spacer)
-            row_hbox.MYTEXT = i
+            item_id = i[0]
+            item = i[1]
+            if len(item) > 50:
+                item = item[:50]
+            row_hbox.MYTEXT = f"{item_id} {item}"
             self.listbox.append(row_hbox)
             line = Gtk.Label.new()
-            line.set_markup('<span font="DejaVu Sans Mono">{}</span>'.format(i))
-            # line.set_label(i)
+            line.set_markup(f'<span font="DejaVu Sans Mono">{item_id} {item}</span>')
             line.props.margin_end = 5
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)
@@ -109,7 +226,7 @@ class MenuClipboard(Gtk.Application):
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
         self.app.add_action(show_searchbar_action)
         self.scrolled_window = Gtk.ScrolledWindow()
-        self.scrolled_window.set_min_content_width(600)
+        self.scrolled_window.set_min_content_width(500)
         self.scrolled_window.set_min_content_height(600)
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.searchbar = Gtk.SearchEntry.new()
@@ -122,20 +239,13 @@ class MenuClipboard(Gtk.Application):
         self.main_box.append(self.searchbar)
         self.button_clear = Gtk.Button()
         self.button_clear.add_css_class("clipboard_clear_button")
-        if self.clipboard_cmd_exist:
-            self.button_clear.set_label("Clear")
-        else:
-            self.button_clear.set_label(
-                "Enable clipboard by installing {0} and autostart wl-paste --watch cliphist store".format(
-                    self.clipboard_cmd.capitalize()
-                )
-            )
-        self.button_clear.connect("clicked", self.clear_cliphist)
+        self.button_clear.set_label("Clear")
+        self.button_clear.connect("clicked", self.clear_clipboard)
         self.button_clear.add_css_class("button_clear_from_clipboard")
         self.main_box.append(self.button_clear)
         self.listbox = Gtk.ListBox.new()
         self.listbox.connect(
-            "row-selected", lambda widget, row: self.wl_copy_clipboard(row)
+            "row-selected", lambda widget, row: self.on_copy_clipboard(row)
         )
         self.searchbar.set_key_capture_widget(self.top_panel)
         self.listbox.props.hexpand = True
@@ -145,80 +255,27 @@ class MenuClipboard(Gtk.Application):
         self.main_box.append(self.scrolled_window)
         self.scrolled_window.set_child(self.listbox)
         self.popover_clipboard.set_child(self.main_box)
-        clipboard_history = "\n"
-        if self.clipboard_cmd_exist:
-            clipboard_history = (
-                check_output("cliphist list".split())
-                .decode("latin-1")
-                .encode("utf-8")
-                .decode()
-            )
-        clipboard_history = clipboard_history.split("\n")
-        for i in clipboard_history:
-            if not self.clipboard_cmd_exist:
-                continue
-            row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-            image_button = Gtk.Button()
-            image_button.set_icon_name("edit-delete-remove")
-            image_button.connect("clicked", lambda i: self.cliphist_delete_selected(i))
-            spacer = Gtk.Label(label="    ")
-            row_hbox.append(image_button)
-            row_hbox.append(spacer)
-            row_hbox.MYTEXT = i
-            self.listbox.append(row_hbox)
-            line = Gtk.Label.new()
-            line.set_markup('<span font="DejaVu Sans Mono">{}</span>'.format(i))
-            # line.set_label(i)
-            line.props.margin_end = 5
-            line.props.hexpand = True
-            line.set_halign(Gtk.Align.START)
-            row_hbox.append(line)
-            self.find_text_using_button[image_button] = line
-
+        self.update_clipboard_list()
         self.listbox.set_filter_func(self.on_filter_invalidate)
-        # Create a menu button
         self.popover_clipboard.set_parent(self.menubutton_clipboard)
         self.popover_clipboard.popup()
         return self.popover_clipboard
 
-    def wl_copy_clipboard(self, x, *_):
+    def on_copy_clipboard(self, x, *_):
         selected_text = x.get_child().MYTEXT
-        echo = Popen(("echo", selected_text), stdout=subprocess.PIPE)
-        echo.wait()
-        selected_text = check_output(("cliphist", "decode"), stdin=echo.stdout).decode()
-        # not gonna use buggy pyperclip
-        Popen(["wl-copy", selected_text])
+        manager = ClipboardManager()
+        asyncio.run(manager.initialize())
+        item_id = int(selected_text.split()[0])
+        on_paste_clicked(manager,  item_id)
         self.popover_clipboard.popdown()
 
-    def clear_cliphist(self, *_):
-        box = self.listbox
-        counter = 0
-        while True:
-            b = box.get_row_at_index(counter)
-            if not b:
-                break
-            text = b.get_child().MYTEXT
-            counter += 1
-            search = self.searchbar.get_text().strip()
-            if search.lower() in text.lower() and isinstance(text, str):
-                # huge lists will break the output
-                try:
-                    command_thread = threading.Thread(
-                        target=self.clear_clipboard, args=(text,)
-                    )
-                    command_thread.start()
-                except Exception as e:
-                    print(e)
+    def clear_clipboard(self, *_):
+        asyncio.run(ClipboardManager().clear_history())
+        asyncio.run(ClipboardManager().reset_ids())
+        self.update_clipboard_list()
+        self.scrolled_window.set_min_content_height(50)
 
-    def command_exists(self, command):
-        try:
-            subprocess.call([command])
-            return True
-        except Exception as e:
-            print(e)
-            return False
-
-    def cliphist_delete_selected(self, button):
+    def on_delete_selected(self, button):
         button = [i for i in self.find_text_using_button if button == i]
         print(button)
         if button:
@@ -227,11 +284,10 @@ class MenuClipboard(Gtk.Application):
             print("clipboard del button not found")
             return
         label = self.find_text_using_button[button]
-        text = label.get_text()
+        item_id = label.get_text().split()[0]
         label.set_label("")
-        echo = Popen(("echo", text), stdout=subprocess.PIPE)
-        echo.wait()
-        Popen(("cliphist", "delete"), stdin=echo.stdout)
+        manager = ClipboardManager()
+        asyncio.run(manager.delete_item(item_id))
         self.update_clipboard_list()
 
     def run_app_from_launcher(self, x):
@@ -244,7 +300,6 @@ class MenuClipboard(Gtk.Application):
         if self.popover_clipboard and self.popover_clipboard.is_visible():
             self.popover_clipboard.popdown()
         if self.popover_clipboard and not self.popover_clipboard.is_visible():
-            print(self.clipboard_cmd_exist)
             self.update_clipboard_list()
             self.popover_clipboard.popup()
         if not self.popover_clipboard:
@@ -279,7 +334,7 @@ class MenuClipboard(Gtk.Application):
         )  # get text from searchentry and remove space from start and end
         if not isinstance(row, str):
             row = row.get_child().MYTEXT
-        row = row.lower().strip()
+        # row = row.lower().strip()
         if (
             text_to_search.lower() in row
         ):  # == row_hbox.MYTEXT (Gtk.ListBoxRow===>get_child()===>row_hbox.MYTEXT)
