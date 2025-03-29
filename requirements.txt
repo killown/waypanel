@@ -16,3 +16,4 @@ PyGObject
 watchdog
 pyperclip 
 aiosqlite 
+pillow
