@@ -106,7 +106,7 @@ class Dockbar(Adw.Application):
         # self.add_launcher.connect("clicked", self.dockbar_append)
         # self.dockbar.append(self.add_launcher)
         self.left_panel.set_content(self.dockbar)
-        if enabled == True:
+        if enabled:
             self.left_panel.present()
 
     def _setup_bottom_panel(self, config):
@@ -120,7 +120,8 @@ class Dockbar(Adw.Application):
         )
         self.add_launcher = Gtk.Button()
         self.add_launcher.set_icon_name(get_nearest_icon_name("tab-new"))
-        self.add_launcher.connect("clicked", self.dockbar_append)
+        # here will make the button to append app to dockbar work
+        # self.add_launcher.connect("clicked", self.dockbar_append)
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.add_css_class("scrolled_window_bottom_bar")
         output = os.getenv("waypanel")
@@ -145,9 +146,10 @@ class Dockbar(Adw.Application):
         self.taskbar.set_halign(Gtk.Align.CENTER)  # Center horizontally
         self.taskbar.set_valign(Gtk.Align.CENTER)  # Center vertically
         self.scrolled_window.set_child(self.taskbar)
-        self.taskbar.append(self.add_launcher)
+        # apps append button
+        # self.taskbar.append(self.add_launcher)
         self.taskbar.add_css_class("taskbar")
-        if enabled == True:
+        if enabled:
             self.bottom_panel.present()
 
         # Start the taskbar list for the bottom panel
@@ -324,8 +326,8 @@ class Dockbar(Adw.Application):
 
     def get_default_monitor_name(self):
         try:
-            with open(self.topbar_config, "r") as file:
-                config = toml.load(file)
+            with open(self.waypanel_cfg, "r") as file:
+                config = toml.load(file)["panel"]
                 if "monitor" in config:
                     return config["monitor"].get("name")
                 else:
