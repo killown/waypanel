@@ -270,7 +270,7 @@ class MenuClipboard(Gtk.Application):
             item = i[1]
             if len(item) > 50:
                 item = item[:50]
-            row_hbox.MYTEXT = f"{item_id} {item}"
+            row_hbox.MYTEXT = f"{item_id} {item.strip()}"
             self.listbox.append(row_hbox)
             if self.is_image_content(item):
                 # Create larger thumbnail (128px) with padding
