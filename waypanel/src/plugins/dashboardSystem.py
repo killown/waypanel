@@ -1,4 +1,8 @@
 import os
+import subprocess
+import sys
+from importlib.util import find_spec
+from pathlib import Path
 from subprocess import Popen, check_output
 
 import psutil
@@ -34,6 +38,54 @@ class SystemDashboard(Adw.Application):
         )
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
+
+    def message(self, msg):
+        # Create a message dialog
+        dialog = Gtk.MessageDialog(
+            transient_for=None,
+            message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.NONE,  # We'll add our own button
+            text=msg
+        )
+
+        # Add a custom close button
+        close_btn = Gtk.Button(label="_Close", use_underline=True)
+        close_btn.connect("clicked", lambda *_: dialog.close())
+        dialog.get_message_area().append(close_btn)
+        dialog.show()
+
+    def is_settings_installed(self):
+        """Check if waypanel-settings is installed"""
+        if find_spec("waypanel_settings") is not None:
+            return True
+        try:
+            subprocess.run(["waypanel-settings", "--version"],
+                           check=True,
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            msg = """Error: waypanel-settings is not installed"
+                    Install it with:
+                          git clone https://github.com/killown/waypanel-settings
+                          cd waypanel-settings && pip install -e ."""
+            self.message(msg)
+            return False
+
+    def launch_settings(self):
+        try:
+            # Try direct execution first
+            subprocess.Popen(['waypanel-settings'], start_new_session=True)
+        except FileNotFoundError:
+            # Fallback to absolute path lookup
+            for path in ['/usr/local/bin/waypanel-settings',
+                         '/usr/bin/waypanel-settings',
+                         f'{os.path.expanduser("~")}/.local/bin/waypanel-settings']:
+                if os.path.exists(path):
+                    subprocess.Popen([path], start_new_session=True)
+                    break
+            else:
+                print("Error: waypanel-settings not found in PATH", file=sys.stderr)
 
     def get_system_list(self):
         devices = check_output("systemctl devices".split()).decode().strip().split("\n")
@@ -72,6 +124,8 @@ class SystemDashboard(Adw.Application):
             ("Turn Off Monitors", "", "display-symbolic"): "",
             ("Exit Waypanel", "", "display-symbolic"): "",
             ("Restart Waypanel", "", "display-symbolic"): "",
+            ("Settings", "", "gnome-settings-theme"): "",
+
         }
         done = []
         for data, category in data_and_categories.items():
@@ -206,6 +260,10 @@ class SystemDashboard(Adw.Application):
                     --inside-color 00000088 --separator-color 00000000
                     --grace 2 --fade-in 4""".split()
             )
+        if action == "Settings":
+            if self.is_settings_installed():
+                self.launch_settings()
+                self.popover_dashboard.popdown()
 
     def popover_is_open(self, *_):
         return
