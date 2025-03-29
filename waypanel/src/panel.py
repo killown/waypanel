@@ -610,7 +610,7 @@ class Panel(Adw.Application):
         """
         Manages DPMS (Display Power Management Signaling) for monitors.
         Args:
-            timeout (int): Time in seconds before monitors are turned off. 
+            timeout (int): Time in seconds before monitors are turned off.
             If 0, monitors are turned off immediately.
         """
         # If timeout is zero, turn off all monitors and return False for GLib.timeout
@@ -650,7 +650,7 @@ class Panel(Adw.Application):
             mon (str): The name of the monitor to check.
 
         Returns:
-            bool: True if the monitor should not be turned off 
+            bool: True if the monitor should not be turned off
             (e.g., it has focus or a fullscreen view),
                   False if DPMS off was successfully triggered.
         """
@@ -1433,7 +1433,6 @@ class Panel(Adw.Application):
         # Read the menu configuration from the specified file
         with open(self.waypanel_cfg, "r") as f:
             menu_toml = toml.load(f)["menu"]
-            print(menu_toml)
 
         # Initialize a dictionary to store the menu buttons
         menu_buttons = {}
@@ -1459,6 +1458,8 @@ class Panel(Adw.Application):
             menu_buttons[m] = btn
             self.create_simple_action()
             for item in menu_toml[m].values():
+                if isinstance(item, dict):
+                    item = [item]
                 name = item[0]["name"]
                 cmd = item[0]["cmd"]
                 if "submenu" in item[0]:
@@ -1798,6 +1799,7 @@ class Panel(Adw.Application):
                     self.tbcard.set_label("{0}".format(sink.description))
 
     def update_title_top_panel(self):
+
         try:
             title = self.focused_view_title()
             if not title:
@@ -1809,13 +1811,15 @@ class Panel(Adw.Application):
             title = self.filter_title(title)
 
             # Limit the title length
-            title = title[:self.window_title_topbar_length]
+            print(title)
+            # title = title[:self.window_title_topbar_length]
 
             # Apply custom icon if available
             custom_icon = self.apply_custom_icon(wclass)
             if custom_icon:
                 wclass = custom_icon
             # Update title and icon
+
             self.update_title_icon_top_panel(title, wclass, initial_title)
         except Exception as e:
             print(e)
@@ -1962,9 +1966,9 @@ class Panel(Adw.Application):
                 if wm_class in browsers:
                     self.window_title.set_label(wm_class)
 
-            # self.utils.append_widget_if_ready(self.top_panel_box_window_title,
-            #                                  self.window_title,
-            #                                 )
+                    # self.utils.append_widget_if_ready(self.top_panel_box_window_title,
+                    #                         self.window_title,
+                    #                         )
 
     def update_widgets_background_panel(self, workspace_id, pid, wclass, mem_usage):
         """Update widget labels."""
