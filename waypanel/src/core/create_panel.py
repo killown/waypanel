@@ -181,7 +181,7 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     # LayerShell.set_margin(window, LayerShell.Edge.BOTTOM, 0)
     # LayerShell.set_margin(window, LayerShell.Edge.TOP, 0)
     if class_style == "TopBarBackground":
-        window.set_default_size(monitor["width"], height)
+        window.set_default_size(get_monitor_width(monitor), height)
         LayerShell.set_margin(window, LayerShell.Edge.BOTTOM, 11)
         # LayerShell.set_margin(window, LayerShell.Edge.TOP, 11)
 
