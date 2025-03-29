@@ -65,8 +65,8 @@ def get_monitor_info():
     monitors = screen.get_monitors()
     monitor_info = {}
     for monitor in monitors:
-        monitor_width = monitor.get_geometry().width
-        monitor_height = monitor.get_geometry().height
+        monitor_width = int(monitor.get_geometry().width)
+        monitor_height = int(monitor.get_geometry().height)
         name = monitor.props.connector
         monitor_info[name] = {
             "monitor": monitor,
@@ -104,6 +104,8 @@ def get_monitor_width(monitor):
 
 
 def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
+    width = int(width)
+    height = int(height)
     window = Adw.Window(application=app)
     window.add_css_class(class_style)
     # lets try to set monitor info from Gdk, if not, get the panel default info instead
@@ -138,7 +140,7 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
         monitor = monitor[monitor_name]
         gdk_monitor = monitor["monitor"]
 
-    window.set_default_size(width, height)
+    window.set_default_size(int(width), int(height))
     window.set_focus_on_click(False)
     LayerShell.init_for_window(window)
     LayerShell.set_namespace(window, "waypanel")
