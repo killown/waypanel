@@ -76,6 +76,33 @@ def get_monitor_info():
     return monitor_info
 
 
+def get_monitor_width(monitor):
+    """Handles both dictionary and Gdk.Monitor cases, returning width"""
+    # Case 1: Already a Gdk.Monitor object
+    if hasattr(monitor, 'get_geometry'):
+        try:
+            # For newer GTK versions (get_geometry() returns a Gdk.Rectangle)
+            geom = monitor.get_geometry()
+            return geom.width
+        except TypeError:
+            # For older GTK versions (get_geometry() modifies a passed rectangle)
+            geom = Gdk.Rectangle()
+            monitor.get_geometry(geom)
+            return geom.width
+
+    # Case 2: Dictionary with direct width
+    if isinstance(monitor, dict) and 'width' in monitor:
+        return monitor['width']
+
+    # Case 3: Nested dictionary structure
+    if isinstance(monitor, dict):
+        for value in monitor.values():
+            if isinstance(value, (dict, Gdk.Monitor)):
+                return get_monitor_width(value)  # Recursively process
+
+    return
+
+
 def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     window = Adw.Window(application=app)
     window.add_css_class(class_style)
@@ -97,8 +124,10 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
         config = toml.load(panel_config)["panel"]
 
     # Monitor dimensions to set the panel size
+    monitor_width = None
     if "monitor" in config:
         monitor_name = config["monitor"]["name"]
+        monitor_width = config["monitor"]["width"]
 
     argv = sys.argv
     if len(argv) > 1:
@@ -119,7 +148,10 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
         LayerShell.set_monitor(window, gdk_monitor)
 
     if layer == "TOP":
-        window.set_default_size(monitor["width"], height)
+        if monitor_width:
+            window.set_default_size(monitor_width, height)
+        else:
+            window.set_default_size(get_monitor_width(monitor), height)
         LayerShell.set_layer(window, LayerShell.Layer.TOP)
         window.set_size_request(10, 10)
 
