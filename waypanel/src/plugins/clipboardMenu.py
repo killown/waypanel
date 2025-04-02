@@ -9,10 +9,10 @@ import toml
 import aiosqlite
 import gi
 import pyperclip
-from gi.repository import Adw, GdkPixbuf, Gio, Gtk, GLib
+from gi.repository import GdkPixbuf, Gio, Gtk, GLib
 from gi.repository import Gtk4LayerShell as LayerShell
-from gi.repository import Pango
 from PIL import Image
+import re
 
 from ..core.utils import Utils
 from .clipboard_server import AsyncClipboardServer
@@ -165,8 +165,8 @@ class MenuClipboard(Gtk.Application):
 
     def is_image_content(self, content):
         """Detect both image files AND raw image data"""
-        # Case 1: It's a file path that exists
-        if isinstance(content, str) and Path(content).exists():
+        # Case 1: It's a file path that exists (and is reasonably short)
+        if isinstance(content, str) and len(content) < 256 and Path(content).exists():
             mime = mimetypes.guess_type(content)[0]
             return mime and mime.startswith("image/")
 
@@ -189,6 +189,7 @@ class MenuClipboard(Gtk.Application):
         ):
             return True
 
+        return False
         return False
 
     def on_paste_clicked(self, manager: ClipboardManager, item_id: int):
@@ -226,7 +227,6 @@ class MenuClipboard(Gtk.Application):
             if Path(content).exists():  # It's a file path
                 try:
                     # Use wl-copy for Wayland (most reliable)
-                    subprocess.run(["wl-copy"], input=content.encode(), check=True)
                     subprocess.run(
                         ["wl-copy", "-t", "image/png"],
                         stdin=open(content, "rb"),
@@ -234,9 +234,22 @@ class MenuClipboard(Gtk.Application):
                     )
                 except subprocess.CalledProcessError:
                     print(f"Failed to copy image: {content}")
+            elif isinstance(content, bytes):
+                # Handle raw image data
+                try:
+                    subprocess.run(
+                        ["wl-copy", "-t", "image/png"],
+                        input=content,
+                        check=True,
+                    )
+                except subprocess.CalledProcessError:
+                    print(f"Failed to copy raw image data")
         else:
             # Handle text copy
-            pyperclip.copy(content)
+            try:
+                pyperclip.copy(content)
+            except Exception as e:
+                print(f"Failed to copy text: {e}")
 
     def update_clipboard_list(self):
         # Clear the existing list
@@ -248,15 +261,29 @@ class MenuClipboard(Gtk.Application):
         asyncio.run(manager.initialize())
         items = asyncio.run(manager.get_history())
         asyncio.run(manager.server.stop())
+        # Calculate needed height
+
+        # Image extensions to check for
+        IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".svg")
 
         # Calculate needed height
-        line_height = 40  # Approx. height per row in pixels
         padding = 20  # Additional padding
-        item_count = len(items)
+        total_height = padding
+
+        for item in items:
+            if isinstance(item, str) and any(
+                item.lower().endswith(ext) for ext in IMAGE_EXTENSIONS
+            ):
+                total_height += 128  # Image height
+            else:
+                total_height += 35  # Text height
+
+            # Add spacing between items (optional)
+            total_height += 5
 
         # Calculate dynamic height (capped at 600px)
-        dynamic_height = min(item_count * line_height + padding, 600)
-        self.scrolled_window.set_min_content_height(dynamic_height)
+        self.scrolled_window.set_min_content_height(total_height)
+        self.scrolled_window.set_max_content_height(800)
 
         clipboard_history = get_clipboard_items_sync()
         for i in clipboard_history:
@@ -301,10 +328,13 @@ class MenuClipboard(Gtk.Application):
                     image_widget.set_size_request(128, 128)
                     image_box.append(image_widget)
                     row_hbox.append(image_box)
+                    if not item:
+                        item = "/image"
                     item = item.split("/")[-1]
                     row_hbox.set_size_request(-1, 150)
             line = Gtk.Label.new()
             escaped_text = GLib.markup_escape_text(item)
+            escaped_text = self.format_color_text(escaped_text)
             line.set_markup(
                 f'<span font="DejaVu Sans Mono">{item_id} {escaped_text}</span>'
             )
@@ -347,8 +377,12 @@ class MenuClipboard(Gtk.Application):
         self.app.add_action(show_searchbar_action)
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_min_content_width(500)
-        self.scrolled_window.set_min_content_height(600)
-        self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.scrolled_window.set_min_content_height(900)
+        self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 10)
+        self.main_box.set_margin_top(10)
+        self.main_box.set_margin_bottom(10)
+        self.main_box.set_margin_start(10)
+        self.main_box.set_margin_end(10)
         self.searchbar = Gtk.SearchEntry.new()
         self.searchbar.grab_focus()
         self.searchbar.connect("search_changed", self.on_search_entry_changed)
@@ -362,7 +396,6 @@ class MenuClipboard(Gtk.Application):
         self.button_clear.set_label("Clear")
         self.button_clear.connect("clicked", self.clear_clipboard)
         self.button_clear.add_css_class("button_clear_from_clipboard")
-        self.main_box.append(self.button_clear)
         self.listbox = Gtk.ListBox.new()
         self.listbox.connect(
             "row-selected", lambda widget, row: self.on_copy_clipboard(row)
@@ -373,6 +406,7 @@ class MenuClipboard(Gtk.Application):
         self.listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.listbox.set_show_separators(True)
         self.main_box.append(self.scrolled_window)
+        self.main_box.append(self.button_clear)
         self.scrolled_window.set_child(self.listbox)
         self.popover_clipboard.set_child(self.main_box)
         self.update_clipboard_list()
@@ -388,6 +422,92 @@ class MenuClipboard(Gtk.Application):
         item_id = int(selected_text.split()[0])
         self.on_paste_clicked(manager, item_id)
         self.popover_clipboard.popdown()
+
+    def is_color_code(self, text):
+        """
+        Returns True ONLY if the input is EXACTLY:
+        - A 3/6-digit hex color (with or without #), e.g., "FF0000", "#F00"
+        - An RGB color, e.g., "rgb(255,0,0)"
+        - An RGBA color, e.g., "rgba(255,0,0,0.5)"
+        Returns False for partial matches (e.g., "x#FF0000", "123abc").
+        """
+
+        # Check for HEX color (3 or 6 digits, optional #)
+        if isinstance(text, str) and re.fullmatch(
+            r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", text
+        ):
+            return True
+
+        # Check for RGB/RGBA color (strict format)
+        if isinstance(text, str):
+            # RGB: "rgb(255, 0, 0)"
+            if re.fullmatch(
+                r"^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$", text
+            ):
+                r, g, b = map(int, re.findall(r"\d+", text))
+                return all(0 <= c <= 255 for c in (r, g, b))
+
+            # RGBA: "rgba(255, 0, 0, 0.5)"
+            if re.fullmatch(
+                r"^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*([01]?\.\d+)\s*\)$",
+                text,
+            ):
+                r, g, b, a = map(float, re.findall(r"[\d.]+", text))
+                return all(0 <= c <= 255 for c in (r, g, b)) and (0 <= a <= 1)
+
+        return False
+
+    def get_contrast_color(self, color):
+        """
+        Calculate contrasting color (black or white) for:
+        - Hex strings (e.g., "#FF0000", "F00", "FF0000")
+        - RGB tuples (e.g., (255, 0, 0))
+        """
+        # If input is a hex string
+        if isinstance(color, str):
+            # Remove '#' if present and normalize to 6-digit hex
+            hex_color = color.lstrip("#")
+
+            # Expand 3-digit hex to 6-digit if needed
+            if len(hex_color) == 3:
+                hex_color = "".join([c * 2 for c in hex_color])
+
+            # Convert hex to RGB
+            rgb = tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
+
+        # If input is an RGB tuple
+        elif isinstance(color, (tuple, list)) and len(color) == 3:
+            rgb = tuple(color)  # Ensure it's a tuple
+
+        else:
+            raise ValueError(
+                "Input must be a hex string (e.g., '#FF0000') or RGB tuple (e.g., (255, 0, 0))"
+            )
+
+        # Calculate luminance (same for both hex and RGB)
+        luminance = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255
+        return "#000000" if luminance > 0.5 else "#ffffff"
+
+    def format_color_text(self, text):
+        """Wrap color codes in markup with proper # prefix."""
+        import re
+
+        # Find all hex color patterns (with or without #)
+        hex_colors = re.findall(
+            r"(?:^|\s)([0-9a-fA-F]{3}|[0-9a-fA-F]{6})(?:\s|$)", text
+        )
+
+        for color in hex_colors:
+            # Ensure color has a # prefix
+            proper_color = f"#{color}" if not color.startswith("#") else color
+
+            # Replace in text with proper markup
+            text = text.replace(
+                color,
+                f'<span background="{proper_color}" foreground="{self.get_contrast_color(proper_color)}">{color}</span>',
+            )
+
+        return text
 
     def clear_clipboard(self, *_):
         asyncio.run(ClipboardManager().clear_history())
