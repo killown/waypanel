@@ -48,7 +48,9 @@ def verify_db():
         # Verify table structure
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='clipboard_items'")
+        cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='clipboard_items'"
+        )
         if not cursor.fetchone():
             print("Table missing. Recreating...")
             initialize_db(db_path)
@@ -99,7 +101,9 @@ class AsyncClipboardServer:
 
         async with aiosqlite.connect(self.db_path) as db:
             # First insert the new item
-            await db.execute("INSERT INTO clipboard_items (content) VALUES (?)", (content,))
+            await db.execute(
+                "INSERT INTO clipboard_items (content) VALUES (?)", (content,)
+            )
 
             # Then enforce the row limit using the instance variable
             await db.execute(f"""
@@ -120,7 +124,7 @@ class AsyncClipboardServer:
         async with aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute(
                 "SELECT id, content FROM clipboard_items ORDER BY timestamp DESC LIMIT ?",
-                (limit,)
+                (limit,),
             )
             return await cursor.fetchall()
 
