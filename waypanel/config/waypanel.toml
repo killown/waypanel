@@ -33,6 +33,7 @@ bluetooth_icon = "bluetooth"
 position = "TOP"
 Exclusive = "True"
 size = "12"
+max_note_lenght = 100
 
 [panel.top_background]
 position = "BOTTOM"
