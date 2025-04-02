@@ -3,10 +3,7 @@ from subprocess import Popen, check_output
 
 import gi
 from gi.repository import Adw, Gtk
-from gi.repository import Gtk4LayerShell as LayerShell
-
 from ..core.utils import Utils
-from .icons import get_nearest_icon_name
 
 gi.require_version("Gtk", "4.0")
 
@@ -40,9 +37,7 @@ class BluetoothDashboard(Adw.Application):
         self.bluetooth_buttons = {}
 
     def get_bluetooth_list(self):
-        devices = (
-            check_output("bluetoothctl devices".split()).decode().strip()
-        )
+        devices = check_output("bluetoothctl devices".split()).decode().strip()
         if not devices:
             return
         devices = [" ".join(i.split(" ")[1:]) for i in devices.split("\n")]
@@ -54,7 +49,6 @@ class BluetoothDashboard(Adw.Application):
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        self.menubutton_dashboard.set_icon_name(get_nearest_icon_name("bluetooth"))
         return self.menubutton_dashboard
 
     def CreateGesture(self, widget, mouse_button, arg):

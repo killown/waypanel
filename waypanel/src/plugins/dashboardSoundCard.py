@@ -2,11 +2,11 @@ import os
 from subprocess import Popen, check_output
 
 import pulsectl
+from requests import get
 import soundcard as sc
-from gi.repository import Adw, Gio, Gtk
-from gi.repository import Gtk4LayerShell as LayerShell
+from gi.repository import Adw, Gtk
 from wayfire.ipc import WayfireSocket
-
+import toml
 from ..core.utils import Utils
 from .icons import get_nearest_icon_name
 
@@ -39,7 +39,9 @@ class SoundCardDashboard(Adw.Application):
         self.menu_config = os.path.join(self.config_path, "menu.toml")
         self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
         self.cmd_config = os.path.join(self.config_path, "cmd.toml")
-        self.topbar_dashboard_config = os.path.join(self.config_path, "topbar-launcher.toml")
+        self.topbar_dashboard_config = os.path.join(
+            self.config_path, "topbar-launcher.toml"
+        )
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
 
@@ -133,7 +135,6 @@ class SoundCardDashboard(Adw.Application):
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        self.menubutton_dashboard.set_icon_name(get_nearest_icon_name("audio-volume"))
         return self.menubutton_dashboard
 
     def create_popover_soundcard(self, *_):

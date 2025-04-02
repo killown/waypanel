@@ -19,9 +19,11 @@ from wayfire.core.template import get_msg_template
 from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.extra.stipc import Stipc
 
-from waypanel.src.core.create_panel import (CreatePanel,
-                                            set_layer_position_exclusive,
-                                            unset_layer_position_exclusive)
+from waypanel.src.core.create_panel import (
+    CreatePanel,
+    set_layer_position_exclusive,
+    unset_layer_position_exclusive,
+)
 from waypanel.src.core.utils import Utils
 from waypanel.src.core.utils import Utils as utils
 from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
@@ -42,7 +44,6 @@ app = None
 
 
 class WayfireSocket(OriginalWayfireSocket):
-
     def hide_view(self, view_id):
         message = get_msg_template("hide-view/hide")
         message["data"]["view-id"] = view_id
@@ -131,7 +132,9 @@ class Panel(Adw.Application):
             config = toml.load(topbar_config)
 
         self.simple_title_enabled = config["panel"]["views"]["tilling"]
-        self.maximize_views_on_expo_enabled = config["panel"]["views"]["maximize_views_on_expo"]
+        self.maximize_views_on_expo_enabled = config["panel"]["views"][
+            "maximize_views_on_expo"
+        ]
         self.window_title_topbar_length = config["panel"]["window_title_lenght"]["size"]
 
         # Set monitor dimensions
@@ -248,14 +251,29 @@ class Panel(Adw.Application):
 
         # Verify required plugins are enabled
         required_plugins = {
-            "stipc", "ipc", "ipc-rules", "resize", "window-rules", "wsets",
-            "session-lock", "wm-actions", "move", "vswitch", "grid", "place", "scale"
+            "stipc",
+            "ipc",
+            "ipc-rules",
+            "resize",
+            "window-rules",
+            "wsets",
+            "session-lock",
+            "wm-actions",
+            "move",
+            "vswitch",
+            "grid",
+            "place",
+            "scale",
         }
-        enabled_plugins = set(self.sock.get_option_value("core/plugins")["value"].split())
+        enabled_plugins = set(
+            self.sock.get_option_value("core/plugins")["value"].split()
+        )
 
         missing_plugins = required_plugins - enabled_plugins
         if missing_plugins:
-            print(f"\n\033[91mERROR:\033[0m The following plugins are required to start the shell: {missing_plugins}")
+            print(
+                f"\n\033[91mERROR:\033[0m The following plugins are required to start the shell: {missing_plugins}"
+            )
             print(f"Required Plugin List: {required_plugins}")
             sys.exit()
 
@@ -307,14 +325,15 @@ class Panel(Adw.Application):
         # self.turn_off_monitor_timeout = timeout_single
 
     def check_widgets_ready(self):
-        if (self.utils.is_widget_ready(self.top_panel_box_left) and
-            self.utils.is_widget_ready(self.top_panel_box_window_title) and
-            self.utils.is_widget_ready(self.top_panel_box_widgets_left) and
-            self.utils.is_widget_ready(self.top_panel_box_right) and
-            self.utils.is_widget_ready(self.top_panel_box_systray) and
-            self.utils.is_widget_ready(self.top_panel_box_center) and
-                self.utils.is_widget_ready(self.top_panel_box_full)):
-
+        if (
+            self.utils.is_widget_ready(self.top_panel_box_left)
+            and self.utils.is_widget_ready(self.top_panel_box_window_title)
+            and self.utils.is_widget_ready(self.top_panel_box_widgets_left)
+            and self.utils.is_widget_ready(self.top_panel_box_right)
+            and self.utils.is_widget_ready(self.top_panel_box_systray)
+            and self.utils.is_widget_ready(self.top_panel_box_center)
+            and self.utils.is_widget_ready(self.top_panel_box_full)
+        ):
             # Apply CSS classes
             self.top_panel_box_left.add_css_class("top_panel_box_left")
             self.top_panel_box_window_title.add_css_class("top_panel_box_window_title")
@@ -351,7 +370,11 @@ class Panel(Adw.Application):
             counter = 0
             while counter <= 10:  # 10 seconds limit
                 print("asdf")
-                view = [i for i in self.sock.list_views() if autostart[app].lower() in i["app-id"].lower()]
+                view = [
+                    i
+                    for i in self.sock.list_views()
+                    if autostart[app].lower() in i["app-id"].lower()
+                ]
                 if view:
                     self.hide_view_instead_closing(view[-1])
                     break
@@ -393,6 +416,7 @@ class Panel(Adw.Application):
             except Exception as e:
                 print(f"An error occurred in {func.__name__}: {e}")
                 return None
+
         return wrapper
 
     def update_background_panel(self):
@@ -615,7 +639,9 @@ class Panel(Adw.Application):
         """
         # If timeout is zero, turn off all monitors and return False for GLib.timeout
         if timeout == 0:
-            print(f"{self.dpms_monitors_timeout} hour of inactivity. Turning off monitor(s)...")
+            print(
+                f"{self.dpms_monitors_timeout} hour of inactivity. Turning off monitor(s)..."
+            )
             self.utils.dpms("off")
             return False
 
@@ -636,7 +662,9 @@ class Panel(Adw.Application):
             if monitor_name != focused_monitor:
                 monitor_id = self.wf_utils.get_output_id_by_name(monitor_name)
                 if not self.wf_utils.has_ouput_fullscreen_view(monitor_id):
-                    if monitor_name not in self.timeout_ids:  # Check if timeout is not already set
+                    if (
+                        monitor_name not in self.timeout_ids
+                    ):  # Check if timeout is not already set
                         # Set up a GLib timeout and store its ID
                         self.timeout_ids[monitor_name] = GLib.timeout_add_seconds(
                             timeout, self.set_output_ready_for_dpms_off, monitor_name
@@ -655,7 +683,9 @@ class Panel(Adw.Application):
                   False if DPMS off was successfully triggered.
         """
         # Check if the monitor has focus or a fullscreen view
-        if self.monitor_has_focus(mon) or self.wf_utils.has_ouput_fullscreen_view(self.wf_utils.get_output_id_by_name(mon)):
+        if self.monitor_has_focus(mon) or self.wf_utils.has_ouput_fullscreen_view(
+            self.wf_utils.get_output_id_by_name(mon)
+        ):
             return True
 
         # Turn off DPMS for the monitor
@@ -907,7 +937,11 @@ class Panel(Adw.Application):
 
     def next_visibe_view_active_workspace(self):
         view_ids = self.wf_utils.get_views_from_active_workspace()
-        views = [i["id"] for i in self.sock.list_views() if i["id"] in view_ids and i["role"] == "toplevel"]
+        views = [
+            i["id"]
+            for i in self.sock.list_views()
+            if i["id"] in view_ids and i["role"] == "toplevel"
+        ]
         if views:
             view_id = views[0]
             if view_id:
@@ -1121,7 +1155,13 @@ class Panel(Adw.Application):
                     position = panel_toml[p]["position"]
                     size = panel_toml[p]["size"]
                     self.bottom_panel = CreatePanel(
-                        app, "BOTTOM", position, self.exclusive, width=size, height=0, class_style="BottomBar"
+                        app,
+                        "BOTTOM",
+                        position,
+                        self.exclusive,
+                        width=size,
+                        height=0,
+                        class_style="BottomBar",
                     )
 
                 if "right" == p:
@@ -1499,13 +1539,33 @@ class Panel(Adw.Application):
     def bluetooth_manager(self):
         bt = BluetoothDashboard()
         bt = bt.create_menu_popover_bluetooth(self, app)
-        bt.set_icon_name("bluetooth")
+        bt_icon = "bluetooth"
+        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
+        if os.path.exists(waypanel_config_path):
+            with open(waypanel_config_path, "r") as f:
+                config = toml.load(f)
+                bt_icon = (
+                    config.get("panel", {})
+                    .get("top", {})
+                    .get("bluetooth_icon", "bluetooth")
+                )
+        bt.set_icon_name(bt_icon)
         return bt
 
     def system_dashboard(self):
         s = SystemDashboard()
         s = s.create_menu_popover_system(self, app)
-        s.set_icon_name("system-shutdown")
+        system_icon = "system-shutdown"
+        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
+        if os.path.exists(waypanel_config_path):
+            with open(waypanel_config_path, "r") as f:
+                config = toml.load(f)
+                system_icon = (
+                    config.get("panel", {})
+                    .get("top", {})
+                    .get("system_icon", "system-shutdown")
+                )
+        s.set_icon_name(system_icon)
         return s
 
     def volume_slider(self):
@@ -1514,7 +1574,17 @@ class Panel(Adw.Application):
         self.icon_vol_slider = self.icon_vol_slider.create_menu_popover_soundcard(
             self, app
         )
-        self.icon_vol_slider.set_icon_name("audio-volume-high")
+        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
+        soundcard_icon = "audio-volume-high"
+        if os.path.exists(waypanel_config_path):
+            with open(waypanel_config_path, "r") as f:
+                config = toml.load(f)
+                soundcard_icon = (
+                    config.get("panel", {})
+                    .get("top", {})
+                    .get("soundcard_icon", "audio-volume")
+                )
+        self.icon_vol_slider.set_icon_name(soundcard_icon)
         self.vol_slider_box.append(self.icon_vol_slider)
         self.vol_slider = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL)
         self.vol_slider.set_range(0, 100)
@@ -1548,15 +1618,11 @@ class Panel(Adw.Application):
                     # Update the volume label with the current volume percentage
                     self.tbvol.set_label("{0}%".format(volume))
                     if volume == 0 and self.icon_vol_slider is not None:
-                        self.icon_vol_slider.set_icon_name(
-                            "audio-volume-muted"
-                        )
+                        self.icon_vol_slider.set_icon_name("audio-volume-muted")
                     if volume < 35:
                         self.icon_vol_slider.set_icon_name("audio-volume-low")
                     if volume >= 35 and volume <= 75:
-                        self.icon_vol_slider.set_icon_name(
-                            "audio-volume-medium"
-                        )
+                        self.icon_vol_slider.set_icon_name("audio-volume-medium")
                     if volume > 75:
                         self.icon_vol_slider.set_icon_name("audio-volume-high")
 
@@ -1799,7 +1865,6 @@ class Panel(Adw.Application):
                     self.tbcard.set_label("{0}".format(sink.description))
 
     def update_title_top_panel(self):
-
         try:
             title = self.focused_view_title()
             if not title:
@@ -1847,7 +1912,9 @@ class Panel(Adw.Application):
         # Fetch and format process information
         mem_usage, exe, cpu_usage = self.fetch_process_info(pid)
         # Update widget labels and icons
-        self.update_widgets_background_panel(workspace_id, pid, wm_class, mem_usage, exe)
+        self.update_widgets_background_panel(
+            workspace_id, pid, wm_class, mem_usage, exe
+        )
 
     def apply_custom_icon(self, wclass):
         """Apply custom icon if available."""
@@ -1921,7 +1988,6 @@ class Panel(Adw.Application):
         title = self.utils.filter_utf_for_gtk(title)
         icon = self.get_icon(wm_class, initial_title, title)
         if icon and title:
-
             # Adw.ButtonContent will freeze some parts of panel with add snapshot view thing
             # because it will try to add content while the widget is not ready
             # the solution now is create a clickable box with image/label/append/remove
@@ -1957,7 +2023,7 @@ class Panel(Adw.Application):
                 "librewolf",
                 "ungoogled-chromium",
                 "waterfox",
-                "palemoon"
+                "palemoon",
             ]
 
             if self.utils.is_widget_ready(self.window_title):
@@ -1988,11 +2054,11 @@ class Panel(Adw.Application):
         self.volume_watch()
 
 
-def append_to_env(app_name, monitor_name, env_var='waypanel'):
-    existing_env = os.getenv(env_var, '{}')
+def append_to_env(app_name, monitor_name, env_var="waypanel"):
+    existing_env = os.getenv(env_var, "{}")
     env_dict = json.loads(existing_env)
     env_dict[app_name] = monitor_name
-    os.environ[env_var] = json.dumps(env_dict).decode('utf-8')
+    os.environ[env_var] = json.dumps(env_dict).decode("utf-8")
 
 
 def load_config(config_path):
@@ -2001,19 +2067,26 @@ def load_config(config_path):
 
 
 def get_monitor_name(config, sock):
-    monitor = next((output for output in sock.list_outputs() if "-1" in output['name']), sock.list_outputs()[0])
+    monitor = next(
+        (output for output in sock.list_outputs() if "-1" in output["name"]),
+        sock.list_outputs()[0],
+    )
     monitor_name = monitor.get("name")
     return config.get("monitor", {}).get("name", monitor_name)
 
 
 def find_config_path():
-    home_config_path = os.path.join(os.path.expanduser("~"), ".config/waypanel", "waypanel.toml")
+    home_config_path = os.path.join(
+        os.path.expanduser("~"), ".config/waypanel", "waypanel.toml"
+    )
     if os.path.exists(home_config_path):
         print(f"using {home_config_path}")
         return home_config_path
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    default_config_path = os.path.join(os.path.dirname(script_dir), "config/waypanel.toml")
+    default_config_path = os.path.join(
+        os.path.dirname(script_dir), "config/waypanel.toml"
+    )
     print(f"Using default config path: {default_config_path}")
 
     return default_config_path

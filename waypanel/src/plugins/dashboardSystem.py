@@ -4,7 +4,7 @@ import sys
 from importlib.util import find_spec
 from pathlib import Path
 from subprocess import Popen, check_output
-
+import toml
 import psutil
 from gi.repository import Adw, Gtk
 
@@ -45,7 +45,7 @@ class SystemDashboard(Adw.Application):
             transient_for=None,
             message_type=Gtk.MessageType.INFO,
             buttons=Gtk.ButtonsType.NONE,  # We'll add our own button
-            text=msg
+            text=msg,
         )
 
         # Add a custom close button
@@ -59,10 +59,12 @@ class SystemDashboard(Adw.Application):
         if find_spec("waypanel_settings") is not None:
             return True
         try:
-            subprocess.run(["waypanel-settings", "--version"],
-                           check=True,
-                           stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL)
+            subprocess.run(
+                ["waypanel-settings", "--version"],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
             msg = """Error: waypanel-settings is not installed"
@@ -75,12 +77,14 @@ class SystemDashboard(Adw.Application):
     def launch_settings(self):
         try:
             # Try direct execution first
-            subprocess.Popen(['waypanel-settings'], start_new_session=True)
+            subprocess.Popen(["waypanel-settings"], start_new_session=True)
         except FileNotFoundError:
             # Fallback to absolute path lookup
-            for path in ['/usr/local/bin/waypanel-settings',
-                         '/usr/bin/waypanel-settings',
-                         f'{os.path.expanduser("~")}/.local/bin/waypanel-settings']:
+            for path in [
+                "/usr/local/bin/waypanel-settings",
+                "/usr/bin/waypanel-settings",
+                f"{os.path.expanduser('~')}/.local/bin/waypanel-settings",
+            ]:
                 if os.path.exists(path):
                     subprocess.Popen([path], start_new_session=True)
                     break
@@ -96,7 +100,6 @@ class SystemDashboard(Adw.Application):
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        self.menubutton_dashboard.set_icon_name(get_nearest_icon_name("shutdown"))
         return self.menubutton_dashboard
 
     def create_popover_system(self, *_):
@@ -125,7 +128,6 @@ class SystemDashboard(Adw.Application):
             ("Exit Waypanel", "", "display-symbolic"): "",
             ("Restart Waypanel", "", "display-symbolic"): "",
             ("Settings", "", "gnome-settings-theme"): "",
-
         }
         done = []
         for data, category in data_and_categories.items():
@@ -219,18 +221,20 @@ class SystemDashboard(Adw.Application):
 
     def kill_process_by_name(self, name):
         # Iterate over all running processes
-        for proc in psutil.process_iter(['pid', 'name']):
+        for proc in psutil.process_iter(["pid", "name"]):
             try:
                 # Check if the process name matches
-                if name in proc.info['name']:
+                if name in proc.info["name"]:
                     proc.kill()
-                    print(f"Killed process {proc.info['name']} with PID {proc.info['pid']}")
+                    print(
+                        f"Killed process {proc.info['name']} with PID {proc.info['pid']}"
+                    )
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
 
     def run_later(self, command, delay):
         # Schedule the command to run after `delay` seconds
-        Popen(['bash', '-c', f'sleep {delay} && {command}'])
+        Popen(["bash", "-c", f"sleep {delay} && {command}"])
 
     def on_action(self, button, action):
         if action == "Exit Waypanel":
