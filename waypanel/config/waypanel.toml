@@ -1,79 +1,64 @@
-# waypanel.toml
-
-## Monitor Configuration (uncomment and adjust)
-
-## Power Management
 [dpms]
 enabled = false
 timeout_all = 3600
 timeout_single = 1800
 
-## ======================
-## Panel Configuration
-## ======================
-[panel]
+[cmd]
+
 [panel.bottom]
-enabled = true
+enabled = "True"
 position = "BOTTOM"
-Exclusive = false
-size = 42
+Exclusive = "False"
+size = "42"
 
 [panel.left]
-enabled = true
+enabled = "True"
 position = "BOTTOM"
-Exclusive = false
-size = 64
+Exclusive = "False"
+size = "64"
 
 [panel.right]
 position = "BOTTOM"
-Exclusive = false
-size = 42
+Exclusive = "False"
+size = "42"
 
 [panel.top]
 menu_icon = "archlinux-logo"
 folder_icon = "folder"
+bookmarks_icon = "librewolf"
+clipboard_icon = "edit-paste"
+soundcard_icon = "audio-volume-high"
+system_icon = "system-shutdown"
+bluetooth_icon = "bluetooth"
 position = "TOP"
-Exclusive = true
-size = 12
+Exclusive = "True"
+size = "12"
 
 [panel.top_background]
 position = "BOTTOM"
-Exclusive = false
-size = 42
-
-#[panel.monitor]
-#name = "DP-1"
-#width = 1920
-#height = 1080
+Exclusive = "False"
+size = "42"
 
 [panel.views]
-tilling = true
-maximize_views_on_expo = true
+tilling = "True"
+maximize_views_on_expo = "True"
 
 [panel.window_title_lenght]
-size = 48
+size = "48"
 
 [panel.clipboard]
-max_items = 50
+max_items = "100"
 
 [panel.change_icon_title]
 firefoxdeveloperedition = "firefox-developer-edition"
 gnome-terminal-server = "gnome-terminal"
 codium-insiders-url-handler = "vscodium"
 wlroots = "wayland"
-com.obsproject.Studio = "com.obsproject.Studio"
+com = "{'obsproject': {'Studio': 'com.obsproject.Studio'}}"
 
-## ======================
-## Menu Configuration
-## ======================
-[menu]
-
-## Icons for menu entries
 [menu.icons]
-# "System" = "system-shutdown-symbolic"
-"Wayfire" = "dialog-scripts"
+Wayfire = "dialog-scripts"
 
-## VPN Submenu
 [menu.VPN]
 [[menu.VPN.item1]]
 name = "Change Server"
@@ -91,15 +76,14 @@ cmd = "python /home/neo/.config/waypanel/scripts/mullvad-disconnect.py"
 name = "Mullvad Connect"
 cmd = "python /home/neo/.config/waypanel/scripts/mullvad-connect.py"
 
-## Wayfire Submenu
 [menu.Wayfire]
 [[menu.Wayfire.item0]]
 name = "Turn ON/OFF DP-2"
 cmd = "python /home/neo/Scripts/wayfire/output_dp_2.py"
 
 [[menu.Wayfire.item1]]
-name = "Patch wayfire and install"
-cmd = "kitty -e bash -c \"cd ~/Git/wayfire/; ~/Scripts/wayfire/patch.apply; ~/Scripts/wayfire/install\""
+name = "test"
+cmd = "test"
 
 [[menu.Wayfire.item2]]
 name = "Start Wayfire Debug"
@@ -109,25 +93,6 @@ cmd = "/home/neo/.local/wayfire/debug-build/bin/wayfire -d &>/tmp/wayfire-debug.
 name = "Update Waypanel"
 cmd = "cd /home/neo/Git/waypanel/ ; pip install .; notify-send waypanel updated!"
 
-
-## PIN Submenu (Commented Out)
-# [menu.PIN]
-#   [[menu.PIN.item1]]
-#   name = "Pin Focused View"
-#   cmd = "/opt/waypanel/scripts/mullvad-random-br.py"
-#
-#   [[menu.PIN.item2]]
-#   name = "Unpin Focused View"
-#   cmd = "python /home/neo/Git/pywayfire_examples/examples/set_view_as_wallpaper.py unpin"
-#
-#   [[menu.PIN.item3]]
-#   name = "Set Focused As Wallpaper"
-#   cmd = "python /home/neo/Git/pywayfire_examples/examples/set_view_as_wallpaper.py"
-#
-#
-
-## Folder Shortcuts Configuration
-[folders]
 [folders.Home]
 name = "Home"
 path = "/home/my_home_user"
@@ -170,16 +135,21 @@ path = ".config/wayfire"
 filemanager = "nautilus"
 icon = "configuration_section-symbolic"
 
-## ======================
-## Dockbar Applications
-## ======================
-[dockbar]
-[dockbar.firefox-developer-edition]
-cmd = "/usr/lib/firefox-developer-edition/firefox"
-icon = "firefox-developer-edition"
-wclass = "firefoxdeveloperedition"
-desktop_file = "firefoxdeveloperedition.desktop"
-name = "Firefox Developer"
+[dockbar.librewolf]
+cmd = "librewolf"
+icon = "librewolf"
+wclass = "librewolf"
+desktop_file = "librewolf"
+name = "librewolf"
+initial_title = "librewolf"
+
+[dockbar.nautilus]
+cmd = "nautilus --new-window"
+icon = "nautilus"
+wclass = "org.gnome.nautilus"
+initial_title = "org.gnome.nautilus"
+desktop_file = "org.gnome.Nautilus.desktop"
+name = "Nautilus"
 
 [dockbar.steam]
 cmd = "mullvad-exclude gtk-launch steam.desktop"
@@ -187,13 +157,6 @@ icon = "steam"
 wclass = "steam"
 desktop_file = "steam.desktop"
 name = "Steam"
-
-[dockbar.code]
-cmd = "codium-insiders"
-icon = "vscodium"
-wclass = "codium-insiders-url-handler"
-desktop_file = "vscodium-insiders.desktop"
-name = "Codium"
 
 [dockbar.hexchat]
 cmd = "hexchat"
@@ -209,41 +172,10 @@ wclass = "chromium"
 desktop_file = "chromium.desktop"
 name = "Chromium"
 
-[dockbar.nautilus]
-cmd = "nautilus --new-window"
-icon = "nautilus"
-wclass = "org.gnome.nautilus"
-initial_title = "org.gnome.nautilus"
-desktop_file = "org.gnome.Nautilus.desktop"
-name = "Nautilus"
-
-[dockbar.thunderbird]
-cmd = "thunderbird"
-icon = "thunderbird"
-wclass = "thunderbird"
-desktop_file = "thunderbird.desktop"
-name = "Thunderbird"
-
-
-## Command Widgets Configuration
-[cmd]
-#[cmd.date]
-#refresh = 1000000
-#position = "center"
-#cmd = "sh /home/neo/.config/hypr/scripts/weather.sh"
-#css_class = "weather"
-
-## ======================
-## Launcher Configuration
-## ======================
-[launcher]
-
-## Notification System Toggle
 [launcher.notify_system]
 cmd = "swaync-client -t"
 icon = "notifyconf"
 
-## Separator (Disabled)
 [launcher.separator]
 cmd = "NULL"
 icon = "gnome-panel-separator"
