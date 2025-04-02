@@ -9,7 +9,7 @@ import toml
 import aiosqlite
 import gi
 import pyperclip
-from gi.repository import Adw, GdkPixbuf, Gio, Gtk
+from gi.repository import Adw, GdkPixbuf, Gio, Gtk, GLib
 from gi.repository import Gtk4LayerShell as LayerShell
 from gi.repository import Pango
 from PIL import Image
@@ -304,7 +304,10 @@ class MenuClipboard(Gtk.Application):
                     item = item.split("/")[-1]
                     row_hbox.set_size_request(-1, 150)
             line = Gtk.Label.new()
-            line.set_markup(f'<span font="DejaVu Sans Mono">{item_id} {item}</span>')
+            escaped_text = GLib.markup_escape_text(item)
+            line.set_markup(
+                f'<span font="DejaVu Sans Mono">{item_id} {escaped_text}</span>'
+            )
             line.props.margin_end = 5
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)
