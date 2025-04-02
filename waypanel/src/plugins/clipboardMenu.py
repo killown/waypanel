@@ -5,7 +5,7 @@ import os
 import subprocess
 from pathlib import Path
 from typing import List, Tuple
-
+import toml
 import aiosqlite
 import gi
 import pyperclip
@@ -21,6 +21,7 @@ from .icons import get_nearest_icon_name
 
 def run_server_in_background():
     """Start the clipboard server without blocking main thread"""
+
     async def _run_server():
         server = AsyncClipboardServer()
         await server.start()
@@ -33,6 +34,7 @@ def run_server_in_background():
         asyncio.run(_run_server())
 
     import threading
+
     thread = threading.Thread(target=_start_loop, daemon=True)
     thread.start()
     return thread
@@ -47,6 +49,7 @@ async def show_clipboard_popover():
     # Display items in Waypanel's popover UI
     for item_id, content in items:
         print(f"{item_id}: {content[:50]}...")
+
 
 # Call this when the popover opens
 asyncio.run(show_clipboard_popover())
@@ -99,7 +102,9 @@ class ClipboardManager:
 
             # Replace old table
             await db.execute("DROP TABLE clipboard_items")
-            await db.execute("ALTER TABLE new_clipboard_items RENAME TO clipboard_items")
+            await db.execute(
+                "ALTER TABLE new_clipboard_items RENAME TO clipboard_items"
+            )
             await db.commit()
 
     async def delete_item(self, item_id: int):
@@ -163,30 +168,32 @@ class MenuClipboard(Gtk.Application):
         # Case 1: It's a file path that exists
         if isinstance(content, str) and Path(content).exists():
             mime = mimetypes.guess_type(content)[0]
-            return mime and mime.startswith('image/')
+            return mime and mime.startswith("image/")
 
         # Case 2: It's raw image data (from wl-copy)
         if isinstance(content, bytes):
             # Check magic numbers for common image formats
             magic_numbers = {
-                b'\x89PNG': 'PNG',
-                b'\xff\xd8': 'JPEG',
-                b'GIF87a': 'GIF',
-                b'GIF89a': 'GIF',
-                b'BM': 'BMP',
-                b'RIFF....WEBP': 'WEBP'
+                b"\x89PNG": "PNG",
+                b"\xff\xd8": "JPEG",
+                b"GIF87a": "GIF",
+                b"GIF89a": "GIF",
+                b"BM": "BMP",
+                b"RIFF....WEBP": "WEBP",
             }
             return any(content.startswith(magic) for magic in magic_numbers.keys())
 
         # Case 3: It's a base64 encoded image (common in clipboard)
-        if isinstance(content, str) and content.startswith(('data:image/png', 'data:image/jpeg')):
+        if isinstance(content, str) and content.startswith(
+            ("data:image/png", "data:image/jpeg")
+        ):
             return True
 
         return False
 
     def on_paste_clicked(self, manager: ClipboardManager, item_id: int):
         """Standalone version requiring manager instance"""
-        if (item := manager.get_item_by_id_sync(item_id)):
+        if item := manager.get_item_by_id_sync(item_id):
             _, content = item
             self.copy_to_clipboard(content)
             return True  # Success
@@ -201,10 +208,10 @@ class MenuClipboard(Gtk.Application):
 
                 # Create high-quality PNG
                 bio = io.BytesIO()
-                img.save(bio, format='PNG', quality=95)
+                img.save(bio, format="PNG", quality=95)
 
                 # Load as Pixbuf
-                loader = GdkPixbuf.PixbufLoader.new_with_type('png')
+                loader = GdkPixbuf.PixbufLoader.new_with_type("png")
                 loader.write(bio.getvalue())
                 loader.close()
                 return loader.get_pixbuf()
@@ -219,15 +226,11 @@ class MenuClipboard(Gtk.Application):
             if Path(content).exists():  # It's a file path
                 try:
                     # Use wl-copy for Wayland (most reliable)
-                    subprocess.run(
-                        ["wl-copy"],
-                        input=content.encode(),
-                        check=True
-                    )
+                    subprocess.run(["wl-copy"], input=content.encode(), check=True)
                     subprocess.run(
                         ["wl-copy", "-t", "image/png"],
                         stdin=open(content, "rb"),
-                        check=True
+                        check=True,
                     )
                 except subprocess.CalledProcessError:
                     print(f"Failed to copy image: {content}")
@@ -248,7 +251,7 @@ class MenuClipboard(Gtk.Application):
 
         # Calculate needed height
         line_height = 40  # Approx. height per row in pixels
-        padding = 20       # Additional padding
+        padding = 20  # Additional padding
         item_count = len(items)
 
         # Calculate dynamic height (capped at 600px)
@@ -261,7 +264,20 @@ class MenuClipboard(Gtk.Application):
                 continue
             row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
             image_button = Gtk.Button()
-            image_button.set_icon_name(get_nearest_icon_name("delete"))
+            waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
+            if os.path.exists(waypanel_config_path):
+                with open(waypanel_config_path, "r") as f:
+                    config = toml.load(f)
+                    clipboard_icon_delete = (
+                        config.get("panel", {})
+                        .get("top", {})
+                        .get("clipboard_icon_delete", "delete")
+                    )
+                    image_button.set_icon_name(
+                        get_nearest_icon_name(clipboard_icon_delete)
+                    )
+            else:
+                image_button.set_icon_name("delete")
             image_button.connect("clicked", self.on_delete_selected)
             spacer = Gtk.Label(label="    ")
             row_hbox.append(image_button)
@@ -301,7 +317,20 @@ class MenuClipboard(Gtk.Application):
         self.app = app
         self.menubutton_clipboard = Gtk.Button.new()
         self.menubutton_clipboard.connect("clicked", self.open_popover_clipboard)
-        self.menubutton_clipboard.set_icon_name("edit-paste")
+        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
+        if os.path.exists(waypanel_config_path):
+            with open(waypanel_config_path, "r") as f:
+                config = toml.load(f)
+                clipboard_icon = (
+                    config.get("panel", {})
+                    .get("top", {})
+                    .get("clipboard_icon", "edit-paste")
+                )
+                self.menubutton_clipboard.set_icon_name(
+                    get_nearest_icon_name(clipboard_icon)
+                )
+        else:
+            self.menubutton_clipboard.set_icon_name("edit-paste")
         obj.top_panel_box_systray.append(self.menubutton_clipboard)
 
     def create_popover_clipboard(self, *_):
@@ -354,7 +383,7 @@ class MenuClipboard(Gtk.Application):
         manager = ClipboardManager()
         asyncio.run(manager.initialize())
         item_id = int(selected_text.split()[0])
-        self.on_paste_clicked(manager,  item_id)
+        self.on_paste_clicked(manager, item_id)
         self.popover_clipboard.popdown()
 
     def clear_clipboard(self, *_):

@@ -43,7 +43,18 @@ class PopoverBookmarks(Adw.Application):
         self.app = app
         self.menubutton_bookmarks = Gtk.Button()
         self.menubutton_bookmarks.connect("clicked", self.open_popover_bookmarks)
-        self.menubutton_bookmarks.set_icon_name("librewolf")
+        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
+        if os.path.exists(waypanel_config_path):
+            with open(waypanel_config_path, "r") as f:
+                config = toml.load(f)
+                bookmarks_icon = (
+                    config.get("panel", {})
+                    .get("top", {})
+                    .get("bookmarks_icon", "librewolf")
+                )
+                self.menubutton_bookmarks.set_icon_name(bookmarks_icon)
+        else:
+            self.menubutton_bookmarks.set_icon_name("librewolf")
         self.menubutton_bookmarks.add_css_class("top_left_widgets")
         obj.top_panel_box_widgets_left.append(self.menubutton_bookmarks)
 
@@ -214,9 +225,7 @@ class PopoverBookmarks(Adw.Application):
         url, container = [i.get_child().MYTEXT for i in x.get_selected_children()][0]
         sock = self.compositor()
         all_windows = sock.list_views()
-        view = [
-            i["id"] for i in all_windows if "librewolf" in i["app-id"]
-        ]
+        view = [i["id"] for i in all_windows if "librewolf" in i["app-id"]]
         if view:
             sock.set_focus(view[0])
         cmd = [
