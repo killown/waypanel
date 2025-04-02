@@ -1,13 +1,13 @@
 import os
 from subprocess import Popen
+from PIL import Image
 
 import gi
 import requests
 import toml
 import wayfire.ipc as wayfire
 from bs4 import BeautifulSoup
-from gi.repository import Adw, GdkPixbuf, Gio, Gtk
-from gi.repository import Gtk4LayerShell as LayerShell
+from gi.repository import Adw, GdkPixbuf, Gtk
 
 
 class PopoverBookmarks(Adw.Application):
@@ -22,21 +22,14 @@ class PopoverBookmarks(Adw.Application):
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
         self.home = os.path.expanduser("~")
-        self.scripts = os.path.join(self.home, ".config/hypr/scripts")
         self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.dockbar_config = os.path.join(self.config_path, "dockbar.toml")
         self.style_css_config = os.path.join(self.config_path, "style.css")
-        self.workspace_list_config = os.path.join(self.config_path, "workspacebar.toml")
-        self.topbar_config = os.path.join(self.config_path, "panel.toml")
-        self.menu_config = os.path.join(self.config_path, "menu.toml")
-        self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
-        self.cmd_config = os.path.join(self.config_path, "cmd.toml")
-        self.topbar_launcher_config = os.path.join(
-            self.config_path, "topbar-launcher.toml"
-        )
+        self.topbar_config = os.path.join(self.config_path, "waypanel.toml")
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
         self.bookmarks_image_path = os.path.join(self.config_path, "bookmarks/images/")
+        self.thumbnails_path = os.path.join(self.bookmarks_image_path, "thumbnails")
+        os.makedirs(self.thumbnails_path, exist_ok=True)
 
     def create_menu_popover_bookmarks(self, obj, app, *_):
         self.top_panel = obj.top_panel
@@ -60,9 +53,8 @@ class PopoverBookmarks(Adw.Application):
 
     def create_popover_bookmarks(self, *_):
         """
-        Create and configure a popover for bookmarks.
+        Create and configure a popover for bookmarks with optimized thumbnails.
         """
-        # Create a new popover menu
         self.popover_bookmarks = Gtk.Popover.new()
         self.popover_bookmarks.set_has_arrow(False)
         self.popover_bookmarks.set_autohide(True)
@@ -96,6 +88,10 @@ class PopoverBookmarks(Adw.Application):
         with open(bookmarks_path, "r") as f:
             all_bookmarks = toml.load(f)
 
+        # Thumbnail settings
+        THUMBNAIL_SIZE = (32, 32)
+        THUMBNAIL_QUALITY = 75
+
         # Populate flow box with bookmarks
         for name, bookmark_data in all_bookmarks.items():
             url = bookmark_data.get("url", "")
@@ -110,7 +106,6 @@ class PopoverBookmarks(Adw.Application):
             if "/" in icon:
                 icon = [i for i in icon.split("/") if "." in i][0]
                 icon = "{0}.png".format(icon)
-                print(icon)
             else:
                 icon = url + ".png"
 
@@ -123,8 +118,9 @@ class PopoverBookmarks(Adw.Application):
             line.set_halign(Gtk.Align.START)
 
             bookmark_image = os.path.join(self.bookmarks_image_path, icon)
+            thumbnail_path = os.path.join(self.thumbnails_path, icon)
 
-            # skip this url if there is an exception
+            # Try to load or generate thumbnail
             try:
                 if not os.path.exists(bookmark_image):
                     if "image" in bookmark_data:
@@ -132,17 +128,25 @@ class PopoverBookmarks(Adw.Application):
                         self.download_image_direct(new_url, bookmark_image)
                     else:
                         self.download_image(url, self.bookmarks_image_path)
-                # Inside the loop where you load bookmarks
-                # Load the original image as a Pixbuf
-                original_pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    bookmark_image, 64, 64, True
-                )
-            except Exception as e:
-                print(e)
-                continue
 
-            # Create a Gtk.Image widget and set the Pixbuf
-            image = Gtk.Image.new_from_pixbuf(original_pixbuf)
+                # Generate thumbnail if needed
+                if (not os.path.exists(thumbnail_path)) or (
+                    os.path.getmtime(bookmark_image) > os.path.getmtime(thumbnail_path)
+                ):
+                    with Image.open(bookmark_image) as img:
+                        img.thumbnail(THUMBNAIL_SIZE)
+                        img.save(thumbnail_path, quality=THUMBNAIL_QUALITY)
+
+                # Load the thumbnail
+                thumbnail_pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                    thumbnail_path, THUMBNAIL_SIZE[0], THUMBNAIL_SIZE[1], True
+                )
+                image = Gtk.Image.new_from_pixbuf(thumbnail_pixbuf)
+            except Exception as e:
+                print(f"Error processing image for {url}: {e}")
+                # Fallback to symbolic icon
+                image = Gtk.Image.new_from_icon_name("web-browser-symbolic")
+                image.set_pixel_size(THUMBNAIL_SIZE[0])
 
             image.add_css_class("icon_from_popover_launcher")
             image.props.margin_end = 5
@@ -153,7 +157,7 @@ class PopoverBookmarks(Adw.Application):
             self.row_hbox.append(line)
             self.flowbox.append(self.row_hbox)
 
-        # Connect signal for selecting a row
+        # Set scroll window dimensions
         height = self.flowbox.get_preferred_size().natural_size.height
         width = self.flowbox.get_preferred_size().natural_size.width
         self.scrolled_window.set_min_content_width(width)
@@ -164,59 +168,44 @@ class PopoverBookmarks(Adw.Application):
         return self.popover_bookmarks
 
     def download_image_direct(self, url, save_path):
-        # Specify a custom user-agent header
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
         }
 
-        # Send a GET request to the URL with custom headers
         if "https://" not in url:
             url = "https://" + url
         response = requests.get(url, headers=headers)
-        print(response)
 
-        # Check if the request was successful
         if response.status_code == 200:
-            # Save the image
             with open(save_path, "wb") as f:
                 f.write(response.content)
             print("Image downloaded successfully.")
         else:
-            # If request failed
             print(f"Failed to download image. Status code: {response.status_code}")
 
     def download_image(self, url, save_path):
-        # Specify a custom user-agent header
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
         }
 
-        # Send a GET request to the URL with custom headers
         if "https://" not in url:
             url = "https://" + url
         response = requests.get(url, headers=headers)
-        print(response)
-        # Parse the HTML content of the webpage
-        soup = BeautifulSoup(response.text, "html.parser")
 
-        # Check for the og:image meta tag
+        soup = BeautifulSoup(response.text, "html.parser")
         og_image_meta = soup.find("meta", property="og:image")
+
         if og_image_meta:
             image_url = og_image_meta.get("content")
             if image_url:
-                # Send a GET request to download the image with custom headers
                 image_response = requests.get(image_url, headers=headers)
                 if image_response.status_code == 200:
-                    # Create the directory if it doesn't exist
                     if not os.path.exists(save_path):
                         os.makedirs(save_path)
-                    # Save the image
-                    with open(
-                        os.path.join(save_path, "{0}.png".format(url)), "wb"
-                    ) as f:
+                    with open(os.path.join(save_path, f"{url}.png"), "wb") as f:
                         f.write(image_response.content)
                     print("Image downloaded successfully.")
-        # If no suitable image found
+
         print(
             "No suitable image found. If the domain doesn't allow scraping tools, that may deny the image download"
         )
