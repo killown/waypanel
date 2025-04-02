@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import aiosqlite
-import pyperclip
+import subprocess
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -143,12 +143,27 @@ class AsyncClipboardServer:
             logger.info(f"Deleted item {item_id}")
 
     async def monitor(self):
-        """Background task: Watch clipboard for changes."""
+        """Background task: Watch clipboard for changes using wl-paste."""
         self.running = True
         while self.running:
-            content = await asyncio.get_event_loop().run_in_executor(
-                self.executor, pyperclip.paste
+            # Run wl-paste in a separate thread to avoid blocking
+            content = await asyncio.to_thread(
+                lambda: subprocess.run(
+                    ["wl-paste", "--no-newline"], capture_output=True, text=True
+                ).stdout.strip()
             )
+
+            if not content:
+                # Try getting an image if no text is found
+                image_data = await asyncio.to_thread(
+                    lambda: subprocess.run(
+                        ["wl-paste", "--type", "image/png"], capture_output=True
+                    ).stdout
+                )
+
+                if image_data:
+                    content = "<image>"  # Placeholder for image handling logic
+
             await self.add_item(content)
             await asyncio.sleep(0.5)
 
