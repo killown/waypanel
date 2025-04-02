@@ -22,13 +22,7 @@ class BluetoothDashboard(Adw.Application):
         self.home = os.path.expanduser("~")
         self.scripts = os.path.join(self.home, ".config/hypr/scripts")
         self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.dockbar_config = os.path.join(self.config_path, "dockbar.toml")
         self.style_css_config = os.path.join(self.config_path, "style.css")
-        self.workspace_list_config = os.path.join(self.config_path, "workspacebar.toml")
-        self.topbar_config = os.path.join(self.config_path, "panel.toml")
-        self.menu_config = os.path.join(self.config_path, "menu.toml")
-        self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
-        self.cmd_config = os.path.join(self.config_path, "cmd.toml")
         self.topbar_dashboard_config = os.path.join(
             self.config_path, "topbar-launcher.toml"
         )
@@ -74,8 +68,11 @@ class BluetoothDashboard(Adw.Application):
         # self.popover_dashboard.set_size_request(600, 400)
 
         # Create a box to hold the elements vertically
-        box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-
+        box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
+        box.set_margin_start(10)
+        box.set_margin_end(10)
         connected_devices = "bluetoothctl info".split()
         try:
             connected_devices = check_output(connected_devices).decode()
@@ -92,7 +89,7 @@ class BluetoothDashboard(Adw.Application):
             if device_id in connected_devices:
                 bluetooth_button.set_icon_name("blueberry-tray")
             else:
-                bluetooth_button.set_icon_name("blueman-disabled-symbolic")
+                bluetooth_button.set_icon_name("blueberry-tray-disabled")
             gesture = Gtk.GestureClick.new()
             gesture.connect("released", self.on_bluetooth_clicked)
             gesture.set_button(1)
