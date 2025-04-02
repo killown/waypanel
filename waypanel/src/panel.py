@@ -28,6 +28,7 @@ from waypanel.src.core.utils import Utils
 from waypanel.src.core.utils import Utils as utils
 from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
 from waypanel.src.plugins.bookmarksPopover import PopoverBookmarks
+from waypanel.src.plugins.notes import MenuNotes, NotesManager
 from waypanel.src.plugins.clipboardMenu import MenuClipboard
 from waypanel.src.plugins.dashboardBluetooth import BluetoothDashboard
 from waypanel.src.plugins.dashboardPopover import PopoverDashboard
@@ -98,6 +99,7 @@ class Panel(Adw.Application):
         self.active_window_changed = None
         self.notifications = []
         self.popover_bookmarks = None
+        self.popover_notes = None
         self.popover_folders = None
         self.popover_launcher = None
         self.popover_clipboard = None
@@ -285,6 +287,9 @@ class Panel(Adw.Application):
         if os.path.exists(bookmarks_file):
             self.PopoverBookmarks = PopoverBookmarks()
             self.PopoverBookmarks.create_menu_popover_bookmarks(self, app)
+
+        self.PopoverNotes = MenuNotes()
+        self.PopoverNotes.create_popover_menu_notes(self, app)
 
         self.PopoverFolders = PopoverFolders()
         self.PopoverFolders.create_menu_popover_folders(self, app)
