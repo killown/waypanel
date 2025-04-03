@@ -282,8 +282,13 @@ class MenuClipboard(Gtk.Application):
             total_height += 5
 
         # Calculate dynamic height (capped at 600px)
+        if total_height < 100:
+            total_height = 100
+        if total_height > 600:
+            total_height = 600
+
         self.scrolled_window.set_min_content_height(total_height)
-        self.scrolled_window.set_max_content_height(800)
+        self.scrolled_window.set_max_content_height(600)
 
         clipboard_history = get_clipboard_items_sync()
         for i in clipboard_history:
