@@ -1,7 +1,8 @@
 ## waypanel
 
-![test](https://github.com/user-attachments/assets/e0532323-8032-40d7-9dd4-e02ce41bd227)
-![test](https://github.com/user-attachments/assets/d38345e3-9c26-4f26-b9c4-8e7261466b28)
+![example1](https://github.com/user-attachments/assets/6f9bc597-4089-4ffb-b49f-5fcb2f446864)
+![example2](https://github.com/user-attachments/assets/17fc7a1b-10cc-4a47-9445-b55d47ed301c)
+
 
 ##### _Gtk4/Adwaita panel made for wayfire_
 
