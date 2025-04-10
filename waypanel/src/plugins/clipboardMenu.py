@@ -46,9 +46,6 @@ server_thread = run_server_in_background()
 async def show_clipboard_popover():
     server = AsyncClipboardServer()
     items = await server.get_items()
-    # Display items in Waypanel's popover UI
-    for item_id, content in items:
-        print(f"{item_id}: {content[:50]}...")
 
 
 # Call this when the popover opens
@@ -122,7 +119,6 @@ async def _fetch_items():
     await manager.initialize()
     try:
         history = await manager.get_history()  # Get items
-        print(f"Debug: Fetched {len(history)} items")  # Optional logging
         return history  # <- Explicit return
     finally:
         await manager.server.stop()

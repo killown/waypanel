@@ -1,5 +1,4 @@
 import os
-import re
 import subprocess
 import sys
 from collections import ChainMap, defaultdict
@@ -8,7 +7,7 @@ from subprocess import check_output as out
 
 import orjson as json
 import toml
-from gi.repository import Adw, GLib, Gtk
+from gi.repository import Gtk
 from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.ipc import WayfireSocket
 
@@ -25,7 +24,7 @@ from .icons import get_nearest_icon_name
 sys.path.append("/usr/lib/waypanel/")
 
 
-class Dockbar(Adw.Application):
+class Dockbar(Gtk.Application):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.utils = Utils()

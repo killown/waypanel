@@ -21,8 +21,6 @@ from wayfire.extra.stipc import Stipc
 
 from waypanel.src.core.create_panel import (
     CreatePanel,
-    set_layer_position_exclusive,
-    unset_layer_position_exclusive,
 )
 from waypanel.src.core.utils import Utils
 from waypanel.src.core.utils import Utils as utils
@@ -77,7 +75,6 @@ class Panel(Adw.Application):
         # Initialize variables and configurations
         self.toggle_mute = {}
         self.volume = 0
-        self.clock_box = Gtk.Box()
         self.args = sys.argv
         self.source_id = None  # Store the source ID for the GLib.timeout
 
@@ -306,9 +303,9 @@ class Panel(Adw.Application):
         self.update_title_top_panel()
         self.get_focused_output = self.sock.get_focused_output()
 
-        self.output_is_ready_to_dpms_off = {
-            output_name: False for output_name in self.wf_utils.list_outputs_names()
-        }
+        # self.output_is_ready_to_dpms_off = {
+        #    output_name: False for output_name in self.wf_utils.list_outputs_names()
+        # }
         # Load DPMS settings from config
         # with open(self.topbar_config, "r") as f:
         #    panel_toml = toml.load(f)
@@ -459,64 +456,64 @@ class Panel(Adw.Application):
         if not event == "view-tiled":
             return
 
-        if view["type"] == "toplevel" and view["parent"] == -1:
-            # this is needed, self.sock, if pass sock from watch, it will fail
-            ws = self.wf_utils.get_active_workspace()
-            wx, wy = [None, None]
-            if ws:
-                wx = ws["x"]
-                wy = ws["y"]
-
-            wset = self.sock.get_focused_view()["wset-index"]
-            layout = self.wf_utils.get_current_tiling_layout()
-            all_views = self.wf_utils.get_tile_list_views(layout)
-            output = self.sock.get_focused_output()
-            desired_layout = {}
-            if not all_views or (len(all_views) == 1 and all_views[0][0] == view["id"]):
-                desired_layout = {
-                    "vertical-split": [{"view-id": view["id"], "weight": 1}]
-                }
-                self.wf_utils.set_current_tiling_layout(desired_layout)
-                return
-
-            main_view = all_views[0][0]
-            weight_main = all_views[0][1]
-            stack_views_old = [v for v in all_views[1:] if v[0] != view["id"]]
-            weight_others = max(
-                [v[1] for v in stack_views_old],
-                default=output["workarea"]["width"] - weight_main,
-            )
-
-            if main_view == view["id"]:
-                return
-
-            if not stack_views_old:
-                desired_layout = {
-                    "vertical-split": [
-                        {"view-id": main_view, "weight": 1},
-                        {"view-id": view["id"], "weight": 1},
-                    ]
-                }
-                self.wf_utils.set_current_tiling_layout(desired_layout)
-                return
-
-            stack = [{"view-id": v[0], "weight": v[2]} for v in stack_views_old]
-            stack += [
-                {
-                    "view-id": view["id"],
-                    "weight": sum([v[2] for v in stack_views_old])
-                    / len(stack_views_old),
-                }
-            ]
-
-            desired_layout = {
-                "vertical-split": [
-                    {"weight": weight_main, "view-id": main_view},
-                    {"weight": weight_others, "horizontal-split": stack},
-                ]
-            }
-
-            self.wf_utils.set_current_tiling_layout(desired_layout)
+        # if view["type"] == "toplevel" and view["parent"] == -1:
+        #     # this is needed, self.sock, if pass sock from watch, it will fail
+        #     ws = self.wf_utils.get_active_workspace()
+        #     wx, wy = [None, None]
+        #     if ws:
+        #         wx = ws["x"]
+        #         wy = ws["y"]
+        #
+        #     wset = self.sock.get_focused_view()["wset-index"]
+        #     layout = self.wf_utils.get_current_tiling_layout()
+        #     all_views = self.wf_utils.get_tile_list_views(layout)
+        #     output = self.sock.get_focused_output()
+        #     desired_layout = {}
+        #     if not all_views or (len(all_views) == 1 and all_views[0][0] == view["id"]):
+        #         desired_layout = {
+        #             "vertical-split": [{"view-id": view["id"], "weight": 1}]
+        #         }
+        #         self.wf_utils.set_current_tiling_layout(desired_layout)
+        #         return
+        #
+        #     main_view = all_views[0][0]
+        #     weight_main = all_views[0][1]
+        #     stack_views_old = [v for v in all_views[1:] if v[0] != view["id"]]
+        #     weight_others = max(
+        #         [v[1] for v in stack_views_old],
+        #         default=output["workarea"]["width"] - weight_main,
+        #     )
+        #
+        #     if main_view == view["id"]:
+        #         return
+        #
+        #     if not stack_views_old:
+        #         desired_layout = {
+        #             "vertical-split": [
+        #                 {"view-id": main_view, "weight": 1},
+        #                 {"view-id": view["id"], "weight": 1},
+        #             ]
+        #         }
+        #         self.wf_utils.set_current_tiling_layout(desired_layout)
+        #         return
+        #
+        #     stack = [{"view-id": v[0], "weight": v[2]} for v in stack_views_old]
+        #     stack += [
+        #         {
+        #             "view-id": view["id"],
+        #             "weight": sum([v[2] for v in stack_views_old])
+        #             / len(stack_views_old),
+        #         }
+        #     ]
+        #
+        #     desired_layout = {
+        #         "vertical-split": [
+        #             {"weight": weight_main, "view-id": main_view},
+        #             {"weight": weight_others, "horizontal-split": stack},
+        #         ]
+        #     }
+        #
+        #     self.wf_utils.set_current_tiling_layout(desired_layout)
 
     def handle_event_checks(self, msg, required_keys=None):
         """
@@ -1896,8 +1893,7 @@ class Panel(Adw.Application):
             title = self.filter_title(title)
 
             # Limit the title length
-            print(title)
-            # title = title[:self.window_title_topbar_length]
+            title = title[: self.window_title_topbar_length]
 
             # Apply custom icon if available
             custom_icon = self.apply_custom_icon(wclass)
@@ -2048,7 +2044,6 @@ class Panel(Adw.Application):
 
             if self.utils.is_widget_ready(self.window_title_content):
                 self.window_title_label.set_label(title)
-                print(icon)
                 if icon:  # Only proceed if we have an icon name
                     try:
                         # Clear any existing icon first
@@ -2141,7 +2136,7 @@ def find_config_path():
     return default_config_path
 
 
-def start_panel():
+def run():
     sock = WayfireSocket()
     utils = WayfireUtils(sock)
 

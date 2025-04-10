@@ -1,20 +1,21 @@
-styles content: .title_button_view {
+.topbar-title-content-box {
   /* Complete transparency */
   background-color: transparent;
   border: none;
   box-shadow: none;
+}
 
-  /* Text styling only */
-  color: #ebdbb2;
-  font-size: 16px;
+.topbar-title-content-label {
+margin: 5px;
+  font-size: 18px;
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
     sans-serif;
-  text-decoration: none;
+  color: #ebdbb2;
+}
 
-  /* Prevents any unexpected interactions */
-  pointer-events: auto;
-  cursor: default;
+.topbar-title-content-icon {
+   -gtk-icon-size: 28px;
 }
 
 .dockbar-left {
@@ -31,8 +32,6 @@ styles content: .title_button_view {
 
 .dockbar-left-button {
   background-color: #1d2021de;
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
   color: #ebdbb2;
   font-family:
@@ -41,7 +40,7 @@ styles content: .title_button_view {
   border-radius: 8px;
   border-style: none;
   border-width: 1px;
-  padding: 5px 1px 5px 1px;
+  padding: 5px 5px 5px 9px;
   margin: 1px;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 2px 0px,
@@ -49,8 +48,12 @@ styles content: .title_button_view {
     #00000075 0 -4px 0 inset;
   -gtk-icon-size: 42px;
   font-size: 16px;
-  -gtk-icon-size: 42px;
+}
 
+.dockbar-left-button:hover {
+  color: #282828;
+  background-color: #d5c4a1;
+  text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
 }
 
 .RightBar-button {
@@ -81,7 +84,6 @@ styles content: .title_button_view {
   margin-top: 2px;
   color: #ffffff;
   background: #00000000;
-  background-color: #00000000;
 }
 
 .cf_box {
@@ -109,7 +111,7 @@ styles content: .title_button_view {
 
 .maximize-button {
   -gtk-icon-size: 20px;
-  background-color: #458588; /* macOS green */
+  background-color: #458588;
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
@@ -126,7 +128,7 @@ styles content: .title_button_view {
 
 .minimize-button {
   -gtk-icon-size: 20px;
-  background-color: #458588; /* macOS yellow */
+  background-color: #458588;
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
@@ -139,40 +141,39 @@ styles content: .title_button_view {
   color: #ebdbb2;
   border-color: rgba(36, 40, 59, 0.744);
   border-radius: 4px;
-
 }
 
 /* notes plugin */
 .notes_button_clear.text-button {
-    background-color: #FF0000;
-    color: white;
-    border: none;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-
+  background-color: #FF0000;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .notes_button_add.text-button {
-    background-color: #008000;
-    color: white;
-    border: none;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);;
+  background-color: #008000;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .notes_button_delete.image-button {
-    background-color: #FF0000;
-    color: white;
-    border: none;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.1);;
-
+  background-color: #FF0000;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.1);
 }
 
 /* Hover states */
 .close-button:hover {
   background-color: #ff5f56cc;
 }
+
 .maximize-button:hover {
   background-color: #ffbd2ecc;
 }
+
 .minimize-button:hover {
   background-color: #28c940cc;
 }
@@ -181,9 +182,11 @@ styles content: .title_button_view {
 .close-button:active {
   background-color: #ff5f5699;
 }
+
 .maximize-button:active {
   background-color: #ffbd2e99;
 }
+
 .minimize-button:active {
   background-color: #28c94099;
 }
@@ -191,20 +194,12 @@ styles content: .title_button_view {
 .top_panel_box_widgets_left {
   /* Complete transparency */
   background-color: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   border: none;
   box-shadow: none;
 
   /* Text styling only */
-  font-family: inherit; /* Uses parent's font */
+  font-family: inherit;
   text-decoration: none;
-
-  /* Minimal padding */
-
-  /* Prevents any unexpected interactions */
-  pointer-events: auto;
-  cursor: default;
 }
 
 scale slider {
@@ -243,18 +238,18 @@ scale {
 }
 
 .bluetooth-dashboard-buttons {
-    background-color: #4479e1;
-    color: white;
-    border: none;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    font-size: 18px;
+  background-color: #4479e1;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  font-size: 18px;
 }
 
 .button_clear_from_clipboard {
-    background-color: #FF0000;
-    color: white;
-    border: none;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  background-color: #FF0000;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 /*icons from bookbarks menu*/
@@ -276,6 +271,7 @@ scale {
 .popover_launcher_row_hbox {
   background-color: transparent;
 }
+
 .icon_from_folders {
   -gtk-icon-size: 42px;
 }
@@ -301,30 +297,20 @@ scale {
 .ClockButton {
   /* Complete transparency */
   background-color: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   border: none;
   box-shadow: none;
 
   /* Text styling only */
-  color: inherit; /* Takes parent's text color */
-  font-family: inherit; /* Uses parent's font */
+  color: inherit;
+  font-family: inherit;
   text-decoration: none;
-
-  /* Minimal padding */
   margin: 0;
-
-  /* Prevents any unexpected interactions */
-  pointer-events: auto;
-  cursor: default;
   font-size: 18px;
 }
 
 .Clock {
   /* Complete transparency */
   background-color: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   border: none;
   box-shadow: none;
 
@@ -333,15 +319,8 @@ scale {
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
     sans-serif;
-
   text-decoration: none;
-
-  /* Minimal padding */
   margin: 0;
-
-  /* Prevents any unexpected interactions */
-  pointer-events: auto;
-  cursor: default;
 }
 
 .wallpaper {
@@ -370,33 +349,22 @@ scale {
 
 /*system dashboard: if gsettings prefer-dark, then changes for white colors is necessary*/
 .system_dashboard_stack {
-  color: #2d2d2d; /* Light text color */
-  box-shadow: 10px 10px 30px #2d2d2d; /* Slightly stronger shadow for depth */
-  font-family: 'Segoe UI', sans-serif; /* Windows 10 default font */
-  font-size: 12px; /* Typical title bar font size */
-  font-weight: 400; /* Slightly bolder text */
-  height: 30px; /* Standard title bar height */
-  display: flex;
-  align-items: center;
-  padding: 0 10px;
+  color: #282828;
+  box-shadow: 10px 10px 30px #2d2d2d;
+  font-family: 'Segoe UI', sans-serif;
   font-size: 16px;
+  font-weight: 400;
 }
 
 .TopBar {
-  background-color: #282828; /* Dark gray background */
-  border-bottom: 1px solid #1a1a1a; /* Subtle dark border */
-  color: #e0e0e0; /* Light text color */
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); /* Slightly stronger shadow for depth */
-  font-family: 'Segoe UI', sans-serif; /* Windows 10 default font */
-  font-size: 12px; /* Typical title bar font size */
-  font-weight: 400; /* Slightly bolder text */
-  height: 30px; /* Standard title bar height */
-  display: flex;
-  align-items: center;
-  padding: 0 10px;
-  -webkit-user-select: none; /* Prevent text selection (like real window bars) */
-  user-select: none;
+  background-color: #282828;
+  border-bottom: 1px solid #1a1a1a;
+  color: #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  font-family: 'Segoe UI', sans-serif;
   font-size: 16px;
+  font-weight: 400;
+  padding: 0 10px;
 }
 
 .top_panel_box_left {
@@ -404,6 +372,7 @@ scale {
 }
 
 .top_panel_box_right {
+  /* Empty declaration removed */
 }
 
 .top_left_widgets {
@@ -412,23 +381,13 @@ scale {
 
 .top_panel_box_systray {
   -gtk-icon-size: 22px;
-  /* Complete transparency */
   background-color: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   border: none;
   box-shadow: none;
-
-  /* Text styling only */
-  color: inherit; /* Takes parent's text color */
-  font-family: inherit; /* Uses parent's font */
+  color: inherit;
+  font-family: inherit;
   text-decoration: none;
-
   margin: 2px;
-
-  /* Prevents any unexpected interactions */
-  pointer-events: auto;
-  cursor: default;
 }
 
 .top_panel_box_center {
@@ -462,10 +421,8 @@ scale {
   border-width: 0;
 }
 
-.taskbar_button {
+.taskbar-button {
   background-color: #1d2021de;
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
   color: #ebdbb2;
   font-family:
@@ -484,12 +441,14 @@ scale {
   font-size: 16px;
 }
 
-.taskbar_button:hover {
-  background-color: #282828;
+.taskbar-button:hover {
+  color: #282828;
+  background-color: #d5c4a1;
+  text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
 }
 
 .hvr-grow:hover {
-  color: #ebdbb2;
-  background: #ebdbb2;
-  text-shadow: rgb(9, 5, 5) 0.006em 0.006em 0.007em;
+  color: #282828;
+  background-color: #d5c4a1;
+  text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
 }

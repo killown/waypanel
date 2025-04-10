@@ -12,6 +12,8 @@ import subprocess
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+LOG_ENABLED = False
+
 
 def initialize_db(db_path=None):
     """
@@ -92,7 +94,8 @@ class AsyncClipboardServer:
                 )
             """)
             await db.commit()
-            logger.info(f"Database initialized at {self.db_path}")
+            if LOG_ENABLED:
+                logger.info(f"Database initialized at {self.db_path}")
 
     async def add_item(self, content):
         """Add an item if it's new and non-empty, maintaining max items limit."""
@@ -117,7 +120,8 @@ class AsyncClipboardServer:
 
             await db.commit()
             self.last_clipboard_content = content
-            logger.info(f"Added item: {content[:50]}...")
+            if LOG_ENABLED:
+                logger.info(f"Added item: {content[:50]}...")
 
     async def get_items(self, limit=100):
         """Fetch recent items (newest first)."""
@@ -133,14 +137,16 @@ class AsyncClipboardServer:
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute("DELETE FROM clipboard_items")
             await db.commit()
-            logger.info("Cleared all items.")
+            if LOG_ENABLED:
+                logger.info("Cleared all items.")
 
     async def delete_item(self, item_id):
         """Delete a specific item by ID."""
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute("DELETE FROM clipboard_items WHERE id = ?", (item_id,))
             await db.commit()
-            logger.info(f"Deleted item {item_id}")
+            if LOG_ENABLED:
+                logger.info(f"Deleted item {item_id}")
 
     async def monitor(self):
         """Background task: Watch clipboard for changes using wl-paste."""
@@ -171,10 +177,12 @@ class AsyncClipboardServer:
         """Start the clipboard monitor."""
         await self._init_db()
         asyncio.create_task(self.monitor())
-        logger.info("Clipboard monitor started.")
+        if LOG_ENABLED:
+            logger.info("Clipboard monitor started.")
 
     async def stop(self):
         """Stop the monitor."""
         self.running = False
         self.executor.shutdown()
-        logger.info("Clipboard monitor stopped.")
+        if LOG_ENABLED:
+            logger.info("Clipboard monitor stopped.")

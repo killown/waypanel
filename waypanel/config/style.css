@@ -1,20 +1,21 @@
-.title_button_view {
+.topbar-title-content-box {
   /* Complete transparency */
   background-color: transparent;
   border: none;
   box-shadow: none;
+}
 
-  /* Text styling only */
-  color: #ebdbb2;
-  font-size: 16px;
+.topbar-title-content-label {
+margin: 5px;
+  font-size: 18px;
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
     sans-serif;
-  text-decoration: none;
+  color: #ebdbb2;
+}
 
-  /* Prevents any unexpected interactions */
-  pointer-events: auto;
-  cursor: default;
+.topbar-title-content-icon {
+   -gtk-icon-size: 28px;
 }
 
 .dockbar-left {
@@ -30,9 +31,7 @@
 }
 
 .dockbar-left-button {
-  background-color: rgba(0, 0, 0, 0.637);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+  background-color: #1d2021de;
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
   color: #ebdbb2;
   font-family:
@@ -41,15 +40,20 @@
   border-radius: 8px;
   border-style: none;
   border-width: 1px;
-  padding: 5px 5px 5px 5px;
+  padding: 5px 5px 5px 9px;
+  margin: 1px;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 2px 0px,
     rgba(0, 0, 0, 0.555) 0 2px 0px,
     #00000075 0 -4px 0 inset;
   -gtk-icon-size: 42px;
   font-size: 16px;
-  -gtk-icon-size: 42px;
-  padding: 5px;
+}
+
+.dockbar-left-button:hover {
+  color: #282828;
+  background-color: #d5c4a1;
+  text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
 }
 
 .RightBar-button {
@@ -80,7 +84,6 @@
   margin-top: 2px;
   color: #ffffff;
   background: #00000000;
-  background-color: #00000000;
 }
 
 .cf_box {
@@ -91,7 +94,7 @@
 
 .close-button {
   -gtk-icon-size: 20px;
-  background-color: #ff5f56; /* macOS red */
+  background-color: #cc241d;
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
@@ -108,7 +111,7 @@
 
 .maximize-button {
   -gtk-icon-size: 20px;
-  background-color: #28c940; /* macOS green */
+  background-color: #458588;
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
@@ -125,7 +128,7 @@
 
 .minimize-button {
   -gtk-icon-size: 20px;
-  background-color: #ffbd2e; /* macOS yellow */
+  background-color: #458588;
   border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
@@ -138,16 +141,39 @@
   color: #ebdbb2;
   border-color: rgba(36, 40, 59, 0.744);
   border-radius: 4px;
+}
 
+/* notes plugin */
+.notes_button_clear.text-button {
+  background-color: #FF0000;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.notes_button_add.text-button {
+  background-color: #008000;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.notes_button_delete.image-button {
+  background-color: #FF0000;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.1);
 }
 
 /* Hover states */
 .close-button:hover {
   background-color: #ff5f56cc;
 }
+
 .maximize-button:hover {
   background-color: #ffbd2ecc;
 }
+
 .minimize-button:hover {
   background-color: #28c940cc;
 }
@@ -156,9 +182,11 @@
 .close-button:active {
   background-color: #ff5f5699;
 }
+
 .maximize-button:active {
   background-color: #ffbd2e99;
 }
+
 .minimize-button:active {
   background-color: #28c94099;
 }
@@ -166,20 +194,12 @@
 .top_panel_box_widgets_left {
   /* Complete transparency */
   background-color: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   border: none;
   box-shadow: none;
 
   /* Text styling only */
-  font-family: inherit; /* Uses parent's font */
+  font-family: inherit;
   text-decoration: none;
-
-  /* Minimal padding */
-
-  /* Prevents any unexpected interactions */
-  pointer-events: auto;
-  cursor: default;
 }
 
 scale slider {
@@ -218,30 +238,18 @@ scale {
 }
 
 .bluetooth-dashboard-buttons {
-  border-radius: 8px;
-  font-size: 20px;
-  color: #ffffff;
-  background: rgba(42, 46, 68, 0.774);
-  background-color: rgba(42, 46, 68, 0.774);
-  border-style: solid;
-  border-width: 1px;
-  margin: 4px 4px 4px 4px;
-  padding: 2px 2px 2px 2px;
-  border-color: rgba(36, 40, 59, 0.744);
-  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+  background-color: #4479e1;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  font-size: 18px;
 }
 
 .button_clear_from_clipboard {
-  border-radius: 8px;
-  font-size: 20px;
-  color: #ffffff;
-  background: rgba(36, 40, 59, 0.9);
-  background-color: rgba(36, 40, 59, 0.9);
-  border-style: solid;
-  border-width: 1px;
-  margin: 4px 4px 4px 4px;
-  border-color: rgba(36, 40, 59, 0.744);
-  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+  background-color: #FF0000;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 /*icons from bookbarks menu*/
@@ -263,6 +271,7 @@ scale {
 .popover_launcher_row_hbox {
   background-color: transparent;
 }
+
 .icon_from_folders {
   -gtk-icon-size: 42px;
 }
@@ -288,30 +297,20 @@ scale {
 .ClockButton {
   /* Complete transparency */
   background-color: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   border: none;
   box-shadow: none;
 
   /* Text styling only */
-  color: inherit; /* Takes parent's text color */
-  font-family: inherit; /* Uses parent's font */
+  color: inherit;
+  font-family: inherit;
   text-decoration: none;
-
-  /* Minimal padding */
   margin: 0;
-
-  /* Prevents any unexpected interactions */
-  pointer-events: auto;
-  cursor: default;
   font-size: 18px;
 }
 
 .Clock {
   /* Complete transparency */
   background-color: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   border: none;
   box-shadow: none;
 
@@ -320,15 +319,8 @@ scale {
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
     sans-serif;
-
   text-decoration: none;
-
-  /* Minimal padding */
   margin: 0;
-
-  /* Prevents any unexpected interactions */
-  pointer-events: auto;
-  cursor: default;
 }
 
 .wallpaper {
@@ -355,14 +347,24 @@ scale {
   min-width: 100px;
 }
 
+/*system dashboard: if gsettings prefer-dark, then changes for white colors is necessary*/
+.system_dashboard_stack {
+  color: #282828;
+  box-shadow: 10px 10px 30px #2d2d2d;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+}
+
 .TopBar {
-  background-color: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(35px);
-  -webkit-backdrop-filter: blur(35px);
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.75));
-  border-bottom: 0.1px solid rgba(0, 0, 0, 0.08);
-  color: rgba(245, 245, 245, 0.85);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  background-color: #282828;
+  border-bottom: 1px solid #1a1a1a;
+  color: #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  padding: 0 10px;
 }
 
 .top_panel_box_left {
@@ -370,6 +372,7 @@ scale {
 }
 
 .top_panel_box_right {
+  /* Empty declaration removed */
 }
 
 .top_left_widgets {
@@ -378,23 +381,13 @@ scale {
 
 .top_panel_box_systray {
   -gtk-icon-size: 22px;
-  /* Complete transparency */
   background-color: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   border: none;
   box-shadow: none;
-
-  /* Text styling only */
-  color: inherit; /* Takes parent's text color */
-  font-family: inherit; /* Uses parent's font */
+  color: inherit;
+  font-family: inherit;
   text-decoration: none;
-
   margin: 2px;
-
-  /* Prevents any unexpected interactions */
-  pointer-events: auto;
-  cursor: default;
 }
 
 .top_panel_box_center {
@@ -428,10 +421,8 @@ scale {
   border-width: 0;
 }
 
-.taskbar_button {
-  background-color: rgba(0, 0, 0, 0.637);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+.taskbar-button {
+  background-color: #1d2021de;
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
   color: #ebdbb2;
   font-family:
@@ -450,12 +441,14 @@ scale {
   font-size: 16px;
 }
 
-.taskbar_button:hover {
-  background-color: #282828;
+.taskbar-button:hover {
+  color: #282828;
+  background-color: #d5c4a1;
+  text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
 }
 
 .hvr-grow:hover {
-  color: #ebdbb2;
-  background: #ebdbb2;
-  text-shadow: rgb(9, 5, 5) 0.006em 0.006em 0.007em;
+  color: #282828;
+  background-color: #d5c4a1;
+  text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
 }
