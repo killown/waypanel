@@ -3,120 +3,114 @@ import asyncio
 import orjson as json
 import time
 from concurrent.futures import ThreadPoolExecutor
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 from wayfire import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
 
-# Remove existing socket files
-socket_paths = ['/tmp/waypanel.sock', '/tmp/waypanel-dockbar.sock', '/tmp/waypanel-utils.sock']
-for path in socket_paths:
-    if os.path.exists(path):
-        os.remove(path)
 
-# Initialize Wayfire socket and utils
-sock = WayfireSocket()
-utils = WayfireUtils(sock)
-sock.watch()
+class WayfireEventServer:
+    def __init__(self):
+        self.socket_paths = [
+            "/tmp/waypanel.sock",
+            "/tmp/waypanel-dockbar.sock",
+            "/tmp/waypanel-utils.sock",
+        ]
+        self._cleanup_sockets()
 
-# Thread pool for blocking operations
-executor = ThreadPoolExecutor()
+        self.sock = WayfireSocket()
+        self.utils = WayfireUtils(self.sock)
+        self.sock.watch()
 
-# Event queue for handling Wayfire events
-event_queue = asyncio.Queue()
+        self.executor = ThreadPoolExecutor()
+        self.event_queue = asyncio.Queue()
+        self.clients = []
+        self.loop = None
 
-# Watchdog observer for monitoring wayfire.ini
-class ConfigChangeHandler(FileSystemEventHandler):
-    def __init__(self, callback):
-        super().__init__()
-        self.callback = callback
+    def _cleanup_sockets(self):
+        """Remove existing socket files"""
+        for path in self.socket_paths:
+            if os.path.exists(path):
+                os.remove(path)
 
-    def on_modified(self, event):
-        if event.src_path == os.path.expanduser("~/.config/wayfire.ini"):
-            self.callback()
+    def reconnect_wayfire_socket(self):
+        """Reconnect to Wayfire socket"""
+        print("reconnecting wayfire ipc")
+        self.sock.close()
+        self.sock = WayfireSocket()
+        self.utils = WayfireUtils(self.sock)
+        self.sock.watch()
 
-def start_watchdog(callback):
-    observer = Observer()
-    event_handler = ConfigChangeHandler(callback)
-    observer.schedule(event_handler, path=os.path.dirname(os.path.expanduser("~/.config/wayfire.ini")), recursive=False)
-    observer.start()
-    return observer
-
-def reconnect_wayfire_socket():
-    global sock, utils
-    sock.close()
-    sock = WayfireSocket()
-    utils = WayfireUtils(sock)
-    sock.watch()
-
-def is_socket_active():
-    if not sock.is_connected():
-        try:
-            reconnect_wayfire_socket()
-        except Exception as e:
-            print(f"Retrying in 10 seconds: {e}")
-            time.sleep(10)
-            return False
-    return True
-
-def read_events():
-    while True:
-        if not is_socket_active():
-            continue
-
-        try:
-            event = sock.read_next_event()  # Blocking call
-            asyncio.run_coroutine_threadsafe(event_queue.put(event), loop)
-        except Exception as e:
-            print(f"Skipping the event: {e}")
-            continue
-
-async def handle_event(clients):
-    while True:
-        event = await event_queue.get()
-        serialized_event = json.dumps(event)
-        # Broadcast the event to all connected clients
-        for client in clients:
+    def is_socket_active(self):
+        """Check if socket is connected, reconnect if not"""
+        if not self.sock.is_connected():
             try:
-                client.write((serialized_event + b'\n'))
-                await client.drain()
-            except (ConnectionResetError, BrokenPipeError):
-                clients.remove(client)  # Remove disconnected clients
+                self.reconnect_wayfire_socket()
+            except Exception as e:
+                print(f"Retrying in 10 seconds: {e}")
+                time.sleep(10)
+                return False
+        return True
 
-async def handle_client(reader, writer, clients):
-    clients.append(writer)
-    try:
+    def read_events(self):
+        """Read events from Wayfire socket in background thread"""
         while True:
-            await asyncio.sleep(3600)  # Keep the client connection alive
-    except (ConnectionResetError, BrokenPipeError):
-        pass
-    finally:
-        clients.remove(writer)
-        writer.close()
-        await writer.wait_closed()
+            if not self.is_socket_active():
+                continue
 
-async def start_server(path, clients):
-    server = await asyncio.start_unix_server(lambda r, w: handle_client(r, w, clients), path=path)
-    async with server:
-        await server.serve_forever()
+            try:
+                event = self.sock.read_next_event()
+                asyncio.run_coroutine_threadsafe(self.event_queue.put(event), self.loop)
+            except Exception as e:
+                print(f"Event read failed: {e}")
+                if not self.sock.is_connected():
+                    time.sleep(1)
+                    continue
 
-async def main():
-    clients = []
-    servers = [start_server(path, clients) for path in socket_paths]
-    
-    # Start the event reader in a separate thread
-    global loop
-    loop = asyncio.get_running_loop()
-    executor.submit(read_events)
-    
-    # Start the watchdog observer
-    watchdog_observer = start_watchdog(reconnect_wayfire_socket)
-    
-    try:
-        await asyncio.gather(*servers, handle_event(clients))
-    finally:
-        watchdog_observer.stop()
-        watchdog_observer.join()
+    async def handle_event(self):
+        """Process and broadcast events to connected clients"""
+        while True:
+            event = await self.event_queue.get()
+            serialized_event = json.dumps(event)
+            for client in self.clients:
+                try:
+                    client.write(serialized_event + b"\n")
+                    await client.drain()
+                except (ConnectionResetError, BrokenPipeError):
+                    self.clients.remove(client)
 
-if __name__ == '__main__':
-    asyncio.run(main())
+    async def handle_client(self, reader, writer):
+        """Manage individual client connections"""
+        self.clients.append(writer)
+        try:
+            while True:
+                await asyncio.sleep(3600)  # Keep connection alive
+        except (ConnectionResetError, BrokenPipeError):
+            pass
+        finally:
+            self.clients.remove(writer)
+            writer.close()
+            await writer.wait_closed()
+
+    async def start_server(self, path):
+        """Start UNIX socket server on specified path"""
+        server = await asyncio.start_unix_server(
+            lambda r, w: self.handle_client(r, w), path=path
+        )
+        async with server:
+            await server.serve_forever()
+
+    async def main(self):
+        """Main server entry point"""
+        servers = [self.start_server(path) for path in self.socket_paths]
+        self.loop = asyncio.get_running_loop()
+        self.executor.submit(self.read_events)
+
+        try:
+            await asyncio.gather(*servers, self.handle_event())
+        finally:
+            # Cleanup logic if needed
+            pass
+
+
+if __name__ == "__main__":
+    server = WayfireEventServer()
+    asyncio.run(server.main())

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import logging
 from logging.handlers import RotatingFileHandler
 import os
@@ -7,7 +8,11 @@ import shutil
 import subprocess
 from ctypes import CDLL
 import gi
-from waypanel.src.ipc_server import ipc_async_server
+import sys
+import time
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+from waypanel.src.ipc_server.ipc_async_server import WayfireEventServer
 
 # Constants
 DEFAULT_CONFIG_PATH = "~/.config/waypanel"
@@ -44,11 +49,57 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
+class ConfigReloadHandler(FileSystemEventHandler):
+    def __init__(self, callback):
+        super().__init__()
+        self.callback = callback
+        self.last_modified = time.time()
+
+    def on_modified(self, event):
+        if event.src_path == os.path.expanduser(os.getenv("WAYFIRE_CONFIG_FILE")):
+            now = time.time()
+            if now - self.last_modified > 1:  # 1 second debounce
+                logger.info("wayfire.ini modified - triggering reload")
+                self.last_modified = now
+                self.callback()
+
+
+def restart_application():
+    """Fully restart the current process"""
+    logger.info("Restarting waypanel...")
+    python = sys.executable
+    os.execl(python, python, *sys.argv)
+
+
+def start_config_watcher():
+    """Start watching wayfire.ini for changes"""
+    wayfire_ini = os.path.expanduser(os.getenv("WAYFIRE_CONFIG_FILE"))
+    if not os.path.exists(wayfire_ini):
+        logger.warning(
+            f"wayfire.ini not found at {wayfire_ini} - config watching disabled"
+        )
+        return None
+
+    event_handler = ConfigReloadHandler(restart_application)
+    observer = Observer()
+    observer.schedule(event_handler, path=os.path.dirname(wayfire_ini))
+    observer.start()
+    return observer
+
+
+def cleanup_resources():
+    """Clean up resources before restart"""
+    logger.info("Cleaning up resources before restart...")
+    # Add any specific cleanup needed here
+    pass
+
+
 def ipc_server():
     """Start the IPC server in an asyncio event loop."""
     logger.info("Starting IPC server")
     try:
-        asyncio.run(ipc_async_server.main())
+        server = WayfireEventServer()
+        asyncio.run(server.main())
     except Exception as e:
         logger.error(f"IPC server crashed: {e}", exc_info=True)
         raise
@@ -104,17 +155,14 @@ def layer_shell_check():
     logger.info("gtk4-layer-shell not found. Installing...")
 
     try:
-        # Clean up existing temp dir
         if os.path.exists(temp_dir):
             logger.debug(f"Cleaning existing temporary directory: {temp_dir}")
             shutil.rmtree(temp_dir)
 
-        # Clone and build
         logger.info(f"Cloning repository: {GTK_LAYER_SHELL_REPO}")
         subprocess.run(["git", "clone", GTK_LAYER_SHELL_REPO, temp_dir], check=True)
 
         os.chdir(temp_dir)
-
         logger.info("Configuring build with Meson...")
         subprocess.run(
             [
@@ -139,9 +187,6 @@ def layer_shell_check():
     except subprocess.CalledProcessError as e:
         logger.error(f"Installation failed: {e}", exc_info=True)
         raise
-    except Exception as e:
-        logger.error(f"Unexpected error during installation: {e}", exc_info=True)
-        raise
     finally:
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -152,10 +197,8 @@ def create_first_config():
     temp_dir = TEMP_DIRS["waypanel"]
 
     try:
-        # Ensure destination directory exists
         os.makedirs(dest_dir, exist_ok=True)
 
-        # Clean up existing temp dir
         if os.path.exists(temp_dir):
             logger.debug(f"Cleaning existing temporary directory: {temp_dir}")
             shutil.rmtree(temp_dir)
@@ -164,8 +207,6 @@ def create_first_config():
         subprocess.run(["git", "clone", WAYPANEL_REPO, temp_dir], check=True)
 
         src_config_dir = os.path.join(temp_dir, CONFIG_SUBDIR)
-
-        # Create config directory if it doesn't exist
         if not os.path.exists(src_config_dir):
             logger.info(f"Creating missing config directory: {src_config_dir}")
             os.makedirs(src_config_dir)
@@ -179,7 +220,6 @@ def create_first_config():
         raise
     finally:
         if os.path.exists(temp_dir):
-            logger.debug(f"Cleaning up temporary directory: {temp_dir}")
             shutil.rmtree(temp_dir)
 
 
@@ -205,14 +245,12 @@ def find_typelib_path(base_path):
             if file.endswith(".typelib"):
                 logger.debug(f"Found typelib at: {root}")
                 return root
-    logger.debug("No typelib files found")
     return None
 
 
 def set_gi_typelib_path(primary_path, fallback_path):
     """Set GI_TYPELIB_PATH environment variable."""
     primary_typelib_path = find_typelib_path(primary_path)
-
     if primary_typelib_path:
         os.environ["GI_TYPELIB_PATH"] = primary_typelib_path
         logger.info(f"GI_TYPELIB_PATH set to: {primary_typelib_path}")
@@ -224,15 +262,19 @@ def set_gi_typelib_path(primary_path, fallback_path):
         logger.info(f"GI_TYPELIB_PATH set to fallback path: {fallback_typelib_path}")
         return
 
-    error_msg = f"No .typelib files found in {primary_path} or {fallback_path}"
-    logger.error(error_msg)
-    raise FileNotFoundError(error_msg)
+    raise FileNotFoundError(
+        f"No .typelib files found in {primary_path} or {fallback_path}"
+    )
 
 
 def main():
     """Main application entry point."""
+    config_observer = None
     try:
         logger.info("Starting Waypanel initialization")
+
+        # Start config watcher first
+        config_observer = start_config_watcher()
 
         layer_shell_check()
         check_config_path()
@@ -246,6 +288,11 @@ def main():
     except Exception as e:
         logger.critical(f"Fatal error: {e}", exc_info=True)
         raise
+    finally:
+        if config_observer:
+            config_observer.stop()
+            config_observer.join()
+        cleanup_resources()
 
 
 if __name__ == "__main__":
