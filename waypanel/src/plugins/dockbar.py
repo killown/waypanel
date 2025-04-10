@@ -5,7 +5,6 @@ import sys
 from collections import ChainMap, defaultdict
 from subprocess import call
 from subprocess import check_output as out
-from subprocess import run
 
 import orjson as json
 import toml
@@ -15,8 +14,11 @@ from wayfire.ipc import WayfireSocket
 
 from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
 
-from ..core.create_panel import (CreatePanel, set_layer_position_exclusive,
-                                 unset_layer_position_exclusive)
+from ..core.create_panel import (
+    CreatePanel,
+    set_layer_position_exclusive,
+    unset_layer_position_exclusive,
+)
 from ..core.utils import Utils
 from .icons import get_nearest_icon_name
 
@@ -123,7 +125,6 @@ class Dockbar(Adw.Application):
         # here will make the button to append app to dockbar work
         # self.add_launcher.connect("clicked", self.dockbar_append)
         self.scrolled_window = Gtk.ScrolledWindow()
-        self.scrolled_window.add_css_class("scrolled_window_bottom_bar")
         output = os.getenv("waypanel")
         output_name = None
         geometry = None
@@ -142,13 +143,13 @@ class Dockbar(Adw.Application):
             self.scrolled_window.set_size_request(monitor_width / 1.2, 64)
 
         self.bottom_panel.set_content(self.scrolled_window)
-        self.taskbar = Gtk.Box()
+        self.taskbar = Gtk.FlowBox()
         self.taskbar.set_halign(Gtk.Align.CENTER)  # Center horizontally
         self.taskbar.set_valign(Gtk.Align.CENTER)  # Center vertically
         self.scrolled_window.set_child(self.taskbar)
+
         # apps append button
         # self.taskbar.append(self.add_launcher)
-        self.taskbar.add_css_class("taskbar")
         if enabled:
             self.bottom_panel.present()
 
@@ -164,6 +165,7 @@ class Dockbar(Adw.Application):
             except Exception as e:
                 print(f"An error occurred in {func.__name__}: {e}")
                 return None
+
         return wrapper
 
     def file_exists(self, full_path):
@@ -277,7 +279,6 @@ class Dockbar(Adw.Application):
 
     def on_app_id_changed(self, view):
         self.update_taskbar_list(view)
-        self.new_taskbar_view("h", "taskbar", view["id"])
 
     def panel_output_is_focused_output(self):
         output = os.getenv("waypanel")
@@ -313,16 +314,15 @@ class Dockbar(Adw.Application):
 
     def on_view_created(self, view):
         self.update_taskbar_list(view)
-        self.new_taskbar_view("h", "taskbar", view["id"])
 
     def on_view_destroyed(self, view):
         self.update_taskbar_list(view)
 
     def on_view_wset_changed(self, view):
-        self.update_taskbar(view)
+        self.update_taskbar_button_label(view)
 
     def on_title_changed(self, view):
-        self.update_taskbar(view)
+        self.update_taskbar_button_label(view)
 
     def get_default_monitor_name(self):
         try:
@@ -339,11 +339,11 @@ class Dockbar(Adw.Application):
         try:
             # Get sink inputs from PulseAudio
             pactl_output = subprocess.run(
-                ['pactl', 'list', 'sink-inputs'],
+                ["pactl", "list", "sink-inputs"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                check=True
+                check=True,
             ).stdout
 
             # Parse sink inputs
@@ -351,12 +351,12 @@ class Dockbar(Adw.Application):
             current_app = {}
 
             for line in pactl_output.splitlines():
-                if line.startswith('Sink Input #'):
+                if line.startswith("Sink Input #"):
                     if current_app:
                         apps.append(current_app)
                         current_app = {}
-                elif '=' in line:
-                    key, value = map(str.strip, line.split('=', 1))
+                elif "=" in line:
+                    key, value = map(str.strip, line.split("=", 1))
                     current_app[key] = value.strip('"')
 
             if current_app:
@@ -365,11 +365,11 @@ class Dockbar(Adw.Application):
             # Get window titles using wmctrl
             try:
                 wmctrl_output = subprocess.run(
-                    ['wmctrl', '-lp'],
+                    ["wmctrl", "-lp"],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
-                    check=True
+                    check=True,
                 ).stdout
 
                 # Create PID to window title mapping
@@ -387,7 +387,7 @@ class Dockbar(Adw.Application):
             result = []
 
             for app in apps:
-                pid = app.get('application.process.id')
+                pid = app.get("application.process.id")
                 if not pid:
                     continue
 
@@ -395,10 +395,16 @@ class Dockbar(Adw.Application):
                 # 1. Media title (song/video name)
                 # 2. Window title
                 # 3. Application name
-                title = (app.get('media.name') or
-                         app.get('xesam:title') or
-                         (pid_to_windows.get(pid, [''])[0] if pid in pid_to_windows else '') or
-                         app.get('application.name', ''))
+                title = (
+                    app.get("media.name")
+                    or app.get("xesam:title")
+                    or (
+                        pid_to_windows.get(pid, [""])[0]
+                        if pid in pid_to_windows
+                        else ""
+                    )
+                    or app.get("application.name", "")
+                )
 
                 if title:  # Only include if we found a title
                     result.append({pid: title})
@@ -412,7 +418,7 @@ class Dockbar(Adw.Application):
             print(f"Unexpected error: {e}")
             return []
 
-    def update_taskbar(self, view):
+    def update_taskbar_button_label(self, view):
         title = self.utils.filter_utf_for_gtk(view["title"])
         title = title[:20]
         words = title.split()
@@ -433,11 +439,17 @@ class Dockbar(Adw.Application):
         button = None
         if id in self.buttons_id:
             button = self.buttons_id[view["id"]]
+
+        if not self.utils.widget_exists(button):
+            return
+
         if button:
             button = button[0]
             apps_using_audio = self.get_audio_apps_with_titles()
             pid = str(view["pid"])
-            if any(app for app in apps_using_audio if str(pid) in app and title in app[pid]):
+            if any(
+                app for app in apps_using_audio if str(pid) in app and title in app[pid]
+            ):
                 title = title + " 🔊"
             button.set_label(title)
 
@@ -455,16 +467,9 @@ class Dockbar(Adw.Application):
 
     def update_taskbar_on_scale(self):
         for view in self.sock.list_views():
-            self.update_taskbar(view)
+            self.update_taskbar_button_label(view)
 
     def Taskbar(self, orientation, class_style, update_button=False, callback=None):
-        # Load configuration from dockbar_config file
-        with open(self.waypanel_cfg, "r") as f:
-            config = toml.load(f)["dockbar"]
-
-        # Extract desktop_file paths from the configuration
-        launchers_desktop_file = [config[i]["desktop_file"] for i in config]
-
         list_views = self.sock.list_views()
         if not list_views:
             return
@@ -509,17 +514,13 @@ class Dockbar(Adw.Application):
         button = self.utils.create_taskbar_launcher(
             wm_class, title, initial_title, orientation, class_style, id
         )
-        if not self.utils.widget_exists(button):
-            return
-
         if button:
-            self.taskbar.append(button)
-
+            self.utils.append_widget_if_ready(self.taskbar, button)
             # Store button information in dictionaries for easy access
             self.buttons_id[id] = [button, initial_title, id]
 
             self.taskbar_list.append(id)
-
+            button.add_css_class("taskbar-button")
             return True
 
     def pid_exist(self, id):
@@ -556,7 +557,7 @@ class Dockbar(Adw.Application):
         for v in self.sock.list_views():
             if v["role"] == "toplevel":
                 if v["id"] not in self.buttons_id:
-                    self.new_taskbar_view("h", "taskbar", view["id"])
+                    self.update_taskbar_list(v)
 
     def update_taskbar_list(self, view):
         if not self.view_exist(view["id"]):
@@ -650,7 +651,7 @@ class Dockbar(Adw.Application):
         updated_data = ChainMap(new_data, config)
         with open(self.waypanel_cfg, "w") as f:
             # toml.dump(updated_data, f)
-            print('cannot dumb data, this will overwrite the whole file')
+            print("cannot dump data, this will overwrite the whole file")
 
         # Create and append button to the dockbar
         button = self.utils.create_button(

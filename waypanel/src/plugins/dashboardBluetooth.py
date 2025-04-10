@@ -81,7 +81,6 @@ class BluetoothDashboard(Adw.Application):
 
         for device in devices:
             bluetooth_button = Adw.ButtonContent()
-            bluetooth_button.add_css_class("bluetooth-dashboard-buttons")
             device_id = device.split()[0]
             device_name = " ".join(device.split()[1:])
             self.bluetooth_buttons[device_name] = device_id
@@ -95,6 +94,7 @@ class BluetoothDashboard(Adw.Application):
             gesture.set_button(1)
             bluetooth_button.add_controller(gesture)
             box.append(bluetooth_button)
+            bluetooth_button.add_css_class("bluetooth-dashboard-buttons")
 
         # Set the box as the child of the popover
         self.popover_dashboard.set_child(box)

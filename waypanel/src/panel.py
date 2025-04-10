@@ -128,10 +128,8 @@ class Panel(Adw.Application):
         self.monitor = None
         self.get_focused_output = None
         self.output_is_ready_to_dpms_off = None
-
-        # Load and apply configurations
-        with open(self.waypanel_cfg) as topbar_config:
-            config = toml.load(topbar_config)
+        self.panel_config_loaded = self.load_config()
+        config = self.panel_config_loaded
 
         self.simple_title_enabled = config["panel"]["views"]["tilling"]
         self.maximize_views_on_expo_enabled = config["panel"]["views"][
@@ -160,13 +158,6 @@ class Panel(Adw.Application):
             self.monitor_name = config["monitor"]["name"]
         else:
             print("Using the first monitor from the list.")
-
-        # Load additional configurations
-        with open(self.waypanel_cfg, "r") as f:
-            self.topbar_config_loaded = toml.load(f)
-
-        with open(self.waypanel_cfg, "r") as f:
-            self.dockbar_config_loaded = toml.load(f)
 
     def _initialize_utilities(self):
         """Initialize utility functions and properties."""
@@ -318,7 +309,6 @@ class Panel(Adw.Application):
         self.output_is_ready_to_dpms_off = {
             output_name: False for output_name in self.wf_utils.list_outputs_names()
         }
-
         # Load DPMS settings from config
         # with open(self.topbar_config, "r") as f:
         #    panel_toml = toml.load(f)
@@ -328,6 +318,12 @@ class Panel(Adw.Application):
         # self.dpms_enabled = panel_toml["dpms"]["enabled"]
         # self.turn_off_monitors_timeout = GLib.timeout_add_seconds(timeout_all, self.dpms_manager)
         # self.turn_off_monitor_timeout = timeout_single
+
+    def load_config(self):
+        if not hasattr(self, "_cached_config"):
+            with open(self.waypanel_cfg, "r") as f:
+                self._cached_config = toml.load(f)
+        return self._cached_config
 
     def check_widgets_ready(self):
         if (
@@ -374,7 +370,6 @@ class Panel(Adw.Application):
             self.stipc.run_cmd(app)
             counter = 0
             while counter <= 10:  # 10 seconds limit
-                print("asdf")
                 view = [
                     i
                     for i in self.sock.list_views()
@@ -523,67 +518,88 @@ class Panel(Adw.Application):
 
             self.wf_utils.set_current_tiling_layout(desired_layout)
 
-    def handle_plugin_event(self, msg):
+    def handle_event_checks(self, msg, required_keys=None):
+        """
+        Perform common checks on the event message.
+        Args:
+            msg (dict): The event message.
+            required_keys (list): List of keys that must be present in the message.
+        Returns:
+            bool: True if the checks pass, False otherwise.
+        """
+        if not isinstance(msg, dict):
+            return False
+
         if "event" not in msg:
-            return
+            return False
+
+        if required_keys:
+            for key in required_keys:
+                if key not in msg:
+                    return False
+
+        return True
+
+    def handle_plugin_event(self, msg):
+        if not self.handle_event_checks(
+            msg, required_keys=["event", "plugin", "state"]
+        ):
+            return True
+
         if msg["event"] == "plugin-activation-state-changed":
             if msg["state"]:
                 if msg["plugin"] == "expo":
                     self.on_expo_activated()
-                if msg["plugin"] == "scale":
+                elif msg["plugin"] == "scale":
                     self.on_scale_activated()
-                if msg["plugin"] == "move":
+                elif msg["plugin"] == "move":
                     self.on_moving_view()
-                if msg["plugin"] == "builtin-close-view":
-                    self.on_view_destroyed()
             else:
                 if msg["plugin"] == "expo":
                     self.on_expo_desactivated()
-                if msg["plugin"] == "scale":
+                elif msg["plugin"] == "scale":
                     self.on_scale_desactivated()
 
+        return True
+
     def handle_view_event(self, msg):
+        # Validate the event using handle_event_checks
+        if not self.handle_event_checks(msg, required_keys=["event"]):
+            return True
+
         event = msg["event"]
-        view = None
-        if "view" in msg:
-            view = msg["view"]
+        view = msg.get("view")
 
-        if event == "view-unmapped":
-            self.on_view_destroyed()
-
+        # Common checks for view-related events
         if view is None:
             return True
 
-        if view["pid"] == -1:
+        if view["pid"] == -1 or view.get("role") != "toplevel":
             return True
 
-        if "role" not in view:
+        if view.get("app-id") in ["", "nil"]:
             return True
 
-        if view["role"] != "toplevel":
-            return True
-
-        if view["app-id"] == "":
-            return True
-
-        if view["app-id"] == "nil":
+        # Handle specific events
+        if event == "view-unmapped":
+            self.on_view_destroyed()
             return True
 
         if event == "view-title-changed":
             self.on_title_changed()
 
-        if event == "view-tiled" and view:
-            pass
+        elif event == "view-tiled" and view:
+            pass  # No action needed here
 
-        if event == "app-id-changed":
+        elif event == "app-id-changed":
             self.on_app_id_changed()
 
-        if event == "view-focused":
+        elif event == "view-focused":
             self.on_view_role_toplevel_focused(view["id"])
             self.on_view_focused()
             self.last_focused_output = view["output-id"]
 
-        if event == "view-mapped":
+        elif event == "view-mapped":
             self.on_view_created(view)
 
         return True
@@ -593,11 +609,11 @@ class Panel(Adw.Application):
             return
 
     def handle_output_events(self, msg):
-        if "event" not in msg:
+        if not self.handle_event_checks(msg, required_keys=["event"]):
             return
+
         if msg["event"] == "output-gain-focus":
             self.output_get_focus()
-            return
 
     def on_event_ready(self, fd, condition):
         msg = self.sock.read_next_event()
@@ -715,8 +731,8 @@ class Panel(Adw.Application):
     def output_get_focus(self):
         focused_output_name = self.wf_utils.get_focused_output_name()
         self.utils.run_cmd("xrandr --output {0}".format(focused_output_name))
-        if self.dpms_enabled:
-            self.dpms_manager(self.turn_off_monitor_timeout)
+        # if self.dpms_enabled:
+        #    self.dpms_manager(self.turn_off_monitor_timeout)
 
     def on_moving_view(self):
         return True
@@ -800,7 +816,7 @@ class Panel(Adw.Application):
 
     def setup_background_panel_widgets(self):
         # notes label
-        self.todo_button = Adw.ButtonContent()
+        self.todo_button = Gtk.Button()
         self.todo_button.add_css_class("todo_label")
         self.todo_button.set_icon_name("task-due")
         todo = os.path.join(self.home, "Documentos", "todo.txt")
@@ -890,7 +906,9 @@ class Panel(Adw.Application):
         # Setting up gestures for various UI components
         # self.utils.create_gesture(self.todo_button, 1, self.utils.take_note_app)
         # self.utils.create_gesture(self.clock_box, 1, self.clock_dashboard)
-        self.utils.create_gesture(self.window_title, 1, self.manage_window_notes)
+        self.utils.create_gesture(
+            self.window_title_content, 1, self.manage_window_notes
+        )
         # self.utils.create_gesture(self.tbclass, 1, self.dock.dockbar_append)
         # self.utils.create_gesture(self.tbclass, 3, self.dock.join_windows)
         # self.utils.create_gesture(self.tbSIGKILL, 1, self.sigkill_activewindow)
@@ -1012,8 +1030,8 @@ class Panel(Adw.Application):
         self.cf_box.append(self.minimize_button)
         self.cf_box.append(self.maximize_button)
         self.cf_box.append(self.close_button)
-        self.cf_box.add_css_class("cf_box")
         self.top_panel_box_for_buttons.append(self.cf_box)
+        self.cf_box.add_css_class("cf_box")
 
     def minimize_view(self, *_):
         if not self.last_toplevel_focused_view:
@@ -1044,7 +1062,6 @@ class Panel(Adw.Application):
         self.clock_box.set_halign(Gtk.Align.CENTER)
         self.clock_box.set_hexpand(True)
         self.clock_box.set_baseline_position(Gtk.BaselinePosition.CENTER)
-        self.clock_box.add_css_class("Clock")
 
         # Creating clock label with current date and time
         self.PopoverDashboard = PopoverDashboard()
@@ -1054,12 +1071,13 @@ class Panel(Adw.Application):
         self.clock_label = self.popover_dashboard
         self.clock_label.set_label(datetime.datetime.now().strftime("%b %d  %H:%M"))
         self.clock_label.set_halign(Gtk.Align.CENTER)
-        self.clock_label.add_css_class("ClockButton")
         self.clock_label.set_hexpand(True)
         self.clock_box.append(self.clock_label)
 
         # Adding the clock widget to the center panel
         self.top_panel_box_center.append(self.clock_box)
+        self.clock_box.add_css_class("Clock")
+        self.clock_label.add_css_class("ClockButton")
 
         # Schedule the initial update and then update every minute
         GLib.timeout_add_seconds(60 - datetime.datetime.now().second, self.update_clock)
@@ -1118,6 +1136,7 @@ class Panel(Adw.Application):
             self.load_css_from_file()
 
     def load_css_from_file(self):
+        # you need to append the widgets to their parent containers first and then add_css_class
         css_provider = Gtk.CssProvider()
         css_provider.load_from_file(Gio.File.new_for_path(self.style_css_config))
         Gtk.StyleContext.add_provider_for_display(
@@ -1138,9 +1157,14 @@ class Panel(Adw.Application):
         # setup window title
         # self.window_title_content = self.create_button_content()
         # self.window_title = self.window_title_content[0]
-        self.window_title = Adw.ButtonContent()
-        self.window_title.add_css_class("title_button_view")
-        self.top_panel_box_window_title.append(self.window_title)
+        self.window_title_content = Gtk.Box()
+        self.window_title_label = Gtk.Label()
+        self.window_title_icon = Gtk.Image.new_from_icon_name("None")
+        self.window_title_content.append(self.window_title_icon)
+        self.window_title_content.append(self.window_title_label)
+        self.top_panel_box_window_title.append(self.window_title_content)
+        self.window_title_label.add_css_class("topbar-title-content-label")
+        self.window_title_icon.add_css_class("topbar-title-content-icon")
 
         if "--custom" in self.args:
             self.default_panel = False
@@ -1149,73 +1173,74 @@ class Panel(Adw.Application):
             self.exclusive = False
 
         self.default_panel = True
-        with open(self.waypanel_cfg, "r") as f:
-            panel_toml = toml.load(f)["panel"]
-            for p in panel_toml:
-                if "bottom" == p:
-                    self.exclusive = True
-                    if panel_toml[p]["Exclusive"] == "False":
-                        self.exclusive = False
+        panel_toml = self.panel_config_loaded["panel"]
+        for p in panel_toml:
+            if "bottom" == p:
+                self.exclusive = True
+                if panel_toml[p]["Exclusive"] == "False":
+                    self.exclusive = False
 
-                    position = panel_toml[p]["position"]
-                    size = panel_toml[p]["size"]
-                    self.bottom_panel = CreatePanel(
-                        app,
-                        "BOTTOM",
-                        position,
-                        self.exclusive,
-                        width=size,
-                        height=0,
-                        class_style="BottomBar",
-                    )
+                position = panel_toml[p]["position"]
+                size = panel_toml[p]["size"]
+                self.bottom_panel = CreatePanel(
+                    app,
+                    "BOTTOM",
+                    position,
+                    self.exclusive,
+                    width=size,
+                    height=0,
+                    class_style="BottomBar",
+                )
 
-                if "right" == p:
-                    self.exclusive = True
-                    if panel_toml[p]["Exclusive"] == "False":
-                        self.exclusive = False
-                    position = panel_toml[p]["position"]
-                    self.right_panel = CreatePanel(
-                        app, "RIGHT", position, self.exclusive, 0, 32, "RightBar"
-                    )
-                if "left" == p:
-                    self.exclusive = True
-                    if panel_toml[p]["Exclusive"] == "False":
-                        self.exclusive = False
-                    position = panel_toml[p]["position"]
-                    size = panel_toml[p]["size"]
-                    self.left_panel = CreatePanel(
-                        app, "LEFT", position, self.exclusive, 0, size, "LeftBar"
-                    )
+            if "right" == p:
+                self.exclusive = True
+                if panel_toml[p]["Exclusive"] == "False":
+                    self.exclusive = False
+                position = panel_toml[p]["position"]
+                self.right_panel = CreatePanel(
+                    app, "RIGHT", position, self.exclusive, 0, 32, "RightBar"
+                )
+            if "left" == p:
+                self.exclusive = True
+                if panel_toml[p]["Exclusive"] == "False":
+                    self.exclusive = False
+                position = panel_toml[p]["position"]
+                size = panel_toml[p]["size"]
+                self.left_panel = CreatePanel(
+                    app, "LEFT", position, self.exclusive, 0, size, "LeftBar"
+                )
 
-                if "top" == p:
-                    self.exclusive = True
-                    if panel_toml[p]["Exclusive"] == "False":
-                        self.exclusive = False
-                    position = panel_toml[p]["position"]
-                    size = panel_toml[p]["size"]
-                    self.top_panel = CreatePanel(
-                        app,
-                        "TOP",
-                        position,
-                        self.exclusive,
-                        self.monitor_width,
-                        size,
-                        "TopBar",
-                    )
-                if "top_background" == p:
-                    self.exclusive = True
-                    if panel_toml[p]["Exclusive"] == "False":
-                        self.exclusive = False
-                    position = panel_toml[p]["position"]
-                    self.top_panel_background = CreatePanel(
-                        app,
-                        "TOP",
-                        position,
-                        self.exclusive,
-                        self.monitor_width,
-                        24,
-                        "TopBarBackground",
-                    )
+            if "top" == p:
+                self.exclusive = True
+                if panel_toml[p]["Exclusive"] == "False":
+                    self.exclusive = False
+                position = panel_toml[p]["position"]
+                size = panel_toml[p]["size"]
+                self.top_panel = CreatePanel(
+                    app,
+                    "TOP",
+                    position,
+                    self.exclusive,
+                    self.monitor_width,
+                    size,
+                    "TopBar",
+                )
+            if "top_background" == p:
+                self.exclusive = True
+                if panel_toml[p]["Exclusive"] == "False":
+                    self.exclusive = False
+                position = panel_toml[p]["position"]
+                self.top_panel_background = CreatePanel(
+                    app,
+                    "TOP",
+                    position,
+                    self.exclusive,
+                    self.monitor_width,
+                    24,
+                    "TopBarBackground",
+                )
+
+        self.window_title_content.add_css_class("title-content-box")
 
     def mullvad_status(self):
         """
@@ -1476,8 +1501,7 @@ class Panel(Adw.Application):
             dict: A dictionary containing the menu buttons associated with the created menus.
         """
         # Read the menu configuration from the specified file
-        with open(self.waypanel_cfg, "r") as f:
-            menu_toml = toml.load(f)["menu"]
+        menu_toml = self.panel_config_loaded["menu"]
 
         # Initialize a dictionary to store the menu buttons
         menu_buttons = {}
@@ -1547,13 +1571,12 @@ class Panel(Adw.Application):
         bt_icon = "bluetooth"
         waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
         if os.path.exists(waypanel_config_path):
-            with open(waypanel_config_path, "r") as f:
-                config = toml.load(f)
-                bt_icon = (
-                    config.get("panel", {})
-                    .get("top", {})
-                    .get("bluetooth_icon", "bluetooth")
-                )
+            config = self.panel_config_loaded
+            bt_icon = (
+                config.get("panel", {})
+                .get("top", {})
+                .get("bluetooth_icon", "bluetooth")
+            )
         bt.set_icon_name(bt_icon)
         return bt
 
@@ -1561,15 +1584,11 @@ class Panel(Adw.Application):
         s = SystemDashboard()
         s = s.create_menu_popover_system(self, app)
         system_icon = "system-shutdown"
-        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
-        if os.path.exists(waypanel_config_path):
-            with open(waypanel_config_path, "r") as f:
-                config = toml.load(f)
-                system_icon = (
-                    config.get("panel", {})
-                    .get("top", {})
-                    .get("system_icon", "system-shutdown")
-                )
+        system_icon = (
+            self.panel_config_loaded.get("panel", {})
+            .get("top", {})
+            .get("system_icon", "system-shutdown")
+        )
         s.set_icon_name(system_icon)
         return s
 
@@ -1579,27 +1598,23 @@ class Panel(Adw.Application):
         self.icon_vol_slider = self.icon_vol_slider.create_menu_popover_soundcard(
             self, app
         )
-        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
         soundcard_icon = "audio-volume-high"
-        if os.path.exists(waypanel_config_path):
-            with open(waypanel_config_path, "r") as f:
-                config = toml.load(f)
-                soundcard_icon = (
-                    config.get("panel", {})
-                    .get("top", {})
-                    .get("soundcard_icon", "audio-volume")
-                )
+        soundcard_icon = (
+            self.panel_config_loaded.get("panel", {})
+            .get("top", {})
+            .get("soundcard_icon", "audio-volume")
+        )
         self.icon_vol_slider.set_icon_name(soundcard_icon)
         self.vol_slider_box.append(self.icon_vol_slider)
         self.vol_slider = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL)
         self.vol_slider.set_range(0, 100)
-        self.vol_slider_box.add_css_class("vol_slider_box")
         self.vol_slider.set_format_value_func()
         # self.vol_slider.set_draw_value(True)
         self.vol_slider.set_value(50)
         self.vol_slider.set_value_pos(Gtk.PositionType.RIGHT)
         self.vol_slider.connect("value-changed", self.on_volume_slider_changed)
         # self.vol_slider_box.append(self.vol_slider)
+        # self.vol_slider_box.add_css_class("vol_slider_box")
         return self.vol_slider_box
 
     def on_volume_slider_changed(self, slider):
@@ -1799,8 +1814,6 @@ class Panel(Adw.Application):
         box.set_baseline_position(Gtk.BaselinePosition.BOTTOM)
 
         # Add the specified CSS class to the box container and the label
-        box.add_css_class(css_class)
-        label.add_css_class(css_class)
 
         # Add the label to the box container
         box.append(label)
@@ -1812,6 +1825,9 @@ class Panel(Adw.Application):
             self.top_panel_box_systray.append(box)
         elif position == "center":
             self.clock_box.append(box)
+
+        box.add_css_class(css_class)
+        label.add_css_class(css_class)
 
         # Schedule the command to run once after 10 seconds
         GLib.timeout_add(10 * 1000, lambda: self._exec_once(output, label))
@@ -1833,8 +1849,7 @@ class Panel(Adw.Application):
             None
         """
         # Read command settings from the configuration file
-        with open(self.waypanel_cfg, "r") as config_file:
-            cmd_settings = toml.load(config_file)["cmd"]
+        cmd_settings = self.panel_config_loaded["cmd"]
 
         # Iterate through each command setting and create/configure the corresponding command label
         for label_key in cmd_settings:
@@ -2031,15 +2046,19 @@ class Panel(Adw.Application):
                 "palemoon",
             ]
 
-            if self.utils.is_widget_ready(self.window_title):
-                self.window_title.set_label(title)
-                self.window_title.set_icon_name(icon)
+            if self.utils.is_widget_ready(self.window_title_content):
+                self.window_title_label.set_label(title)
+                print(icon)
+                if icon:  # Only proceed if we have an icon name
+                    try:
+                        # Clear any existing icon first
+                        self.window_title_icon.set_from_icon_name("")
+                        # Set new icon
+                        self.window_title_icon.set_from_icon_name(icon)
+                    except Exception as e:
+                        print(f"Error setting icon {icon}: {e}")
                 if wm_class in browsers:
-                    self.window_title.set_label(wm_class)
-
-                    # self.utils.append_widget_if_ready(self.top_panel_box_window_title,
-                    #                         self.window_title,
-                    #                         )
+                    self.window_title_label.set_label(wm_class)
 
     def update_widgets_background_panel(self, workspace_id, pid, wclass, mem_usage):
         """Update widget labels."""
@@ -2067,8 +2086,33 @@ def append_to_env(app_name, monitor_name, env_var="waypanel"):
 
 
 def load_config(config_path):
-    with open(config_path) as panel_config_file:
-        return toml.load(panel_config_file)
+    """
+    Load the configuration file or exit the application with an error message.
+    Args:
+        config_path (str): Path to the configuration file.
+    Returns:
+        dict: Parsed TOML configuration.
+    """
+    if not os.path.exists(config_path):
+        print(f"Error: Configuration file not found at '{config_path}'.")
+        print("The panel cannot run without a valid configuration file.")
+        print("Please ensure the file exists or reinstall the application.")
+        sys.exit(1)  # Exit with a non-zero status code to indicate failure
+
+    try:
+        with open(config_path, "r") as f:
+            config = toml.load(f)
+            if not config:
+                raise ValueError("Configuration file is empty.")
+            return config
+    except toml.TomlDecodeError as e:
+        print(f"Error: Failed to parse the configuration file at '{config_path}'.")
+        print(f"Details: {e}")
+        print("Please fix the file or replace it with a valid configuration.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Unexpected error while loading the configuration file: {e}")
+        sys.exit(1)
 
 
 def get_monitor_name(config, sock):

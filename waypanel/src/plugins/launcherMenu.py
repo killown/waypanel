@@ -47,18 +47,20 @@ class MenuLauncher(Adw.Application):
         if os.path.exists(panel_config_path):
             with open(panel_config_path, "r") as f:
                 panel_config = toml.load(f)
-            menu_icon = get_nearest_icon_name(panel_config.get(
-                "top", {}).get("menu_icon", get_nearest_icon_name("wayfire")))
+            menu_icon = get_nearest_icon_name(
+                panel_config.get("top", {}).get(
+                    "menu_icon", get_nearest_icon_name("wayfire")
+                )
+            )
 
         self.menubutton_launcher.set_icon_name(menu_icon)
-        self.menubutton_launcher.add_css_class("top_left_widgets")
         obj.top_panel_box_widgets_left.append(self.menubutton_launcher)
+        self.menubutton_launcher.add_css_class("top_left_widgets")
 
     def create_popover_launcher(self, *_):
         # Create a popover
         self.popover_launcher = Gtk.Popover()
         self.popover_launcher.set_has_arrow(False)
-        self.popover_launcher.add_css_class("transparent-popover-launcher")
         self.popover_launcher.connect("closed", self.popover_is_closed)
         self.popover_launcher.connect("notify::visible", self.popover_is_open)
         show_searchbar_action = Gio.SimpleAction.new("show_searchbar")
@@ -88,7 +90,6 @@ class MenuLauncher(Adw.Application):
         self.flowbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.flowbox.set_activate_on_single_click(True)
         self.flowbox.connect("child-activated", self.run_app_from_launcher)
-        self.flowbox.add_css_class("popover_launcher_flowbox")
         self.main_box.append(self.scrolled_window)
         self.scrolled_window.set_child(self.flowbox)
         self.popover_launcher.set_child(self.main_box)
@@ -122,18 +123,18 @@ class MenuLauncher(Adw.Application):
             self.widgets_dict[i.get_id()] = self.row_hbox
             self.row_hbox.MYTEXT = name, cmd, keywords
             line = Gtk.Label.new()
-            line.add_css_class("label_from_popover_launcher")
             line.set_label(name)
             line.props.margin_start = 5
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)
             image = Gtk.Image.new_from_gicon(icon)
-            image.add_css_class("icon_from_popover_launcher")
             image.props.margin_end = 5
             image.set_halign(Gtk.Align.END)
             self.row_hbox.append(image)
             self.row_hbox.append(line)
             self.flowbox.append(self.row_hbox)
+            line.add_css_class("label_from_popover_launcher")
+            image.add_css_class("icon_from_popover_launcher")
 
         for i in self.all_apps:
             name = i.get_name()
@@ -151,18 +152,19 @@ class MenuLauncher(Adw.Application):
             self.widgets_dict[i.get_id()] = self.row_hbox
             self.row_hbox.MYTEXT = name, cmd, keywords
             line = Gtk.Label.new()
-            line.add_css_class("label_from_popover_launcher")
             line.set_label(name)
             line.props.margin_start = 5
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)
             image = Gtk.Image.new_from_gicon(icon)
-            image.add_css_class("icon_from_popover_launcher")
             image.props.margin_end = 5
             image.set_halign(Gtk.Align.END)
             self.row_hbox.append(image)
             self.row_hbox.append(line)
             self.flowbox.append(self.row_hbox)
+            line.add_css_class("label_from_popover_launcher")
+            image.add_css_class("icon_from_popover_launcher")
+
         self.flowbox.set_filter_func(self.on_filter_invalidate)
         # Connect signal for selecting a row
         width = self.flowbox.get_preferred_size().natural_size.width
@@ -170,6 +172,8 @@ class MenuLauncher(Adw.Application):
         self.scrolled_window.set_min_content_height(600)
         self.popover_launcher.set_parent(self.menubutton_launcher)
         self.popover_launcher.popup()
+        self.flowbox.add_css_class("popover_launcher_flowbox")
+        self.popover_launcher.add_css_class("transparent-popover-launcher")
         return self.popover_launcher
 
     # this is where pressing enter will take effect
@@ -189,7 +193,9 @@ class MenuLauncher(Adw.Application):
 
         # remove widgets from uninstalled apps
         app_ids = [i.get_id() for i in all_apps]
-        should_continue = [i.get_id() for i in self.all_apps if i.get_id() not in app_ids]
+        should_continue = [
+            i.get_id() for i in self.all_apps if i.get_id() not in app_ids
+        ]
 
         # if all app_ids match in both all updated apps along with old self all apps
         if not should_continue:
@@ -222,19 +228,19 @@ class MenuLauncher(Adw.Application):
             self.row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
             self.row_hbox.MYTEXT = name, cmd, keywords
             line = Gtk.Label.new()
-            line.add_css_class("label_from_popover_launcher")
             line.set_label(name)
             line.props.margin_start = 5
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)
 
             image = Gtk.Image.new_from_gicon(icon)
-            image.add_css_class("icon_from_popover_launcher")
             image.props.margin_end = 5
             image.set_halign(Gtk.Align.END)
             self.row_hbox.append(image)
             self.row_hbox.append(line)
             self.flowbox.append(self.row_hbox)
+            line.add_css_class("label_from_popover_launcher")
+            image.add_css_class("icon_from_popover_launcher")
 
         for i in all_apps:
             if i in self.all_apps:
@@ -253,18 +259,18 @@ class MenuLauncher(Adw.Application):
             self.row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
             self.row_hbox.MYTEXT = name, cmd, keywords
             line = Gtk.Label.new()
-            line.add_css_class("label_from_popover_launcher")
             line.set_label(name)
             line.props.margin_start = 5
             line.props.hexpand = True
             line.set_halign(Gtk.Align.START)
             image = Gtk.Image.new_from_gicon(icon)
-            image.add_css_class("icon_from_popover_launcher")
             image.props.margin_end = 5
             image.set_halign(Gtk.Align.END)
             self.row_hbox.append(image)
             self.row_hbox.append(line)
             self.flowbox.append(self.row_hbox)
+            line.add_css_class("label_from_popover_launcher")
+            image.add_css_class("icon_from_popover_launcher")
 
         self.all_apps = all_apps
 
@@ -331,6 +337,7 @@ class MenuLauncher(Adw.Application):
 
     def select_first_visible_child(self):
         """Select the first visible child in the flowbox."""
+
         def on_child(child):
             if child.is_visible():
                 self.flowbox.select_child(child)

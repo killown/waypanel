@@ -113,7 +113,6 @@ class PopoverFolders(Adw.Application):
 
             # Create label for the bookmark name
             line = Gtk.Label.new()
-            line.add_css_class("label_from_folders")
             line.set_label(name)
             line.props.margin_start = 5
             line.props.hexpand = True
@@ -121,7 +120,6 @@ class PopoverFolders(Adw.Application):
 
             # Create image for the bookmark icon
             image = Gtk.Image.new_from_icon_name(icon)
-            image.add_css_class("icon_from_folders")
             image.set_icon_size(Gtk.IconSize.INHERIT)
             image.props.margin_end = 5
             image.set_halign(Gtk.Align.END)
@@ -129,6 +127,8 @@ class PopoverFolders(Adw.Application):
             # Add label and image to the bookmark box
             row_hbox.append(image)
             row_hbox.append(line)
+            line.add_css_class("label_from_folders")
+            image.add_css_class("icon_from_folders")
 
         for folder in self.home_folders:
             folders_path = os.path.join(self.home, folder)

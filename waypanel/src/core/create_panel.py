@@ -79,7 +79,7 @@ def get_monitor_info():
 def get_monitor_width(monitor):
     """Handles both dictionary and Gdk.Monitor cases, returning width"""
     # Case 1: Already a Gdk.Monitor object
-    if hasattr(monitor, 'get_geometry'):
+    if hasattr(monitor, "get_geometry"):
         try:
             # For newer GTK versions (get_geometry() returns a Gdk.Rectangle)
             geom = monitor.get_geometry()
@@ -91,8 +91,8 @@ def get_monitor_width(monitor):
             return geom.width
 
     # Case 2: Dictionary with direct width
-    if isinstance(monitor, dict) and 'width' in monitor:
-        return monitor['width']
+    if isinstance(monitor, dict) and "width" in monitor:
+        return monitor["width"]
 
     # Case 3: Nested dictionary structure
     if isinstance(monitor, dict):
@@ -107,12 +107,11 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     width = int(width)
     height = int(height)
     window = Adw.Window(application=app)
-    window.add_css_class(class_style)
     # lets try to set monitor info from Gdk, if not, get the panel default info instead
     monitor = get_monitor_info()
     gdk_monitor = None
     print(type(monitor))
-    monitor_name = next((name for name in monitor if name.endswith('-1')), None)
+    monitor_name = next((name for name in monitor if name.endswith("-1")), None)
     home = os.path.expanduser("~")
     config_path = os.path.join(home, ".config/waypanel")
     panel_config = os.path.join(config_path, "waypanel.toml")
@@ -190,4 +189,5 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     if layer == "BOTTOM":
         LayerShell.set_layer(window, LayerShell.Layer.BOTTOM)
 
+    window.add_css_class(class_style)
     return window

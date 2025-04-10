@@ -2,14 +2,11 @@ import os
 import subprocess
 import sys
 from importlib.util import find_spec
-from pathlib import Path
 from subprocess import Popen, check_output
-import toml
 import psutil
 from gi.repository import Adw, Gtk
 
 from ..core.utils import Utils
-from .icons import get_nearest_icon_name
 
 
 class SystemDashboard(Adw.Application):
@@ -109,16 +106,12 @@ class SystemDashboard(Adw.Application):
         self.popover_dashboard.connect("closed", self.popover_is_closed)
         self.popover_dashboard.connect("notify::visible", self.popover_is_open)
         # Set width and height of the popover dashboard
-        self.popover_dashboard.set_size_request(
-            400, 440
-        )  # Set width to 600 and height to 400
+        self.popover_dashboard.set_vexpand(True)
+        self.popover_dashboard.set_hexpand(True)
 
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.stack = Gtk.Stack.new()
-        self.stack.add_css_class("system_dash_box")
-        self.stack.add_css_class("system_dash_stack")
-        self.stack.props.hexpand = True
-        self.stack.props.vexpand = True
+
         data_and_categories = {
             ("Logout", "", "gnome-logout-symbolic"): "",
             ("Reboot", "", "system-reboot-symbolic"): "",
@@ -127,28 +120,26 @@ class SystemDashboard(Adw.Application):
             ("Turn Off Monitors", "", "display-symbolic"): "",
             ("Exit Waypanel", "", "display-symbolic"): "",
             ("Restart Waypanel", "", "display-symbolic"): "",
-            ("Settings", "", "gnome-settings-theme"): "",
+            ("Settings", "", "preferences-activities-symbolic"): "",
         }
         done = []
         for data, category in data_and_categories.items():
             if category not in done:  # if flowbox not exist in stack
-                sw = Gtk.ScrolledWindow.new()
                 flowbox = Gtk.FlowBox.new()
-                sw.set_child(flowbox)
                 flowbox.props.homogeneous = True
                 flowbox.set_valign(Gtk.Align.START)  # top to bottom
-                flowbox.props.margin_start = 20
-                flowbox.props.margin_end = 20
-                flowbox.props.margin_top = 20
-                flowbox.props.margin_bottom = 20
+                flowbox.props.margin_start = 15
+                flowbox.props.margin_end = 15
+                flowbox.props.margin_top = 15
+                flowbox.props.margin_bottom = 15
                 flowbox.props.hexpand = True
                 flowbox.props.vexpand = True
-                flowbox.props.max_children_per_line = 4
+                flowbox.props.max_children_per_line = 3
                 flowbox.props.selection_mode = Gtk.SelectionMode.NONE
-                self.stack.add_titled(sw, category, category)
+                self.stack.add_titled(flowbox, category, category)
                 done.append(category)
             else:
-                flowbox = self.stack.get_child_by_name(category).get_child().get_child()
+                flowbox = self.stack.get_child_by_name(category)
 
             icon_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
 
@@ -157,25 +148,22 @@ class SystemDashboard(Adw.Application):
             icon_vbox.append(icon)
 
             name_label = Gtk.Label.new(data[0])
-            name_label.add_css_class("system_dash_label")
             icon_vbox.append(name_label)
 
             summary_label = Gtk.Label.new(data[1])
-            summary_label.add_css_class("system_dash_summary")
             icon_vbox.append(summary_label)
 
             button = Gtk.Button.new()
             button.set_has_frame(False)
-            button.set_child(icon_vbox)
+            if icon_vbox is not None and isinstance(icon_vbox, Gtk.Widget):
+                button.set_child(icon_vbox)
+            else:
+                print("Error: Invalid icon_vbox provided")
             flowbox.append(button)
             button.connect("clicked", self.on_action, data[0])
+            name_label.add_css_class("system_dash_label")
+            summary_label.add_css_class("system_dash_summary")
 
-        stack_switcher = Gtk.StackSwitcher.new()
-        stack_switcher.props.hexpand = False
-        stack_switcher.props.vexpand = False
-        stack_switcher.set_stack(self.stack)
-
-        self.main_box.append(stack_switcher)
         self.main_box.append(self.stack)
 
         # Set the box as the child of the popover
@@ -184,7 +172,7 @@ class SystemDashboard(Adw.Application):
         # Set the parent widget of the popover and display it
         self.popover_dashboard.set_parent(self.menubutton_dashboard)
         self.popover_dashboard.popup()
-
+        self.stack.add_css_class("system_dashboard_stack")
         return self.popover_dashboard
 
     def on_system_clicked(self, device, *_):

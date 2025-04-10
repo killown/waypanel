@@ -65,7 +65,7 @@ class Utils(Adw.Application):
             "xfce4-terminal",
             "tilix",
             "st",
-            "rxvt"
+            "rxvt",
         ]
 
     @staticmethod
@@ -76,6 +76,7 @@ class Utils(Adw.Application):
             except Exception as e:
                 print(f"An error occurred in {func.__name__}: {e}")
                 return None
+
         return wrapper
 
     def connect_socket(self):
@@ -85,7 +86,12 @@ class Utils(Adw.Application):
         self.client_socket.connect(socket_path)
 
         # Create a GLib IO Watcher
-        self.source = GLib.io_add_watch(self.client_socket, GLib.PRIORITY_DEFAULT, GLib.IO_IN, self.handle_socket_event)
+        self.source = GLib.io_add_watch(
+            self.client_socket,
+            GLib.PRIORITY_DEFAULT,
+            GLib.IO_IN,
+            self.handle_socket_event,
+        )
 
     def handle_socket_event(self, fd, condition):
         """Read from the socket and process events."""
@@ -96,8 +102,8 @@ class Utils(Adw.Application):
         self.buffer += chunk
 
         # Process the complete events in the buffer
-        while '\n' in self.buffer:
-            event_str, self.buffer = self.buffer.split('\n', 1)
+        while "\n" in self.buffer:
+            event_str, self.buffer = self.buffer.split("\n", 1)
             if event_str:
                 try:
                     event = json.loads(event_str)
@@ -179,26 +185,22 @@ class Utils(Adw.Application):
             return False
 
         # Check if the container is realized and visible
-        if not Gtk.Widget.get_realized(container) or not Gtk.Widget.get_visible(container):
+        if not Gtk.Widget.get_realized(container) or not Gtk.Widget.get_visible(
+            container
+        ):
             return False
 
         return True
 
     def append_widget_if_ready(self, container, widget):
-        """
-        Append a widget to a container if both the container and widget are in a proper state.
+        if widget is None or not isinstance(widget, Gtk.Widget):
+            print("Error: Invalid widget provided")
+            return False
 
-        Args:
-            container (Gtk.Widget): The container to which the widget will be appended.
-            widget (Gtk.Widget): The widget to append to the container.
-
-        Returns:
-            bool: True if the widget was appended, False otherwise.
-        """
-        if self.is_widget_ready(container):
+        if not widget.get_parent():
             container.append(widget)
-            return True
-        return False
+
+        return True
 
     def CreateWorkspacePanel(
         self, config, orientation, class_style, callback=None, use_label=False
@@ -230,11 +232,12 @@ class Utils(Adw.Application):
                     initial_title,
                     use_label,
                 )
-
-                if callback is not None:
-                    self.create_gesture(button, 3, callback)
-
-                box.append(button)
+                if self.widget_exists(button):
+                    if callback is not None:
+                        self.create_gesture(button, 3, callback)
+                    self.append_widget_if_ready(box, button)
+                else:
+                    print(f"Error: Failed to create button for app {app}")
 
         return box
 
@@ -361,9 +364,8 @@ class Utils(Adw.Application):
 
                 if callback is not None:
                     self.create_gesture(button, 3, callback)
-
-                box.append(button)
-
+                self.append_widget_if_ready(box, button)
+                button.add_css_class(class_style)
         return box
 
     def search_local_desktop(self, initial_title):
@@ -383,11 +385,13 @@ class Utils(Adw.Application):
     def layer_shell_check(self):
         """Check if gtk4-layer-shell is installed, and install it if not."""
         # Define paths
-        install_path = os.path.expanduser('~/.local/lib/gtk4-layer-shell')
-        installed_marker = os.path.join(install_path, 'libgtk_layer_shell.so')  # Adjust if necessary
-        temp_dir = '/tmp/gtk4-layer-shell'
-        repo_url = 'https://github.com/wmww/gtk4-layer-shell.git'
-        build_dir = 'build'
+        install_path = os.path.expanduser("~/.local/lib/gtk4-layer-shell")
+        installed_marker = os.path.join(
+            install_path, "libgtk_layer_shell.so"
+        )  # Adjust if necessary
+        temp_dir = "/tmp/gtk4-layer-shell"
+        repo_url = "https://github.com/wmww/gtk4-layer-shell.git"
+        build_dir = "build"
 
         # Check if the library is installed
         if os.path.exists(installed_marker):
@@ -403,23 +407,33 @@ class Utils(Adw.Application):
 
         # Clone the repository
         print("Cloning the repository...")
-        subprocess.run(['git', 'clone', repo_url, temp_dir], check=True)
+        subprocess.run(["git", "clone", repo_url, temp_dir], check=True)
 
         # Change to the repository directory
         os.chdir(temp_dir)
 
         # Set up the build directory with Meson
         print("Configuring the build environment...")
-        subprocess.run(['meson', 'setup', f'--prefix={install_path}',
-                       '-Dexamples=true', '-Ddocs=true', '-Dtests=true', build_dir], check=True)
+        subprocess.run(
+            [
+                "meson",
+                "setup",
+                f"--prefix={install_path}",
+                "-Dexamples=true",
+                "-Ddocs=true",
+                "-Dtests=true",
+                build_dir,
+            ],
+            check=True,
+        )
 
         # Build the project
         print("Building the project...")
-        subprocess.run(['ninja', '-C', build_dir], check=True)
+        subprocess.run(["ninja", "-C", build_dir], check=True)
 
         # Install the project
         print("Installing the project...")
-        subprocess.run(['ninja', '-C', build_dir, 'install'], check=True)
+        subprocess.run(["ninja", "-C", build_dir, "install"], check=True)
 
         print("Installation complete.")
 
@@ -463,7 +477,6 @@ class Utils(Adw.Application):
             return None
 
     def icon_exist(self, argument):
-
         if argument:
             exist = [
                 i.get_icon()
@@ -575,25 +588,44 @@ class Utils(Adw.Application):
 
     def create_taskbar_button(self, title, icon_name, view_id):
         if icon_name is None:
-            return
-        button = Adw.ButtonContent()
+            return None
+
+        button = Gtk.Button()
+
         # Filter title for UTF-8 compatibility
         title = self.filter_utf_for_gtk(title)
         if not title:
             return None
+
         # Determine title to use based on its length
         use_this_title = title[:30]
         first_word_length = len(title.split()[0])
         if first_word_length > 13:
             use_this_title = title.split()[0]
-        button.set_icon_name(icon_name)
-        button.set_label(use_this_title)
-        button.add_css_class("taskbar_button")
+
+        # Create a box to hold icon and label
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+
+        # Add icon if available
+        if icon_name:
+            icon = Gtk.Image.new_from_icon_name(icon_name)
+            box.append(icon)
+
+        # Add label
+        label = Gtk.Label(label=use_this_title)
+        box.append(label)
+
+        # Set the box as the button's child
+        button.set_child(box)
 
         # Create gesture handlers for the button
-        self.create_gesture(button, 1, lambda *_: self.set_view_focus(view_id))
-        self.create_gesture(button, 2, lambda *_: self.sock.close_view(view_id))
-        self.create_gesture(button, 3, lambda *_: self.wf_utils.move_view_to_empty_workspace(view_id))
+        button.connect("clicked", lambda *_: self.set_view_focus(view_id))
+        self.create_gesture(box, 1, lambda *_: self.set_view_focus(view_id))
+        self.create_gesture(box, 2, lambda *_: self.sock.close_view(view_id))
+        self.create_gesture(
+            box, 3, lambda *_: self.wf_utils.move_view_to_empty_workspace(view_id)
+        )
+
         return button
 
     def focus_view_when_ready(self, view):
@@ -610,8 +642,8 @@ class Utils(Adw.Application):
             self.sock.set_workspace(x, y, view_id)
 
     def normalize_icon_name(self, app_id):
-        if '.' in app_id:
-            return app_id.split('.')[-1]  # Extract the last part
+        if "." in app_id:
+            return app_id.split(".")[-1]  # Extract the last part
         return app_id
 
     # this function is useful because it will handle icon_name and icon_path
@@ -622,11 +654,15 @@ class Utils(Adw.Application):
         icon_path = self.get_icon(wmclass, title, initial_title)
         if icon_path:
             print(icon_path)
-            if icon_path.startswith('/'):
+            if icon_path.startswith("/"):
                 try:
                     image = Gtk.Image.new_from_file(icon_path)
                     button.set_image(image)
-                    button.set_always_show_image(True)
+                    if image is not None and isinstance(image, Gtk.Image):
+                        button.set_image(image)
+                        button.set_always_show_image(True)
+                    else:
+                        print("Error: Invalid image provided")
                 except Exception as e:
                     print(f"Error loading icon from file: {e}")
                     button.set_icon_name("default-icon-name")
@@ -641,7 +677,10 @@ class Utils(Adw.Application):
         normalized_app_id = self.normalize_icon_name(app_id)
         for app in app_list:
             app_info_id = app.get_id().lower()
-            if app_info_id and (app_info_id.startswith(normalized_app_id) or normalized_app_id in app_info_id):
+            if app_info_id and (
+                app_info_id.startswith(normalized_app_id)
+                or normalized_app_id in app_info_id
+            ):
                 icon = app.get_icon()
                 if icon:
                     if isinstance(icon, Gio.ThemedIcon):
@@ -678,7 +717,7 @@ class Utils(Adw.Application):
                         return None
 
                     # Assume the first result is the desired game
-                    game_url = results[0]['href']
+                    game_url = results[0]["href"]
 
                     try:
                         async with session.get(game_url) as game_response:
@@ -690,9 +729,11 @@ class Utils(Adw.Application):
                             game_soup = BeautifulSoup(game_text, "html.parser")
 
                             # Find the image URL
-                            img_tag = game_soup.find("img", {"class": "game_header_image_full"})
-                            if img_tag and img_tag['src']:
-                                return img_tag['src']
+                            img_tag = game_soup.find(
+                                "img", {"class": "game_header_image_full"}
+                            )
+                            if img_tag and img_tag["src"]:
+                                return img_tag["src"]
                             else:
                                 print("Image not found.")
                                 return None
@@ -739,12 +780,12 @@ class Utils(Adw.Application):
                 return None
 
     def get_wayfire_pid(self):
-        for entry in os.listdir('/proc'):
+        for entry in os.listdir("/proc"):
             if entry.isdigit():
                 try:
-                    with open(f'/proc/{entry}/comm', 'r') as comm_file:
+                    with open(f"/proc/{entry}/comm", "r") as comm_file:
                         command_name = comm_file.read().strip()
-                        if 'wayfire' in command_name:
+                        if "wayfire" in command_name:
                             return entry
                 except IOError:
                     continue
@@ -755,9 +796,9 @@ class Utils(Adw.Application):
         maps_file = f"/proc/{pid}/maps"
 
         try:
-            with open(maps_file, 'r') as f:
+            with open(maps_file, "r") as f:
                 for line in f:
-                    if 'so' in line:
+                    if "so" in line:
                         lib_path = line.split()[-1]
                         if os.path.isfile(lib_path) and lib_path not in libs:
                             libs.append(lib_path)
@@ -837,7 +878,9 @@ class Utils(Adw.Application):
             viewgeo = self.wf_utils.get_view_geometry(view_id)
             if viewgeo:
                 if viewgeo["width"] < 100 or viewgeo["height"] < 100:
-                    self.sock.configure_view(view_id, viewgeo["x"], viewgeo["y"], 400, 400)
+                    self.sock.configure_view(
+                        view_id, viewgeo["x"], viewgeo["y"], 400, 400
+                    )
 
             if output_id in self.is_scale_active:
                 if self.is_scale_active[output_id] is True:
@@ -893,7 +936,9 @@ class Utils(Adw.Application):
 
         window_notes_config = os.path.join(config_path, "window-config.toml")
         if not self.file_exists(window_notes_config):
-            window_notes_config = os.path.join(directory_path, "config/window-config.toml")
+            window_notes_config = os.path.join(
+                directory_path, "config/window-config.toml"
+            )
 
         cache_folder = os.path.join(home, ".cache/waypanel")
 
@@ -907,7 +952,7 @@ class Utils(Adw.Application):
             "config_path": config_path,
             "style_css_config": style_css_config,
             "window_notes_config": window_notes_config,
-            "cache_folder": cache_folder
+            "cache_folder": cache_folder,
         }
 
     def filter_utf_for_gtk(self, byte_string):
@@ -924,24 +969,32 @@ class Utils(Adw.Application):
             return byte_string
 
         if isinstance(byte_string, bytes):
-            encodings = ['utf-8', 'utf-16', 'utf-32', 'utf-16-le', 'utf-16-be', 'utf-32-le', 'utf-32-be']
+            encodings = [
+                "utf-8",
+                "utf-16",
+                "utf-32",
+                "utf-16-le",
+                "utf-16-be",
+                "utf-32-le",
+                "utf-32-be",
+            ]
 
             # Try UTF-8 first
             try:
-                return byte_string.decode('utf-8', errors='replace')
+                return byte_string.decode("utf-8", errors="replace")
             except UnicodeDecodeError as e:
                 print(f"UTF-8 decoding error: {e}")
 
             # Try other UTF encodings if UTF-8 fails
             for encoding in encodings[1:]:  # Skip 'utf-8' as it's already tried
                 try:
-                    return byte_string.decode(encoding, errors='replace')
+                    return byte_string.decode(encoding, errors="replace")
                 except UnicodeDecodeError as e:
                     print(f"{encoding} decoding error: {e}")
 
             # If all UTF decoding attempts fail, fallback to a last-resort encoding like 'latin-1'
             print("All UTF decoding attempts failed, falling back to 'latin-1'.")
-            return byte_string.decode('latin-1', errors='replace')
+            return byte_string.decode("latin-1", errors="replace")
 
         raise TypeError("Input must be a bytes object or a string.")
 
@@ -955,50 +1008,48 @@ class Utils(Adw.Application):
         use_label=False,
         use_function=False,
     ):
-        # Create the main container box
-        box = Gtk.Box(spacing=2)
-        assert box is not None, "Box creation failed"
-        box.add_css_class(Class_Style)
-        box.set_can_focus(False)
-        box.set_focusable(False)
-        box.set_focus_on_click(False)
+        # Create the button
+        button = Gtk.Button()
+        assert button is not None, "Button creation failed"
 
-        # Create the button content
-        button = Adw.ButtonContent()
-        assert button is not None, "Button content creation failed"
-        button.set_can_focus(False)
-        button.set_focusable(False)
-        button.set_focus_on_click(False)
+        # Create content box
+        box = Gtk.Box()
 
-        # Set label or icon for the button
+        # Add icon or label
         if use_label:
-            button.set_label(icon_name)
+            label = Gtk.Label(label=icon_name)
+            box.append(label)
         else:
-            button.add_css_class("hvr-grow")
-            button.set_icon_name(icon_name)
+            if icon_name:  # Only add icon if name is provided
+                icon = Gtk.Image.new_from_icon_name(icon_name)
+                box.append(icon)
 
-        button.add_css_class(Class_Style)
+        # Set content
+        button.set_child(box)
 
-        # If cmd is NULL, disable the button and return it
+        # If cmd is NULL, disable the button
         if cmd == "NULL":
             button.set_sensitive(False)
             return button
 
-        # Handle gestures based on whether a custom function is used
-        if not use_function:
-            self.create_gesture(button, 1, lambda *_: self.run_cmd(cmd))
-            self.create_gesture(button, 3, lambda *_: self.dockbar_remove(icon_name))
+        # Set up click handling - LEFT CLICK
+        if use_function:
+            button.connect("clicked", lambda *_: use_function())
         else:
-            self.create_gesture(button, 1, use_function)
+            button.connect("clicked", lambda *_: self.run_cmd(cmd))
 
+        # Set up gesture for RIGHT CLICK (button 3)
+        self.create_gesture(box, 3, lambda *_: self.dockbar_remove(icon_name))
+
+        button.add_css_class(Class_Style)
         return button
 
     # Remove a command from the dockbar configuration
     def dockbar_remove(self, cmd):
-        with open(self.dockbar_config, "r") as f:
+        with open(self.waypanel_cfg, "r") as f:
             config = toml.load(f)
         del config[cmd]
-        with open(self.dockbar_config, "w") as f:
+        with open(self.waypanel_cfg, "w") as f:
             toml.dump(config, f)
 
     def load_topbar_config(self):

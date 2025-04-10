@@ -48,8 +48,8 @@ class PopoverBookmarks(Adw.Application):
                 self.menubutton_bookmarks.set_icon_name(bookmarks_icon)
         else:
             self.menubutton_bookmarks.set_icon_name("librewolf")
-        self.menubutton_bookmarks.add_css_class("top_left_widgets")
         obj.top_panel_box_widgets_left.append(self.menubutton_bookmarks)
+        self.menubutton_bookmarks.add_css_class("top_left_widgets")
 
     def create_popover_bookmarks(self, *_):
         """
@@ -111,7 +111,6 @@ class PopoverBookmarks(Adw.Application):
 
             # Create label for the bookmark name
             line = Gtk.Label.new()
-            line.add_css_class("label_from_bookmarks")
             line.set_label(name)
             line.props.margin_start = 5
             line.props.hexpand = True
@@ -148,7 +147,6 @@ class PopoverBookmarks(Adw.Application):
                 image = Gtk.Image.new_from_icon_name("web-browser-symbolic")
                 image.set_pixel_size(THUMBNAIL_SIZE[0])
 
-            image.add_css_class("icon_from_popover_launcher")
             image.props.margin_end = 5
             image.set_halign(Gtk.Align.END)
 
@@ -156,6 +154,8 @@ class PopoverBookmarks(Adw.Application):
             self.row_hbox.append(image)
             self.row_hbox.append(line)
             self.flowbox.append(self.row_hbox)
+            line.add_css_class("label_from_bookmarks")
+            image.add_css_class("icon_from_popover_launcher")
 
         # Set scroll window dimensions
         height = self.flowbox.get_preferred_size().natural_size.height

@@ -339,7 +339,8 @@ class MenuClipboard(Gtk.Application):
                     row_hbox.set_size_request(-1, 150)
             line = Gtk.Label.new()
             escaped_text = GLib.markup_escape_text(item)
-            escaped_text = self.format_color_text(escaped_text)
+
+            escaped_text = self.format_color_text(item)  # Don't escape again here
             line.set_markup(
                 f'<span font="DejaVu Sans Mono">{item_id} {escaped_text}</span>'
             )
@@ -397,10 +398,8 @@ class MenuClipboard(Gtk.Application):
 
         self.main_box.append(self.searchbar)
         self.button_clear = Gtk.Button()
-        self.button_clear.add_css_class("clipboard_clear_button")
         self.button_clear.set_label("Clear")
         self.button_clear.connect("clicked", self.clear_clipboard)
-        self.button_clear.add_css_class("button_clear_from_clipboard")
         self.listbox = Gtk.ListBox.new()
         self.listbox.connect(
             "row-selected", lambda widget, row: self.on_copy_clipboard(row)
@@ -418,6 +417,8 @@ class MenuClipboard(Gtk.Application):
         self.listbox.set_filter_func(self.on_filter_invalidate)
         self.popover_clipboard.set_parent(self.menubutton_clipboard)
         self.popover_clipboard.popup()
+        self.button_clear.add_css_class("clipboard_clear_button")
+        self.button_clear.add_css_class("button_clear_from_clipboard")
         return self.popover_clipboard
 
     def on_copy_clipboard(self, x, *_):
@@ -494,25 +495,30 @@ class MenuClipboard(Gtk.Application):
         return "#000000" if luminance > 0.5 else "#ffffff"
 
     def format_color_text(self, text):
-        """Wrap color codes in markup with proper # prefix."""
-        import re
+        """Wrap color codes in markup with proper background/foreground colors."""
+        # First, escape the text to prevent markup injection
+        text = GLib.markup_escape_text(text)
 
-        # Find all hex color patterns (with or without #)
-        hex_colors = re.findall(
-            r"(?:^|\s)([0-9a-fA-F]{3}|[0-9a-fA-F]{6})(?:\s|$)", text
-        )
+        # Improved regex to match:
+        # 1. 3-digit hex with # (e.g., #f00)
+        # 2. 6-digit hex with # (e.g., #ff0000)
+        # 3. 3 or 6-digit hex without # (e.g., f00 or ff0000)
+        color_pattern = re.compile(r"(?<!\w)(#?[0-9a-fA-F]{3}|#?[0-9a-fA-F]{6})(?!\w)")
 
-        for color in hex_colors:
-            # Ensure color has a # prefix
-            proper_color = f"#{color}" if not color.startswith("#") else color
+        def replace_color(match):
+            color = match.group(1)
+            # Ensure color has # prefix
+            if not color.startswith("#"):
+                color = f"#{color}"
 
-            # Replace in text with proper markup
-            text = text.replace(
-                color,
-                f'<span background="{proper_color}" foreground="{self.get_contrast_color(proper_color)}">{color}</span>',
-            )
+            # Get contrasting text color
+            fg_color = self.get_contrast_color(color)
 
-        return text
+            # Return formatted span
+            return f'<span background="{color}" foreground="{fg_color}">{match.group(1)}</span>'
+
+        # Replace all color matches in the text
+        return color_pattern.sub(replace_color, text)
 
     def clear_clipboard(self, *_):
         asyncio.run(ClipboardManager().clear_history())
