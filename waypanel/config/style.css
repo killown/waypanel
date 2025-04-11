@@ -294,14 +294,14 @@ scale {
   -gtk-icon-size: 28px;
 }
 
-.ClockButton {
+.clock-button {
   /* Complete transparency */
   background-color: transparent;
   border: none;
   box-shadow: none;
 
   /* Text styling only */
-  color: inherit;
+  color: #ebdbb2;
   font-family: inherit;
   text-decoration: none;
   margin: 0;
@@ -431,7 +431,6 @@ scale {
   border-radius: 8px;
   border-style: none;
   border-width: 1px;
-  margin: 2px 5px 2px 2px;
   padding: 5px 5px 5px 5px;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 2px 0px,
