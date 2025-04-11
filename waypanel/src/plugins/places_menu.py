@@ -221,3 +221,17 @@ class PopoverFolders(Adw.Application):
         ):  # == row_hbox.MYTEXT (Gtk.ListBoxRow===>get_child()===>row_hbox.MYTEXT)
             return True  # if True Show row
         return False
+
+
+places = PopoverFolders()
+
+
+# set the plugin location, order, position
+def position():
+    position = "left"
+    order = 3
+    return position, order
+
+
+def initialize_plugin(obj, app):
+    places.create_menu_popover_folders(obj, app)

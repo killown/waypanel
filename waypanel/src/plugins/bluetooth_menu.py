@@ -1,6 +1,6 @@
 import os
 from subprocess import Popen, check_output
-
+import toml
 import gi
 from gi.repository import Adw, Gtk
 from ..core.utils import Utils
@@ -23,12 +23,16 @@ class BluetoothDashboard(Adw.Application):
         self.scripts = os.path.join(self.home, ".config/hypr/scripts")
         self.config_path = os.path.join(self.home, ".config/waypanel")
         self.style_css_config = os.path.join(self.config_path, "style.css")
-        self.topbar_dashboard_config = os.path.join(
-            self.config_path, "topbar-launcher.toml"
-        )
+        self.waypanel_config = os.path.join(self.config_path, "waypanel.toml")
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
         self.bluetooth_buttons = {}
+
+    def load_config(self):
+        if not hasattr(self, "_cached_config"):
+            with open(self.waypanel_config, "r") as f:
+                self._cached_config = toml.load(f)
+        return self._cached_config
 
     def get_bluetooth_list(self):
         devices = check_output("bluetoothctl devices".split()).decode().strip()
@@ -43,6 +47,17 @@ class BluetoothDashboard(Adw.Application):
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
+        bt_icon = "bluetooth"
+        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
+        if os.path.exists(waypanel_config_path):
+            config = self.load_config()
+            bt_icon = (
+                config.get("panel", {})
+                .get("top", {})
+                .get("bluetooth_icon", "bluetooth")
+            )
+        obj.top_panel_box_systray.append(self.menubutton_dashboard)
+        self.menubutton_dashboard.set_icon_name(bt_icon)
         return self.menubutton_dashboard
 
     def CreateGesture(self, widget, mouse_button, arg):
@@ -142,3 +157,16 @@ class BluetoothDashboard(Adw.Application):
         self.searchbar.set_search_mode(
             True
         )  # Ctrl+F To Active show_searchbar and show searchbar
+
+
+bt = BluetoothDashboard()
+
+
+def position():
+    position = "right"
+    order = 3
+    return position, order
+
+
+def initialize_plugin(obj, app):
+    bt.create_menu_popover_bluetooth(obj, app)

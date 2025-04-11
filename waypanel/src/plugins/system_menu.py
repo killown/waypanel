@@ -5,7 +5,7 @@ from importlib.util import find_spec
 from subprocess import Popen, check_output
 import psutil
 from gi.repository import Adw, Gtk
-
+import toml
 from ..core.utils import Utils
 
 
@@ -23,16 +23,8 @@ class SystemDashboard(Adw.Application):
         self.home = os.path.expanduser("~")
         self.scripts = os.path.join(self.home, ".config/hypr/scripts")
         self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.dockbar_config = os.path.join(self.config_path, "dockbar.toml")
         self.style_css_config = os.path.join(self.config_path, "style.css")
-        self.workspace_list_config = os.path.join(self.config_path, "workspacebar.toml")
-        self.topbar_config = os.path.join(self.config_path, "panel.toml")
-        self.menu_config = os.path.join(self.config_path, "menu.toml")
-        self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
-        self.cmd_config = os.path.join(self.config_path, "cmd.toml")
-        self.topbar_dashboard_config = os.path.join(
-            self.config_path, "topbar-launcher.toml"
-        )
+        self.waypanel_cfg = os.path.join(self.config_path, "waypanel.toml")
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
 
@@ -88,6 +80,12 @@ class SystemDashboard(Adw.Application):
             else:
                 print("Error: waypanel-settings not found in PATH", file=sys.stderr)
 
+    def load_config(self):
+        if not hasattr(self, "_cached_config"):
+            with open(self.waypanel_cfg, "r") as f:
+                self._cached_config = toml.load(f)
+        return self._cached_config
+
     def get_system_list(self):
         devices = check_output("systemctl devices".split()).decode().strip().split("\n")
         return [" ".join(i.split(" ")[1:]) for i in devices]
@@ -97,6 +95,13 @@ class SystemDashboard(Adw.Application):
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
+        system_icon = "system-shutdown"
+        config = self.load_config()
+        system_icon = (
+            config.get("panel", {}).get("top", {}).get("system_icon", "system-shutdown")
+        )
+        self.menubutton_dashboard.set_icon_name(system_icon)
+        obj.top_panel_box_systray.append(self.menubutton_dashboard)
         return self.menubutton_dashboard
 
     def create_popover_system(self, *_):
@@ -108,7 +113,6 @@ class SystemDashboard(Adw.Application):
         # Set width and height of the popover dashboard
         self.popover_dashboard.set_vexpand(True)
         self.popover_dashboard.set_hexpand(True)
-
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.stack = Gtk.Stack.new()
 
@@ -267,3 +271,16 @@ class SystemDashboard(Adw.Application):
         self.searchbar.set_search_mode(
             True
         )  # Ctrl+F To Active show_searchbar and show searchbar
+
+
+system = SystemDashboard()
+
+
+def position():
+    position = "right"
+    order = 10
+    return position, order
+
+
+def initialize_plugin(obj, app):
+    system.create_menu_popover_system(obj, app)

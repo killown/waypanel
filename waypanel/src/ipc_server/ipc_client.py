@@ -16,7 +16,12 @@ class WayfireClientIPC:
         self.socket_path = socket_path
         self.client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.client_socket.connect(socket_path)
-        self.source = GLib.io_add_watch(self.client_socket, GLib.PRIORITY_DEFAULT, GLib.IO_IN, self.handle_socket_event)
+        self.source = GLib.io_add_watch(
+            self.client_socket,
+            GLib.PRIORITY_DEFAULT,
+            GLib.IO_IN,
+            self.handle_socket_event,
+        )
 
     def handle_socket_event(self, fd, condition):
         # try decode before actually handle the event
@@ -28,8 +33,8 @@ class WayfireClientIPC:
 
             self.buffer += chunk
 
-            while '\n' in self.buffer:
-                event_str, self.buffer = self.buffer.split('\n', 1)
+            while "\n" in self.buffer:
+                event_str, self.buffer = self.buffer.split("\n", 1)
                 if event_str:
                     try:
                         event = orjson.loads(event_str)

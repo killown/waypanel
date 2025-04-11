@@ -5,9 +5,10 @@ from gi.repository import Gtk4LayerShell as LayerShell
 from ..core.utils import Utils
 from subprocess import check_output
 from gi.repository import Playerctl, GLib
+import toml
 
 
-class PopoverDashboard(Adw.Application):
+class CalendarDashboard(Adw.Application):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.popover_dashboard = None
@@ -20,8 +21,8 @@ class PopoverDashboard(Adw.Application):
         self.right_label = Gtk.Label()
         # Connect the Playerctl manager signals
         self.manager = Playerctl.PlayerManager()
-        self.manager.connect('name-appeared', self.on_name_appeared)
-        self.manager.connect('player-vanished', self.on_player_vanished)
+        self.manager.connect("name-appeared", self.on_name_appeared)
+        self.manager.connect("player-vanished", self.on_player_vanished)
         self.button = None
 
     def _setup_config_paths(self):
@@ -29,18 +30,16 @@ class PopoverDashboard(Adw.Application):
         self.home = os.path.expanduser("~")
         self.scripts = os.path.join(self.home, ".config/hypr/scripts")
         self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.dockbar_config = os.path.join(self.config_path, "dockbar.toml")
         self.style_css_config = os.path.join(self.config_path, "style.css")
-        self.workspace_list_config = os.path.join(self.config_path, "workspacebar.toml")
-        self.topbar_config = os.path.join(self.config_path, "panel.toml")
-        self.menu_config = os.path.join(self.config_path, "menu.toml")
-        self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
-        self.cmd_config = os.path.join(self.config_path, "cmd.toml")
-        self.topbar_dashboard_config = os.path.join(
-            self.config_path, "topbar-launcher.toml"
-        )
+        self.waypanel_config = os.path.join(self.config_path, "waypanel.toml")
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
+
+    def load_config(self):
+        if not hasattr(self, "_cached_config"):
+            with open(self.waypanel_config, "r") as f:
+                self._cached_config = toml.load(f)
+        return self._cached_config
 
     def get_folder_location(self, folder_name):
         """
@@ -63,6 +62,9 @@ class PopoverDashboard(Adw.Application):
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
+        obj.clock_box.append(self.menubutton_dashboard)
+        self.menubutton_dashboard.set_child(obj.clock_label)
+        self.menubutton_dashboard.add_css_class("clock-button")
         return self.menubutton_dashboard
 
     def create_popover_dashboard(self, *_):
@@ -88,7 +90,7 @@ class PopoverDashboard(Adw.Application):
         self.left_box.append(left_label)
 
         # Add the left box to the grid
-        #grid.attach(self.left_box, 0, 0, 1, 1)
+        # grid.attach(self.left_box, 0, 0, 1, 1)
 
         # Create a calendar for the right side
         self.calendar = Gtk.Calendar()
@@ -129,41 +131,50 @@ class PopoverDashboard(Adw.Application):
 
     def popover_is_closed(self, *_):
         return
- 
-    def on_play(self, player, status, manager):
-        print('player is playing: {}'.format(player.props.player_name))
 
+    def on_play(self, player, status, manager):
+        print("player is playing: {}".format(player.props.player_name))
 
     def on_metadata(self, player, metadata, manager):
         keys = metadata.keys()
         if not metadata:
             return
-        if  "mpris:artUrl" in keys:
-            art_url = metadata["mpris:artUrl"] 
-            #image = Gtk.Image.new_from_file(art_url)
-            #button = Gtk.Button()
-            #button.set_child(image)
+        if "mpris:artUrl" in keys:
+            art_url = metadata["mpris:artUrl"]
+            # image = Gtk.Image.new_from_file(art_url)
+            # button = Gtk.Button()
+            # button.set_child(image)
 
-        if 'xesam:artist' in keys and 'xesam:title' in keys:
-            print('{} - {}'.format(metadata['xesam:artist'], metadata['xesam:title'] ))
-            #self.button = Gtk.Button()
-            #self.button.set_label(metadata['xesam:title'])
-            #self.left_box.append(self.button)
-
+        if "xesam:artist" in keys and "xesam:title" in keys:
+            print("{} - {}".format(metadata["xesam:artist"], metadata["xesam:title"]))
+            # self.button = Gtk.Button()
+            # self.button.set_label(metadata['xesam:title'])
+            # self.left_box.append(self.button)
 
     def init_player(self, name):
         # choose if you want to manage the player based on the name
-            player = Playerctl.Player.new_from_name(name)
-            player.connect('playback-status::playing', self.on_play, self.manager)
-            player.connect('metadata', self.on_metadata, self.manager)
-            self.manager.manage_player(player)
-
+        player = Playerctl.Player.new_from_name(name)
+        player.connect("playback-status::playing", self.on_play, self.manager)
+        player.connect("metadata", self.on_metadata, self.manager)
+        self.manager.manage_player(player)
 
     def on_name_appeared(self, manager, name):
         self.init_player(name)
 
-
     def on_player_vanished(self, manager, player):
         if self.button:
             self.button.destroy()
-        print('player has exited: {}'.format(player.props.player_name))
+        print("player has exited: {}".format(player.props.player_name))
+
+
+calendar = CalendarDashboard()
+
+
+def position():
+    position = "left"
+    order = 1
+    return position, order
+
+
+def initialize_plugin(obj, app):
+    calendar.create_menu_popover_dashboard(obj, app)

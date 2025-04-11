@@ -247,3 +247,28 @@ class PopoverBookmarks(Adw.Application):
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
         return wayfire.WayfireSocket(addr)
+
+
+def position():
+    position = "left"
+    order = 2
+    return position, order
+
+
+Bookmarks = PopoverBookmarks()
+
+
+def initialize_plugin(obj, app):
+    """
+    Initialize the plugin by checking for the existence of a bookmarks file.
+    If the file exists, create a bookmarks popover menu.
+
+    Args:
+        obj: The object where the popover will be added.
+        app: The application instance.
+    """
+    # Expand the user's home directory directly in the function
+    bookmarks_file = os.path.join(os.path.expanduser("~"), ".bookmarks")
+
+    if os.path.exists(bookmarks_file):
+        Bookmarks.create_menu_popover_bookmarks(obj, app)

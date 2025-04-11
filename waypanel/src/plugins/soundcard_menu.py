@@ -32,17 +32,9 @@ class SoundCardDashboard(Adw.Application):
         self.home = os.path.expanduser("~")
         self.scripts = os.path.join(self.home, ".config/hypr/scripts")
         self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.dockbar_config = os.path.join(self.config_path, "dockbar.toml")
         self.style_css_config = os.path.join(self.config_path, "style.css")
-        self.workspace_list_config = os.path.join(self.config_path, "workspacebar.toml")
-        self.topbar_config = os.path.join(self.config_path, "panel.toml")
-        self.menu_config = os.path.join(self.config_path, "menu.toml")
-        self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
-        self.cmd_config = os.path.join(self.config_path, "cmd.toml")
-        self.topbar_dashboard_config = os.path.join(
-            self.config_path, "topbar-launcher.toml"
-        )
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
+        self.waypanel_config = os.path.join(self.config_path, "waypanel.toml")
         self.psutil_store = {}
 
     def get_view_id_by_pid(self, pid):
@@ -130,11 +122,28 @@ class SoundCardDashboard(Adw.Application):
         print(cmd)
         Popen(cmd)
 
+    def load_config(self):
+        if not hasattr(self, "_cached_config"):
+            with open(self.waypanel_config, "r") as f:
+                self._cached_config = toml.load(f)
+        return self._cached_config
+
     def create_menu_popover_soundcard(self, obj, app, *_):
         self.top_panel = obj.top_panel
         self.app = app
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
+        s_icon = "audio-volume-high"
+        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
+        if os.path.exists(waypanel_config_path):
+            config = self.load_config()
+            s_icon = (
+                config.get("panel", {})
+                .get("top", {})
+                .get("sound_card_icon", "audio-volume-high")
+            )
+        obj.top_panel_box_systray.append(self.menubutton_dashboard)
+        self.menubutton_dashboard.set_icon_name(s_icon)
         return self.menubutton_dashboard
 
     def create_popover_soundcard(self, *_):
@@ -253,3 +262,16 @@ class SoundCardDashboard(Adw.Application):
 
     def on_start(self):
         pass
+
+
+card = SoundCardDashboard()
+
+
+def position():
+    position = "right"
+    order = 3
+    return position, order
+
+
+def initialize_plugin(obj, app):
+    card.create_menu_popover_soundcard(obj, app)

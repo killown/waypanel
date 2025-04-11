@@ -337,3 +337,16 @@ class MenuNotes(Gtk.Application):
             row_text = row.get_child().MYTEXT.lower()
             return search_text in row_text
         return False
+
+
+notes = MenuNotes()
+
+
+def position():
+    position = "right"
+    order = 1
+    return position, order
+
+
+def initialize_plugin(obj, app):
+    notes.create_popover_menu_notes(obj, app)

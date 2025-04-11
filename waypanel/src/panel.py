@@ -6,7 +6,9 @@ import time
 from collections import ChainMap
 from pathlib import Path
 from subprocess import Popen, check_output
-
+import importlib
+import pkgutil
+from pathlib import Path
 import netifaces
 import orjson as json
 import psutil
@@ -25,16 +27,7 @@ from waypanel.src.core.create_panel import (
 from waypanel.src.core.utils import Utils
 from waypanel.src.core.utils import Utils as utils
 from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
-from waypanel.src.plugins.bookmarksPopover import PopoverBookmarks
-from waypanel.src.plugins.notes import MenuNotes, NotesManager
-from waypanel.src.plugins.clipboardMenu import MenuClipboard
-from waypanel.src.plugins.dashboardBluetooth import BluetoothDashboard
-from waypanel.src.plugins.dashboardPopover import PopoverDashboard
-from waypanel.src.plugins.dashboardSoundCard import SoundCardDashboard
-from waypanel.src.plugins.dashboardSystem import SystemDashboard
 from waypanel.src.plugins.dockbar import Dockbar
-from waypanel.src.plugins.folders import PopoverFolders
-from waypanel.src.plugins.launcherMenu import MenuLauncher
 
 # to get the gtk and gdk completions
 # pip install pygobject-stubs --no-cache-dir --config-settings=config=Gtk4,Gdk
@@ -96,9 +89,6 @@ class Panel(Adw.Application):
         self.active_window_changed = None
         self.notifications = []
         self.popover_bookmarks = None
-        self.popover_notes = None
-        self.popover_folders = None
-        self.popover_launcher = None
         self.popover_clipboard = None
         self.set_cpu_usage_state = []
         self.clipboard_text_copy = None
@@ -107,6 +97,7 @@ class Panel(Adw.Application):
         self.active_window = None
         self.last_toplevel_focused_view = None
         self.last_focused_output = None
+        self.clock_button = None
         self.is_scale_active = None
         self.focused_output = None
         self.dpms_monitors_timeout = 3600
@@ -267,32 +258,10 @@ class Panel(Adw.Application):
             print(f"Required Plugin List: {required_plugins}")
             sys.exit()
 
-        # Initialize plugins and menus
-        self.MenuLauncher = MenuLauncher()
-        self.MenuLauncher.create_menu_popover_launcher(self, app)
-
-        bookmarks_file = os.path.join(self.home, ".bookmarks")
-        if os.path.exists(bookmarks_file):
-            self.PopoverBookmarks = PopoverBookmarks()
-            self.PopoverBookmarks.create_menu_popover_bookmarks(self, app)
-
-        self.PopoverNotes = MenuNotes()
-        self.PopoverNotes.create_popover_menu_notes(self, app)
-
-        self.PopoverFolders = PopoverFolders()
-        self.PopoverFolders.create_menu_popover_folders(self, app)
-
-        self.MenuClipboard = MenuClipboard()
-        self.MenuClipboard.create_popover_menu_clipboard(self, app)
-
-        # Add system tray components
-        self.top_panel_box_systray.append(self.bluetooth_manager())
-        self.top_panel_box_systray.append(self.volume_slider())
-
-        # Setup menus and system dashboard
         self.menus = self.create_new_menu()
         self.setup_menus()
-        self.top_panel_box_systray.append(self.system_dashboard())
+
+        self.load_plugins()
 
         # Hide desktop-environment views with unknown type
         for view in self.sock.list_views():
@@ -384,6 +353,67 @@ class Panel(Adw.Application):
     # string = "interface='org.freedesktop.Notifications',member='Notify', eavesdrop='true'"
     # bus.add_match_string(string)
     # bus.add_message_filter(self.notification_msg)
+
+    def load_plugins(self):
+        """
+        Dynamically load all plugins from the src.plugins package.
+        Each plugin defines a `position()` function that returns:
+            - position: "left", "right", or "center"
+            - order: an integer determining the order of insertion
+        Plugins are sorted by their `order` value before being initialized.
+        """
+        from waypanel.src import plugins
+
+        # List to store plugin metadata (module, position, order)
+        plugin_metadata = []
+
+        # Iterate over all modules in the src.plugins package
+        for _, module_name, _ in pkgutil.iter_modules(plugins.__path__):
+            try:
+                # Dynamically import the module
+                module = importlib.import_module(f"waypanel.src.plugins.{module_name}")
+
+                # Check if the module has a `position` function
+                if hasattr(module, "position"):
+                    position, order = module.position()
+                    plugin_metadata.append((module, position, order))
+                else:
+                    print(
+                        f"Module {module_name} does not have a 'position' function. Skipping."
+                    )
+                    continue
+            except Exception as e:
+                print(f"Failed to load plugin {module_name}: {e}")
+
+        # Sort plugins by their `order` value
+        plugin_metadata.sort(key=lambda x: x[2])  # Sort by the third element (order)
+
+        # Initialize plugins in sorted order
+        for module, position, _ in plugin_metadata:
+            try:
+                # Determine the target panel box based on the position
+                if position == "left":
+                    target_box = self.top_panel_box_left
+                elif position == "right":
+                    target_box = self.top_panel_box_systray
+                elif position == "center":
+                    target_box = self.top_panel_box_center
+                else:
+                    print(
+                        f"Invalid position '{position}' returned by module {module.__name__}. Skipping."
+                    )
+                    continue
+
+                # Check if the module has an `initialize_plugin` function
+                if hasattr(module, "initialize_plugin"):
+                    # Call the `initialize_plugin` function, passing the target box and app instance
+                    module.initialize_plugin(self, app)
+                else:
+                    print(
+                        f"Module {module.__name__} does not have an 'initialize_plugin' function."
+                    )
+            except Exception as e:
+                print(f"Failed to initialize plugin {module.__name__}: {e}")
 
     def get_folder_location(self, folder_name):
         """
@@ -1059,22 +1089,15 @@ class Panel(Adw.Application):
         self.clock_box.set_halign(Gtk.Align.CENTER)
         self.clock_box.set_hexpand(True)
         self.clock_box.set_baseline_position(Gtk.BaselinePosition.CENTER)
-
-        # Creating clock label with current date and time
-        self.PopoverDashboard = PopoverDashboard()
-        self.popover_dashboard = self.PopoverDashboard.create_menu_popover_dashboard(
-            self, app
-        )
-        self.clock_label = self.popover_dashboard
+        self.clock_label = Gtk.Label()
         self.clock_label.set_label(datetime.datetime.now().strftime("%b %d  %H:%M"))
         self.clock_label.set_halign(Gtk.Align.CENTER)
         self.clock_label.set_hexpand(True)
-        self.clock_box.append(self.clock_label)
 
         # Adding the clock widget to the center panel
         self.top_panel_box_center.append(self.clock_box)
-        self.clock_box.add_css_class("Clock")
-        self.clock_label.add_css_class("ClockButton")
+        self.clock_box.add_css_class("clock-box")
+        self.clock_label.add_css_class("clock-label")
 
         # Schedule the initial update and then update every minute
         GLib.timeout_add_seconds(60 - datetime.datetime.now().second, self.update_clock)
@@ -1561,33 +1584,6 @@ class Panel(Adw.Application):
         active_window_pid = self.sock.get_focused_view()["pid"]
         self.utils.run_app(f"wl-copy {active_window_pid}")
         self.utils.run_app(f"kitty --hold -- htop -p {active_window_pid}")
-
-    def bluetooth_manager(self):
-        bt = BluetoothDashboard()
-        bt = bt.create_menu_popover_bluetooth(self, app)
-        bt_icon = "bluetooth"
-        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
-        if os.path.exists(waypanel_config_path):
-            config = self.panel_config_loaded
-            bt_icon = (
-                config.get("panel", {})
-                .get("top", {})
-                .get("bluetooth_icon", "bluetooth")
-            )
-        bt.set_icon_name(bt_icon)
-        return bt
-
-    def system_dashboard(self):
-        s = SystemDashboard()
-        s = s.create_menu_popover_system(self, app)
-        system_icon = "system-shutdown"
-        system_icon = (
-            self.panel_config_loaded.get("panel", {})
-            .get("top", {})
-            .get("system_icon", "system-shutdown")
-        )
-        s.set_icon_name(system_icon)
-        return s
 
     def volume_slider(self):
         self.vol_slider_box = Gtk.Box()

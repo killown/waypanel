@@ -377,3 +377,16 @@ class MenuLauncher(Adw.Application):
             self.search_row = []
             return True
         return False
+
+
+menu = MenuLauncher()
+
+
+def position():
+    position = "left"
+    order = 1
+    return position, order
+
+
+def initialize_plugin(obj, app):
+    menu.create_menu_popover_launcher(obj, app)

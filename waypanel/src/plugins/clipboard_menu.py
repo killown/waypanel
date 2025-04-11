@@ -587,3 +587,14 @@ class MenuClipboard(Gtk.Application):
         ):  # == row_hbox.MYTEXT (Gtk.ListBoxRow===>get_child()===>row_hbox.MYTEXT)
             return True  # if True Show row
         return False
+
+
+def position():
+    return "right", 2
+
+
+Clipboard = MenuClipboard()
+
+
+def initialize_plugin(obj, app):
+    Clipboard.create_popover_menu_clipboard(obj, app)
