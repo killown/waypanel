@@ -2,16 +2,17 @@ import os
 from subprocess import Popen, check_output
 
 import pulsectl
-from requests import get
 import soundcard as sc
 from gi.repository import Adw, Gtk
 from wayfire.ipc import WayfireSocket
 import toml
 from ..core.utils import Utils
-from .icons import get_nearest_icon_name
 
 addr = os.getenv("WAYFIRE_SOCKET")
 sock = WayfireSocket(addr)
+
+# set to False or remove the plugin file to disable it
+ENABLE_PLUGIN = True
 
 
 class SoundCardDashboard(Adw.Application):
@@ -274,4 +275,5 @@ def position():
 
 
 def initialize_plugin(obj, app):
-    card.create_menu_popover_soundcard(obj, app)
+    if ENABLE_PLUGIN:
+        card.create_menu_popover_soundcard(obj, app)

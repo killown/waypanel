@@ -7,6 +7,9 @@ from ..core.utils import Utils
 
 gi.require_version("Gtk", "4.0")
 
+# set to False or remove the plugin file to disable it
+ENABLE_PLUGIN = True
+
 
 class BluetoothDashboard(Adw.Application):
     def __init__(self, **kwargs):
@@ -169,4 +172,5 @@ def position():
 
 
 def initialize_plugin(obj, app):
-    bt.create_menu_popover_bluetooth(obj, app)
+    if ENABLE_PLUGIN:
+        bt.create_menu_popover_bluetooth(obj, app)

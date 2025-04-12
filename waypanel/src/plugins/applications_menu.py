@@ -2,14 +2,15 @@ import os
 import random
 from subprocess import Popen
 
-import cairo
-import gi
 import toml
-from gi.repository import Adw, Gio, GLib, Gtk
+from gi.repository import Adw, Gio, Gtk
 from gi.repository import Gtk4LayerShell as LayerShell
 
 from ..core.utils import Utils
 from .icons import get_nearest_icon_name
+
+# set to False or remove the plugin file to disable it
+ENABLE_PLUGIN = True
 
 
 class MenuLauncher(Adw.Application):
@@ -389,4 +390,5 @@ def position():
 
 
 def initialize_plugin(obj, app):
-    menu.create_menu_popover_launcher(obj, app)
+    if ENABLE_PLUGIN:
+        menu.create_menu_popover_launcher(obj, app)

@@ -9,6 +9,9 @@ from gi.repository import Gtk4LayerShell as LayerShell
 
 from .icons import get_nearest_icon_name
 
+# set to False or remove the plugin file to disable it
+ENABLE_PLUGIN = True
+
 
 class PopoverFolders(Adw.Application):
     def __init__(self, **kwargs):
@@ -234,4 +237,5 @@ def position():
 
 
 def initialize_plugin(obj, app):
-    places.create_menu_popover_folders(obj, app)
+    if ENABLE_PLUGIN:
+        places.create_menu_popover_folders(obj, app)

@@ -9,6 +9,9 @@ import wayfire.ipc as wayfire
 from bs4 import BeautifulSoup
 from gi.repository import Adw, GdkPixbuf, Gtk
 
+# set to False or remove the plugin file to disable it
+ENABLE_PLUGIN = True
+
 
 class PopoverBookmarks(Adw.Application):
     def __init__(self, **kwargs):
@@ -271,4 +274,5 @@ def initialize_plugin(obj, app):
     bookmarks_file = os.path.join(os.path.expanduser("~"), ".bookmarks")
 
     if os.path.exists(bookmarks_file):
-        Bookmarks.create_menu_popover_bookmarks(obj, app)
+        if ENABLE_PLUGIN:
+            Bookmarks.create_menu_popover_bookmarks(obj, app)

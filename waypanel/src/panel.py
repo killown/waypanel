@@ -104,6 +104,7 @@ class Panel(Adw.Application):
         self.vol_slider = None
         self.dockbar_pending_events = []
         self.icon_vol_slider = None
+        self.floating_volume_plugin = None
         self.workspace_empty = None
         self.timeout_ids = {}
         self.turn_off_monitors_timeout = None
@@ -153,15 +154,15 @@ class Panel(Adw.Application):
 
     def _setup_panel_boxes(self):
         """Setup panel boxes and related configurations."""
-        self.top_panel_box_left = Gtk.Box(spacing=10)
-        self.top_panel_box_systray = Gtk.Box(spacing=2)
-        self.top_panel_box_for_buttons = Gtk.Box(spacing=6)
-        self.top_panel_box_window_title = Gtk.Box(spacing=6)
-        self.top_panel_box_widgets_left = Gtk.Box(spacing=6)
+        self.top_panel_box_left = Gtk.Box()
+        self.top_panel_box_systray = Gtk.Box()
+        self.top_panel_box_for_buttons = Gtk.Box()
+        self.top_panel_box_window_title = Gtk.Box()
+        self.top_panel_box_widgets_left = Gtk.Box()
         self.top_panel_box_left.append(self.top_panel_box_widgets_left)
         self.top_panel_box_left.append(self.top_panel_box_window_title)
-        self.top_panel_box_right = Gtk.Box(spacing=10)
-        self.top_panel_grid_right = Gtk.Grid(column_spacing=10)
+        self.top_panel_box_right = Gtk.Box()
+        self.top_panel_grid_right = Gtk.Grid()
         self.top_panel_grid_right.attach(self.top_panel_box_right, 1, 0, 1, 2)
         self.top_panel_grid_right.attach_next_to(
             self.top_panel_box_systray,
@@ -178,7 +179,7 @@ class Panel(Adw.Application):
             2,
         )
 
-        self.top_panel_box_center = Gtk.Box(spacing=6)
+        self.top_panel_box_center = Gtk.Box()
         self.top_panel_box_full = Gtk.Grid()
         self.top_panel_box_full.set_column_homogeneous(True)
         self.top_panel_box_full.attach(self.top_panel_box_left, 1, 0, 1, 2)
@@ -199,6 +200,9 @@ class Panel(Adw.Application):
         # load the Dockbar
         self.dock = Dockbar(application_id="com.github.dockbar")
         self.clock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.top_panel_box_center.set_halign(Gtk.Align.CENTER)
+        self.top_panel_box_center.set_valign(Gtk.Align.CENTER)
+        self.top_panel_box_center.set_hexpand(False)
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -220,7 +224,6 @@ class Panel(Adw.Application):
             app: The application instance.
         """
         # Initialize monitor dimensions and UI components
-        self.monitor_width_height()
         self.cmd_output()
         self.close_fullscreen_buttons()
         self.right_position_launcher_topbar()
@@ -355,33 +358,21 @@ class Panel(Adw.Application):
     # bus.add_message_filter(self.notification_msg)
 
     def load_plugins(self):
-        """
-        Dynamically load all plugins from the src.plugins package.
-        Each plugin defines a `position()` function that returns:
-            - position: "left", "right", or "center"
-            - order: an integer determining the order of insertion
-        Plugins are sorted by their `order` value before being initialized.
-        """
-        from waypanel.src import plugins
-
-        # List to store plugin metadata (module, position, order)
+        """Dynamically load all plugins from the src.plugins package."""
+        plugin_dir = os.path.join(os.path.dirname(__file__), "plugins")
+        plugin_names = [name for _, name, _ in pkgutil.iter_modules([plugin_dir])]
         plugin_metadata = []
 
-        # Iterate over all modules in the src.plugins package
-        for _, module_name, _ in pkgutil.iter_modules(plugins.__path__):
+        for module_name in plugin_names:
             try:
-                # Dynamically import the module
                 module = importlib.import_module(f"waypanel.src.plugins.{module_name}")
-
-                # Check if the module has a `position` function
-                if hasattr(module, "position"):
+                if hasattr(module, "position") and hasattr(module, "initialize_plugin"):
                     position, order = module.position()
                     plugin_metadata.append((module, position, order))
                 else:
                     print(
-                        f"Module {module_name} does not have a 'position' function. Skipping."
+                        f"Module {module_name} is missing required functions. Skipping."
                     )
-                    continue
             except Exception as e:
                 print(f"Failed to load plugin {module_name}: {e}")
 
@@ -395,7 +386,7 @@ class Panel(Adw.Application):
                 if position == "left":
                     target_box = self.top_panel_box_left
                 elif position == "right":
-                    target_box = self.top_panel_box_systray
+                    target_box = self.top_panel_box_right
                 elif position == "center":
                     target_box = self.top_panel_box_center
                 else:
@@ -404,14 +395,9 @@ class Panel(Adw.Application):
                     )
                     continue
 
-                # Check if the module has an `initialize_plugin` function
+                # Call the `initialize_plugin` function, passing the main app instance
                 if hasattr(module, "initialize_plugin"):
-                    # Call the `initialize_plugin` function, passing the target box and app instance
-                    module.initialize_plugin(self, app)
-                else:
-                    print(
-                        f"Module {module.__name__} does not have an 'initialize_plugin' function."
-                    )
+                    module.initialize_plugin(self, self)
             except Exception as e:
                 print(f"Failed to initialize plugin {module.__name__}: {e}")
 
@@ -1087,7 +1073,6 @@ class Panel(Adw.Application):
     def setup_clock_widget(self):
         # Configuring the clock widget for display
         self.clock_box.set_halign(Gtk.Align.CENTER)
-        self.clock_box.set_hexpand(True)
         self.clock_box.set_baseline_position(Gtk.BaselinePosition.CENTER)
         self.clock_label = Gtk.Label()
         self.clock_label.set_label(datetime.datetime.now().strftime("%b %d  %H:%M"))
@@ -1171,8 +1156,6 @@ class Panel(Adw.Application):
         self.all_panels_enabled = True
 
         self.top_panel_box_right.set_halign(Gtk.Align.FILL)
-        self.top_panel_box_right.set_homogeneous(True)
-        self.top_panel_box_right.set_hexpand(True)
 
         # setup window title
         # self.window_title_content = self.create_button_content()
@@ -1398,6 +1381,10 @@ class Panel(Adw.Application):
         else:
             self.stipc.run_cmd("pactl -- set-sink-volume @DEFAULT_SINK@  +8%")
 
+        # Show the floating volume widget
+        if hasattr(self, "floating_volume_plugin"):
+            self.floating_volume_plugin.show_widget()
+
         with pulsectl.Pulse("volume-increaser") as pulse:
             # Iterate through all the audio sinks
             for sink in pulse.sink_list():
@@ -1405,11 +1392,13 @@ class Panel(Adw.Application):
                 if "running" in str(sink.state):
                     # Calculate the volume percentage and round it to the nearest whole number
                     volume = round(sink.volume.values[0] * 100)
+                    self.floating_volume_plugin.set_volume(volume)
 
                     # Update the volume label with the current volume percentage
-                    self.tbvol.set_label("{0}%".format(volume))
-                    if self.vol_slider is not None:
-                        self.vol_slider.set_value(volume)
+                    # self.tbvol.set_label("{0}%".format(volume))
+                    # if self.vol_slider is not None:
+                    #    self.vol_slider.set_value(volume)
+                    #
 
     def top_panel_left_gesture_lclick(self, *_):
         # data format is (self, gesture, data, x, y)

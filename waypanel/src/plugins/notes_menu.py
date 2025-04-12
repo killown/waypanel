@@ -9,6 +9,9 @@ from gi.repository import Gtk4LayerShell as LayerShell
 from ..core.utils import Utils
 from .icons import get_nearest_icon_name
 
+# set to False or remove the plugin file to disable it
+ENABLE_PLUGIN = True
+
 
 class NotesManager:
     def __init__(self):
@@ -349,4 +352,5 @@ def position():
 
 
 def initialize_plugin(obj, app):
-    notes.create_popover_menu_notes(obj, app)
+    if ENABLE_PLUGIN:
+        notes.create_popover_menu_notes(obj, app)

@@ -4,8 +4,11 @@ from gi.repository import Gio, Gtk, Adw
 from gi.repository import Gtk4LayerShell as LayerShell
 from ..core.utils import Utils
 from subprocess import check_output
-from gi.repository import Playerctl, GLib
+from gi.repository import Playerctl
 import toml
+
+# set to False or remove the plugin file to disable it
+ENABLE_PLUGIN = True
 
 
 class CalendarDashboard(Adw.Application):
@@ -177,4 +180,5 @@ def position():
 
 
 def initialize_plugin(obj, app):
-    calendar.create_menu_popover_dashboard(obj, app)
+    if ENABLE_PLUGIN:
+        calendar.create_menu_popover_dashboard(obj, app)

@@ -4,6 +4,7 @@ import os
 from gi.repository import Adw, Gtk
 from wayfire.ipc import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
+from ..panel import Panel
 
 
 def position():
@@ -27,7 +28,7 @@ def initialize_plugin(obj, app):
     app: The main application instance
     """
 
-    # The following will enable the plugin
+    # uncomment if you want to enable the plugin
     # example = ExamplePluginFeatures()
     # example.create_menu_popover_example(obj, app)
 
@@ -42,7 +43,12 @@ class ExamplePluginFeatures(Adw.Application):
         self.utils = WayfireUtils(self.sock)
 
     def create_menu_popover_example(self, obj, app):
+        # obj is a instance of class Panel(Adw.Application) from panel.py
         self.top_panel = obj.top_panel
+        # This lists all possible methods that can be called with the *obj*
+        # Use panel_methods_example for auto-completion and listing different methods
+        # Then use obj to actually call the methods and interact with the panel instance
+        panel_methods_example = Panel("test")
         self.app = app
 
         # Setup basic button

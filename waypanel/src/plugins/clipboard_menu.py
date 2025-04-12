@@ -18,6 +18,9 @@ from ..core.utils import Utils
 from .clipboard_server import AsyncClipboardServer
 from .icons import get_nearest_icon_name
 
+# set to False or remove the plugin file to disable it
+ENABLE_PLUGIN = True
+
 
 def run_server_in_background():
     """Start the clipboard server without blocking main thread"""
@@ -597,4 +600,5 @@ Clipboard = MenuClipboard()
 
 
 def initialize_plugin(obj, app):
-    Clipboard.create_popover_menu_clipboard(obj, app)
+    if ENABLE_PLUGIN:
+        Clipboard.create_popover_menu_clipboard(obj, app)
