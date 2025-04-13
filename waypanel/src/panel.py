@@ -334,7 +334,7 @@ class Panel(Adw.Application):
     def load_plugins(self):
         """
         Dynamically load all plugins from the src.plugins package.
-        Plugins that return False for their position will still initialize their logic.
+        Plugins that return False for their position or are disabled via ENABLE_PLUGIN will be skipped.
         """
         plugin_dir = os.path.join(os.path.dirname(__file__), "plugins")
         plugin_names = [name for _, name, _ in pkgutil.iter_modules([plugin_dir])]
@@ -344,19 +344,26 @@ class Panel(Adw.Application):
         for module_name in plugin_names:
             try:
                 module = importlib.import_module(f"waypanel.src.plugins.{module_name}")
+
+                # Check if the plugin has required functions
                 if hasattr(module, "position") and hasattr(module, "initialize_plugin"):
+                    # Check if the plugin is enabled via ENABLE_PLUGIN
+                    is_plugin_enabled = getattr(module, "ENABLE_PLUGIN", True)
+                    if not is_plugin_enabled:
+                        self.logger.info(f"Skipping disabled plugin: {module_name}")
+                        continue
+
                     position_result = module.position()
 
-                    # Check if position is False (background-only plugin)
+                    # Handle background-only plugins (position is False)
                     if position_result is False:
                         self.logger.info(
                             f"Initializing background-only plugin: {module_name}"
                         )
-                        # Initialize the plugin directly without appending to panel boxes
-                        module.initialize_plugin(self, self)
+                        module.initialize_plugin(self, self)  # Initialize directly
                         continue
 
-                    # Unpack position and order only if position_result is not False
+                    # Unpack position and order for regular plugins
                     try:
                         position, order = position_result
                     except (TypeError, ValueError):
@@ -372,6 +379,7 @@ class Panel(Adw.Application):
                         )
                         continue
 
+                    # Add plugin metadata for sorting and initialization
                     plugin_metadata.append((module, position, order))
                 else:
                     self.logger.error(
@@ -400,8 +408,7 @@ class Panel(Adw.Application):
                     continue
 
                 # Call the `initialize_plugin` function, passing the main app instance
-                if hasattr(module, "initialize_plugin"):
-                    module.initialize_plugin(self, self)
+                module.initialize_plugin(self, self)
             except Exception as e:
                 self.logger.error(f"Failed to initialize plugin {module.__name__}: {e}")
 
