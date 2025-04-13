@@ -332,16 +332,46 @@ class Panel(Adw.Application):
                 time.sleep(1)
 
     def load_plugins(self):
-        """Dynamically load all plugins from the src.plugins package."""
+        """
+        Dynamically load all plugins from the src.plugins package.
+        Plugins that return False for their position will still initialize their logic.
+        """
         plugin_dir = os.path.join(os.path.dirname(__file__), "plugins")
         plugin_names = [name for _, name, _ in pkgutil.iter_modules([plugin_dir])]
         plugin_metadata = []
 
+        # Load plugin metadata
         for module_name in plugin_names:
             try:
                 module = importlib.import_module(f"waypanel.src.plugins.{module_name}")
                 if hasattr(module, "position") and hasattr(module, "initialize_plugin"):
-                    position, order = module.position()
+                    position_result = module.position()
+
+                    # Check if position is False (background-only plugin)
+                    if position_result is False:
+                        self.logger.info(
+                            f"Initializing background-only plugin: {module_name}"
+                        )
+                        # Initialize the plugin directly without appending to panel boxes
+                        module.initialize_plugin(self, self)
+                        continue
+
+                    # Unpack position and order only if position_result is not False
+                    try:
+                        position, order = position_result
+                    except (TypeError, ValueError):
+                        self.logger.error(
+                            f"Module {module_name} returned an invalid position. Skipping."
+                        )
+                        continue
+
+                    # Validate position
+                    if position not in ("left", "right", "center"):
+                        self.logger.error(
+                            f"Invalid position '{position}' returned by module {module_name}. Skipping."
+                        )
+                        continue
+
                     plugin_metadata.append((module, position, order))
                 else:
                     self.logger.error(
