@@ -232,7 +232,7 @@ class Dockbar(Gtk.Application):
                 if "view" in msg:
                     view = msg["view"]
                     if view["layer"] != "workspace":
-                        self.taskbar_remove(view["id"])
+                        self.taskbar_view_exists(view["id"])
             if msg["event"] == "output-gain-focus":
                 pass
             self.handle_view_event(msg)
@@ -286,35 +286,48 @@ class Dockbar(Gtk.Application):
                     return True
 
     def on_scale_activated(self):
-        """Handle scale plugin activation."""
+        """Handle scale wayfire plugin activation."""
         self.logger.info("Scale plugin activated.")
+
+        # set layer exclusive so the panels becomes clickable
         set_layer_position_exclusive(self.left_panel, 64)
         set_layer_position_exclusive(self.bottom_panel, 48)
+
+        # also update taskbar buttons, sometimes the title/icon changed meanwhile
         self.update_taskbar_on_scale()
 
     def on_scale_desactivated(self):
         """Handle scale plugin deactivation."""
         self.logger.info("Scale plugin deactivated.")
+
+        # this will set panels on bottom, hidden it from views
         unset_layer_position_exclusive(self.left_panel)
         unset_layer_position_exclusive(self.bottom_panel)
 
     def on_view_created(self, view):
         """Handle creation of new views."""
         self.logger.debug(f"View created: {view}")
+
+        # create a new button for the newly created view
         self.update_taskbar_list(view)
 
     def on_view_destroyed(self, view):
         """Handle destruction of views."""
         self.logger.debug(f"View destroyed: {view}")
+
+        # remove the button related to the view
         self.update_taskbar_list(view)
 
     def on_view_wset_changed(self, view):
         """Handle workspace changes for views."""
         self.logger.debug(f"Workspace changed for view: {view}")
+
+        # wokspace changed so it may need an update
         self.update_taskbar_button_label(view)
 
     def on_title_changed(self, view):
         """Handle title changes for views."""
+        # update the label for the given view when title changes
         self.update_taskbar_button_label(view)
 
     def get_default_monitor_name(self):
@@ -324,6 +337,7 @@ class Dockbar(Gtk.Application):
             with open(self.waypanel_cfg, "r") as file:
                 config = toml.load(file)["panel"]
                 if "monitor" in config:
+                    # for panel creation to determine which monitor it should stay on
                     return config["monitor"].get("name")
                 else:
                     return None
@@ -360,6 +374,7 @@ class Dockbar(Gtk.Application):
             return
 
         if button:
+            # FIXME: label and icon not being updated
             taskbar_button = button[0]
             button_box = taskbar_button.get_first_child()
             button_icon = button_box.get_first_child()
@@ -378,7 +393,10 @@ class Dockbar(Gtk.Application):
         """Update all taskbar buttons during scale plugin activation."""
         self.logger.debug("Updating taskbar buttons during scale plugin activation.")
         for view in self.sock.list_views():
+            # FIXME: while update_taskbar_button_label is not fixed
+            # so for better update, remove all buttons
             self.remove_button(view["id"])
+            # then create all buttons again
             self.update_taskbar_list(view)
 
     def Taskbar(self, orientation, class_style, update_button=False, callback=None):
@@ -389,7 +407,6 @@ class Dockbar(Gtk.Application):
             return
         for i in list_views:
             self.new_taskbar_view(orientation, class_style, i["id"])
-        # Return True to indicate successful execution of the Taskbar function
         return True
 
     def new_taskbar_view(
@@ -426,19 +443,11 @@ class Dockbar(Gtk.Application):
             button.add_css_class("taskbar-button")
             return True
 
-    def pid_exist(self, id):
-        """Check if a PID exists for a given view."""
-        self.logger.debug(f"Checking if PID exists for view ID: {id}")
-        pid = self.wf_utils.get_view_pid(id)
-        if pid != -1:
-            return True
-        else:
-            return False
-
     def view_exist(self, view_id):
         """Check if a view exists and meets criteria to be displayed in the taskbar."""
         self.logger.debug(f"Checking if view exists: {view_id}")
         try:
+            # filter all views which is not allowed in the taskbar
             view = self.sock.get_view(view_id)
             layer = view["layer"] != "workspace"
             role = view["role"] != "toplevel"
@@ -454,11 +463,8 @@ class Dockbar(Gtk.Application):
 
     def update_taskbar_for_hidden_views(self, view):
         """Handle cases where views are hidden but still need removal from the taskbar."""
+        # this function is specific for the wayfire plugin hide-view
         self.logger.debug(f"Updating taskbar for hidden views: {view}")
-        # The goal of this function is to catch taskbar buttons which are not toplevel
-        # and should be in the task list. Sometimes there aren't enough events to remove
-        # the button on the fly. This is made for hide view plugins that hide a view but
-        # lack events to trigger taskbar button removal.
         if view["role"] == "desktop-environment":
             self.remove_button(view["id"])
         # Also update the view when unhide
@@ -471,13 +477,13 @@ class Dockbar(Gtk.Application):
         """Update the taskbar list based on the current views."""
         self.logger.debug(f"Updating taskbar list for view: {view}")
         if not self.view_exist(view["id"]):
-            self.taskbar_remove(view["id"])
+            self.taskbar_view_exists(view["id"])
         self.Taskbar("h", "taskbar")
         ids = self.wf_utils.list_ids()
         button_ids = self.buttons_id.copy()
         for button_id in button_ids:
             if button_id not in ids:
-                self.taskbar_remove(button_id)
+                self.taskbar_view_exists(button_id)
 
     def remove_button(self, id):
         """Remove a taskbar button associated with a view."""
@@ -491,7 +497,7 @@ class Dockbar(Gtk.Application):
             self.utils.remove_gesture(button)
             del self.buttons_id[id]
 
-    def taskbar_remove(self, id=None):
+    def taskbar_view_exists(self, id=None):
         """Remove a taskbar entry if the view does not exist."""
         self.logger.debug(f"Attempting to remove taskbar entry for ID: {id}")
         if self.view_exist(id):

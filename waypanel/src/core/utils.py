@@ -40,7 +40,7 @@ class Utils(Adw.Application):
 
         self.ipc_client = WayfireClientIPC(self.handle_event)
         # here is where the ipc events happen
-        self.ipc_client.wayfire_events_setup("/tmp/waypanel-utils.sock")
+        self.ipc_client.wayfire_events_setup("/tmp/waypanel.sock")
 
         self.wf_utils = WayfireUtils(self.sock)
         self.stipc = Stipc(self.sock)

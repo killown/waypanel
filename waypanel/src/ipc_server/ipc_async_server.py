@@ -8,11 +8,14 @@ from wayfire.extra.ipc_utils import WayfireUtils
 
 
 class WayfireEventServer:
+    """
+    The goal of this additional IPC server:
+    is to handle compositor IPC issues and prevent code from hanging.
+    """
+
     def __init__(self):
         self.socket_paths = [
             "/tmp/waypanel.sock",
-            "/tmp/waypanel-dockbar.sock",
-            "/tmp/waypanel-utils.sock",
         ]
         self._cleanup_sockets()
 
