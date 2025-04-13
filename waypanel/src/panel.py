@@ -92,7 +92,6 @@ class Panel(Adw.Application):
         self.active_window = None
         self.last_toplevel_focused_view = None
         self.last_focused_output = None
-        self.clock_button = None
         self.is_scale_active = None
         self.focused_output = None
         self.vol_slider = None
@@ -117,7 +116,6 @@ class Panel(Adw.Application):
         self.maximize_views_on_expo_enabled = config["panel"]["views"][
             "maximize_views_on_expo"
         ]
-        self.window_title_topbar_length = config["panel"]["window_title_lenght"]["size"]
 
         # Set monitor dimensions
         monitor = next(
@@ -153,10 +151,8 @@ class Panel(Adw.Application):
         self.top_panel_box_left = Gtk.Box()
         self.top_panel_box_systray = Gtk.Box()
         self.top_panel_box_for_buttons = Gtk.Box()
-        self.top_panel_box_window_title = Gtk.Box()
         self.top_panel_box_widgets_left = Gtk.Box()
         self.top_panel_box_left.append(self.top_panel_box_widgets_left)
-        self.top_panel_box_left.append(self.top_panel_box_window_title)
         self.top_panel_box_right = Gtk.Box()
         self.top_panel_grid_right = Gtk.Grid()
         self.top_panel_grid_right.attach(self.top_panel_box_right, 1, 0, 1, 2)
@@ -195,7 +191,6 @@ class Panel(Adw.Application):
         )
         # load the Dockbar
         self.dock = Dockbar(application_id="com.github.dockbar", logger=self.logger)
-        self.clock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.top_panel_box_center.set_halign(Gtk.Align.CENTER)
         self.top_panel_box_center.set_valign(Gtk.Align.CENTER)
         self.top_panel_box_center.set_hexpand(False)
@@ -224,7 +219,6 @@ class Panel(Adw.Application):
         self.close_fullscreen_buttons()
         self.right_position_launcher_topbar()
         self.setup_panels()
-        self.setup_clock_widget()
         self.setup_panel_buttons()
 
         # Verify required plugins are enabled
@@ -265,7 +259,6 @@ class Panel(Adw.Application):
             if view["role"] == "desktop-environment" and view["type"] == "unknown":
                 self.hide_view_instead_closing(view, ignore_toplevel=True)
 
-        self.update_title_top_panel()
         self.get_focused_output = self.sock.get_focused_output()
 
     def load_config(self):
@@ -277,7 +270,6 @@ class Panel(Adw.Application):
     def check_widgets_ready(self):
         if (
             self.utils.is_widget_ready(self.top_panel_box_left)
-            and self.utils.is_widget_ready(self.top_panel_box_window_title)
             and self.utils.is_widget_ready(self.top_panel_box_widgets_left)
             and self.utils.is_widget_ready(self.top_panel_box_right)
             and self.utils.is_widget_ready(self.top_panel_box_systray)
@@ -286,7 +278,6 @@ class Panel(Adw.Application):
         ):
             # Apply CSS classes
             self.top_panel_box_left.add_css_class("top_panel_box_left")
-            self.top_panel_box_window_title.add_css_class("top_panel_box_window_title")
             self.top_panel_box_widgets_left.add_css_class("top_panel_box_widgets_left")
             self.top_panel_box_right.add_css_class("top_panel_box_right")
             self.top_panel_box_systray.add_css_class("top_panel_box_systray")
@@ -492,26 +483,6 @@ class Panel(Adw.Application):
 
         return wrapper
 
-    def update_background_panel(self):
-        view = self.sock.get_focused_view()
-        title = view["title"]
-        title = self.utils.filter_utf_for_gtk(title)
-        workspace_id = self.wf_utils.get_active_workspace_number()
-        pid = view["pid"]
-        wclass = view["app-id"]
-        initial_title = title.split()[0]
-        # Update title and icon
-        self.update_widgets(
-            title,
-            wclass,
-            initial_title,
-            pid,
-            workspace_id,
-        )
-        if self.is_scale_active:
-            return True
-        return False
-
     def file_exists(self, full_path):
         return os.path.exists(full_path)
 
@@ -665,7 +636,7 @@ class Panel(Adw.Application):
         return True
 
     def on_title_changed(self):
-        self.update_title_top_panel()
+        return
 
     # created view must start as maximized to auto tilling works
     def on_view_created(self, view):
@@ -697,7 +668,7 @@ class Panel(Adw.Application):
         return True
 
     def on_app_id_changed(self):
-        self.update_title_top_panel()
+        return
 
     def on_expo_activated(self):
         return True
@@ -717,7 +688,7 @@ class Panel(Adw.Application):
         self.is_scale_active = False
 
     def on_view_focused(self):
-        self.update_title_top_panel()
+        return
 
     def list_views(self):
         return self.sock.list_views()
@@ -757,24 +728,7 @@ class Panel(Adw.Application):
             self.all_panels_enabled = False
             self.top_panel.present()
 
-    def clock_dashboard(self, *_):
-        # self.dashboard = Dashboard(application_id="org.waypanel.dashboard",flags= Gio.ApplicationFlags.FLAGS_NONE)
-        # self.dashboard.run(sys.argv)
-        # self.utils.run_app("python {0}/calendar.py".format(self.scripts))
-        return
-
     def setup_gestures(self):
-        # Setting up gestures for various UI components
-        # self.utils.create_gesture(self.todo_button, 1, self.utils.take_note_app)
-        # self.utils.create_gesture(self.clock_box, 1, self.clock_dashboard)
-        self.utils.create_gesture(
-            self.window_title_content, 1, self.manage_window_notes
-        )
-        # self.utils.create_gesture(self.tbclass, 1, self.dock.dockbar_append)
-        # self.utils.create_gesture(self.tbclass, 3, self.dock.join_windows)
-        # self.utils.create_gesture(self.tbSIGKILL, 1, self.sigkill_activewindow)
-        # self.utils.create_gesture(self.tbvol, 1, self.toggle_mute_from_sink)
-
         # Gestures for top panel
         self.utils.create_gesture(
             self.top_panel_box_left, 2, self.top_panel_left_gesture_mclick
@@ -837,7 +791,7 @@ class Panel(Adw.Application):
                 return
             button = Gtk.Button()
             button.connect("clicked", lambda widget: self.on_hidden_view(widget, view))
-            self.clock_box.append(button)
+            self.top_panel_box_center.append(button)
             self.utils.handle_icon_for_button(view, button)
             self.sock.hide_view(view["id"])
 
@@ -859,7 +813,7 @@ class Panel(Adw.Application):
             # set focus will return an Exception in case the view is not toplevel
             GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))
             if self.utils.widget_exists(widget):
-                self.clock_box.remove(widget)
+                self.top_panel_box_center.remove(widget)
 
     def close_fullscreen_buttons(self):
         # Creating close and full screen buttons for the top bar
@@ -897,9 +851,6 @@ class Panel(Adw.Application):
         self.sock.set_view_minimized(self.last_toplevel_focused_view, True)
 
     def right_position_launcher_topbar(self):
-        # Creating close and full screen buttons for the top bar
-        # box = self.utils.CreateFromAppList(self.topbar_launcher_config, "h", "TopBar")
-        # self.top_panel_box_systray.append(box)
         return
 
     def get_soundcard_list(self):
@@ -914,42 +865,6 @@ class Panel(Adw.Application):
     def set_default_soundcard(self, id):
         cmd = "pactl set-default-sink {0}".format(id).split()
         Popen(cmd)
-
-    def setup_clock_widget(self):
-        # Configuring the clock widget for display
-        self.clock_box.set_halign(Gtk.Align.CENTER)
-        self.clock_box.set_baseline_position(Gtk.BaselinePosition.CENTER)
-        self.clock_label = Gtk.Label()
-        self.clock_label.set_label(datetime.datetime.now().strftime("%b %d  %H:%M"))
-        self.clock_label.set_halign(Gtk.Align.CENTER)
-        self.clock_label.set_hexpand(True)
-
-        # Adding the clock widget to the center panel
-        self.top_panel_box_center.append(self.clock_box)
-        self.clock_box.add_css_class("clock-box")
-        self.clock_label.add_css_class("clock-label")
-
-        # Schedule the initial update and then update every minute
-        GLib.timeout_add_seconds(60 - datetime.datetime.now().second, self.update_clock)
-
-    def update_clock(self):
-        try:
-            # Update the label with the current date and time
-            self.clock_label.set_label(datetime.datetime.now().strftime("%b %d  %H:%M"))
-
-        except Exception as e:
-            self.logger.error("An error occurred while updating the clock:", e)
-
-        # Schedule the next update after 60 seconds
-        try:
-            timeout_id = GLib.timeout_add_seconds(60, self.update_clock)
-            if timeout_id == 0:
-                self.logger.error("Failed to schedule next update")
-        except Exception as e:
-            self.logger.error("Error scheduling next update:", e)
-
-        # Returning False means the timeout will not be rescheduled automatically
-        return False
 
     def on_css_file_changed(self, monitor, file, other_file, event_type):
         if event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT:
@@ -972,18 +887,6 @@ class Panel(Adw.Application):
         self.all_panels_enabled = True
 
         self.top_panel_box_right.set_halign(Gtk.Align.FILL)
-
-        # setup window title
-        # self.window_title_content = self.create_button_content()
-        # self.window_title = self.window_title_content[0]
-        self.window_title_content = Gtk.Box()
-        self.window_title_label = Gtk.Label()
-        self.window_title_icon = Gtk.Image.new_from_icon_name("None")
-        self.window_title_content.append(self.window_title_icon)
-        self.window_title_content.append(self.window_title_label)
-        self.top_panel_box_window_title.append(self.window_title_content)
-        self.window_title_label.add_css_class("topbar-title-content-label")
-        self.window_title_icon.add_css_class("topbar-title-content-icon")
 
         if "--custom" in self.args:
             self.default_panel = False
@@ -1070,8 +973,6 @@ class Panel(Adw.Application):
                     24,
                     "TopBarBackground",
                 )
-
-        self.window_title_content.add_css_class("title-content-box")
 
     def create_widgets(self, orientation, class_style):
         """
@@ -1507,7 +1408,7 @@ class Panel(Adw.Application):
         elif position == "right":
             self.top_panel_box_systray.append(box)
         elif position == "center":
-            self.clock_box.append(box)
+            self.top_panel_box_center.append(box)
 
         box.add_css_class(css_class)
         label.add_css_class(css_class)
@@ -1567,30 +1468,6 @@ class Panel(Adw.Application):
                     # Update the card label with the description of the active audio sink
                     # self.tbcard.set_label("{0}".format(sink.description))
 
-    def update_title_top_panel(self):
-        try:
-            title = self.focused_view_title()
-            if not title:
-                return
-            initial_title = title.split()
-            if initial_title:
-                initial_title = initial_title[0]
-            wclass = self.sock.get_focused_view()["app-id"]
-            title = self.filter_title(title)
-
-            # Limit the title length
-            title = title[: self.window_title_topbar_length]
-
-            # Apply custom icon if available
-            custom_icon = self.apply_custom_icon(wclass)
-            if custom_icon:
-                wclass = custom_icon
-            # Update title and icon
-
-            self.update_title_icon_top_panel(title, wclass, initial_title)
-        except Exception as e:
-            self.logger.error(e)
-
     def update_widgets(self, title, wm_class, initial_title, pid, workspace_id):
         if not self.is_scale_active:
             return True
@@ -1621,48 +1498,3 @@ class Panel(Adw.Application):
             title = title.split(" — ", 1)[0]
 
         return title
-
-    # this code is still cause of crashes and freezes in the panel
-
-    @handle_exceptions
-    def update_title_icon_top_panel(self, title, wm_class, initial_title):
-        """Update title and icons."""
-        # some classes and initial titles has whitespaces which will lead to not found icons
-        title = self.utils.filter_utf_for_gtk(title)
-        icon = self.get_icon(wm_class, initial_title, title)
-        if icon and title:
-            browsers = [
-                "google-chrome",
-                "firefox",
-                "chromium",
-                "brave-browser",
-                "opera",
-                "vivaldi",
-                "microsoft-edge",
-                "tor-browser",
-                "falkon",
-                "midori",
-                "qutebrowser",
-                "konqueror",
-                "epiphany",
-                "lynx",
-                "links",
-                "w3m",
-                "librewolf",
-                "ungoogled-chromium",
-                "waterfox",
-                "palemoon",
-            ]
-
-            if self.utils.is_widget_ready(self.window_title_content):
-                self.window_title_label.set_label(title)
-                if icon:  # Only proceed if we have an icon name
-                    try:
-                        # Clear any existing icon first
-                        self.window_title_icon.set_from_icon_name("")
-                        # Set new icon
-                        self.window_title_icon.set_from_icon_name(icon)
-                    except Exception as e:
-                        self.logger.error(f"Error setting icon {icon}: {e}")
-                if wm_class in browsers:
-                    self.window_title_label.set_label(wm_class)
