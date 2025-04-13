@@ -7,7 +7,6 @@ from typing import List, Tuple
 from gi.repository import Adw, Gio, Gtk, GLib
 from gi.repository import Gtk4LayerShell as LayerShell
 from ..core.utils import Utils
-from .icons import get_nearest_icon_name
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -149,7 +148,7 @@ class MenuNotes(Gtk.Application):
         dynamic_height = min(notes_count * line_height + padding, 600)
         self.scrolled_window.set_min_content_height(dynamic_height)
 
-        button_icon = get_nearest_icon_name(self.delete_button_icon())
+        button_icon = self.utils.get_nearest_icon_name(self.delete_button_icon())
         for note_id, content in notes:
             if not content:
                 continue
@@ -204,7 +203,9 @@ class MenuNotes(Gtk.Application):
                     .get("top", {})
                     .get("notes_icon", "accessories-notes")
                 )
-                self.menubutton_notes.set_icon_name(get_nearest_icon_name(notes_icon))
+                self.menubutton_notes.set_icon_name(
+                    self.utils.get_nearest_icon_name(notes_icon)
+                )
         else:
             self.menubutton_notes.set_icon_name("accessories-notes")
 

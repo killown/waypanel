@@ -5,7 +5,8 @@ import socket
 import subprocess
 from subprocess import call, check_output
 from time import sleep
-
+import logging
+import sys
 import aiohttp
 import gi
 import numpy as np
@@ -19,17 +20,14 @@ from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.extra.stipc import Stipc
 
 from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
-from waypanel.src.plugins import icons
-
-from ..plugins.icons import get_nearest_icon_name
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
 
 class Utils(Adw.Application):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, application_id=None, **kwargs):
+        super().__init__(application_id=application_id, **kwargs)
         self._setup_config_paths()
         self.psutil_store = {}
         self.panel_cfg = self.load_topbar_config()
@@ -133,6 +131,18 @@ class Utils(Adw.Application):
         # Define the path for the Unix socket
         self.connect_socket()
 
+    def logger(self):
+        # Configure logging
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            handlers=[
+                logging.StreamHandler(sys.stdout),  # Log to console
+                logging.FileHandler("/tmp/waypanel.log"),
+            ],
+        )
+        return logging.getLogger(__name__)
+
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
         if [c for c in self.terminal_emulators if cmd in c] and cmd_mode:
             # **note-taking**
@@ -192,7 +202,7 @@ class Utils(Adw.Application):
 
         return True
 
-    def get_nearest_icon_name(app_name: str, size=Gtk.IconSize.LARGE) -> str:
+    def get_nearest_icon_name(self, app_name: str, size=Gtk.IconSize.LARGE) -> str:
         """
         Get the best matching icon name for an application (GTK4 synchronous version).
         Returns immediately with the icon name or fallback.
@@ -410,7 +420,7 @@ class Utils(Adw.Application):
                     pass
 
                 button = self.create_button(
-                    get_nearest_icon_name(config_data[app]["icon"]),
+                    self.get_nearest_icon_name(config_data[app]["icon"]),
                     config_data[app]["cmd"],
                     class_style,
                     wclass,
@@ -590,12 +600,6 @@ class Utils(Adw.Application):
         elif orientation == "v":
             orientation = Gtk.Orientation.VERTICAL
 
-        # if "proton" in wmclass or wmclass == "wine":
-        #   game_image = self.get_game_image(title)
-        #   filename = os.path.join("/tmp", wmclass + ".png")
-        #  if filename:
-        #       icon = self.download_image(game_image, filename)
-        # else:
         title = self.filter_utf_for_gtk(title)
         icon = self.get_icon(wmclass, initial_title, title)
 
@@ -612,25 +616,30 @@ class Utils(Adw.Application):
 
     def get_icon(self, wm_class, initial_title, title):
         title = self.filter_utf_for_gtk(title)
+        initial_title = title.split()[0]
         for terminal in self.terminal_emulators:
             if terminal in wm_class and terminal not in title.lower():
                 title_icon = self.icon_exist(initial_title)
                 if title_icon:
                     return title_icon
 
+        # only works for microsoft edges web apps
         web_apps = {
-            "chromium",
+            "msedge",
             "microsoft-edge",
             "microsoft-edge-dev",
             "microsoft-edge-beta",
         }
         if any(app in wm_class.lower() for app in web_apps):
             desk_local = self.search_local_desktop(initial_title)
+            print(desk_local)
 
             if desk_local and desk_local.endswith("-Default.desktop"):
-                if desk_local.startswith("msedge-") or desk_local.startswith("chrome-"):
+                if desk_local.startswith("msedge-"):
                     icon_name = desk_local.split(".desktop")[0]
                     return icon_name
+            else:
+                return self.get_nearest_icon_name("microsoft-edge")
 
         found_icon = self.icon_exist(wm_class)
         if found_icon:
@@ -665,6 +674,7 @@ class Utils(Adw.Application):
         # Add icon if available
         if icon_name:
             icon = Gtk.Image.new_from_icon_name(icon_name)
+            icon.new_from_icon_name()
             box.append(icon)
 
         # Add label
@@ -881,6 +891,79 @@ class Utils(Adw.Application):
             return True
         else:
             return False
+
+    def get_audio_apps_with_titles(self):
+        """Retrieve audio applications along with their titles."""
+        try:
+            # Get sink inputs from PulseAudio
+            pactl_output = subprocess.run(
+                ["pactl", "list", "sink-inputs"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=True,
+            ).stdout
+            # Parse sink inputs
+            apps = []
+            current_app = {}
+            for line in pactl_output.splitlines():
+                if line.startswith("Sink Input #"):
+                    if current_app:
+                        apps.append(current_app)
+                        current_app = {}
+                elif "=" in line:
+                    key, value = map(str.strip, line.split("=", 1))
+                    current_app[key] = value.strip('"')
+            if current_app:
+                apps.append(current_app)
+            # Get window titles using wmctrl
+            try:
+                wmctrl_output = subprocess.run(
+                    ["wmctrl", "-lp"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    check=True,
+                ).stdout
+                # Create PID to window title mapping
+                pid_to_windows = defaultdict(list)
+                for wm_line in wmctrl_output.splitlines():
+                    parts = wm_line.split(maxsplit=4)
+                    if len(parts) >= 5:
+                        pid = parts[2]
+                        title = parts[4]
+                        pid_to_windows[pid].append(title)
+            except:
+                pid_to_windows = {}
+            # Prepare the result list
+            result = []
+            for app in apps:
+                pid = app.get("application.process.id")
+                if not pid:
+                    continue
+                # Try to get the best available title in this order:
+                # 1. Media title (song/video name)
+                # 2. Window title
+                # 3. Application name
+                title = (
+                    app.get("media.name")
+                    or app.get("xesam:title")
+                    or (
+                        pid_to_windows.get(pid, [""])[0]
+                        if pid in pid_to_windows
+                        else ""
+                    )
+                    or app.get("application.name", "")
+                )
+                if title:  # Only include if we found a title
+                    result.append({pid: title})
+            return result
+        except subprocess.CalledProcessError as e:
+            print(f"Error running command: {e.stderr}")
+            return []
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return []
 
     def get_default_monitor_name(self, config_file_path):
         try:

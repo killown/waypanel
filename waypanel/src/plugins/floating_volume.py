@@ -65,7 +65,6 @@ class FloatingVolumePlugin:
 
         # Schedule the widget to hide after 3 seconds
         self.hide_timeout_id = GLib.timeout_add_seconds(1, self.hide_widget)
-        print("Widget shown and auto-hide timeout set")
 
     def hide_widget(self):
         """Hide the floating widget."""
@@ -93,7 +92,7 @@ class FloatingVolumePlugin:
         else:
             self.icon.set_from_icon_name("audio-volume-high-symbolic")
 
-    def on_slider_changed(self):
+    def on_slider_changed(self, *__):
         """Handle slider value changes."""
         volume = self.slider.get_value()
         self.set_volume(volume)

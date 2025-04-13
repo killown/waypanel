@@ -7,6 +7,8 @@ import threading
 import shutil
 import subprocess
 from ctypes import CDLL
+import toml
+import orjson as json
 import gi
 import sys
 import time
@@ -23,24 +25,27 @@ TEMP_DIRS = {"gtk_layer_shell": "/tmp/gtk4-layer-shell", "waypanel": "/tmp/waypa
 CONFIG_SUBDIR = "waypanel/config"
 
 
-# Logging Configuration
 def setup_logging():
-    """Configure logging with both file and console output."""
+    """Configure logging with log rotation."""
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     log_file = os.path.expanduser("~/.config/waypanel/waypanel.log")
 
+    # Create the directory for the log file if it doesn't exist
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
+
+    # Configure RotatingFileHandler
+    handler = RotatingFileHandler(
+        log_file,
+        maxBytes=1024 * 1024,  # 1 MB per log file
+        backupCount=2,
+    )
 
     logging.basicConfig(
         level=logging.INFO,
         format=log_format,
         handlers=[
-            RotatingFileHandler(
-                log_file,
-                maxBytes=1024 * 1024,  # 1MB
-                backupCount=3,
-            ),
-            logging.StreamHandler(),
+            handler,  # Log to file with rotation
+            logging.StreamHandler(),  # Log to console
         ],
     )
 
@@ -134,9 +139,35 @@ def load_panel():
         gi.require_version("Playerctl", "2.0")
         gi.require_version("Adw", "1")
 
-        from waypanel.src import panel
+        from waypanel.src.panel import Panel
+        from wayfire import WayfireSocket
+        from wayfire.extra.ipc_utils import WayfireUtils
 
-        return panel
+        sock = WayfireSocket()
+        utils = WayfireUtils(sock)
+
+        config_path = find_config_path()
+        config = load_config(config_path)["panel"]
+
+        monitor_name = get_monitor_name(config, sock)
+        if len(sys.argv) > 1:
+            monitor_name = sys.argv[-1].strip()
+
+        app_name = f"com.waypanel.{monitor_name}"
+        panel = Panel(application_id=app_name, logger=logger)
+        panel.set_panel_instance(panel)
+
+        append_to_env("output_name", monitor_name)
+        append_to_env("output_id", utils.get_output_id_by_name(monitor_name))
+
+        panel.run(None)
+        # sock.watch(["event"])
+
+        while True:
+            msg = sock.read_message()
+            if "output" in msg and monitor_name == msg["output-data"]["name"]:
+                if msg["event"] == "output-added":
+                    panel.run(None)
     except ImportError as e:
         logger.error(f"Failed to load panel: {e}", exc_info=True)
         raise
@@ -267,6 +298,69 @@ def set_gi_typelib_path(primary_path, fallback_path):
     )
 
 
+def append_to_env(app_name, monitor_name, env_var="waypanel"):
+    existing_env = os.getenv(env_var, "{}")
+    env_dict = json.loads(existing_env)
+    env_dict[app_name] = monitor_name
+    os.environ[env_var] = json.dumps(env_dict).decode("utf-8")
+
+
+def load_config(config_path):
+    """
+    Load the configuration file or exit the application with an error message.
+    Args:
+        config_path (str): Path to the configuration file.
+    Returns:
+        dict: Parsed TOML configuration.
+    """
+    if not os.path.exists(config_path):
+        print(f"Error: Configuration file not found at '{config_path}'.")
+        print("The panel cannot run without a valid configuration file.")
+        print("Please ensure the file exists or reinstall the application.")
+        sys.exit(1)  # Exit with a non-zero status code to indicate failure
+
+    try:
+        with open(config_path, "r") as f:
+            config = toml.load(f)
+            if not config:
+                raise ValueError("Configuration file is empty.")
+            return config
+    except toml.TomlDecodeError as e:
+        print(f"Error: Failed to parse the configuration file at '{config_path}'.")
+        print(f"Details: {e}")
+        print("Please fix the file or replace it with a valid configuration.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Unexpected error while loading the configuration file: {e}")
+        sys.exit(1)
+
+
+def get_monitor_name(config, sock):
+    monitor = next(
+        (output for output in sock.list_outputs() if "-1" in output["name"]),
+        sock.list_outputs()[0],
+    )
+    monitor_name = monitor.get("name")
+    return config.get("monitor", {}).get("name", monitor_name)
+
+
+def find_config_path():
+    home_config_path = os.path.join(
+        os.path.expanduser("~"), ".config/waypanel", "waypanel.toml"
+    )
+    if os.path.exists(home_config_path):
+        print(f"using {home_config_path}")
+        return home_config_path
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    default_config_path = os.path.join(
+        os.path.dirname(script_dir), "config/waypanel.toml"
+    )
+    print(f"Using default config path: {default_config_path}")
+
+    return default_config_path
+
+
 def main():
     """Main application entry point."""
     config_observer = None
@@ -284,7 +378,7 @@ def main():
         panel = load_panel()
 
         logger.info("Starting panel...")
-        panel.run()
+        panel.run(logger=logger)
     except Exception as e:
         logger.critical(f"Fatal error: {e}", exc_info=True)
         raise

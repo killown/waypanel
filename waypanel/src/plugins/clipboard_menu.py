@@ -16,7 +16,6 @@ import re
 
 from ..core.utils import Utils
 from .clipboard_server import AsyncClipboardServer
-from .icons import get_nearest_icon_name
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -305,7 +304,7 @@ class MenuClipboard(Gtk.Application):
                         .get("clipboard_icon_delete", "delete")
                     )
                     image_button.set_icon_name(
-                        get_nearest_icon_name(clipboard_icon_delete)
+                        self.utils.get_nearest_icon_name(clipboard_icon_delete)
                     )
             else:
                 image_button.set_icon_name("delete")
@@ -365,7 +364,7 @@ class MenuClipboard(Gtk.Application):
                     .get("clipboard_icon", "edit-paste")
                 )
                 self.menubutton_clipboard.set_icon_name(
-                    get_nearest_icon_name(clipboard_icon)
+                    self.utils.get_nearest_icon_name(clipboard_icon)
                 )
         else:
             self.menubutton_clipboard.set_icon_name("edit-paste")

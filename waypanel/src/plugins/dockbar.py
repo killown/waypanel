@@ -1,7 +1,5 @@
 import os
-import subprocess
 import sys
-from collections import defaultdict
 import orjson as json
 import toml
 from gi.repository import Gtk
@@ -14,7 +12,6 @@ from ..core.create_panel import (
     unset_layer_position_exclusive,
 )
 from ..core.utils import Utils
-from .icons import get_nearest_icon_name
 
 sys.path.append("/usr/lib/waypanel/")
 
@@ -22,8 +19,9 @@ sys.path.append("/usr/lib/waypanel/")
 class Dockbar(Gtk.Application):
     """Main class responsible for managing the dockbar and its panels."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, logger, **kwargs):
         super().__init__(**kwargs)
+        self.logger = logger
         self.utils = Utils()
         self.panel_cfg = self.utils.load_topbar_config()
         self.taskbar_list = [None]
@@ -38,11 +36,14 @@ class Dockbar(Gtk.Application):
         self.is_scale_active = {}
         self._setup_config_paths()
         self.ipc_client = WayfireClientIPC(self.handle_event)
+        self.logger.info("Dockbar initialized.")
         # Initialize IPC events handling.
         self.ipc_client.wayfire_events_setup("/tmp/waypanel.sock")
+        self.logger.info("IPC events setup completed.")
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
+        self.logger.debug("Setting up configuration paths.")
         config_paths = self.utils.setup_config_paths()
         self.home = config_paths["home"]
         self.waypanel_cfg = os.path.join(self.home, ".config/waypanel/waypanel.toml")
@@ -50,30 +51,38 @@ class Dockbar(Gtk.Application):
         self.scripts = config_paths["scripts"]
         self.config_path = config_paths["config_path"]
         self.cache_folder = config_paths["cache_folder"]
+        self.logger.info(f"Configuration paths set: {config_paths}")
 
     def _load_config(self):
         """Load and cache the configuration from the TOML file."""
+        self.logger.debug("Loading configuration from TOML file.")
         if not hasattr(self, "_cached_config"):
             with open(self.waypanel_cfg, "r") as f:
                 self._cached_config = toml.load(f)
+        self.logger.info("Configuration loaded successfully.")
         return self._cached_config
 
     def do_start(self):
         """Start the Dockbar application by setting up the stored windows and panels."""
+        self.logger.info("Starting Dockbar application.")
         self.stored_windows = [i["id"] for i in self.sock.list_views()]
         panel_toml = self._load_config()["panel"]
         self._setup_panels(panel_toml)
+        self.logger.info("Dockbar application started.")
 
     def _setup_panels(self, panel_toml):
         """Set up panels based on the provided configuration."""
+        self.logger.debug("Setting up panels.")
         for p in panel_toml:
             if p == "left":
                 self._setup_left_panel(panel_toml[p])
             elif p == "bottom":
                 self._setup_bottom_panel(panel_toml[p])
+        self.logger.info("Panels setup completed.")
 
     def _setup_left_panel(self, config):
         """Create and configure the left panel."""
+        self.logger.debug("Setting up left panel.")
         exclusive = config["Exclusive"] == True
         position = config["position"]
         size = config["size"]
@@ -87,9 +96,11 @@ class Dockbar(Gtk.Application):
         self.left_panel.set_content(self.dockbar)
         if enabled:
             self.left_panel.present()
+        self.logger.info("Left panel setup completed.")
 
     def _setup_bottom_panel(self, config):
         """Create and configure the bottom panel."""
+        self.logger.debug("Setting up bottom panel.")
         exclusive = config["Exclusive"] == True
         position = config["position"]
         size = config["size"]
@@ -98,7 +109,7 @@ class Dockbar(Gtk.Application):
             self, "BOTTOM", position, exclusive, 0, size, "BottomBar"
         )
         self.add_launcher = Gtk.Button()
-        self.add_launcher.set_icon_name(get_nearest_icon_name("tab-new"))
+        self.add_launcher.set_icon_name(self.utils.get_nearest_icon_name("tab-new"))
         self.scrolled_window = Gtk.ScrolledWindow()
         output = os.getenv("waypanel")
         output_name = None
@@ -126,26 +137,34 @@ class Dockbar(Gtk.Application):
         # Start the taskbar list for the bottom panel
         self.Taskbar("h", "taskbar")
         set_layer_position_exclusive(self.bottom_panel, size)
+        self.logger.info("Bottom panel setup completed.")
+        unset_layer_position_exclusive(self.left_panel)
+        unset_layer_position_exclusive(self.bottom_panel)
 
-    @staticmethod
-    def handle_exceptions(func):
+    def handle_exceptions(self, func):
         """Decorator to handle exceptions within methods."""
 
         def wrapper(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
             except Exception as e:
-                print(f"An error occurred in {func.__name__}: {e}")
+                self.logger.error(f"An error occurred in {func.__name__}: {e}")
                 return None
 
         return wrapper
 
     def file_exists(self, full_path):
         """Check if a file exists at the given path."""
-        return os.path.exists(full_path)
+        exists = os.path.exists(full_path)
+        self.logger.debug(f"Checking if file exists: {full_path} -> {exists}")
+        return exists
 
-    def handle_view_event(self, msg, view):
+    def handle_view_event(self, msg):
         """Handle view-related IPC events."""
+        self.logger.debug(f"Handling dockbar view event: {msg}")
+
+        view = msg.get("view")
+
         if "event" not in msg:
             return
         # This event match must be here because if not, role != toplevel will make it never match.
@@ -179,11 +198,12 @@ class Dockbar(Gtk.Application):
         if msg["event"] == "view-mapped":
             self.on_view_created(view)
         if msg["event"] == "view-unmapped":
-            self.on_view_destroyed(msg["view"])
+            self.on_view_destroyed(view)
         return True
 
     def handle_plugin_event(self, msg):
         """Handle plugin-related IPC events."""
+        self.logger.debug(f"Handling plugin event: {msg}")
         if "event" not in msg:
             return True
         if msg["event"] == "plugin-activation-state-changed":
@@ -203,6 +223,7 @@ class Dockbar(Gtk.Application):
 
     def handle_event(self, msg):
         """Handle general IPC events."""
+        self.logger.debug(f"Handling general IPC event: {msg}")
         view = None
         if "view" in msg:
             view = msg["view"]
@@ -214,36 +235,43 @@ class Dockbar(Gtk.Application):
                         self.taskbar_remove(view["id"])
             if msg["event"] == "output-gain-focus":
                 pass
-            self.handle_view_event(msg, view)
+            self.handle_view_event(msg)
             self.handle_plugin_event(msg)
         return True
 
     def on_view_role_toplevel_focused(self, view):
         """Handle when a toplevel view gains focus."""
+        self.logger.debug(f"Toplevel view focused: {view}")
         return True
 
     def on_expo_activated(self):
         """Handle expo plugin activation."""
+        self.logger.info("Expo plugin activated.")
         return True
 
     def on_moving_view(self):
         """Handle moving view event."""
+        self.logger.info("Moving view event triggered.")
         return True
 
     def on_expo_desactivated(self):
         """Handle expo plugin deactivation."""
+        self.logger.info("Expo plugin deactivated.")
         return True
 
     def on_view_focused(self):
         """Handle when any view gains focus."""
+        self.logger.debug("View focused.")
         return True
 
     def on_app_id_changed(self, view):
         """Handle changes in app-id of a view."""
+        self.logger.debug(f"App ID changed for view: {view}")
         self.update_taskbar_list(view)
 
     def panel_output_is_focused_output(self):
         """Check if the current panel's output is the focused output."""
+        self.logger.debug("Checking if panel output is focused output.")
         output = os.getenv("waypanel")
         output_name = None
         focused_output_name = None
@@ -259,31 +287,30 @@ class Dockbar(Gtk.Application):
 
     def on_scale_activated(self):
         """Handle scale plugin activation."""
-        # The issue with this focused output thing:
-        # If you have a multi-monitor setup, scaling the first monitor with dockbar
-        # then scaling another monitor without the dockbar will cause the dockbar
-        # to not get layer exclusive when moving the mouse from the monitor without
-        # the panel to the monitor with it.
-        # if self.panel_output_is_focused_output():
+        self.logger.info("Scale plugin activated.")
         set_layer_position_exclusive(self.left_panel, 64)
         set_layer_position_exclusive(self.bottom_panel, 48)
         self.update_taskbar_on_scale()
 
     def on_scale_desactivated(self):
         """Handle scale plugin deactivation."""
+        self.logger.info("Scale plugin deactivated.")
         unset_layer_position_exclusive(self.left_panel)
         unset_layer_position_exclusive(self.bottom_panel)
 
     def on_view_created(self, view):
         """Handle creation of new views."""
+        self.logger.debug(f"View created: {view}")
         self.update_taskbar_list(view)
 
     def on_view_destroyed(self, view):
         """Handle destruction of views."""
+        self.logger.debug(f"View destroyed: {view}")
         self.update_taskbar_list(view)
 
     def on_view_wset_changed(self, view):
         """Handle workspace changes for views."""
+        self.logger.debug(f"Workspace changed for view: {view}")
         self.update_taskbar_button_label(view)
 
     def on_title_changed(self, view):
@@ -292,6 +319,7 @@ class Dockbar(Gtk.Application):
 
     def get_default_monitor_name(self):
         """Get the default monitor name from the configuration."""
+        self.logger.debug("Fetching default monitor name.")
         try:
             with open(self.waypanel_cfg, "r") as file:
                 config = toml.load(file)["panel"]
@@ -300,83 +328,12 @@ class Dockbar(Gtk.Application):
                 else:
                     return None
         except FileNotFoundError:
+            self.logger.error("Configuration file not found.")
             return None
-
-    def get_audio_apps_with_titles(self):
-        """Retrieve audio applications along with their titles."""
-        try:
-            # Get sink inputs from PulseAudio
-            pactl_output = subprocess.run(
-                ["pactl", "list", "sink-inputs"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=True,
-            ).stdout
-            # Parse sink inputs
-            apps = []
-            current_app = {}
-            for line in pactl_output.splitlines():
-                if line.startswith("Sink Input #"):
-                    if current_app:
-                        apps.append(current_app)
-                        current_app = {}
-                elif "=" in line:
-                    key, value = map(str.strip, line.split("=", 1))
-                    current_app[key] = value.strip('"')
-            if current_app:
-                apps.append(current_app)
-            # Get window titles using wmctrl
-            try:
-                wmctrl_output = subprocess.run(
-                    ["wmctrl", "-lp"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=True,
-                ).stdout
-                # Create PID to window title mapping
-                pid_to_windows = defaultdict(list)
-                for wm_line in wmctrl_output.splitlines():
-                    parts = wm_line.split(maxsplit=4)
-                    if len(parts) >= 5:
-                        pid = parts[2]
-                        title = parts[4]
-                        pid_to_windows[pid].append(title)
-            except:
-                pid_to_windows = {}
-            # Prepare the result list
-            result = []
-            for app in apps:
-                pid = app.get("application.process.id")
-                if not pid:
-                    continue
-                # Try to get the best available title in this order:
-                # 1. Media title (song/video name)
-                # 2. Window title
-                # 3. Application name
-                title = (
-                    app.get("media.name")
-                    or app.get("xesam:title")
-                    or (
-                        pid_to_windows.get(pid, [""])[0]
-                        if pid in pid_to_windows
-                        else ""
-                    )
-                    or app.get("application.name", "")
-                )
-                if title:  # Only include if we found a title
-                    result.append({pid: title})
-            return result
-        except subprocess.CalledProcessError as e:
-            print(f"Error running command: {e.stderr}")
-            return []
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-            return []
 
     def update_taskbar_button_label(self, view):
         """Update the label and icon of a taskbar button."""
+        self.logger.debug(f"Updating taskbar button label for view: {view}")
         title = self.utils.filter_utf_for_gtk(view["title"])
         title = title[:20]
         words = title.split()
@@ -395,27 +352,38 @@ class Dockbar(Gtk.Application):
         button = None
         if id in self.buttons_id:
             button = self.buttons_id[view["id"]]
-        if not self.utils.widget_exists(button):
+
+        if not button:
             return
+
+        if not self.utils.widget_exists(button[0]):
+            return
+
         if button:
-            button = button[0]
-            apps_using_audio = self.get_audio_apps_with_titles()
+            taskbar_button = button[0]
+            button_box = taskbar_button.get_first_child()
+            button_icon = button_box.get_first_child()
+            button_label = button_box.get_last_child()
+            apps_using_audio = self.utils.get_audio_apps_with_titles()
             pid = str(view["pid"])
             if any(
                 app for app in apps_using_audio if str(pid) in app and title in app[pid]
             ):
                 title = title + " 🔊"
-            button.set_label(title)
+            button_label.set_name(title)
             if icon:
-                button.set_icon_name(get_nearest_icon_name(icon))
+                button_icon.new_from_icon_name(self.utils.get_nearest_icon_name(icon))
 
     def update_taskbar_on_scale(self):
         """Update all taskbar buttons during scale plugin activation."""
+        self.logger.debug("Updating taskbar buttons during scale plugin activation.")
         for view in self.sock.list_views():
-            self.update_taskbar_button_label(view)
+            self.remove_button(view["id"])
+            self.update_taskbar_list(view)
 
     def Taskbar(self, orientation, class_style, update_button=False, callback=None):
         """Initialize or update the taskbar."""
+        self.logger.debug("Initializing or updating taskbar.")
         list_views = self.sock.list_views()
         if not list_views:
             return
@@ -432,6 +400,7 @@ class Dockbar(Gtk.Application):
         callback=None,
     ):
         """Create a new taskbar button for a view."""
+        self.logger.debug(f"Creating new taskbar view for ID: {view_id}")
         if not class_style:
             class_style = "taskbar"
         if not self.view_exist(view_id):
@@ -441,10 +410,6 @@ class Dockbar(Gtk.Application):
         if view_id not in self.wf_utils.list_ids():
             return
         view = self.sock.get_view(view_id)
-        if view["type"] != "toplevel":
-            return
-        if view["layer"] != "workspace":
-            return
         id = view["id"]
         title = view["title"]
         title = self.utils.filter_utf_for_gtk(title)
@@ -463,6 +428,7 @@ class Dockbar(Gtk.Application):
 
     def pid_exist(self, id):
         """Check if a PID exists for a given view."""
+        self.logger.debug(f"Checking if PID exists for view ID: {id}")
         pid = self.wf_utils.get_view_pid(id)
         if pid != -1:
             return True
@@ -471,6 +437,7 @@ class Dockbar(Gtk.Application):
 
     def view_exist(self, view_id):
         """Check if a view exists and meets criteria to be displayed in the taskbar."""
+        self.logger.debug(f"Checking if view exists: {view_id}")
         try:
             view = self.sock.get_view(view_id)
             layer = view["layer"] != "workspace"
@@ -478,15 +445,16 @@ class Dockbar(Gtk.Application):
             mapped = view["mapped"] is False
             app_id = view["app-id"] == "nil"
             pid = view["pid"] == -1
-            view_type = view["type"] != "toplevel"
-            if layer or role or mapped or app_id or pid or view_type:
+            if layer or role or mapped or app_id or pid:
                 return False
             return True
         except Exception:
+            self.logger.info(f"View closed or does not exist - ID: {view_id}")
             return False
 
     def update_taskbar_for_hidden_views(self, view):
         """Handle cases where views are hidden but still need removal from the taskbar."""
+        self.logger.debug(f"Updating taskbar for hidden views: {view}")
         # The goal of this function is to catch taskbar buttons which are not toplevel
         # and should be in the task list. Sometimes there aren't enough events to remove
         # the button on the fly. This is made for hide view plugins that hide a view but
@@ -501,6 +469,7 @@ class Dockbar(Gtk.Application):
 
     def update_taskbar_list(self, view):
         """Update the taskbar list based on the current views."""
+        self.logger.debug(f"Updating taskbar list for view: {view}")
         if not self.view_exist(view["id"]):
             self.taskbar_remove(view["id"])
         self.Taskbar("h", "taskbar")
@@ -512,6 +481,7 @@ class Dockbar(Gtk.Application):
 
     def remove_button(self, id):
         """Remove a taskbar button associated with a view."""
+        self.logger.debug(f"Removing taskbar button for ID: {id}")
         if id in self.buttons_id:
             button = self.buttons_id[id][0]
             if not self.utils.widget_exists(button):
@@ -523,6 +493,7 @@ class Dockbar(Gtk.Application):
 
     def taskbar_remove(self, id=None):
         """Remove a taskbar entry if the view does not exist."""
+        self.logger.debug(f"Attempting to remove taskbar entry for ID: {id}")
         if self.view_exist(id):
             return
         if id in self.buttons_id:

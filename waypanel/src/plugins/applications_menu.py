@@ -7,7 +7,6 @@ from gi.repository import Adw, Gio, Gtk
 from gi.repository import Gtk4LayerShell as LayerShell
 
 from ..core.utils import Utils
-from .icons import get_nearest_icon_name
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -44,7 +43,7 @@ class MenuLauncher(Adw.Application):
         self.menubutton_launcher = Gtk.Button()
         self.menubutton_launcher.connect("clicked", self.open_popover_launcher)
         panel_config_path = os.path.join(self.config_path, "panel.toml")
-        menu_icon = get_nearest_icon_name("archlinux")
+        menu_icon = self.utils.get_nearest_icon_name("archlinux")
         if os.path.exists(panel_config_path):
             with open(panel_config_path, "r") as f:
                 panel_config = toml.load(f)

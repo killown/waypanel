@@ -1,5 +1,4 @@
 import os
-import random
 from subprocess import Popen
 
 import gi
@@ -7,7 +6,7 @@ import toml
 from gi.repository import Adw, Gio, Gtk
 from gi.repository import Gtk4LayerShell as LayerShell
 
-from .icons import get_nearest_icon_name
+from ..core.utils import Utils
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -18,6 +17,7 @@ class PopoverFolders(Adw.Application):
         super().__init__(**kwargs)
         self.popover_folders = None
         self.app = None
+        self.panel_utils = Utils()
         self.top_panel = None
         self._setup_config_paths()
 
@@ -39,7 +39,7 @@ class PopoverFolders(Adw.Application):
         self.menubutton_folders = Gtk.Button()
         self.menubutton_folders.connect("clicked", self.open_popover_folders)
         panel_config_path = os.path.join(self.config_path, "waypanel.toml")
-        menu_icon = get_nearest_icon_name("folder")
+        menu_icon = self.panel_utils.get_nearest_icon_name("folder")
         if os.path.exists(panel_config_path):
             with open(panel_config_path, "r") as f:
                 panel_config = toml.load(f)["folders"]
