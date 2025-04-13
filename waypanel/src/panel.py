@@ -333,8 +333,37 @@ class Panel(Adw.Application):
     def load_plugins(self):
         """
         Dynamically load all plugins from the src.plugins package.
-        Plugins that return False for their position or are disabled via ENABLE_PLUGIN will be skipped.
+        Plugins that return False for their position or are disabled via ENABLE_PLUGIN or listed in the `disabled` field
+        in waypanel.toml will be skipped.
+        Additionally, update the [plugins] section in waypanel.toml to reflect the valid plugins.
         """
+        # Path to the configuration file
+        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
+
+        # Load the TOML configuration
+        try:
+            if not os.path.exists(waypanel_config_path):
+                self.logger.error(
+                    f"Configuration file not found at '{waypanel_config_path}'."
+                )
+                return
+
+            with open(waypanel_config_path, "r") as f:
+                config = toml.load(f)
+
+            # Ensure the [plugins] section exists
+            if "plugins" not in config:
+                config["plugins"] = {"list": "", "disabled": ""}
+
+            # Parse the disabled plugins list
+            disabled_plugins = set(config["plugins"].get("disabled", "").split())
+        except Exception as e:
+            self.logger.error(f"Failed to load configuration file: {e}")
+            return
+
+        # Initialize lists to track valid plugins
+        valid_plugins = []
+
         plugin_dir = os.path.join(os.path.dirname(__file__), "plugins")
         plugin_names = [name for _, name, _ in pkgutil.iter_modules([plugin_dir])]
         plugin_metadata = []
@@ -342,6 +371,13 @@ class Panel(Adw.Application):
         # Load plugin metadata
         for module_name in plugin_names:
             try:
+                # Skip plugins listed in the `disabled` field
+                if module_name in disabled_plugins:
+                    self.logger.info(
+                        f"Skipping plugin listed in 'disabled': {module_name}"
+                    )
+                    continue
+
                 module = importlib.import_module(f"waypanel.src.plugins.{module_name}")
 
                 # Check if the plugin has required functions
@@ -360,6 +396,7 @@ class Panel(Adw.Application):
                             f"Initializing background-only plugin: {module_name}"
                         )
                         module.initialize_plugin(self, self)  # Initialize directly
+                        valid_plugins.append(module_name)  # Add to valid list
                         continue
 
                     # Unpack position and order for regular plugins
@@ -380,6 +417,7 @@ class Panel(Adw.Application):
 
                     # Add plugin metadata for sorting and initialization
                     plugin_metadata.append((module, position, order))
+                    valid_plugins.append(module_name)  # Add to valid list
                 else:
                     self.logger.error(
                         f"Module {module_name} is missing required functions. Skipping."
@@ -410,6 +448,18 @@ class Panel(Adw.Application):
                 module.initialize_plugin(self, self)
             except Exception as e:
                 self.logger.error(f"Failed to initialize plugin {module.__name__}: {e}")
+
+        # Update the [plugins] section in the TOML configuration
+        config["plugins"]["list"] = " ".join(valid_plugins)
+        config["plugins"]["disabled"] = " ".join(disabled_plugins)
+
+        # Save the updated configuration back to the file
+        try:
+            with open(waypanel_config_path, "w") as f:
+                toml.dump(config, f)
+            self.logger.info("Updated [plugins] section in waypanel.toml.")
+        except Exception as e:
+            self.logger.error(f"Failed to save updated configuration: {e}")
 
     def get_folder_location(self, folder_name):
         """
