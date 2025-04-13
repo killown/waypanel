@@ -144,10 +144,8 @@ class Utils(Adw.Application):
         return logging.getLogger(__name__)
 
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
-        if [c for c in self.terminal_emulators if cmd in c] and cmd_mode:
-            # **note-taking**
-            # replace this function with stipc
-            self.stipc.run_cmd(cmd)
+        # FIXME: need to handle more data as it in params
+        self.stipc.run_cmd(cmd)
 
     def find_view_middle_cursor_position(self, view_geometry, monitor_geometry):
         # Calculate the middle position of the view
@@ -395,6 +393,28 @@ class Utils(Adw.Application):
                         self.is_scale_active[msg["output"]] = False
         except Exception as e:
             print(e)
+        return True
+
+    def handle_event_checks(self, msg, required_keys=None):
+        """
+        Perform common checks on the event message.
+        Args:
+            msg (dict): The event message.
+            required_keys (list): List of keys that must be present in the message.
+        Returns:
+            bool: True if the checks pass, False otherwise.
+        """
+        if not isinstance(msg, dict):
+            return False
+
+        if "event" not in msg:
+            return False
+
+        if required_keys:
+            for key in required_keys:
+                if key not in msg:
+                    return False
+
         return True
 
     def CreateFromAppList(
