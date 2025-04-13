@@ -103,22 +103,22 @@ class AsyncClipboardServer:
             return
 
         async with aiosqlite.connect(self.db_path) as db:
-            # First insert the new item
+            cursor = await db.execute("SELECT COUNT(*) FROM clipboard_items")
+            count = (await cursor.fetchone())[0]
+
+            if count >= self.max_items:
+                await db.execute("""
+                    DELETE FROM clipboard_items
+                    WHERE id = (SELECT id FROM clipboard_items ORDER BY timestamp ASC LIMIT 1)
+                """)
+                await db.commit()
+
+            # Insert the new item
             await db.execute(
                 "INSERT INTO clipboard_items (content) VALUES (?)", (content,)
             )
-
-            # Then enforce the row limit using the instance variable
-            await db.execute(f"""
-                DELETE FROM clipboard_items 
-                WHERE id IN (
-                    SELECT id FROM clipboard_items 
-                    ORDER BY timestamp ASC
-                    LIMIT -1 OFFSET {self.max_items}
-                )
-            """)
-
             await db.commit()
+
             self.last_clipboard_content = content
             if LOG_ENABLED:
                 logger.info(f"Added item: {content[:50]}...")
