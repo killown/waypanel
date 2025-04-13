@@ -225,7 +225,6 @@ class Panel(Adw.Application):
         self.right_position_launcher_topbar()
         self.setup_panels()
         self.setup_clock_widget()
-        self.update_widget_with_timeout()
         self.setup_panel_buttons()
 
         # Verify required plugins are enabled
@@ -692,10 +691,6 @@ class Panel(Adw.Application):
             self.top_panel_box_systray.set_halign(Gtk.Align.END)
             self.top_panel_box_systray.set_hexpand(True)
 
-    def update_widget_with_timeout(self):
-        if os.path.exists("/usr/bin/mullvad"):
-            GLib.timeout_add(10000, self.mullvad_status)
-
     def show_panels(self):
         if self.all_panels_enabled:
             self.top_panel.present()
@@ -1027,41 +1022,6 @@ class Panel(Adw.Application):
                 )
 
         self.window_title_content.add_css_class("title-content-box")
-
-    def mullvad_status(self):
-        """
-        Check the status of the Mullvad VPN and update the menu label accordingly.
-
-        This function checks the status of the Mullvad VPN by searching for files in
-        the directory "/sys/class/net" that start with either "wg" or "tun".
-        If the interface is "tun", it checks for the presence of "-mullvad" as well.
-        It updates the label of the VPN menu item based on the status.
-
-        Returns:
-            bool: True if the function executes successfully.
-        """
-        vpn_menu = self.menus.get("VPN")  # Retrieve VPN menu
-
-        if vpn_menu is None:
-            return False
-
-        net_files = os.listdir("/sys/class/net")
-
-        is_mullvad_active = any(
-            (file.startswith("wg") or file.startswith("tun")) for file in net_files
-        )
-
-        if not is_mullvad_active:
-            is_mullvad_active = any(
-                file.startswith("tun") and "-mullvad" in file for file in net_files
-            )
-
-        if is_mullvad_active:
-            vpn_menu.set_icon_name("mullvad-vpn")
-        else:
-            vpn_menu.set_icon_name("stock_disconnect")
-
-        return True
 
     def create_widgets(self, orientation, class_style):
         """
