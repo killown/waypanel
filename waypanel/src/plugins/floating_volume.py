@@ -51,6 +51,11 @@ class FloatingVolumePlugin:
 
         self.widget.set_child(vbox)
         self.widget.set_default_size(200, 100)
+        self.icon.add_css_class("floating-volume-icon")
+        self.slider.add_css_class("floating-volume-slider")
+        self.label.add_css_class("floating-volume-label")
+        vbox.add_css_class("floating-volume-box")
+        self.widget.add_css_class("floating-volume-widget")
 
     def show_widget(self):
         """Show the floating widget."""
