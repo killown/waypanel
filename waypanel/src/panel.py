@@ -204,7 +204,6 @@ class Panel(Adw.Application):
         self.scripts = config_paths["scripts"]
         self.config_path = config_paths["config_path"]
         self.style_css_config = config_paths["style_css_config"]
-        self.window_notes_config = config_paths["window_notes_config"]
         self.cache_folder = config_paths["cache_folder"]
 
     def on_activate(self, app):
@@ -649,26 +648,10 @@ class Panel(Adw.Application):
         return True
 
     def on_view_destroyed(self):
-        # FIXME: awaiting a fix in wayfire that is spamming unmapped views when switching tabs
-        # if view_id in self.list_ids():
-        #    return
-
-        # if it check if workspace has views too fast, will still get the id from destroyed view
-        # and thus never change to next workspace
-        # sleep(0.2)
-        # this signal will be cleared with {'event': 'view-focused', 'view': None}
-        # useful when focusing empty workspaces
-        # if no signal like that, the go_next_workspace_with_views will be triggered
-        # and never will allow to visit an empty workspace
-        # workspace_from_view = self.sock.get_workspace_from_view(view_id)
-        # if not self.sock.has_workspace_views(workspace_from_view):
-        #    sock.go_next_workspace_with_views()
-        # sock.focus_next_view_from_active_workspace()
-
         return True
 
     def on_app_id_changed(self):
-        return
+        return True
 
     def on_expo_activated(self):
         return True
@@ -716,9 +699,6 @@ class Panel(Adw.Application):
         if self.all_panels_enabled:
             self.top_panel.present()
             self.dock.do_start()
-            # if self.background_panel_enabled:
-            # self.top_panel_background.present()
-            # load the dockbar
 
     def setup_panel_buttons(self):
         if self.default_panel:
@@ -755,13 +735,6 @@ class Panel(Adw.Application):
         self.utils.create_gesture(
             self.top_panel_box_right, 3, self.top_panel_left_gesture_rclick
         )
-
-        self.utils.create_gesture(self.top_panel_box_systray, 3, self.notify_client)
-
-        # click will copy pid to clipboard
-        # self.tbpid_gesture = self.utils.create_gesture(
-        #    self.tbpid, 1, self.copy_to_clipboard
-        # )
 
         # Adding scroll event to the full panel
         EventScroll = Gtk.EventControllerScroll.new(
@@ -991,31 +964,7 @@ class Panel(Adw.Application):
         dockbar = self.utils.CreateFromAppList(
             self.waypanel_cfg, orientation, class_style
         )
-        # workspace_buttons = self.utils.CreateFromAppList(
-        #    self.workspace_list_config, orientation, class_style
-        # )
         return dockbar
-
-    def todo_txt(self):
-        """
-        Update the label of the TODO button with the last line from the TODO.txt file.
-
-        This function reads the last line from the TODO.txt file and updates the label of the TODO button
-        with the content of the last line.
-
-        Returns:
-            bool: Always returns True.
-        """
-        # Define the path to the TODO.txt file
-        todo_filepath = os.path.join(self.home, "Documentos", "todo.txt")
-
-        # Read the last line from the TODO.txt file
-        last_line = open(todo_filepath, "r").readlines()[-1]
-
-        # Update the label of the TODO button with the content of the last line
-        self.todo_button.set_label(last_line.strip())
-
-        return True
 
     def on_button_press_event(self, _, event):
         """
@@ -1052,7 +1001,6 @@ class Panel(Adw.Application):
         """
 
         self.sock.toggle_expo()
-        # Popen("kitty".split())
 
     def scroll_event(self, _, _dx, dy):
         """
@@ -1089,34 +1037,23 @@ class Panel(Adw.Application):
                     self.floating_volume_plugin.set_volume(volume)
 
     def top_panel_left_gesture_lclick(self, *_):
-        # data format is (self, gesture, data, x, y)
         cmd = self.panel_cfg["left_side_gestures"]["left_click"]
         self.utils.run_app(cmd, True)
 
     def top_panel_left_gesture_rclick(self, *_):
         self.wf_utils.go_next_workspace_with_views()
-        # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
-        # self.utils.run_app(cmd, True)
 
     def top_panel_left_gesture_mclick(self, *_):
         self.sock.toggle_expo()
-        # cmd = self.panel_cfg["left_side_gestures"]["middle_click"]
-        # self.utils.run_app(cmd, True)
 
     def top_panel_center_gesture_lclick(self, *_):
         self.sock.toggle_expo()
-        # cmd = self.panel_cfg["center_side_gestures"]["left_click"]
-        # self.utils.run_app(cmd, True)
 
     def top_panel_center_gesture_mclick(self, *_):
         self.sock.toggle_expo()
-        # cmd = self.panel_cfg["center_side_gestures"]["middle_click"]
-        # self.utils.run_app(cmd, True)
 
     def top_panel_center_gesture_rclick(self, *_):
         self.wf_utils.go_next_workspace_with_views()
-        # cmd = self.panel_cfg["left_side_gestures"]["right_click"]
-        # self.utils.run_app(cmd, True)
 
     def top_panel_right_gesture_lclick(self, *_):
         cmd = self.panel_cfg["right_side_gestures"]["left_click"]
@@ -1124,13 +1061,9 @@ class Panel(Adw.Application):
 
     def top_panel_right_gesture_rclick(self, *_):
         self.sock.toggle_expo()
-        # cmd = self.panel_cfg["right_side_gestures"]["right_click"]
-        # self.utils.run_app(cmd, True)
 
     def top_panel_right_gesture_mclick(self, *_):
         self.sock.toggle_expo()
-        # cmd = self.panel_cfg["right_side_gestures"]["middle_click"]
-        # self.utils.run_app(cmd, True)
 
     def create_simple_action(self):
         """
@@ -1277,65 +1210,6 @@ class Panel(Adw.Application):
                 sink = sink.split("\n")[0]
                 self.utils.run_app("pactl set-sink-input-mute {0} toggle".format(sink))
 
-    def notify_client(self, *_):
-        self.utils.run_app("swaync-client -t")
-
-    def manage_window_notes(self, *_):
-        """
-        Manage notes for the active window.
-
-        This function retrieves information about the active window, such as its initial title
-        and window class, and updates a configuration file with this information. It also
-        manages the creation and opening of a Markdown file for notes related to the window.
-
-        Args:
-            *_: Additional arguments (unused).
-
-        Returns:
-            None
-        """
-        # Retrieve information about the active window
-
-        view = None
-        if self.last_toplevel_focused_view is not None:
-            view = self.sock.get_view(self.last_toplevel_focused_view)
-        if view is None:
-            return
-        title = self.utils.filter_utf_for_gtk(view["title"])
-        wm_class = view["app-id"].lower()
-        initial_title = title.split()[0].lower()
-
-        # Adjust the window class based on specific conditions
-        if "firefox" in wm_class and "." in title:
-            wm_class = title.split()[0]
-        if wm_class == "kitty":
-            wm_class = title.split()[0]
-        if wm_class == "gnome-terminal-server":
-            wm_class = title.split()[0]
-
-        # Load existing window notes from the configuration file
-        with open(self.window_notes_config, "r") as config_file:
-            existing_notes = toml.load(config_file)
-
-        # Create a new entry for the active window and update the configuration
-        new_entry = {wm_class: {"initial_title": initial_title, "title": title}}
-        updated_notes = ChainMap(new_entry, existing_notes)
-
-        # Save the updated notes back to the configuration file
-        with open(self.window_notes_config, "w") as config_file:
-            toml.dump(updated_notes, config_file)
-
-        # Define the path and command for the Markdown file related to the window
-        filepath = f"/home/neo/Notes/{wm_class}.md"
-        cmd = f"marktext {filepath}"
-
-        # Create the Markdown file if it doesn't exist
-        if not os.path.isfile(filepath):
-            Path(filepath).touch()
-
-        # run the Markdown editor application
-        self.utils.run_app(cmd)
-
     def _exec_once(self, output, label):
         """
         Executes the output command once and updates the label.
@@ -1432,7 +1306,6 @@ class Panel(Adw.Application):
         Returns:
             None
         """
-        # Read command settings from the configuration file
         cmd_settings = self.panel_config_loaded["cmd"]
 
         # Iterate through each command setting and create/configure the corresponding command label
@@ -1444,57 +1317,3 @@ class Panel(Adw.Application):
 
             # Create and configure the command label with the specified settings
             self.create_cmd_label(output, position, css_class, refresh)
-
-    def volume_watch(self):
-        """
-        Watch for changes in the volume and update the volume and card labels accordingly.
-
-        This function uses the `pulsectl` library to monitor the volume and updates the labels
-        with the current volume percentage and the description of the active audio sink.
-
-        """
-        # Initialize PulseAudio client
-        with pulsectl.Pulse("volume-increaser") as pulse:
-            # Iterate through all the audio sinks
-            for sink in pulse.sink_list():
-                # Check if the sink is currently running (active)
-                if "running" in str(sink.state):
-                    # Calculate the volume percentage and round it to the nearest whole number
-                    volume = round(sink.volume.values[0] * 100)
-
-                    # Update the volume label with the current volume percentage
-                    # self.tbvol.set_label("{0}%".format(volume))
-
-                    # Update the card label with the description of the active audio sink
-                    # self.tbcard.set_label("{0}".format(sink.description))
-
-    def update_widgets(self, title, wm_class, initial_title, pid, workspace_id):
-        if not self.is_scale_active:
-            return True
-        # Modify title based on certain patterns
-        title = self.filter_title(title)
-        # Limit the title length
-        title = title[: self.window_title_topbar_length]
-
-        self.update_title_icon_top_panel(title, wm_class, initial_title)
-
-    def apply_custom_icon(self, wclass):
-        """Apply custom icon if available."""
-        panel_cfg = self.panel_cfg["change_icon_title"]
-        if wclass in panel_cfg:
-            return panel_cfg[wclass]
-
-    def filter_title(self, title):
-        """Modify title based on certain patterns."""
-        title = self.utils.filter_utf_for_gtk(title)
-        if "." in title:
-            parts = title.split(" ", 1)
-            if parts[0].startswith("www."):
-                title = parts[0][4:]  # Assuming "www." always has a length of 4
-            else:
-                title = parts[0]
-
-        if " — " in title:
-            title = title.split(" — ", 1)[0]
-
-        return title
