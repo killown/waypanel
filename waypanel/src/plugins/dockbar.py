@@ -212,6 +212,8 @@ class Dockbar(Gtk.Application):
             return
         if view["app-id"] == "nil":
             return
+        if msg["event"] == "output-gain-focus":
+            self.on_output_gain_focus()
         if msg["event"] == "view-title-changed":
             self.on_title_changed(view)
         if msg["event"] == "view-tiled" and view:
@@ -271,6 +273,9 @@ class Dockbar(Gtk.Application):
         self.logger.debug(f"Toplevel view focused: {view}")
         return True
 
+    def on_output_gain_focus(self):
+        return True
+
     def on_expo_activated(self):
         """Handle expo plugin activation."""
         self.logger.info("Expo plugin activated.")
@@ -317,8 +322,15 @@ class Dockbar(Gtk.Application):
         self.logger.info("Scale plugin activated.")
 
         # set layer exclusive so the panels becomes clickable
-        set_layer_position_exclusive(self.left_panel, 64)
-        set_layer_position_exclusive(self.bottom_panel, 48)
+        output_info = os.getenv("waypanel")
+        layer_set_on_output_name = None
+        if output_info:
+            layer_set_on_output_name = json.loads(output_info).get("output_name")
+        focused_output_name = self.sock.get_focused_output()["name"]
+        # only set layer if the focused output is the same as the defined in panel creation
+        if layer_set_on_output_name == focused_output_name:
+            set_layer_position_exclusive(self.left_panel, 64)
+            set_layer_position_exclusive(self.bottom_panel, 48)
 
         # also update taskbar buttons, sometimes the title/icon changed meanwhile
         self.update_taskbar_on_scale()
