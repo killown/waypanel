@@ -321,12 +321,11 @@ class Panel(Adw.Application):
                 time.sleep(1)
 
     def load_plugins(self):
-        """
-        Dynamically load all plugins from the src.plugins package.
-        Plugins that return False for their position or are disabled via ENABLE_PLUGIN or listed in the `disabled` field
-        in waypanel.toml will be skipped.
-        Additionally, update the [plugins] section in waypanel.toml to reflect the valid plugins.
-        """
+        """Dynamically load all plugins from the src.plugins package.
+        Plugins that return False for their position or are disabled via ENABLE_PLUGIN
+        or listed in the `disabled` field in waypanel.toml will be skipped.
+        Additionally, update the [plugins] section in waypanel.toml to reflect the valid plugins."""
+
         # Path to the configuration file
         waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
 
@@ -347,19 +346,21 @@ class Panel(Adw.Application):
 
             # Parse the disabled plugins list
             disabled_plugins = set(config["plugins"].get("disabled", "").split())
+
         except Exception as e:
             self.logger.error(f"Failed to load configuration file: {e}")
             return
 
         # Initialize lists to track valid plugins
         valid_plugins = []
-
         plugin_dir = os.path.join(os.path.dirname(__file__), "plugins")
         plugin_names = [name for _, name, _ in pkgutil.iter_modules([plugin_dir])]
         plugin_metadata = []
 
         # Load plugin metadata
         for module_name in plugin_names:
+            start_time = time.time()  # Start timing
+
             try:
                 # Skip plugins listed in the `disabled` field
                 if module_name in disabled_plugins:
@@ -387,6 +388,12 @@ class Panel(Adw.Application):
                         )
                         module.initialize_plugin(self, self)  # Initialize directly
                         valid_plugins.append(module_name)  # Add to valid list
+                        elapsed_time = (
+                            time.time() - start_time
+                        )  # Calculate elapsed time
+                        self.logger.info(
+                            f"Background plugin '{module_name}' loaded in {elapsed_time:.4f} seconds"
+                        )
                         continue
 
                     # Unpack position and order for regular plugins
@@ -408,18 +415,33 @@ class Panel(Adw.Application):
                     # Add plugin metadata for sorting and initialization
                     plugin_metadata.append((module, position, order))
                     valid_plugins.append(module_name)  # Add to valid list
+
                 else:
                     self.logger.error(
                         f"Module {module_name} is missing required functions. Skipping."
                     )
+
             except Exception as e:
-                self.logger.error(f"Failed to load plugin {module_name}: {e}")
+                elapsed_time = (
+                    time.time() - start_time
+                )  # Calculate elapsed time even if there's an error
+                self.logger.error(
+                    f"Failed to load plugin {module_name}: {e} (processed in {elapsed_time:.4f} seconds)"
+                )
+                continue
+
+            elapsed_time = time.time() - start_time  # Calculate elapsed time
+            self.logger.info(
+                f"Plugin '{module_name}' processed in {elapsed_time:.4f} seconds"
+            )
 
         # Sort plugins by their `order` value
         plugin_metadata.sort(key=lambda x: x[2])  # Sort by the third element (order)
 
         # Initialize plugins in sorted order
         for module, position, _ in plugin_metadata:
+            start_time = time.time()  # Start timing
+
             try:
                 # Determine the target panel box based on the position
                 if position == "left":
@@ -436,8 +458,19 @@ class Panel(Adw.Application):
 
                 # Call the `initialize_plugin` function, passing the main app instance
                 module.initialize_plugin(self, self)
+
+                elapsed_time = time.time() - start_time  # Calculate elapsed time
+                self.logger.info(
+                    f"Plugin '{module.__name__}' initialized in {elapsed_time:.4f} seconds"
+                )
+
             except Exception as e:
-                self.logger.error(f"Failed to initialize plugin {module.__name__}: {e}")
+                elapsed_time = (
+                    time.time() - start_time
+                )  # Calculate elapsed time even if there's an error
+                self.logger.error(
+                    f"Failed to initialize plugin {module.__name__}: {e} (processed in {elapsed_time:.4f} seconds)"
+                )
 
         # Update the [plugins] section in the TOML configuration
         config["plugins"]["list"] = " ".join(valid_plugins)
@@ -447,7 +480,6 @@ class Panel(Adw.Application):
         try:
             with open(waypanel_config_path, "w") as f:
                 toml.dump(config, f)
-            self.logger.info("Updated [plugins] section in waypanel.toml.")
         except Exception as e:
             self.logger.error(f"Failed to save updated configuration: {e}")
 
