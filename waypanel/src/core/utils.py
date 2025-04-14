@@ -256,13 +256,34 @@ class Utils(Adw.Application):
 
         return "image-missing"
 
+    def update_widget(self, function_method, *args):
+        """
+        Safely update a GTK widget's property or method using GLib.idle_add.
+
+        Args:
+            function_method: The method to call on the widget (e.g., widget.set_label).
+            *args: Arguments to pass to the method.
+        """
+        GLib.idle_add(function_method, *args)
+
     def append_widget_if_ready(self, container, widget):
+        """
+        Append a widget to a container if the widget is valid and not already parented.
+        Ensures the operation is performed on the main thread using GLib.idle_add.
+
+        Args:
+            container (Gtk.Container): The container to which the widget will be appended.
+            widget (Gtk.Widget): The widget to append.
+
+        Returns:
+            bool: True if the widget was successfully appended, False otherwise.
+        """
         if widget is None or not isinstance(widget, Gtk.Widget):
             print("Error: Invalid widget provided")
             return False
 
         if not widget.get_parent():
-            container.append(widget)
+            self.update_widget(container.append, widget)
 
         return True
 
@@ -693,16 +714,17 @@ class Utils(Adw.Application):
 
         # Add icon if available
         if icon_name:
-            icon = Gtk.Image.new_from_icon_name(icon_name)
-            icon.new_from_icon_name()
-            box.append(icon)
+            icon = Gtk.Image()
+            self.update_widget(icon.set_from_icon_name, icon_name)
+            self.update_widget(box.append, icon)
 
         # Add label
-        label = Gtk.Label(label=use_this_title)
-        box.append(label)
+        label = Gtk.Label()
+        self.update_widget(label.set_label, use_this_title)
+        self.update_widget(box.append, label)
 
         # Set the box as the button's child
-        button.set_child(box)
+        self.update_widget(button.set_child, box)
 
         # Create gesture handlers for the button
         button.connect("clicked", lambda *_: self.set_view_focus(view_id))
