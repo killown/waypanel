@@ -30,6 +30,7 @@ class Dockbar(Gtk.Application):
         self.all_pids = [i["id"] for i in self.sock.list_views()]
         self.buttons_id = {}
         self.left_panel = None
+        self.update_widget = self.utils.update_widget
         self.bottom_panel = None
         self.has_taskbar_started = False
         self.stored_windows = []
@@ -101,45 +102,71 @@ class Dockbar(Gtk.Application):
     def _setup_bottom_panel(self, config):
         """Create and configure the bottom panel."""
         self.logger.debug("Setting up bottom panel.")
+
+        # Extract configuration values
         exclusive = config["Exclusive"] == True
         position = config["position"]
         size = config["size"]
         enabled = config["enabled"]
+
+        # Create the bottom panel
         self.bottom_panel = CreatePanel(
             self, "BOTTOM", position, exclusive, 0, size, "BottomBar"
         )
+
+        # Add launcher button
         self.add_launcher = Gtk.Button()
-        self.add_launcher.set_icon_name(self.utils.get_nearest_icon_name("tab-new"))
+        icon = self.utils.get_nearest_icon_name("tab-new")
+        self.update_widget(self.add_launcher.set_icon_name, icon)
+
+        # Scrolled window setup
         self.scrolled_window = Gtk.ScrolledWindow()
         output = os.getenv("waypanel")
         output_name = None
         geometry = None
+
         if output:
-            output_name = json.loads(output)
-            output_name = output_name["output_name"]
+            output_name = json.loads(output).get("output_name")
         if output_name:
             output_id = self.wf_utils.get_output_id_by_name(output_name)
             if output_id:
                 geometry = self.wf_utils.get_output_geometry(output_id)
+
         if geometry:
             monitor_width = geometry["width"]
-            self.scrolled_window.set_size_request(monitor_width / 1.2, 64)
-        self.bottom_panel.set_content(self.scrolled_window)
+            self.update_widget(
+                self.scrolled_window.set_size_request, monitor_width / 1.2, 64
+            )
+
+        # Set content for the bottom panel
+        self.update_widget(self.bottom_panel.set_content, self.scrolled_window)
+
+        # Taskbar setup
         self.taskbar = Gtk.FlowBox()
-        self.taskbar.set_halign(Gtk.Align.CENTER)  # Center horizontally
-        self.taskbar.set_valign(Gtk.Align.CENTER)  # Center vertically
-        self.scrolled_window.set_child(self.taskbar)
+        self.update_widget(
+            self.taskbar.set_halign, Gtk.Align.CENTER
+        )  # Center horizontally
+        self.update_widget(
+            self.taskbar.set_valign, Gtk.Align.CENTER
+        )  # Center vertically
+        self.update_widget(self.scrolled_window.set_child, self.taskbar)
         self.taskbar.add_css_class("taskbar")
-        # apps append button
-        # self.taskbar.append(self.add_launcher)
+
+        # Present the panel if enabled
         if enabled:
-            self.bottom_panel.present()
+            self.update_widget(self.bottom_panel.present)
+
         # Start the taskbar list for the bottom panel
         self.Taskbar("h", "taskbar")
-        set_layer_position_exclusive(self.bottom_panel, size)
+
+        # Set layer position exclusively
+        self.update_widget(set_layer_position_exclusive, self.bottom_panel, size)
+
         self.logger.info("Bottom panel setup completed.")
-        unset_layer_position_exclusive(self.left_panel)
-        unset_layer_position_exclusive(self.bottom_panel)
+
+        # Unset layer position for other panels
+        self.update_widget(unset_layer_position_exclusive, self.left_panel)
+        self.update_widget(unset_layer_position_exclusive, self.bottom_panel)
 
     def handle_exceptions(self, func):
         """Decorator to handle exceptions within methods."""
@@ -301,14 +328,15 @@ class Dockbar(Gtk.Application):
         self.logger.info("Scale plugin deactivated.")
 
         # this will set panels on bottom, hidden it from views
-        unset_layer_position_exclusive(self.left_panel)
-        unset_layer_position_exclusive(self.bottom_panel)
+        self.update_widget(unset_layer_position_exclusive, self.left_panel)
+        self.update_widget(unset_layer_position_exclusive, self.bottom_panel)
 
     def on_view_created(self, view):
         """Handle creation of new views."""
         self.logger.debug(f"View created: {view}")
 
         # create a new button for the newly created view
+        self.update_taskbar(view)
         self.update_taskbar_list(view)
 
     def on_view_destroyed(self, view):
@@ -323,12 +351,12 @@ class Dockbar(Gtk.Application):
         self.logger.debug(f"Workspace changed for view: {view}")
 
         # wokspace changed so it may need an update
-        self.update_taskbar_button_label(view)
+        self.update_taskbar(view)
 
     def on_title_changed(self, view):
         """Handle title changes for views."""
         # update the label for the given view when title changes
-        self.update_taskbar_button_label(view)
+        self.update_taskbar_button(view)
 
     def get_default_monitor_name(self):
         """Get the default monitor name from the configuration."""
@@ -345,58 +373,65 @@ class Dockbar(Gtk.Application):
             self.logger.error("Configuration file not found.")
             return None
 
-    def update_taskbar_button_label(self, view):
-        """Update the label and icon of a taskbar button."""
-        self.logger.debug(f"Updating taskbar button label for view: {view}")
-        title = self.utils.filter_utf_for_gtk(view["title"])
-        title = title[:20]
+    def _truncate_title(self, title: str, max_length: int = 20) -> str:
+        """
+        Truncate a title to fit within the maximum allowed length.
+
+        Args:
+            title (str): The original title.
+            max_length (int): The maximum allowed length.
+
+        Returns:
+            str: The truncated title.
+        """
+        if len(title) <= max_length:
+            return title
         words = title.split()
-        first_word_length = 0
-        if words:
-            first_word_length = len(words[0])
-        if first_word_length > 10:
-            title = title.split()[0]
-        initial_title = title.split()
-        if initial_title:
-            initial_title = initial_title[0]
-        else:
-            return
-        icon = self.utils.get_icon(view["app-id"], initial_title, title)
-        id = view["id"]
+        if len(words[0]) > 10:
+            return words[0][:max_length]
+        return " ".join(words)[:max_length]
+
+    def update_taskbar_button(self, view):
+        """
+        remove the old button from taskbar and add a new one updated
+        this function is only intended to use along with event: title_changed
+        """
         button = None
+        id = view["id"]
         if id in self.buttons_id:
-            button = self.buttons_id[view["id"]]
+            button = self.buttons_id[id][0]
 
         if not button:
             return
 
-        if not self.utils.widget_exists(button[0]):
+        if not self.utils.widget_exists(button):
             return
 
         if button:
-            # FIXME: label and icon not being updated
-            taskbar_button = button[0]
-            button_box = taskbar_button.get_first_child()
-            button_icon = button_box.get_first_child()
-            button_label = button_box.get_last_child()
-            apps_using_audio = self.utils.get_audio_apps_with_titles()
-            pid = str(view["pid"])
-            if any(
-                app for app in apps_using_audio if str(pid) in app and title in app[pid]
-            ):
-                title = title + " 🔊"
-            button_label.set_name(title)
-            if icon:
-                button_icon.new_from_icon_name(self.utils.get_nearest_icon_name(icon))
+            self.remove_button(id)
+            self.update_taskbar(view)
 
-    def update_taskbar_on_scale(self):
+    def update_taskbar(self, view) -> None:
+        """
+        Update the label of a taskbar button based on the view's title.
+
+        Args:
+            view (dict): A dictionary containing view details, including 'title'.
+        """
+        self.logger.debug(f"Updating taskbar button label for view: {view}")
+        raw_title = view.get("title", "")
+        filtered_title = self.utils.filter_utf_for_gtk(raw_title)
+        truncated_title = self._truncate_title(filtered_title)
+        initial_title = truncated_title.split()[0]
+        self.logger.debug(f"Truncated title: {truncated_title}")
+        icon = self.utils.get_icon(view["app-id"], initial_title, truncated_title)
+        self.update_taskbar_list(view)
+
+    def update_taskbar_on_scale(self) -> None:
         """Update all taskbar buttons during scale plugin activation."""
         self.logger.debug("Updating taskbar buttons during scale plugin activation.")
         for view in self.sock.list_views():
-            # FIXME: while update_taskbar_button_label is not fixed
-            # so for better update, remove all buttons
-            self.remove_button(view["id"])
-            # then create all buttons again
+            self.update_taskbar(view)
             self.update_taskbar_list(view)
 
     def Taskbar(self, orientation, class_style, update_button=False, callback=None):
@@ -409,57 +444,144 @@ class Dockbar(Gtk.Application):
             self.new_taskbar_view(orientation, class_style, i["id"])
         return True
 
-    def new_taskbar_view(
-        self,
-        orientation,
-        class_style,
-        view_id,
-        callback=None,
-    ):
-        """Create a new taskbar button for a view."""
-        self.logger.debug(f"Creating new taskbar view for ID: {view_id}")
-        if not class_style:
-            class_style = "taskbar"
+    def validate_view_for_taskbar(self, view_id) -> dict:
+        """
+        Validate if a view exists and meets the criteria to be added to the taskbar.
+
+        Args:
+            view_id (int): The ID of the view to validate.
+
+        Returns:
+            dict or None: The view object if valid, otherwise None.
+        """
+        self.logger.debug(f"Validating view for taskbar: {view_id}")
         if not self.view_exist(view_id):
-            return
+            self.logger.debug(f"View does not exist: {view_id}")
+            return {}
         if view_id in self.taskbar_list:
-            return
+            self.logger.debug(f"View already in taskbar list: {view_id}")
+            return {}
         if view_id not in self.wf_utils.list_ids():
-            return
+            self.logger.debug(f"View ID not in active IDs: {view_id}")
+            return {}
+
         view = self.sock.get_view(view_id)
+        if not view:
+            self.logger.debug(f"Failed to fetch view details for ID: {view_id}")
+            return {}
+
+        return view
+
+    def get_valid_button(self, button_id):
+        if button_id in self.buttons_id:
+            button = self.buttons_id[button_id][0]
+            if self.utils.widget_exists(button):
+                return button
+        self.logger.debug(f"Invalid or missing button for ID: {button_id}")
+        return None
+
+    def create_taskbar_button(self, view, orientation, class_style):
+        """
+        Create a taskbar button for a given view.
+
+        Args:
+            view (dict): The view object containing details like ID, title, and app-id.
+            orientation (str): The orientation of the taskbar ("h" or "v").
+            class_style (str): The CSS class style for the button.
+
+        Returns:
+            bool: True if the button was successfully created, False otherwise.
+        """
+        self.logger.debug(f"Creating taskbar button for view: {view['id']}")
         id = view["id"]
-        title = view["title"]
-        title = self.utils.filter_utf_for_gtk(title)
+        title = self.utils.filter_utf_for_gtk(view["title"])
         wm_class = view["app-id"]
         initial_title = title.split(" ")[0].lower()
+
         button = self.utils.create_taskbar_launcher(
             wm_class, title, initial_title, orientation, class_style, id
         )
-        if button:
-            self.utils.append_widget_if_ready(self.taskbar, button)
-            # Store button information in dictionaries for easy access
-            self.buttons_id[id] = [button, initial_title, id]
-            self.taskbar_list.append(id)
-            button.add_css_class("taskbar-button")
-            return True
+
+        if not button:
+            self.logger.error(f"Failed to create taskbar button for view ID: {id}")
+            return False
+
+        # Append the button to the taskbar
+        self.utils.append_widget_if_ready(self.taskbar, button)
+
+        # Store button information in dictionaries for easy access
+        self.buttons_id[id] = [button, initial_title, id]
+        self.taskbar_list.append(id)
+        button.add_css_class("taskbar-button")
+
+        self.logger.info(f"Taskbar button created for view ID: {id}")
+        return True
+
+    def new_taskbar_view(self, orientation, class_style, view_id, callback=None):
+        """
+        Initialize or update the taskbar with a new view.
+
+        Args:
+            orientation (str): The orientation of the taskbar ("h" or "v").
+            class_style (str): The CSS class style for the button.
+            view_id (int): The ID of the view to add.
+            callback (function, optional): A callback function to execute after creation.
+
+        Returns:
+            bool: True if the taskbar button was successfully created, False otherwise.
+        """
+        self.logger.debug(f"Initializing new taskbar view for ID: {view_id}")
+
+        # Validate the view
+        view = self.validate_view_for_taskbar(view_id)
+        if not view:
+            self.logger.debug(f"Validation failed for view ID: {view_id}")
+            return False
+
+        # Create the taskbar button
+        success = self.create_taskbar_button(view, orientation, class_style)
+        if not success:
+            self.logger.error(f"Failed to create taskbar button for view ID: {view_id}")
+            return False
+
+        if callback:
+            callback(view_id)
+
+        return True
+
+    def is_valid_view(self, view):
+        """
+        Check if a view meets the criteria to be displayed in the taskbar.
+
+        Args:
+            view (dict): The view object containing details like ID.
+
+        Returns:
+            bool: True if the view is valid, False otherwise.
+        """
+        return (
+            view["layer"] == "workspace"
+            and view["role"] == "toplevel"
+            and view["mapped"] is True
+            and view["app-id"] != "nil"
+            and view["pid"] != -1
+        )
 
     def view_exist(self, view_id):
         """Check if a view exists and meets criteria to be displayed in the taskbar."""
         self.logger.debug(f"Checking if view exists: {view_id}")
         try:
-            # filter all views which is not allowed in the taskbar
             view = self.sock.get_view(view_id)
-            layer = view["layer"] != "workspace"
-            role = view["role"] != "toplevel"
-            mapped = view["mapped"] is False
-            app_id = view["app-id"] == "nil"
-            pid = view["pid"] == -1
-            if layer or role or mapped or app_id or pid:
+            if not self.is_valid_view(view):
                 return False
             return True
-        except Exception:
-            self.logger.info(f"View closed or does not exist - ID: {view_id}")
-            return False
+        except KeyError as e:
+            self.logger.error(f"Missing key in view data: {e}")
+        except TypeError as e:
+            self.logger.error(f"Invalid type in view data: {e}")
+        except Exception as e:
+            self.logger.error(f"Unexpected error checking view existence: {e}")
+        return False
 
     def update_taskbar_for_hidden_views(self, view):
         """Handle cases where views are hidden but still need removal from the taskbar."""
@@ -474,36 +596,94 @@ class Dockbar(Gtk.Application):
                     self.update_taskbar_list(v)
 
     def update_taskbar_list(self, view):
-        """Update the taskbar list based on the current views."""
+        """
+        Update the taskbar list based on the current views.
+
+        Args:
+            view (dict): The view object containing details like ID.
+        """
         self.logger.debug(f"Updating taskbar list for view: {view}")
-        if not self.view_exist(view["id"]):
-            self.taskbar_view_exists(view["id"])
+
+        # Step 1: Validate the current view
+        if not self._validate_and_update_view(view):
+            self.logger.debug(f"View ID {view['id']} does not exist. Skipping.")
+
+        # Step 2: Update the taskbar layout
         self.Taskbar("h", "taskbar")
-        ids = self.wf_utils.list_ids()
-        button_ids = self.buttons_id.copy()
-        for button_id in button_ids:
-            if button_id not in ids:
+
+        # Step 3: Remove invalid buttons
+        self._remove_invalid_buttons()
+
+    def _validate_and_update_view(self, view) -> bool:
+        """
+        Validate the existence of a view and update the taskbar accordingly.
+
+        Args:
+            view (dict): The view object containing details like ID.
+
+        Returns:
+            bool: True if the view exists, False otherwise.
+        """
+        view_id = view["id"]
+        if not self.view_exist(view_id):
+            self.logger.debug(
+                f"View ID {view_id} does not exist. Removing from taskbar."
+            )
+            self.taskbar_view_exists(view_id)
+            return False
+        return True
+
+    def _remove_invalid_buttons(self):
+        """
+        Remove taskbar buttons for views that no longer exist.
+        """
+        active_ids = set(
+            self.wf_utils.list_ids()
+        )  # Get the current list of valid view IDs
+        for button_id in list(self.buttons_id.keys()):  # Iterate over a copy of keys
+            if button_id not in active_ids:
+                self.logger.debug(f"Removing invalid button ID: {button_id}")
                 self.taskbar_view_exists(button_id)
 
     def remove_button(self, id):
-        """Remove a taskbar button associated with a view."""
+        """
+        Remove a taskbar button associated with a view.
+
+        Args:
+            id (int): The ID of the view whose button should be removed.
+        """
         self.logger.debug(f"Removing taskbar button for ID: {id}")
-        if id in self.buttons_id:
-            button = self.buttons_id[id][0]
-            if not self.utils.widget_exists(button):
-                return
-            self.taskbar.remove(button)
-            self.taskbar_list.remove(id)
-            self.utils.remove_gesture(button)
-            del self.buttons_id[id]
+
+        # Get the valid button using the helper function
+        button = self.get_valid_button(id)
+        if not button:
+            self.logger.debug(f"No valid button found for ID: {id}")
+            return
+
+        # Remove the button from the taskbar and clean up
+        self.update_widget(self.taskbar.remove, button)
+        self.taskbar_list.remove(id)
+        self.utils.remove_gesture(button)
+        del self.buttons_id[id]
 
     def taskbar_view_exists(self, id=None):
-        """Remove a taskbar entry if the view does not exist."""
+        """
+        Remove a taskbar entry if the view does not exist.
+
+        Args:
+            id (int): The ID of the view to check.
+
+        Returns:
+            bool: True if the taskbar entry was removed, False otherwise.
+        """
         self.logger.debug(f"Attempting to remove taskbar entry for ID: {id}")
         if self.view_exist(id):
-            return
-        if id in self.buttons_id:
-            button = self.buttons_id[id][0]
-            if not self.utils.widget_exists(button):
-                return
-            self.remove_button(id)
+            self.logger.debug(f"View ID {id} still exists. Skipping removal.")
+            return False
+        button = self.get_valid_button(id)
+        if not button:
+            self.logger.debug(f"No valid button found for ID: {id}. Skipping removal.")
+            return False
+        self.logger.info(f"Removing taskbar entry for ID: {id}")
+        self.remove_button(id)
+        return True
