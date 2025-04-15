@@ -3,7 +3,7 @@ from subprocess import Popen, check_output
 import toml
 import gi
 from gi.repository import Adw, Gtk
-from ..core.utils import Utils
+from ...core.utils import Utils
 
 gi.require_version("Gtk", "4.0")
 

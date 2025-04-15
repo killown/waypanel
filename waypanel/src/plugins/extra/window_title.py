@@ -2,7 +2,7 @@ import os
 import toml
 from gi.repository import Gtk
 from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
-from ..core.utils import Utils
+from ...core.utils import Utils
 
 
 class WindowTitlePlugin:

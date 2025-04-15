@@ -78,7 +78,7 @@ class SwayNCTogglePlugin:
             )
 
         # Add the Button to the systray
-        self.obj.top_panel_box_systray.append(self.button_swaync)
+        self.obj.top_panel_box_center.append(self.button_swaync)
 
         # Connect the button to toggle SwayNC using the "clicked" signal
         self.button_swaync.connect("clicked", self.toggle_swaync)

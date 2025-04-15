@@ -6,7 +6,7 @@ from subprocess import Popen, check_output
 import psutil
 from gi.repository import Adw, Gtk
 import toml
-from ..core.utils import Utils
+from ...core.utils import Utils
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True

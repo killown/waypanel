@@ -24,6 +24,11 @@ setup(
     ],
     python_requires=">=3.6",
     install_requires=read_requirements(),  # Reading from requirements.txt
+    extras_require={
+        "dev": [
+            "pygobject-stubs[Gtk4,Gdk]",
+        ],
+    },
     entry_points={
         "console_scripts": [
             "waypanel=waypanel.main:main",

@@ -6,12 +6,12 @@ from gi.repository import Gtk
 from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.ipc import WayfireSocket
 from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
-from ..core.create_panel import (
+from ...core.create_panel import (
     CreatePanel,
     set_layer_position_exclusive,
     unset_layer_position_exclusive,
 )
-from ..core.utils import Utils
+from ...core.utils import Utils
 
 sys.path.append("/usr/lib/waypanel/")
 

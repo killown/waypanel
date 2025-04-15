@@ -3,7 +3,7 @@ from gi.repository import Gtk, GLib
 
 
 # set to False or remove the plugin file to disable it
-ENABLE_PLUGIN = False
+ENABLE_PLUGIN = True
 
 
 def position():
@@ -34,7 +34,7 @@ class CriptoPlugin:
         self.popover_crypto = None
         self.crypto_labels = {}
         self.update_timeout_id = None
-        self.update_time = 1800
+        self.update_time = 18000
         self.prices = {
             "XRPUSDT": None,
             "BTCUSDT": None,
@@ -64,8 +64,13 @@ class CriptoPlugin:
         """
         Start periodic updates for cryptocurrency data.
         """
+
         # Fetch data immediately for the first time
-        self.fetch_and_update_crypto_data()
+        def run_once():
+            self.fetch_and_update_crypto_data()
+            return False
+
+        GLib.idle_add(run_once)
 
         # Schedule periodic updates
         self.update_timeout_id = GLib.timeout_add_seconds(

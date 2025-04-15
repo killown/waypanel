@@ -1,4 +1,3 @@
-# ==== FILE: waypanel/src/plugins/system_monitor.py ====
 import psutil
 import gi
 
@@ -6,7 +5,7 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, GLib
 
 # set to False or remove the plugin file to disable it
-ENABLE_PLUGIN = False
+ENABLE_PLUGIN = True
 
 
 def position():

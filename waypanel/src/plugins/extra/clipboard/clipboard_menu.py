@@ -14,7 +14,7 @@ from gi.repository import Gtk4LayerShell as LayerShell
 from PIL import Image
 import re
 
-from ..core.utils import Utils
+from ....core.utils import Utils
 from .clipboard_server import AsyncClipboardServer
 
 # set to False or remove the plugin file to disable it

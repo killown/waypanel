@@ -6,7 +6,7 @@ import soundcard as sc
 from gi.repository import Adw, Gtk
 from wayfire.ipc import WayfireSocket
 import toml
-from ..core.utils import Utils
+from ...core.utils import Utils
 
 addr = os.getenv("WAYFIRE_SOCKET")
 sock = WayfireSocket(addr)

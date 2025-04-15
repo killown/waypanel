@@ -6,7 +6,7 @@ import toml
 from gi.repository import Adw, Gio, Gtk
 from gi.repository import Gtk4LayerShell as LayerShell
 
-from ..core.utils import Utils
+from ...core.utils import Utils
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
