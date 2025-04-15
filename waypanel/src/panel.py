@@ -251,7 +251,7 @@ class Panel(Adw.Application):
         self.menus = self.create_new_menu()
         self.setup_menus()
 
-        self.load_plugins()
+        GLib.idle_add(self.load_plugins)
 
         # Hide desktop-environment views with unknown type
         for view in self.sock.list_views():
