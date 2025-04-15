@@ -67,6 +67,10 @@ class GesturePlugin:
             self.obj.top_panel_box_center, 3, self.top_panel_center_gesture_rclick
         )
 
+        self.create_gesture(
+            self.obj.top_panel_box_full, 3, self.top_panel_full_gesture_rclick
+        )
+
         # Gestures for top panel right
         self.create_gesture(
             self.obj.top_panel_box_right, 1, self.top_panel_right_gesture_lclick
@@ -84,7 +88,7 @@ class GesturePlugin:
         self.obj.utils.run_app(cmd, True)
 
     def top_panel_left_gesture_rclick(self, *_):
-        self.obj.wf_utils.go_next_workspace_with_views()
+        return
 
     def top_panel_left_gesture_mclick(self, *_):
         self.obj.sock.toggle_expo()
@@ -96,11 +100,13 @@ class GesturePlugin:
         self.obj.sock.toggle_expo()
 
     def top_panel_center_gesture_rclick(self, *_):
+        return
+
+    def top_panel_full_gesture_rclick(self, *_):
         self.obj.wf_utils.go_next_workspace_with_views()
 
     def top_panel_right_gesture_lclick(self, *_):
-        cmd = self.obj.panel_cfg["right_side_gestures"]["left_click"]
-        self.obj.utils.run_app(cmd, True)
+        return
 
     def top_panel_right_gesture_rclick(self, *_):
         self.obj.sock.toggle_expo()
