@@ -7,6 +7,8 @@ from gi.repository import GLib
 
 ENABLE_PLUGIN = False  # Set to True to enable this plugin
 
+# NOTE: If the code hangs, it will delay the execution of all plugins. Always use GLib.idle_add for non-blocking code.
+
 
 class BackgroundCPUMonitor:
     def __init__(self):

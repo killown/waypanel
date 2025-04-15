@@ -6,6 +6,7 @@ import re
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = False
+# NOTE: If the code hangs, it will delay the execution of all plugins. Always use GLib.idle_add for non-blocking code.
 
 
 class ExampleMenuPlugin:

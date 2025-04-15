@@ -6,6 +6,8 @@ from wayfire.ipc import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
 from ..panel import Panel
 
+# NOTE: If the code hangs, it will delay the execution of all plugins. Always use GLib.idle_add for non-blocking code.
+
 
 def position():
     # Define plugin position (left, right, center) and order
