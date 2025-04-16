@@ -1,4 +1,3 @@
-# ==== FILE: waypanel/src/plugins/taskbar.py ====
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 
@@ -9,30 +8,36 @@ def position():
 
     Since this is a background-only plugin (no UI), return `False`.
     """
-    return False  # Background-only plugin
+    return "left", 99  # Position: left, Order: 99 (low priority)
 
 
 def initialize_plugin(obj, app):
-    """Initialize the Taskbar plugin."""
-    if ENABLE_PLUGIN:
-        print("Initializing Taskbar plugin.")
+    """
+    Initialize the plugin.
 
-        # Access the EventManagerPlugin instance
-        if "event_manager" not in obj.plugins:
-            print(
-                "Error: EventManagerPlugin is not loaded. Cannot initialize Taskbar plugin."
-            )
-            return
+    Args:
+        obj: The main panel object from panel.py.
+        app: The main application instance.
+    """
+    if not ENABLE_PLUGIN:
+        print("Plugin is disabled.")
+        return
 
-        event_manager = obj.plugins["event_manager"]
+    # Ensure the EventManagerPlugin is loaded
+    if "event_manager" not in obj.plugins:
+        print("Error: EventManagerPlugin is not loaded. Cannot subscribe to events.")
+        return
 
-        # Subscribe to "view-focused" events
+    event_manager = obj.plugins["event_manager"]
+    print("Subscribing to events...")
+
+    # Subscribe to events with callbacks
+    try:
         event_manager.subscribe_to_event("view-focused", on_view_focused)
-
-        # Subscribe to "view-created" events
-        event_manager.subscribe_to_event("view-created", on_view_created)
-
-        print("Taskbar plugin initialized.")
+        event_manager.subscribe_to_event("view-mapped", on_view_created)
+        print("Successfully subscribed to events.")
+    except Exception as e:
+        print(f"Error subscribing to events: {e}")
 
 
 def on_view_focused(event_message):
@@ -42,8 +47,12 @@ def on_view_focused(event_message):
     Args:
         event_message (dict): The event message containing view details.
     """
-    view_id = event_message.get("view", {}).get("id")
-    print(f"View focused: {view_id}")
+    try:
+        if "view" in event_message and event_message["view"] is not None:
+            view_id = event_message["view"].get("id")
+            print(f"View focused id: {view_id}")
+    except Exception as e:
+        print(f"Error handling 'view-focused' event: {e}")
 
 
 def on_view_created(event_message):
@@ -53,8 +62,8 @@ def on_view_created(event_message):
     Args:
         event_message (dict): The event message containing view details.
     """
-    view_id = event_message.get("view", {}).get("id")
-    print(f"View created: {view_id}" * 1000)
-
-
-# ==== END OF FILE: waypanel/src/plugins/taskbar.py ====
+    try:
+        view_id = event_message.get("view", {}).get("id")
+        print(f"View created: {view_id}")
+    except Exception as e:
+        print(f"Error handling 'view-created' event: {e}")
