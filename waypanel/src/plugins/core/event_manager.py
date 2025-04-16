@@ -11,7 +11,9 @@ ENABLE_PLUGIN = True
 
 def position():
     """Define the plugin's position and order."""
-    return "right", 99  # Low priority, as it doesn't display UI
+    any_order = 99
+    priority = 1
+    return "right", any_order, priority
 
 
 def initialize_plugin(obj, app):
@@ -20,6 +22,7 @@ def initialize_plugin(obj, app):
         print("Initializing Event Manager Plugin.")
         event_manager = EventManagerPlugin(obj, app)
         print("Event Manager Plugin initialized.")
+        return event_manager
 
 
 class WayfireSocket(OriginalWayfireSocket):
