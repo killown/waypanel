@@ -71,21 +71,12 @@ class Panel(Adw.Application):
         self.timeout_ids = {}
         self.turn_off_monitors_timeout = None
         self.signal_view_destroyed = False
-        self.was_last_focused_view_maximized = None
         self.previous_workspace = {}
         self.request_switch_keyboard_on_demand_to_none = None
-        self.maximize_button = None
-        self.minimize_button = None
         self.monitor = None
-        self.get_focused_output = None
         self.update_widget = self.utils.update_widget
         self.panel_config_loaded = self.load_config()
         config = self.panel_config_loaded
-
-        self.simple_title_enabled = config["panel"]["views"]["tilling"]
-        self.maximize_views_on_expo_enabled = config["panel"]["views"][
-            "maximize_views_on_expo"
-        ]
 
         # Set monitor dimensions
         monitor = next(
@@ -189,7 +180,6 @@ class Panel(Adw.Application):
             app: The application instance.
         """
         # Initialize monitor dimensions and UI components
-        self.close_fullscreen_buttons()
         self.setup_panels()
         self.setup_panel_buttons()
 
@@ -223,13 +213,6 @@ class Panel(Adw.Application):
 
         # ===========LOAD PLUGINS=============
         GLib.idle_add(self.load_plugins)
-
-        # Hide desktop-environment views with unknown type
-        for view in self.sock.list_views():
-            if view["role"] == "desktop-environment" and view["type"] == "unknown":
-                self.hide_view_instead_closing(view, ignore_toplevel=True)
-
-        self.get_focused_output = self.sock.get_focused_output()
 
     def load_config(self):
         if not hasattr(self, "_cached_config"):
@@ -334,6 +317,7 @@ class Panel(Adw.Application):
 
         # Update the TOML configuration with valid plugins
         self._update_plugin_configuration(config, valid_plugins, disabled_plugins)
+        self.logger.debug(self.plugins)
 
     def _load_plugin_configuration(self):
         """
@@ -367,10 +351,6 @@ class Panel(Adw.Application):
     def _process_plugin(
         self, module_name, module_path, disabled_plugins, valid_plugins, plugin_metadata
     ):
-        """
-        Process a single plugin module.
-        Handles loading, validation, and categorization of the plugin.
-        """
         if module_name in disabled_plugins:
             self.logger.info(f"Skipping plugin listed in 'disabled': {module_name}")
             return
@@ -395,28 +375,26 @@ class Panel(Adw.Application):
                 self.logger.info(f"Skipping disabled plugin: {module_name}")
                 return
 
+            # Get position, order, and optional priority
             position_result = module.position()
-
-            # Handle background-only plugins
-            if position_result is False:
-                self.logger.info(f"Initializing background-only plugin: {module_name}")
-                module.initialize_plugin(self, self)
-                valid_plugins.append(module_name)
-                elapsed_time = time.time() - start_time
-                self.logger.info(
-                    f"Background plugin '{module_name}' loaded in {elapsed_time:.4f} seconds"
+            if isinstance(position_result, tuple):
+                if len(position_result) == 3:
+                    position, order, priority = position_result
+                elif len(position_result) == 2:
+                    position, order = position_result
+                    priority = 0  # Default priority if not specified
+                else:
+                    self.logger.error(
+                        f"Invalid position result from module {module_name}. Skipping."
+                    )
+                    return
+            else:
+                self.logger.error(
+                    f"Invalid position result from module {module_name}. Skipping."
                 )
                 return
 
             # Validate position for regular plugins
-            try:
-                position, order = position_result
-            except (TypeError, ValueError):
-                self.logger.error(
-                    f"Module {module_name} returned an invalid position. Skipping."
-                )
-                return
-
             if position not in ("left", "right", "center"):
                 self.logger.error(
                     f"Invalid position '{position}' returned by module {module_name}. Skipping."
@@ -424,37 +402,39 @@ class Panel(Adw.Application):
                 return
 
             # Add plugin metadata for sorting and initialization
-            plugin_metadata.append((module, position, order))
+            plugin_metadata.append((module, position, order, priority))
             valid_plugins.append(module_name)
 
         except Exception as e:
             self.logger.error(f"Error processing plugin {module_name}: {e}")
 
     def _initialize_sorted_plugins(self, plugin_metadata):
-        """
-        Sort plugins by their `order` value and initialize them in sorted order.
-        """
-        plugin_metadata.sort(key=lambda x: x[2])  # Sort by the third element (order)
+        """Sort plugins by their priority and order, then initialize them."""
+        # Sort by priority (descending), then by order (ascending)
+        plugin_metadata.sort(key=lambda x: (-x[3], x[2]))
 
-        for module, position, _ in plugin_metadata:
+        for module, position, order, priority in plugin_metadata:
             start_time = time.time()  # Start timing
             try:
                 target_box = self._get_target_panel_box(position)
                 if target_box is None:
                     continue
 
+                # Initialize the plugin
+                module_name = module.__name__.split(".")[-1]
                 plugin_instance = module.initialize_plugin(self, self)
-                self.plugins[module.__name__] = plugin_instance
+                self.plugins[module_name] = plugin_instance
 
                 elapsed_time = time.time() - start_time
                 self.logger.info(
-                    f"Plugin '{module.__name__}' initialized in {elapsed_time:.4f} seconds"
+                    f"Plugin '{module.__name__}' initialized in {elapsed_time:.4f} seconds "
+                    f"(Position: {position}, Order: {order}, Priority: {priority})"
                 )
-
             except Exception as e:
                 elapsed_time = time.time() - start_time
                 self.logger.error(
-                    f"Failed to initialize plugin {module.__name__}: {e} (processed in {elapsed_time:.4f} seconds)"
+                    f"Failed to initialize plugin {module.__name__}: {e} "
+                    f"(processed in {elapsed_time:.4f} seconds)"
                 )
 
     def _get_target_panel_box(self, position):
@@ -505,78 +485,6 @@ class Panel(Adw.Application):
         if [i for i in self.args if "topbar" in i]:
             self.all_panels_enabled = False
             self.top_panel.present()
-
-    def maximize_last_focused_view(self, *_):
-        pass
-
-    def hide_view_instead_closing(self, view, ignore_toplevel=None):
-        if view:
-            if view["role"] != "toplevel" and ignore_toplevel is None:
-                return
-            button = Gtk.Button()
-            button.connect("clicked", lambda widget: self.on_hidden_view(widget, view))
-            self.update_widget(self.top_panel_box_center.append, button)
-            self.utils.handle_icon_for_button(view, button)
-            self.sock.hide_view(view["id"])
-
-    def close_last_focused_view(self, *_):
-        if self.last_toplevel_focused_view:
-            view = self.sock.get_view(self.last_toplevel_focused_view)
-
-            # if the lib from plugin hide-view is not found then use old close view method
-            if not self.utils.find_wayfire_lib("libhide-view.so"):
-                self.sock.close_view(self.last_toplevel_focused_view)
-                return
-            self.hide_view_instead_closing(view)
-
-    def on_hidden_view(self, widget, view):
-        id = view["id"]
-        if id in self.wf_utils.list_ids():
-            self.sock.unhide_view(id)
-            # ***Warning*** this was freezing the panel
-            # set focus will return an Exception in case the view is not toplevel
-            GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))
-            if self.utils.widget_exists(widget):
-                self.update_widget(self.top_panel_box_center.remove, widget)
-
-    def close_fullscreen_buttons(self):
-        # Creating close and full screen buttons for the top bar
-        self.cf_box = Gtk.Box()
-        self.maximize_button = self.utils.create_button(
-            "window-maximize-symbolic",
-            None,
-            "maximize-button",
-            None,
-            use_function=self.maximize_last_focused_view,
-        )
-        self.close_button = self.utils.create_button(
-            "window-close-symbolic",
-            None,
-            "close-button",
-            None,
-            use_function=self.close_last_focused_view,
-        )
-        self.minimize_button = self.utils.create_button(
-            "window-minimize-symbolic",
-            None,
-            "minimize-button",
-            None,
-            use_function=self.minimize_view,
-        )
-        self.update_widget(self.cf_box.append, self.minimize_button)
-        self.update_widget(self.cf_box.append, self.maximize_button)
-        self.update_widget(self.cf_box.append, self.close_button)
-        self.update_widget(self.top_panel_box_for_buttons.append, self.cf_box)
-        self.update_widget(self.cf_box.add_css_class, "cf_box")
-
-    def minimize_view(self, *_):
-        if not self.last_toplevel_focused_view:
-            return
-        self.sock.set_view_minimized(self.last_toplevel_focused_view, True)
-
-    def set_default_soundcard(self, id):
-        cmd = "pactl set-default-sink {0}".format(id).split()
-        Popen(cmd)
 
     def on_css_file_changed(self, monitor, file, other_file, event_type):
         if event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT:
