@@ -1,6 +1,8 @@
 import datetime
 import gi
 from gi.repository import Gtk, GLib
+import requests
+import asyncio
 
 gi.require_version("Gtk", "4.0")
 
@@ -30,6 +32,8 @@ class ClockCalendarPlugin:
         self.clock_label = None
         self.popover_calendar = None
         self.update_timeout_id = None
+        self.weather_label = None  # Label for displaying weather data
+        self.loop = asyncio.new_event_loop()  # Create a new asyncio event loop
 
     def create_clock_widget(self):
         """Create and setup the clock widget."""
@@ -114,7 +118,7 @@ class ClockCalendarPlugin:
         self.popover_calendar.set_parent(self.clock_button)
         self.popover_calendar.set_has_arrow(False)
 
-        # Create a grid to hold the calendar and additional widgets
+        # Create a grid to hold the calendar, weather, and additional widgets
         grid = Gtk.Grid()
         grid.set_row_spacing(10)
         grid.set_column_spacing(10)
@@ -139,13 +143,60 @@ class ClockCalendarPlugin:
         self.selected_date_label.set_label("Select a date...")
         grid.attach(self.selected_date_label, 0, 1, 1, 1)
 
+        # Add a label for weather data
+        self.weather_label = Gtk.Label()
+        self.weather_label.add_css_class("weather-label")
+        self.weather_label.set_label("Loading weather...")
+        grid.attach(self.weather_label, 0, 2, 1, 1)
+
+        # Fetch weather data asynchronously when the popover is opened
+        GLib.idle_add(self.fetch_and_update_weather)
+
         # Set grid as the child of the popover
         self.popover_calendar.set_child(grid)
 
+    def fetch_weather_data(self):
+        """Fetch weather data from the API."""
+        lat, lon = -23.5505, -46.6333  # Example coordinates (São Paulo)
+        url = f"https://api.met.no/weatherapi/locationforecast/2.0/compact?lat={lat}&lon={lon}"
+        headers = {"User-Agent": "MyWeatherApp/1.0 youremail@example.com"}
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()  # Raise an exception for HTTP errors
+            data = response.json()
+            temperature = data["properties"]["timeseries"][0]["data"]["instant"][
+                "details"
+            ]["air_temperature"]
+            return temperature
+        except Exception as e:
+            print(f"Failed to fetch weather data: {e}")
+            return None
+
+    def fetch_and_update_weather(self):
+        """Fetch weather data and update the UI."""
+        try:
+            temperature = self.fetch_weather_data()
+            if temperature is not None:
+                GLib.idle_add(self.weather_label.set_label, f"Weather: {temperature}°C")
+            else:
+                GLib.idle_add(self.weather_label.set_label, "Weather: Error")
+        except Exception as e:
+            print(f"Unexpected error fetching weather: {e}")
+            GLib.idle_add(self.weather_label.set_label, "Weather: Error")
+
     def on_day_selected(self, calendar):
         """Handle day selection in calendar."""
-        year, month, day = calendar.get_date()
-        selected_date = f"{year}-{month + 1:02d}-{day:02d}"
+        # Get the selected date as a GLib.DateTime object
+        date_time = calendar.get_date()
+
+        # Extract year, month, and day from the GLib.DateTime object
+        year = date_time.get_year()
+        month = date_time.get_month()  # Note: Months are 1-based (January = 1)
+        day = date_time.get_day_of_month()
+
+        # Format the selected date as a string
+        selected_date = f"{year}-{month:02d}-{day:02d}"
+
+        # Update the label with the selected date
         self.selected_date_label.set_label(f"Selected: {selected_date}")
         print(f"Selected date: {selected_date}")
-        # You can add more functionality here, like opening a detailed view
