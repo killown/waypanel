@@ -1,7 +1,7 @@
 import os
 import subprocess
 from gi.repository import Gtk
-from ..core.utils import Utils
+from ...core.utils import Utils
 import toml
 
 # Set to False or remove the plugin file to disable it
