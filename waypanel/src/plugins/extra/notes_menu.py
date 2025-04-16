@@ -322,6 +322,7 @@ class MenuNotes(Gtk.Application):
             self.popover_notes.popup()
         else:
             self.popover_notes = self.create_popover_notes(self.app)
+            GLib.timeout_add(100, self.popover_notes.popup)
 
     def popover_is_open(self, *_):
         LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
