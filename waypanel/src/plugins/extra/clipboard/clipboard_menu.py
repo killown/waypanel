@@ -600,4 +600,4 @@ Clipboard = MenuClipboard()
 
 def initialize_plugin(obj, app):
     if ENABLE_PLUGIN:
-        Clipboard.create_popover_menu_clipboard(obj, app)
+        return Clipboard.create_popover_menu_clipboard(obj, app)

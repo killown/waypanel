@@ -19,7 +19,7 @@ def position():
 def initialize_plugin(obj, app):
     """Initialize the window controls plugin."""
     if ENABLE_PLUGIN:
-        WindowControlsPlugin(obj, app)
+        return WindowControlsPlugin(obj, app)
 
 
 class WindowControlsPlugin:

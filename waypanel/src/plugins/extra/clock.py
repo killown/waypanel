@@ -22,6 +22,7 @@ def initialize_plugin(obj, app):
     if ENABLE_PLUGIN:
         clock_calendar_plugin = ClockCalendarPlugin(obj, app)
         clock_calendar_plugin.create_clock_widget()
+        return clock_calendar_plugin
 
 
 class ClockCalendarPlugin:

@@ -19,7 +19,7 @@ def position():
 def initialize_plugin(obj, app):
     """Initialize the volume scroll plugin."""
     if ENABLE_PLUGIN:
-        VolumeScrollPlugin(obj, app)
+        return VolumeScrollPlugin(obj, app)
 
 
 class VolumeScrollPlugin:

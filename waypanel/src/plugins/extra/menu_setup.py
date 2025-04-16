@@ -98,3 +98,4 @@ def initialize_plugin(obj, app):
     if ENABLE_PLUGIN:
         plugin = MenuSetupPlugin(obj, app)
         plugin.setup_menus()
+        return plugin

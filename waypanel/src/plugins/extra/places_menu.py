@@ -226,9 +226,6 @@ class PopoverFolders(Adw.Application):
         return False
 
 
-places = PopoverFolders()
-
-
 # set the plugin location, order, position
 def position():
     position = "left"
@@ -238,4 +235,6 @@ def position():
 
 def initialize_plugin(obj, app):
     if ENABLE_PLUGIN:
+        places = PopoverFolders()
         places.create_menu_popover_folders(obj, app)
+        return places

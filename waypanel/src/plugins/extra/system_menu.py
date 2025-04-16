@@ -276,9 +276,6 @@ class SystemDashboard(Adw.Application):
         )  # Ctrl+F To Active show_searchbar and show searchbar
 
 
-system = SystemDashboard()
-
-
 def position():
     position = "right"
     order = 10
@@ -287,4 +284,6 @@ def position():
 
 def initialize_plugin(obj, app):
     if ENABLE_PLUGIN:
+        system = SystemDashboard()
         system.create_menu_popover_system(obj, app)
+        return system

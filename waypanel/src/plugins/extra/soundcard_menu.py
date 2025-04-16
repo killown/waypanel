@@ -265,9 +265,6 @@ class SoundCardDashboard(Adw.Application):
         pass
 
 
-card = SoundCardDashboard()
-
-
 def position():
     position = "right"
     order = 3
@@ -276,4 +273,6 @@ def position():
 
 def initialize_plugin(obj, app):
     if ENABLE_PLUGIN:
+        card = SoundCardDashboard()
         card.create_menu_popover_soundcard(obj, app)
+        return card

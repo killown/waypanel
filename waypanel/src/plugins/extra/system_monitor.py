@@ -23,7 +23,7 @@ def initialize_plugin(obj, app):
         app: The main application instance.
     """
     if ENABLE_PLUGIN:
-        SystemMonitorPlugin(obj, app)
+        return SystemMonitorPlugin(obj, app)
 
 
 class SystemMonitorPlugin:

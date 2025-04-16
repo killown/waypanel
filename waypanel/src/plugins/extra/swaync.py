@@ -29,6 +29,7 @@ def initialize_plugin(obj, app):
     if ENABLE_PLUGIN:
         swaync_plugin = SwayNCTogglePlugin(obj, app)
         swaync_plugin.create_swaync_button()
+        return swaync_plugin
 
 
 class SwayNCTogglePlugin:

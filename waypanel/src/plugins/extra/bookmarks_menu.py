@@ -275,4 +275,4 @@ def initialize_plugin(obj, app):
 
     if os.path.exists(bookmarks_file):
         if ENABLE_PLUGIN:
-            Bookmarks.create_menu_popover_bookmarks(obj, app)
+            return Bookmarks.create_menu_popover_bookmarks(obj, app)

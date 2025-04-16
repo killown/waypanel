@@ -136,3 +136,4 @@ def initialize_plugin(obj, app):
         gesture_plugin = GesturePlugin(obj, app)
         gesture_plugin.setup_gestures()
         print("Gesture Plugin initialized and gestures added.")
+        return gesture_plugin

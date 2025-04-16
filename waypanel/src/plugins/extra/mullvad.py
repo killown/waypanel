@@ -19,6 +19,7 @@ def initialize_plugin(obj, app):
     if ENABLE_PLUGIN:
         mullvad_plugin = MullvadPlugin(obj, app)
         mullvad_plugin.create_menu_popover_mullvad(obj, app)
+        return mullvad_plugin
 
 
 class MullvadPlugin:

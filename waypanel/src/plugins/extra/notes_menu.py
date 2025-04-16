@@ -356,3 +356,4 @@ def position():
 def initialize_plugin(obj, app):
     if ENABLE_PLUGIN:
         notes.create_popover_menu_notes(obj, app)
+        return notes

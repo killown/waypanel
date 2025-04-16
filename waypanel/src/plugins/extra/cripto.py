@@ -25,6 +25,7 @@ def initialize_plugin(obj, app):
     if ENABLE_PLUGIN:
         cripto_plugin = CriptoPlugin(obj, app)
         cripto_plugin.create_menu_popover_crypto()
+        return cripto_plugin
 
 
 class CriptoPlugin:
