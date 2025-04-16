@@ -84,8 +84,7 @@ class GesturePlugin:
 
     # Gesture Handlers
     def top_panel_left_gesture_lclick(self, *_):
-        cmd = self.obj.panel_cfg["left_side_gestures"]["left_click"]
-        self.obj.utils.run_app(cmd, True)
+        return
 
     def top_panel_left_gesture_rclick(self, *_):
         return
