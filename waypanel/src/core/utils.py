@@ -1219,9 +1219,6 @@ class Utils(Adw.Application):
         else:
             button.connect("clicked", lambda *_: self.run_cmd(cmd))
 
-        # Set up gesture for RIGHT CLICK (button 3)
-        self.create_gesture(box, 3, lambda *_: self.dockbar_remove(icon_name))
-
         button.add_css_class(Class_Style)
         return button
 
