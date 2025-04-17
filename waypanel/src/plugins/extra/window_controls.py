@@ -11,21 +11,21 @@ ENABLE_PLUGIN = True
 
 def position():
     """Define the plugin's position and order."""
-    position = "right"  # Can be "left", "right", or "center"
-    order = 5  # Middle priority
-    return position, order
+    position = "after-systray"  # Can be "left", "right", or "center"
+    order = 1
+    priority = 1
+    return position, order, priority
 
 
-def initialize_plugin(obj, app):
+def initialize_plugin(panel_instance):
     """Initialize the window controls plugin."""
     if ENABLE_PLUGIN:
-        return WindowControlsPlugin(obj, app)
+        return WindowControlsPlugin(panel_instance)
 
 
 class WindowControlsPlugin:
-    def __init__(self, obj, app):
-        self.obj = obj
-        self.app = app
+    def __init__(self, panel_instance):
+        self.obj = panel_instance
         self.sock = WayfireSocket()
         self.utils = Utils()
 
@@ -58,14 +58,26 @@ class WindowControlsPlugin:
         # Add CSS class
         self.cf_box.add_css_class("cf_box")
 
-        # Add container to panel
-        if hasattr(self.obj, "top_panel_box_for_buttons"):
-            self.obj.top_panel_box_for_buttons.append(self.cf_box)
-
         # Subscribe to the 'view-focused' event
-        if "event_manager" in obj.plugins:
-            event_manager = obj.plugins["event_manager"]
-            event_manager.subscribe_to_event("view-focused", self.on_view_focused)
+
+        def run_once():
+            if "event_manager" in self.obj.plugin_loader.plugins:
+                event_manager = self.obj.plugin_loader.plugins["event_manager"]
+                event_manager.subscribe_to_event("view-focused", self.on_view_focused)
+                self.obj.logger.info(
+                    "Window Constrols plugin subscribed to view-focused event!"
+                )
+                return False
+            else:
+                self.obj.logger.info(
+                    "Window Constrols plugin waiting for event_manager to be ready"
+                )
+                return True
+
+        GLib.timeout_add_seconds(1, run_once)
+
+    def append_widget(self):
+        return self.cf_box
 
     def create_control_button(self, icon_name, css_class, callback):
         button = self.utils.create_button(
@@ -100,10 +112,14 @@ class WindowControlsPlugin:
             self.last_toplevel_focused_view
             and self.last_toplevel_focused_view.get("role") == "toplevel"
         ):
-            print(f"Closing view with ID: {self.last_toplevel_focused_view['id']}")
+            self.obj.logger.info(
+                f"Closing view with ID: {self.last_toplevel_focused_view['id']}"
+            )
             self.sock.close_view(self.last_toplevel_focused_view["id"])
         else:
-            print("No valid toplevel view to close.")
+            self.obj.logger.info("No valid toplevel view to close.")
+
+        print(self.obj.plugin_loader.plugins)
 
     def minimize_view(self, *_):
         if self.last_toplevel_focused_view:

@@ -12,30 +12,40 @@ from ...core.utils import Utils
 ENABLE_PLUGIN = True
 
 
+# set the plugin location, order, position
+def position():
+    position = "left"
+    order = 3
+    return position, order
+
+
+def initialize_plugin(panel_instance):
+    if ENABLE_PLUGIN:
+        places = PopoverFolders(panel_instance)
+        places.create_menu_popover_folders()
+        return places
+
+
 class PopoverFolders(Adw.Application):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, panel_instance):
         self.popover_folders = None
-        self.app = None
+        self.obj = panel_instance
         self.panel_utils = Utils()
-        self.top_panel = None
         self._setup_config_paths()
+
+    def append_widget(self):
+        return self.menubutton_folders
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
         self.home = os.path.expanduser("~")
         self.home_folders = os.listdir(self.home)
-        self.scripts = os.path.join(self.home, ".config/hypr/scripts")
         self.config_path = os.path.join(self.home, ".config/waypanel/")
-        self.style_css_config = os.path.join(self.config_path, "style.css")
-        self.window_notes_config = os.path.join(self.config_path, "window-config.toml")
-        self.cache_folder = os.path.join(self.home, ".cache/waypanel")
-        self.psutil_store = {}
 
-    def create_menu_popover_folders(self, obj, app, *_):
-        self.top_panel = obj.top_panel
-        self.app = app
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
+    def create_menu_popover_folders(self):
+        LayerShell.set_keyboard_mode(
+            self.obj.top_panel, LayerShell.KeyboardMode.ON_DEMAND
+        )
         self.menubutton_folders = Gtk.Button()
         self.menubutton_folders.connect("clicked", self.open_popover_folders)
         panel_config_path = os.path.join(self.config_path, "waypanel.toml")
@@ -46,9 +56,8 @@ class PopoverFolders(Adw.Application):
             menu_icon = panel_config.get("top", {}).get("folder_icon", "folder")
         self.menubutton_folders.set_icon_name(menu_icon)
         self.menubutton_folders.add_css_class("top_left_widgets")
-        obj.top_panel_box_widgets_left.append(self.menubutton_folders)
 
-    def create_popover_folders(self, *_):
+    def create_popover_folders(self):
         """
         Create and configure a popover for folders.
         """
@@ -62,7 +71,7 @@ class PopoverFolders(Adw.Application):
         # Create an action to show the search bar
         show_searchbar_action = Gio.SimpleAction.new("show_searchbar")
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
-        self.app.add_action(show_searchbar_action)
+        self.obj.add_action(show_searchbar_action)
 
         # Set up scrolled window
         self.scrolled_window = Gtk.ScrolledWindow()
@@ -85,7 +94,7 @@ class PopoverFolders(Adw.Application):
         # Create and configure listbox
         self.listbox = Gtk.ListBox.new()
         self.listbox.connect("row-selected", lambda widget, row: self.open_folder(row))
-        self.searchbar.set_key_capture_widget(self.top_panel)
+        self.searchbar.set_key_capture_widget(self.obj.top_panel)
         self.listbox.props.hexpand = True
         self.listbox.props.vexpand = True
         self.listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
@@ -187,13 +196,15 @@ class PopoverFolders(Adw.Application):
             self.listbox.unselect_all()
             self.popover_folders.popup()
         if not self.popover_folders:
-            self.popover_folders = self.create_popover_folders(self.app)
+            self.popover_folders = self.create_popover_folders()
 
     def popover_is_open(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
+        LayerShell.set_keyboard_mode(
+            self.obj.top_panel, LayerShell.KeyboardMode.ON_DEMAND
+        )
 
     def popover_is_closed(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
+        LayerShell.set_keyboard_mode(self.obj.top_panel, LayerShell.KeyboardMode.NONE)
 
     def on_show_searchbar_action_actived(self, action, parameter):
         self.searchbar.set_search_mode(
@@ -224,17 +235,3 @@ class PopoverFolders(Adw.Application):
         ):  # == row_hbox.MYTEXT (Gtk.ListBoxRow===>get_child()===>row_hbox.MYTEXT)
             return True  # if True Show row
         return False
-
-
-# set the plugin location, order, position
-def position():
-    position = "left"
-    order = 3
-    return position, order
-
-
-def initialize_plugin(obj, app):
-    if ENABLE_PLUGIN:
-        places = PopoverFolders()
-        places.create_menu_popover_folders(obj, app)
-        return places

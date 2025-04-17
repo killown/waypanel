@@ -12,6 +12,19 @@ from ...core.utils import Utils
 ENABLE_PLUGIN = True
 
 
+def position():
+    position = "systray"
+    order = 1
+    return position, order
+
+
+def initialize_plugin(panel_instance):
+    if ENABLE_PLUGIN:
+        notes = MenuNotes(panel_instance)
+        notes.create_popover_menu_notes()
+        return notes
+
+
 class NotesManager:
     def __init__(self):
         self.db_path = self._default_db_path()
@@ -70,16 +83,17 @@ def get_notes_sync() -> List[Tuple[int, str]]:
 
 
 class MenuNotes(Gtk.Application):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, panel_instance):
         self.popover_notes = None
-        self.app = None
-        self.top_panel = None
+        self.obj = panel_instance
         self._setup_config_paths()
         self.utils = Utils(application_id="com.github.utils")
         self.find_text_using_button = {}
         self.row_content = None
         self.listbox = None
+
+    def append_widget(self):
+        return self.menubutton_notes
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -185,12 +199,11 @@ class MenuNotes(Gtk.Application):
             self.listbox.append(row_hbox)
             self.find_text_using_button[delete_button] = row_hbox
 
-    def create_popover_menu_notes(self, obj, app, *_):
+    def create_popover_menu_notes(self):
         """Create the notes button in the panel"""
-        self.top_panel = obj.top_panel
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
-        self.app = app
-
+        LayerShell.set_keyboard_mode(
+            self.obj.top_panel, LayerShell.KeyboardMode.ON_DEMAND
+        )
         self.menubutton_notes = Gtk.Button.new()
         self.menubutton_notes.connect("clicked", self.open_popover_notes)
 
@@ -209,9 +222,7 @@ class MenuNotes(Gtk.Application):
         else:
             self.menubutton_notes.set_icon_name("accessories-notes")
 
-        obj.top_panel_box_systray.append(self.menubutton_notes)
-
-    def create_popover_notes(self, *_):
+    def create_popover_notes(self):
         """Create the notes popover content"""
         self.popover_notes = Gtk.Popover.new()
         self.popover_notes.set_has_arrow(False)
@@ -220,7 +231,7 @@ class MenuNotes(Gtk.Application):
 
         show_searchbar_action = Gio.SimpleAction.new("show_searchbar")
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
-        self.app.add_action(show_searchbar_action)
+        self.obj.add_action(show_searchbar_action)
 
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_min_content_width(390)
@@ -321,7 +332,7 @@ class MenuNotes(Gtk.Application):
             self.update_notes_list()
             self.popover_notes.popup()
         else:
-            self.popover_notes = self.create_popover_notes(self.app)
+            self.popover_notes = self.create_popover_notes()
             GLib.timeout_add(100, self.popover_notes.popup)
 
     def popover_is_open(self, *_):
@@ -342,18 +353,3 @@ class MenuNotes(Gtk.Application):
             row_text = row.get_child().MYTEXT.lower()
             return search_text in row_text
         return False
-
-
-notes = MenuNotes()
-
-
-def position():
-    position = "right"
-    order = 1
-    return position, order
-
-
-def initialize_plugin(obj, app):
-    if ENABLE_PLUGIN:
-        notes.create_popover_menu_notes(obj, app)
-        return notes

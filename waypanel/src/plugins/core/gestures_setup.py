@@ -8,8 +8,33 @@ from gi.repository import Gtk, Gdk
 ENABLE_PLUGIN = True
 
 
+def position():
+    """
+    Define the plugin's position and order.
+    """
+    position = "right"  # Can be "left", "right", or "center"
+    order = 10  # Lower numbers have higher priority
+    return position, order
+
+
+def initialize_plugin(panel_instance):
+    """
+    Initialize the plugin.
+
+    Args:
+        obj: The main panel object from panel.py
+        app: The main application instance
+    """
+    if ENABLE_PLUGIN:
+        print("Initializing Gesture Plugin.")
+        gesture_plugin = GesturePlugin(panel_instance)
+        gesture_plugin.setup_gestures()
+        print("Gesture Plugin initialized and gestures added.")
+        return gesture_plugin
+
+
 class GesturePlugin:
-    def __init__(self, obj, app):
+    def __init__(self, panel_instance):
         """
         Initialize the GesturePlugin.
 
@@ -17,8 +42,7 @@ class GesturePlugin:
             obj: The main panel object from panel.py
             app: The main application instance
         """
-        self.obj = obj
-        self.app = app
+        self.obj = panel_instance
         self.gestures = {}  # Store gesture references
 
     def create_gesture(self, widget, mouse_button, callback, arg=None):
@@ -112,28 +136,3 @@ class GesturePlugin:
 
     def top_panel_right_gesture_mclick(self, *_):
         self.obj.sock.toggle_expo()
-
-
-def position():
-    """
-    Define the plugin's position and order.
-    """
-    position = "right"  # Can be "left", "right", or "center"
-    order = 10  # Lower numbers have higher priority
-    return position, order
-
-
-def initialize_plugin(obj, app):
-    """
-    Initialize the plugin.
-
-    Args:
-        obj: The main panel object from panel.py
-        app: The main application instance
-    """
-    if ENABLE_PLUGIN:
-        print("Initializing Gesture Plugin.")
-        gesture_plugin = GesturePlugin(obj, app)
-        gesture_plugin.setup_gestures()
-        print("Gesture Plugin initialized and gestures added.")
-        return gesture_plugin

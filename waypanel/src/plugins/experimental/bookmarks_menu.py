@@ -13,14 +13,41 @@ from gi.repository import Adw, GdkPixbuf, Gtk
 ENABLE_PLUGIN = True
 
 
+def position():
+    position = "left"
+    order = 2
+    return position, order
+
+
+def initialize_plugin(panel_instance):
+    """
+    Initialize the plugin by checking for the existence of a bookmarks file.
+    If the file exists, create a bookmarks popover menu.
+
+    Args:
+        obj: The object where the popover will be added.
+        app: The application instance.
+    """
+    # Expand the user's home directory directly in the function
+    bookmarks_file = os.path.join(os.path.expanduser("~"), ".bookmarks")
+
+    if os.path.exists(bookmarks_file):
+        if ENABLE_PLUGIN:
+            bookmarks = PopoverBookmarks(panel_instance)
+            bookmarks.create_menu_popover_bookmarks()
+            return bookmarks
+
+
 class PopoverBookmarks(Adw.Application):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, panel_instance):
         self.popover_bookmarks = None
-        self.app = None
+        self.obj = panel_instance
         self.top_panel = None
         self._setup_config_paths()
         self.listbox = Gtk.ListBox.new()
+
+    def append_widget(self):
+        return self.menubutton_bookmarks
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -34,9 +61,7 @@ class PopoverBookmarks(Adw.Application):
         self.thumbnails_path = os.path.join(self.bookmarks_image_path, "thumbnails")
         os.makedirs(self.thumbnails_path, exist_ok=True)
 
-    def create_menu_popover_bookmarks(self, obj, app, *_):
-        self.top_panel = obj.top_panel
-        self.app = app
+    def create_menu_popover_bookmarks(self):
         self.menubutton_bookmarks = Gtk.Button()
         self.menubutton_bookmarks.connect("clicked", self.open_popover_bookmarks)
         waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
@@ -51,7 +76,6 @@ class PopoverBookmarks(Adw.Application):
                 self.menubutton_bookmarks.set_icon_name(bookmarks_icon)
         else:
             self.menubutton_bookmarks.set_icon_name("librewolf")
-        obj.top_panel_box_widgets_left.append(self.menubutton_bookmarks)
         self.menubutton_bookmarks.add_css_class("top_left_widgets")
 
     def create_popover_bookmarks(self, *_):
@@ -229,7 +253,7 @@ class PopoverBookmarks(Adw.Application):
 
     def open_popover_bookmarks(self, *_):
         if self.popover_bookmarks is None:
-            self.popover_bookmarks = self.create_popover_bookmarks(self.app)
+            self.popover_bookmarks = self.create_popover_bookmarks()
 
         if self.popover_bookmarks and self.popover_bookmarks.is_visible():
             self.popover_bookmarks.popdown()
@@ -250,29 +274,3 @@ class PopoverBookmarks(Adw.Application):
     def compositor(self):
         addr = os.getenv("WAYFIRE_SOCKET")
         return wayfire.WayfireSocket(addr)
-
-
-def position():
-    position = "left"
-    order = 2
-    return position, order
-
-
-Bookmarks = PopoverBookmarks()
-
-
-def initialize_plugin(obj, app):
-    """
-    Initialize the plugin by checking for the existence of a bookmarks file.
-    If the file exists, create a bookmarks popover menu.
-
-    Args:
-        obj: The object where the popover will be added.
-        app: The application instance.
-    """
-    # Expand the user's home directory directly in the function
-    bookmarks_file = os.path.join(os.path.expanduser("~"), ".bookmarks")
-
-    if os.path.exists(bookmarks_file):
-        if ENABLE_PLUGIN:
-            return Bookmarks.create_menu_popover_bookmarks(obj, app)

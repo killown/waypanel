@@ -16,17 +16,16 @@ def position():
     return "right", 10  # Position: right, Order: 10
 
 
-def initialize_plugin(obj, app):
+def initialize_plugin(panel_instance):
     """Initialize the volume scroll plugin."""
     if ENABLE_PLUGIN:
-        return VolumeScrollPlugin(obj, app)
+        return VolumeScrollPlugin(panel_instance)
 
 
 class VolumeScrollPlugin:
-    def __init__(self, obj, app):
+    def __init__(self, panel_instance):
         """Initialize the plugin."""
-        self.obj = obj
-        self.app = app
+        self.obj = panel_instance
         self.widget = None
         self.hide_timeout_id = None
         self.slider = None  # Initialize slider as None

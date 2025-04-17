@@ -14,12 +14,12 @@ def position():
     Returns:
         tuple: (position, order)
     """
-    position = "right"  # Can be "left", "right", or "center"
-    order = 7  # Lower numbers have higher priority
+    position = "center"
+    order = 7
     return position, order
 
 
-def initialize_plugin(obj, app):
+def initialize_plugin(panel_instance):
     """
     Initialize the SwayNC Toggle plugin.
     Args:
@@ -27,23 +27,25 @@ def initialize_plugin(obj, app):
         app: The main application instance.
     """
     if ENABLE_PLUGIN:
-        swaync_plugin = SwayNCTogglePlugin(obj, app)
+        swaync_plugin = SwayNCTogglePlugin(panel_instance)
         swaync_plugin.create_swaync_button()
         return swaync_plugin
 
 
 class SwayNCTogglePlugin:
-    def __init__(self, obj, app):
+    def __init__(self, panel_instance):
         """
         Initialize the plugin.
         Args:
             obj: The main panel object from panel.py
             app: The main application instance
         """
-        self.obj = obj
-        self.app = app
+        self.obj = panel_instance
         self.utils = Utils(application_id="com.github.swaync-toggle")
         self._setup_config_paths()
+
+    def append_widget(self):
+        return self.button_swaync
 
     def _setup_config_paths(self):
         """
@@ -77,9 +79,6 @@ class SwayNCTogglePlugin:
             self.button_swaync.set_icon_name(
                 self.utils.get_nearest_icon_name(swaync_icon)
             )
-
-        # Add the Button to the systray
-        self.obj.top_panel_box_center.append(self.button_swaync)
 
         # Connect the button to toggle SwayNC using the "clicked" signal
         self.button_swaync.connect("clicked", self.toggle_swaync)

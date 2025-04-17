@@ -15,18 +15,31 @@ sock = WayfireSocket(addr)
 ENABLE_PLUGIN = True
 
 
+def position():
+    position = "systray"
+    order = 2
+    return position, order
+
+
+def initialize_plugin(panel_instance):
+    if ENABLE_PLUGIN:
+        card = SoundCardDashboard(panel_instance)
+        card.create_menu_popover_soundcard()
+        return card
+
+
 class SoundCardDashboard(Adw.Application):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, panel_instance):
         self.popover_dashboard = None
         self.soundcard_combobox = None
         self.mic_combobox = None
         self.menubutton_dashboard = None
-        self.app = None
-        self.top_panel = None
         self._setup_config_paths()
         self.utils = Utils(application_id="com.github.utils")
         self.sock = sock
+
+    def append_widget(self):
+        return self.menubutton_dashboard
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -129,9 +142,7 @@ class SoundCardDashboard(Adw.Application):
                 self._cached_config = toml.load(f)
         return self._cached_config
 
-    def create_menu_popover_soundcard(self, obj, app, *_):
-        self.top_panel = obj.top_panel
-        self.app = app
+    def create_menu_popover_soundcard(self):
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
         s_icon = "audio-volume-high"
@@ -143,7 +154,6 @@ class SoundCardDashboard(Adw.Application):
                 .get("top", {})
                 .get("sound_card_icon", "audio-volume-high")
             )
-        obj.top_panel_box_systray.append(self.menubutton_dashboard)
         self.menubutton_dashboard.set_icon_name(s_icon)
         return self.menubutton_dashboard
 
@@ -263,16 +273,3 @@ class SoundCardDashboard(Adw.Application):
 
     def on_start(self):
         pass
-
-
-def position():
-    position = "right"
-    order = 3
-    return position, order
-
-
-def initialize_plugin(obj, app):
-    if ENABLE_PLUGIN:
-        card = SoundCardDashboard()
-        card.create_menu_popover_soundcard(obj, app)
-        return card

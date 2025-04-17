@@ -12,19 +12,35 @@ from ...core.utils import Utils
 ENABLE_PLUGIN = True
 
 
+def position():
+    position = "left"
+    order = 1
+    return position, order
+
+
+def initialize_plugin(panel_instance):
+    if ENABLE_PLUGIN:
+        menu = MenuLauncher(panel_instance)
+        menu.create_menu_popover_launcher()
+        return menu
+
+
 class MenuLauncher(Adw.Application):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, panel_instance):
         self.popover_launcher = None
-        self.app = None
+        self.obj = panel_instance
         self.widgets_dict = {}
         self.all_apps = None
+        self.menubutton_launcher = Gtk.Button()
         self.top_panel = None
         self.search_get_child = None
         self.search_row = []
         self._setup_config_paths()
         self.recent_apps_file = os.path.expanduser("~/config/waypanel/recent-apps.lst")
         self.utils = Utils(application_id="com.github.utils")
+
+    def append_widget(self):
+        return self.menubutton_launcher
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -37,24 +53,20 @@ class MenuLauncher(Adw.Application):
         self.cache_folder = os.path.join(self.home, ".cache/waypanel")
         self.psutil_store = {}
 
-    def create_menu_popover_launcher(self, obj, app, *_):
-        self.top_panel = obj.top_panel
-        self.app = app
-        self.menubutton_launcher = Gtk.Button()
+    def create_menu_popover_launcher(self):
         self.menubutton_launcher.connect("clicked", self.open_popover_launcher)
         panel_config_path = os.path.join(self.config_path, "panel.toml")
         menu_icon = self.utils.get_nearest_icon_name("archlinux")
         if os.path.exists(panel_config_path):
             with open(panel_config_path, "r") as f:
                 panel_config = toml.load(f)
-            menu_icon = get_nearest_icon_name(
+            menu_icon = self.utils.get_nearest_icon_name(
                 panel_config.get("top", {}).get(
-                    "menu_icon", get_nearest_icon_name("wayfire")
+                    "menu_icon", self.utils.get_nearest_icon_name("wayfire")
                 )
             )
 
         self.menubutton_launcher.set_icon_name(menu_icon)
-        obj.top_panel_box_widgets_left.append(self.menubutton_launcher)
         self.menubutton_launcher.add_css_class("top_left_widgets")
 
     def create_popover_launcher(self, *_):
@@ -65,7 +77,7 @@ class MenuLauncher(Adw.Application):
         self.popover_launcher.connect("notify::visible", self.popover_is_open)
         show_searchbar_action = Gio.SimpleAction.new("show_searchbar")
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
-        self.app.add_action(show_searchbar_action)
+        self.obj.add_action(show_searchbar_action)
         # Set up scrolled window
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_policy(
@@ -317,14 +329,16 @@ class MenuLauncher(Adw.Application):
             self.popover_is_open()
 
         if not self.popover_launcher:
-            self.popover_launcher = self.create_popover_launcher(self.app)
+            self.popover_launcher = self.create_popover_launcher(self.obj)
 
     def popover_is_open(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
+        LayerShell.set_keyboard_mode(
+            self.obj.top_panel, LayerShell.KeyboardMode.ON_DEMAND
+        )
         return
 
     def popover_is_closed(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
+        LayerShell.set_keyboard_mode(self.obj.top_panel, LayerShell.KeyboardMode.NONE)
         # print(LayerShell.get_keyboard_mode(self.top_panel).value_name)
 
     def on_show_searchbar_action_actived(self, action, parameter):
@@ -377,17 +391,3 @@ class MenuLauncher(Adw.Application):
             self.search_row = []
             return True
         return False
-
-
-menu = MenuLauncher()
-
-
-def position():
-    position = "left"
-    order = 1
-    return position, order
-
-
-def initialize_plugin(obj, app):
-    if ENABLE_PLUGIN:
-        return menu.create_menu_popover_launcher(obj, app)

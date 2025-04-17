@@ -17,24 +17,27 @@ def position():
     return position, order
 
 
-def initialize_plugin(obj, app):
+def initialize_plugin(panel_instance):
     """Initialize the clock and calendar plugin."""
     if ENABLE_PLUGIN:
-        clock_calendar_plugin = ClockCalendarPlugin(obj, app)
+        clock_calendar_plugin = ClockCalendarPlugin(panel_instance)
         clock_calendar_plugin.create_clock_widget()
         return clock_calendar_plugin
 
 
 class ClockCalendarPlugin:
-    def __init__(self, obj, app):
-        self.obj = obj
-        self.app = app
+    def __init__(self, panel_instance):
+        self.obj = panel_instance
         self.clock_button = None
+        self.clock_box = None
         self.clock_label = None
         self.popover_calendar = None
         self.update_timeout_id = None
         self.weather_label = None  # Label for displaying weather data
         self.loop = asyncio.new_event_loop()  # Create a new asyncio event loop
+
+    def append_widget(self):
+        return self.clock_box
 
     def create_clock_widget(self):
         """Create and setup the clock widget."""
@@ -64,10 +67,9 @@ class ClockCalendarPlugin:
         self.clock_box.append(self.clock_button)
 
         # Add clock box to center panel
-        self.obj.top_panel_box_center.append(self.clock_box)
 
         # Apply additional CSS classes to containers
-        self.obj.top_panel_box_center.add_css_class("clock-container")
+        # self.obj.top_panel_box_center.add_css_class("clock-container")
 
         # Initial time update
         self.update_clock()

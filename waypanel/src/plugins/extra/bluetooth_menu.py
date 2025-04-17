@@ -11,14 +11,29 @@ gi.require_version("Gtk", "4.0")
 ENABLE_PLUGIN = True
 
 
+def position():
+    position = "systray"
+    order = 3
+    return position, order
+
+
+def initialize_plugin(panel_instance):
+    if ENABLE_PLUGIN:
+        bt = BluetoothDashboard(panel_instance)
+        bt.create_menu_popover_bluetooth()
+        return bt
+
+
 class BluetoothDashboard(Adw.Application):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, panel_instance):
         self.popover_dashboard = None
-        self.app = None
+        self.obj = panel_instance
         self.top_panel = None
         self._setup_config_paths()
         self.utils = Utils(application_id="com.github.utils")
+
+    def append_widget(self):
+        return self.menubutton_dashboard
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -45,9 +60,7 @@ class BluetoothDashboard(Adw.Application):
         print(devices)
         return devices
 
-    def create_menu_popover_bluetooth(self, obj, app, *_):
-        self.top_panel = obj.top_panel
-        self.app = app
+    def create_menu_popover_bluetooth(self):
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
         bt_icon = "bluetooth"
@@ -59,7 +72,6 @@ class BluetoothDashboard(Adw.Application):
                 .get("top", {})
                 .get("bluetooth_icon", "bluetooth")
             )
-        obj.top_panel_box_systray.append(self.menubutton_dashboard)
         self.menubutton_dashboard.set_icon_name(bt_icon)
         return self.menubutton_dashboard
 
@@ -148,7 +160,7 @@ class BluetoothDashboard(Adw.Application):
         if self.popover_dashboard and not self.popover_dashboard.is_visible():
             self.popover_dashboard.popup()
         if not self.popover_dashboard:
-            self.popover_dashboard = self.create_popover_bluetooth(self.app)
+            self.popover_dashboard = self.create_popover_bluetooth(self.obj)
 
     def popover_is_open(self, *_):
         return
@@ -160,17 +172,3 @@ class BluetoothDashboard(Adw.Application):
         self.searchbar.set_search_mode(
             True
         )  # Ctrl+F To Active show_searchbar and show searchbar
-
-
-bt = BluetoothDashboard()
-
-
-def position():
-    position = "right"
-    order = 3
-    return position, order
-
-
-def initialize_plugin(obj, app):
-    if ENABLE_PLUGIN:
-        return bt.create_menu_popover_bluetooth(obj, app)

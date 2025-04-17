@@ -10,12 +10,12 @@ ENABLE_PLUGIN = True
 
 def position():
     """Define the plugin's position and order."""
-    position = "right"  # Can be "left", "right", or "center"
-    order = 2  # Lower numbers have higher priority
+    position = "systray"
+    order = 2
     return position, order
 
 
-def initialize_plugin(obj, app):
+def initialize_plugin(panel_instance):
     """Initialize the system monitor plugin.
 
     Args:
@@ -23,19 +23,20 @@ def initialize_plugin(obj, app):
         app: The main application instance.
     """
     if ENABLE_PLUGIN:
-        return SystemMonitorPlugin(obj, app)
+        return SystemMonitorPlugin(panel_instance)
 
 
 class SystemMonitorPlugin:
-    def __init__(self, obj, app):
-        self.obj = obj
-        self.app = app
+    def __init__(self, panel_instance):
+        self.obj = panel_instance
         self.popover_system = None
         self.update_timeout_id = None
         self.update_interval = 2  # Update interval in seconds
         self.prev_net_io = psutil.net_io_counters()
-
         self.create_menu_popover_system()
+
+    def append_widget(self):
+        return self.menubutton_system
 
     def create_menu_popover_system(self):
         """Create the system monitor button and popover."""
@@ -43,12 +44,6 @@ class SystemMonitorPlugin:
         self.menubutton_system = Gtk.Button()
         self.menubutton_system.set_icon_name("utilities-system-monitor")  # Default icon
         self.menubutton_system.connect("clicked", self.open_popover_system)
-
-        # Add the button to the systray
-        if hasattr(self.obj, "top_panel_box_right"):
-            self.obj.top_panel_box_systray.append(self.menubutton_system)
-        else:
-            print("Error: top_panel_box_right not found in Panel object.")
 
     def start_system_updates(self):
         """Start periodic updates for system data."""

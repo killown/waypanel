@@ -8,13 +8,31 @@ import subprocess
 ENABLE_PLUGIN = True
 
 
+def position():
+    """Define the plugin's position and order."""
+    return "systray", 5  # Position: right, Order: 5
+
+
+def initialize_plugin(panel_instance):
+    """Initialize the plugin."""
+    if ENABLE_PLUGIN:
+        plugin = MenuSetupPlugin(panel_instance)
+        plugin.setup_menus()
+        return plugin
+
+
 class MenuSetupPlugin:
-    def __init__(self, obj, app):
-        self.obj = obj
-        self.app = app
+    def __init__(self, panel_instance):
+        self.obj = panel_instance
+        self.menu_button = None
         self.utils = Utils(application_id="com.github.menu-setup-plugin")
         self.config_path = os.path.expanduser("~/.config/waypanel/waypanel.toml")
-        self.logger = app.logger  # Assuming logger is available via app instance
+        self.logger = self.obj.logger
+        self.widgets = []
+
+    def append_widget(self):
+        # a list of buttons
+        return self.widgets
 
     def load_menu_config(self):
         """Load menu configuration from waypanel.toml."""
@@ -31,7 +49,7 @@ class MenuSetupPlugin:
         action_name = f"app.run-command-{name.replace(' ', '-')}"
         action = Gio.SimpleAction.new(action_name, None)
         action.connect("activate", self.menu_run_action, cmd)
-        self.app.add_action(action)
+        self.obj.add_action(action)
 
         menu_item = Gio.MenuItem.new(name, f"app.{action_name}")
         menu.append_item(menu_item)
@@ -56,16 +74,17 @@ class MenuSetupPlugin:
         menu_buttons = {}
         for menu_name, menu_data in menu_config.items():
             menu = Gio.Menu()
-            btn = Gtk.MenuButton(label=menu_name)
+            menu_button = Gtk.MenuButton(label=menu_name)
 
             # Set icon if specified in the configuration
             if "icon" in menu_data:
-                btn.set_icon_name(menu_data["icon"])
+                menu_button.set_icon_name(menu_data["icon"])
             else:
-                btn.set_label(menu_name)
+                menu_button.set_label(menu_name)
 
-            btn.set_menu_model(menu)
-            menu_buttons[menu_name] = btn
+            menu_button.set_menu_model(menu)
+            menu_buttons[menu_name] = menu_button
+            self.widgets.append(menu_button)
 
             # Add menu items or submenus
             for item in menu_data.get("items", []):
@@ -74,28 +93,9 @@ class MenuSetupPlugin:
                 else:
                     self.create_menu_item(menu, item["name"], item["cmd"])
 
-            # Attach the button to the systray or panel
-            if hasattr(self.obj, "top_panel_box_systray"):
-                self.obj.top_panel_box_systray.append(btn)
-            else:
-                self.logger.error("Systray box not found in Panel object.")
-
     def menu_run_action(self, action, parameter, cmd):
         """Run the specified command when a menu item is activated."""
         try:
             subprocess.Popen(cmd, shell=True)
         except Exception as e:
             self.logger.error(f"Error running command '{cmd}': {e}")
-
-
-def position():
-    """Define the plugin's position and order."""
-    return "right", 5  # Position: right, Order: 5
-
-
-def initialize_plugin(obj, app):
-    """Initialize the plugin."""
-    if ENABLE_PLUGIN:
-        plugin = MenuSetupPlugin(obj, app)
-        plugin.setup_menus()
-        return plugin

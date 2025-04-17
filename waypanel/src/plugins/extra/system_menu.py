@@ -12,14 +12,28 @@ from ...core.utils import Utils
 ENABLE_PLUGIN = True
 
 
+def position():
+    position = "systray"
+    order = 10
+    return position, order
+
+
+def initialize_plugin(panel_instance):
+    if ENABLE_PLUGIN:
+        system = SystemDashboard(panel_instance)
+        system.create_menu_popover_system()
+        return system
+
+
 class SystemDashboard(Adw.Application):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, panel_instance):
         self.popover_dashboard = None
-        self.app = None
-        self.top_panel = None
+        self.obj = panel_instance
         self._setup_config_paths()
         self.utils = Utils(application_id="com.github.utils")
+
+    def append_widget(self):
+        return self.menubutton_dashboard
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -93,9 +107,7 @@ class SystemDashboard(Adw.Application):
         devices = check_output("systemctl devices".split()).decode().strip().split("\n")
         return [" ".join(i.split(" ")[1:]) for i in devices]
 
-    def create_menu_popover_system(self, obj, app, *_):
-        self.top_panel = obj.top_panel
-        self.app = app
+    def create_menu_popover_system(self):
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
         system_icon = "system-shutdown"
@@ -104,7 +116,6 @@ class SystemDashboard(Adw.Application):
             config.get("panel", {}).get("top", {}).get("system_icon", "system-shutdown")
         )
         self.menubutton_dashboard.set_icon_name(system_icon)
-        obj.top_panel_box_systray.append(self.menubutton_dashboard)
         return self.menubutton_dashboard
 
     def create_popover_system(self, *_):
@@ -212,7 +223,7 @@ class SystemDashboard(Adw.Application):
         if self.popover_dashboard and not self.popover_dashboard.is_visible():
             self.popover_dashboard.popup()
         if not self.popover_dashboard:
-            self.popover_dashboard = self.create_popover_system(self.app)
+            self.popover_dashboard = self.create_popover_system()
 
     def kill_process_by_name(self, name):
         # Iterate over all running processes
@@ -274,16 +285,3 @@ class SystemDashboard(Adw.Application):
         self.searchbar.set_search_mode(
             True
         )  # Ctrl+F To Active show_searchbar and show searchbar
-
-
-def position():
-    position = "right"
-    order = 10
-    return position, order
-
-
-def initialize_plugin(obj, app):
-    if ENABLE_PLUGIN:
-        system = SystemDashboard()
-        system.create_menu_popover_system(obj, app)
-        return system

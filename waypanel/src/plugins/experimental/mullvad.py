@@ -9,26 +9,28 @@ ENABLE_PLUGIN = True
 
 def position():
     """Define the plugin's position and order."""
-    position = "right"
+    position = "systray"
     order = 5
     return position, order
 
 
-def initialize_plugin(obj, app):
+def initialize_plugin(panel_instance):
     """Initialize the Mullvad plugin."""
     if ENABLE_PLUGIN:
-        mullvad_plugin = MullvadPlugin(obj, app)
-        mullvad_plugin.create_menu_popover_mullvad(obj, app)
+        mullvad_plugin = MullvadPlugin(panel_instance)
+        mullvad_plugin.create_menu_popover_mullvad()
         return mullvad_plugin
 
 
 class MullvadPlugin:
-    def __init__(self, obj, app):
-        self.obj = obj
-        self.app = app
+    def __init__(self, panel_instance):
+        self.obj = panel_instance
         self._setup_config_paths()
         self.mullvad_version = self.get_mullvad_version()
         print("Mullvad plugin initialized.")
+
+    def append_widget(self):
+        return self.menubutton_mullvad
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -45,28 +47,23 @@ class MullvadPlugin:
             print(f"Error retrieving Mullvad version: {e}")
             return "Mullvad Version Unavailable"
 
-    def create_menu_popover_mullvad(self, obj, app):
+    def create_menu_popover_mullvad(self):
         """Create a menu button and attach it to the panel."""
-        print("Creating Mullvad menu popover.")
-        self.top_panel = obj.top_panel
-        self.app = app
-
         # Create the MenuButton
         self.menubutton_mullvad = Gtk.MenuButton()
         self.menubutton_mullvad.set_icon_name("mullvad-vpn")
         self.menubutton_mullvad.add_css_class("top_right_widgets")
 
         # Add the MenuButton to the systray
-        obj.top_panel_box_systray.append(self.menubutton_mullvad)
 
         # Create and set the menu model
-        self.create_menu_model(obj)
+        self.create_menu_model()
 
         # Start periodic status updates
         if os.path.exists("/usr/bin/mullvad"):
             GLib.timeout_add(10000, self.update_vpn_status)
 
-    def create_menu_model(self, obj):
+    def create_menu_model(self):
         """Create a Gio.Menu and populate it with options for Mullvad."""
         print("Creating Mullvad menu model.")
         menu = Gio.Menu()

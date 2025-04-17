@@ -16,6 +16,9 @@ class ExampleMenuPlugin:
         self._setup_config_paths()
         print("ExampleMenuPlugin initialized.")
 
+    def append_widget(self):
+        return self.menubutton_example
+
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
         self.home = os.path.expanduser("~")
@@ -50,8 +53,8 @@ class ExampleMenuPlugin:
                     self.utils.get_nearest_icon_name(menu_icon)
                 )
 
-        # Add the MenuButton to the systray
-        obj.top_panel_box_systray.append(self.menubutton_example)
+        # use append_widget instead
+        # obj.top_panel_box_systray.append(self.menubutton_example)
 
         # Create and set the menu model
         self.create_menu_model()

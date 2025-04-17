@@ -1,8 +1,5 @@
 import os
 import sys
-import time
-from subprocess import Popen
-import importlib
 import toml
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 from wayfire import WayfireSocket
@@ -14,6 +11,7 @@ from waypanel.src.core.create_panel import (
 from waypanel.src.core.utils import Utils
 from waypanel.src.core.utils import Utils as utils
 from waypanel.src.plugins.core.dockbar import Dockbar
+from waypanel.src.plugins.core.plugin_loader import PluginLoader
 
 
 class Panel(Adw.Application):
@@ -34,7 +32,7 @@ class Panel(Adw.Application):
         # Setup panel boxes and configuration paths
         self._setup_panel_boxes()
         self._setup_config_paths()
-        self.plugins = {}
+        self.plugin_loader = PluginLoader(self, logger, self.config_path)
 
         # Initialize variables and configurations
         self.toggle_mute = {}
@@ -212,7 +210,8 @@ class Panel(Adw.Application):
             sys.exit()
 
         # ===========LOAD PLUGINS=============
-        GLib.idle_add(self.load_plugins)
+        self.logger.info("Starting panel...")
+        GLib.idle_add(self.plugin_loader.load_plugins)
 
     def load_config(self):
         if not hasattr(self, "_cached_config"):
@@ -266,205 +265,6 @@ class Panel(Adw.Application):
         self.monitor.connect("changed", self.on_css_file_changed)
         self.check_widgets_ready()
         self.show_panels()
-
-    def load_plugins(self):
-        """
-        Dynamically load all plugins from the src.plugins package, including subdirectories.
-        Plugins in the 'examples' folder are excluded.
-        Plugins that return False for their position or are disabled via ENABLE_PLUGIN
-        or listed in the `disabled` field in waypanel.toml will be skipped.
-        Additionally, update the [plugins] section in waypanel.toml to reflect the valid plugins.
-        """
-        # Load configuration and initialize plugin lists
-        config, disabled_plugins = self._load_plugin_configuration()
-        if config is None:
-            return
-
-        plugin_dir = os.path.join(os.path.dirname(__file__), "plugins")
-        valid_plugins = []
-        plugin_metadata = []
-
-        # Walk through the plugin directory recursively
-        for root, dirs, files in os.walk(plugin_dir):
-            # Exclude the 'examples' folder
-            if "examples" in dirs:
-                dirs.remove("examples")  # Skip the 'examples' folder
-
-            for file_name in files:
-                if file_name.endswith(".py") and file_name != "__init__.py":
-                    module_name = file_name[:-3]  # Remove the .py extension
-                    module_path = os.path.relpath(
-                        os.path.join(root, file_name), plugin_dir
-                    ).replace(os.sep, ".")[:-3]
-
-                    start_time = time.time()  # Start timing
-                    try:
-                        self._process_plugin(
-                            module_name,
-                            module_path,
-                            disabled_plugins,
-                            valid_plugins,
-                            plugin_metadata,
-                        )
-                    except Exception as e:
-                        elapsed_time = time.time() - start_time
-                        self.logger.error(
-                            f"Failed to process plugin {module_name}: {e} (processed in {elapsed_time:.4f} seconds)"
-                        )
-
-        # Sort and initialize plugins
-        self._initialize_sorted_plugins(plugin_metadata)
-
-        # Update the TOML configuration with valid plugins
-        self._update_plugin_configuration(config, valid_plugins, disabled_plugins)
-        self.logger.debug(self.plugins)
-
-    def _load_plugin_configuration(self):
-        """
-        Load the TOML configuration file and parse the disabled plugins list.
-        Returns the configuration and the set of disabled plugins.
-        """
-        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
-
-        try:
-            if not os.path.exists(waypanel_config_path):
-                self.logger.error(
-                    f"Configuration file not found at '{waypanel_config_path}'."
-                )
-                return None, None
-
-            with open(waypanel_config_path, "r") as f:
-                config = toml.load(f)
-
-            # Ensure the [plugins] section exists
-            if "plugins" not in config:
-                config["plugins"] = {"list": "", "disabled": ""}
-
-            # Parse the disabled plugins list
-            disabled_plugins = set(config["plugins"].get("disabled", "").split())
-            return config, disabled_plugins
-
-        except Exception as e:
-            self.logger.error(f"Failed to load configuration file: {e}")
-            return None, None
-
-    def _process_plugin(
-        self, module_name, module_path, disabled_plugins, valid_plugins, plugin_metadata
-    ):
-        if module_name in disabled_plugins:
-            self.logger.info(f"Skipping plugin listed in 'disabled': {module_name}")
-            return
-
-        try:
-            # Import the plugin module dynamically
-            module_full_path = f"waypanel.src.plugins.{module_path}"
-            module = importlib.import_module(module_full_path)
-
-            # Check if the plugin has required functions
-            if not hasattr(module, "position") or not hasattr(
-                module, "initialize_plugin"
-            ):
-                self.logger.error(
-                    f"Module {module_name} is missing required functions. Skipping."
-                )
-                return
-
-            # Check if the plugin is enabled via ENABLE_PLUGIN
-            is_plugin_enabled = getattr(module, "ENABLE_PLUGIN", True)
-            if not is_plugin_enabled:
-                self.logger.info(f"Skipping disabled plugin: {module_name}")
-                return
-
-            # Get position, order, and optional priority
-            position_result = module.position()
-            if isinstance(position_result, tuple):
-                if len(position_result) == 3:
-                    position, order, priority = position_result
-                elif len(position_result) == 2:
-                    position, order = position_result
-                    priority = 0  # Default priority if not specified
-                else:
-                    self.logger.error(
-                        f"Invalid position result from module {module_name}. Skipping."
-                    )
-                    return
-            else:
-                self.logger.error(
-                    f"Invalid position result from module {module_name}. Skipping."
-                )
-                return
-
-            # Validate position for regular plugins
-            if position not in ("left", "right", "center"):
-                self.logger.error(
-                    f"Invalid position '{position}' returned by module {module_name}. Skipping."
-                )
-                return
-
-            # Add plugin metadata for sorting and initialization
-            plugin_metadata.append((module, position, order, priority))
-            valid_plugins.append(module_name)
-
-        except Exception as e:
-            self.logger.error(f"Error processing plugin {module_name}: {e}")
-
-    def _initialize_sorted_plugins(self, plugin_metadata):
-        """Sort plugins by their priority and order, then initialize them."""
-        # Sort by priority (descending), then by order (ascending)
-        plugin_metadata.sort(key=lambda x: (-x[3], x[2]))
-
-        for module, position, order, priority in plugin_metadata:
-            start_time = time.time()  # Start timing
-            try:
-                target_box = self._get_target_panel_box(position)
-                if target_box is None:
-                    continue
-
-                # Initialize the plugin
-                module_name = module.__name__.split(".")[-1]
-                plugin_instance = module.initialize_plugin(self, self)
-                self.plugins[module_name] = plugin_instance
-
-                elapsed_time = time.time() - start_time
-                self.logger.info(
-                    f"Plugin '{module.__name__}' initialized in {elapsed_time:.4f} seconds "
-                    f"(Position: {position}, Order: {order}, Priority: {priority})"
-                )
-            except Exception as e:
-                elapsed_time = time.time() - start_time
-                self.logger.error(
-                    f"Failed to initialize plugin {module.__name__}: {e} "
-                    f"(processed in {elapsed_time:.4f} seconds)"
-                )
-
-    def _get_target_panel_box(self, position):
-        """
-        Determine the target panel box based on the plugin's position.
-        """
-        if position == "left":
-            return self.top_panel_box_left
-        elif position == "right":
-            return self.top_panel_box_right
-        elif position == "center":
-            return self.top_panel_box_center
-        else:
-            self.logger.error(f"Invalid position '{position}'. Skipping.")
-            return None
-
-    def _update_plugin_configuration(self, config, valid_plugins, disabled_plugins):
-        """
-        Update the [plugins] section in the TOML configuration with valid plugins.
-        Save the updated configuration back to the file.
-        """
-        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
-        config["plugins"]["list"] = " ".join(valid_plugins)
-        config["plugins"]["disabled"] = " ".join(disabled_plugins)
-
-        try:
-            with open(waypanel_config_path, "w") as f:
-                toml.dump(config, f)
-        except Exception as e:
-            self.logger.error(f"Failed to save updated configuration: {e}")
 
     def monitor_width_height(self):
         focused_view = self.sock.get_focused_view()

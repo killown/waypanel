@@ -8,10 +8,10 @@ def position():
 
     Since this is a background-only plugin (no UI), return `False`.
     """
-    return "left", 99  # Position: left, Order: 99 (low priority)
+    return "left", 99, 99
 
 
-def initialize_plugin(obj, app):
+def initialize_plugin(panel_instance):
     """
     Initialize the plugin.
 
@@ -24,12 +24,12 @@ def initialize_plugin(obj, app):
         return
 
     # Ensure the EventManagerPlugin is loaded
-    if "event_manager" not in obj.plugins:
+    if "event_manager" not in panel_instance.plugins:
         print("Error: EventManagerPlugin is not loaded. Cannot subscribe to events.")
         return
 
-    event_manager = obj.plugins["event_manager"]
-    print("Subscribing to events...")
+    event_manager = panel_instance.plugin_loader.plugins["event_manager"]
+    print("Subscribing to events..." * 100)
 
     # Subscribe to events with callbacks
     try:

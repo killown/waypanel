@@ -5,8 +5,31 @@ from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
 from ...core.utils import Utils
 
 
+def initialize_plugin(panel_instance):
+    """
+    Initialize the plugin.
+
+    Args:
+        obj: The main panel object from panel.py
+        app: The main application instance
+    """
+    return WindowTitlePlugin(panel_instance)
+
+
+def position():
+    """
+    Define the plugin's position and order.
+
+    Returns:
+        tuple: (position, order)
+    """
+    position = "left"
+    order = 5
+    return position, order
+
+
 class WindowTitlePlugin:
-    def __init__(self, obj, app):
+    def __init__(self, panel_instance):
         """
         Initialize the plugin.
 
@@ -14,10 +37,9 @@ class WindowTitlePlugin:
             obj: The main panel object from panel.py
             app: The main application instance
         """
-        self.obj = obj
-        self.app = app
+        self.obj = panel_instance
         self.utils = Utils()
-        self.logger = app.logger  # Assuming logger is available via app instance
+        self.logger = self.obj.logger
         self.config_path = os.path.expanduser("~/.config/waypanel/waypanel.toml")
         self.load_config()
 
@@ -25,6 +47,7 @@ class WindowTitlePlugin:
         self.window_title_content = Gtk.Box()
         self.window_title_label = Gtk.Label()
         self.window_title_icon = Gtk.Image.new_from_icon_name("None")
+        self.title_length = 50
 
         # Assemble the widget
         self.window_title_content.append(self.window_title_icon)
@@ -35,12 +58,12 @@ class WindowTitlePlugin:
         self.window_title_icon.add_css_class("topbar-title-content-icon")
         self.window_title_content.add_css_class("topbar-title-content")
 
-        # Add the widget to the top panel's window title box
-        obj.top_panel_box_left.append(self.window_title_content)
-
         # Set up IPC client
         self.ipc_client = WayfireClientIPC(self.handle_event)
         self.ipc_client.wayfire_events_setup("/tmp/waypanel.sock")
+
+    def append_widget(self):
+        return self.window_title_content
 
     def load_config(self):
         """Load configuration from waypanel.toml."""
@@ -127,14 +150,16 @@ class WindowTitlePlugin:
         title = self.utils.filter_utf_for_gtk(title)
 
         # Shorten the title if too long
-        if len(title) > 20:
+        if len(title) > self.title_length:
             words = title.split()
             first_word_length = len(words[0]) if words else 0
             if first_word_length > 10:
                 title = words[0]
             else:
-                title = title[:20]
+                title = title[: self.title_length]
 
+        if " — " in title:
+            title = title.split(" — ")[0]
         return title
 
     def update_widget(self, title, icon_name):
@@ -156,26 +181,3 @@ class WindowTitlePlugin:
                 self.window_title_icon.set_from_icon_name("None")
         except Exception as e:
             self.logger.error(f"Error updating window title widget: {e}")
-
-
-def initialize_plugin(obj, app):
-    """
-    Initialize the plugin.
-
-    Args:
-        obj: The main panel object from panel.py
-        app: The main application instance
-    """
-    return WindowTitlePlugin(obj, app)
-
-
-def position():
-    """
-    Define the plugin's position and order.
-
-    Returns:
-        tuple: (position, order)
-    """
-    position = "center"
-    order = 5
-    return position, order

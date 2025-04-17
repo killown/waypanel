@@ -69,11 +69,9 @@ class Dockbar(Gtk.Application):
         self.stored_windows = [i["id"] for i in self.sock.list_views()]
         panel_toml = self._load_config()["panel"]
         self._setup_panels(panel_toml)
-        self.logger.info("Dockbar application started.")
 
     def _setup_panels(self, panel_toml):
         """Set up panels based on the provided configuration."""
-        self.logger.debug("Setting up panels.")
         for p in panel_toml:
             if p == "left":
                 self._setup_left_panel(panel_toml[p])
@@ -188,8 +186,6 @@ class Dockbar(Gtk.Application):
 
     def handle_view_event(self, msg):
         """Handle view-related IPC events."""
-        self.logger.debug(f"Handling dockbar view event: {msg}")
-
         view = msg.get("view")
 
         if "event" not in msg:
@@ -232,7 +228,6 @@ class Dockbar(Gtk.Application):
 
     def handle_plugin_event(self, msg):
         """Handle plugin-related IPC events."""
-        self.logger.debug(f"Handling plugin event: {msg}")
         if "event" not in msg:
             return True
         if msg["event"] == "plugin-activation-state-changed":
@@ -252,7 +247,6 @@ class Dockbar(Gtk.Application):
 
     def handle_event(self, msg):
         """Handle general IPC events."""
-        self.logger.debug(f"Handling general IPC event: {msg}")
         view = None
         if "view" in msg:
             view = msg["view"]
@@ -270,7 +264,6 @@ class Dockbar(Gtk.Application):
 
     def on_view_role_toplevel_focused(self, view):
         """Handle when a toplevel view gains focus."""
-        self.logger.debug(f"Toplevel view focused: {view}")
         return True
 
     def on_output_gain_focus(self):
@@ -278,32 +271,26 @@ class Dockbar(Gtk.Application):
 
     def on_expo_activated(self):
         """Handle expo plugin activation."""
-        self.logger.info("Expo plugin activated.")
         return True
 
     def on_moving_view(self):
         """Handle moving view event."""
-        self.logger.info("Moving view event triggered.")
         return True
 
     def on_expo_desactivated(self):
         """Handle expo plugin deactivation."""
-        self.logger.info("Expo plugin deactivated.")
         return True
 
     def on_view_focused(self):
         """Handle when any view gains focus."""
-        self.logger.debug("View focused.")
         return True
 
     def on_app_id_changed(self, view):
         """Handle changes in app-id of a view."""
-        self.logger.debug(f"App ID changed for view: {view}")
         self.update_taskbar_list(view)
 
     def panel_output_is_focused_output(self):
         """Check if the current panel's output is the focused output."""
-        self.logger.debug("Checking if panel output is focused output.")
         output = os.getenv("waypanel")
         output_name = None
         focused_output_name = None
@@ -319,8 +306,6 @@ class Dockbar(Gtk.Application):
 
     def on_scale_activated(self):
         """Handle scale wayfire plugin activation."""
-        self.logger.info("Scale plugin activated.")
-
         # set layer exclusive so the panels becomes clickable
         output_info = os.getenv("waypanel")
         layer_set_on_output_name = None
@@ -337,8 +322,6 @@ class Dockbar(Gtk.Application):
 
     def on_scale_desactivated(self):
         """Handle scale plugin deactivation."""
-        self.logger.info("Scale plugin deactivated.")
-
         # this will set panels on bottom, hidden it from views
         self.update_widget(unset_layer_position_exclusive, self.left_panel)
         self.update_widget(unset_layer_position_exclusive, self.bottom_panel)
@@ -525,8 +508,6 @@ class Dockbar(Gtk.Application):
         self.buttons_id[id] = [button, initial_title, id]
         self.taskbar_list.append(id)
         button.add_css_class("taskbar-button")
-
-        self.logger.info(f"Taskbar button created for view ID: {id}")
         return True
 
     def new_taskbar_view(self, orientation, class_style, view_id, callback=None):
@@ -581,8 +562,10 @@ class Dockbar(Gtk.Application):
 
     def view_exist(self, view_id):
         """Check if a view exists and meets criteria to be displayed in the taskbar."""
-        self.logger.debug(f"Checking if view exists: {view_id}")
         try:
+            view_id_list = [view["id"] for view in self.sock.list_views()]
+            if view_id not in view_id_list:
+                return
             view = self.sock.get_view(view_id)
             if not self.is_valid_view(view):
                 return False
@@ -618,7 +601,7 @@ class Dockbar(Gtk.Application):
 
         # Step 1: Validate the current view
         if not self._validate_and_update_view(view):
-            self.logger.debug(f"View ID {view['id']} does not exist. Skipping.")
+            return
 
         # Step 2: Update the taskbar layout
         self.Taskbar("h", "taskbar")
@@ -638,9 +621,6 @@ class Dockbar(Gtk.Application):
         """
         view_id = view["id"]
         if not self.view_exist(view_id):
-            self.logger.debug(
-                f"View ID {view_id} does not exist. Removing from taskbar."
-            )
             self.taskbar_view_exists(view_id)
             return False
         return True
@@ -654,7 +634,6 @@ class Dockbar(Gtk.Application):
         )  # Get the current list of valid view IDs
         for button_id in list(self.buttons_id.keys()):  # Iterate over a copy of keys
             if button_id not in active_ids:
-                self.logger.debug(f"Removing invalid button ID: {button_id}")
                 self.taskbar_view_exists(button_id)
 
     def remove_button(self, id):
@@ -664,7 +643,6 @@ class Dockbar(Gtk.Application):
         Args:
             id (int): The ID of the view whose button should be removed.
         """
-        self.logger.debug(f"Removing taskbar button for ID: {id}")
 
         # Get the valid button using the helper function
         button = self.get_valid_button(id)
@@ -688,14 +666,10 @@ class Dockbar(Gtk.Application):
         Returns:
             bool: True if the taskbar entry was removed, False otherwise.
         """
-        self.logger.debug(f"Attempting to remove taskbar entry for ID: {id}")
         if self.view_exist(id):
-            self.logger.debug(f"View ID {id} still exists. Skipping removal.")
             return False
         button = self.get_valid_button(id)
         if not button:
-            self.logger.debug(f"No valid button found for ID: {id}. Skipping removal.")
             return False
-        self.logger.info(f"Removing taskbar entry for ID: {id}")
         self.remove_button(id)
         return True

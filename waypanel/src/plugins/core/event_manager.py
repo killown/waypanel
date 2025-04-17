@@ -1,4 +1,3 @@
-import time
 from gi.repository import GLib
 from ...core.utils import Utils
 from wayfire.core.template import get_msg_template
@@ -16,12 +15,10 @@ def position():
     return "right", any_order, priority
 
 
-def initialize_plugin(obj, app):
+def initialize_plugin(panel_instance):
     """Initialize the Event Manager plugin."""
     if ENABLE_PLUGIN:
-        print("Initializing Event Manager Plugin.")
-        event_manager = EventManagerPlugin(obj, app)
-        print("Event Manager Plugin initialized.")
+        event_manager = EventManagerPlugin(panel_instance)
         return event_manager
 
 
@@ -38,11 +35,10 @@ class WayfireSocket(OriginalWayfireSocket):
 
 
 class EventManagerPlugin:
-    def __init__(self, obj, app):
+    def __init__(self, panel_instance):
         """Initialize the plugin."""
-        self.obj = obj
-        self.app = app
-        self.logger = app.logger
+        self.obj = panel_instance
+        self.logger = self.obj.logger
         self.sock = WayfireSocket()
         self.wf_utils = WayfireUtils(self.sock)
         self.utils = Utils()
@@ -56,11 +52,10 @@ class EventManagerPlugin:
 
     def handle_event(self, msg):
         """Handle incoming IPC events."""
-        if not self._validate_event(msg):
-            return
+        # if not self._validate_event(msg):
+        #    return
 
         event_type = msg.get("event")
-        self.logger.debug(f"Processing event: {event_type}")
 
         # Notify subscribers
         if event_type in self.event_subscribers:
