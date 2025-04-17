@@ -7,7 +7,7 @@ from subprocess import Popen, check_output
 ENABLE_PLUGIN = True
 
 
-def position():
+def get_plugin_placement():
     """Define the plugin's position and order."""
     position = "systray"
     order = 5

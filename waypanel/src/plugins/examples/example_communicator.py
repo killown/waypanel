@@ -7,7 +7,7 @@ from gi.repository import Gtk
 ENABLE_PLUGIN = True
 
 
-def position():
+def get_plugin_placement():
     """Define the plugin's position and order."""
     position = "center"
     order = 0

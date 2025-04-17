@@ -16,7 +16,7 @@ def initialize_plugin(panel_instance):
     return WindowTitlePlugin(panel_instance)
 
 
-def position():
+def get_plugin_placement():
     """
     Define the plugin's position and order.
 

@@ -21,7 +21,7 @@ from .clipboard_server import AsyncClipboardServer
 ENABLE_PLUGIN = True
 
 
-def position():
+def get_plugin_placement():
     return "systray", 2
 
 

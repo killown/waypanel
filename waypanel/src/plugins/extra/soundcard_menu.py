@@ -15,7 +15,7 @@ sock = WayfireSocket(addr)
 ENABLE_PLUGIN = True
 
 
-def position():
+def get_plugin_placement():
     position = "systray"
     order = 2
     return position, order

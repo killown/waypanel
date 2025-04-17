@@ -8,7 +8,7 @@ import subprocess
 ENABLE_PLUGIN = True
 
 
-def position():
+def get_plugin_placement():
     """Define the plugin's position and order."""
     return "systray", 5  # Position: right, Order: 5
 

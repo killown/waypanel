@@ -10,7 +10,7 @@ gi.require_version("Gtk", "4.0")
 ENABLE_PLUGIN = True
 
 
-def position():
+def get_plugin_placement():
     """Define the plugin's position and order."""
     position = "center"  # Clock/calendar is usually in the center
     order = 5  # Middle priority

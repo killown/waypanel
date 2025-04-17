@@ -12,7 +12,7 @@ from ...core.utils import Utils
 ENABLE_PLUGIN = True
 
 
-def position():
+def get_plugin_placement():
     position = "left"
     order = 1
     return position, order

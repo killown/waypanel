@@ -1,17 +1,14 @@
-# ==== FILE: waypanel/src/plugins/gesture_plugin.py ====
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, Gdk
+from gi.repository import Gtk
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 
 
-def position():
-    """
-    Define the plugin's position and order.
-    """
+def get_plugin_placement():
+    """Define the plugin's position and order."""
     position = "right"  # Can be "left", "right", or "center"
     order = 10  # Lower numbers have higher priority
     return position, order
@@ -20,119 +17,122 @@ def position():
 def initialize_plugin(panel_instance):
     """
     Initialize the plugin.
-
     Args:
-        obj: The main panel object from panel.py
-        app: The main application instance
+        panel_instance: The main panel object from panel.py
     """
     if ENABLE_PLUGIN:
-        print("Initializing Gesture Plugin.")
-        gesture_plugin = GesturePlugin(panel_instance)
-        gesture_plugin.setup_gestures()
-        print("Gesture Plugin initialized and gestures added.")
-        return gesture_plugin
+        print("Initializing 'Go Next Workspace with Views' Plugin.")
+        plugin = GesturePlugin(panel_instance)
+        plugin.setup_gestures()
+        return plugin
 
 
 class GesturePlugin:
     def __init__(self, panel_instance):
-        """
-        Initialize the GesturePlugin.
-
-        Args:
-            obj: The main panel object from panel.py
-            app: The main application instance
-        """
+        """Initialize the GesturePlugin."""
         self.obj = panel_instance
         self.gestures = {}  # Store gesture references
+        self.appended_actions = {}  # Store additional actions for each gesture
 
-    def create_gesture(self, widget, mouse_button, callback, arg=None):
+    def setup_gestures(self):
+        """Set up gestures for the top panel (left, center, and right)."""
+        # Gestures for the left section of the top panel
+        self.create_gesture(self.obj.top_panel_box_left, 1, self.pos_left_left_click)
+        self.create_gesture(self.obj.top_panel_box_left, 2, self.pos_left_middle_click)
+        self.create_gesture(self.obj.top_panel_box_left, 3, self.pos_left_right_click)
+
+        # Gestures for the center section of the top panel
+        self.create_gesture(
+            self.obj.top_panel_box_center, 1, self.pos_center_left_click
+        )
+        self.create_gesture(
+            self.obj.top_panel_box_center, 2, self.pos_center_middle_click
+        )
+        self.create_gesture(
+            self.obj.top_panel_box_center, 3, self.pos_center_right_click
+        )
+
+        # Gestures for the full section of the top panel
+        self.create_gesture(self.obj.top_panel_box_full, 3, self.pos_full_right_click)
+
+        # Gestures for the right section of the top panel
+        self.create_gesture(self.obj.top_panel_box_right, 1, self.pos_right_left_click)
+        self.create_gesture(
+            self.obj.top_panel_box_right, 2, self.pos_right_middle_click
+        )
+        self.create_gesture(self.obj.top_panel_box_right, 3, self.pos_right_right_click)
+
+    def create_gesture(self, widget, mouse_button, callback):
         """
-        Create a gesture for a widget.
-
+        Create a gesture for a widget and attach it to the specified callback.
         Args:
             widget: The widget to attach the gesture to.
             mouse_button: The mouse button to trigger the gesture (e.g., 1 for left click).
             callback: The function to call when the gesture is triggered.
-            arg: Optional argument to pass to the callback.
         """
         gesture = Gtk.GestureClick.new()
-        if arg is None:
-            gesture.connect("released", callback)
-        else:
-            gesture.connect("released", lambda gesture, arg=arg: callback(arg))
+        gesture.connect("released", lambda *_: self.execute_callback(callback))
         gesture.set_button(mouse_button)
         widget.add_controller(gesture)
         self.gestures[widget] = gesture
-        return widget
 
-    def setup_gestures(self):
+    def execute_callback(self, callback):
         """
-        Set up gestures for the top panel (left, center, and right).
+        Execute the callback and any appended actions.
+        Args:
+            callback: The primary callback function to execute.
         """
-        # Gestures for top panel left
-        self.create_gesture(
-            self.obj.top_panel_box_left, 1, self.top_panel_left_gesture_lclick
-        )
-        self.create_gesture(
-            self.obj.top_panel_box_left, 2, self.top_panel_left_gesture_mclick
-        )
-        self.create_gesture(
-            self.obj.top_panel_box_left, 3, self.top_panel_left_gesture_rclick
-        )
+        # Execute the primary callback
+        callback()
 
-        # Gestures for top panel center
-        self.create_gesture(
-            self.obj.top_panel_box_center, 1, self.top_panel_center_gesture_lclick
-        )
-        self.create_gesture(
-            self.obj.top_panel_box_center, 2, self.top_panel_center_gesture_mclick
-        )
-        self.create_gesture(
-            self.obj.top_panel_box_center, 3, self.top_panel_center_gesture_rclick
-        )
+        # Execute any appended actions for this callback
+        if callback.__name__ in self.appended_actions:
+            for action in self.appended_actions[callback.__name__]:
+                action()
 
-        self.create_gesture(
-            self.obj.top_panel_box_full, 3, self.top_panel_full_gesture_rclick
-        )
-
-        # Gestures for top panel right
-        self.create_gesture(
-            self.obj.top_panel_box_right, 1, self.top_panel_right_gesture_lclick
-        )
-        self.create_gesture(
-            self.obj.top_panel_box_right, 2, self.top_panel_right_gesture_mclick
-        )
-        self.create_gesture(
-            self.obj.top_panel_box_right, 3, self.top_panel_right_gesture_rclick
-        )
+    def append_action(self, callback_name, action):
+        """
+        Append an additional action to a specific gesture callback.
+        Args:
+            callback_name: The name of the callback function to append the action to.
+            action: The additional action to append (a callable function).
+        """
+        if callback_name not in self.appended_actions:
+            self.appended_actions[callback_name] = []
+        self.appended_actions[callback_name].append(action)
 
     # Gesture Handlers
-    def top_panel_left_gesture_lclick(self, *_):
-        return
+    def pos_left_left_click(self, *_):
+        """Callback for left-click on the left section."""
+        pass
 
-    def top_panel_left_gesture_rclick(self, *_):
-        return
-
-    def top_panel_left_gesture_mclick(self, *_):
+    def pos_left_middle_click(self, *_):
+        """Callback for middle-click on the left section."""
         self.obj.sock.toggle_expo()
 
-    def top_panel_center_gesture_lclick(self, *_):
-        self.obj.sock.toggle_expo()
+    def pos_left_right_click(self, *_):
+        """Callback for right-click on the left section."""
+        pass
 
-    def top_panel_center_gesture_mclick(self, *_):
-        self.obj.sock.toggle_expo()
+    def pos_center_left_click(self, *_):
+        """Callback for left-click on the center section."""
 
-    def top_panel_center_gesture_rclick(self, *_):
-        return
+    def pos_center_middle_click(self, *_):
+        """Callback for middle-click on the center section."""
 
-    def top_panel_full_gesture_rclick(self, *_):
-        self.obj.wf_utils.go_next_workspace_with_views()
+    def pos_center_right_click(self, *_):
+        """Callback for right-click on the center section."""
+        pass
 
-    def top_panel_right_gesture_lclick(self, *_):
-        return
+    def pos_full_right_click(self, *_):
+        """Callback for right-click on the full section."""
 
-    def top_panel_right_gesture_rclick(self, *_):
-        self.obj.sock.toggle_expo()
+    def pos_right_left_click(self, *_):
+        """Callback for left-click on the right section."""
+        pass
 
-    def top_panel_right_gesture_mclick(self, *_):
-        self.obj.sock.toggle_expo()
+    def pos_right_middle_click(self, *_):
+        """Callback for middle-click on the right section."""
+
+    def pos_right_right_click(self, *_):
+        """Callback for right-click on the right section."""

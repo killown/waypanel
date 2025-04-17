@@ -12,7 +12,7 @@ from ...core.utils import Utils
 ENABLE_PLUGIN = True
 
 
-def position():
+def get_plugin_placement():
     position = "systray"
     order = 10
     return position, order

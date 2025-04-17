@@ -9,7 +9,7 @@ from ...core.utils import Utils
 ENABLE_PLUGIN = True
 
 
-def position():
+def get_plugin_placement():
     """Define the plugin's position and order."""
     position = "after-systray"  # Can be "left", "right", or "center"
     order = 1
@@ -97,7 +97,6 @@ class WindowControlsPlugin:
                 view = event_message["view"]
                 if view.get("role") == "toplevel":
                     self.last_toplevel_focused_view = view
-                    print(f"Last focused toplevel view updated: {view['id']}")
         except Exception as e:
             print(f"Error handling 'view-focused' event: {e}")
 
@@ -107,7 +106,6 @@ class WindowControlsPlugin:
             self.sock.assign_slot(self.last_toplevel_focused_view["id"], "slot_c")
 
     def close_last_focused_view(self, *_):
-        print("Attempting to close last focused view...")
         if (
             self.last_toplevel_focused_view
             and self.last_toplevel_focused_view.get("role") == "toplevel"

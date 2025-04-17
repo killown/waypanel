@@ -11,7 +11,7 @@ gi.require_version("Gtk", "4.0")
 ENABLE_PLUGIN = True
 
 
-def position():
+def get_plugin_placement():
     position = "systray"
     order = 3
     return position, order

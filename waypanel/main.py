@@ -15,6 +15,9 @@ import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from waypanel.src.ipc_server.ipc_async_server import WayfireEventServer
+from wayfire import WayfireSocket
+
+sock = WayfireSocket()
 
 # Constants
 DEFAULT_CONFIG_PATH = "~/.config/waypanel"
@@ -116,6 +119,42 @@ def start_ipc_server():
     ipc_thread = threading.Thread(target=ipc_server, daemon=True)
     ipc_thread.start()
     logger.info("IPC server started in background thread")
+
+
+def verify_required_wayfire_plugins():
+    """
+    Verify that all required plugins are enabled.
+    Exit the application if any required plugins are missing.
+    """
+    logger.debug("Verifying required plugins...")
+
+    required_plugins = {
+        "stipc",
+        "ipc",
+        "ipc-rules",
+        "resize",
+        "window-rules",
+        "wsets",
+        "session-lock",
+        "wm-actions",
+        "move",
+        "vswitch",
+        "grid",
+        "place",
+        "scale",
+    }
+
+    enabled_plugins = set(sock.get_option_value("core/plugins")["value"].split())
+    missing_plugins = required_plugins - enabled_plugins
+
+    if missing_plugins:
+        logger.error(
+            f"\n\033[91mERROR:\033[0m The following plugins are required to start the shell: {missing_plugins}"
+        )
+        logger.info(f"Required Plugin List: {required_plugins}")
+        sys.exit()
+
+    logger.info("All required plugins are enabled.")
 
 
 def load_panel():
@@ -369,7 +408,7 @@ def main():
 
         # Start config watcher first
         config_observer = start_config_watcher()
-
+        verify_required_wayfire_plugins()
         layer_shell_check()
         check_config_path()
         start_ipc_server()

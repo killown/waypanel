@@ -131,7 +131,7 @@ class ExampleMenuPlugin:
             print(f"Error running application {app_id}: {e}")
 
 
-def position():
+def get_plugin_placement():
     """
     Define plugin position and order.
     """

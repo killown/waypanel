@@ -50,6 +50,6 @@ def initialize_plugin(obj, app):
         cpu_monitor.initialize_plugin(obj, app)
 
 
-def position():
+def get_plugin_placement():
     # Return False to indicate this is a background-only plugin
     return False

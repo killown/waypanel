@@ -8,7 +8,7 @@ import toml
 ENABLE_PLUGIN = True
 
 
-def position():
+def get_plugin_placement():
     """
     Define the plugin's position and order.
     Returns:

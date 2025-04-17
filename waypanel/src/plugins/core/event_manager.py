@@ -8,7 +8,7 @@ from wayfire import WayfireSocket as OriginalWayfireSocket
 ENABLE_PLUGIN = True
 
 
-def position():
+def get_plugin_placement():
     """Define the plugin's position and order."""
     any_order = 99
     priority = 1
@@ -60,6 +60,7 @@ class EventManagerPlugin:
         # Notify subscribers
         if event_type in self.event_subscribers:
             for callback in self.event_subscribers[event_type]:
+                # callback must return False always to prevent infinite loops
                 GLib.idle_add(callback, msg)
 
         # Handle specific event types

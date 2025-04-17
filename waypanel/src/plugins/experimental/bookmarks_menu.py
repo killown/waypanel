@@ -13,7 +13,7 @@ from gi.repository import Adw, GdkPixbuf, Gtk
 ENABLE_PLUGIN = True
 
 
-def position():
+def get_plugin_placement():
     position = "left"
     order = 2
     return position, order

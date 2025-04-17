@@ -97,7 +97,7 @@ class PluginLoader:
             module = importlib.import_module(module_full_path)
 
             # Check if the plugin has required functions
-            if not hasattr(module, "position") or not hasattr(
+            if not hasattr(module, "get_plugin_placement") or not hasattr(
                 module, "initialize_plugin"
             ):
                 self.logger.error(
@@ -112,7 +112,7 @@ class PluginLoader:
                 return
 
             # Get position, order, and optional priority
-            position_result = module.position()
+            position_result = module.get_plugin_placement()
             if isinstance(position_result, tuple):
                 if len(position_result) == 3:
                     position, order, priority = position_result
@@ -169,6 +169,15 @@ class PluginLoader:
                         else:
                             GLib.idle_add(target_box.append, widget_to_append)
 
+                if hasattr(plugin_instance, "panel_set_content"):
+                    panel_to_set_content = plugin_instance.panel_set_content()
+                    if panel_to_set_content:
+                        if isinstance(panel_to_set_content, list):
+                            for widget in panel_to_set_content:
+                                GLib.idle_add(target_box.append, widget)
+                        else:
+                            GLib.idle_add(target_box.set_content, panel_to_set_content)
+
                 elapsed_time = time.time() - start_time
                 self.logger.info(
                     f"Plugin '{module.__name__}' initialized in {elapsed_time:.4f} seconds "
@@ -193,6 +202,10 @@ class PluginLoader:
             return self.panel_instance.top_panel_box_systray
         elif position == "after-systray":
             return self.panel_instance.top_panel_box_for_buttons
+        elif position == "left-panel":
+            return self.panel_instance.left_panel
+        elif position == "bottom-panel":
+            return self.panel_instance.bottom_panel
         else:
             self.logger.error(f"Invalid position '{position}'. Skipping.")
             return None
