@@ -53,8 +53,48 @@ def setup_logging():
     )
 
 
-setup_logging()
-logger = logging.getLogger(__name__)
+class ColoredFormatter(logging.Formatter):
+    """Custom formatter to add colors to log messages."""
+
+    # Define colors for different log levels
+    COLORS = {
+        "DEBUG": "\033[36m",  # Cyan
+        "INFO": "\033[32m",  # Green
+        "WARNING": "\033[33m",  # Yellow
+        "ERROR": "\033[31m",  # Red
+        "CRITICAL": "\033[35m",  # Magenta
+    }
+    RESET = "\033[0m"
+
+    def format(self, record):
+        # Get the original log message
+        log_message = super().format(record)
+        # Add color based on the log level
+        log_level = record.levelname
+        if log_level in self.COLORS:
+            log_message = f"{self.COLORS[log_level]}{log_message}{self.RESET}"
+        return log_message
+
+
+def start_logger():
+    setup_logging()
+    logger = logging.getLogger("ColoredLogger")
+    logger.setLevel(logging.DEBUG)
+
+    # Create a console handler
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+
+    # Set the custom formatter
+    formatter = ColoredFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    ch.setFormatter(formatter)
+
+    # Add the handler to the logger
+    logger.addHandler(ch)
+    return logger
+
+
+logger = start_logger()
 
 
 class ConfigReloadHandler(FileSystemEventHandler):
