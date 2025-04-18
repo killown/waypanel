@@ -223,10 +223,10 @@ class CriptoPlugin:
         """
         Callback when the popover is opened.
         """
-        print("Crypto popover is open")
+        return
 
     def popover_is_closed(self, *_):
         """
         Callback when the popover is closed.
         """
-        print("Crypto popover is closed")
+        return

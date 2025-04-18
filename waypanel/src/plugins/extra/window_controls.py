@@ -38,16 +38,20 @@ class WindowControlsPlugin:
         # Create buttons
         self.maximize_button = self.create_control_button(
             "window-maximize-symbolic",
-            "maximize-button",
+            "window-controls-maximize-button",
             self.maximize_last_focused_view,
         )
 
         self.close_button = self.create_control_button(
-            "window-close-symbolic", "close-button", self.close_last_focused_view
+            "window-close-symbolic",
+            "window-controls-close-button",
+            self.close_last_focused_view,
         )
 
         self.minimize_button = self.create_control_button(
-            "window-minimize-symbolic", "minimize-button", self.minimize_view
+            "window-minimize-symbolic",
+            "window-controls-minimize-button",
+            self.minimize_view,
         )
 
         # Add buttons to container
@@ -56,7 +60,7 @@ class WindowControlsPlugin:
         self.cf_box.append(self.close_button)
 
         # Add CSS class
-        self.cf_box.add_css_class("cf_box")
+        self.cf_box.add_css_class("window-controls-box")
 
         # Subscribe to the 'view-focused' event
 

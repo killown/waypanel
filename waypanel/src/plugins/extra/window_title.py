@@ -39,14 +39,19 @@ class WindowTitlePlugin:
         self.window_title_content = Gtk.Box()
         self.window_title_label = Gtk.Label()
         self.window_title_icon = Gtk.Image.new_from_icon_name("None")
+        self.window_title_icon.add_css_class("window-title-icon")
         self.title_length = 50
 
         # Assemble the widget
         self.window_title_content.append(self.window_title_icon)
         self.window_title_content.append(self.window_title_label)
+        self.window_title_content.add_css_class("window-title-content")
 
         # Add CSS classes for styling
-        self.window_title_label.add_css_class("topbar-title-content-label")
+        self.window_title_label.add_css_class("window-title-label")
+
+        # first update so it will set the default it if no focus yet
+        self.update_widget("", "focus-windows")
 
         # Subscribe to necessary events using the EventManagerPlugin
         self._subscribe_to_events()

@@ -55,7 +55,7 @@ class PopoverFolders(Adw.Application):
                 panel_config = toml.load(f)["folders"]
             menu_icon = panel_config.get("top", {}).get("folder_icon", "folder")
         self.menubutton_folders.set_icon_name(menu_icon)
-        self.menubutton_folders.add_css_class("top_left_widgets")
+        self.menubutton_folders.add_css_class("places-menu-button")
 
     def create_popover_folders(self):
         """
@@ -139,8 +139,8 @@ class PopoverFolders(Adw.Application):
             # Add label and image to the bookmark box
             row_hbox.append(image)
             row_hbox.append(line)
-            line.add_css_class("label_from_folders")
-            image.add_css_class("icon_from_folders")
+            line.add_css_class("places-label-from-popover")
+            image.add_css_class("places-icon-from-popover")
 
         for folder in self.home_folders:
             folders_path = os.path.join(self.home, folder)
@@ -156,7 +156,7 @@ class PopoverFolders(Adw.Application):
 
             # Create label for the bookmark name
             line = Gtk.Label.new()
-            line.add_css_class("label_from_folders")
+            line.add_css_class("places-label-from-popover")
             line.set_label(folder)
             line.props.margin_start = 5
             line.props.hexpand = True
@@ -164,7 +164,7 @@ class PopoverFolders(Adw.Application):
 
             # Create image for the bookmark icon
             image = Gtk.Image.new_from_icon_name(icon)
-            image.add_css_class("icon_from_folders")
+            image.add_css_class("places-icon-from-popover")
             image.set_icon_size(Gtk.IconSize.LARGE)
             image.props.margin_end = 5
             image.set_halign(Gtk.Align.END)

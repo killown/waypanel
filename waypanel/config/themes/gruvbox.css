@@ -1,108 +1,92 @@
-.title_button_view {
-  background-color: #1d2021;
-  border-radius: 8px;
-  border-width: 0;
-  margin-top: 2px;
-  color: #ebdbb2;
-  font-size: 16px;
-  text-decoration: none;
-  transition:
-    box-shadow 0.15s,
-    transform 0.15s;
-  padding-left: 6px;
-  padding-right: 6px;
-  box-shadow:
-    rgba(0, 0, 0, 0.507) 0 1px 1px,
-    rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -4px 0 inset;
+.window-title-content {
+  background-color: transparent;
+  margin-left: 10px;
 }
 
-.dockbar-left {
+.window-title-label {
+  margin: 5px;
+  font-size: 15px;
+  font-weight: bold;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    sans-serif;
+  color: #ebdbb2;
+}
+
+.window-title-icon {
+   -gtk-icon-size: 28px;
+
+}
+
+.left-panel {
   -gtk-icon-size: 42px;
-  background: #d3d3d300;
-}
-
-.hvr-grow {
-  transform: translateZ(0);
-  box-shadow: 0 0 1px rgba(0, 0, 0, 0);
-  transition-duration: 0.1s;
-  transition-property: transform;
-}
-
-.dockbar-left-button {
-  padding-left: 4px;
-  padding-right: 4px;
-  padding-top: 4px;
-  padding-bottom: 4px;
-  margin-left: 4px;
-  margin-right: 4px;
-  background-color: #1d2021;
+  background: transparent;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08); 
   border-radius: 8px;
-  border-width: 0;
+  border-style: none;
   color: #ebdbb2;
-  box-shadow:
-    rgba(0, 0, 0, 0.507) 0 1px 1px,
-    rgba(0, 0, 0, 0.555) 0 1px 1px,
+  padding: 6px;
+    box-shadow:
+    rgba(0, 0, 0, 0.507) 0 2px 0px,
+    rgba(0, 0, 0, 0.555) 0 2px 0px,
     #00000075 0 -4px 0 inset;
-  color: #ffffffd8;
-  font-size: 20px;
-  font-family: "Sriracha";
-  text-decoration: none;
-  transition:
-    box-shadow 0.15s,
-    transform 0.15s;
 }
 
-.RightBar-button {
-  background-color: #1d2021;
-  border-radius: 4px;
-  border-width: 0;
-  box-shadow:
-    rgba(0, 0, 0, 0.507) 0 1px 1px,
-    rgba(0, 0, 0, 0.555) 0 1px 1px,
+.right-panel {
+  -gtk-icon-size: 42px;
+  background: transparent;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08); 
+  border-radius: 8px;
+  border-style: none;
+  color: #ebdbb2;
+  padding: 6px;
+    box-shadow:
+    rgba(0, 0, 0, 0.507) 0 2px 0px,
+    rgba(0, 0, 0, 0.555) 0 2px 0px,
     #00000075 0 -4px 0 inset;
-  font-size: 20px;
-  font-family: "Sriracha";
-  line-height: 1;
-  padding-left: 6px;
-  padding-right: 12px;
-  padding-top: 6px;
-  padding-bottom: 6px;
-  margin-left: 1px;
-  margin-right: 1px;
-  text-decoration: none;
-  transition:
-    box-shadow 0.15s,
-    transform 0.15s;
 }
 
-.RightBar {
-  -gtk-icon-size: 0px;
-  margin-top: 2px;
-  color: #ffffff;
-  background: #00000000;
-  background-color: #00000000;
+.dockbar-buttons {
+  background-color: #1d2021de;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+  color: #ebdbb2;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    sans-serif;
+  border-radius: 8px;
+  border-style: none;
+  padding: 6px 8px 6px 8px;
+  margin: 1px;
+  box-shadow:
+    rgba(0, 0, 0, 0.507) 0 2px 0px,
+    rgba(0, 0, 0, 0.555) 0 2px 0px,
+    #00000075 0 -4px 0 inset;
+  -gtk-icon-size: 42px;
+  font-size: 16px;
 }
 
-.cf_box {
-  margin-top: 2px;
+
+.dockbar-buttons:hover {
+  color: #282828;
+  background-color: #d5c4a1;
+  text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
+}
+
+
+.window-controls-box {
   border-style: solid;
   background: rgba(36, 40, 59, 0);
-  padding: 2px 4px 2px 4px;
-  margin: 1px 1px 1px 1px;
-  margin-top: 2px;
+  margin: 5px;
 }
 
-.close-button {
-  -gtk-icon-size: 22px;
-  background-color: #1d2021;
-  border-radius: 4px;
-  border-width: 0;
+.window-controls-close-button {
+  -gtk-icon-size: 20px;
+  background-color: #cc241d;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
     #00000075 0 -4px 0 inset;
-  padding: 2px 20px 2px 20px;
+  padding: 2px 10px 2px 10px;
   margin-left: 2px;
   margin-right: 1px;
   background-size: 100% auto;
@@ -111,59 +95,96 @@
   border-radius: 4px;
 }
 
-.maximize-button {
-  -gtk-icon-size: 22px;
-  background-color: #1d2021;
-  border-radius: 4px;
-  border-width: 0;
+.window-controls-maximize-button {
+  -gtk-icon-size: 20px;
+  background-color: #458588;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
     #00000075 0 -4px 0 inset;
-  padding: 0px 14px 0px 14px;
-  margin-left: 1px;
+  padding: 2px 10px 2px 10px;
+  margin-left: 2px;
   margin-right: 1px;
   background-size: 100% auto;
   color: #ebdbb2;
   border-color: rgba(36, 40, 59, 0.744);
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
-.minimize-button {
-  -gtk-icon-size: 22px;
-  background-color: #1d2021;
-  border-radius: 4px;
-  border-width: 0;
+.window-controls-minimize-button {
+  -gtk-icon-size: 20px;
+  background-color: #458588;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
     #00000075 0 -4px 0 inset;
-  padding: 2px 14px 2px 14px;
-  margin-left: 1px;
+  padding: 2px 10px 2px 10px;
+  margin-left: 2px;
   margin-right: 1px;
   background-size: 100% auto;
   color: #ebdbb2;
   border-color: rgba(36, 40, 59, 0.744);
-  border-radius: 6px;
+  border-radius: 4px;
+}
+
+/* notes plugin */
+.notes_button_clear.text-button {
+  background-color: #FF0000;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.notes_button_add.text-button {
+  background-color: #008000;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.notes_button_delete.image-button {
+  background-color: #FF0000;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+}
+
+
+/* Hover states */
+.close-button:hover {
+  background-color: #ff5f56cc;
+}
+
+.maximize-button:hover {
+  background-color: #ffbd2ecc;
+}
+
+.minimize-button:hover {
+  background-color: #28c940cc;
+}
+
+/* Active states */
+.close-button:active {
+  background-color: #ff5f5699;
+}
+
+.maximize-button:active {
+  background-color: #ffbd2e99;
+}
+
+.minimize-button:active {
+  background-color: #28c94099;
 }
 
 .top_panel_box_widgets_left {
-  background-color: #1d2021;
-  border-radius: 8px;
-  margin-top: 2px;
-  border-width: 0;
-  box-shadow:
-    rgba(0, 0, 0, 0.507) 0 1px 1px,
-    rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -4px 0 inset;
-  color: #ffffffd8;
-  font-size: 20px;
+  /* Complete transparency */
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+
+  /* Text styling only */
+  font-family: inherit;
   text-decoration: none;
-  transition:
-    box-shadow 0.15s,
-    transform 0.15s;
-  padding-left: 6px;
-  padding-right: 6px;
 }
 
 scale slider {
@@ -176,207 +197,187 @@ scale {
   min-width: 60px;
 }
 
-.weather {
-  font-size: 16px;
+.weather-label {
+  font-size: 15px;
   font-weight: bold;
-  background-color: #14151700;
-}
-
-.cripto {
-  font-size: 8px;
-  font-weight: bold;
-  background-color: #14151700;
+  background-color: transparent;
+  color: #89a899;
 }
 
 /*this is for menubuttons from systray menus*/
 .image-button {
-  -gtk-icon-size: 22px;
-  background: rgb(0, 0, 0);
+  -gtk-icon-size: 16px;
   color: #ffffffd8;
   background-color: #ffffff00;
 }
 
 .text-button {
-  border-radius: 80px;
-  background: rgb(0, 0, 0);
+  border-radius: 0px;
   background-color: rgba(13, 61, 151, 0);
-  font-size: 20px;
-  color: #36395ad8;
+  font-size: 12px;
+  color: rgba(221, 221, 221, 0.9);
   border-style: solid;
-  border-width: 0.1px;
   border-color: rgba(36, 40, 59, 0.744);
 }
 
 .bluetooth-dashboard-buttons {
-  border-radius: 8px;
-  font-size: 20px;
-  color: #ffffff;
-  background: rgba(42, 46, 68, 0.774);
-  background-color: rgba(42, 46, 68, 0.774);
-  border-style: solid;
-  border-width: 1px;
-  margin: 4px 4px 4px 4px;
-  padding: 2px 2px 2px 2px;
-  border-color: rgba(36, 40, 59, 0.744);
-  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+  background-color: #4479e1;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  font-size: 18px;
 }
 
 .button_clear_from_clipboard {
-  border-radius: 8px;
-  font-size: 20px;
-  color: #ffffff;
-  background: rgba(36, 40, 59, 0.9);
-  background-color: rgba(36, 40, 59, 0.9);
-  border-style: solid;
-  border-width: 1px;
-  margin: 4px 4px 4px 4px;
-  border-color: rgba(36, 40, 59, 0.744);
-  box-shadow: inset 0px 0px 24px 8px rgba(1, 1, 1, 0.4);
+  background-color: #FF0000;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+
+/*prevent the popover menu icon from being selected*/
+.applications-menu-icon:focus {
+    outline: none;
+    background-color: transparent;
 }
 
 /*icons from bookbarks menu*/
-.icon_from_popover_launcher {
-  -gtk-icon-size: 36px;
+.app-launcher-icon-from-popover {
+  -gtk-icon-size: 32px;
 }
 
-.transparent-popover-launcher {
+.app-launcher-label-from-popover {
+  font-size: 20px;
+}
+
+.app-launcher-popover {
   border-color: shade(@dark_bg_color, 0.8);
   background-image: none;
   background-color: @dark_bg_color;
   color: @dark_fg_color;
 }
 
-.popover_launcher_flowbox {
+.app-launcher-flowbox {
   background-color: transparent;
 }
 
-.popover_launcher_row_hbox {
-  background-color: transparent;
-}
-.icon_from_folders {
+.places-icon-from-popover {
   -gtk-icon-size: 42px;
 }
 
-.label_from_popover_launcher {
-  font-size: 20px;
-}
-
-.label_from_folders {
+.places-label-from-popover {
   font-size: 20px;
   font-family: "Sriracha";
 }
 
-.label_from_bookmarks {
+.places-label-from-popover {
   font-size: 20px;
   font-weight: bold;
 }
 
-.icon_from_bookmarks {
-  -gtk-icon-size: 28px;
+.bookmarks-icon-from-popover {
+  -gtk-icon-size: 36px;
 }
 
-.ClockButton {
-  font-size: 18px;
-  font-weight: bold;
-  color: #ebdbb2;
-}
-
-.Clock {
-  background-color: #1d2021;
-  border-radius: 8px;
-  color: #ebdbb2;
-  margin-top: 2px;
+.clock-label {
+  /* Complete transparency */
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    sans-serif;
   text-decoration: none;
-  transition:
-    box-shadow 0.15s,
-    transform 0.15s;
-  box-shadow:
-    rgba(0, 0, 0, 0.507) 0 1px 1px,
-    rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -4px 0 inset;
+  color: #ebdbb2;
+  font-family: inherit;
+  text-decoration: none;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 18px;
 }
 
-.wallpaper {
-  -gtk-icon-size: 400px;
+.Clock-box {
+  /* Complete transparency */
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
 }
 
-.tbcpusage {
-  min-width: 120px;
+.clock-button {
+  background-color: transparent;
 }
 
-.tbpid {
-  min-width: 80px;
+/*system dashboard: if gsettings prefer-dark, then changes for white colors is necessary*/
+.system_dashboard_stack {
+  color: #282828;
+  box-shadow: 10px 10px 30px #2d2d2d;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
 }
 
-.tbmemusage {
-  min-width: 140px;
-}
-
-.tbdiskusage {
-  min-width: 120px;
-}
-
-.tbclass {
-  min-width: 100px;
-}
-
-.TopBar {
-  color: #000000;
-  background-color: #00000000;
-  background: #00000000;
-  padding: 0px 2px 0px 2px;
+.top-panel {
+  background-color: #282828;
+  border-bottom: 1px solid #1a1a1a;
+  color: #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  font-weight: 400;
 }
 
 .top_panel_box_left {
   -gtk-icon-size: 28px;
-  padding: 0px 4px 2px 4px;
+}
+
+.right-box-spacer {
+  background-color: #282828;
 }
 
 .top_panel_box_right {
-  padding: 0px 4px 2px 4px;
+  background-color: #fff;
 }
 
-.top_left_widgets {
-  -gtk-icon-size: 32px;
-  padding: 0px 4px 2px 4px;
+
+.app-launcher-menu-button,
+.bookmarks-menu-button,
+.places-menu-button {
+  -gtk-icon-size: 28px;
 }
 
 .top_panel_box_systray {
   -gtk-icon-size: 22px;
-  margin-top: 2px;
-  background-color: #1d2021;
-  border-radius: 8px;
-  border-width: 0;
-  color: #ebdbb2;
-  padding: 2px 4px 2px 4px;
-  transition:
-    box-shadow 0.15s,
-    transform 0.15s;
-  box-shadow:
-    rgba(0, 0, 0, 0.507) 0 1px 1px,
-    rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -4px 0 inset;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  color: inherit;
+  font-family: inherit;
+  text-decoration: none;
+  margin: 2px;
 }
 
 .top_panel_box_center {
   -gtk-icon-size: 0px;
-  padding: 0px 4px 2px 4px;
 }
 
-.todo_label {
-  font-size: 15px;
+.floating-volume-widget {
+    background-color: rgba(30, 30, 30, 0.6);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
 }
 
-.TopBarBackground {
-  -gtk-icon-size: 24px;
-  background-color: #000000;
-  color: #ebdbb2;
-  font-size: 20px;
-  line-height: 1;
-  text-decoration: none;
-  transition:
-    box-shadow 0.15s,
-    transform 0.15s;
+.floating-volume-icon {
+    color: #fff; 
+}
+
+.floating-volume-label {
+    font-size: 14px;
+    font-weight: bold;
+    color: #ffffff; 
+}
+
+.mullvad-header-label {
+    font-weight: bold;
+    font-size: 14px;
+    color: #ffffff;
 }
 
 .BottomBar {
@@ -387,17 +388,29 @@ scale {
 
 .taskbar {
   border-radius: 8px;
-  border-width: 0;
-}
-
-.taskbar_button {
-  background-color: #1d2021;
-  color: #ebdbb2;
+  -gtk-icon-size: 42px;
+  background: transparent;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08); 
   border-radius: 8px;
   border-style: none;
-  border-width: 1px;
-  margin: 4px 4px 4px 4px;
-  padding: 4px 4px 4px 4px;
+  color: #ebdbb2;
+  padding: 6px;
+    box-shadow:
+    rgba(0, 0, 0, 0.507) 0 2px 0px,
+    rgba(0, 0, 0, 0.555) 0 2px 0px,
+    #00000075 0 -4px 0 inset;
+}
+
+.taskbar-button {
+  background-color: #1d2021de;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+  color: #ebdbb2;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    sans-serif;
+  border-radius: 8px;
+  border-style: none;
+  padding: 5px 5px 5px 5px;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 2px 0px,
     rgba(0, 0, 0, 0.555) 0 2px 0px,
@@ -406,12 +419,9 @@ scale {
   font-size: 16px;
 }
 
-.taskbar_button:hover {
-  background-color: #282828;
+.taskbar-button:hover {
+  color: #282828;
+  background-color: #d5c4a1;
+  text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
 }
 
-.hvr-grow:hover {
-  color: #ebdbb2;
-  background: #ebdbb2;
-  text-shadow: rgb(9, 5, 5) 0.006em 0.006em 0.007em;
-}

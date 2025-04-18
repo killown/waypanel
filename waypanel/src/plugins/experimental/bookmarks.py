@@ -76,57 +76,72 @@ class PopoverBookmarks(Adw.Application):
                 self.menubutton_bookmarks.set_icon_name(bookmarks_icon)
         else:
             self.menubutton_bookmarks.set_icon_name("librewolf")
-        self.menubutton_bookmarks.add_css_class("top_left_widgets")
+        self.menubutton_bookmarks.add_css_class("bookmarks-menu-button")
 
     def create_popover_bookmarks(self, *_):
         """
         Create and configure a popover for bookmarks with optimized thumbnails.
         """
+        # Initialize the popover
+        self._initialize_popover()
+
+        # Set up the layout (scrolled window, main box, and flowbox)
+        self._setup_layout()
+
+        # Load and process bookmarks
+        self._load_and_process_bookmarks()
+
+        # Finalize popover setup
+        self._finalize_popover_setup()
+
+        return self.popover_bookmarks
+
+    def _initialize_popover(self):
+        """Initialize the popover widget."""
         self.popover_bookmarks = Gtk.Popover.new()
         self.popover_bookmarks.set_has_arrow(False)
         self.popover_bookmarks.set_autohide(True)
         self.popover_bookmarks.connect("closed", self.popover_is_closed)
         self.popover_bookmarks.connect("notify::visible", self.popover_is_open)
 
-        # Set up scrolled window
+    def _setup_layout(self):
+        """Set up the layout components: scrolled window, main box, and flowbox."""
+        # Scrolled window
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_policy(
             Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC
         )
 
-        # Set up main box
+        # Main box
         self.main_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
 
-        # Create and configure flow box
+        # Flowbox
         self.flowbox = Gtk.FlowBox()
         self.flowbox.set_valign(Gtk.Align.START)
         self.flowbox.set_max_children_per_line(2)
         self.flowbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.flowbox.set_activate_on_single_click(True)
         self.flowbox.connect("child-activated", self.open_url_from_bookmarks)
+
+        # Attach widgets
         self.scrolled_window.set_child(self.flowbox)
         self.main_box.append(self.scrolled_window)
-
-        # Configure popover with main box
         self.popover_bookmarks.set_child(self.main_box)
 
-        # Load bookmarks from file
+    def _load_and_process_bookmarks(self):
+        """Load bookmarks from file and populate the flowbox."""
         bookmarks_path = os.path.join(self.home, ".bookmarks")
         with open(bookmarks_path, "r") as f:
             all_bookmarks = toml.load(f)
 
-        # Thumbnail settings
         THUMBNAIL_SIZE = (32, 32)
         THUMBNAIL_QUALITY = 75
 
-        # Populate flow box with bookmarks
         for name, bookmark_data in all_bookmarks.items():
             url = bookmark_data.get("url", "")
             container = bookmark_data.get("container", "")
-            self.row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-
-            # Create a box for each bookmark
-            self.row_hbox.MYTEXT = url, container
+            row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+            row_hbox.MYTEXT = (url, container)
 
             # Configure bookmark icon
             icon = url
@@ -151,9 +166,7 @@ class PopoverBookmarks(Adw.Application):
                 if not os.path.exists(bookmark_image):
                     if "image" in bookmark_data:
                         new_url = bookmark_data.get("image", "")
-                        self.download_image_direct(new_url, bookmark_image)
-                    else:
-                        self.download_image(url, self.bookmarks_image_path)
+                        self.download_image(new_url, bookmark_image)
 
                 # Generate thumbnail if needed
                 if (not os.path.exists(thumbnail_path)) or (
@@ -178,37 +191,37 @@ class PopoverBookmarks(Adw.Application):
             image.set_halign(Gtk.Align.END)
 
             # Add label and image to the bookmark box
-            self.row_hbox.append(image)
-            self.row_hbox.append(line)
-            self.flowbox.append(self.row_hbox)
-            line.add_css_class("label_from_bookmarks")
-            image.add_css_class("icon_from_popover_launcher")
+            row_hbox.append(image)
+            row_hbox.append(line)
+            self.flowbox.append(row_hbox)
+            line.add_css_class("bookmarks-label-from-popover")
+            image.add_css_class("bookmarks-icon-from-popover")
 
-        # Set scroll window dimensions
+    def _finalize_popover_setup(self):
+        """Finalize the popover setup, including dimensions and parent."""
         height = self.flowbox.get_preferred_size().natural_size.height
         width = self.flowbox.get_preferred_size().natural_size.width
         self.scrolled_window.set_min_content_width(width)
         self.scrolled_window.set_min_content_height(height)
 
-        # Set the parent and display the popover
-        self.popover_bookmarks.set_parent(self.menubutton_bookmarks)
-        return self.popover_bookmarks
+        if self.popover_bookmarks:
+            self.popover_bookmarks.set_parent(self.menubutton_bookmarks)
 
-    def download_image_direct(self, url, save_path):
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-        }
+        def download_image_direct(self, url, save_path):
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+            }
 
-        if "https://" not in url:
-            url = "https://" + url
-        response = requests.get(url, headers=headers)
+            if "https://" not in url:
+                url = "https://" + url
+            response = requests.get(url, headers=headers)
 
-        if response.status_code == 200:
-            with open(save_path, "wb") as f:
-                f.write(response.content)
-            print("Image downloaded successfully.")
-        else:
-            print(f"Failed to download image. Status code: {response.status_code}")
+            if response.status_code == 200:
+                with open(save_path, "wb") as f:
+                    f.write(response.content)
+                print("Image downloaded successfully.")
+            else:
+                print(f"Failed to download image. Status code: {response.status_code}")
 
     def download_image(self, url, save_path):
         headers = {

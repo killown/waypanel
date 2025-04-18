@@ -1,36 +1,52 @@
-.topbar-title-content-box {
-  /* Complete transparency */
+.window-title-content {
   background-color: transparent;
-  border: none;
-  box-shadow: none;
+  margin-left: 10px;
 }
 
-.topbar-title-content-label {
-margin: 5px;
-  font-size: 18px;
+.window-title-label {
+  margin: 5px;
+  font-size: 15px;
+  font-weight: bold;
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
     sans-serif;
   color: #ebdbb2;
 }
 
-.topbar-title-content-icon {
+.window-title-icon {
    -gtk-icon-size: 28px;
+
 }
 
-.dockbar-left {
+.left-panel {
   -gtk-icon-size: 42px;
-  background: #d3d3d300;
+  background: transparent;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08); 
+  border-radius: 8px;
+  border-style: none;
+  color: #ebdbb2;
+  padding: 6px;
+    box-shadow:
+    rgba(0, 0, 0, 0.507) 0 2px 0px,
+    rgba(0, 0, 0, 0.555) 0 2px 0px,
+    #00000075 0 -4px 0 inset;
 }
 
-.hvr-grow {
-  transform: translateZ(0);
-  box-shadow: 0 0 1px rgba(0, 0, 0, 0);
-  transition-duration: 0.1s;
-  transition-property: transform;
+.right-panel {
+  -gtk-icon-size: 42px;
+  background: transparent;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08); 
+  border-radius: 8px;
+  border-style: none;
+  color: #ebdbb2;
+  padding: 6px;
+    box-shadow:
+    rgba(0, 0, 0, 0.507) 0 2px 0px,
+    rgba(0, 0, 0, 0.555) 0 2px 0px,
+    #00000075 0 -4px 0 inset;
 }
 
-.dockbar-left-button {
+.dockbar-buttons {
   background-color: #1d2021de;
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
   color: #ebdbb2;
@@ -39,8 +55,7 @@ margin: 5px;
     sans-serif;
   border-radius: 8px;
   border-style: none;
-  border-width: 1px;
-  padding: 5px 5px 5px 9px;
+  padding: 6px 8px 6px 8px;
   margin: 1px;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 2px 0px,
@@ -50,52 +65,23 @@ margin: 5px;
   font-size: 16px;
 }
 
-.dockbar-left-button:hover {
+
+.dockbar-buttons:hover {
   color: #282828;
   background-color: #d5c4a1;
   text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
 }
 
-.RightBar-button {
-  background-color: #1d2021;
-  border-radius: 4px;
-  border-width: 0;
-  box-shadow:
-    rgba(0, 0, 0, 0.507) 0 1px 1px,
-    rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -4px 0 inset;
-  font-size: 20px;
-  font-family: "Sriracha";
-  line-height: 1;
-  padding-left: 6px;
-  padding-right: 12px;
-  padding-top: 6px;
-  padding-bottom: 6px;
-  margin-left: 1px;
-  margin-right: 1px;
-  text-decoration: none;
-  transition:
-    box-shadow 0.15s,
-    transform 0.15s;
-}
 
-.RightBar {
-  -gtk-icon-size: 0px;
-  margin-top: 2px;
-  color: #ffffff;
-  background: #00000000;
-}
-
-.cf_box {
+.window-controls-box {
   border-style: solid;
   background: rgba(36, 40, 59, 0);
   margin: 5px;
 }
 
-.close-button {
+.window-controls-close-button {
   -gtk-icon-size: 20px;
   background-color: #cc241d;
-  border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
@@ -109,10 +95,9 @@ margin: 5px;
   border-radius: 4px;
 }
 
-.maximize-button {
+.window-controls-maximize-button {
   -gtk-icon-size: 20px;
   background-color: #458588;
-  border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
@@ -126,10 +111,9 @@ margin: 5px;
   border-radius: 4px;
 }
 
-.minimize-button {
+.window-controls-minimize-button {
   -gtk-icon-size: 20px;
   background-color: #458588;
-  border-width: 0;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
@@ -164,6 +148,7 @@ margin: 5px;
   border: none;
   box-shadow: 0 1px 1px rgba(0,0,0,0.1);
 }
+
 
 /* Hover states */
 .close-button:hover {
@@ -212,28 +197,26 @@ scale {
   min-width: 60px;
 }
 
-.weather {
-  font-size: 20px;
+.weather-label {
+  font-size: 15px;
   font-weight: bold;
-  background-color: #14151700;
+  background-color: transparent;
+  color: #89a899;
 }
 
 /*this is for menubuttons from systray menus*/
 .image-button {
   -gtk-icon-size: 16px;
-  background: rgb(0, 0, 0);
   color: #ffffffd8;
   background-color: #ffffff00;
 }
 
 .text-button {
   border-radius: 0px;
-  background: rgb(0, 0, 0);
   background-color: rgba(13, 61, 151, 0);
   font-size: 12px;
   color: rgba(221, 221, 221, 0.9);
   border-style: solid;
-  border-width: 0.1px;
   border-color: rgba(36, 40, 59, 0.744);
 }
 
@@ -252,99 +235,77 @@ scale {
   box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
+
+/*prevent the popover menu icon from being selected*/
+.applications-menu-icon:focus {
+    outline: none;
+    background-color: transparent;
+}
+
 /*icons from bookbarks menu*/
-.icon_from_popover_launcher {
+.app-launcher-icon-from-popover {
   -gtk-icon-size: 32px;
 }
 
-.transparent-popover-launcher {
+.app-launcher-label-from-popover {
+  font-size: 20px;
+}
+
+.app-launcher-popover {
   border-color: shade(@dark_bg_color, 0.8);
   background-image: none;
   background-color: @dark_bg_color;
   color: @dark_fg_color;
 }
 
-.popover_launcher_flowbox {
+.app-launcher-flowbox {
   background-color: transparent;
 }
 
-.popover_launcher_row_hbox {
-  background-color: transparent;
-}
-
-.icon_from_folders {
+.places-icon-from-popover {
   -gtk-icon-size: 42px;
 }
 
-.label_from_popover_launcher {
-  font-size: 20px;
-}
-
-.label_from_folders {
+.places-label-from-popover {
   font-size: 20px;
   font-family: "Sriracha";
 }
 
-.label_from_bookmarks {
+.places-label-from-popover {
   font-size: 20px;
   font-weight: bold;
 }
 
-.icon_from_bookmarks {
-  -gtk-icon-size: 28px;
+.bookmarks-icon-from-popover {
+  -gtk-icon-size: 36px;
 }
 
-.clock-button {
+.clock-label {
   /* Complete transparency */
   background-color: transparent;
   border: none;
   box-shadow: none;
-
-  /* Text styling only */
-  color: #ebdbb2;
-  font-family: inherit;
-  text-decoration: none;
-  margin: 0;
-  font-size: 18px;
-}
-
-.Clock {
-  /* Complete transparency */
-  background-color: transparent;
-  border: none;
-  box-shadow: none;
-
-  /* Text styling only */
-  color: #ebdbb2;
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
     sans-serif;
   text-decoration: none;
-  margin: 0;
+  color: #ebdbb2;
+  font-family: inherit;
+  text-decoration: none;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 18px;
 }
 
-.wallpaper {
-  -gtk-icon-size: 400px;
+.Clock-box {
+  /* Complete transparency */
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
 }
 
-.tbcpusage {
-  min-width: 120px;
-}
-
-.tbpid {
-  min-width: 80px;
-}
-
-.tbmemusage {
-  min-width: 140px;
-}
-
-.tbdiskusage {
-  min-width: 120px;
-}
-
-.tbclass {
-  min-width: 100px;
+.clock-button {
+  background-color: transparent;
 }
 
 /*system dashboard: if gsettings prefer-dark, then changes for white colors is necessary*/
@@ -356,26 +317,30 @@ scale {
   font-weight: 400;
 }
 
-.TopBar {
+.top-panel {
   background-color: #282828;
   border-bottom: 1px solid #1a1a1a;
   color: #e0e0e0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  font-family: 'Segoe UI', sans-serif;
-  font-size: 16px;
   font-weight: 400;
-  padding: 0 10px;
 }
 
 .top_panel_box_left {
   -gtk-icon-size: 28px;
 }
 
-.top_panel_box_right {
-  /* Empty declaration removed */
+.right-box-spacer {
+  background-color: #282828;
 }
 
-.top_left_widgets {
+.top_panel_box_right {
+  background-color: #fff;
+}
+
+
+.app-launcher-menu-button,
+.bookmarks-menu-button,
+.places-menu-button {
   -gtk-icon-size: 28px;
 }
 
@@ -394,20 +359,25 @@ scale {
   -gtk-icon-size: 0px;
 }
 
-.todo_label {
-  font-size: 15px;
+.floating-volume-widget {
+    background-color: rgba(30, 30, 30, 0.6);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
 }
 
-.TopBarBackground {
-  -gtk-icon-size: 24px;
-  background-color: #000000;
-  color: #ebdbb2;
-  font-size: 20px;
-  line-height: 1;
-  text-decoration: none;
-  transition:
-    box-shadow 0.15s,
-    transform 0.15s;
+.floating-volume-icon {
+    color: #fff; 
+}
+
+.floating-volume-label {
+    font-size: 14px;
+    font-weight: bold;
+    color: #ffffff; 
+}
+
+.mullvad-header-label {
+    font-weight: bold;
+    font-size: 14px;
+    color: #ffffff;
 }
 
 .BottomBar {
@@ -418,7 +388,17 @@ scale {
 
 .taskbar {
   border-radius: 8px;
-  border-width: 0;
+  -gtk-icon-size: 42px;
+  background: transparent;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08); 
+  border-radius: 8px;
+  border-style: none;
+  color: #ebdbb2;
+  padding: 6px;
+    box-shadow:
+    rgba(0, 0, 0, 0.507) 0 2px 0px,
+    rgba(0, 0, 0, 0.555) 0 2px 0px,
+    #00000075 0 -4px 0 inset;
 }
 
 .taskbar-button {
@@ -430,7 +410,6 @@ scale {
     sans-serif;
   border-radius: 8px;
   border-style: none;
-  border-width: 1px;
   padding: 5px 5px 5px 5px;
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 2px 0px,
@@ -446,8 +425,3 @@ scale {
   text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
 }
 
-.hvr-grow:hover {
-  color: #282828;
-  background-color: #d5c4a1;
-  text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
-}

@@ -40,14 +40,13 @@ class AppLauncher(Adw.Application):
 
     def create_menu_popover_launcher(self):
         self.menubutton_launcher.connect("clicked", self.open_popover_launcher)
-        self.menubutton_launcher.add_css_class("applications-menu-icon")
+        self.menubutton_launcher.add_css_class("app-launcher-menu-button")
         menu_icon = self.utils.get_nearest_icon_name(
             self.obj.config.get("top", {}).get(
                 "menu_icon", self.utils.get_nearest_icon_name("archlinux")
             )
         )
         self.menubutton_launcher.set_icon_name(menu_icon)
-        self.menubutton_launcher.add_css_class("top_left_widgets")
 
     def create_popover_launcher(self, *_):
         """Create and configure the popover launcher."""
@@ -138,13 +137,13 @@ class AppLauncher(Adw.Application):
         """Finalize the popover setup."""
         min_size, natural_size = self.flowbox.get_preferred_size()
         width = natural_size.width if natural_size else 0
-        self.flowbox.add_css_class("popover_launcher_flowbox")
+        self.flowbox.add_css_class("app-launcher-flowbox")
         self.scrolled_window.set_min_content_width(width)
         self.scrolled_window.set_min_content_height(600)
         if self.popover_launcher:
             self.popover_launcher.set_parent(self.menubutton_launcher)
             self.popover_launcher.popup()
-            self.popover_launcher.add_css_class("transparent-popover-launcher")
+            self.popover_launcher.add_css_class("app-launcher-popover")
 
     def on_keypress(self, *_):
         cmd = "gtk-launch {}".format(self.search_get_child).split()
@@ -225,8 +224,8 @@ class AppLauncher(Adw.Application):
         row_hbox.append(line)
         self.flowbox.append(row_hbox)
 
-        line.add_css_class("label_from_popover_launcher")
-        image.add_css_class("icon_from_popover_launcher")
+        line.add_css_class("app-launcher-label-from-popover")
+        image.add_css_class("app-launcher-icon-from-popover")
 
     def add_recent_app(self, app_name):
         """
@@ -249,8 +248,8 @@ class AppLauncher(Adw.Application):
         # Add the app to the end of the list
         recent_apps.append(app_name)
 
-        # Truncate the list to the last 40 entries
-        recent_apps = recent_apps[-40:]
+        # Truncate the list to the last 50 entries
+        recent_apps = recent_apps[-50:]
 
         # Write the updated list back to the file
         with open(self.recent_apps_file, "w") as f:

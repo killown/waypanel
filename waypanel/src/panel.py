@@ -299,7 +299,7 @@ class Panel(Adw.Application):
             exclusive,
             self.monitor_width,
             size,
-            "TopBar",
+            "top-panel",
         )
 
         if config.get("enabled", True):
