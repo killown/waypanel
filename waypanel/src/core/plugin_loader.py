@@ -27,7 +27,7 @@ class PluginLoader:
         if config is None:
             return
 
-        plugin_dir = os.path.join(os.path.dirname(__file__), "../../plugins")
+        plugin_dir = os.path.join(os.path.dirname(__file__), "../plugins")
         valid_plugins = []
         plugin_metadata = []
 
@@ -87,6 +87,11 @@ class PluginLoader:
         self, module_name, module_path, disabled_plugins, valid_plugins, plugin_metadata
     ):
         """Process and validate a single plugin."""
+
+        # Skipping files with _name_conventions
+        if module_name.startswith("_"):
+            return
+
         if module_name in disabled_plugins:
             self.logger.info(f"Skipping plugin listed in 'disabled': {module_name}")
             return
@@ -96,6 +101,7 @@ class PluginLoader:
             module_full_path = f"waypanel.src.plugins.{module_path}"
             module = importlib.import_module(module_full_path)
 
+            is_plugin_enabled = getattr(module, "ENABLE_PLUGIN", True)
             # Check if the plugin has required functions
             if not hasattr(module, "get_plugin_placement") or not hasattr(
                 module, "initialize_plugin"
@@ -106,13 +112,13 @@ class PluginLoader:
                 return
 
             # Check if the plugin is enabled via ENABLE_PLUGIN
-            is_plugin_enabled = getattr(module, "ENABLE_PLUGIN", True)
             if not is_plugin_enabled:
                 self.logger.info(f"Skipping disabled plugin: {module_name}")
                 return
 
             # Get position, order, and optional priority
-            position_result = module.get_plugin_placement()
+            position_result = module.get_plugin_placement(self.panel_instance)
+
             if isinstance(position_result, tuple):
                 if len(position_result) == 3:
                     position, order, priority = position_result
@@ -129,7 +135,10 @@ class PluginLoader:
             valid_plugins.append(module_name)
             plugin_metadata.append((module, position, order, priority))
         except Exception as e:
-            self.logger.error(f"Error processing plugin {module_name}: {e}")
+            self.logger.error(
+                f"Failed to initialize plugin {module_name}: {e} ",
+                exc_info=True,
+            )
 
     def _update_plugin_configuration(self, config, valid_plugins, disabled_plugins):
         """Update the [plugins] section in the TOML configuration."""
@@ -179,15 +188,17 @@ class PluginLoader:
                             GLib.idle_add(target_box.set_content, panel_to_set_content)
 
                 elapsed_time = time.time() - start_time
+                plugin_name = module.__name__.split(".src.plugins.")[-1]
                 self.logger.info(
-                    f"Plugin '{module.__name__}' initialized in {elapsed_time:.4f} seconds "
+                    f"Plugin [{plugin_name}] initialized in {elapsed_time:.4f} seconds "
                     f"(Position: {position}, Order: {order}, Priority: {priority})"
                 )
             except Exception as e:
                 elapsed_time = time.time() - start_time
                 self.logger.error(
                     f"Failed to initialize plugin {module.__name__}: {e} "
-                    f"(processed in {elapsed_time:.4f} seconds)"
+                    f"(processed in {elapsed_time:.4f} seconds)",
+                    exc_info=True,
                 )
 
     def _get_target_panel_box(self, position):
@@ -204,8 +215,12 @@ class PluginLoader:
             return self.panel_instance.top_panel_box_for_buttons
         elif position == "left-panel":
             return self.panel_instance.left_panel
+        elif position == "right-panel":
+            return self.panel_instance.right_panel
         elif position == "bottom-panel":
             return self.panel_instance.bottom_panel
+        elif position == "top-panel":
+            return self.panel_instance.top_panel
         else:
             self.logger.error(f"Invalid position '{position}'. Skipping.")
             return None

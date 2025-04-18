@@ -9,7 +9,7 @@ from wayfire.extra.ipc_utils import WayfireUtils
 ENABLE_PLUGIN = True
 
 
-def get_plugin_placement():
+def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
     position = "right"
     order = 10
@@ -23,10 +23,8 @@ def initialize_plugin(panel_instance):
         panel_instance: The main panel object from panel.py
     """
     if ENABLE_PLUGIN:
-        print("Initializing 'Go Next Workspace with Views' Plugin.")
         plugin = GoNextWorkspaceWithViewsPlugin(panel_instance)
         plugin.setup_plugin()
-        print("'Go Next Workspace with Views' Plugin initialized.")
         return plugin
 
 
@@ -34,6 +32,7 @@ class GoNextWorkspaceWithViewsPlugin:
     def __init__(self, panel_instance):
         """Initialize the plugin."""
         self.obj = panel_instance
+        self.logger = self.obj.logger
         self.sock = WayfireSocket()
         self.wf_utils = WayfireUtils(self.sock)
         self.gestures_setup_plugin = None
@@ -57,7 +56,6 @@ class GoNextWorkspaceWithViewsPlugin:
             ]
             self.append_right_click_action()
             return False  # Stop the timeout loop
-        print("Waiting for gestures_setup plugin to load...")
         return True  # Continue checking
 
     def append_right_click_action(self):
@@ -72,15 +70,19 @@ class GoNextWorkspaceWithViewsPlugin:
         self.gestures_setup_plugin.append_action(
             callback_name=callback_name, action=self.go_next_workspace_with_views
         )
-        print(f"Action appended to gesture callback: {callback_name}")
 
     def get_workspaces_with_views(self):
         """
-        Retrieve a list of workspaces that have views.
+        Retrieve a list of workspaces that have views, ensuring the current workspace is always included.
         """
         focused_output = self.sock.get_focused_output()
         monitor = focused_output["geometry"]
-        ws_with_views = []
+
+        # Always include the current workspace
+        current_ws_x = focused_output["workspace"]["x"]
+        current_ws_y = focused_output["workspace"]["y"]
+        ws_with_views = [{"x": current_ws_x, "y": current_ws_y}]
+
         views = self.wf_utils.get_focused_output_views()
 
         if views:
@@ -97,26 +99,28 @@ class GoNextWorkspaceWithViewsPlugin:
             if views:
                 grid_width = focused_output["workspace"]["grid_width"]
                 grid_height = focused_output["workspace"]["grid_height"]
-                current_ws_x = focused_output["workspace"]["x"]
-                current_ws_y = focused_output["workspace"]["y"]
 
                 # Check each workspace for visible views
                 for ws_x in range(grid_width):
                     for ws_y in range(grid_height):
-                        for view in views:
-                            intersection_area = (
-                                self.wf_utils._calculate_intersection_area(
-                                    view["geometry"],
-                                    ws_x - current_ws_x,
-                                    ws_y - current_ws_y,
-                                    monitor,
+                        if (ws_x, ws_y) != (
+                            current_ws_x,
+                            current_ws_y,
+                        ):  # Avoid duplicate entry
+                            for view in views:
+                                intersection_area = (
+                                    self.wf_utils._calculate_intersection_area(
+                                        view["geometry"],
+                                        ws_x - current_ws_x,
+                                        ws_y - current_ws_y,
+                                        monitor,
+                                    )
                                 )
-                            )
-                            if (
-                                intersection_area > 0
-                            ):  # View is visible on this workspace
-                                ws_with_views.append({"x": ws_x, "y": ws_y})
-                                break  # No need to check other views for this workspace
+                                if (
+                                    intersection_area > 0
+                                ):  # View is visible on this workspace
+                                    ws_with_views.append({"x": ws_x, "y": ws_y})
+                                    break  # No need to check other views for this workspace
 
         return ws_with_views
 
@@ -126,7 +130,7 @@ class GoNextWorkspaceWithViewsPlugin:
         """
         workspaces_with_views = self.get_workspaces_with_views()
         if not workspaces_with_views:
-            print("No workspaces with views found.")
+            self.logger.info("No workspaces with views found.")
             return
 
         # Get the currently active workspace
@@ -149,7 +153,9 @@ class GoNextWorkspaceWithViewsPlugin:
         )
 
         if current_index is None:
-            print("Current workspace not found in the list of workspaces with views.")
+            self.logger.info(
+                "Current workspace not found in the list of workspaces with views."
+            )
             return
 
         # Calculate the index of the next workspace (cyclically)
@@ -157,7 +163,7 @@ class GoNextWorkspaceWithViewsPlugin:
         next_workspace = workspaces_with_views[next_index]
 
         # Switch to the next workspace
-        print(
+        self.logger.info(
             f"Switching to workspace: x={next_workspace['x']}, y={next_workspace['y']}"
         )
         self.sock.set_workspace(next_workspace["x"], next_workspace["y"])

@@ -8,7 +8,7 @@ from gi.repository import Gtk, GLib
 ENABLE_PLUGIN = True
 
 
-def get_plugin_placement():
+def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
     position = "systray"
     order = 2

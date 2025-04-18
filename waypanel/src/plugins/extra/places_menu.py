@@ -13,7 +13,7 @@ ENABLE_PLUGIN = True
 
 
 # set the plugin location, order, position
-def get_plugin_placement():
+def get_plugin_placement(panel_instance):
     position = "left"
     order = 3
     return position, order

@@ -15,7 +15,7 @@ from waypanel.src.core.utils import Utils
 ENABLE_PLUGIN = True
 
 
-def get_plugin_placement():
+def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
     position = "bottom-panel"
     order = 5
@@ -38,6 +38,8 @@ class TaskbarPlugin(Gtk.Application):
         """
         self.logger = panel_instance.logger
         self.obj = panel_instance
+        # will hide until scale plugin is toggled if False
+        self.layer_always_exclusive = False
         self.utils = Utils()
         self.taskbar_list = []
         self.buttons_id = {}
@@ -48,13 +50,21 @@ class TaskbarPlugin(Gtk.Application):
         # Load configuration and set up taskbar
         self.config = panel_instance.config
         self._setup_taskbar()
-
-        # Subscribe to events using the event_manager
         self._subscribe_to_events()
+
+    def set_layer_exclusive(self, exclusive):
+        if exclusive:
+            self.update_widget(set_layer_position_exclusive, self.bottom_panel, 48)
+        else:
+            self.update_widget(unset_layer_position_exclusive, self.bottom_panel)
 
     def _setup_taskbar(self):
         """Create and configure the bottom panel."""
         self.logger.debug("Setting up bottom panel.")
+        if self.layer_always_exclusive:
+            LayerShell.set_layer(self.bottom_panel, LayerShell.Layer.TOP)
+            LayerShell.auto_exclusive_zone_enable(self.bottom_panel)
+            self.bottom_panel.set_size_request(10, 10)
 
         # Add launcher button
         self.add_launcher = Gtk.Button()
@@ -102,7 +112,6 @@ class TaskbarPlugin(Gtk.Application):
         self.logger.info("Bottom panel setup completed.")
 
         # Unset layer position for other panels
-        self.update_widget(unset_layer_position_exclusive, self.bottom_panel)
 
     def _subscribe_to_events(self):
         """Subscribe to relevant events using the event_manager."""
@@ -116,16 +125,30 @@ class TaskbarPlugin(Gtk.Application):
                 self.logger.info("Subscribing to events for Taskbar Plugin.")
 
                 # Subscribe to necessary events
-                event_manager.subscribe_to_event("view-focused", self.handle_view_event)
-                event_manager.subscribe_to_event("view-mapped", self.handle_view_event)
                 event_manager.subscribe_to_event(
-                    "view-unmapped", self.handle_view_event
+                    "view-focused",
+                    self.handle_view_event,
+                    plugin_name="taskbar",
                 )
                 event_manager.subscribe_to_event(
-                    "view-title-changed", self.handle_view_event
+                    "view-mapped",
+                    self.handle_view_event,
+                    plugin_name="taskbar",
                 )
                 event_manager.subscribe_to_event(
-                    "plugin-activation-state-changed", self.handle_plugin_event
+                    "view-unmapped",
+                    self.handle_view_event,
+                    plugin_name="taskbar",
+                )
+                event_manager.subscribe_to_event(
+                    "view-title-changed",
+                    self.handle_view_event,
+                    plugin_name="taskbar",
+                )
+                event_manager.subscribe_to_event(
+                    "plugin-activation-state-changed",
+                    self.handle_plugin_event,
+                    plugin_name="taskbar",
                 )
 
                 return False
@@ -302,14 +325,17 @@ class TaskbarPlugin(Gtk.Application):
             layer_set_on_output_name = json.loads(output_info).get("output_name")
         focused_output_name = self.sock.get_focused_output()["name"]
         # only set layer if the focused output is the same as the defined in panel creation
-        if layer_set_on_output_name == focused_output_name:
-            # set_layer_position_exclusive(self.left_panel, 64)
-            set_layer_position_exclusive(self.bottom_panel, 48)
+        if (
+            layer_set_on_output_name == focused_output_name
+            and not self.layer_always_exclusive
+        ):
+            self.set_layer_exclusive(True)
         self.update_taskbar_on_scale()
 
     def on_scale_desactivated(self):
         """Handle scale plugin deactivation."""
-        unset_layer_position_exclusive(self.obj.bottom_panel)
+        if not self.layer_always_exclusive:
+            self.set_layer_exclusive(False)
 
     def get_valid_button(self, button_id):
         if button_id in self.buttons_id:

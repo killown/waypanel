@@ -110,7 +110,6 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
     # lets try to set monitor info from Gdk, if not, get the panel default info instead
     monitor = get_monitor_info()
     gdk_monitor = None
-    print(type(monitor))
     monitor_name = next((name for name in monitor if name.endswith("-1")), None)
     home = os.path.expanduser("~")
     config_path = os.path.join(home, ".config/waypanel")
@@ -165,6 +164,7 @@ def CreatePanel(app, anchor, layer, exclusive, width, height, class_style):
 
     if anchor == "RIGHT":
         LayerShell.set_anchor(window, LayerShell.Edge.RIGHT, True)
+        window.set_size_request(10, 10)
         if exclusive:
             LayerShell.auto_exclusive_zone_enable(window)
 

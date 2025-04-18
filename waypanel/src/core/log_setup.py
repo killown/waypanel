@@ -16,20 +16,34 @@ class ColoredFormatter(logging.Formatter):
         "CRITICAL": "\033[35m",  # Magenta
     }
     RESET = "\033[0m"
+    BLUE = "\033[34m"  # Blue for filenames
 
     def format(self, record):
-        log_message = super().format(record)
-        log_level = record.levelname
-        if log_level in self.COLORS:
-            log_message = f"{self.COLORS[log_level]}{log_message}{self.RESET}"
-        return log_message
+        # Extract log details
+        levelname = record.levelname
+        filename = record.filename
+        message = record.getMessage()
+
+        # Apply color coding
+        level_color = self.COLORS.get(levelname, self.RESET)
+        formatted_message = (
+            f"{self.BLUE}[{filename}]{self.RESET} "
+            f"{level_color}{levelname}{self.RESET}: "
+            f"{self.COLORS['INFO']}{message}{self.RESET}"
+        )
+
+        # Add timestamp and logger name if needed
+        if self._fmt:
+            formatted_message = (
+                super().format(record).replace(record.getMessage(), formatted_message)
+            )
+
+        return formatted_message
 
 
 def setup_logging(level=logging.INFO):
-    """
-    Configure logging with both file and console handlers.
-    Ensures no duplicate handlers are added.
-    """
+    """Configure logging with both file and console handlers.
+    Ensures no duplicate handlers are added."""
     logger = logging.getLogger("WaypanelLogger")
     logger.propagate = False
 
@@ -52,14 +66,9 @@ def setup_logging(level=logging.INFO):
         )
         file_handler.setFormatter(file_formatter)
 
-        if logger.hasHandlers():
-            logger.handlers.clear()
-
         # Console Handler with Colors
         console_handler = logging.StreamHandler()
-        console_formatter = ColoredFormatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        console_formatter = ColoredFormatter()
         console_handler.setFormatter(console_formatter)
 
         # Add handlers to the logger

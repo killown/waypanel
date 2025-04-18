@@ -15,13 +15,13 @@ from PIL import Image
 import re
 
 from ....core.utils import Utils
-from .clipboard_server import AsyncClipboardServer
+from ._clipboard_server import AsyncClipboardServer
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 
 
-def get_plugin_placement():
+def get_plugin_placement(panel_instance):
     return "systray", 2
 
 

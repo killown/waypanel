@@ -1,7 +1,4 @@
-import os
-import toml
 from gi.repository import Gtk
-from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
 from ...core.utils import Utils
 
 
@@ -16,7 +13,7 @@ def initialize_plugin(panel_instance):
     return WindowTitlePlugin(panel_instance)
 
 
-def get_plugin_placement():
+def get_plugin_placement(panel_instance):
     """
     Define the plugin's position and order.
 
@@ -31,17 +28,12 @@ def get_plugin_placement():
 class WindowTitlePlugin:
     def __init__(self, panel_instance):
         """
-        Initialize the plugin.
-
-        Args:
-            obj: The main panel object from panel.py
-            app: The main application instance
+        Initialize the Window Title plugin.
         """
         self.obj = panel_instance
-        self.utils = Utils()
         self.logger = self.obj.logger
-        self.config_path = os.path.expanduser("~/.config/waypanel/waypanel.toml")
-        self.load_config()
+        self.utils = Utils()
+        self.title_length = 50
 
         # Create window title widget components
         self.window_title_content = Gtk.Box()
@@ -55,61 +47,81 @@ class WindowTitlePlugin:
 
         # Add CSS classes for styling
         self.window_title_label.add_css_class("topbar-title-content-label")
-        self.window_title_icon.add_css_class("topbar-title-content-icon")
-        self.window_title_content.add_css_class("topbar-title-content")
 
-        # Set up IPC client
-        self.ipc_client = WayfireClientIPC(self.handle_event)
-        self.ipc_client.wayfire_events_setup("/tmp/waypanel.sock")
+        # Subscribe to necessary events using the EventManagerPlugin
+        self._subscribe_to_events()
 
     def append_widget(self):
         return self.window_title_content
 
-    def load_config(self):
-        """Load configuration from waypanel.toml."""
-        if os.path.exists(self.config_path):
-            with open(self.config_path, "r") as f:
-                self.config = toml.load(f)
-        else:
-            self.config = {}
-
-    def handle_event(self, event):
+    def _subscribe_to_events(self):
         """
-        Handle IPC events from the Wayfire compositor.
+        Subscribe to relevant events using the EventManagerPlugin.
+        """
+        if "event_manager" not in self.obj.plugin_loader.plugins:
+            self.logger.error(
+                "Event Manager Plugin is not loaded. Cannot subscribe to events."
+            )
+            return
+
+        event_manager = self.obj.plugin_loader.plugins["event_manager"]
+
+        # Subscribe to view-related events
+        event_manager.subscribe_to_event(
+            "view-focused", self.on_view_focused, plugin_name="window_title"
+        )
+        event_manager.subscribe_to_event(
+            "view-closed",
+            self.on_view_closed,
+            plugin_name="window_title",
+        )
+        event_manager.subscribe_to_event(
+            "view-title-changed",
+            self.on_view_title_changed,
+            plugin_name="window_title",
+        )
+
+        self.logger.info("Window Title Plugin subscribed to view events.")
+
+    def on_view_focused(self, event_message):
+        """
+        Handle when a view gains focus.
 
         Args:
-            event: The event dictionary received from the IPC server.
+            event_message (dict): The event message containing view details.
         """
-        if self.handle_view_event(event):
-            return
         try:
-            if event.get("event") == "view-focused":
-                view = event.get("view", {})
-                self.update_title_icon(view)
-            elif event.get("event") == "view-closed":
-                self.clear_widget()
-            elif event.get("event") == "view-title-changed":
-                view = event.get("view", {})
+            if "view" in event_message:
+                view = event_message.get("view", {})
                 self.update_title_icon(view)
         except Exception as e:
-            self.logger.error(f"Error handling IPC event: {e}")
+            self.logger.error(f"Error handling 'view-focused' event: {e}")
 
-    def handle_view_event(self, msg):
-        # Validate the event using handle_event_checks
-        if not self.utils.handle_event_checks(msg, required_keys=["event"]):
-            return True
+    def on_view_closed(self, event_message):
+        """
+        Handle when a view is closed.
 
-        view = msg.get("view")
+        Args:
+            event_message (dict): The event message containing view details.
+        """
+        try:
+            self.clear_widget()
+        except Exception as e:
+            self.logger.error(f"Error handling 'view-closed' event: {e}")
 
-        # Common checks for view-related events
-        if view is None:
-            return True
+    def on_view_title_changed(self, event_message):
+        """
+        Handle when a view's title changes.
 
-        if view["pid"] == -1 or view.get("role") != "toplevel":
-            return True
-
-        if view.get("app-id") in ["", "nil"]:
-            return True
+        Args:
+            event_message (dict): The event message containing view details.
+        """
+        try:
+            if "view" in event_message:
+                view = event_message.get("view", {})
+                self.update_title_icon(view)
+        except Exception as e:
+            self.logger.error(f"Error handling 'view-title-changed' event: {e}")
 
     def update_title_icon(self, view):
         """
@@ -119,6 +131,9 @@ class WindowTitlePlugin:
             view: The view object containing details like title, app-id, etc.
         """
         try:
+            view = self.utils.is_view_valid(view)
+            if not view:
+                return
             title = self.filter_title(view.get("title", ""))
             wm_class = view.get("app-id", "").lower()
             initial_title = title.split()[0].lower() if title else ""
@@ -130,7 +145,9 @@ class WindowTitlePlugin:
             self.logger.error(f"Error updating title/icon: {e}")
 
     def clear_widget(self):
-        """Clear the widget when no view is focused."""
+        """
+        Clear the widget when no view is focused.
+        """
         self.update_widget("", "")
 
     def filter_title(self, title):

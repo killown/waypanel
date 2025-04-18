@@ -12,6 +12,7 @@ import subprocess
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+ENABLE_PLUGIN = False
 LOG_ENABLED = False
 
 

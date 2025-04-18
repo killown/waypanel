@@ -7,7 +7,7 @@ from gi.repository import Gtk
 ENABLE_PLUGIN = True
 
 
-def get_plugin_placement():
+def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
     position = "right"  # Can be "left", "right", or "center"
     order = 10  # Lower numbers have higher priority
@@ -21,7 +21,6 @@ def initialize_plugin(panel_instance):
         panel_instance: The main panel object from panel.py
     """
     if ENABLE_PLUGIN:
-        print("Initializing 'Go Next Workspace with Views' Plugin.")
         plugin = GesturePlugin(panel_instance)
         plugin.setup_gestures()
         return plugin

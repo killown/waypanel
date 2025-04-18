@@ -6,16 +6,16 @@ from gi.repository import Gtk, GLib
 ENABLE_PLUGIN = True
 
 
-def get_plugin_placement():
+def get_plugin_placement(panel_instance):
     """
     Define the plugin's position and order.
     """
-    position = "right"  # Can be "left", "right", or "center"
+    position = "systray"
     order = 3  # Lower numbers have higher priority
     return position, order
 
 
-def initialize_plugin(obj, app):
+def initialize_plugin(panel_instance):
     """
     Initialize the cripto plugin.
     Args:
@@ -23,15 +23,14 @@ def initialize_plugin(obj, app):
         app: The main application instance.
     """
     if ENABLE_PLUGIN:
-        cripto_plugin = CriptoPlugin(obj, app)
+        cripto_plugin = CriptoPlugin(panel_instance)
         cripto_plugin.create_menu_popover_crypto()
         return cripto_plugin
 
 
 class CriptoPlugin:
-    def __init__(self, obj, app):
-        self.obj = obj
-        self.app = app
+    def __init__(self, panel_instance):
+        self.obj = panel_instance
         self.popover_crypto = None
         self.crypto_labels = {}
         self.update_timeout_id = None
@@ -43,6 +42,9 @@ class CriptoPlugin:
             "VETUSDT": None,
         }
 
+    def append_widget(self):
+        return self.menubutton_crypto
+
     def create_menu_popover_crypto(self):
         """
         Create the crypto button and popover.
@@ -52,14 +54,13 @@ class CriptoPlugin:
         self.menubutton_crypto.set_icon_name("taxes-finances")  # Default icon
         self.menubutton_crypto.connect("clicked", self.open_popover_crypto)
 
-        # Add the button to the systray
-        if hasattr(self.obj, "top_panel_box_right"):
-            self.obj.top_panel_box_systray.append(self.menubutton_crypto)
-        else:
-            print("Error: top_panel_box_right not found in Panel object.")
-
         # Start fetching crypto data periodically
-        self.start_crypto_updates()
+        def run_once():
+            self.start_crypto_updates()
+            return False
+
+        # delay the fetch so it won't hang other plugins
+        GLib.timeout_add_seconds(3, run_once)
 
     def start_crypto_updates(self):
         """

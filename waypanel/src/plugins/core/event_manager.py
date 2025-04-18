@@ -8,7 +8,7 @@ from wayfire import WayfireSocket as OriginalWayfireSocket
 ENABLE_PLUGIN = True
 
 
-def get_plugin_placement():
+def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
     any_order = 99
     priority = 1
@@ -44,24 +44,35 @@ class EventManagerPlugin:
         self.utils = Utils()
 
         # Initialize the IPC client
-        from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
+        from waypanel.src.ipc.ipc_client import WayfireClientIPC
 
         self.ipc_client = WayfireClientIPC(self.handle_event)
         self.ipc_client.wayfire_events_setup("/tmp/waypanel.sock")
         self.event_subscribers = {}  # Dictionary to store event subscribers
 
     def handle_event(self, msg):
-        """Handle incoming IPC events."""
-        # if not self._validate_event(msg):
-        #    return
+        """
+        Handle incoming IPC events and notify subscribers.
 
+        Args:
+            msg (dict): The event message containing details about the event.
+        """
         event_type = msg.get("event")
 
         # Notify subscribers
         if event_type in self.event_subscribers:
-            for callback in self.event_subscribers[event_type]:
-                # callback must return False always to prevent infinite loops
-                GLib.idle_add(callback, msg)
+            for callback, plugin_name in self.event_subscribers[event_type]:
+                try:
+                    # Execute the callback function
+                    GLib.idle_add(callback, msg)
+                    if plugin_name:
+                        self.logger.debug(
+                            f"Event '{event_type}' triggered for plugin '{plugin_name}'"
+                        )
+                except Exception as e:
+                    self.logger.error(
+                        f"Error executing callback for event '{event_type}': {e}"
+                    )
 
         # Handle specific event types
         if event_type.startswith("view-"):
@@ -161,12 +172,28 @@ class EventManagerPlugin:
             return
         # Add workspace-specific logic here
 
-    def subscribe_to_event(self, event_type, callback):
-        """Allow plugins to subscribe to specific events."""
+    def subscribe_to_event(self, event_type, callback, plugin_name=None):
+        """
+        Allow plugins to subscribe to specific events.
+
+        Args:
+            event_type (str): The type of event to subscribe to.
+            callback (function): The callback function to execute when the event occurs.
+            plugin_name (str, optional): The name of the plugin subscribing to the event.
+        """
         if event_type not in self.event_subscribers:
             self.event_subscribers[event_type] = []
-        self.event_subscribers[event_type].append(callback)
-        self.logger.info(f"Subscribed to event: {event_type}")
+
+        # Add the callback and plugin name to the list of subscribers
+        self.event_subscribers[event_type].append((callback, plugin_name))
+
+        # Log the subscription with the plugin name
+        if plugin_name:
+            self.logger.info(
+                f"Plugin '{plugin_name}' subscribed to event: {event_type}"
+            )
+        else:
+            self.logger.info(f"Anonymous plugin subscribed to event: {event_type}")
 
     def unsubscribe_from_event(self, event_type, callback):
         """Allow plugins to unsubscribe from specific events."""

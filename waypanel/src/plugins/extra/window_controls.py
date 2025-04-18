@@ -9,9 +9,9 @@ from ...core.utils import Utils
 ENABLE_PLUGIN = True
 
 
-def get_plugin_placement():
+def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
-    position = "after-systray"  # Can be "left", "right", or "center"
+    position = "after-systray"
     order = 1
     priority = 1
     return position, order, priority
@@ -63,7 +63,11 @@ class WindowControlsPlugin:
         def run_once():
             if "event_manager" in self.obj.plugin_loader.plugins:
                 event_manager = self.obj.plugin_loader.plugins["event_manager"]
-                event_manager.subscribe_to_event("view-focused", self.on_view_focused)
+                event_manager.subscribe_to_event(
+                    "view-focused",
+                    self.on_view_focused,
+                    plugin_name="window_controls",
+                )
                 self.obj.logger.info(
                     "Window Constrols plugin subscribed to view-focused event!"
                 )
@@ -102,7 +106,6 @@ class WindowControlsPlugin:
 
     def maximize_last_focused_view(self, *_):
         if self.last_toplevel_focused_view:
-            print(self.last_toplevel_focused_view)
             self.sock.assign_slot(self.last_toplevel_focused_view["id"], "slot_c")
 
     def close_last_focused_view(self, *_):

@@ -11,7 +11,7 @@ from waypanel.src.core.create_panel import (
 from waypanel.src.core.utils import Utils
 from waypanel.src.core.utils import Utils as utils
 
-from waypanel.src.plugins.core.plugin_loader import PluginLoader
+from waypanel.src.core.plugin_loader import PluginLoader
 
 
 class Panel(Adw.Application):
@@ -359,10 +359,10 @@ class Panel(Adw.Application):
 
         exclusive = config.get("Exclusive", "True") == "True"
         position = config.get("position", "right")
-        size = config.get("size", 32)
+        size = config.get("size", 64)
 
         self.right_panel = CreatePanel(
-            self.panel_instance, "RIGHT", position, exclusive, size, 0, "RightBar"
+            self.panel_instance, "RIGHT", position, exclusive, size, 0, "right-panel"
         )
 
         if config.get("enabled", True):

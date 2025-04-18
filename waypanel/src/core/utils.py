@@ -18,8 +18,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 from wayfire import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.extra.stipc import Stipc
-
-from waypanel.src.ipc_server.ipc_client import WayfireClientIPC
+from waypanel.src.ipc.ipc_client import WayfireClientIPC
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -602,30 +601,6 @@ class Utils(Adw.Application):
                     return exist
         return ""
 
-    def dpms_status(self):
-        status = check_output(["wlopm"]).decode().strip().split("\n")
-        dpms_status = {}
-        for line in status:
-            line = line.split()
-            dpms_status[line[0]] = line[1]
-        return dpms_status
-
-    def dpms(self, state, output_name=None):
-        if state == "off" and output_name is None:
-            outputs = [output["name"] for output in self.sock.list_outputs()]
-            for output in outputs:
-                call("wlopm --off {}".format(output).split())
-        if state == "on" and output_name is None:
-            outputs = [output["name"] for output in self.sock.list_outputs()]
-            for output in outputs:
-                call("wlopm --on {}".format(output).split())
-        if state == "on":
-            call("wlopm --on {}".format(output_name).split())
-        if state == "off":
-            call("wlopm --off {}".format(output_name).split())
-        if state == "toggle":
-            call("wlopm --toggle {}".format(output_name).split())
-
     def create_taskbar_launcher(
         self,
         wmclass,
@@ -983,7 +958,6 @@ class Utils(Adw.Application):
                 pid = app.get("application.process.id")
                 if not pid:
                     continue
-                # Try to get the best available title in this order:
                 # 1. Media title (song/video name)
                 # 2. Window title
                 # 3. Application name
@@ -1033,17 +1007,40 @@ class Utils(Adw.Application):
         self.sock.set_view_alpha(view_id, original_alpha)
 
     def is_view_valid(self, view_id):
-        views = [i["id"] for i in self.sock.list_views()]
-        if view_id not in views:
-            return
+        """
+        Validate if a view is valid based on its ID or dictionary.
+
+        Args:
+            view_id (int or dict): The ID of the view or a dictionary containing view details.
+
+        Returns:
+            dict or False: The view object if valid, otherwise False.
+        """
+        # Extract the ID if view_id is a dictionary
+        if isinstance(view_id, dict):
+            view_id = view_id.get("id")
+            if not view_id:
+                return False  # Invalid dictionary (missing "id" key)
+
+        # Get the list of active view IDs
+        view_ids = [i["id"] for i in self.sock.list_views()]
+        if view_id not in view_ids:
+            return False
+
+        # Fetch the view details
         view = self.sock.get_view(view_id)
+        if not view:
+            return False
+
+        # Perform additional checks
         if view["role"] != "toplevel":
             return False
         if view["pid"] == -1:
             return False
-        if view["app-id"] == "" or view["app-id"] == "nil":
+        if view["app-id"] in ["", "nil"]:
             return False
-        return self.sock.get_view(view_id)
+
+        return view
 
     def set_view_focus(self, view_id):
         try:
@@ -1094,33 +1091,19 @@ class Utils(Adw.Application):
         self.scripts = config_paths["scripts"]
         self.config_path = config_paths["config_path"]
         self.style_css_config = config_paths["style_css_config"]
-        self.window_notes_config = config_paths["window_notes_config"]
         self.cache_folder = config_paths["cache_folder"]
 
     def setup_config_paths(self):
         home = os.path.expanduser("~")
         full_path = os.path.abspath(__file__)
         directory_path = os.path.dirname(full_path)
-        # Get the parent directory, waypane/src will go for waypanel
         directory_path = os.path.dirname(directory_path)
         self.waypanel_cfg = os.path.join(home, ".config/waypanel/waypanel.toml")
-        # Initial path setup
         scripts = os.path.join(home, ".config/waypanel/scripts")
         if not self.file_exists(scripts):
             scripts = "../config/scripts"
-
         config_path = os.path.join(home, ".config/waypanel")
-
-        style_css_config = os.path.join(config_path, "style.css")
-        if not self.file_exists(style_css_config):
-            style_css_config = os.path.join(directory_path, "config/style.css")
-
-        window_notes_config = os.path.join(config_path, "window-config.toml")
-        if not self.file_exists(window_notes_config):
-            window_notes_config = os.path.join(
-                directory_path, "config/window-config.toml"
-            )
-
+        style_css_config = os.path.join(config_path, "styles.css")
         cache_folder = os.path.join(home, ".cache/waypanel")
 
         if not os.path.exists(config_path):
@@ -1132,7 +1115,6 @@ class Utils(Adw.Application):
             "scripts": scripts,
             "config_path": config_path,
             "style_css_config": style_css_config,
-            "window_notes_config": window_notes_config,
             "cache_folder": cache_folder,
         }
 

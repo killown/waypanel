@@ -4,7 +4,7 @@ from gi.repository import Adw, Gtk
 # NOTE: Always use GLib.idle_add for non-blocking code.
 
 
-def get_plugin_placement():
+def get_plugin_placement(panel_instance):
     """
     Define where the plugin should be placed in the panel and its order.
     plugin_loader will use this metadata to append the widget to the panel instance.

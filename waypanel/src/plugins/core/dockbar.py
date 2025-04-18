@@ -13,11 +13,19 @@ from ...core.create_panel import (
 ENABLE_PLUGIN = True
 
 
-def get_plugin_placement():
+def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
-    position = "left-panel"  # Can be "left", "right", "center", or "systray"
-    order = 5  # Lower numbers have higher priority
-    return position, order
+    position = "right-panel"
+    # priority position is from waypanel.toml [dockbar_panel.position] = "left"
+    # the dockbar will be on left ignoring hardcoded position
+    dockbar_config = panel_instance.config.get("dockbar_panel", {})
+    if dockbar_config:
+        if "panel" in dockbar_config:
+            position = dockbar_config["panel"]
+            position = f"{position}-panel"
+    order = 5
+    priority = 1
+    return position, order, priority
 
 
 def initialize_plugin(panel_instance):
@@ -35,7 +43,9 @@ class DockbarPlugin:
         self.obj = panel_instance
         self.utils = Utils()
         self.taskbar_list = []
+        self.dockbar_panel = None
         self.buttons_id = {}
+        self.plugins = self.obj.plugin_loader.plugins
         self.sock = WayfireSocket()  # Use the shared WayfireSocket instance
         self.wf_utils = WayfireUtils(self.sock)  # Use the shared WayfireUtils instance
         self.dockbar = None
@@ -48,29 +58,63 @@ class DockbarPlugin:
         # Subscribe to events using the event_manager
         self._subscribe_to_events()
 
+    def get_dockbar_position(self, panel):
+        if panel == "left-panel":
+            return self.obj.left_panel
+        if panel == "right-panel":
+            return self.obj.right_panel
+        elif panel == "bottom-panel":
+            return self.obj.bottom_panel
+        elif panel == "top-panel":
+            return self.obj.top_panel
+        else:
+            self.logger.error(f"Invalid panel value: {panel}")
+
+    def choose_and_set_dockbar(self):
+        panel = get_plugin_placement(self.obj)[0]
+
+        dockbar_config = self.config.get("dockbar_panel", {})
+        if dockbar_config:
+            if "panel" in dockbar_config:
+                position = dockbar_config["panel"]
+                panel = f"{position}-panel"
+
+        # Validate panel value
+        valid_panels = {"left-panel", "right-panel", "bottom-panel", "top-panel"}
+        if panel not in valid_panels:
+            self.logger.error(
+                f"Invalid panel value: {panel}. Using default 'left-panel'."
+            )
+            panel = "left-panel"
+
+        self.dockbar_panel = self.get_dockbar_position(panel)
+
     def _setup_dockbar(self):
         """Set up the dockbar based on the configuration."""
         dockbar_toml = self.config.get("dockbar", {})
-        orientation = dockbar_toml.get("orientation", "v")  # Vertical by default
+        orientation = dockbar_toml.get("orientation", "v")
         class_style = dockbar_toml.get("class_style", "dockbar-buttons")
 
         self.dockbar = self.utils.CreateFromAppList(
             self.obj.waypanel_cfg, orientation, class_style
         )
+        self.choose_and_set_dockbar()
         self.logger.info("Dockbar setup completed.")
 
     def _subscribe_to_events(self):
         """Subscribe to relevant events using the event_manager."""
 
         def is_event_manager_ready():
-            if "event_manager" not in self.obj.plugin_loader.plugins:
-                self.obj.logger("dockbar is waiting for event manager")
+            if "event_manager" not in self.plugins:
+                self.logger.info("dockbar is waiting for event manager")
                 return True
             else:
-                event_manager = self.obj.plugin_loader.plugins["event_manager"]
+                event_manager = self.plugins["event_manager"]
                 self.logger.info("Subscribing to events for Dockbar Plugin.")
                 event_manager.subscribe_to_event(
-                    "plugin-activation-state-changed", self.handle_plugin_event
+                    "plugin-activation-state-changed",
+                    self.handle_plugin_event,
+                    plugin_name="dockbar",
                 )
                 return False
 
@@ -111,13 +155,12 @@ class DockbarPlugin:
         focused_output_name = self.sock.get_focused_output()["name"]
         # only set layer if the focused output is the same as the defined in panel creation
         if layer_set_on_output_name == focused_output_name:
-            set_layer_position_exclusive(self.obj.left_panel, 64)
+            set_layer_position_exclusive(self.dockbar_panel, 64)
 
     def on_scale_desactivated(self):
         """Handle scale plugin deactivation."""
         # this will set panels on bottom, hidden it from views
-        self.update_widget(unset_layer_position_exclusive, self.obj.left_panel)
-        return False
+        self.update_widget(unset_layer_position_exclusive, self.dockbar_panel)
 
     def panel_set_content(self):
         """Return the dockbar widget to be added to the panel."""

@@ -12,13 +12,15 @@ import orjson as json
 import gi
 import sys
 import time
+
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from waypanel.src.ipc_server.ipc_async_server import WayfireEventServer
+from waypanel.src.ipc.ipc_async_server import WayfireEventServer
 from wayfire import WayfireSocket
+from waypanel.src.core.log_setup import setup_logging
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sock = WayfireSocket()
-
 # Constants
 DEFAULT_CONFIG_PATH = "~/.config/waypanel"
 GTK_LAYER_SHELL_INSTALL_PATH = "~/.local/lib/gtk4-layer-shell"
@@ -28,74 +30,8 @@ TEMP_DIRS = {"gtk_layer_shell": "/tmp/gtk4-layer-shell", "waypanel": "/tmp/waypa
 CONFIG_SUBDIR = "waypanel/config"
 
 
-def setup_logging():
-    """Configure logging with log rotation."""
-    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    log_file = os.path.expanduser("~/.config/waypanel/waypanel.log")
-
-    # Create the directory for the log file if it doesn't exist
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
-
-    # Configure RotatingFileHandler
-    handler = RotatingFileHandler(
-        log_file,
-        maxBytes=1024 * 1024,  # 1 MB per log file
-        backupCount=2,
-    )
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format=log_format,
-        handlers=[
-            handler,  # Log to file with rotation
-            logging.StreamHandler(),  # Log to console
-        ],
-    )
-
-
-class ColoredFormatter(logging.Formatter):
-    """Custom formatter to add colors to log messages."""
-
-    # Define colors for different log levels
-    COLORS = {
-        "DEBUG": "\033[36m",  # Cyan
-        "INFO": "\033[32m",  # Green
-        "WARNING": "\033[33m",  # Yellow
-        "ERROR": "\033[31m",  # Red
-        "CRITICAL": "\033[35m",  # Magenta
-    }
-    RESET = "\033[0m"
-
-    def format(self, record):
-        # Get the original log message
-        log_message = super().format(record)
-        # Add color based on the log level
-        log_level = record.levelname
-        if log_level in self.COLORS:
-            log_message = f"{self.COLORS[log_level]}{log_message}{self.RESET}"
-        return log_message
-
-
-def start_logger(level=logging.INFO):
-    setup_logging()
-    logger = logging.getLogger("ColoredLogger")
-    logger.setLevel(level)
-
-    # Create a console handler
-    ch = logging.StreamHandler()
-    ch.setLevel(level)
-
-    # Set the custom formatter
-    formatter = ColoredFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    ch.setFormatter(formatter)
-
-    # Add the handler to the logger
-    logger.addHandler(ch)
-    return logger
-
-
 # use param logging.DEBUG for detailed output
-logger = start_logger()
+logger = setup_logging(level=logging.INFO)
 
 
 class ConfigReloadHandler(FileSystemEventHandler):

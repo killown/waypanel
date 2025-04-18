@@ -7,7 +7,7 @@ from subprocess import Popen, check_output
 ENABLE_PLUGIN = True
 
 
-def get_plugin_placement():
+def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
     position = "systray"
     order = 5
@@ -25,9 +25,9 @@ def initialize_plugin(panel_instance):
 class MullvadPlugin:
     def __init__(self, panel_instance):
         self.obj = panel_instance
+        self.logger = self.obj.logger
         self._setup_config_paths()
         self.mullvad_version = self.get_mullvad_version()
-        print("Mullvad plugin initialized.")
 
     def append_widget(self):
         return self.menubutton_mullvad
@@ -44,7 +44,7 @@ class MullvadPlugin:
             version = check_output(["mullvad", "--version"]).decode().strip()
             return version
         except Exception as e:
-            print(f"Error retrieving Mullvad version: {e}")
+            self.logger.info(f"Error retrieving Mullvad version: {e}")
             return "Mullvad Version Unavailable"
 
     def create_menu_popover_mullvad(self):
@@ -65,7 +65,6 @@ class MullvadPlugin:
 
     def create_menu_model(self):
         """Create a Gio.Menu and populate it with options for Mullvad."""
-        print("Creating Mullvad menu model.")
         menu = Gio.Menu()
 
         # Add menu items
@@ -142,29 +141,29 @@ class MullvadPlugin:
 
     def connect_vpn(self, action, parameter=None):
         """Connect to Mullvad VPN."""
-        print("Connecting to Mullvad VPN...")
+        self.logger.info("Connecting to Mullvad VPN...")
         Popen(["mullvad", "connect"])
         Popen(["notify-send", "The VPN is connected now"])
 
     def disconnect_vpn(self, action, parameter=None):
         """Disconnect from Mullvad VPN."""
-        print("Disconnecting from Mullvad VPN...")
+        self.logger.info("Disconnecting from Mullvad VPN...")
         Popen(["mullvad", "disconnect"])
         Popen(["notify-send", "The VPN is disconnected now"])
 
     def check_status(self, action, parameter=None):
         """Check the status of the Mullvad VPN."""
-        print("Checking Mullvad VPN status...")
+        self.logger.info("Checking Mullvad VPN status...")
         try:
             status = check_output(["mullvad", "status"]).decode().strip()
             self.status_label.set_text(status)
             Popen(["notify-send", status])
         except Exception as e:
-            print(f"Error checking Mullvad status: {e}")
+            self.logger.info(f"Error checking Mullvad status: {e}")
 
     def random_br_relay(self, action, parameter=None):
         """Set a random Brazilian relay for Mullvad."""
-        print("Setting random Brazilian relay...")
+        self.logger.info("Setting random Brazilian relay...")
         try:
             # Fetch the list of relays
             mullvad_list = check_output(["mullvad", "relay", "list"]).decode()
@@ -190,9 +189,8 @@ class MullvadPlugin:
             Popen(["mullvad", "connect"])
             msg = f"Mudando para {relay_choice}"
             Popen(["notify-send", msg])
-            print(msg)
         except Exception as e:
-            print(f"Error setting random Brazilian relay: {e}")
+            self.logger.error(f"Error setting random Brazilian relay: {e}")
 
     def update_vpn_status(self):
         """Check the status of the Mullvad VPN and update the UI."""
