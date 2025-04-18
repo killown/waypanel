@@ -76,14 +76,14 @@ class ColoredFormatter(logging.Formatter):
         return log_message
 
 
-def start_logger():
+def start_logger(level=logging.INFO):
     setup_logging()
     logger = logging.getLogger("ColoredLogger")
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(level)
 
     # Create a console handler
     ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
+    ch.setLevel(level)
 
     # Set the custom formatter
     formatter = ColoredFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -94,6 +94,7 @@ def start_logger():
     return logger
 
 
+# use param logging.DEBUG for detailed output
 logger = start_logger()
 
 
