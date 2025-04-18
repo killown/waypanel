@@ -41,10 +41,9 @@ class AppLauncher(Adw.Application):
     def create_menu_popover_launcher(self):
         self.menubutton_launcher.connect("clicked", self.open_popover_launcher)
         self.menubutton_launcher.add_css_class("applications-menu-icon")
-        menu_icon = self.utils.get_nearest_icon_name("archlinux")
         menu_icon = self.utils.get_nearest_icon_name(
             self.obj.config.get("top", {}).get(
-                "menu_icon", self.utils.get_nearest_icon_name("wayfire")
+                "menu_icon", self.utils.get_nearest_icon_name("archlinux")
             )
         )
         self.menubutton_launcher.set_icon_name(menu_icon)
