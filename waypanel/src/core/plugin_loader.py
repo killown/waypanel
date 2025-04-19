@@ -80,7 +80,12 @@ class PluginLoader:
             disabled_plugins = set(config["plugins"].get("disabled", "").split())
             return config, disabled_plugins
         except Exception as e:
-            self.logger.error(f"Failed to load configuration file: {e}")
+            self.logger.error_handler.handle(
+                error=e,
+                message="Failed to load configuration file: {e}",
+                level="error",
+                user_notification=lambda msg: print(f"USER NOTIFICATION: {msg}"),
+            )
             return None, None
 
     def _process_plugin(
@@ -106,7 +111,7 @@ class PluginLoader:
             if not hasattr(module, "get_plugin_placement") or not hasattr(
                 module, "initialize_plugin"
             ):
-                self.logger.error(
+                self.logger.error_handler(
                     f"Module {module_name} is missing required functions. Skipping."
                 )
                 return
@@ -118,26 +123,32 @@ class PluginLoader:
 
             # Get position, order, and optional priority
             position_result = module.get_plugin_placement(self.panel_instance)
-
-            if isinstance(position_result, tuple):
-                if len(position_result) == 3:
-                    position, order, priority = position_result
+            # don't append any widget except if a position is found
+            position = "background"
+            priority = 0
+            order = 0
+            if position_result:
+                if isinstance(position_result, tuple):
+                    if len(position_result) == 3:
+                        position, order, priority = position_result
+                    else:
+                        position, order = position_result
+                        priority = 0
                 else:
-                    position, order = position_result
-                    priority = 0
-            else:
-                self.logger.error(
-                    f"Invalid position result for plugin {module_name}. Skipping."
-                )
-                return
+                    self.logger.error_handler.handle(
+                        f"Invalid position result for plugin {module_name}. Skipping."
+                    )
+                    return
 
             # Add to valid plugins and metadata
             valid_plugins.append(module_name)
             plugin_metadata.append((module, position, order, priority))
         except Exception as e:
-            self.logger.error(
-                f"Failed to initialize plugin {module_name}: {e} ",
-                exc_info=True,
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Failed to initialize plugin: {module_name}: {e} ",
+                level="error",
+                user_notification=lambda msg: print(f"USER NOTIFICATION: {msg}"),
             )
 
     def _update_plugin_configuration(self, config, valid_plugins, disabled_plugins):
@@ -154,17 +165,38 @@ class PluginLoader:
         # Sort by priority (descending), then by order (ascending)
         plugin_metadata.sort(key=lambda x: (-x[3], x[2]))
 
+        # Check if 'event_manager' exists in plugin_metadata
+        event_manager_metadata = None
+        for metadata in plugin_metadata:
+            if metadata[0].__name__.endswith("event_manager"):
+                event_manager_metadata = metadata
+                plugin_metadata.remove(metadata)
+                break
+
+        # If 'event_manager' was found, insert it at the beginning to load first
+        if event_manager_metadata:
+            plugin_metadata.insert(0, event_manager_metadata)
+
         for module, position, order, priority in plugin_metadata:
+            # Initialize the plugin
+            module_name = module.__name__.split(".")[-1]
+            plugin_name = module.__name__.split(".src.plugins.")[-1]
+            plugin_instance = module.initialize_plugin(self.panel_instance)
+            self.plugins[module_name] = plugin_instance
             start_time = time.time()  # Start timing
             try:
-                target_box = self._get_target_panel_box(position)
+                target_box = self._get_target_panel_box(position, plugin_name)
                 if target_box is None:
                     continue
 
-                # Initialize the plugin
-                module_name = module.__name__.split(".")[-1]
-                plugin_instance = module.initialize_plugin(self.panel_instance)
-                self.plugins[module_name] = plugin_instance
+                # background plugins have no widgets to append
+                if position == "background":
+                    elapsed_time = time.time() - start_time
+                    self.logger.info(
+                        f"Plugin [{plugin_name}] initialized in {elapsed_time:.4f} seconds "
+                        f"(Position: {position}, Order: {order}, Priority: {priority})"
+                    )
+                    continue
 
                 # Check if plugin has append_widget method and use it
                 if hasattr(plugin_instance, "append_widget"):
@@ -188,7 +220,6 @@ class PluginLoader:
                             GLib.idle_add(target_box.set_content, panel_to_set_content)
 
                 elapsed_time = time.time() - start_time
-                plugin_name = module.__name__.split(".src.plugins.")[-1]
                 self.logger.info(
                     f"Plugin [{plugin_name}] initialized in {elapsed_time:.4f} seconds "
                     f"(Position: {position}, Order: {order}, Priority: {priority})"
@@ -198,10 +229,10 @@ class PluginLoader:
                 self.logger.error(
                     f"Failed to initialize plugin {module.__name__}: {e} "
                     f"(processed in {elapsed_time:.4f} seconds)",
-                    exc_info=True,
+                    # exc_info=True,
                 )
 
-    def _get_target_panel_box(self, position):
+    def _get_target_panel_box(self, position, plugin_name=None):
         """Determine the target panel box based on the plugin's position."""
         if position == "left":
             return self.panel_instance.top_panel_box_left
@@ -221,6 +252,10 @@ class PluginLoader:
             return self.panel_instance.bottom_panel
         elif position == "top-panel":
             return self.panel_instance.top_panel
+        elif position == "background":
+            return "background"
         else:
-            self.logger.error(f"Invalid position '{position}'. Skipping.")
+            self.logger.error_handler.handle(
+                f"[{plugin_name}] has an invalid position in get_plugin_placement() '{position}'."
+            )
             return None

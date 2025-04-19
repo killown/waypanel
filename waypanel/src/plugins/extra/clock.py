@@ -8,6 +8,7 @@ gi.require_version("Gtk", "4.0")
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+COORDINATES = -23.5505, -46.6333  # Example coordinates (São Paulo)
 
 
 def get_plugin_placement(panel_instance):
@@ -160,7 +161,7 @@ class ClockCalendarPlugin:
 
     def fetch_weather_data(self):
         """Fetch weather data from the API."""
-        lat, lon = -23.5505, -46.6333  # Example coordinates (São Paulo)
+        lat, lon = COORDINATES
         url = f"https://api.met.no/weatherapi/locationforecast/2.0/compact?lat={lat}&lon={lon}"
         headers = {"User-Agent": "MyWeatherApp/1.0 youremail@example.com"}
         try:
@@ -202,4 +203,3 @@ class ClockCalendarPlugin:
 
         # Update the label with the selected date
         self.selected_date_label.set_label(f"Selected: {selected_date}")
-        print(f"Selected date: {selected_date}")
