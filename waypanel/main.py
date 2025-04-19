@@ -19,6 +19,7 @@ from waypanel.src.ipc.ipc_async_server import WayfireEventServer
 from wayfire import WayfireSocket
 from waypanel.src.core.log_setup import setup_logging
 
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sock = WayfireSocket()
 # Constants
@@ -47,6 +48,19 @@ class ConfigReloadHandler(FileSystemEventHandler):
                 logger.info("wayfire.ini modified - triggering reload")
                 self.last_modified = now
                 self.callback()
+
+
+def global_exception_handler(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        # Do not capture KeyboardInterrupt
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger = logging.getLogger("WaypanelLogger")
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
+sys.excepthook = global_exception_handler
 
 
 def restart_application():
@@ -79,21 +93,21 @@ def cleanup_resources():
     pass
 
 
-def ipc_server():
+def ipc_server(logger):
     """Start the IPC server in an asyncio event loop."""
     logger.info("Starting IPC server")
     try:
-        server = WayfireEventServer()
+        server = WayfireEventServer(logger)
         asyncio.run(server.main())
     except Exception as e:
         logger.error(f"IPC server crashed: {e}", exc_info=True)
         raise
 
 
-def start_ipc_server():
+def start_ipc_server(logger):
     """Launch the IPC server in a daemon thread."""
     logger.debug("Spawning IPC server thread")
-    ipc_thread = threading.Thread(target=ipc_server, daemon=True)
+    ipc_thread = threading.Thread(target=ipc_server, args=(logger,), daemon=True)
     ipc_thread.start()
     logger.info("IPC server started in background thread")
 
@@ -388,7 +402,7 @@ def main():
         verify_required_wayfire_plugins()
         layer_shell_check()
         check_config_path()
-        start_ipc_server()
+        start_ipc_server(logger)
 
         logger.info("Loading panel...")
         panel = load_panel()

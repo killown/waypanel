@@ -3,7 +3,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, GLib
 from wayfire.ipc import WayfireSocket
-from ...core.utils import Utils
+
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -26,8 +26,9 @@ def initialize_plugin(panel_instance):
 class WindowControlsPlugin:
     def __init__(self, panel_instance):
         self.obj = panel_instance
+        self.logger = self.obj.logger
         self.sock = WayfireSocket()
-        self.utils = Utils()
+        self.utils = self.obj.utils
 
         # Store the last focused toplevel view as an instance variable
         self.last_toplevel_focused_view = None
@@ -72,12 +73,12 @@ class WindowControlsPlugin:
                     self.on_view_focused,
                     plugin_name="window_controls",
                 )
-                self.obj.logger.info(
+                self.logger.info(
                     "Window Constrols plugin subscribed to view-focused event!"
                 )
                 return False
             else:
-                self.obj.logger.info(
+                self.logger.info(
                     "Window Constrols plugin waiting for event_manager to be ready"
                 )
                 return True
@@ -117,12 +118,12 @@ class WindowControlsPlugin:
             self.last_toplevel_focused_view
             and self.last_toplevel_focused_view.get("role") == "toplevel"
         ):
-            self.obj.logger.info(
+            self.logger.info(
                 f"Closing view with ID: {self.last_toplevel_focused_view['id']}"
             )
             self.sock.close_view(self.last_toplevel_focused_view["id"])
         else:
-            self.obj.logger.info("No valid toplevel view to close.")
+            self.logger.info("No valid toplevel view to close.")
 
         print(self.obj.plugin_loader.plugins)
 

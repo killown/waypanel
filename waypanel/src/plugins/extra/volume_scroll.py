@@ -12,8 +12,7 @@ ENABLE_PLUGIN = True
 
 
 def get_plugin_placement(panel_instance):
-    """Define the plugin's position and order."""
-    return "right", 10  # Position: right, Order: 10
+    return
 
 
 def initialize_plugin(panel_instance):

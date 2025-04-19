@@ -5,7 +5,9 @@ from gi.repository import GLib
 
 
 class WayfireClientIPC:
-    def __init__(self, handle_event):
+    def __init__(self, handle_event, panel_instance):
+        self.obj = panel_instance
+        self.logger = self.obj.logger
         self.client_socket = None
         self.source = None
         self.buffer = ""
@@ -40,9 +42,9 @@ class WayfireClientIPC:
                         event = orjson.loads(event_str)
                         self.process_event(event)
                     except orjson.JSONDecodeError as e:
-                        print(f"JSON decode error: {e}")
+                        self.logger.error_handler.handle(f"JSON decode error: {e}")
         except UnicodeDecodeError as e:
-            print(f"{e}")
+            self.logger.error_handler.handle(f"{e}")
 
         return GLib.SOURCE_CONTINUE
 

@@ -6,7 +6,7 @@ from subprocess import Popen, check_output
 import psutil
 from gi.repository import Adw, Gtk
 import toml
-from ...core.utils import Utils
+
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -29,8 +29,9 @@ class SystemDashboard(Adw.Application):
     def __init__(self, panel_instance):
         self.popover_dashboard = None
         self.obj = panel_instance
+        self.logger = self.obj.logger
         self._setup_config_paths()
-        self.utils = Utils(application_id="com.github.utils")
+        self.utils = self.obj.utils
 
     def append_widget(self):
         return self.menubutton_dashboard
@@ -95,7 +96,9 @@ class SystemDashboard(Adw.Application):
                     subprocess.Popen([path], start_new_session=True)
                     break
             else:
-                print("Error: waypanel-settings not found in PATH", file=sys.stderr)
+                self.logger.info(
+                    "Error: waypanel-settings not found in PATH", file=sys.stderr
+                )
 
     def load_config(self):
         if not hasattr(self, "_cached_config"):
@@ -176,7 +179,7 @@ class SystemDashboard(Adw.Application):
             if icon_vbox is not None and isinstance(icon_vbox, Gtk.Widget):
                 button.set_child(icon_vbox)
             else:
-                print("Error: Invalid icon_vbox provided")
+                self.logger.info("Error: Invalid icon_vbox provided")
             flowbox.append(button)
             button.connect("clicked", self.on_action, data[0])
             name_label.add_css_class("system_dash_label")
@@ -204,7 +207,7 @@ class SystemDashboard(Adw.Application):
         try:
             connected_devices = check_output(connected_devices).decode()
         except Exception as e:
-            print(e)
+            self.logger.error_handler.handle(e)
             return
 
         if device_id in connected_devices:
@@ -232,7 +235,7 @@ class SystemDashboard(Adw.Application):
                 # Check if the process name matches
                 if name in proc.info["name"]:
                     proc.kill()
-                    print(
+                    self.logger.info(
                         f"Killed process {proc.info['name']} with PID {proc.info['pid']}"
                     )
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):

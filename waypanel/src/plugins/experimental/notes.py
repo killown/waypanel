@@ -6,10 +6,12 @@ from pathlib import Path
 from typing import List, Tuple
 from gi.repository import Adw, Gio, Gtk, GLib
 from gi.repository import Gtk4LayerShell as LayerShell
-from ...core.utils import Utils
+
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+# load the plugin only after essential plugins is loaded
+DEPS = ["dockbar", "taskbar"]
 
 
 def get_plugin_placement(panel_instance):
@@ -86,8 +88,9 @@ class MenuNotes(Gtk.Application):
     def __init__(self, panel_instance):
         self.popover_notes = None
         self.obj = panel_instance
+        self.logger = self.obj.logger
         self._setup_config_paths()
-        self.utils = Utils(application_id="com.github.utils")
+        self.utils = self.obj.utils
         self.find_text_using_button = {}
         self.row_content = None
         self.listbox = None
@@ -146,7 +149,7 @@ class MenuNotes(Gtk.Application):
                 self.update_notes_list()
                 self.scrolled_window.set_min_content_height(50)
         except Exception as e:
-            print(f"Dialog error: {e}")
+            self.logger.error_handler.handle(f"Dialog error: {e}")
 
     def update_notes_list(self):
         """Update the list of notes in the popover"""
@@ -308,7 +311,7 @@ class MenuNotes(Gtk.Application):
     def on_delete_note(self, button):
         """Handle deleting a note"""
         if button not in self.find_text_using_button:
-            print("Note delete button not found")
+            self.logger.info("Note delete button not found")
             return
 
         row = self.find_text_using_button[button]

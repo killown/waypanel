@@ -13,7 +13,8 @@ class WayfireEventServer:
     is to handle compositor IPC issues and prevent code from hanging.
     """
 
-    def __init__(self):
+    def __init__(self, logger):
+        self.logger = logger
         self.socket_paths = [
             "/tmp/waypanel.sock",
         ]
@@ -36,7 +37,7 @@ class WayfireEventServer:
 
     def reconnect_wayfire_socket(self):
         """Reconnect to Wayfire socket"""
-        print("reconnecting wayfire ipc")
+        self.logger.info("reconnecting wayfire ipc")
         self.sock.close()
         self.sock = WayfireSocket()
         self.utils = WayfireUtils(self.sock)
@@ -48,7 +49,7 @@ class WayfireEventServer:
             try:
                 self.reconnect_wayfire_socket()
             except Exception as e:
-                print(f"Retrying in 10 seconds: {e}")
+                self.logger.error_handler.handle(f"Retrying in 10 seconds: {e}")
                 time.sleep(10)
                 return False
         return True
@@ -63,7 +64,7 @@ class WayfireEventServer:
                 event = self.sock.read_next_event()
                 asyncio.run_coroutine_threadsafe(self.event_queue.put(event), self.loop)
             except Exception as e:
-                print(f"Event read failed: {e}")
+                self.logger.error_handler.handle(f"Event read failed: {e}")
                 if not self.sock.is_connected():
                     time.sleep(1)
                     continue
@@ -112,8 +113,3 @@ class WayfireEventServer:
         finally:
             # Cleanup logic if needed
             pass
-
-
-if __name__ == "__main__":
-    server = WayfireEventServer()
-    asyncio.run(server.main())

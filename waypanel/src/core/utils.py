@@ -3,10 +3,7 @@ import math
 import os
 import socket
 import subprocess
-from subprocess import call, check_output
 from time import sleep
-import logging
-import sys
 import aiohttp
 import gi
 import numpy as np
@@ -25,8 +22,9 @@ gi.require_version("Adw", "1")
 
 
 class Utils(Adw.Application):
-    def __init__(self, application_id=None, **kwargs):
-        super().__init__(application_id=application_id, **kwargs)
+    def __init__(self, panel_instance):
+        self.obj = panel_instance
+        self.logger = self.obj.logger
         self._setup_config_paths()
         self.psutil_store = {}
         self.panel_cfg = self.load_topbar_config()
@@ -36,11 +34,8 @@ class Utils(Adw.Application):
         self.fd = None
         self.watch_id = None
         self.sock = WayfireSocket()
-
-        self.ipc_client = WayfireClientIPC(self.handle_event)
-        # here is where the ipc events happen
-        self.ipc_client.wayfire_events_setup("/tmp/waypanel.sock")
-
+        # subscribe to events, try until it's ready to subscribe
+        GLib.timeout_add_seconds(1, self.subscribe_events)
         self.wf_utils = WayfireUtils(self.sock)
         self.stipc = Stipc(self.sock)
 
@@ -65,16 +60,22 @@ class Utils(Adw.Application):
             "rxvt",
         ]
 
-    @staticmethod
-    def handle_exceptions(func):
-        def wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                print(f"An error occurred in {func.__name__}: {e}")
-                return None
-
-        return wrapper
+    def subscribe_events(self):
+        # try until it returns the event_manager instance
+        event_manager = self.obj.plugins["event_manager"]
+        if not event_manager:
+            return True
+        try:
+            event_manager.subscribe_to_event(
+                "plugin-activation-state-changed", self.handle_event
+            )
+            self.logger.info("Utils: Successfully subscribed to events.")
+        except Exception as e:
+            self.logger.error_handler.handle(f"Error subscribing to events: {e}")
+            # try to subscribe again
+            return True
+        # no need for more tries
+        return False
 
     def connect_socket(self):
         """Establish a connection to the Unix socket."""
@@ -106,13 +107,13 @@ class Utils(Adw.Application):
                     event = json.loads(event_str)
                     self.process_event(event)
                 except json.JSONDecodeError as e:
-                    print(f"JSON decode error: {e}")
+                    self.logger.error_handler.handle(f"JSON decode error: {e}")
 
         return GLib.SOURCE_CONTINUE  # Continue receiving data
 
     def process_event(self, event):
         """Process the event dictionary."""
-        print(f"Received event: {event}")
+        self.logger.info(f"Received event: {event}")
         self.handle_event(event)
 
     def disconnect_socket(self):
@@ -129,18 +130,6 @@ class Utils(Adw.Application):
 
         # Define the path for the Unix socket
         self.connect_socket()
-
-    def logger(self):
-        # Configure logging
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[
-                logging.StreamHandler(sys.stdout),  # Log to console
-                logging.FileHandler("/tmp/waypanel.log"),
-            ],
-        )
-        return logging.getLogger(__name__)
 
     def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
         # FIXME: need to handle more data as it in params
@@ -171,7 +160,7 @@ class Utils(Adw.Application):
         try:
             self.stipc.run_cmd(command)
         except Exception as e:
-            print(f"utils: self.run_cmd: {e}")
+            self.logger.error_handler.handle(f"utils: self.run_cmd: {e}")
 
     def widget_exists(self, widget):
         return widget is not None and isinstance(widget, Gtk.Widget)
@@ -242,7 +231,7 @@ class Utils(Adw.Application):
             if matches:
                 return matches[0]  # Return first match
         except Exception as e:
-            print(f"Icon search error: {e}")
+            self.logger.error_handler.handle(f"Icon search error: {e}")
 
         # Final fallbacks
         for fallback in [
@@ -278,7 +267,7 @@ class Utils(Adw.Application):
             bool: True if the widget was successfully appended, False otherwise.
         """
         if widget is None or not isinstance(widget, Gtk.Widget):
-            print("Error: Invalid widget provided")
+            self.logger.error_handler.handle("Error: Invalid widget provided")
             return False
 
         if not widget.get_parent():
@@ -321,7 +310,9 @@ class Utils(Adw.Application):
                         self.create_gesture(button, 3, callback)
                     self.append_widget_if_ready(box, button)
                 else:
-                    print(f"Error: Failed to create button for app {app}")
+                    self.logger.error_handler.handle(
+                        f"Error: Failed to create button for app {app}"
+                    )
 
         return box
 
@@ -412,7 +403,7 @@ class Utils(Adw.Application):
                     if msg["plugin"] == "scale":
                         self.is_scale_active[msg["output"]] = False
         except Exception as e:
-            print(e)
+            self.logger.error_handler.handle(e)
         return True
 
     def handle_event_checks(self, msg, required_keys=None):
@@ -501,25 +492,25 @@ class Utils(Adw.Application):
 
         # Check if the library is installed
         if os.path.exists(installed_marker):
-            print("gtk4-layer-shell is already installed.")
+            self.logger.info("gtk4-layer-shell is already installed.")
             return
 
         # Proceed with installation if not installed
-        print("gtk4-layer-shell is not installed. Installing...")
+        self.logger.info("gtk4-layer-shell is not installed. Installing...")
 
         # Create a temporary directory
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
 
         # Clone the repository
-        print("Cloning the repository...")
+        self.logger.info("Cloning the repository...")
         subprocess.run(["git", "clone", repo_url, temp_dir], check=True)
 
         # Change to the repository directory
         os.chdir(temp_dir)
 
         # Set up the build directory with Meson
-        print("Configuring the build environment...")
+        self.logger.info("Configuring the build environment...")
         subprocess.run(
             [
                 "meson",
@@ -534,14 +525,14 @@ class Utils(Adw.Application):
         )
 
         # Build the project
-        print("Building the project...")
+        self.logger.info("Building the project...")
         subprocess.run(["ninja", "-C", build_dir], check=True)
 
         # Install the project
-        print("Installing the project...")
+        self.logger.info("Installing the project...")
         subprocess.run(["ninja", "-C", build_dir, "install"], check=True)
 
-        print("Installation complete.")
+        self.logger.info("Installation complete.")
 
     def extract_icon_info(self, application_name):
         icon_name = None
@@ -648,7 +639,7 @@ class Utils(Adw.Application):
         }
         if any(app in wm_class.lower() for app in web_apps):
             desk_local = self.search_local_desktop(initial_title)
-            print(desk_local)
+            self.logger.info(desk_local)
 
             if desk_local and desk_local.endswith("-Default.desktop"):
                 if desk_local.startswith("msedge-"):
@@ -736,7 +727,7 @@ class Utils(Adw.Application):
         wmclass = view["app-id"]
         icon_path = self.get_icon(wmclass, title, initial_title)
         if icon_path:
-            print(icon_path)
+            self.logger.info(icon_path)
             if icon_path.startswith("/"):
                 try:
                     image = Gtk.Image.new_from_file(icon_path)
@@ -745,9 +736,13 @@ class Utils(Adw.Application):
                         button.set_image(image)
                         button.set_always_show_image(True)
                     else:
-                        print("Error: Invalid image provided")
+                        self.logger.error_handler.handle(
+                            "Error: Invalid image provided"
+                        )
                 except Exception as e:
-                    print(f"Error loading icon from file: {e}")
+                    self.logger.error_handler.handle(
+                        f"Error loading icon from file: {e}"
+                    )
                     button.set_icon_name("default-icon-name")
             else:
                 button.set_icon_name(icon_path)
@@ -788,7 +783,7 @@ class Utils(Adw.Application):
             try:
                 async with session.get(search_url, params=params) as response:
                     if response.status != 200:
-                        print("Failed to retrieve search results.")
+                        self.logger.info("Failed to retrieve search results.")
                         return None
 
                     text = await response.text()
@@ -796,7 +791,7 @@ class Utils(Adw.Application):
                     results = soup.find_all("a", href=True, class_="search_result_row")
 
                     if not results:
-                        print("Game not found.")
+                        self.logger.info("Game not found.")
                         return None
 
                     # Assume the first result is the desired game
@@ -805,7 +800,7 @@ class Utils(Adw.Application):
                     try:
                         async with session.get(game_url) as game_response:
                             if game_response.status != 200:
-                                print("Failed to retrieve game page.")
+                                self.logger.info("Failed to retrieve game page.")
                                 return None
 
                             game_text = await game_response.text()
@@ -818,16 +813,18 @@ class Utils(Adw.Application):
                             if img_tag and img_tag["src"]:
                                 return img_tag["src"]
                             else:
-                                print("Image not found.")
+                                self.logger.info("Image not found.")
                                 return None
                     except asyncio.TimeoutError:
-                        print("Timed out while retrieving game page.")
+                        self.logger.info("Timed out while retrieving game page.")
                         return None
             except asyncio.TimeoutError:
-                print("Timed out while retrieving search results.")
+                self.logger.error_handler.handle(
+                    "Timed out while retrieving search results."
+                )
                 return None
             except aiohttp.ClientError as e:
-                print(f"HTTP error occurred: {e}")
+                self.logger.error_handler.handle(f"HTTP error occurred: {e}")
                 return None
 
     async def main_get_steam_game_image(self, game_title):
@@ -848,7 +845,7 @@ class Utils(Adw.Application):
             try:
                 async with session.get(url) as response:
                     if response.status != 200:
-                        print("Failed to download image.")
+                        self.logger.info("Failed to download image.")
                         return None
 
                     with open(file_path, "wb") as file:
@@ -856,10 +853,10 @@ class Utils(Adw.Application):
 
                     return file_path
             except asyncio.TimeoutError:
-                print("Timed out while downloading image.")
+                self.logger.error_handler.handle("Timed out while downloading image.")
                 return None
             except aiohttp.ClientError as e:
-                print(f"HTTP error occurred: {e}")
+                self.logger.error_handler.handle(f"HTTP error occurred: {e}")
                 return None
 
     def get_wayfire_pid(self):
@@ -893,7 +890,7 @@ class Utils(Adw.Application):
     def check_lib_in_wayfire(self, lib_name):
         pid = self.get_wayfire_pid()
         if not pid:
-            print("Wayfire process not found.")
+            self.logger.info("Wayfire process not found.")
             return False
 
         libs = self.list_libs_in_process(pid)
@@ -975,10 +972,10 @@ class Utils(Adw.Application):
                     result.append({pid: title})
             return result
         except subprocess.CalledProcessError as e:
-            print(f"Error running command: {e.stderr}")
+            self.logger.error_handler.handle(f"Error running command: {e.stderr}")
             return []
         except Exception as e:
-            print(f"Unexpected error: {e}")
+            self.logger.info(f"Unexpected error: {e}")
             return []
 
     def get_default_monitor_name(self, config_file_path):
@@ -990,7 +987,9 @@ class Utils(Adw.Application):
                 else:
                     return None
         except FileNotFoundError:
-            print(f"Config file '{config_file_path}' not found.")
+            self.logger.error_handler.handle(
+                f"Config file '{config_file_path}' not found."
+            )
             return None
 
     def view_focus_indicator_effect(self, view_id):
@@ -1003,7 +1002,7 @@ class Utils(Adw.Application):
                 self.sock.set_view_alpha(view_id, f)
                 sleep(0.02)
             except Exception as e:
-                print(e)
+                self.logger.error_handler.handle(e)
         self.sock.set_view_alpha(view_id, original_alpha)
 
     def is_view_valid(self, view_id):
@@ -1076,7 +1075,7 @@ class Utils(Adw.Application):
                 self.view_focus_indicator_effect(view_id)
 
         except Exception as e:
-            print(e)
+            self.logger.error_handler.handle(e)
             return True
 
     def file_exists(self, path):
@@ -1146,17 +1145,19 @@ class Utils(Adw.Application):
             try:
                 return byte_string.decode("utf-8", errors="replace")
             except UnicodeDecodeError as e:
-                print(f"UTF-8 decoding error: {e}")
+                self.logger.error_handler.handle(f"UTF-8 decoding error: {e}")
 
             # Try other UTF encodings if UTF-8 fails
             for encoding in encodings[1:]:  # Skip 'utf-8' as it's already tried
                 try:
                     return byte_string.decode(encoding, errors="replace")
                 except UnicodeDecodeError as e:
-                    print(f"{encoding} decoding error: {e}")
+                    self.logger.error_handler.handle(f"{encoding} decoding error: {e}")
 
             # If all UTF decoding attempts fail, fallback to a last-resort encoding like 'latin-1'
-            print("All UTF decoding attempts failed, falling back to 'latin-1'.")
+            self.logger.info(
+                "All UTF decoding attempts failed, falling back to 'latin-1'."
+            )
             return byte_string.decode("latin-1", errors="replace")
 
         raise TypeError("Input must be a bytes object or a string.")

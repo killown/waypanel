@@ -1,5 +1,5 @@
 from gi.repository import GLib
-from ...core.utils import Utils
+
 from wayfire.core.template import get_msg_template
 from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire import WayfireSocket as OriginalWayfireSocket
@@ -38,12 +38,12 @@ class EventManagerPlugin:
         self.logger = self.obj.logger
         self.sock = WayfireSocket()
         self.wf_utils = WayfireUtils(self.sock)
-        self.utils = Utils()
+        self.utils = self.obj.utils
 
         # Initialize the IPC client
         from waypanel.src.ipc.ipc_client import WayfireClientIPC
 
-        self.ipc_client = WayfireClientIPC(self.handle_event)
+        self.ipc_client = WayfireClientIPC(self.handle_event, self.obj)
         self.ipc_client.wayfire_events_setup("/tmp/waypanel.sock")
         self.event_subscribers = {}  # Dictionary to store event subscribers
 
@@ -67,7 +67,7 @@ class EventManagerPlugin:
                             f"Event '{event_type}' triggered for plugin '{plugin_name}'"
                         )
                 except Exception as e:
-                    self.logger.error(
+                    self.logger.error_handler(
                         f"Error executing callback for event '{event_type}': {e}"
                     )
 

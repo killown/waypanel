@@ -15,19 +15,19 @@ def get_plugin_placement(panel_instance):
     return position, order, priority
 
 
-def initialize_plugin(obj, app):
+def initialize_plugin(panel_instance):
     """Initialize the Plugin Communicator."""
     if ENABLE_PLUGIN:
         print("Initializing Plugin Communicator.")
-        communicator = PluginCommunicator(obj, app)
+        communicator = PluginCommunicator(panel_instance)
         communicator.create_ui()
         print("Plugin Communicator initialized.")
 
 
 class PluginCommunicator:
-    def __init__(self, obj, app):
-        self.obj = obj
-        self.app = app
+    def __init__(self, panel_instance):
+        self.obj = panel_instance
+        self.logger = self.obj.logger
 
     def create_ui(self):
         """Create UI elements for the Plugin Communicator."""
@@ -50,11 +50,11 @@ class PluginCommunicator:
             clock_plugin = self.obj.plugins["clock"]
             try:
                 current_time = clock_plugin.clock_label.get_text()
-                print(f"Current Time: {current_time}")
+                self.logger.info(f"Current Time: {current_time}")
             except Exception as e:
-                print(e)
+                self.logger.error_handler.handle(e)
         else:
-            print("clock plugin is not loaded")
+            self.logger.info("clock plugin is not loaded")
 
     def get_current_volume(self, widget):
         """Get current volume from volume_scroll_plugin."""
@@ -62,8 +62,10 @@ class PluginCommunicator:
             volume_plugin = self.obj.plugins["volume_scroll"]
             try:
                 max_volume = volume_plugin.max_volume
-                print(f"Max Volume: {max_volume}")
+                self.logger.info(f"Max Volume: {max_volume}")
             except AttributeError:
-                print("volume_scroll plugin does not have current_volume property")
+                self.logger.error_handler.handle(
+                    "volume_scroll plugin does not have current_volume property"
+                )
         else:
-            print("volume scroll plugin is not loaded")
+            self.logger.info("volume scroll plugin is not loaded")

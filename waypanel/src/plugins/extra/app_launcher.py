@@ -3,7 +3,7 @@ import random
 from subprocess import Popen
 from gi.repository import Adw, Gio, Gtk
 from gi.repository import Gtk4LayerShell as LayerShell
-from ...core.utils import Utils
+
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -26,6 +26,7 @@ class AppLauncher(Adw.Application):
     def __init__(self, panel_instance):
         self.popover_launcher = None
         self.obj = panel_instance
+        self.logger = self.obj.logger
         self.widgets_dict = {}
         self.all_apps = None
         self.menubutton_launcher = Gtk.Button()
@@ -33,7 +34,7 @@ class AppLauncher(Adw.Application):
         self.search_get_child = None
         self.search_row = []
         self.recent_apps_file = os.path.expanduser("~/config/waypanel/.recent-apps")
-        self.utils = Utils(application_id="com.github.utils")
+        self.utils = self.obj.utils
 
     def append_widget(self):
         return self.menubutton_launcher

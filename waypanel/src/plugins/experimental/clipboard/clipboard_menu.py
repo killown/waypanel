@@ -14,11 +14,12 @@ from gi.repository import Gtk4LayerShell as LayerShell
 from PIL import Image
 import re
 
-from ....core.utils import Utils
 from ._clipboard_server import AsyncClipboardServer
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+# load the plugin only after essential plugins is loaded
+DEPS = ["dockbar", "taskbar"]
 
 
 def get_plugin_placement(panel_instance):
@@ -146,8 +147,9 @@ class MenuClipboard(Gtk.Application):
     def __init__(self, panel_instance):
         self.popover_clipboard = None
         self.obj = panel_instance
+        self.logger = self.obj.logger
         self._setup_config_paths()
-        self.utils = Utils(application_id="com.github.utils")
+        self.utils = self.obj.utils
         self.find_text_using_button = {}
         self.row_content = None
         self.listbox = None
@@ -213,7 +215,7 @@ class MenuClipboard(Gtk.Application):
                 loader.close()
                 return loader.get_pixbuf()
         except Exception as e:
-            print(f"Thumbnail generation failed: {e}")
+            self.logger.error_handler.handle(f"Thumbnail generation failed: {e}")
             return None
 
     def copy_to_clipboard(self, content):
@@ -229,7 +231,7 @@ class MenuClipboard(Gtk.Application):
                         check=True,
                     )
                 except subprocess.CalledProcessError:
-                    print(f"Failed to copy image: {content}")
+                    self.logger.error_handler.handle(f"Failed to copy image: {content}")
             elif isinstance(content, bytes):
                 # Handle raw image data
                 try:
@@ -238,14 +240,16 @@ class MenuClipboard(Gtk.Application):
                         input=content,
                         check=True,
                     )
-                except subprocess.CalledProcessError:
-                    print(f"Failed to copy raw image data")
+                except Exception as e:
+                    self.logger.error_handler.handle(
+                        f"Failed to copy raw image data {e}"
+                    )
         else:
             # Handle text copy
             try:
                 pyperclip.copy(content)
             except Exception as e:
-                print(f"Failed to copy text: {e}")
+                self.logger.error_handler.handle(f"Failed to copy text: {e}")
 
     def update_clipboard_list(self):
         # Clear the existing list
@@ -523,11 +527,11 @@ class MenuClipboard(Gtk.Application):
 
     def on_delete_selected(self, button):
         button = [i for i in self.find_text_using_button if button == i]
-        print(button)
+        self.logger.info(button)
         if button:
             button = button[0]
         else:
-            print("clipboard del button not found")
+            self.logger.info("clipboard del button not found")
             return
         label = self.find_text_using_button[button]
         item_id = label.get_text().split()[0]
@@ -566,7 +570,9 @@ class MenuClipboard(Gtk.Application):
 
     def search_entry_grab_focus(self):
         self.searchentry.grab_focus()
-        print("search entry is focused: {}".format(self.searchentry.is_focus()))
+        self.logger.info(
+            "search entry is focused: {}".format(self.searchentry.is_focus())
+        )
 
     def on_search_entry_changed(self, searchentry):
         """The filter_func will be called for each row after the call,

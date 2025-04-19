@@ -9,6 +9,8 @@ gi.require_version("Gtk", "4.0")
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 COORDINATES = -23.5505, -46.6333  # Example coordinates (São Paulo)
+# load the plugin only after essential plugins is loaded
+DEPS = ["dockbar", "taskbar"]
 
 
 def get_plugin_placement(panel_instance):

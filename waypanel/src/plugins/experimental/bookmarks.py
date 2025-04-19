@@ -11,6 +11,8 @@ from gi.repository import Adw, GdkPixbuf, Gtk
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+# load the plugin only after essential plugins is loaded
+DEPS = ["dockbar", "taskbar"]
 
 
 def get_plugin_placement(panel_instance):
@@ -42,6 +44,7 @@ class PopoverBookmarks(Adw.Application):
     def __init__(self, panel_instance):
         self.popover_bookmarks = None
         self.obj = panel_instance
+        self.logger = self.obj.logger
         self.top_panel = None
         self._setup_config_paths()
         self.listbox = Gtk.ListBox.new()
@@ -182,7 +185,9 @@ class PopoverBookmarks(Adw.Application):
                 )
                 image = Gtk.Image.new_from_pixbuf(thumbnail_pixbuf)
             except Exception as e:
-                print(f"Error processing image for {url}: {e}")
+                self.logger.error_handler.handle(
+                    f"Error processing image for {url}: {e}"
+                )
                 # Fallback to symbolic icon
                 image = Gtk.Image.new_from_icon_name("web-browser-symbolic")
                 image.set_pixel_size(THUMBNAIL_SIZE[0])
@@ -219,9 +224,11 @@ class PopoverBookmarks(Adw.Application):
             if response.status_code == 200:
                 with open(save_path, "wb") as f:
                     f.write(response.content)
-                print("Image downloaded successfully.")
+                self.logger.info("Image downloaded successfully.")
             else:
-                print(f"Failed to download image. Status code: {response.status_code}")
+                self.logger.info(
+                    f"Failed to download image. Status code: {response.status_code}"
+                )
 
     def download_image(self, url, save_path):
         headers = {
@@ -244,9 +251,9 @@ class PopoverBookmarks(Adw.Application):
                         os.makedirs(save_path)
                     with open(os.path.join(save_path, f"{url}.png"), "wb") as f:
                         f.write(image_response.content)
-                    print("Image downloaded successfully.")
+                    self.logger.info("Image downloaded successfully.")
 
-        print(
+        self.logger.info(
             "No suitable image found. If the domain doesn't allow scraping tools, that may deny the image download"
         )
 

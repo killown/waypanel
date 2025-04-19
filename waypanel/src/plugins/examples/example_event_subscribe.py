@@ -1,14 +1,11 @@
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+DEPS = ["event_manager"]
 
 
 def get_plugin_placement(panel_instance):
-    """
-    Define the plugin's position and order.
-
-    Since this is a background-only plugin (no UI), return `False`.
-    """
-    return "left", 99, 99
+    """Background plugin"""
+    return
 
 
 def initialize_plugin(panel_instance):
@@ -20,12 +17,14 @@ def initialize_plugin(panel_instance):
         app: The main application instance.
     """
     if not ENABLE_PLUGIN:
-        print("Plugin is disabled.")
+        panel_instance.logger.info("Plugin is disabled.")
         return
 
     # Ensure the EventManagerPlugin is loaded
     if "event_manager" not in panel_instance.plugins:
-        print("Error: EventManagerPlugin is not loaded. Cannot subscribe to events.")
+        panel_instance.logger.info(
+            "Error: EventManagerPlugin is not loaded. Cannot subscribe to events."
+        )
         return
 
     event_manager = panel_instance.plugin_loader.plugins["event_manager"]
@@ -35,9 +34,9 @@ def initialize_plugin(panel_instance):
     try:
         event_manager.subscribe_to_event("view-focused", on_view_focused)
         event_manager.subscribe_to_event("view-mapped", on_view_created)
-        print("Successfully subscribed to events.")
+        panel_instance.logger.info("Successfully subscribed to events.")
     except Exception as e:
-        print(f"Error subscribing to events: {e}")
+        panel_instance.logger.error_handler.handle(f"Error subscribing to events: {e}")
 
 
 def on_view_focused(event_message):

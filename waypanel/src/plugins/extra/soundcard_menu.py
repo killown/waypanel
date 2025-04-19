@@ -6,7 +6,7 @@ import soundcard as sc
 from gi.repository import Adw, Gtk
 from wayfire.ipc import WayfireSocket
 import toml
-from ...core.utils import Utils
+
 
 addr = os.getenv("WAYFIRE_SOCKET")
 sock = WayfireSocket(addr)
@@ -30,12 +30,14 @@ def initialize_plugin(panel_instance):
 
 class SoundCardDashboard(Adw.Application):
     def __init__(self, panel_instance):
+        self.obj = panel_instance
+        self.logger = self.obj.logger
         self.popover_dashboard = None
         self.soundcard_combobox = None
         self.mic_combobox = None
         self.menubutton_dashboard = None
         self._setup_config_paths()
-        self.utils = Utils(application_id="com.github.utils")
+        self.utils = self.obj.utils
         self.sock = sock
 
     def append_widget(self):
@@ -133,7 +135,7 @@ class SoundCardDashboard(Adw.Application):
 
     def set_default_mic(self, id):
         cmd = "pactl set-default-source {0}".format(id).split()
-        print(cmd)
+        self.logger.info(cmd)
         Popen(cmd)
 
     def load_config(self):
@@ -254,22 +256,22 @@ class SoundCardDashboard(Adw.Application):
     def run_app_from_dashboard(self, x):
         selected_text, filename = x.get_child().MYTEXT
         cmd = "gtk-launch {}".format(filename)
-        print(cmd)
+        self.logger.info(cmd)
         Popen(cmd)
 
     def open_popover_dashboard(self, *_):
         self.create_popover_soundcard()
 
     def popover_is_open(self, *_):
-        print("Popover is open")
+        pass
 
     def popover_is_closed(self, *_):
-        print("Popover is closed")
+        pass
 
     def show_audio_info(self):
         audio_apps = self.get_active_audio_app_info()
         for app_info in audio_apps.values():
-            print(app_info["application_name"])
+            pass
 
     def on_start(self):
         pass

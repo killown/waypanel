@@ -2,6 +2,8 @@ from gi.repository import GLib
 from wayfire import WayfireSocket
 
 ENABLE_PLUGIN = True
+# load the plugin only after essential plugins is loaded
+DEPS = ["dockbar", "taskbar", "event_manager"]
 
 
 def get_plugin_placement(panel_instance):
@@ -27,7 +29,7 @@ class WindowRulesPlugin:
 
     def subscribe_to_events(self):
         if "event_manager" not in self.obj.plugin_loader.plugins:
-            self.logger.error(
+            self.logger.error_handler.handle(
                 "Event Manager Plugin is not loaded. Cannot subscribe to events."
             )
             return
@@ -57,7 +59,7 @@ class WindowRulesPlugin:
                 self.on_scale_deactivated()
 
         except Exception as e:
-            self.logger.error(f"Error handling scale event: {e}")
+            self.logger.error_handler.handle(f"Error handling scale event: {e}")
 
     def set_focused_view_fullscreen_false(self):
         # the panels will disappear if the focused view is fullscreen

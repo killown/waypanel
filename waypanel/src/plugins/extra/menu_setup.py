@@ -1,6 +1,6 @@
 import os
 from gi.repository import Gtk, Gio
-from ...core.utils import Utils
+
 import toml
 import subprocess
 
@@ -24,10 +24,11 @@ def initialize_plugin(panel_instance):
 class MenuSetupPlugin:
     def __init__(self, panel_instance):
         self.obj = panel_instance
-        self.menu_button = None
-        self.utils = Utils(application_id="com.github.menu-setup-plugin")
-        self.config_path = os.path.expanduser("~/.config/waypanel/waypanel.toml")
         self.logger = self.obj.logger
+        self.menu_button = None
+        self.utils = self.obj.utils
+        self.config_path = os.path.expanduser("~/.config/waypanel/waypanel.toml")
+        self.logger = self.logger
         self.widgets = []
 
     def append_widget(self):
@@ -37,7 +38,9 @@ class MenuSetupPlugin:
     def load_menu_config(self):
         """Load menu configuration from waypanel.toml."""
         if not os.path.exists(self.config_path):
-            self.logger.error(f"Menu config file not found: {self.config_path}")
+            self.logger.error_handler.handle(
+                f"Menu config file not found: {self.config_path}"
+            )
             return {}
 
         with open(self.config_path, "r") as f:
@@ -98,4 +101,4 @@ class MenuSetupPlugin:
         try:
             subprocess.Popen(cmd, shell=True)
         except Exception as e:
-            self.logger.error(f"Error running command '{cmd}': {e}")
+            self.logger.error_handler.handle(f"Error running command '{cmd}': {e}")

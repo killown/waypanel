@@ -9,10 +9,10 @@ from waypanel.src.core.create_panel import (
     set_layer_position_exclusive,
     unset_layer_position_exclusive,
 )
-from waypanel.src.core.utils import Utils
 
 # Enable or disable the plugin
 ENABLE_PLUGIN = True
+DEPS = ["event_manager"]
 
 
 def get_plugin_placement(panel_instance):
@@ -38,9 +38,10 @@ class TaskbarPlugin(Gtk.Application):
         """
         self.logger = panel_instance.logger
         self.obj = panel_instance
+        self._subscribe_to_events()
         # will hide until scale plugin is toggled if False
         self.layer_always_exclusive = False
-        self.utils = Utils()
+        self.utils = self.obj.utils
         self.taskbar_list = []
         self.buttons_id = {}
         self.sock = WayfireSocket()
@@ -50,7 +51,6 @@ class TaskbarPlugin(Gtk.Application):
         # Load configuration and set up taskbar
         self.config = panel_instance.config
         self._setup_taskbar()
-        self._subscribe_to_events()
 
     def set_layer_exclusive(self, exclusive):
         if exclusive:
@@ -115,45 +115,39 @@ class TaskbarPlugin(Gtk.Application):
 
     def _subscribe_to_events(self):
         """Subscribe to relevant events using the event_manager."""
+        if "event_manager" not in self.obj.plugin_loader.plugins:
+            self.logger.debug("Taskbar is waiting for EventManagerPlugin.")
+            return True
+        else:
+            event_manager = self.obj.plugin_loader.plugins["event_manager"]
+            self.logger.info("Subscribing to events for Taskbar Plugin.")
 
-        def is_event_manager_ready():
-            if "event_manager" not in self.obj.plugin_loader.plugins:
-                self.logger.debug("Taskbar is waiting for EventManagerPlugin.")
-                return True
-            else:
-                event_manager = self.obj.plugin_loader.plugins["event_manager"]
-                self.logger.info("Subscribing to events for Taskbar Plugin.")
-
-                # Subscribe to necessary events
-                event_manager.subscribe_to_event(
-                    "view-focused",
-                    self.handle_view_event,
-                    plugin_name="taskbar",
-                )
-                event_manager.subscribe_to_event(
-                    "view-mapped",
-                    self.handle_view_event,
-                    plugin_name="taskbar",
-                )
-                event_manager.subscribe_to_event(
-                    "view-unmapped",
-                    self.handle_view_event,
-                    plugin_name="taskbar",
-                )
-                event_manager.subscribe_to_event(
-                    "view-title-changed",
-                    self.handle_view_event,
-                    plugin_name="taskbar",
-                )
-                event_manager.subscribe_to_event(
-                    "plugin-activation-state-changed",
-                    self.handle_plugin_event,
-                    plugin_name="taskbar",
-                )
-
-                return False
-
-        GLib.timeout_add_seconds(1, is_event_manager_ready)
+            # Subscribe to necessary events
+            event_manager.subscribe_to_event(
+                "view-focused",
+                self.handle_view_event,
+                plugin_name="taskbar",
+            )
+            event_manager.subscribe_to_event(
+                "view-mapped",
+                self.handle_view_event,
+                plugin_name="taskbar",
+            )
+            event_manager.subscribe_to_event(
+                "view-unmapped",
+                self.handle_view_event,
+                plugin_name="taskbar",
+            )
+            event_manager.subscribe_to_event(
+                "view-title-changed",
+                self.handle_view_event,
+                plugin_name="taskbar",
+            )
+            event_manager.subscribe_to_event(
+                "plugin-activation-state-changed",
+                self.handle_plugin_event,
+                plugin_name="taskbar",
+            )
 
     def create_taskbar_button(self, view, orientation, class_style):
         """
@@ -178,7 +172,9 @@ class TaskbarPlugin(Gtk.Application):
         )
 
         if not button:
-            self.logger.error(f"Failed to create taskbar button for view ID: {id}")
+            self.logger.error_handler.handle(
+                f"Failed to create taskbar button for view ID: {id}"
+            )
             return False
 
         # Append the button to the taskbar
@@ -224,7 +220,9 @@ class TaskbarPlugin(Gtk.Application):
         # Create the taskbar button
         success = self.create_taskbar_button(view, orientation, class_style)
         if not success:
-            self.logger.error(f"Failed to create taskbar button for view ID: {view_id}")
+            self.logger.error_handler.handle(
+                f"Failed to create taskbar button for view ID: {view_id}"
+            )
             return False
 
         if callback:
@@ -393,7 +391,7 @@ class TaskbarPlugin(Gtk.Application):
 
             return True
         except Exception as e:
-            self.logger.error(f"Error checking view existence: {e}")
+            self.logger.error_handler.handle(f"Error checking view existence: {e}")
             return False
 
     def is_valid_view(self, view):

@@ -5,12 +5,11 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 from wayfire import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
 
+from waypanel.src.core import plugin_loader
 from waypanel.src.core.create_panel import (
     CreatePanel,
 )
 from waypanel.src.core.utils import Utils
-from waypanel.src.core.utils import Utils as utils
-
 from waypanel.src.core.plugin_loader import PluginLoader
 
 
@@ -26,14 +25,14 @@ class Panel(Adw.Application):
         self.logger = logger
         self.panel_instance = None
         # Initialize utilities and connect to activation event
-        self._initialize_utilities()
         self.connect("activate", self.on_activate)
 
         # Setup panel boxes and configuration paths
-
+        self.utils = Utils(self)
         self._setup_panel_boxes()
         self._setup_config_paths()
         self.plugin_loader = PluginLoader(self, logger, self.config_path)
+        self.plugins = self.plugin_loader.plugins
 
         # Initialize variables and configurations
         self.args = sys.argv
@@ -41,7 +40,6 @@ class Panel(Adw.Application):
         # Initialize Wayfire components
         self.sock = WayfireSocket()
         self.wf_utils = WayfireUtils(self.sock)
-        self.utils = utils()
 
         # Initialize state variables
         self.monitor = None
@@ -51,10 +49,6 @@ class Panel(Adw.Application):
 
     def set_panel_instance(self, panel_instance):
         self.panel_instance = panel_instance
-
-    def _initialize_utilities(self):
-        """Initialize utility functions and properties."""
-        self.utils = Utils(application_id="com.github.utils")
 
     def _set_monitor_dimensions(self):
         """

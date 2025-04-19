@@ -1,9 +1,10 @@
 from gi.repository import Gtk, GLib
-from ...core.utils import Utils
+
 from wayfire import WayfireSocket
 import os
 import orjson as json
 from wayfire.extra.ipc_utils import WayfireUtils
+from gi.repository import Gtk4LayerShell as LayerShell
 from ...core.create_panel import (
     set_layer_position_exclusive,
     unset_layer_position_exclusive,
@@ -11,6 +12,7 @@ from ...core.create_panel import (
 
 # Enable or disable the plugin
 ENABLE_PLUGIN = True
+DEPS = ["event_manager"]
 
 
 def get_plugin_placement(panel_instance):
@@ -31,7 +33,6 @@ def get_plugin_placement(panel_instance):
 def initialize_plugin(panel_instance):
     """Initialize the Dockbar plugin."""
     if ENABLE_PLUGIN:
-        print("Initializing Dockbar Plugin.")
         dockbar = DockbarPlugin(panel_instance)
         return dockbar
 
@@ -41,11 +42,14 @@ class DockbarPlugin:
         """Initialize the Dockbar plugin."""
         self.logger = panel_instance.logger
         self.obj = panel_instance
-        self.utils = Utils()
+        # Subscribe to events using the event_manager
+        self.plugins = self.obj.plugin_loader.plugins
+        self._subscribe_to_events()
+        self.utils = self.obj.utils
+        self.layer_state = False
         self.taskbar_list = []
         self.dockbar_panel = None
         self.buttons_id = {}
-        self.plugins = self.obj.plugin_loader.plugins
         self.sock = WayfireSocket()  # Use the shared WayfireSocket instance
         self.wf_utils = WayfireUtils(self.sock)  # Use the shared WayfireUtils instance
         self.dockbar = None
@@ -55,8 +59,10 @@ class DockbarPlugin:
         self.config = panel_instance.config
         self._setup_dockbar()
 
-        # Subscribe to events using the event_manager
-        self._subscribe_to_events()
+    def is_scale_enabled(self):
+        sock = WayfireSocket()
+        plugins = sock.get_option_value("core/plugins")["value"].split()
+        return "scale" in plugins
 
     def get_dockbar_position(self, panel):
         if panel == "left-panel":
@@ -68,7 +74,7 @@ class DockbarPlugin:
         elif panel == "top-panel":
             return self.obj.top_panel
         else:
-            self.logger.error(f"Invalid panel value: {panel}")
+            self.logger.error_handler.handle(f"Invalid panel value: {panel}")
 
     def choose_and_set_dockbar(self):
         panel = get_plugin_placement(self.obj)[0]
@@ -82,7 +88,7 @@ class DockbarPlugin:
         # Validate panel value
         valid_panels = {"left-panel", "right-panel", "bottom-panel", "top-panel"}
         if panel not in valid_panels:
-            self.logger.error(
+            self.logger.error_handler.handle(
                 f"Invalid panel value: {panel}. Using default 'left-panel'."
             )
             panel = "left-panel"
@@ -99,26 +105,39 @@ class DockbarPlugin:
             self.obj.waypanel_cfg, orientation, class_style
         )
         self.choose_and_set_dockbar()
+        # FIXME: remove this motion_controller later to use in a example
+        motion_controller = Gtk.EventControllerMotion()
+        motion_controller.connect("enter", self.on_mouse_enter)
+        self.dockbar.add_controller(motion_controller)
+
+        # set exclusive by default if scale plugin is disabled
+        # FIXME: find the right way to set exclusive zone as the top
+        # probably only possible in panel creation, so check if scale is enabled
+        # before the panel creation, if not, then create the panels with exclusive spacing
+        if not self.is_scale_enabled():
+            LayerShell.set_layer(self.dockbar_panel, LayerShell.Layer.TOP)
+            LayerShell.set_exclusive_zone(self.dockbar_panel, 64)
+
         self.logger.info("Dockbar setup completed.")
+
+    def on_mouse_enter(self, controller, x, y):
+        if self.layer_state is False:
+            set_layer_position_exclusive(self.dockbar_panel, 64)
+            self.layer_state = True
 
     def _subscribe_to_events(self):
         """Subscribe to relevant events using the event_manager."""
-
-        def is_event_manager_ready():
-            if "event_manager" not in self.plugins:
-                self.logger.info("dockbar is waiting for event manager")
-                return True
-            else:
-                event_manager = self.plugins["event_manager"]
-                self.logger.info("Subscribing to events for Dockbar Plugin.")
-                event_manager.subscribe_to_event(
-                    "plugin-activation-state-changed",
-                    self.handle_plugin_event,
-                    plugin_name="dockbar",
-                )
-                return False
-
-        GLib.timeout_add_seconds(1, is_event_manager_ready)
+        if "event_manager" not in self.plugins:
+            self.logger.info("dockbar is waiting for event manager")
+            return True
+        else:
+            event_manager = self.plugins["event_manager"]
+            self.logger.info("Subscribing to events for Dockbar Plugin.")
+            event_manager.subscribe_to_event(
+                "plugin-activation-state-changed",
+                self.handle_plugin_event,
+                plugin_name="dockbar",
+            )
 
     def create_dockbar_button(self, view):
         """Create a dockbar button for a given view."""
@@ -155,12 +174,14 @@ class DockbarPlugin:
         focused_output_name = self.sock.get_focused_output()["name"]
         # only set layer if the focused output is the same as the defined in panel creation
         if layer_set_on_output_name == focused_output_name:
-            set_layer_position_exclusive(self.dockbar_panel, 64)
+            self.update_widget(set_layer_position_exclusive, self.dockbar_panel, 64)
+            self.layer_state = True
 
     def on_scale_desactivated(self):
         """Handle scale plugin deactivation."""
         # this will set panels on bottom, hidden it from views
         self.update_widget(unset_layer_position_exclusive, self.dockbar_panel)
+        self.layer_state = False
 
     def panel_set_content(self):
         """Return the dockbar widget to be added to the panel."""

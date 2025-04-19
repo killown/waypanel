@@ -6,7 +6,7 @@ import toml
 from gi.repository import Adw, Gio, Gtk
 from gi.repository import Gtk4LayerShell as LayerShell
 
-from ...core.utils import Utils
+
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -30,7 +30,8 @@ class PopoverFolders(Adw.Application):
     def __init__(self, panel_instance):
         self.popover_folders = None
         self.obj = panel_instance
-        self.panel_utils = Utils()
+        self.logger = self.obj.logger
+        self.panel_utils = self.obj.utils
         self._setup_config_paths()
 
     def append_widget(self):
@@ -213,7 +214,9 @@ class PopoverFolders(Adw.Application):
 
     def search_entry_grab_focus(self):
         self.searchentry.grab_focus()
-        print("search entry is focused: {}".format(self.searchentry.is_focus()))
+        self.logger.info(
+            "search entry is focused: {}".format(self.searchentry.is_focus())
+        )
 
     def on_search_entry_changed(self, searchentry):
         """The filter_func will be called for each row after the call,

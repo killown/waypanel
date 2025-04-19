@@ -3,7 +3,7 @@ from subprocess import Popen, check_output
 import toml
 import gi
 from gi.repository import Adw, Gtk
-from ...core.utils import Utils
+
 
 gi.require_version("Gtk", "4.0")
 
@@ -28,9 +28,10 @@ class BluetoothDashboard(Adw.Application):
     def __init__(self, panel_instance):
         self.popover_dashboard = None
         self.obj = panel_instance
+        self.logger = self.obj.logger
         self.top_panel = None
         self._setup_config_paths()
-        self.utils = Utils(application_id="com.github.utils")
+        self.utils = self.obj.utils
 
     def append_widget(self):
         return self.menubutton_dashboard

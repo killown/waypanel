@@ -1,11 +1,13 @@
 import os
 import subprocess
 from gi.repository import Gtk
-from ...core.utils import Utils
+
 import toml
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+# load the plugin only after essential plugins is loaded
+DEPS = ["dockbar", "taskbar"]
 
 
 def get_plugin_placement(panel_instance):
@@ -41,7 +43,8 @@ class SwayNCTogglePlugin:
             app: The main application instance
         """
         self.obj = panel_instance
-        self.utils = Utils(application_id="com.github.swaync-toggle")
+        self.logger = self.obj.logger
+        self.utils = self.obj.utils
         self._setup_config_paths()
 
     def append_widget(self):

@@ -4,6 +4,8 @@ from gi.repository import Gtk, GLib
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+# load the plugin only after essential plugins is loaded
+DEPS = ["dockbar", "taskbar", "event_manager"]
 
 
 def get_plugin_placement(panel_instance):
@@ -53,14 +55,6 @@ class CriptoPlugin:
         self.menubutton_crypto = Gtk.Button()
         self.menubutton_crypto.set_icon_name("taxes-finances")  # Default icon
         self.menubutton_crypto.connect("clicked", self.open_popover_crypto)
-
-        # Start fetching crypto data periodically
-        def run_once():
-            self.start_crypto_updates()
-            return False
-
-        # delay the fetch so it won't hang other plugins
-        GLib.timeout_add_seconds(3, run_once)
 
     def start_crypto_updates(self):
         """
@@ -167,10 +161,6 @@ class CriptoPlugin:
                     label.set_label(f"{icons[symbol]}: ${price}")
                     label.set_xalign(0.0)
 
-    def update_labels_run_once(self):
-        self.update_labels()
-        return False
-
     def open_popover_crypto(self, *_):
         """
         Handle opening the crypto popover.
@@ -181,9 +171,13 @@ class CriptoPlugin:
             self.update_labels()
             self.popover_crypto.popup()
         else:
-            # we need 100 ms to update labels
-            # which is time enough to create popover for the first time
-            GLib.timeout_add(100, self.update_labels_run_once)
+            # Start fetching crypto data periodically
+            def run_once():
+                self.start_crypto_updates()
+                return False
+
+            # delay the fetch so it won't hang other plugins
+            GLib.idle_add(run_once)
             self.create_popover_crypto()
 
     def create_popover_crypto(self):

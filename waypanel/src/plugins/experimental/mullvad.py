@@ -5,6 +5,8 @@ from subprocess import Popen, check_output
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+# load the plugin only after essential plugins is loaded
+DEPS = ["dockbar", "taskbar"]
 
 
 def get_plugin_placement(panel_instance):
@@ -190,7 +192,9 @@ class MullvadPlugin:
             msg = f"Mudando para {relay_choice}"
             Popen(["notify-send", msg])
         except Exception as e:
-            self.logger.error(f"Error setting random Brazilian relay: {e}")
+            self.logger.error_handler.handle(
+                f"Error setting random Brazilian relay: {e}"
+            )
 
     def update_vpn_status(self):
         """Check the status of the Mullvad VPN and update the UI."""

@@ -8,12 +8,63 @@ from gi.repository import GLib
 class PluginLoader:
     def __init__(self, panel_instance, logger, config_path):
         """
-        Initialize the PluginLoader.
+        The PluginLoader is responsible for discovering, validating, and initializing plugins
+        from the `src.plugins` package. It ensures that plugins are loaded in the correct order,
+        based on their priority and position, and integrates with the `waypanel.toml` configuration
+        file to manage plugin settings.
 
-        Args:
-            panel_instance: The main panel object from panel.py.
-            logger: Logger instance for logging messages.
-            config_path: Path to the configuration directory.
+        ### Design Philosophy
+        The PluginLoader adheres to the principle of simplicity and modularity:
+        - Plugins are designed to be self-contained and functional without requiring external dependencies.
+        - Integration with `waypanel.toml` is optional, allowing plugin developers to decide whether
+          their plugin needs configuration or can operate with default behavior.
+        - This approach lowers the barrier for new plugin developers, as they can focus on core functionality
+          without needing to understand or implement complex configuration management.
+
+        ### Why Plugins Do Not Use Config by Default
+        1. **Simplicity**: By not enforcing a centralized `Config` class, plugins remain lightweight and
+           independent. Developers can create plugins with minimal boilerplate code.
+        2. **Flexibility**: Plugins that do not require configuration can function immediately without
+           additional setup. Only plugins that need user-defined settings (e.g., themes, intervals, or
+           custom paths) should interact with `waypanel.toml`.
+        3. **Separation of Concerns**: The PluginLoader itself does not impose configuration on plugins.
+           Instead, it provides utilities (e.g., `_load_plugin_configuration`) to load and parse
+           `waypanel.toml`, leaving it up to individual plugins to decide how to use this data.
+        4. **Ease of Contribution**: New contributors can quickly create plugins without worrying about
+           integrating with a centralized configuration system. They can later enhance their plugins to
+           support configuration if needed.
+
+        ### Responsibilities
+        - **Dynamic Loading**: Discovers all available plugins in the `src.plugins` package.
+        - **Validation**: Ensures that each plugin implements the required interface (e.g., `initialize_plugin`).
+        - **Configuration Management**: Loads the `waypanel.toml` file to determine which plugins are enabled,
+          disabled, or have custom settings.
+        - **Sorting and Initialization**: Sorts plugins by priority and order, then initializes them in the
+          correct sequence.
+
+        ### Usage
+        To use the PluginLoader:
+        1. Instantiate the PluginLoader with the main panel object, logger, and configuration path.
+        2. Call the `load_plugins` method to dynamically load and initialize all plugins.
+        3. Access initialized plugins via the `plugins` dictionary.
+
+        ### Example
+        ```python
+        plugin_loader = PluginLoader(panel_instance, logger, config_path)
+        plugin_loader.load_plugins()
+        dockbar_plugin = plugin_loader.plugins.get("dockbar")
+        ```
+
+        ### Notes
+        - Plugins that require configuration should define their own logic for loading and using settings
+          from `waypanel.toml`. A utility function like `load_config` can be provided to simplify this process.
+        - Disabled plugins are skipped during initialization based on the `disabled` list in `waypanel.toml`.
+
+        ### Methods
+        - `_load_plugin_configuration`: Loads and parses the `waypanel.toml` file to determine plugin settings.
+        - `_process_plugin`: Validates and processes a single plugin module.
+        - `_update_plugin_configuration`: Updates the `waypanel.toml` file with the latest plugin list.
+        - `_initialize_sorted_plugins`: Initializes plugins in the correct order based on priority and position.
         """
         self.panel_instance = panel_instance
         self.logger = logger
@@ -161,8 +212,8 @@ class PluginLoader:
             toml.dump(config, f)
 
     def _initialize_sorted_plugins(self, plugin_metadata):
-        """Sort plugins by their priority and order, then initialize them."""
-        # Sort by priority (descending), then by order (ascending)
+        """Initialize plugins in the correct order based on priority and position."""
+        # Sort plugins by priority (descending), then by order (ascending)
         plugin_metadata.sort(key=lambda x: (-x[3], x[2]))
 
         # Check if 'event_manager' exists in plugin_metadata
@@ -177,60 +228,89 @@ class PluginLoader:
         if event_manager_metadata:
             plugin_metadata.insert(0, event_manager_metadata)
 
-        for module, position, order, priority in plugin_metadata:
-            # Initialize the plugin
+        # Initialize plugins
+        def initialize_plugin_with_deps(module, position, order, priority):
             module_name = module.__name__.split(".")[-1]
             plugin_name = module.__name__.split(".src.plugins.")[-1]
-            plugin_instance = module.initialize_plugin(self.panel_instance)
-            self.plugins[module_name] = plugin_instance
-            start_time = time.time()  # Start timing
+
+            # Check for dependencies
+            has_plugin_deps = getattr(module, "DEPS", [])
+            if has_plugin_deps:
+                # Delay initialization until all dependencies are ready
+                deps_satisfied = all(dep in self.plugins for dep in has_plugin_deps)
+                if not deps_satisfied:
+                    self.logger.debug(
+                        f"Delaying initialization of {plugin_name} due to missing dependencies."
+                    )
+                    GLib.idle_add(
+                        lambda: initialize_plugin_with_deps(
+                            module, position, order, priority
+                        ),
+                    )
+                    return
+
+            # Initialize the plugin
             try:
+                plugin_instance = module.initialize_plugin(self.panel_instance)
+                self.logger.info(f"Initialized plugin: {plugin_name}")
+                self.plugins[module_name] = plugin_instance
+
+                # Append widget to the panel if applicable
                 target_box = self._get_target_panel_box(position, plugin_name)
                 if target_box is None:
-                    continue
-
-                # background plugins have no widgets to append
-                if position == "background":
-                    elapsed_time = time.time() - start_time
-                    self.logger.info(
-                        f"Plugin [{plugin_name}] initialized in {elapsed_time:.4f} seconds "
-                        f"(Position: {position}, Order: {order}, Priority: {priority})"
+                    self.logger.error(
+                        f"No target box found for plugin {plugin_name} with position {position}."
                     )
-                    continue
+                    return
 
-                # Check if plugin has append_widget method and use it
+                # Background plugins have no widgets to append
+                if position == "background":
+                    self.logger.info(
+                        f"Plugin [{plugin_name}] initialized as a background plugin."
+                    )
+                    return
+
+                # Check if the plugin has an append_widget method
                 if hasattr(plugin_instance, "append_widget"):
-                    # change this later from append_widget to append_to_instance or better name
                     widget_to_append = plugin_instance.append_widget()
-                    # widget_to_append could be a list of widgets to append or a single widget
-                    if widget_to_append:
-                        if isinstance(widget_to_append, list):
-                            for widget in widget_to_append:
-                                GLib.idle_add(target_box.append, widget)
-                        else:
-                            GLib.idle_add(target_box.append, widget_to_append)
+                    if widget_to_append is None:
+                        self.logger.error(
+                            f"append_widget returned None for plugin {plugin_name}."
+                        )
+                        return
 
-                if hasattr(plugin_instance, "panel_set_content"):
-                    panel_to_set_content = plugin_instance.panel_set_content()
-                    if panel_to_set_content:
-                        if isinstance(panel_to_set_content, list):
-                            for widget in panel_to_set_content:
-                                GLib.idle_add(target_box.append, widget)
-                        else:
-                            GLib.idle_add(target_box.set_content, panel_to_set_content)
+                    # Append the widget(s) to the target box
+                    if isinstance(widget_to_append, list):
+                        for widget in widget_to_append:
+                            GLib.idle_add(target_box.append, widget)
+                    else:
+                        GLib.idle_add(target_box.append, widget_to_append)
+                elif hasattr(plugin_instance, "panel_set_content"):
+                    # Handle plugins that use panel_set_content instead of append_widget
+                    panel_content = plugin_instance.panel_set_content()
+                    if panel_content is None:
+                        self.logger.error(
+                            f"panel_set_content returned None for plugin {plugin_name}."
+                        )
+                        return
 
-                elapsed_time = time.time() - start_time
-                self.logger.info(
-                    f"Plugin [{plugin_name}] initialized in {elapsed_time:.4f} seconds "
-                    f"(Position: {position}, Order: {order}, Priority: {priority})"
-                )
+                    if isinstance(panel_content, list):
+                        for widget in panel_content:
+                            GLib.idle_add(target_box.set_content, widget)
+                    else:
+                        GLib.idle_add(target_box.set_content, panel_content)
+                else:
+                    # Log background plugins without warnings
+                    self.logger.info(
+                        f"Plugin [{plugin_name}] initialized without UI interaction."
+                    )
+
             except Exception as e:
-                elapsed_time = time.time() - start_time
-                self.logger.error(
-                    f"Failed to initialize plugin {module.__name__}: {e} "
-                    f"(processed in {elapsed_time:.4f} seconds)",
-                    # exc_info=True,
-                )
+                self.logger.error(f"Failed to initialize plugin {plugin_name}: {e}")
+
+        # Process all plugins
+        for module, position, order, priority in plugin_metadata:
+            initialize_plugin_with_deps(module, position, order, priority)
 
     def _get_target_panel_box(self, position, plugin_name=None):
         """Determine the target panel box based on the plugin's position."""

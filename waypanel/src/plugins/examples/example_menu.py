@@ -1,7 +1,6 @@
 import os
 import toml
 from gi.repository import Gtk, Gio
-from ..core.utils import Utils
 import re
 
 # Set to False or remove the plugin file to disable it
@@ -9,12 +8,36 @@ ENABLE_PLUGIN = False
 # NOTE: If the code hangs, it will delay the execution of all plugins. Always use GLib.idle_add for non-blocking code.
 
 
+def get_plugin_placement(panel_instance):
+    """
+    Define plugin position and order.
+    """
+    return "right", 6, 6
+
+
+def initialize_plugin(panel_instance):
+    """
+    Initialize the example menu plugin.
+    Args:
+        obj: The main panel object from panel.py
+        app: The main application instance
+    """
+    if ENABLE_PLUGIN:
+        panel_instance.logger.info("Initializing example menu plugin.")
+        example_menu = ExampleMenuPlugin(panel_instance)
+        example_menu.create_menu_popover_example()
+        panel_instance.logger.info(
+            "Example menu plugin initialized and menu button added."
+        )
+        return example_menu
+
+
 class ExampleMenuPlugin:
-    def __init__(self, obj, app):
-        self.obj = obj
-        self.app = app
+    def __init__(self, panel_instance):
+        self.obj = panel_instance
+        self.logger = self.obj.logger
         self._setup_config_paths()
-        print("ExampleMenuPlugin initialized.")
+        self.logger.info("ExampleMenuPlugin initialized.")
 
     def append_widget(self):
         return self.menubutton_example
@@ -24,15 +47,13 @@ class ExampleMenuPlugin:
         self.home = os.path.expanduser("~")
         self.config_path = os.path.join(self.home, ".config/waypanel")
         self.waypanel_cfg = os.path.join(self.config_path, "waypanel.toml")
-        self.utils = Utils(application_id="com.github.utils")
+        self.utils = self.obj.utils
 
-    def create_menu_popover_example(self, obj, app):
+    def create_menu_popover_example(self):
         """
         Create a menu button and attach it to the panel.
         """
-        print("Creating menu popover example.")
-        self.top_panel = obj.top_panel
-        self.app = app
+        self.logger.info("Creating menu popover example.")
 
         # Create the MenuButton
         self.menubutton_example = Gtk.MenuButton()
@@ -63,7 +84,7 @@ class ExampleMenuPlugin:
         """
         Create a Gio.Menu and populate it with application entries grouped by category.
         """
-        print("Creating menu model.")
+        self.logger.info("Creating menu model.")
         menu = Gio.Menu()
 
         # Populate the menu with installed applications grouped by category
@@ -124,29 +145,8 @@ class ExampleMenuPlugin:
         """
         Run the application when a menu item is clicked.
         """
-        print(f"Running application: {app_id}")
+        self.logger.info(f"Running application: {app_id}")
         try:
             self.utils.run_app(app_id)
         except Exception as e:
-            print(f"Error running application {app_id}: {e}")
-
-
-def get_plugin_placement(panel_instance):
-    """
-    Define plugin position and order.
-    """
-    return "right", 6
-
-
-def initialize_plugin(obj, app):
-    """
-    Initialize the example menu plugin.
-    Args:
-        obj: The main panel object from panel.py
-        app: The main application instance
-    """
-    if ENABLE_PLUGIN:
-        print("Initializing example menu plugin.")
-        example_menu = ExampleMenuPlugin(obj, app)
-        example_menu.create_menu_popover_example(obj, app)
-        print("Example menu plugin initialized and menu button added.")
+            self.logger.error_handler.handle(f"Error running application {app_id}: {e}")
