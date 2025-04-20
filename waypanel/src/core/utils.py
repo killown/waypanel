@@ -131,9 +131,25 @@ class Utils(Adw.Application):
         # Define the path for the Unix socket
         self.connect_socket()
 
-    def run_app(self, cmd, wclass=None, initial_title=None, cmd_mode=True):
-        # FIXME: need to handle more data as it in params
-        self.stipc.run_cmd(cmd)
+    def run_cmd(self, cmd):
+        """Run a shell command without blocking the main thread."""
+
+        def worker():
+            try:
+                result = subprocess.run(
+                    cmd, shell=True, capture_output=True, text=True, check=True
+                )
+                GLib.idle_add(lambda: self.logger.info(f"Command Output: {result}"))
+            except subprocess.CalledProcessError as e:
+                GLib.idle_add(
+                    lambda e=e: self.logger.error_handler.handle(
+                        f"Error running command '{cmd}': {e.stderr}"
+                    )
+                )  # Run the worker in a separate thread
+
+        from threading import Thread
+
+        Thread(target=worker, daemon=True).start()
 
     def find_view_middle_cursor_position(self, view_geometry, monitor_geometry):
         # Calculate the middle position of the view
@@ -155,12 +171,6 @@ class Utils(Adw.Application):
             view_geometry, output_geometry
         )
         self.stipc.move_cursor(cursor_x, cursor_y)
-
-    def run_cmd(self, command):
-        try:
-            self.stipc.run_cmd(command)
-        except Exception as e:
-            self.logger.error_handler.handle(f"utils: self.run_cmd: {e}")
 
     def widget_exists(self, widget):
         return widget is not None and isinstance(widget, Gtk.Widget)
