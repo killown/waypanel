@@ -5,7 +5,7 @@ import os
 import orjson as json
 import toml
 from wayfire.extra.ipc_utils import WayfireUtils
-from gi.repository import Gtk4LayerShell as LayerShell
+from wayfire.extra.stipc import Stipc
 from ...core.create_panel import (
     set_layer_position_exclusive,
     unset_layer_position_exclusive,
@@ -53,7 +53,8 @@ class DockbarPlugin:
         self.dockbar_panel = None
         self.buttons_id = {}
         self.sock = WayfireSocket()  # Use the shared WayfireSocket instance
-        self.wf_utils = WayfireUtils(self.sock)  # Use the shared WayfireUtils instance
+        self.wf_utils = WayfireUtils(self.sock)
+        self.stipc = Stipc(self.sock)
         self.dockbar = None
         self.update_widget = self.utils.update_widget
 
@@ -136,14 +137,59 @@ class DockbarPlugin:
                 button, 2, lambda _, cmd=app_cmd: self.on_middle_click(cmd)
             )
 
-            # Add right-click gesture (if a callback is provided)
-            if callback is not None:
-                self.create_gesture(button, 3, callback)
+            # Add right-click gesture
+            self.create_gesture(
+                button, 3, lambda _, cmd=app_cmd: self.on_right_click(cmd)
+            )
 
             # Append the button to the box
             self.update_widget(box.append, button)
 
         return box
+
+    def on_right_click(self, cmd):
+        """
+        Handle right-click action: Move the cursor to the next available output
+        and open the app there.
+
+        Args:
+            cmd (str): The command to execute for the app.
+        """
+        try:
+            # Get the list of outputs and the currently focused output
+            outputs = self.sock.list_outputs()
+            focused_output = self.sock.get_focused_output()
+
+            # Find the index of the currently focused output
+            current_index = next(
+                (
+                    i
+                    for i, output in enumerate(outputs)
+                    if output["id"] == focused_output["id"]
+                ),
+                -1,
+            )
+
+            # Determine the next output (wrap around if necessary)
+            next_index = (current_index + 1) % len(outputs)
+            next_output = outputs[next_index]
+
+            # Calculate the center of the next output's geometry
+            output_geometry = next_output["geometry"]
+            cursor_x = output_geometry["x"] + output_geometry["width"] // 2
+            cursor_y = output_geometry["y"] + output_geometry["height"] // 2
+
+            # Move the cursor to the center of the next output
+            self.stipc.move_cursor(cursor_x, cursor_y)
+            self.stipc.click_button("S-BTN_LEFT", "full")
+
+            # Open the app
+            self.utils.run_cmd(cmd)
+
+        except Exception as e:
+            self.logger.error_handler.handle(
+                error=e, message="Error while handling right-click action."
+            )
 
     def on_middle_click(self, cmd):
         # Check for empty workspace
