@@ -1,6 +1,5 @@
 import socket
-
-import orjson
+import orjson as json
 from gi.repository import GLib
 
 
@@ -15,38 +14,58 @@ class WayfireClientIPC:
         self.handle_event = handle_event  # Store the custom handle_event function
 
     def connect_socket(self, socket_path):
-        self.socket_path = socket_path
-        self.client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.client_socket.connect(socket_path)
-        self.source = GLib.io_add_watch(
-            self.client_socket,
-            GLib.PRIORITY_DEFAULT,
-            GLib.IO_IN,
-            self.handle_socket_event,
-        )
+        try:
+            self.socket_path = socket_path
+            self.client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.client_socket.connect(socket_path)
+            self.source = GLib.io_add_watch(
+                self.client_socket,
+                GLib.PRIORITY_DEFAULT,
+                GLib.IO_IN,
+                self.handle_socket_event,
+            )
+            self.logger.info("Successfully connected to the Unix socket.")
+        except FileNotFoundError:
+            self.logger.error_handler.handle(f"Socket file not found: {socket_path}")
+        except ConnectionRefusedError:
+            self.logger.error_handler.handle("Connection refused by the server.")
+        except Exception as e:
+            self.logger.error_handler.handle(
+                f"Unexpected error connecting to socket: {e}"
+            )
+        finally:
+            if "self.client_socket" in locals() and self.client_socket:
+                self.client_socket.close()
 
     def handle_socket_event(self, fd, condition):
-        # try decode before actually handle the event
-        # if the code fail, glib will stop watching
+        """Read from the socket and process events with improved error handling."""
         try:
-            chunk = fd.recv(1024).decode()
+            chunk = fd.recv(1024).decode("utf-8", errors="replace")
             if not chunk:
-                return GLib.SOURCE_REMOVE
+                self.logger.warning("No data received from socket; removing source.")
+                return GLib.SOURCE_REMOVE  # Remove source if no data is received
 
             self.buffer += chunk
 
-            while "\n" in self.buffer:
+            # Process the complete events in the buffer
+            while "\n" in self.buffer:  # Assuming newline separates events
                 event_str, self.buffer = self.buffer.split("\n", 1)
-                if event_str:
+                if event_str.strip():  # Ignore empty strings
                     try:
-                        event = orjson.loads(event_str)
+                        event = json.loads(event_str)
                         self.process_event(event)
-                    except orjson.JSONDecodeError as e:
+                    except json.JSONDecodeError as e:
                         self.logger.error_handler.handle(f"JSON decode error: {e}")
+            return GLib.SOURCE_CONTINUE  # Continue receiving data
         except UnicodeDecodeError as e:
-            self.logger.error_handler.handle(f"{e}")
-
-        return GLib.SOURCE_CONTINUE
+            self.logger.error_handler.handle(f"Unicode decode error: {e}")
+        except Exception as e:
+            self.logger.error_handler.handle(
+                f"Unexpected error handling socket event: {e}"
+            )
+            return (
+                GLib.SOURCE_REMOVE
+            )  # Stop receiving data if an unexpected error occurs
 
     def process_event(self, event):
         self.handle_event(event)  # Call the custom handle_event function
