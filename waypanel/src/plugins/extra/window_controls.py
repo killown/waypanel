@@ -1,9 +1,8 @@
 import gi
+from waypanel.src.core.compositor.ipc import IPC
+from gi.repository import Gtk, GLib
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, GLib
-from wayfire.ipc import WayfireSocket
-
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -27,7 +26,7 @@ class WindowControlsPlugin:
     def __init__(self, panel_instance):
         self.obj = panel_instance
         self.logger = self.obj.logger
-        self.sock = WayfireSocket()
+        self.ipc = IPC()
         self.utils = self.obj.utils
 
         # Store the last focused toplevel view as an instance variable
@@ -111,7 +110,7 @@ class WindowControlsPlugin:
 
     def maximize_last_focused_view(self, *_):
         if self.last_toplevel_focused_view:
-            self.sock.assign_slot(self.last_toplevel_focused_view["id"], "slot_c")
+            self.ipc.assign_slot(self.last_toplevel_focused_view["id"], "slot_c")
 
     def close_last_focused_view(self, *_):
         if (
@@ -121,7 +120,7 @@ class WindowControlsPlugin:
             self.logger.info(
                 f"Closing view with ID: {self.last_toplevel_focused_view['id']}"
             )
-            self.sock.close_view(self.last_toplevel_focused_view["id"])
+            self.ipc.close_view(self.last_toplevel_focused_view["id"])
         else:
             self.logger.info("No valid toplevel view to close.")
 
@@ -129,10 +128,10 @@ class WindowControlsPlugin:
 
     def minimize_view(self, *_):
         if self.last_toplevel_focused_view:
-            self.sock.set_view_minimized(self.last_toplevel_focused_view["id"], True)
+            self.ipc.set_view_minimized(self.last_toplevel_focused_view["id"], True)
 
     # # Hide desktop-environment views with unknown type
-    # for view in self.sock.list_views():
+    # for view in self.ipc.list_views():
     # if view["role"] == "desktop-environment" and view["type"] == "unknown":
     # self.hide_view_instead_closing(view, ignore_toplevel=True)
 
@@ -144,12 +143,12 @@ class WindowControlsPlugin:
     #         button.connect("clicked", lambda widget: self.on_hidden_view(widget, view))
     #         self.update_widget(self.obj.top_panel_box_center.append, button)
     #         self.utils.handle_icon_for_button(view, button)
-    #         self.sock.hide_view(view["id"])
+    #         self.ipc.hide_view(view["id"])
     #
     # def on_hidden_view(self, widget, view):
     #     id = view["id"]
-    #     if id in self.wf_utils.list_ids():
-    #         self.sock.unhide_view(id)
+    #     if id in self.ipc.list_ids():
+    #         self.ipc.unhide_view(id)
     #         # ***Warning*** this was freezing the panel
     #         # set focus will return an Exception in case the view is not toplevel
     #         GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))

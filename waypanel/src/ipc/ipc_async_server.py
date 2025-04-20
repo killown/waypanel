@@ -3,8 +3,7 @@ import asyncio
 import orjson as json
 import time
 from concurrent.futures import ThreadPoolExecutor
-from wayfire import WayfireSocket
-from wayfire.extra.ipc_utils import WayfireUtils
+from waypanel.src.core.compositor.ipc import IPC
 
 
 class WayfireEventServer:
@@ -15,14 +14,12 @@ class WayfireEventServer:
 
     def __init__(self, logger):
         self.logger = logger
-        self.socket_paths = [
+        self.ipcet_paths = [
             "/tmp/waypanel.sock",
         ]
         self._cleanup_sockets()
-
-        self.sock = WayfireSocket()
-        self.utils = WayfireUtils(self.sock)
-        self.sock.watch()
+        self.ipc = IPC()
+        self.ipc.watch()
 
         self.executor = ThreadPoolExecutor()
         self.event_queue = asyncio.Queue()
@@ -31,21 +28,19 @@ class WayfireEventServer:
 
     def _cleanup_sockets(self):
         """Remove existing socket files"""
-        for path in self.socket_paths:
+        for path in self.ipcet_paths:
             if os.path.exists(path):
                 os.remove(path)
 
     def reconnect_wayfire_socket(self):
         """Reconnect to Wayfire socket"""
         self.logger.info("reconnecting wayfire ipc")
-        self.sock.close()
-        self.sock = WayfireSocket()
-        self.utils = WayfireUtils(self.sock)
-        self.sock.watch()
+        self.ipc.close()
+        self.ipc.watch()
 
     def is_socket_active(self):
         """Check if socket is connected, reconnect if not"""
-        if not self.sock.is_connected():
+        if not self.ipc.is_connected():
             try:
                 self.reconnect_wayfire_socket()
             except Exception as e:
@@ -61,11 +56,11 @@ class WayfireEventServer:
                 continue
 
             try:
-                event = self.sock.read_next_event()
+                event = self.ipc.read_next_event()
                 asyncio.run_coroutine_threadsafe(self.event_queue.put(event), self.loop)
             except Exception as e:
                 self.logger.error_handler.handle(f"Event read failed: {e}")
-                if not self.sock.is_connected():
+                if not self.ipc.is_connected():
                     time.sleep(1)
                     continue
 
@@ -104,7 +99,7 @@ class WayfireEventServer:
 
     async def main(self):
         """Main server entry point"""
-        servers = [self.start_server(path) for path in self.socket_paths]
+        servers = [self.start_server(path) for path in self.ipcet_paths]
         self.loop = asyncio.get_running_loop()
         self.executor.submit(self.read_events)
 

@@ -1,9 +1,9 @@
 import os
 import orjson as json
-from gi.repository import Gtk, GLib
-from wayfire.extra.ipc_utils import WayfireUtils
-from wayfire.ipc import WayfireSocket
+from gi.repository import Gtk
 from gi.repository import Gtk4LayerShell as LayerShell
+from waypanel.src.core.compositor.ipc import IPC
+
 
 from waypanel.src.core.create_panel import (
     set_layer_position_exclusive,
@@ -38,6 +38,7 @@ class TaskbarPlugin(Gtk.Application):
         """
         self.logger = panel_instance.logger
         self.obj = panel_instance
+        self.ipc = IPC()
         self.plugins = self.obj.plugins
         self.create_gesture = self.plugins["gestures_setup"].create_gesture
         self.remove_gesture = self.plugins["gestures_setup"].remove_gesture
@@ -47,8 +48,6 @@ class TaskbarPlugin(Gtk.Application):
         self.utils = self.obj.utils
         self.taskbar_list = []
         self.buttons_id = {}
-        self.sock = WayfireSocket()
-        self.wf_utils = WayfireUtils(self.sock)
         self.bottom_panel = self.obj.bottom_panel
         self.update_widget = self.utils.update_widget
         self.is_scale_active = {}
@@ -84,9 +83,9 @@ class TaskbarPlugin(Gtk.Application):
         if output:
             output_name = json.loads(output).get("output_name")
         if output_name:
-            output_id = self.wf_utils.get_output_id_by_name(output_name)
+            output_id = self.ipc.get_output_id_by_name(output_name)
             if output_id:
-                geometry = self.wf_utils.get_output_geometry(output_id)
+                geometry = self.ipc.get_output_geometry(output_id)
 
         if geometry:
             monitor_width = geometry["width"]
@@ -195,7 +194,7 @@ class TaskbarPlugin(Gtk.Application):
         # Create gesture handlers for the button
         button.connect("clicked", lambda *_: self.set_view_focus(view))
         self.create_gesture(box, 1, lambda *_: self.set_view_focus(view))
-        self.create_gesture(box, 2, lambda *_: self.sock.close_view(view_id))
+        self.create_gesture(box, 2, lambda *_: self.ipc.close_view(view_id))
         self.create_gesture(box, 3, lambda *_: self.send_view_to_empity_workspace(view))
 
         return button
@@ -203,21 +202,21 @@ class TaskbarPlugin(Gtk.Application):
     def send_view_to_empity_workspace(self, view):
         empty_workspace = self.utils.find_empty_workspace()
         view_id = view["id"]
-        wset_index_focused = self.sock.get_focused_output()["wset-index"]
+        wset_index_focused = self.ipc.get_focused_output()["wset-index"]
         wset_index_view = view["wset-index"]
         # this will prevent from trying to move the view from another output to an empity workspace
         # because it's necessary to bring the view to the current output and then move it to a empity ws
         if wset_index_focused != wset_index_view:
             self.set_view_focus(view)
         else:
-            self.sock.scale_toggle()
+            self.ipc.scale_toggle()
             if empty_workspace:
                 x, y = empty_workspace
                 # if set_workspace from an empity workspace before the view is focused
                 # the view may disappear from the workspaces layout and will not be able to get focus
                 self.set_view_focus(view)
                 # now move the view to an empity workspace
-                self.sock.set_workspace(x, y, view_id)
+                self.ipc.set_workspace(x, y, view_id)
 
     def new_taskbar_button(self, view):
         """
@@ -255,7 +254,7 @@ class TaskbarPlugin(Gtk.Application):
     def Taskbar(self):
         """Initialize or update the taskbar."""
         self.logger.debug("Initializing or updating taskbar.")
-        list_views = self.sock.list_views()
+        list_views = self.ipc.list_views()
         if not list_views:
             return
         for view in list_views:
@@ -312,11 +311,11 @@ class TaskbarPlugin(Gtk.Application):
             self.logger.debug(f"View already in taskbar list: {view_id}")
             return {}
 
-        if view_id not in self.wf_utils.list_ids():
+        if view_id not in self.ipc.list_ids():
             self.logger.debug(f"View ID not in active IDs: {view_id}")
             return {}
 
-        view = self.sock.get_view(view_id)
+        view = self.ipc.get_view(view_id)
         if not view:
             self.logger.debug(f"Failed to fetch view details for ID: {view_id}")
             return {}
@@ -386,7 +385,6 @@ class TaskbarPlugin(Gtk.Application):
             bool: True if an error occurs, otherwise None.
         """
         try:
-            self.sock.scale_toggle()
             view = self.utils.is_view_valid(view_id)
             if not view:
                 self.logger.debug(f"Invalid or non-existent view ID: {view_id}")
@@ -397,9 +395,9 @@ class TaskbarPlugin(Gtk.Application):
 
             # Resize the view if it's too small
             try:
-                viewgeo = self.wf_utils.get_view_geometry(view_id)
+                viewgeo = self.ipc.get_view_geometry(view_id)
                 if viewgeo and (viewgeo["width"] < 100 or viewgeo["height"] < 100):
-                    self.sock.configure_view(
+                    self.ipc.configure_view(
                         view_id, viewgeo["x"], viewgeo["y"], 400, 400
                     )
                     self.logger.debug(f"Resized view ID {view_id} to 400x400.")
@@ -412,7 +410,7 @@ class TaskbarPlugin(Gtk.Application):
             # Handle scale activation
             if output_id in self.is_scale_active and self.is_scale_active[output_id]:
                 try:
-                    self.sock.scale_toggle()
+                    self.ipc.scale_toggle()
                     self.logger.debug("Scale toggled off.")
                 except Exception as e:
                     self.logger.error_handler.handle(
@@ -444,8 +442,8 @@ class TaskbarPlugin(Gtk.Application):
             view_id (int): The ID of the view to focus and center.
         """
         try:
-            self.wf_utils.go_workspace_set_focus(view_id)
-            self.wf_utils.center_cursor_on_view(view_id)
+            self.ipc.go_workspace_set_focus(view_id)
+            self.ipc.center_cursor_on_view(view_id)
         except Exception as e:
             self.logger.error_handler.handle(
                 error=e,
@@ -455,7 +453,7 @@ class TaskbarPlugin(Gtk.Application):
     def update_taskbar_on_scale(self) -> None:
         """Update all taskbar buttons during scale plugin activation."""
         self.logger.debug("Updating taskbar buttons during scale plugin activation.")
-        for view in self.sock.list_views():
+        for view in self.ipc.list_views():
             self.update_taskbar_list(view)
 
     def on_scale_activated(self):
@@ -465,7 +463,7 @@ class TaskbarPlugin(Gtk.Application):
         layer_set_on_output_name = None
         if output_info:
             layer_set_on_output_name = json.loads(output_info).get("output_name")
-        focused_output_name = self.sock.get_focused_output()["name"]
+        focused_output_name = self.ipc.get_focused_output()["name"]
         # only set layer if the focused output is the same as the defined in panel creation
         if (
             layer_set_on_output_name == focused_output_name
@@ -522,7 +520,7 @@ class TaskbarPlugin(Gtk.Application):
 
     def _remove_invalid_buttons(self):
         """Remove buttons for views that no longer exist."""
-        current_views = {v["id"] for v in self.sock.list_views()}
+        current_views = {v["id"] for v in self.ipc.list_views()}
         for view_id in list(self.buttons_id.keys()):
             if view_id not in current_views:
                 self.remove_button(view_id)
@@ -530,10 +528,10 @@ class TaskbarPlugin(Gtk.Application):
     def view_exist(self, view_id):
         """Check if a view exists and meets criteria to be displayed in the taskbar."""
         try:
-            view_id_list = [view["id"] for view in self.sock.list_views()]
+            view_id_list = [view["id"] for view in self.ipc.list_views()]
             if view_id not in view_id_list:
                 return False
-            view = self.sock.get_view(view_id)
+            view = self.ipc.get_view(view_id)
             if not self.is_valid_view(view):
                 return False
 

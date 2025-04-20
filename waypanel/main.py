@@ -16,12 +16,12 @@ import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from waypanel.src.ipc.ipc_async_server import WayfireEventServer
-from wayfire import WayfireSocket
+from waypanel.src.core.compositor.ipc import IPC
 from waypanel.src.core.log_setup import setup_logging
 
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-sock = WayfireSocket()
+sock = IPC()
 # Constants
 DEFAULT_CONFIG_PATH = "~/.config/waypanel"
 GTK_LAYER_SHELL_INSTALL_PATH = "~/.local/lib/gtk4-layer-shell"

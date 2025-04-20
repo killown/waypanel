@@ -1,8 +1,6 @@
 from gi.repository import GLib
-
-from wayfire.core.template import get_msg_template
+from waypanel.src.core.compositor.ipc import IPC
 from wayfire.extra.ipc_utils import WayfireUtils
-from wayfire import WayfireSocket as OriginalWayfireSocket
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -19,25 +17,12 @@ def initialize_plugin(panel_instance):
         return event_manager
 
 
-class WayfireSocket(OriginalWayfireSocket):
-    def hide_view(self, view_id):
-        message = get_msg_template("hide-view/hide")
-        message["data"]["view-id"] = view_id
-        self.send_json(message)
-
-    def unhide_view(self, view_id):
-        message = get_msg_template("hide-view/unhide")
-        message["data"]["view-id"] = view_id
-        self.send_json(message)
-
-
 class EventManagerPlugin:
     def __init__(self, panel_instance):
         """Initialize the plugin."""
         self.obj = panel_instance
         self.logger = self.obj.logger
-        self.sock = WayfireSocket()
-        self.wf_utils = WayfireUtils(self.sock)
+        self.ipc = IPC()
         self.utils = self.obj.utils
 
         # Initialize the IPC client
@@ -254,8 +239,8 @@ class EventManagerPlugin:
 
     def on_hidden_view(self, widget, view):
         id = view["id"]
-        if id in self.wf_utils.list_ids():
-            self.sock.unhide_view(id)
+        if id in self.ipc.list_ids():
+            self.ipc.unhide_view(id)
             # ***Warning*** this was freezing the panel
             # set focus will return an Exception in case the view is not toplevel
             GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))

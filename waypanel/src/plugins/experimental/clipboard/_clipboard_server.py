@@ -98,15 +98,30 @@ class AsyncClipboardServer:
                 logger.info(f"Database initialized at {self.db_path}")
 
     async def add_item(self, content):
-        """Add an item if it's new and non-empty, maintaining max items limit."""
+        """
+        Add an item if it's new and non-empty, maintaining max items limit.
+        Avoids adding duplicate items by checking if the content already exists in the database.
+        """
+        # Skip empty or duplicate content
         if not content.strip() or content == self.last_clipboard_content:
             return
 
         async with aiosqlite.connect(self.db_path) as db:
-            cursor = await db.execute("SELECT COUNT(*) FROM clipboard_items")
+            # Check if the content already exists in the database
+            cursor = await db.execute(
+                "SELECT COUNT(*) FROM clipboard_items WHERE content = ?", (content,)
+            )
             count = (await cursor.fetchone())[0]
+            if count > 0:
+                if LOG_ENABLED:
+                    logger.info(f"Duplicate item found: {content[:50]}... Skipping.")
+                return
 
-            if count >= self.max_items:
+            # Enforce the maximum number of items
+            cursor = await db.execute("SELECT COUNT(*) FROM clipboard_items")
+            total_items = (await cursor.fetchone())[0]
+            if total_items >= self.max_items:
+                # Remove the oldest item
                 await db.execute("""
                     DELETE FROM clipboard_items
                     WHERE id = (SELECT id FROM clipboard_items ORDER BY timestamp ASC LIMIT 1)
@@ -119,9 +134,11 @@ class AsyncClipboardServer:
             )
             await db.commit()
 
+            # Update the last clipboard content
             self.last_clipboard_content = content
+
             if LOG_ENABLED:
-                logger.info(f"Added item: {content[:50]}...")
+                logger.info(f"Added new item: {content[:50]}...")
 
     async def get_items(self, limit=100):
         """Fetch recent items (newest first)."""

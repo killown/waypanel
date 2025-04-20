@@ -2,8 +2,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import GLib
-from wayfire import WayfireSocket
-from wayfire.extra.ipc_utils import WayfireUtils
+from waypanel.src.core.compositor.ipc import IPC
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -33,8 +32,7 @@ class GoNextWorkspaceWithViewsPlugin:
         """Initialize the plugin."""
         self.obj = panel_instance
         self.logger = self.obj.logger
-        self.sock = WayfireSocket()
-        self.wf_utils = WayfireUtils(self.sock)
+        self.ipc = IPC()
         self.gestures_setup_plugin = None
 
     def setup_plugin(self):
@@ -75,7 +73,7 @@ class GoNextWorkspaceWithViewsPlugin:
         """
         Retrieve a list of workspaces that have views, ensuring the current workspace is always included.
         """
-        focused_output = self.sock.get_focused_output()
+        focused_output = self.ipc.get_focused_output()
         monitor = focused_output["geometry"]
 
         # Always include the current workspace
@@ -83,7 +81,7 @@ class GoNextWorkspaceWithViewsPlugin:
         current_ws_y = focused_output["workspace"]["y"]
         ws_with_views = [{"x": current_ws_x, "y": current_ws_y}]
 
-        views = self.wf_utils.get_focused_output_views()
+        views = self.ipc.get_focused_output_views()
 
         if views:
             # Filter views to include only valid toplevel views
@@ -109,7 +107,7 @@ class GoNextWorkspaceWithViewsPlugin:
                         ):  # Avoid duplicate entry
                             for view in views:
                                 intersection_area = (
-                                    self.wf_utils._calculate_intersection_area(
+                                    self.ipc._calculate_intersection_area(
                                         view["geometry"],
                                         ws_x - current_ws_x,
                                         ws_y - current_ws_y,
@@ -134,7 +132,7 @@ class GoNextWorkspaceWithViewsPlugin:
             return
 
         # Get the currently active workspace
-        active_workspace = self.sock.get_focused_output()["workspace"]
+        active_workspace = self.ipc.get_focused_output()["workspace"]
         active_workspace_coords = (active_workspace["x"], active_workspace["y"])
 
         # Sort workspaces by row (y) and then column (x)
@@ -166,4 +164,4 @@ class GoNextWorkspaceWithViewsPlugin:
         self.logger.info(
             f"Switching to workspace: x={next_workspace['x']}, y={next_workspace['y']}"
         )
-        self.sock.set_workspace(next_workspace["x"], next_workspace["y"])
+        self.ipc.set_workspace(next_workspace["x"], next_workspace["y"])

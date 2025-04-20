@@ -2,10 +2,8 @@ import os
 import sys
 import toml
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
-from wayfire import WayfireSocket
-from wayfire.extra.ipc_utils import WayfireUtils
+from waypanel.src.core.compositor.ipc import IPC
 
-from waypanel.src.core import plugin_loader
 from waypanel.src.core.create_panel import (
     CreatePanel,
 )
@@ -33,13 +31,9 @@ class Panel(Adw.Application):
         self._setup_config_paths()
         self.plugin_loader = PluginLoader(self, logger, self.config_path)
         self.plugins = self.plugin_loader.plugins
-
+        self.ipc = IPC()
         # Initialize variables and configurations
         self.args = sys.argv
-
-        # Initialize Wayfire components
-        self.sock = WayfireSocket()
-        self.wf_utils = WayfireUtils(self.sock)
 
         # Initialize state variables
         self.monitor = None
@@ -58,8 +52,8 @@ class Panel(Adw.Application):
 
         # Retrieve monitor information
         monitor = next(
-            (output for output in self.sock.list_outputs() if "-1" in output["name"]),
-            self.sock.list_outputs()[0],
+            (output for output in self.ipc.list_outputs() if "-1" in output["name"]),
+            self.ipc.list_outputs()[0],
         )
 
         # Default dimensions from the monitor geometry
@@ -218,7 +212,7 @@ class Panel(Adw.Application):
         # self.dock.do_start()
 
     def monitor_width_height(self):
-        focused_view = self.sock.get_focused_view()
+        focused_view = self.ipc.get_focused_view()
         if focused_view:
             output = self.utils.get_monitor_info()
             output = output[self.monitor_name]

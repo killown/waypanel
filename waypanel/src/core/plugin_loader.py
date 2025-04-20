@@ -1,7 +1,7 @@
 import os
 import importlib
-import time
 import toml
+from waypanel.src.core.utils import Utils
 from gi.repository import GLib
 
 
@@ -69,6 +69,7 @@ class PluginLoader:
         self.panel_instance = panel_instance
         self.logger = logger
         self.config_path = config_path
+        self.utils = Utils(panel_instance)
         self.plugins = {}
 
     def load_plugins(self):
@@ -189,7 +190,7 @@ class PluginLoader:
             priority = 0
             order = 0
             if position_result:
-                if isinstance(position_result, tuple):
+                if self.utils.validate_tuple(position_result, name="position_result"):
                     if len(position_result) == 3:
                         position, order, priority = position_result
                     else:
@@ -232,34 +233,15 @@ class PluginLoader:
         Returns:
             bool: True if the list is valid, False otherwise.
         """
-        if not isinstance(deps_list, list):
-            self.logger.error_handler.handle(
-                error=TypeError(
-                    f"Invalid DEPS type: {type(deps_list).__name__}. Expected a list."
-                ),
-                message=f"Plugin '{module_name}' has an invalid DEPS list. DEPS must be a list.",
-                level="error",
-            )
+        if not self.utils.validate_list(deps_list, "deps_list"):
             return False
 
         for index, dep in enumerate(deps_list):
-            if not isinstance(dep, str):
-                self.logger.error_handler.handle(
-                    error=TypeError(
-                        f"Invalid dependency type at index {index}: {type(dep).__name__}. Expected a string."
-                    ),
-                    message=f"Plugin '{module_name}' has an invalid dependency at index {index} in DEPS. Dependencies must be strings.",
-                    level="error",
-                )
+            if not self.utils.validate_string(
+                dep, "[dep] item from enumerate(deps_list)"
+            ):
                 return False
-            if not dep.strip():
-                self.logger.error_handler.handle(
-                    error=ValueError(
-                        f"Empty dependency found at index {index} in DEPS."
-                    ),
-                    message=f"Plugin '{module_name}' has an empty dependency at index {index} in DEPS. Dependencies must be non-empty strings.",
-                    level="error",
-                )
+            if not self.utils.validate_string(dep):
                 return False
 
         return True

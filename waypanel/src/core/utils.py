@@ -6,9 +6,7 @@ import gi
 import numpy as np
 import toml
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
-from wayfire import WayfireSocket
-from wayfire.extra.ipc_utils import WayfireUtils
-from wayfire.extra.stipc import Stipc
+from waypanel.src.core.compositor.ipc import IPC
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -25,9 +23,7 @@ class Utils(Adw.Application):
         self.gestures = {}
         self.fd = None
         self.watch_id = None
-        self.sock = WayfireSocket()
-        self.wf_utils = WayfireUtils(self.sock)
-        self.stipc = Stipc(self.sock)
+        self.ipc = IPC()
 
         self.focused_view_id = None
         if not os.path.exists(self.config_path):
@@ -81,14 +77,14 @@ class Utils(Adw.Application):
         return cursor_x, cursor_y
 
     def move_cursor_middle(self, view_id):
-        view = self.sock.get_view(view_id)
+        view = self.ipc.get_view(view_id)
         output_id = view["output-id"]
         view_geometry = view["geometry"]
-        output_geometry = self.sock.get_output(output_id)["geometry"]
+        output_geometry = self.ipc.get_output(output_id)["geometry"]
         cursor_x, cursor_y = self.find_view_middle_cursor_position(
             view_geometry, output_geometry
         )
-        self.stipc.move_cursor(cursor_x, cursor_y)
+        self.ipc.move_cursor(cursor_x, cursor_y)
 
     def widget_exists(self, widget):
         return widget is not None and isinstance(widget, Gtk.Widget)
@@ -459,7 +455,207 @@ class Utils(Adw.Application):
         self.logger.info(f"No icon found for application: {application_name}")
         return None
 
-    def search_desktop(self, wm_class):
+    def validate_method(self, obj, method_name):
+        """
+        Validate that a method exists and is callable on an object.
+        Args:
+            obj: The object to check.
+            method_name (str): The name of the method to validate.
+            logger: Logger instance for logging warnings or errors.
+        Returns:
+            bool: True if the method is valid, False otherwise.
+        """
+        if not hasattr(obj, method_name):
+            self.logger.warning(
+                f"Object {obj.__class__.__name__} does not have a method named '{method_name}'."
+            )
+            return False
+        method = getattr(obj, method_name)
+        if not callable(method):
+            self.logger.warning(
+                f"'{method_name}' on {obj.__class__.__name__} is not callable."
+            )
+            return False
+        return True
+
+    def validate_widget(self, widget, name="widget"):
+        """
+        Validate that the widget exists and is valid.
+        Args:
+            widget: The widget to validate.
+            name (str): The name of the widget for logging purposes.
+        Returns:
+            bool: True if valid, False otherwise.
+        """
+        if not widget:
+            self.logger.warning(f"{name} is None or invalid.")
+            return False
+        return True
+
+    def validate_string(self, input_value, name="input", allow_empty=False):
+        """
+        Validate that the input is a non-empty string.
+        Args:
+            input_value: The value to validate.
+            name (str): The name of the input for logging purposes.
+            allow_empty (bool): Whether to allow empty strings.
+        Returns:
+            bool: True if valid, False otherwise.
+        """
+        if not isinstance(input_value, str):
+            self.logger.warning(
+                f"Invalid {name}: Expected a string, got {type(input_value).__name__}."
+            )
+            return False
+        if not allow_empty and not input_value.strip():
+            self.logger.warning(f"{name} cannot be empty.")
+            return False
+        return True
+
+    def validate_integer(
+        self, input_value, name="input", min_value=None, max_value=None
+    ):
+        """
+        Validate that the input is an integer within a specified range.
+        Args:
+            input_value: The value to validate.
+            name (str): The name of the input for logging purposes.
+            min_value (int): Minimum allowed value (inclusive).
+            max_value (int): Maximum allowed value (inclusive).
+        Returns:
+            bool: True if valid, False otherwise.
+        """
+        if not isinstance(input_value, int):
+            self.logger.warning(
+                f"Invalid {name}: Expected an integer, got {type(input_value).__name__}."
+            )
+            return False
+        if min_value is not None and input_value < min_value:
+            self.logger.warning(f"{name} must be >= {min_value}.")
+            return False
+        if max_value is not None and input_value > max_value:
+            self.logger.warning(f"{name} must be <= {max_value}.")
+            return False
+        return True
+
+    def validate_tuple(
+        self, input_value, expected_length=None, element_types=None, name="input"
+    ):
+        """
+        Validate that the input is a tuple with specific constraints.
+        Args:
+            input_value: The value to validate.
+            expected_length (int, optional): The expected length of the tuple. If None, no length check is performed.
+            element_types (list or type, optional): The expected type(s) of each element in the tuple.
+                                                   If a single type is provided, all elements must match that type.
+                                                   If a list of types is provided, each element must match the corresponding type.
+            name (str): The name of the input for logging purposes.
+        Returns:
+            bool: True if the tuple is valid, False otherwise.
+        """
+        # Check if the input is a tuple
+        if not isinstance(input_value, tuple):
+            self.logger.warning(
+                f"Invalid {name}: Expected a tuple, got {type(input_value).__name__}."
+            )
+            return False
+
+        # Check the length of the tuple
+        if expected_length is not None and len(input_value) != expected_length:
+            self.logger.warning(
+                f"Invalid {name}: Expected a tuple of length {expected_length}, got {len(input_value)}."
+            )
+            return False
+
+        # Check the types of the elements
+        if element_types is not None:
+            if isinstance(element_types, list):
+                # Validate each element against its corresponding type
+                if len(element_types) != len(input_value):
+                    self.logger.warning(
+                        f"Invalid {name}: Number of element types ({len(element_types)}) "
+                        f"does not match tuple length ({len(input_value)})."
+                    )
+                    return False
+                for index, (element, expected_type) in enumerate(
+                    zip(input_value, element_types)
+                ):
+                    if not isinstance(element, expected_type):
+                        self.logger.warning(
+                            f"Invalid element type at index {index} in {name}: "
+                            f"Expected {expected_type.__name__}, got {type(element).__name__}."
+                        )
+                        return False
+            elif isinstance(element_types, type):
+                # Validate all elements against a single type
+                for index, element in enumerate(input_value):
+                    if not isinstance(element, element_types):
+                        self.logger.warning(
+                            f"Invalid element type at index {index} in {name}: "
+                            f"Expected {element_types.__name__}, got {type(element).__name__}."
+                        )
+                        return False
+
+        return True
+
+    def validate_bytes(self, input_value, expected_length=None, name="input"):
+        """
+        Validate that the input is a bytes object with specific constraints.
+        Args:
+            input_value: The value to validate.
+            expected_length (int, optional): The expected length of the bytes object. If None, no length check is performed.
+            name (str): The name of the input for logging purposes.
+        Returns:
+            bool: True if the bytes object is valid, False otherwise.
+        """
+        # Check if the input is a bytes object
+        if not isinstance(input_value, bytes):
+            self.logger.warning(
+                f"Invalid {name}: Expected bytes, got {type(input_value).__name__}."
+            )
+            return False
+
+        # Check the length of the bytes object
+        if expected_length is not None and len(input_value) != expected_length:
+            self.logger.warning(
+                f"Invalid {name}: Expected bytes of length {expected_length}, got {len(input_value)}."
+            )
+            return False
+
+        return True
+
+    def validate_list(
+        self, input_list, name="input", element_type=None, allow_empty=True
+    ):
+        """
+        Validate that the input is a list with elements of a specific type.
+        Args:
+            input_list: The list to validate.
+            name (str): The name of the input for logging purposes.
+            element_type: The expected type of each element in the list.
+            allow_empty (bool): Whether to allow empty lists.
+        Returns:
+            bool: True if valid, False otherwise.
+        """
+        if not isinstance(input_list, list):
+            self.logger.warning(
+                f"Invalid {name}: Expected a list, got {type(input_list).__name__}."
+            )
+            return False
+        if not allow_empty and not input_list:
+            self.logger.warning(f"{name} cannot be empty.")
+            return False
+        if element_type is not None:
+            for index, element in enumerate(input_list):
+                if not isinstance(element, element_type):
+                    self.logger.warning(
+                        f"Invalid element type at index {index} in {name}: "
+                        f"Expected {element_type.__name__}, got {type(element).__name__}."
+                    )
+                    return False
+        return True
+
+    def search_desktop(self, app_id):
         """
         Search for a desktop file associated with the given WM_CLASS.
 
@@ -471,8 +667,8 @@ class Utils(Adw.Application):
         """
         try:
             # Validate input
-            if not wm_class or not isinstance(wm_class, str):
-                self.logger.warning(f"Invalid or missing WM_CLASS: {wm_class}")
+            if not app_id or not self.validate_string(app_id):
+                self.logger.warning(f"Invalid or missing WM_CLASS: {app_id}")
                 return None
 
             # Retrieve all installed applications
@@ -488,24 +684,24 @@ class Utils(Adw.Application):
             desktop_files = [
                 app.get_id().lower()
                 for app in all_apps
-                if app.get_id() and wm_class.lower() in app.get_id().lower()
+                if app.get_id() and app_id.lower() in app.get_id().lower()
             ]
 
             # Log the result
             if desktop_files:
                 self.logger.debug(
-                    f"Found desktop file for WM_CLASS '{wm_class}': {desktop_files[0]}"
+                    f"Found desktop file for WM_CLASS '{app_id}': {desktop_files[0]}"
                 )
                 return desktop_files[0]
             else:
-                self.logger.info(f"No desktop file found for WM_CLASS: {wm_class}")
+                self.logger.info(f"No desktop file found for WM_CLASS: {app_id}")
                 return None
 
         except Exception as e:
             # Catch-all for unexpected errors
             self.logger.error_handler.handle(
                 error=e,
-                message=f"Unexpected error while searching for desktop file with WM_CLASS: {wm_class}",
+                message=f"Unexpected error while searching for desktop file with WM_CLASS: {app_id}",
             )
             return None
 
@@ -600,13 +796,13 @@ class Utils(Adw.Application):
         return None
 
     def list_app_ids(self):
-        views = self.sock.list_views()
+        views = self.ipc.list_views()
         return [i["app-id"].lower() for i in views if i["app-id"] != "nil"]
 
     def focus_view_when_ready(self, view):
         """this function is meant to be used with GLib timeout or idle_add"""
         if view["role"] == "toplevel" and view["focusable"] is True:
-            self.sock.set_focus(view["id"])
+            self.ipc.set_focus(view["id"])
             return False  # Stop idle processing
         return True  # Continue idle processing
 
@@ -619,7 +815,7 @@ class Utils(Adw.Application):
         """
         try:
             # Get the list of workspaces without views
-            empty_workspaces = self.wf_utils.get_workspaces_without_views()
+            empty_workspaces = self.ipc.get_workspaces_without_views()
 
             if empty_workspaces:
                 # Return the first empty workspace as a tuple (x, y)
@@ -637,10 +833,10 @@ class Utils(Adw.Application):
             return None
 
     def move_view_to_empty_workspace(self, view_id):
-        ws = self.wf_utils.get_active_workspace()
+        ws = self.ipc.get_active_workspace()
         if ws:
             x, y = ws.values()
-            self.sock.set_workspace(x, y, view_id)
+            self.ipc.set_workspace(x, y, view_id)
 
     # this function is useful because it will handle icon_name and icon_path
     def handle_icon_for_button(self, view, button):
@@ -1000,7 +1196,7 @@ class Utils(Adw.Application):
 
             # Retrieve the current alpha value of the view
             try:
-                original_alpha = self.sock.get_view_alpha(view_id)["alpha"]
+                original_alpha = self.ipc.get_view_alpha(view_id)["alpha"]
             except Exception as e:
                 self.logger.error_handler.handle(
                     error=e,
@@ -1016,7 +1212,7 @@ class Utils(Adw.Application):
             # Apply the alpha animation
             for alpha in float_sequence:
                 try:
-                    self.sock.set_view_alpha(view_id, alpha)
+                    self.ipc.set_view_alpha(view_id, alpha)
                     sleep(0.02)  # Small delay for the animation effect
                 except Exception as e:
                     self.logger.error_handler.handle(
@@ -1026,7 +1222,7 @@ class Utils(Adw.Application):
 
             # Restore the original alpha value
             try:
-                self.sock.set_view_alpha(view_id, original_alpha)
+                self.ipc.set_view_alpha(view_id, original_alpha)
             except Exception as e:
                 self.logger.error_handler.handle(
                     error=e,
@@ -1073,7 +1269,7 @@ class Utils(Adw.Application):
 
             # Get the list of active view IDs
             try:
-                view_ids = [i["id"] for i in self.sock.list_views()]
+                view_ids = [i["id"] for i in self.ipc.list_views()]
             except Exception as e:
                 self.logger.error_handler.handle(
                     error=e, message="Failed to retrieve active view IDs."
@@ -1088,7 +1284,7 @@ class Utils(Adw.Application):
 
             # Fetch the view details
             try:
-                view = self.sock.get_view(view_id)
+                view = self.ipc.get_view(view_id)
             except Exception as e:
                 self.logger.error_handler.handle(
                     error=e, message=f"Failed to fetch view details for ID: {view_id}"
@@ -1261,10 +1457,9 @@ class Utils(Adw.Application):
         icon_name,
         cmd,
         class_style,
-        app_id,  # Renamed from wclass to app_id
-        initial_title=None,
         use_label=False,
         use_function=False,
+        use_args=False,
     ):
         """
         Create a Gtk.Button with an icon or label, click behavior, and CSS styling.
@@ -1333,7 +1528,7 @@ class Utils(Adw.Application):
             # Set up click handling - LEFT CLICK
             if use_function:
                 try:
-                    button.connect("clicked", lambda *_: use_function())
+                    button.connect("clicked", lambda *_: use_function(use_args))
                 except Exception as e:
                     self.logger.error_handler.handle(
                         error=e, message="Failed to connect custom function to button."

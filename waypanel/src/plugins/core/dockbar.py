@@ -1,11 +1,9 @@
 from gi.repository import Gtk, GLib
 
-from wayfire import WayfireSocket
 import os
 import orjson as json
 import toml
-from wayfire.extra.ipc_utils import WayfireUtils
-from wayfire.extra.stipc import Stipc
+from waypanel.src.core.compositor.ipc import IPC
 from ...core.create_panel import (
     set_layer_position_exclusive,
     unset_layer_position_exclusive,
@@ -52,9 +50,7 @@ class DockbarPlugin:
         self.taskbar_list = []
         self.dockbar_panel = None
         self.buttons_id = {}
-        self.sock = WayfireSocket()  # Use the shared WayfireSocket instance
-        self.wf_utils = WayfireUtils(self.sock)
-        self.stipc = Stipc(self.sock)
+        self.ipc = IPC()  # Use the shared WayfireSocket instance
         self.dockbar = None
         self.update_widget = self.utils.update_widget
 
@@ -63,8 +59,7 @@ class DockbarPlugin:
         self._setup_dockbar()
 
     def is_scale_enabled(self):
-        sock = WayfireSocket()
-        plugins = sock.get_option_value("core/plugins")["value"].split()
+        plugins = self.ipc.get_option_value("core/plugins")["value"].split()
         return "scale" in plugins
 
     def get_dockbar_position(self, panel):
@@ -127,9 +122,14 @@ class DockbarPlugin:
                 self.utils.get_nearest_icon_name(config_data[app]["icon"]),
                 app_cmd,
                 class_style,
-                app_id,
-                initial_title,
                 use_label,
+                self.on_left_click,
+                app_cmd,
+            )
+
+            # Add middle-click gesture
+            self.create_gesture(
+                button, 2, lambda _, cmd=app_cmd: self.on_middle_click(cmd)
             )
 
             # Add middle-click gesture
@@ -147,6 +147,10 @@ class DockbarPlugin:
 
         return box
 
+    def on_left_click(self, cmd):
+        self.utils.run_cmd(cmd)
+        self.ipc.scale_toggle()
+
     def on_right_click(self, cmd):
         """
         Handle right-click action: Move the cursor to the next available output
@@ -157,8 +161,8 @@ class DockbarPlugin:
         """
         try:
             # Get the list of outputs and the currently focused output
-            outputs = self.sock.list_outputs()
-            focused_output = self.sock.get_focused_output()
+            outputs = self.ipc.list_outputs()
+            focused_output = self.ipc.get_focused_output()
 
             # Find the index of the currently focused output
             current_index = next(
@@ -180,8 +184,8 @@ class DockbarPlugin:
             cursor_y = output_geometry["y"] + output_geometry["height"] // 2
 
             # Move the cursor to the center of the next output
-            self.stipc.move_cursor(cursor_x, cursor_y)
-            self.stipc.click_button("S-BTN_LEFT", "full")
+            self.ipc.move_cursor(cursor_x, cursor_y)
+            self.ipc.click_button("S-BTN_LEFT", "full")
 
             # Open the app
             self.utils.run_cmd(cmd)
@@ -196,8 +200,8 @@ class DockbarPlugin:
         coordinates = self.utils.find_empty_workspace()
         if coordinates:
             ws_x, ws_y = coordinates
-            self.sock.scale_toggle()
-            self.sock.set_workspace(ws_x, ws_y)
+            self.ipc.scale_toggle()
+            self.ipc.set_workspace(ws_x, ws_y)
             self.utils.run_cmd(cmd)
         else:
             # If no empty workspace, just open the app
@@ -279,7 +283,7 @@ class DockbarPlugin:
         layer_set_on_output_name = None
         if output_info:
             layer_set_on_output_name = json.loads(output_info).get("output_name")
-        focused_output_name = self.sock.get_focused_output()["name"]
+        focused_output_name = self.ipc.get_focused_output()["name"]
         # only set layer if the focused output is the same as the defined in panel creation
         if layer_set_on_output_name == focused_output_name:
             self.update_widget(set_layer_position_exclusive, self.dockbar_panel, 64)

@@ -6,7 +6,7 @@ import soundcard as sc
 from gi.repository import Adw, Gtk
 from wayfire.ipc import WayfireSocket
 import toml
-
+from waypanel.src.core.compositor.ipc import IPC
 
 addr = os.getenv("WAYFIRE_SOCKET")
 sock = WayfireSocket(addr)
@@ -38,7 +38,7 @@ class SoundCardDashboard(Adw.Application):
         self.menubutton_dashboard = None
         self._setup_config_paths()
         self.utils = self.obj.utils
-        self.sock = sock
+        self.ipc = IPC()
 
     def append_widget(self):
         return self.menubutton_dashboard
@@ -54,7 +54,7 @@ class SoundCardDashboard(Adw.Application):
         self.psutil_store = {}
 
     def get_view_id_by_pid(self, pid):
-        lviews = self.sock.list_views()
+        lviews = self.ipc.list_views()
         for view in lviews:
             if pid == view["pid"]:
                 return view["id"]

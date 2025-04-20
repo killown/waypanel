@@ -161,14 +161,25 @@ class MenuClipboard(Gtk.Application):
         self.config_path = os.path.join(self.home, ".config/waypanel")
 
     def is_image_content(self, content):
-        """Detect both image files AND raw image data"""
+        """
+        Detect both image files AND raw image data.
+        Args:
+            content: The clipboard content to check (can be str or bytes).
+        Returns:
+            bool: True if the content represents an image, False otherwise.
+        """
         # Case 1: It's a file path that exists (and is reasonably short)
-        if isinstance(content, str) and len(content) < 256 and Path(content).exists():
-            mime = mimetypes.guess_type(content)[0]
-            return mime and mime.startswith("image/")
+        if isinstance(content, str) and self.utils.validate_string(
+            content, "content from is_image_content"
+        ):
+            if len(content) < 256 and Path(content).exists():
+                mime = mimetypes.guess_type(content)[0]
+                return mime and mime.startswith("image/")
 
         # Case 2: It's raw image data (from wl-copy)
-        if isinstance(content, bytes):
+        elif isinstance(content, bytes) and self.utils.validate_bytes(
+            content, name="bytes from is_image_content"
+        ):
             # Check magic numbers for common image formats
             magic_numbers = {
                 b"\x89PNG": "PNG",
@@ -181,11 +192,13 @@ class MenuClipboard(Gtk.Application):
             return any(content.startswith(magic) for magic in magic_numbers.keys())
 
         # Case 3: It's a base64 encoded image (common in clipboard)
-        if isinstance(content, str) and content.startswith(
-            ("data:image/png", "data:image/jpeg")
+        elif isinstance(content, str) and self.utils.validate_string(
+            content, "content from is_image_content"
         ):
-            return True
+            if content.startswith(("data:image/png", "data:image/jpeg")):
+                return True
 
+        # Default case: Not recognized as image content
         return False
 
     def on_paste_clicked(self, manager: ClipboardManager, item_id: int):
@@ -230,7 +243,9 @@ class MenuClipboard(Gtk.Application):
                     )
                 except subprocess.CalledProcessError:
                     self.logger.error_handler.handle(f"Failed to copy image: {content}")
-            elif isinstance(content, bytes):
+            elif self.utils.validate_bytes(
+                content, name="bytes from copy_to_clipboard"
+            ):
                 # Handle raw image data
                 try:
                     subprocess.run(
@@ -249,104 +264,175 @@ class MenuClipboard(Gtk.Application):
             except Exception as e:
                 self.logger.error_handler.handle(f"Failed to copy text: {e}")
 
-    def update_clipboard_list(self):
-        # Clear the existing list
-        if self.listbox is not None:
-            self.listbox.remove_all()
+    def clear_and_calculate_height(self):
+        """
+        Clear the existing list and calculate the required height for the scrolled window.
+        Returns:
+            int: The calculated total height.
+        """
+        try:
+            # Clear the existing list
+            if self.listbox is not None:
+                row = self.listbox.get_first_child()
+                while row:
+                    next_row = (
+                        row.get_next_sibling()
+                    )  # Store the next row before removing
+                    self.listbox.remove(row)
+                    row = next_row
 
-        # Get items from manager
-        manager = ClipboardManager()
-        asyncio.run(manager.initialize())
-        items = asyncio.run(manager.get_history())
-        asyncio.run(manager.server.stop())
-        # Calculate needed height
+            # Get items from manager
+            manager = ClipboardManager()
+            asyncio.run(manager.initialize())
+            items = asyncio.run(manager.get_history())
+            asyncio.run(manager.server.stop())
 
-        # Image extensions to check for
-        IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".svg")
-
-        # Calculate needed height
-        padding = 20  # Additional padding
-        total_height = padding
-
-        for item in items:
-            if isinstance(item, str) and any(
-                item.lower().endswith(ext) for ext in IMAGE_EXTENSIONS
-            ):
-                total_height += 128  # Image height
-            else:
-                total_height += 35  # Text height
-
-            # Add spacing between items (optional)
-            total_height += 5
-
-        # Calculate dynamic height (capped at 600px)
-        if total_height < 100:
-            total_height = 100
-        if total_height > 600:
-            total_height = 600
-
-        self.scrolled_window.set_min_content_height(total_height)
-        self.scrolled_window.set_max_content_height(600)
-
-        clipboard_history = get_clipboard_items_sync()
-        for i in clipboard_history:
-            if not i:
-                continue
-            row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-            image_button = Gtk.Button()
-            waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
-            if os.path.exists(waypanel_config_path):
-                with open(waypanel_config_path, "r") as f:
-                    config = toml.load(f)
-                    clipboard_icon_delete = (
-                        config.get("panel", {})
-                        .get("top", {})
-                        .get("clipboard_icon_delete", "delete")
-                    )
-                    image_button.set_icon_name(
-                        self.utils.get_nearest_icon_name(clipboard_icon_delete)
-                    )
-            else:
-                image_button.set_icon_name("delete")
-            image_button.connect("clicked", self.on_delete_selected)
-            spacer = Gtk.Label(label="    ")
-            row_hbox.append(image_button)
-            row_hbox.append(spacer)
-            item_id = i[0]
-            item = i[1]
-            if len(item) > 50:
-                item = item[:50]
-            row_hbox.MYTEXT = f"{item_id} {item.strip()}"
-            self.listbox.append(row_hbox)
-            if self.is_image_content(item):
-                # Create larger thumbnail (128px) with padding
-                thumb = self.create_thumbnail(item, size=128)
-                if thumb:
-                    # Create container for image + text
-                    image_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-
-                    # Bigger image display
-                    image_widget = Gtk.Image.new_from_pixbuf(thumb)
-                    image_widget.set_margin_end(10)
-                    image_widget.set_size_request(128, 128)
-                    image_box.append(image_widget)
-                    row_hbox.append(image_box)
-                    if not item:
-                        item = "/image"
-                    item = item.split("/")[-1]
-                    row_hbox.set_size_request(-1, 150)
-            line = Gtk.Label.new()
-            escaped_text = GLib.markup_escape_text(item)
-
-            escaped_text = self.format_color_text(item)  # Don't escape again here
-            line.set_markup(
-                f'<span font="DejaVu Sans Mono">{item_id} {escaped_text}</span>'
+            # Image extensions to check for
+            IMAGE_EXTENSIONS = (
+                ".png",
+                ".jpg",
+                ".jpeg",
+                ".gif",
+                ".bmp",
+                ".webp",
+                ".svg",
             )
-            line.props.margin_end = 5
-            line.props.hexpand = True
-            line.set_halign(Gtk.Align.START)
-            row_hbox.append(line)
-            self.find_text_using_button[image_button] = line
+
+            # Calculate needed height
+            padding = 0  # Additional padding
+            total_height = padding
+
+            for item in items:
+                if any(
+                    item.lower().endswith(ext)
+                    for ext in IMAGE_EXTENSIONS
+                    if isinstance(item, str)
+                ) or not isinstance(item, bytes):
+                    total_height += 60  # Image height
+                else:
+                    total_height += 38  # Text height
+
+                # Add spacing between items (optional)
+                total_height += 5
+
+            # Calculate dynamic height (capped at 600px)
+            total_height = max(total_height, 100)  # Minimum height of 100px
+            total_height = min(total_height, 600)  # Maximum height of 600px
+
+            return total_height
+
+        except Exception as e:
+            self.logger.error_handler.handle(
+                error=e,
+                message="Error clearing list or calculating height in clear_and_calculate_height.",
+                level="error",
+            )
+            return 100  # Default height in case of error
+
+    def populate_listbox(self):
+        """
+        Populate the ListBox with clipboard history items.
+        """
+        try:
+            clipboard_history = get_clipboard_items_sync()
+
+            for i in clipboard_history:
+                if not i:
+                    continue
+
+                row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+                image_button = Gtk.Button()
+                waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
+                if os.path.exists(waypanel_config_path):
+                    with open(waypanel_config_path, "r") as f:
+                        config = toml.load(f)
+                        clipboard_icon_delete = (
+                            config.get("panel", {})
+                            .get("top", {})
+                            .get("clipboard_icon_delete", "delete")
+                        )
+                        image_button.set_icon_name(
+                            self.utils.get_nearest_icon_name(clipboard_icon_delete)
+                        )
+                else:
+                    image_button.set_icon_name("delete")
+                image_button.connect("clicked", self.on_delete_selected)
+
+                spacer = Gtk.Label(label="    ")
+                row_hbox.append(image_button)
+                row_hbox.append(spacer)
+
+                item_id = i[0]
+                item = i[1]
+                if len(item) > 50:
+                    item = item[:50]
+                row_hbox.MYTEXT = f"{item_id} {item.strip()}"
+
+                # Append the row to the ListBox
+                self.listbox.append(row_hbox)
+
+                if self.is_image_content(item):
+                    # Create larger thumbnail (128px) with padding
+                    thumb = self.create_thumbnail(item, size=128)
+                    if thumb:
+                        # Create container for image + text
+                        image_box = Gtk.Box(
+                            orientation=Gtk.Orientation.VERTICAL, spacing=5
+                        )
+
+                        # Bigger image display
+                        image_widget = Gtk.Image.new_from_pixbuf(thumb)
+                        image_widget.set_margin_end(10)
+                        image_widget.set_size_request(96, 96)
+                        image_box.append(image_widget)
+                        row_hbox.append(image_box)
+
+                        if not item:
+                            item = "/image"
+                        item = item.split("/")[-1]
+                        row_hbox.set_size_request(-96, 96)
+
+                line = Gtk.Label.new()
+                escaped_text = GLib.markup_escape_text(item)
+                escaped_text = self.format_color_text(item)  # Don't escape again here
+                line.set_markup(
+                    f'<span font="DejaVu Sans Mono">{item_id} {escaped_text}</span>'
+                )
+                line.props.margin_end = 5
+                line.props.hexpand = True
+                line.set_halign(Gtk.Align.START)
+                row_hbox.append(line)
+
+                self.find_text_using_button[image_button] = line
+
+        except Exception as e:
+            self.logger.error_handler.handle(
+                error=e,
+                message="Error populating ListBox in populate_listbox.",
+                level="error",
+            )
+
+    def update_clipboard_list(self):
+        """
+        Update the clipboard list by clearing, calculating height, and populating the ListBox.
+        """
+        try:
+            # Step 1: Clear the list and calculate the height
+            total_height = self.clear_and_calculate_height()
+
+            # Step 2: Set the calculated height for the scrolled window
+            self.scrolled_window.set_min_content_height(total_height)
+            self.scrolled_window.set_max_content_height(600)
+
+            # Step 3: Populate the ListBox
+            self.populate_listbox()
+
+        except Exception as e:
+            self.logger.error_handler.handle(
+                error=e,
+                message="Error updating clipboard list in update_clipboard_list.",
+                level="error",
+            )
 
     def create_popover_menu_clipboard(self):
         LayerShell.set_keyboard_mode(
@@ -419,12 +505,15 @@ class MenuClipboard(Gtk.Application):
         return self.popover_clipboard
 
     def on_copy_clipboard(self, x, *_):
+        if x is None:
+            return
         selected_text = x.get_child().MYTEXT
         manager = ClipboardManager()
         asyncio.run(manager.initialize())
         item_id = int(selected_text.split()[0])
         self.on_paste_clicked(manager, item_id)
-        self.popover_clipboard.popdown()
+        if self.popover_clipboard:
+            self.popover_clipboard.popdown()
 
     def is_color_code(self, text):
         """
@@ -436,13 +525,13 @@ class MenuClipboard(Gtk.Application):
         """
 
         # Check for HEX color (3 or 6 digits, optional #)
-        if isinstance(text, str) and re.fullmatch(
+        if self.utils.validate_string(text, "text from is_color_code") and re.fullmatch(
             r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", text
         ):
             return True
 
         # Check for RGB/RGBA color (strict format)
-        if isinstance(text, str):
+        if self.utils.validate_string(text, "text from is_color_code"):
             # RGB: "rgb(255, 0, 0)"
             if re.fullmatch(
                 r"^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$", text
@@ -467,7 +556,7 @@ class MenuClipboard(Gtk.Application):
         - RGB tuples (e.g., (255, 0, 0))
         """
         # If input is a hex string
-        if isinstance(color, str):
+        if self.utils.validate_string(color, "color from get_contrast_color"):
             # Remove '#' if present and normalize to 6-digit hex
             hex_color = color.lstrip("#")
 
@@ -479,7 +568,10 @@ class MenuClipboard(Gtk.Application):
             rgb = tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
 
         # If input is an RGB tuple
-        elif isinstance(color, (tuple, list)) and len(color) == 3:
+        elif (
+            self.utils.validate_list(color, element_type=(tuple, list))
+            and len(color) == 3
+        ):
             rgb = tuple(color)  # Ensure it's a tuple
 
         else:
@@ -581,14 +673,64 @@ class MenuClipboard(Gtk.Application):
         self.listbox.invalidate_filter()
 
     def on_filter_invalidate(self, row):
-        text_to_search = (
-            self.searchbar.get_text().strip()
-        )  # get text from searchentry and remove space from start and end
-        if not isinstance(row, str):
-            row = row.get_child().MYTEXT
-        # row = row.lower().strip()
-        if (
-            text_to_search.lower() in row
-        ):  # == row_hbox.MYTEXT (Gtk.ListBoxRow===>get_child()===>row_hbox.MYTEXT)
-            return True  # if True Show row
-        return False
+        """
+        Filter function for the Gtk.ListBox.
+        Args:
+            row (Gtk.ListBoxRow): The row to validate.
+        Returns:
+            bool: True if the row matches the search criteria, False otherwise.
+        """
+        try:
+            # Ensure the input is a Gtk.ListBoxRow
+            if not isinstance(row, Gtk.ListBoxRow):
+                self.logger.error_handler.handle(
+                    error=TypeError(
+                        f"Invalid row type: {type(row).__name__}. Expected Gtk.ListBoxRow."
+                    ),
+                    message="Invalid row type encountered in on_filter_invalidate.",
+                    level="warning",
+                )
+                return False
+
+            # Get the child widget of the row
+            child = row.get_child()
+            if not child:
+                self.logger.error_handler.handle(
+                    error=ValueError("Row has no child widget."),
+                    message="Row child widget is missing in on_filter_invalidate.",
+                    level="warning",
+                )
+                return False
+
+            # Ensure the child widget has the 'MYTEXT' attribute
+            if not hasattr(child, "MYTEXT"):
+                self.logger.error_handler.handle(
+                    error=AttributeError("Row child does not have 'MYTEXT' attribute."),
+                    message="Row child is missing the required 'MYTEXT' attribute.",
+                    level="warning",
+                )
+                return False
+
+            # Extract the text from the child widget
+            row_text = child.MYTEXT
+            if not isinstance(row_text, str):
+                self.logger.error_handler.handle(
+                    error=TypeError(
+                        f"Invalid row text type: {type(row_text).__name__}. Expected str."
+                    ),
+                    message=f"Invalid row text encountered: {row_text}.",
+                    level="warning",
+                )
+                return False
+
+            # Perform the search
+            text_to_search = self.searchbar.get_text().strip().lower()
+            return text_to_search in row_text.lower()
+
+        except Exception as e:
+            self.logger.error_handler.handle(
+                error=e,
+                message="Unexpected error occurred in on_filter_invalidate.",
+                level="error",
+            )
+            return False
