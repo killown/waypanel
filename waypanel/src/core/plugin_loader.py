@@ -172,6 +172,16 @@ class PluginLoader:
                 self.logger.info(f"Skipping disabled plugin: {module_name}")
                 return
 
+            # Validate DEPS list
+            has_plugin_deps = getattr(module, "DEPS", [])
+            if not self.validate_deps_list(has_plugin_deps, module_name):
+                self.logger.error_handler.handle(
+                    error=ValueError("Invalid DEPS list."),
+                    message=f"Plugin '{module_name}' has an invalid DEPS list. Skipping.",
+                    level="error",
+                )
+                return
+
             # Get position, order, and optional priority
             position_result = module.get_plugin_placement(self.panel_instance)
             # don't append any widget except if a position is found
@@ -211,6 +221,49 @@ class PluginLoader:
         with open(waypanel_config_path, "w") as f:
             toml.dump(config, f)
 
+    def validate_deps_list(self, deps_list, module_name):
+        """
+        Validates the DEPS list to ensure it contains only valid plugin names.
+
+        Args:
+            deps_list (list): The list of dependencies to validate.
+            module_name (str): The name of the plugin being processed.
+
+        Returns:
+            bool: True if the list is valid, False otherwise.
+        """
+        if not isinstance(deps_list, list):
+            self.logger.error_handler.handle(
+                error=TypeError(
+                    f"Invalid DEPS type: {type(deps_list).__name__}. Expected a list."
+                ),
+                message=f"Plugin '{module_name}' has an invalid DEPS list. DEPS must be a list.",
+                level="error",
+            )
+            return False
+
+        for index, dep in enumerate(deps_list):
+            if not isinstance(dep, str):
+                self.logger.error_handler.handle(
+                    error=TypeError(
+                        f"Invalid dependency type at index {index}: {type(dep).__name__}. Expected a string."
+                    ),
+                    message=f"Plugin '{module_name}' has an invalid dependency at index {index} in DEPS. Dependencies must be strings.",
+                    level="error",
+                )
+                return False
+            if not dep.strip():
+                self.logger.error_handler.handle(
+                    error=ValueError(
+                        f"Empty dependency found at index {index} in DEPS."
+                    ),
+                    message=f"Plugin '{module_name}' has an empty dependency at index {index} in DEPS. Dependencies must be non-empty strings.",
+                    level="error",
+                )
+                return False
+
+        return True
+
     def _initialize_sorted_plugins(self, plugin_metadata):
         """Initialize plugins in the correct order based on priority and position."""
         # Sort plugins by priority (descending), then by order (ascending)
@@ -235,6 +288,7 @@ class PluginLoader:
 
             # Check for dependencies
             has_plugin_deps = getattr(module, "DEPS", [])
+
             if has_plugin_deps:
                 # Delay initialization until all dependencies are ready
                 deps_satisfied = all(dep in self.plugins for dep in has_plugin_deps)

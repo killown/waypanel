@@ -12,7 +12,7 @@ from waypanel.src.core.create_panel import (
 
 # Enable or disable the plugin
 ENABLE_PLUGIN = True
-DEPS = ["event_manager"]
+DEPS = ["event_manager", "gestures_setup"]
 
 
 def get_plugin_placement(panel_instance):
@@ -38,6 +38,9 @@ class TaskbarPlugin(Gtk.Application):
         """
         self.logger = panel_instance.logger
         self.obj = panel_instance
+        self.plugins = self.obj.plugins
+        self.create_gesture = self.plugins["gestures_setup"].create_gesture
+        self.remove_gesture = self.plugins["gestures_setup"].remove_gesture
         self._subscribe_to_events()
         # will hide until scale plugin is toggled if False
         self.layer_always_exclusive = False
@@ -48,6 +51,7 @@ class TaskbarPlugin(Gtk.Application):
         self.wf_utils = WayfireUtils(self.sock)
         self.bottom_panel = self.obj.bottom_panel
         self.update_widget = self.utils.update_widget
+        self.is_scale_active = {}
         # Load configuration and set up taskbar
         self.config = panel_instance.config
         self._setup_taskbar()
@@ -107,7 +111,7 @@ class TaskbarPlugin(Gtk.Application):
         # Present the panel if enabled
 
         # Start the taskbar list for the bottom panel
-        self.Taskbar("h", "taskbar")
+        self.Taskbar()
 
         self.logger.info("Bottom panel setup completed.")
 
@@ -149,7 +153,73 @@ class TaskbarPlugin(Gtk.Application):
                 plugin_name="taskbar",
             )
 
-    def create_taskbar_button(self, view, orientation, class_style):
+    def create_taskbar_button(self, view):
+        app_id = view["app-id"]
+        title = view["title"]
+        initial_title = title.split()[0]
+        icon_name = self.utils.get_icon(app_id, initial_title, title)
+        if icon_name is None:
+            return None
+
+        button = Gtk.Button()
+
+        # Filter title for UTF-8 compatibility
+        title = self.utils.filter_utf_for_gtk(view["title"])
+        view_id = view["id"]
+        if not title:
+            return None
+
+        # Determine title to use based on its length
+        use_this_title = title[:30]
+        first_word_length = len(title.split()[0])
+        if first_word_length > 13:
+            use_this_title = title.split()[0]
+
+        # Create a box to hold icon and label
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+
+        # Add icon if available
+        if icon_name:
+            icon = Gtk.Image()
+            self.update_widget(icon.set_from_icon_name, icon_name)
+            self.update_widget(box.append, icon)
+
+        # Add label
+        label = Gtk.Label()
+        self.update_widget(label.set_label, use_this_title)
+        self.update_widget(box.append, label)
+
+        # Set the box as the button's child
+        self.update_widget(button.set_child, box)
+
+        # Create gesture handlers for the button
+        button.connect("clicked", lambda *_: self.set_view_focus(view))
+        self.create_gesture(box, 1, lambda *_: self.set_view_focus(view))
+        self.create_gesture(box, 2, lambda *_: self.sock.close_view(view_id))
+        self.create_gesture(box, 3, lambda *_: self.send_view_to_empity_workspace(view))
+
+        return button
+
+    def send_view_to_empity_workspace(self, view):
+        empty_workspace = self.utils.find_empty_workspace()
+        view_id = view["id"]
+        wset_index_focused = self.sock.get_focused_output()["wset-index"]
+        wset_index_view = view["wset-index"]
+        # this will prevent from trying to move the view from another output to an empity workspace
+        # because it's necessary to bring the view to the current output and then move it to a empity ws
+        if wset_index_focused != wset_index_view:
+            self.set_view_focus(view)
+        else:
+            self.sock.scale_toggle()
+            if empty_workspace:
+                x, y = empty_workspace
+                # if set_workspace from an empity workspace before the view is focused
+                # the view may disappear from the workspaces layout and will not be able to get focus
+                self.set_view_focus(view)
+                # now move the view to an empity workspace
+                self.sock.set_workspace(x, y, view_id)
+
+    def new_taskbar_button(self, view):
         """
         Create a taskbar button for a given view.
 
@@ -163,22 +233,18 @@ class TaskbarPlugin(Gtk.Application):
         """
         self.logger.debug(f"Creating taskbar button for view: {view['id']}")
         id = view["id"]
-        title = self.utils.filter_utf_for_gtk(view["title"])
-        wm_class = view["app-id"]
+        title = view["title"]
+        title = self.utils.filter_utf_for_gtk(title)
         initial_title = title.split(" ")[0].lower()
 
-        button = self.utils.create_taskbar_launcher(
-            wm_class, title, initial_title, orientation, class_style, id
-        )
+        button = self.create_taskbar_button(view)
 
         if not button:
-            self.logger.error_handler.handle(
-                f"Failed to create taskbar button for view ID: {id}"
-            )
+            self.logger.info(f"Failed to create taskbar button for view ID: {id}")
             return False
 
         # Append the button to the taskbar
-        self.utils.append_widget_if_ready(self.taskbar, button)
+        self.update_widget(self.taskbar.append, button)
 
         # Store button information in dictionaries for easy access
         self.buttons_id[id] = [button, initial_title, id]
@@ -186,17 +252,17 @@ class TaskbarPlugin(Gtk.Application):
         button.add_css_class("taskbar-button")
         return True
 
-    def Taskbar(self, orientation, class_style, update_button=False, callback=None):
+    def Taskbar(self):
         """Initialize or update the taskbar."""
         self.logger.debug("Initializing or updating taskbar.")
         list_views = self.sock.list_views()
         if not list_views:
             return
-        for i in list_views:
-            self.new_taskbar_view(orientation, class_style, i["id"])
+        for view in list_views:
+            self.new_view(view)
         return True
 
-    def new_taskbar_view(self, orientation, class_style, view_id, callback=None):
+    def new_view(self, view, callback=None):
         """
         Initialize or update the taskbar with a new view.
 
@@ -209,16 +275,15 @@ class TaskbarPlugin(Gtk.Application):
         Returns:
             bool: True if the taskbar button was successfully created, False otherwise.
         """
+        view_id = view["id"]
         self.logger.debug(f"Initializing new taskbar view for ID: {view_id}")
-
         # Validate the view
-        view = self.validate_view_for_taskbar(view_id)
-        if not view:
+        if not self.validate_view_for_taskbar(view_id):
             self.logger.debug(f"Validation failed for view ID: {view_id}")
             return False
 
         # Create the taskbar button
-        success = self.create_taskbar_button(view, orientation, class_style)
+        success = self.new_taskbar_button(view)
         if not success:
             self.logger.error_handler.handle(
                 f"Failed to create taskbar button for view ID: {view_id}"
@@ -282,9 +347,11 @@ class TaskbarPlugin(Gtk.Application):
         if msg["event"] == "plugin-activation-state-changed":
             if msg["state"] is True:
                 if msg["plugin"] == "scale":
+                    self.is_scale_active[msg["output"]] = True
                     self.on_scale_activated()
             if msg["state"] is False:
                 if msg["plugin"] == "scale":
+                    self.is_scale_active[msg["output"]] = False
                     self.on_scale_desactivated()
         return prevent_infinite_loop_from_event_manager_idle_add
 
@@ -307,6 +374,83 @@ class TaskbarPlugin(Gtk.Application):
         if button:
             self.remove_button(id)
             self.update_taskbar_list(view)
+
+    def set_view_focus(self, view_id):
+        """
+        Focus a view based on its ID, resizing it if necessary and handling scaling activation.
+
+        Args:
+            view_id (int): The ID of the view to focus.
+
+        Returns:
+            bool: True if an error occurs, otherwise None.
+        """
+        try:
+            self.sock.scale_toggle()
+            view = self.utils.is_view_valid(view_id)
+            if not view:
+                self.logger.debug(f"Invalid or non-existent view ID: {view_id}")
+                return
+
+            view_id = view["id"]
+            output_id = view["output-id"]
+
+            # Resize the view if it's too small
+            try:
+                viewgeo = self.wf_utils.get_view_geometry(view_id)
+                if viewgeo and (viewgeo["width"] < 100 or viewgeo["height"] < 100):
+                    self.sock.configure_view(
+                        view_id, viewgeo["x"], viewgeo["y"], 400, 400
+                    )
+                    self.logger.debug(f"Resized view ID {view_id} to 400x400.")
+            except Exception as e:
+                self.logger.error_handler.handle(
+                    error=e,
+                    message=f"Failed to retrieve or resize geometry for view ID: {view_id}",
+                )
+
+            # Handle scale activation
+            if output_id in self.is_scale_active and self.is_scale_active[output_id]:
+                try:
+                    self.sock.scale_toggle()
+                    self.logger.debug("Scale toggled off.")
+                except Exception as e:
+                    self.logger.error_handler.handle(
+                        error=e, message="Failed to toggle scale."
+                    )
+                finally:
+                    # Ensure workspace focus and cursor centering even if scale toggle fails
+                    self._focus_and_center_cursor(view_id)
+            else:
+                # Focus workspace and center cursor without scale handling
+                self._focus_and_center_cursor(view_id)
+
+            # Apply focus indicator effect
+            self.utils.view_focus_indicator_effect(view)
+
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Unexpected error while setting focus for view ID: {view_id}",
+            )
+            return True
+
+    def _focus_and_center_cursor(self, view_id):
+        """
+        Focus the workspace and center the cursor on the specified view.
+
+        Args:
+            view_id (int): The ID of the view to focus and center.
+        """
+        try:
+            self.wf_utils.go_workspace_set_focus(view_id)
+            self.wf_utils.center_cursor_on_view(view_id)
+        except Exception as e:
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Failed to focus workspace or center cursor for view ID: {view_id}",
+            )
 
     def update_taskbar_on_scale(self) -> None:
         """Update all taskbar buttons during scale plugin activation."""
@@ -336,11 +480,17 @@ class TaskbarPlugin(Gtk.Application):
             self.set_layer_exclusive(False)
 
     def get_valid_button(self, button_id):
-        if button_id in self.buttons_id:
-            button = self.buttons_id[button_id][0]
-            if self.utils.widget_exists(button):
-                return button
-        self.logger.debug(f"Invalid or missing button for ID: {button_id}")
+        try:
+            if button_id in self.buttons_id:
+                button = self.buttons_id[button_id][0]
+                if self.utils.widget_exists(button):
+                    return button
+        except Exception as e:
+            self.logger.error_handler.handle(
+                error=e,
+                message="Invalid or missing button for ID",
+                context={"plugin": "taskbar", "ID": button_id},
+            )
         return None
 
     def remove_button(self, view_id):
@@ -354,20 +504,19 @@ class TaskbarPlugin(Gtk.Application):
         # Get the valid button using the helper function
         button = self.get_valid_button(view_id)
         if not button:
-            self.logger.debug(f"No valid button found for ID: {view_id}")
             return
 
         # Remove the button from the taskbar and clean up
         self.update_widget(self.taskbar.remove, button)
         self.taskbar_list.remove(view_id)
-        self.utils.remove_gesture(button)
+        self.remove_gesture(button)
         del self.buttons_id[view_id]
 
     def update_taskbar_list(self, view):
         """Update the taskbar list based on the current views."""
         self.logger.debug(f"Updating taskbar list for view: {view}")
         # Update the taskbar layout
-        self.Taskbar("h", "taskbar")
+        self.Taskbar()
         # Remove invalid buttons
         self._remove_invalid_buttons()
 
@@ -384,14 +533,17 @@ class TaskbarPlugin(Gtk.Application):
             view_id_list = [view["id"] for view in self.sock.list_views()]
             if view_id not in view_id_list:
                 return False
-
             view = self.sock.get_view(view_id)
             if not self.is_valid_view(view):
                 return False
 
             return True
         except Exception as e:
-            self.logger.error_handler.handle(f"Error checking view existence: {e}")
+            self.logger.error_handler.handle(
+                error=e,
+                message="Error checking view existence",
+                context={"plugin": "taskbar", "view_id": view_id},
+            )
             return False
 
     def is_valid_view(self, view):

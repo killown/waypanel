@@ -72,14 +72,20 @@ class GesturePlugin:
         widget.add_controller(gesture)
         self.gestures[widget] = gesture
 
-    def execute_callback(self, callback):
+    def remove_gesture(self, widget):
+        if widget in self.gestures:
+            gesture = self.gestures[widget]
+            widget.remove_controller(gesture)
+            del self.gestures[widget]
+
+    def execute_callback(self, callback, event=None):
         """
         Execute the callback and any appended actions.
         Args:
             callback: The primary callback function to execute.
         """
         # Execute the primary callback
-        callback()
+        callback(event)
 
         # Execute any appended actions for this callback
         if callback.__name__ in self.appended_actions:

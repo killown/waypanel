@@ -10,8 +10,6 @@ from gi.repository import Gtk4LayerShell as LayerShell
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
-# load the plugin only after essential plugins is loaded
-DEPS = ["dockbar", "taskbar"]
 
 
 def get_plugin_placement(panel_instance):

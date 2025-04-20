@@ -11,8 +11,6 @@ from gi.repository import Adw, GdkPixbuf, Gtk
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
-# load the plugin only after essential plugins is loaded
-DEPS = ["dockbar", "taskbar"]
 
 
 def get_plugin_placement(panel_instance):
@@ -129,7 +127,8 @@ class PopoverBookmarks(Adw.Application):
         # Attach widgets
         self.scrolled_window.set_child(self.flowbox)
         self.main_box.append(self.scrolled_window)
-        self.popover_bookmarks.set_child(self.main_box)
+        if self.popover_bookmarks:
+            self.popover_bookmarks.set_child(self.main_box)
 
     def _load_and_process_bookmarks(self):
         """Load bookmarks from file and populate the flowbox."""

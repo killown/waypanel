@@ -52,12 +52,17 @@ class ConfigReloadHandler(FileSystemEventHandler):
 
 def global_exception_handler(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
-        # Do not capture KeyboardInterrupt
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
 
     logger = logging.getLogger("WaypanelLogger")
-    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    logger.error(
+        "Uncaught exception",
+        exc_info=(exc_type, exc_value, exc_traceback),
+        extra={
+            "thread_name": threading.current_thread().name
+        },  # Renamed 'thread' to 'thread_name'
+    )
 
 
 sys.excepthook = global_exception_handler

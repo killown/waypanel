@@ -1,7 +1,7 @@
 import os
 import logging
 from logging.handlers import RotatingFileHandler
-from typing import Optional, Callable, Any
+from typing import Optional, Callable, Dict, Any
 
 LOG_FILE_PATH = os.path.expanduser("~/.config/waypanel/waypanel.log")
 
@@ -44,9 +44,11 @@ class ErrorHandler:
         level: str = "error",
         user_notification: Optional[Callable[[str], None]] = None,
         fallback: Optional[Callable[[], Any]] = None,
+        context: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
-        Handle an exception by logging it, notifying the user (if applicable), and executing a fallback mechanism.
+        Handle an exception by logging it, notifying the user (if applicable),
+        and executing a fallback mechanism.
 
         Args:
             error (Exception): The exception to handle.
@@ -54,7 +56,13 @@ class ErrorHandler:
             level (str): The logging level ('debug', 'info', 'warning', 'error', 'critical').
             user_notification (Callable[[str], None]): A function to notify the user (e.g., GUI alert).
             fallback (Callable[[], Any]): A fallback function to execute if the error occurs.
+            context (Optional[Dict[str, Any]]): Additional contextual information to include in the log.
         """
+        # Add contextual information to the message
+        if context:
+            context_str = ", ".join(f"{k}={v}" for k, v in context.items())
+            message = f"{message} ({context_str})"
+
         # Log the error with the specified level
         log_method = getattr(self.logger, level.lower(), self.logger.error)
         log_method(f"{message}: {error}", exc_info=True)

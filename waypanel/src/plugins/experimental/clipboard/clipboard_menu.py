@@ -18,8 +18,6 @@ from ._clipboard_server import AsyncClipboardServer
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
-# load the plugin only after essential plugins is loaded
-DEPS = ["dockbar", "taskbar"]
 
 
 def get_plugin_placement(panel_instance):

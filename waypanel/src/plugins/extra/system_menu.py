@@ -14,7 +14,7 @@ ENABLE_PLUGIN = True
 
 def get_plugin_placement(panel_instance):
     position = "systray"
-    order = 10
+    order = 999
     return position, order
 
 

@@ -5,7 +5,6 @@ from gi.repository import Gtk, GLib
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 # load the plugin only after essential plugins is loaded
-DEPS = ["dockbar", "taskbar", "event_manager"]
 
 
 def get_plugin_placement(panel_instance):

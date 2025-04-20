@@ -3,6 +3,7 @@ from gi.repository import Gtk, GLib
 from wayfire import WayfireSocket
 import os
 import orjson as json
+import toml
 from wayfire.extra.ipc_utils import WayfireUtils
 from gi.repository import Gtk4LayerShell as LayerShell
 from ...core.create_panel import (
@@ -12,7 +13,7 @@ from ...core.create_panel import (
 
 # Enable or disable the plugin
 ENABLE_PLUGIN = True
-DEPS = ["event_manager"]
+DEPS = ["event_manager", "gestures_setup"]
 
 
 def get_plugin_placement(panel_instance):
@@ -44,6 +45,7 @@ class DockbarPlugin:
         self.obj = panel_instance
         # Subscribe to events using the event_manager
         self.plugins = self.obj.plugin_loader.plugins
+        self.create_gesture = self.obj.plugins["gestures_setup"].create_gesture
         self._subscribe_to_events()
         self.utils = self.obj.utils
         self.layer_state = False
@@ -95,28 +97,88 @@ class DockbarPlugin:
 
         self.dockbar_panel = self.get_dockbar_position(panel)
 
+    def CreateFromAppList(
+        self, config, orientation, class_style, callback=None, use_label=False
+    ):
+        if orientation == "h":
+            orientation = Gtk.Orientation.HORIZONTAL
+        elif orientation == "v":
+            orientation = Gtk.Orientation.VERTICAL
+
+        box = Gtk.Box(spacing=10, orientation=orientation)
+
+        with open(config, "r") as f:
+            config_data = toml.load(f)["dockbar"]
+
+        for app in config_data:
+            app_id = None
+            initial_title = None
+            try:
+                app_id = config_data[app]["wclass"]
+            except KeyError:
+                pass
+
+            # Retrieve the command for this app
+            app_cmd = config_data[app]["cmd"]
+
+            # Create the button
+            button = self.utils.create_button(
+                self.utils.get_nearest_icon_name(config_data[app]["icon"]),
+                app_cmd,
+                class_style,
+                app_id,
+                initial_title,
+                use_label,
+            )
+
+            # Add middle-click gesture
+            self.create_gesture(
+                button, 2, lambda _, cmd=app_cmd: self.on_middle_click(cmd)
+            )
+
+            # Add right-click gesture (if a callback is provided)
+            if callback is not None:
+                self.create_gesture(button, 3, callback)
+
+            # Append the button to the box
+            self.update_widget(box.append, button)
+
+        return box
+
+    def on_middle_click(self, cmd):
+        # Check for empty workspace
+        coordinates = self.utils.find_empty_workspace()
+        if coordinates:
+            ws_x, ws_y = coordinates
+            self.sock.scale_toggle()
+            self.sock.set_workspace(ws_x, ws_y)
+            self.utils.run_cmd(cmd)
+        else:
+            # If no empty workspace, just open the app
+            self.utils.run_cmd(cmd)
+
     def _setup_dockbar(self):
         """Set up the dockbar based on the configuration."""
         dockbar_toml = self.config.get("dockbar", {})
         orientation = dockbar_toml.get("orientation", "v")
         class_style = dockbar_toml.get("class_style", "dockbar-buttons")
 
-        self.dockbar = self.utils.CreateFromAppList(
+        self.dockbar = self.CreateFromAppList(
             self.obj.waypanel_cfg, orientation, class_style
         )
         self.choose_and_set_dockbar()
         # FIXME: remove this motion_controller later to use in a example
-        motion_controller = Gtk.EventControllerMotion()
-        motion_controller.connect("enter", self.on_mouse_enter)
-        self.dockbar.add_controller(motion_controller)
+        # motion_controller = Gtk.EventControllerMotion()
+        # motion_controller.connect("enter", self.on_mouse_enter)
+        # self.dockbar.add_controller(motion_controller)
 
         # set exclusive by default if scale plugin is disabled
         # FIXME: find the right way to set exclusive zone as the top
         # probably only possible in panel creation, so check if scale is enabled
         # before the panel creation, if not, then create the panels with exclusive spacing
-        if not self.is_scale_enabled():
-            LayerShell.set_layer(self.dockbar_panel, LayerShell.Layer.TOP)
-            LayerShell.set_exclusive_zone(self.dockbar_panel, 64)
+        # if not self.is_scale_enabled():
+        #    LayerShell.set_layer(self.dockbar_panel, LayerShell.Layer.TOP)
+        #    LayerShell.set_exclusive_zone(self.dockbar_panel, 64)
 
         self.logger.info("Dockbar setup completed.")
 

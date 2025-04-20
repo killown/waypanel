@@ -1,21 +1,14 @@
-import asyncio
 import math
 import os
-import socket
 import subprocess
 from time import sleep
-import aiohttp
 import gi
 import numpy as np
-import orjson as json
 import toml
-from aiohttp import ClientTimeout
-from bs4 import BeautifulSoup
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 from wayfire import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.extra.stipc import Stipc
-from waypanel.src.ipc.ipc_client import WayfireClientIPC
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -27,15 +20,12 @@ class Utils(Adw.Application):
         self.logger = self.obj.logger
         self._setup_config_paths()
         self.psutil_store = {}
-        self.panel_cfg = self.load_topbar_config()
         self.icon_names = [icon for icon in Gtk.IconTheme().get_icon_names()]
         self.gio_icon_list = Gio.AppInfo.get_all()
         self.gestures = {}
         self.fd = None
         self.watch_id = None
         self.sock = WayfireSocket()
-        # subscribe to events, try until it's ready to subscribe
-        GLib.timeout_add_seconds(1, self.subscribe_events)
         self.wf_utils = WayfireUtils(self.sock)
         self.stipc = Stipc(self.sock)
 
@@ -43,7 +33,6 @@ class Utils(Adw.Application):
         if not os.path.exists(self.config_path):
             os.makedirs(self.config_path)
 
-        self.is_scale_active = {}
         self.terminal_emulators = [
             "kitty",
             "gnome-terminal",
@@ -59,77 +48,6 @@ class Utils(Adw.Application):
             "st",
             "rxvt",
         ]
-
-    def subscribe_events(self):
-        # try until it returns the event_manager instance
-        event_manager = self.obj.plugins["event_manager"]
-        if not event_manager:
-            return True
-        try:
-            event_manager.subscribe_to_event(
-                "plugin-activation-state-changed", self.handle_event
-            )
-            self.logger.info("Utils: Successfully subscribed to events.")
-        except Exception as e:
-            self.logger.error_handler.handle(f"Error subscribing to events: {e}")
-            # try to subscribe again
-            return True
-        # no need for more tries
-        return False
-
-    def connect_socket(self):
-        """Establish a connection to the Unix socket."""
-        socket_path = "/tmp/waypanel-utils.sock"
-        self.client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.client_socket.connect(socket_path)
-
-        # Create a GLib IO Watcher
-        self.source = GLib.io_add_watch(
-            self.client_socket,
-            GLib.PRIORITY_DEFAULT,
-            GLib.IO_IN,
-            self.handle_socket_event,
-        )
-
-    def handle_socket_event(self, fd, condition):
-        """Read from the socket and process events."""
-        chunk = fd.recv(1024).decode()
-        if not chunk:
-            return GLib.SOURCE_REMOVE  # Remove source if no data is received
-
-        self.buffer += chunk
-
-        # Process the complete events in the buffer
-        while "\n" in self.buffer:
-            event_str, self.buffer = self.buffer.split("\n", 1)
-            if event_str:
-                try:
-                    event = json.loads(event_str)
-                    self.process_event(event)
-                except json.JSONDecodeError as e:
-                    self.logger.error_handler.handle(f"JSON decode error: {e}")
-
-        return GLib.SOURCE_CONTINUE  # Continue receiving data
-
-    def process_event(self, event):
-        """Process the event dictionary."""
-        self.logger.info(f"Received event: {event}")
-        self.handle_event(event)
-
-    def disconnect_socket(self):
-        """Clean up resources."""
-        if self.source:
-            self.source.remove()  # Remove the source when done
-        if self.client_socket:
-            self.client_socket.close()
-
-    def wayfire_events_setup(self):
-        """Initialize the Wayfire event listener within a GTK application."""
-        # Create a GTK application
-        app = Gtk.Application(application_id="com.example.GtkApplication")
-
-        # Define the path for the Unix socket
-        self.connect_socket()
 
     def run_cmd(self, cmd):
         """Run a shell command without blocking the main thread."""
@@ -285,195 +203,76 @@ class Utils(Adw.Application):
 
         return True
 
-    def CreateWorkspacePanel(
-        self, config, orientation, class_style, callback=None, use_label=False
-    ):
-        if orientation == "h":
-            orientation = Gtk.Orientation.HORIZONTAL
-        if orientation == "v":
-            orientation = Gtk.Orientation.VERTICAL
-
-        box = Gtk.Box(spacing=10, orientation=orientation)
-
-        with open(config, "r") as f:
-            config_data = toml.load(f)
-
-            for app in config_data:
-                wclass = None
-                initial_title = None
-
-                try:
-                    wclass = config_data[app]["wclass"]
-                except KeyError:
-                    pass
-
-                button = self.create_button(
-                    config_data[app]["icon"],
-                    config_data[app]["cmd"],
-                    class_style,
-                    wclass,
-                    initial_title,
-                    use_label,
-                )
-                if self.widget_exists(button):
-                    if callback is not None:
-                        self.create_gesture(button, 3, callback)
-                    self.append_widget_if_ready(box, button)
-                else:
-                    self.logger.error_handler.handle(
-                        f"Error: Failed to create button for app {app}"
-                    )
-
-        return box
-
-    def find_dock_icon(self, app_id):
-        with open(self.dockbar_config, "r") as f:
-            config_data = toml.load(f)
-
-            for app in config_data:
-                try:
-                    wclass = config_data[app]["wclass"]
-                    if app_id in wclass:
-                        icon = config_data[app]["icon"]
-                        return icon
-                    else:
-                        return None
-                except KeyError:
-                    return None
-
     def get_monitor_info(self):
         """
         Retrieve information about the connected monitors.
 
         This function retrieves information about the connected monitors,
-        such as their dimensions and names,
-        and returns the information as a dictionary.
+        such as their dimensions and names, and returns the information
+        as a dictionary.
 
         Returns:
-            dict: A dictionary containing information
-            about the connected monitors.
+            dict: A dictionary containing information about the connected monitors.
+                  The keys are monitor names, and the values are lists containing
+                  [width, height]. If no monitors are detected or an error occurs,
+                  an empty dictionary is returned.
         """
-        # get default display and retrieve
-        # information about the connected monitors
-        screen = Gdk.Display.get_default()
-        monitors = screen.get_monitors()
-        monitor_info = {}
-        for monitor in monitors:
-            monitor_width = monitor.get_geometry().width
-            monitor_height = monitor.get_geometry().height
-            name = monitor.props.connector
-            monitor_info[name] = [monitor_width, monitor_height]
-
-        return monitor_info
-
-    def take_note_app(self, *_):
-        """
-        Open the note-taking application specified in the configuration file.
-
-        This function reads the configuration file to retrieve the command for
-        the note-taking application,
-        and then executes the command to open the application.
-
-        Args:
-            *_: Additional arguments (unused).
-
-        Returns:
-            None
-        """
-        # Read the configuration file and load the configuration
-        with open(self.topbar_config, "r") as f:
-            config = toml.load(f)
-
-        # Run the note-taking application using the specified command
-        self.run_app(config["take_note_app"]["cmd"])
-
-    def reconnect_client(self, socket):
-        socket.close()
-        sock = WayfireSocket()
-        utils = WayfireUtils(sock)
-        stipc = Stipc(sock)
-        return sock, utils, stipc
-
-    def on_event_ready(self, fd, condition):
-        msg = self.sock.read_next_event()
-        if msg is None:
-            return True
-        if isinstance(msg, dict):  # Check if msg is already a dictionary
-            if "event" in msg:
-                self.handle_event(msg)
-        return True
-
-    def handle_event(self, msg):
         try:
-            if msg["event"] == "plugin-activation-state-changed":
-                if msg["state"] is True:
-                    if msg["plugin"] == "scale":
-                        self.is_scale_active[msg["output"]] = True
-                if msg["state"] is False:
-                    if msg["plugin"] == "scale":
-                        self.is_scale_active[msg["output"]] = False
-        except Exception as e:
-            self.logger.error_handler.handle(e)
-        return True
-
-    def handle_event_checks(self, msg, required_keys=None):
-        """
-        Perform common checks on the event message.
-        Args:
-            msg (dict): The event message.
-            required_keys (list): List of keys that must be present in the message.
-        Returns:
-            bool: True if the checks pass, False otherwise.
-        """
-        if not isinstance(msg, dict):
-            return False
-
-        if "event" not in msg:
-            return False
-
-        if required_keys:
-            for key in required_keys:
-                if key not in msg:
-                    return False
-
-        return True
-
-    def CreateFromAppList(
-        self, config, orientation, class_style, callback=None, use_label=False
-    ):
-        if orientation == "h":
-            orientation = Gtk.Orientation.HORIZONTAL
-        if orientation == "v":
-            orientation = Gtk.Orientation.VERTICAL
-
-        box = Gtk.Box(spacing=10, orientation=orientation)
-
-        with open(config, "r") as f:
-            config_data = toml.load(f)["dockbar"]
-
-            for app in config_data:
-                wclass = None
-                initial_title = None
-
-                try:
-                    wclass = config_data[app]["wclass"]
-                except KeyError:
-                    pass
-
-                button = self.create_button(
-                    self.get_nearest_icon_name(config_data[app]["icon"]),
-                    config_data[app]["cmd"],
-                    class_style,
-                    wclass,
-                    initial_title,
-                    use_label,
+            # Get the default display
+            screen = Gdk.Display.get_default()
+            if not screen:
+                self.logger.error_handler.handle(
+                    error=RuntimeError("Failed to retrieve default display."),
+                    message="No default display found.",
                 )
+                return {}
 
-                if callback is not None:
-                    self.create_gesture(button, 3, callback)
-                self.append_widget_if_ready(box, button)
-                button.add_css_class(class_style)
-        return box
+            # Retrieve the list of monitors
+            monitors = screen.get_monitors()
+            if not monitors:
+                self.logger.warning("No monitors detected.")
+                return {}
+
+            # Build the monitor info dictionary
+            monitor_info = {}
+            for monitor in monitors:
+                try:
+                    # Safely retrieve monitor properties
+                    monitor_width = monitor.get_geometry().width
+                    monitor_height = monitor.get_geometry().height
+                    name = monitor.props.connector
+
+                    # Validate monitor name
+                    if not name or not isinstance(name, str):
+                        self.logger.warning(
+                            f"Invalid or missing monitor name for monitor: {monitor}"
+                        )
+                        continue
+
+                    # Add monitor info to the dictionary
+                    monitor_info[name] = [monitor_width, monitor_height]
+                    self.logger.debug(
+                        f"Detected monitor: {name} ({monitor_width}x{monitor_height})"
+                    )
+
+                except Exception as e:
+                    # Log errors for individual monitors without failing the entire process
+                    self.logger.error_handler.handle(
+                        error=e,
+                        message="Error retrieving information for a monitor.",
+                        context={"monitor": str(monitor)},
+                    )
+
+            return monitor_info
+
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e,
+                message="Unexpected error while retrieving monitor information.",
+                level="error",
+            )
+            return {}
 
     def search_local_desktop(self, initial_title):
         for deskfile in os.listdir(self.webapps_applications):
@@ -490,138 +289,274 @@ class Utils(Adw.Application):
         return None
 
     def layer_shell_check(self):
-        """Check if gtk4-layer-shell is installed, and install it if not."""
-        # Define paths
-        install_path = os.path.expanduser("~/.local/lib/gtk4-layer-shell")
-        installed_marker = os.path.join(
-            install_path, "libgtk_layer_shell.so"
-        )  # Adjust if necessary
-        temp_dir = "/tmp/gtk4-layer-shell"
-        repo_url = "https://github.com/wmww/gtk4-layer-shell.git"
-        build_dir = "build"
+        """
+        Check if gtk4-layer-shell is installed, and install it if not.
+        Logs detailed information about each step and handles errors gracefully.
+        """
+        try:
+            # Define paths
+            install_path = os.path.expanduser("~/.local/lib/gtk4-layer-shell")
+            installed_marker = os.path.join(
+                install_path, "libgtk_layer_shell.so"
+            )  # Adjust if necessary
+            temp_dir = "/tmp/gtk4-layer-shell"
+            repo_url = "https://github.com/wmww/gtk4-layer-shell.git"
+            build_dir = "build"
 
-        # Check if the library is installed
-        if os.path.exists(installed_marker):
-            self.logger.info("gtk4-layer-shell is already installed.")
-            return
+            # Check if the library is already installed
+            if os.path.exists(installed_marker):
+                self.logger.info("gtk4-layer-shell is already installed.")
+                return
 
-        # Proceed with installation if not installed
-        self.logger.info("gtk4-layer-shell is not installed. Installing...")
+            self.logger.info("gtk4-layer-shell is not installed. Installing...")
 
-        # Create a temporary directory
-        if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
+            # Create a temporary directory
+            try:
+                if not os.path.exists(temp_dir):
+                    self.logger.info(f"Creating temporary directory: {temp_dir}")
+                    os.makedirs(temp_dir)
+            except Exception as e:
+                self.logger.error_handler.handle(
+                    error=e, message=f"Failed to create temporary directory: {temp_dir}"
+                )
+                return
 
-        # Clone the repository
-        self.logger.info("Cloning the repository...")
-        subprocess.run(["git", "clone", repo_url, temp_dir], check=True)
+            # Clone the repository
+            try:
+                self.logger.info(f"Cloning repository from: {repo_url}")
+                subprocess.run(["git", "clone", repo_url, temp_dir], check=True)
+            except subprocess.CalledProcessError as e:
+                self.logger.error_handler.handle(
+                    error=e, message="Failed to clone the gtk4-layer-shell repository."
+                )
+                return
 
-        # Change to the repository directory
-        os.chdir(temp_dir)
+            # Change to the repository directory
+            try:
+                os.chdir(temp_dir)
+            except Exception as e:
+                self.logger.error_handler.handle(
+                    error=e, message=f"Failed to change directory to: {temp_dir}"
+                )
+                return
 
-        # Set up the build directory with Meson
-        self.logger.info("Configuring the build environment...")
-        subprocess.run(
-            [
-                "meson",
-                "setup",
-                f"--prefix={install_path}",
-                "-Dexamples=true",
-                "-Ddocs=true",
-                "-Dtests=true",
-                build_dir,
-            ],
-            check=True,
-        )
+            # Set up the build directory with Meson
+            try:
+                self.logger.info("Configuring the build environment...")
+                subprocess.run(
+                    [
+                        "meson",
+                        "setup",
+                        f"--prefix={install_path}",
+                        "-Dexamples=true",
+                        "-Ddocs=true",
+                        "-Dtests=true",
+                        build_dir,
+                    ],
+                    check=True,
+                )
+            except subprocess.CalledProcessError as e:
+                self.logger.error_handler.handle(
+                    error=e,
+                    message="Failed to configure the build environment with Meson.",
+                )
+                return
 
-        # Build the project
-        self.logger.info("Building the project...")
-        subprocess.run(["ninja", "-C", build_dir], check=True)
+            # Build the project
+            try:
+                self.logger.info("Building the project...")
+                subprocess.run(["ninja", "-C", build_dir], check=True)
+            except subprocess.CalledProcessError as e:
+                self.logger.error_handler.handle(
+                    error=e, message="Failed to build the gtk4-layer-shell project."
+                )
+                return
 
-        # Install the project
-        self.logger.info("Installing the project...")
-        subprocess.run(["ninja", "-C", build_dir, "install"], check=True)
+            # Install the project
+            try:
+                self.logger.info("Installing the project...")
+                subprocess.run(["ninja", "-C", build_dir, "install"], check=True)
+            except subprocess.CalledProcessError as e:
+                self.logger.error_handler.handle(
+                    error=e, message="Failed to install the gtk4-layer-shell project."
+                )
+                return
 
-        self.logger.info("Installation complete.")
+            self.logger.info("gtk4-layer-shell installation complete.")
+
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e,
+                message="Unexpected error during gtk4-layer-shell installation.",
+            )
 
     def extract_icon_info(self, application_name):
-        icon_name = None
+        """
+        Extract the icon name for a given application by searching desktop files.
 
+        Args:
+            application_name (str): The name of the application to search for.
+
+        Returns:
+            str: The icon name if found, or None if no matching application is found.
+        """
         # Paths to search for desktop files
         search_paths = [
             "/usr/share/applications/",
             os.path.expanduser("~/.local/share/applications/"),
         ]
 
-        # Loop through each search path
-        for search_path in search_paths:
-            # Check if the search path exists
-            if os.path.exists(search_path):
-                # Loop through each file in the directory
-                for file_name in os.listdir(search_path):
-                    if file_name.endswith(".desktop"):
-                        file_path = os.path.join(search_path, file_name)
-                        with open(file_path, "r") as desktop_file:
-                            found_name = False
-                            for line in desktop_file:
-                                if line.startswith("Name="):
-                                    if line.strip().split("=")[1] == application_name:
-                                        found_name = True
-                                elif found_name and line.startswith("Icon="):
-                                    icon_name = line.strip().split("=")[1]
-                                    return icon_name
+        try:
+            # Loop through each search path
+            for search_path in search_paths:
+                # Check if the search path exists
+                if not os.path.exists(search_path):
+                    self.logger.debug(f"Search path does not exist: {search_path}")
+                    continue
 
-        return icon_name
+                # Loop through each file in the directory
+                try:
+                    for file_name in os.listdir(search_path):
+                        if not file_name.endswith(".desktop"):
+                            continue
+
+                        file_path = os.path.join(search_path, file_name)
+                        try:
+                            with open(file_path, "r") as desktop_file:
+                                found_name = False
+                                for line in desktop_file:
+                                    if line.startswith("Name="):
+                                        app_name = line.strip().split("=")[1]
+                                        if app_name == application_name:
+                                            found_name = True
+                                    elif found_name and line.startswith("Icon="):
+                                        icon_name = line.strip().split("=")[1]
+                                        self.logger.debug(
+                                            f"Found icon '{icon_name}' for application '{application_name}' in file: {file_path}"
+                                        )
+                                        return icon_name
+                        except Exception as e:
+                            self.logger.error_handler.handle(
+                                error=e,
+                                message=f"Error reading desktop file: {file_path}",
+                                context={"file": file_path},
+                            )
+                except Exception as e:
+                    self.logger.error_handler.handle(
+                        error=e,
+                        message=f"Error listing files in directory: {search_path}",
+                        context={"directory": search_path},
+                    )
+
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e, message="Unexpected error while extracting icon info."
+            )
+
+        # Return None if no icon is found
+        self.logger.info(f"No icon found for application: {application_name}")
+        return None
 
     def search_desktop(self, wm_class):
-        all_apps = Gio.AppInfo.get_all()
-        desktop_files = [
-            i.get_id().lower() for i in all_apps if wm_class in i.get_id().lower()
-        ]
-        if desktop_files:
-            return desktop_files[0]
-        else:
+        """
+        Search for a desktop file associated with the given WM_CLASS.
+
+        Args:
+            wm_class (str): The window manager class to search for.
+
+        Returns:
+            str: The ID of the first matching desktop file if found, or None if no match is found.
+        """
+        try:
+            # Validate input
+            if not wm_class or not isinstance(wm_class, str):
+                self.logger.warning(f"Invalid or missing WM_CLASS: {wm_class}")
+                return None
+
+            # Retrieve all installed applications
+            try:
+                all_apps = Gio.AppInfo.get_all()
+            except Exception as e:
+                self.logger.error_handler.handle(
+                    error=e, message="Failed to retrieve installed applications."
+                )
+                return None
+
+            # Filter desktop files based on WM_CLASS
+            desktop_files = [
+                app.get_id().lower()
+                for app in all_apps
+                if app.get_id() and wm_class.lower() in app.get_id().lower()
+            ]
+
+            # Log the result
+            if desktop_files:
+                self.logger.debug(
+                    f"Found desktop file for WM_CLASS '{wm_class}': {desktop_files[0]}"
+                )
+                return desktop_files[0]
+            else:
+                self.logger.info(f"No desktop file found for WM_CLASS: {wm_class}")
+                return None
+
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Unexpected error while searching for desktop file with WM_CLASS: {wm_class}",
+            )
             return None
 
     def icon_exist(self, argument):
-        if argument:
+        """
+        Check if an icon exists based on the given argument.
+
+        Args:
+            argument (str): The application name or identifier to search for.
+
+        Returns:
+            str: The name or path of the matching icon if found, or an empty string if not found.
+        """
+        try:
+            # Validate input
+            if not argument or not isinstance(argument, str):
+                self.logger.warning(f"Invalid or missing argument: {argument}")
+                return ""
+
+            # Search in Gio.AppInfo list
             exist = [
                 i.get_icon()
                 for i in self.gio_icon_list
                 if argument.lower() in i.get_id().lower()
             ]
+
             if exist:
-                if hasattr(exist[0], "get_names"):
+                # Check for methods to extract icon names
+                if hasattr(exist[0], "get_names") and callable(exist[0].get_names):
                     return exist[0].get_names()[0]
-                if hasattr(exist[0], "get_name"):
+                elif hasattr(exist[0], "get_name") and callable(exist[0].get_name):
                     return exist[0].get_name()
-            else:
-                exist = [name for name in self.icon_names if argument.lower() in name]
-                if exist:
-                    exist = exist[0]
-                    return exist
-        return ""
 
-    def create_taskbar_launcher(
-        self,
-        wmclass,
-        title,
-        initial_title,
-        orientation,
-        class_style,
-        view_id,
-        callback=None,
-    ):
-        if orientation == "h":
-            orientation = Gtk.Orientation.HORIZONTAL
-        elif orientation == "v":
-            orientation = Gtk.Orientation.VERTICAL
+            # Fallback to searching in icon names
+            exist = [
+                name for name in self.icon_names if argument.lower() in name.lower()
+            ]
+            if exist:
+                return exist[0]
 
-        title = self.filter_utf_for_gtk(title)
-        icon = self.get_icon(wmclass, initial_title, title)
+            # Log if no icon is found
+            self.logger.debug(f"No icon found for argument: {argument}")
+            return ""
 
-        button = self.create_taskbar_button(title, icon, view_id)
-        return button
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Unexpected error while checking if icon exists for argument: {argument}",
+            )
+            return ""
 
     def search_str_inside_file(self, file_path, word):
         with open(file_path, "r") as file:
@@ -668,50 +603,6 @@ class Utils(Adw.Application):
         views = self.sock.list_views()
         return [i["app-id"].lower() for i in views if i["app-id"] != "nil"]
 
-    def create_taskbar_button(self, title, icon_name, view_id):
-        if icon_name is None:
-            return None
-
-        button = Gtk.Button()
-
-        # Filter title for UTF-8 compatibility
-        title = self.filter_utf_for_gtk(title)
-        if not title:
-            return None
-
-        # Determine title to use based on its length
-        use_this_title = title[:30]
-        first_word_length = len(title.split()[0])
-        if first_word_length > 13:
-            use_this_title = title.split()[0]
-
-        # Create a box to hold icon and label
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-
-        # Add icon if available
-        if icon_name:
-            icon = Gtk.Image()
-            self.update_widget(icon.set_from_icon_name, icon_name)
-            self.update_widget(box.append, icon)
-
-        # Add label
-        label = Gtk.Label()
-        self.update_widget(label.set_label, use_this_title)
-        self.update_widget(box.append, label)
-
-        # Set the box as the button's child
-        self.update_widget(button.set_child, box)
-
-        # Create gesture handlers for the button
-        button.connect("clicked", lambda *_: self.set_view_focus(view_id))
-        self.create_gesture(box, 1, lambda *_: self.set_view_focus(view_id))
-        self.create_gesture(box, 2, lambda *_: self.sock.close_view(view_id))
-        self.create_gesture(
-            box, 3, lambda *_: self.wf_utils.move_view_to_empty_workspace(view_id)
-        )
-
-        return button
-
     def focus_view_when_ready(self, view):
         """this function is meant to be used with GLib timeout or idle_add"""
         if view["role"] == "toplevel" and view["focusable"] is True:
@@ -719,303 +610,437 @@ class Utils(Adw.Application):
             return False  # Stop idle processing
         return True  # Continue idle processing
 
+    def find_empty_workspace(self):
+        """
+        Find an empty workspace using wf_utils.get_workspaces_without_views().
+
+        Returns:
+            tuple: (x, y) coordinates of the first empty workspace, or None if no empty workspace is found.
+        """
+        try:
+            # Get the list of workspaces without views
+            empty_workspaces = self.wf_utils.get_workspaces_without_views()
+
+            if empty_workspaces:
+                # Return the first empty workspace as a tuple (x, y)
+                return empty_workspaces[0]
+            else:
+                # No empty workspace found
+                return None
+        except Exception as e:
+            # Log any unexpected errors
+            self.logger.error_handler.handle(
+                error=e,
+                message="Error while finding an empty workspace.",
+                level="error",
+            )
+            return None
+
     def move_view_to_empty_workspace(self, view_id):
         ws = self.wf_utils.get_active_workspace()
         if ws:
             x, y = ws.values()
             self.sock.set_workspace(x, y, view_id)
 
-    def normalize_icon_name(self, app_id):
-        if "." in app_id:
-            return app_id.split(".")[-1]  # Extract the last part
-        return app_id
-
     # this function is useful because it will handle icon_name and icon_path
     def handle_icon_for_button(self, view, button):
-        title = view["title"]
-        initial_title = title.split()[0]
-        wmclass = view["app-id"]
-        icon_path = self.get_icon(wmclass, title, initial_title)
-        if icon_path:
-            self.logger.info(icon_path)
+        """
+        Set an appropriate icon for the button based on the view's details.
+
+        Args:
+            view (dict): The view object containing details like title and app-id.
+            button (Gtk.Button): The button to which the icon will be applied.
+        """
+        app_id = None
+        try:
+            # Extract relevant details from the view
+            title = view.get("title", "")
+            initial_title = title.split()[0] if title else ""
+            app_id = view.get("app-id", "")
+
+            # Retrieve the icon path or name
+            icon_path = self.get_icon(app_id, title, initial_title)
+            if not icon_path:
+                self.logger.debug(f"No icon found for view: {app_id}")
+                button.set_icon_name("default-icon-name")
+                return
+
+            self.logger.debug(f"Icon retrieved for view: {app_id} -> {icon_path}")
+
+            # Handle file-based icons
             if icon_path.startswith("/"):
                 try:
                     image = Gtk.Image.new_from_file(icon_path)
-                    button.set_image(image)
-                    if image is not None and isinstance(image, Gtk.Image):
+                    if image and isinstance(image, Gtk.Image):
                         button.set_image(image)
                         button.set_always_show_image(True)
                     else:
                         self.logger.error_handler.handle(
                             "Error: Invalid image provided"
                         )
+                        button.set_icon_name("default-icon-name")
                 except Exception as e:
                     self.logger.error_handler.handle(
                         f"Error loading icon from file: {e}"
                     )
                     button.set_icon_name("default-icon-name")
             else:
+                # Handle icon names directly
                 button.set_icon_name(icon_path)
-        else:
+
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Unexpected error while handling icon for button: {app_id}",
+            )
             button.set_icon_name("default-icon-name")
 
     def find_icon_for_app_id(self, app_id):
-        app_id = app_id.lower()
-        app_list = Gio.AppInfo.get_all()
-        normalized_app_id = self.normalize_icon_name(app_id)
-        for app in app_list:
-            app_info_id = app.get_id().lower()
-            if app_info_id and (
-                app_info_id.startswith(normalized_app_id)
-                or normalized_app_id in app_info_id
-            ):
-                icon = app.get_icon()
-                if icon:
-                    if isinstance(icon, Gio.ThemedIcon):
-                        icon_names = icon.get_names()
-                        return icon_names[0] if icon_names else None
-                    elif isinstance(icon, Gio.FileIcon):
-                        return icon.get_file().get_path()
-        return None
+        """
+        Find an icon for a given application ID.
 
-    def find_icon(self, app_id):
-        return self.find_icon_for_app_id(app_id)
+        Args:
+            app_id (str): The application ID to search for.
 
-    async def get_steam_game_pic(self, game_title):
-        REQUEST_TIMEOUT = 10  # seconds
-        search_url = "https://store.steampowered.com/search/"
-        params = {"term": game_title}
+        Returns:
+            str or None: The icon name or path if found, otherwise None.
+        """
+        try:
+            # Validate input
+            if not app_id or not isinstance(app_id, str):
+                self.logger.warning(f"Invalid or missing app_id: {app_id}")
+                return None
 
-        # Set timeout for the session
-        timeout = ClientTimeout(total=REQUEST_TIMEOUT)
+            def normalize_icon_name(app_id):
+                if "." in app_id:
+                    return app_id.split(".")[-1]  # Extract the last part
+                return app_id
 
-        async with aiohttp.ClientSession(timeout=timeout) as session:
+            # Normalize the app_id for comparison
+            app_id = app_id.lower()
+            normalized_app_id = normalize_icon_name(app_id)
+
+            # Retrieve all installed applications
             try:
-                async with session.get(search_url, params=params) as response:
-                    if response.status != 200:
-                        self.logger.info("Failed to retrieve search results.")
-                        return None
-
-                    text = await response.text()
-                    soup = BeautifulSoup(text, "html.parser")
-                    results = soup.find_all("a", href=True, class_="search_result_row")
-
-                    if not results:
-                        self.logger.info("Game not found.")
-                        return None
-
-                    # Assume the first result is the desired game
-                    game_url = results[0]["href"]
-
-                    try:
-                        async with session.get(game_url) as game_response:
-                            if game_response.status != 200:
-                                self.logger.info("Failed to retrieve game page.")
-                                return None
-
-                            game_text = await game_response.text()
-                            game_soup = BeautifulSoup(game_text, "html.parser")
-
-                            # Find the image URL
-                            img_tag = game_soup.find(
-                                "img", {"class": "game_header_image_full"}
-                            )
-                            if img_tag and img_tag["src"]:
-                                return img_tag["src"]
-                            else:
-                                self.logger.info("Image not found.")
-                                return None
-                    except asyncio.TimeoutError:
-                        self.logger.info("Timed out while retrieving game page.")
-                        return None
-            except asyncio.TimeoutError:
+                app_list = Gio.AppInfo.get_all()
+            except Exception as e:
                 self.logger.error_handler.handle(
-                    "Timed out while retrieving search results."
+                    error=e, message="Failed to retrieve installed applications."
                 )
                 return None
-            except aiohttp.ClientError as e:
-                self.logger.error_handler.handle(f"HTTP error occurred: {e}")
-                return None
 
-    async def main_get_steam_game_image(self, game_title):
-        image_url = await self.get_steam_game_pic(game_title)
-        if image_url:
-            return image_url
+            # Search for a matching application
+            for app in app_list:
+                try:
+                    app_info_id = app.get_id().lower()
+                    if not app_info_id:
+                        continue
 
-    def get_game_image(self, game_title):
-        asyncio.run(self.main_get_steam_game_image(game_title))
+                    # Check if the app_id matches the application's ID
+                    if (
+                        app_info_id.startswith(normalized_app_id)
+                        or normalized_app_id in app_info_id
+                    ):
+                        icon = app.get_icon()
+                        if not icon:
+                            continue
 
-    async def download_image(self, url, filename):
-        cache_dir = os.path.expanduser("~/.cache")
-        os.makedirs(cache_dir, exist_ok=True)
-        file_path = os.path.join(cache_dir, filename)
-        timeout = ClientTimeout(total=10)
+                        # Handle themed icons
+                        if isinstance(icon, Gio.ThemedIcon):
+                            icon_names = icon.get_names()
+                            if icon_names:
+                                return icon_names[0]
 
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            try:
-                async with session.get(url) as response:
-                    if response.status != 200:
-                        self.logger.info("Failed to download image.")
-                        return None
+                        # Handle file-based icons
+                        elif isinstance(icon, Gio.FileIcon):
+                            file_path = icon.get_file().get_path()
+                            if file_path:
+                                return file_path
 
-                    with open(file_path, "wb") as file:
-                        file.write(await response.read())
+                except Exception as e:
+                    self.logger.error_handler.handle(
+                        error=e, message=f"Error processing application: {app_info_id}"
+                    )
 
-                    return file_path
-            except asyncio.TimeoutError:
-                self.logger.error_handler.handle("Timed out while downloading image.")
-                return None
-            except aiohttp.ClientError as e:
-                self.logger.error_handler.handle(f"HTTP error occurred: {e}")
-                return None
+            # Log if no icon is found
+            self.logger.debug(f"No icon found for app_id: {app_id}")
+            return None
+
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Unexpected error while finding icon for app_id: {app_id}",
+            )
+            return None
 
     def get_wayfire_pid(self):
-        for entry in os.listdir("/proc"):
-            if entry.isdigit():
+        """
+        Retrieve the PID of the Wayfire compositor process.
+
+        Returns:
+            str or None: The PID of the Wayfire process if found, otherwise None.
+        """
+        try:
+            # Iterate over all entries in /proc
+            for entry in os.listdir("/proc"):
+                if not entry.isdigit():
+                    continue  # Skip non-numeric entries
+
                 try:
-                    with open(f"/proc/{entry}/comm", "r") as comm_file:
+                    comm_file_path = f"/proc/{entry}/comm"
+                    with open(comm_file_path, "r") as comm_file:
                         command_name = comm_file.read().strip()
-                        if "wayfire" in command_name:
+                        if "wayfire" in command_name.lower():
+                            self.logger.debug(
+                                f"Found Wayfire process with PID: {entry}"
+                            )
                             return entry
-                except IOError:
+                except IOError as e:
+                    # Log and skip unreadable entries
+                    self.logger.warning(
+                        f"Failed to read /proc/{entry}/comm. Details: {e}"
+                    )
                     continue
-        return None
+
+            # Log if no Wayfire process is found
+            self.logger.info("No Wayfire process found.")
+            return None
+
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e, message="Unexpected error while retrieving Wayfire PID."
+            )
+            return None
 
     def list_libs_in_process(self, pid):
+        """
+        Retrieve the list of shared libraries (.so files) loaded by a process.
+
+        Args:
+            pid (int or str): The Process ID of the target process.
+
+        Returns:
+            list: A list of unique shared library paths loaded by the process.
+        """
         libs = []
         maps_file = f"/proc/{pid}/maps"
 
         try:
+            # Validate that the PID is valid and the maps file exists
+            if not os.path.exists(maps_file):
+                self.logger.warning(f"Maps file not found for PID: {pid}")
+                return libs
+
             with open(maps_file, "r") as f:
                 for line in f:
+                    # Check if the line contains a shared library reference
                     if "so" in line:
                         lib_path = line.split()[-1]
+                        # Validate the library path
                         if os.path.isfile(lib_path) and lib_path not in libs:
                             libs.append(lib_path)
+                            self.logger.debug(f"Found shared library: {lib_path}")
+
         except FileNotFoundError:
-            pass
+            self.logger.error_handler.handle(
+                error=FileNotFoundError(f"Maps file not found: {maps_file}"),
+                message=f"Failed to read /proc/{pid}/maps",
+            )
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Unexpected error while listing shared libraries for PID: {pid}",
+            )
 
         return libs
 
     def check_lib_in_wayfire(self, lib_name):
-        pid = self.get_wayfire_pid()
-        if not pid:
-            self.logger.info("Wayfire process not found.")
+        """
+        Check if a specific shared library is loaded by the Wayfire process.
+
+        Args:
+            lib_name (str): The name of the shared library to check.
+
+        Returns:
+            bool: True if the library is found in the Wayfire process, False otherwise.
+        """
+        try:
+            # Validate input
+            if not lib_name or not isinstance(lib_name, str):
+                self.logger.warning(f"Invalid or missing library name: {lib_name}")
+                return False
+
+            # Get the PID of the Wayfire process
+            pid = self.get_wayfire_pid()
+            if not pid:
+                self.logger.info("Wayfire process not found.")
+                return False
+
+            self.logger.debug(
+                f"Checking for library '{lib_name}' in Wayfire process (PID: {pid})"
+            )
+
+            # Retrieve the list of shared libraries loaded by the Wayfire process
+            libs = self.list_libs_in_process(pid)
+            if not libs:
+                self.logger.debug(
+                    f"No shared libraries found for Wayfire process (PID: {pid})"
+                )
+                return False
+
+            # Check if the specified library is loaded
+            for lib in libs:
+                if lib_name in lib:
+                    self.logger.debug(
+                        f"Found library '{lib_name}' in Wayfire process: {lib}"
+                    )
+                    return True
+
+            self.logger.debug(f"Library '{lib_name}' not found in Wayfire process.")
             return False
 
-        libs = self.list_libs_in_process(pid)
-        for lib in libs:
-            if lib_name in lib:
-                return True
-
-        return False
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Unexpected error while checking for library '{lib_name}' in Wayfire process.",
+            )
+            return False
 
     def find_wayfire_lib(self, lib_name):
-        if self.check_lib_in_wayfire(lib_name):
-            return True
-        else:
+        """
+        Check if a specific shared library is loaded by the Wayfire process.
+
+        Args:
+            lib_name (str): The name of the shared library to check.
+
+        Returns:
+            bool: True if the library is found in the Wayfire process, False otherwise.
+        """
+        try:
+            # Directly return the result of `check_lib_in_wayfire`
+            return self.check_lib_in_wayfire(lib_name)
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Unexpected error while finding library '{lib_name}' in Wayfire.",
+            )
             return False
 
-    def get_audio_apps_with_titles(self):
-        """Retrieve audio applications along with their titles."""
-        try:
-            # Get sink inputs from PulseAudio
-            pactl_output = subprocess.run(
-                ["pactl", "list", "sink-inputs"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=True,
-            ).stdout
-            # Parse sink inputs
-            apps = []
-            current_app = {}
-            for line in pactl_output.splitlines():
-                if line.startswith("Sink Input #"):
-                    if current_app:
-                        apps.append(current_app)
-                        current_app = {}
-                elif "=" in line:
-                    key, value = map(str.strip, line.split("=", 1))
-                    current_app[key] = value.strip('"')
-            if current_app:
-                apps.append(current_app)
-            # Get window titles using wmctrl
-            try:
-                wmctrl_output = subprocess.run(
-                    ["wmctrl", "-lp"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=True,
-                ).stdout
-                # Create PID to window title mapping
-                pid_to_windows = defaultdict(list)
-                for wm_line in wmctrl_output.splitlines():
-                    parts = wm_line.split(maxsplit=4)
-                    if len(parts) >= 5:
-                        pid = parts[2]
-                        title = parts[4]
-                        pid_to_windows[pid].append(title)
-            except:
-                pid_to_windows = {}
-            # Prepare the result list
-            result = []
-            for app in apps:
-                pid = app.get("application.process.id")
-                if not pid:
-                    continue
-                # 1. Media title (song/video name)
-                # 2. Window title
-                # 3. Application name
-                title = (
-                    app.get("media.name")
-                    or app.get("xesam:title")
-                    or (
-                        pid_to_windows.get(pid, [""])[0]
-                        if pid in pid_to_windows
-                        else ""
-                    )
-                    or app.get("application.name", "")
-                )
-                if title:  # Only include if we found a title
-                    result.append({pid: title})
-            return result
-        except subprocess.CalledProcessError as e:
-            self.logger.error_handler.handle(f"Error running command: {e.stderr}")
-            return []
-        except Exception as e:
-            self.logger.info(f"Unexpected error: {e}")
-            return []
-
     def get_default_monitor_name(self, config_file_path):
+        """
+        Retrieve the default monitor name from a TOML configuration file.
+
+        Args:
+            config_file_path (str): The path to the configuration file.
+
+        Returns:
+            str or None: The default monitor name if found, otherwise None.
+        """
         try:
-            with open(config_file_path, "r") as file:
-                config = toml.load(file)
-                if "monitor" in config:
-                    return config["monitor"].get("name")
+            # Validate that the configuration file exists
+            if not os.path.exists(config_file_path):
+                self.logger.error_handler.handle(
+                    f"Config file '{config_file_path}' not found."
+                )
+                return None
+
+            # Load and parse the TOML configuration file
+            try:
+                with open(config_file_path, "r") as file:
+                    config = toml.load(file)
+            except toml.TomlDecodeError as e:
+                self.logger.error_handler.handle(
+                    error=e, message=f"Failed to parse TOML file: {config_file_path}"
+                )
+                return None
+
+            # Extract the monitor name if the "monitor" section exists
+            if "monitor" in config:
+                monitor_name = config["monitor"].get("name")
+                if monitor_name:
+                    self.logger.debug(f"Default monitor name found: {monitor_name}")
+                    return monitor_name
                 else:
+                    self.logger.info(
+                        "Monitor name is missing in the 'monitor' section."
+                    )
                     return None
-        except FileNotFoundError:
+            else:
+                self.logger.info(
+                    "'monitor' section not found in the configuration file."
+                )
+                return None
+
+        except Exception as e:
+            # Catch-all for unexpected errors
             self.logger.error_handler.handle(
-                f"Config file '{config_file_path}' not found."
+                error=e,
+                message=f"Unexpected error while retrieving default monitor name from '{config_file_path}'.",
             )
             return None
 
-    def view_focus_indicator_effect(self, view_id):
-        precision = 1
-        values = np.arange(0.1, 1, 0.1)
-        float_sequence = [round(value, precision) for value in values]
-        original_alpha = self.sock.get_view_alpha(view_id)["alpha"]
-        for f in float_sequence:
-            try:
-                self.sock.set_view_alpha(view_id, f)
-                sleep(0.02)
-            except Exception as e:
-                self.logger.error_handler.handle(e)
-        self.sock.set_view_alpha(view_id, original_alpha)
+    def view_focus_indicator_effect(self, view):
+        """
+        Apply a focus indicator effect by animating the view's alpha (transparency).
 
-    def is_view_valid(self, view_id):
+        Args:
+            view_id (int): The ID of the view to apply the effect to.
+        """
+        try:
+            view_id = view["id"]
+            if not self.is_view_valid(view):
+                self.logger.warning(f"Invalid or non-existent view ID: {view_id}")
+                return
+
+            # Retrieve the current alpha value of the view
+            try:
+                original_alpha = self.sock.get_view_alpha(view_id)["alpha"]
+            except Exception as e:
+                self.logger.error_handler.handle(
+                    error=e,
+                    message=f"Failed to retrieve alpha value for view ID: {view_id}",
+                )
+                return
+
+            # Define the sequence of alpha values for the animation
+            precision = 1
+            values = np.arange(0.1, 1, 0.1)
+            float_sequence = [round(value, precision) for value in values]
+
+            # Apply the alpha animation
+            for alpha in float_sequence:
+                try:
+                    self.sock.set_view_alpha(view_id, alpha)
+                    sleep(0.02)  # Small delay for the animation effect
+                except Exception as e:
+                    self.logger.error_handler.handle(
+                        error=e,
+                        message=f"Failed to set alpha value ({alpha}) for view ID: {view_id}",
+                    )
+
+            # Restore the original alpha value
+            try:
+                self.sock.set_view_alpha(view_id, original_alpha)
+            except Exception as e:
+                self.logger.error_handler.handle(
+                    error=e,
+                    message=f"Failed to restore original alpha value ({original_alpha}) for view ID: {view_id}",
+                )
+
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Unexpected error while applying focus indicator effect for view ID: {view_id}",
+            )
+
+    def is_view_valid(self, view):
         """
         Validate if a view is valid based on its ID or dictionary.
 
@@ -1025,71 +1050,82 @@ class Utils(Adw.Application):
         Returns:
             dict or False: The view object if valid, otherwise False.
         """
-        # Extract the ID if view_id is a dictionary
-        if isinstance(view_id, dict):
-            view_id = view_id.get("id")
-            if not view_id:
-                return False  # Invalid dictionary (missing "id" key)
-
-        # Get the list of active view IDs
-        view_ids = [i["id"] for i in self.sock.list_views()]
-        if view_id not in view_ids:
-            return False
-
-        # Fetch the view details
-        view = self.sock.get_view(view_id)
-        if not view:
-            return False
-
-        # Perform additional checks
-        if view["role"] != "toplevel":
-            return False
-        if view["pid"] == -1:
-            return False
-        if view["app-id"] in ["", "nil"]:
-            return False
-
-        return view
-
-    def set_view_focus(self, view_id):
+        view_id = None
         try:
-            view = self.is_view_valid(view_id)
+            if view is None:
+                return
+            view_id = view["id"]
+            # Extract the ID if view_id is a dictionary
+            if isinstance(view, dict):
+                view = view.get("id")
+                if not view:
+                    self.logger.warning(
+                        "Invalid dictionary provided: Missing 'id' key."
+                    )
+                    return False
+
+            # Ensure view_id is an integer
+            if not isinstance(view_id, int):
+                self.logger.warning(
+                    f"Invalid view ID type: {type(view_id).__name__}. Expected int."
+                )
+                return False
+
+            # Get the list of active view IDs
+            try:
+                view_ids = [i["id"] for i in self.sock.list_views()]
+            except Exception as e:
+                self.logger.error_handler.handle(
+                    error=e, message="Failed to retrieve active view IDs."
+                )
+                return False
+
+            if view_id not in view_ids:
+                self.logger.debug(
+                    f"View ID {view_id} is not in the list of active views."
+                )
+                return False
+
+            # Fetch the view details
+            try:
+                view = self.sock.get_view(view_id)
+            except Exception as e:
+                self.logger.error_handler.handle(
+                    error=e, message=f"Failed to fetch view details for ID: {view_id}"
+                )
+                return False
 
             if not view:
-                return
+                self.logger.debug(f"No view details found for ID: {view_id}")
+                return False
 
-            view_id = view["id"]
-            output_id = view["output-id"]
+            # Perform additional checks
+            if view.get("role") != "toplevel":
+                self.logger.debug(
+                    f"View ID {view_id} has an invalid role: {view.get('role')}"
+                )
+                return False
 
-            # sometimes the view is so small that we should resize it
-            viewgeo = self.wf_utils.get_view_geometry(view_id)
-            if viewgeo:
-                if viewgeo["width"] < 100 or viewgeo["height"] < 100:
-                    self.sock.configure_view(
-                        view_id, viewgeo["x"], viewgeo["y"], 400, 400
-                    )
+            if view.get("pid") == -1:
+                self.logger.debug(
+                    f"View ID {view_id} has an invalid PID: {view.get('pid')}"
+                )
+                return False
 
-            if output_id in self.is_scale_active:
-                if self.is_scale_active[output_id] is True:
-                    self.sock.scale_toggle()
-                    # FIXME: better get animation speed from the conf so define a proper sleep
-                    # sleep(0.4)
-                    self.wf_utils.go_workspace_set_focus(view_id)
-                    self.wf_utils.center_cursor_on_view(view_id)
-                else:
-                    self.wf_utils.go_workspace_set_focus(view_id)
-                    self.wf_utils.center_cursor_on_view(view_id)
-            else:
-                self.wf_utils.go_workspace_set_focus(view_id)
-                self.wf_utils.center_cursor_on_view(view_id)
-                self.view_focus_indicator_effect(view_id)
+            if view.get("app-id") in ["", "nil"]:
+                self.logger.debug(
+                    f"View ID {view_id} has an invalid app-id: {view.get('app-id')}"
+                )
+                return False
+
+            return view
 
         except Exception as e:
-            self.logger.error_handler.handle(e)
-            return True
-
-    def file_exists(self, path):
-        return os.path.isfile(path)
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e, message=f"Unexpected error while validating view ID: {view_id}"
+            )
+            return False
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
@@ -1103,29 +1139,67 @@ class Utils(Adw.Application):
         self.cache_folder = config_paths["cache_folder"]
 
     def setup_config_paths(self):
-        home = os.path.expanduser("~")
-        full_path = os.path.abspath(__file__)
-        directory_path = os.path.dirname(full_path)
-        directory_path = os.path.dirname(directory_path)
-        self.waypanel_cfg = os.path.join(home, ".config/waypanel/waypanel.toml")
-        scripts = os.path.join(home, ".config/waypanel/scripts")
-        if not self.file_exists(scripts):
-            scripts = "../config/scripts"
-        config_path = os.path.join(home, ".config/waypanel")
-        style_css_config = os.path.join(config_path, "styles.css")
-        cache_folder = os.path.join(home, ".cache/waypanel")
+        """
+        Set up and return configuration paths for the application.
 
-        if not os.path.exists(config_path):
-            os.makedirs(config_path)
-            os.makedirs(scripts)
+        Returns:
+            dict: A dictionary containing paths for home, scripts, config, styles, and cache.
+        """
+        try:
+            # Determine the user's home directory and script directory
+            home = os.path.expanduser("~")
+            full_path = os.path.abspath(__file__)
+            directory_path = os.path.dirname(full_path)
+            parent_directory_path = os.path.dirname(directory_path)
 
-        return {
-            "home": home,
-            "scripts": scripts,
-            "config_path": config_path,
-            "style_css_config": style_css_config,
-            "cache_folder": cache_folder,
-        }
+            # Define key paths
+            waypanel_cfg = os.path.join(home, ".config/waypanel/waypanel.toml")
+            scripts = os.path.join(home, ".config/waypanel/scripts")
+            config_path = os.path.join(home, ".config/waypanel")
+            style_css_config = os.path.join(config_path, "styles.css")
+            cache_folder = os.path.join(home, ".cache/waypanel")
+
+            # Fallback for scripts if the default path does not exist
+            if not os.path.isfile(scripts):
+                self.logger.warning(
+                    f"Scripts directory not found at {scripts}. Using fallback."
+                )
+                scripts = "../config/scripts"
+
+            # Ensure required directories exist
+            try:
+                if not os.path.exists(config_path):
+                    os.makedirs(config_path)
+                    self.logger.info(f"Created config directory: {config_path}")
+
+                if not os.path.exists(scripts):
+                    os.makedirs(scripts)
+                    self.logger.info(f"Created scripts directory: {scripts}")
+
+                if not os.path.exists(cache_folder):
+                    os.makedirs(cache_folder)
+                    self.logger.info(f"Created cache directory: {cache_folder}")
+            except Exception as e:
+                self.logger.error_handler.handle(
+                    error=e, message="Failed to create required directories."
+                )
+
+            # Return the configuration paths
+            return {
+                "home": home,
+                "scripts": scripts,
+                "config_path": config_path,
+                "style_css_config": style_css_config,
+                "cache_folder": cache_folder,
+            }
+
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e,
+                message="Unexpected error while setting up configuration paths.",
+            )
+            return {}
 
     def filter_utf_for_gtk(self, byte_string):
         """
@@ -1137,123 +1211,158 @@ class Utils(Adw.Application):
         Returns:
             str: The decoded string with invalid characters replaced or ignored.
         """
-        if isinstance(byte_string, str):
-            return byte_string
+        try:
+            # If the input is already a string, return it directly
+            if isinstance(byte_string, str):
+                return byte_string
 
-        if isinstance(byte_string, bytes):
-            encodings = [
-                "utf-8",
-                "utf-16",
-                "utf-32",
-                "utf-16-le",
-                "utf-16-be",
-                "utf-32-le",
-                "utf-32-be",
-            ]
+            # If the input is bytes, attempt decoding
+            if isinstance(byte_string, bytes):
+                encodings = [
+                    "utf-8",
+                    "utf-16",
+                    "utf-32",
+                    "utf-16-le",
+                    "utf-16-be",
+                    "utf-32-le",
+                    "utf-32-be",
+                ]
 
-            # Try UTF-8 first
-            try:
-                return byte_string.decode("utf-8", errors="replace")
-            except UnicodeDecodeError as e:
-                self.logger.error_handler.handle(f"UTF-8 decoding error: {e}")
+                # Try each encoding in order
+                for encoding in encodings:
+                    try:
+                        self.logger.debug(f"Attempting to decode using {encoding}...")
+                        return byte_string.decode(encoding, errors="replace")
+                    except UnicodeDecodeError as e:
+                        self.logger.warning(
+                            f"Failed to decode using {encoding}. Details: {e}"
+                        )
 
-            # Try other UTF encodings if UTF-8 fails
-            for encoding in encodings[1:]:  # Skip 'utf-8' as it's already tried
-                try:
-                    return byte_string.decode(encoding, errors="replace")
-                except UnicodeDecodeError as e:
-                    self.logger.error_handler.handle(f"{encoding} decoding error: {e}")
+                # Fallback to 'latin-1' if all other encodings fail
+                self.logger.info(
+                    "All UTF decoding attempts failed, falling back to 'latin-1'."
+                )
+                return byte_string.decode("latin-1", errors="replace")
 
-            # If all UTF decoding attempts fail, fallback to a last-resort encoding like 'latin-1'
-            self.logger.info(
-                "All UTF decoding attempts failed, falling back to 'latin-1'."
+            # Raise an error if the input is neither bytes nor a string
+            raise TypeError("Input must be a bytes object or a string.")
+
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Unexpected error while filtering UTF for GTK: {byte_string}",
+                context={"input_type": type(byte_string).__name__},
             )
-            return byte_string.decode("latin-1", errors="replace")
-
-        raise TypeError("Input must be a bytes object or a string.")
+            return ""  # Return an empty string as a fallback
 
     def create_button(
         self,
         icon_name,
         cmd,
-        Class_Style,
-        wclass,
+        class_style,
+        app_id,  # Renamed from wclass to app_id
         initial_title=None,
         use_label=False,
         use_function=False,
     ):
-        # Create the button
-        button = Gtk.Button()
-        assert button is not None, "Button creation failed"
+        """
+        Create a Gtk.Button with an icon or label, click behavior, and CSS styling.
 
-        # Create content box
-        box = Gtk.Box()
+        Args:
+            icon_name (str): The name of the icon or label text.
+            cmd (str): The command to execute on button click. Use "NULL" to disable the button.
+            class_style (str): The CSS class to apply to the button.
+            app_id (str): The application ID associated with the button.
+            initial_title (str, optional): The initial title for the button.
+            use_label (bool, optional): Whether to use a label instead of an icon.
+            use_function (callable, optional): A function to execute on button click.
 
-        # Add icon or label
-        if use_label:
-            label = Gtk.Label(label=icon_name)
-            box.append(label)
-        else:
-            if icon_name:  # Only add icon if name is provided
-                icon = Gtk.Image.new_from_icon_name(icon_name)
-                box.append(icon)
+        Returns:
+            Gtk.Button: The created button, or None if an error occurs.
+        """
+        try:
+            # Validate inputs
+            if not icon_name and not use_label:
+                self.logger.error_handler.handle(
+                    error=ValueError("Either icon_name or use_label must be provided."),
+                    message="Invalid input: No icon or label provided for button creation.",
+                )
+                return None
 
-        # Set content
-        button.set_child(box)
+            if not isinstance(class_style, str):
+                self.logger.error_handler.handle(
+                    error=TypeError(
+                        f"Invalid class_style type: {type(class_style).__name__}"
+                    ),
+                    message="Invalid input: class_style must be a string.",
+                )
+                return None
 
-        # If cmd is NULL, disable the button
-        if cmd == "NULL":
-            button.set_sensitive(False)
+            # Create the button
+            button = Gtk.Button()
+            assert button is not None, "Button creation failed"
+
+            # Create content box
+            box = Gtk.Box()
+
+            # Add icon or label
+            if use_label:
+                label = Gtk.Label(label=icon_name)
+                box.append(label)
+            else:
+                if icon_name:  # Only add icon if name is provided
+                    try:
+                        icon = Gtk.Image.new_from_icon_name(icon_name)
+                        box.append(icon)
+                    except Exception as e:
+                        self.logger.error_handler.handle(
+                            error=e,
+                            message=f"Failed to create icon with name: {icon_name}",
+                        )
+                        return None
+
+            # Set content
+            button.set_child(box)
+
+            # If cmd is NULL, disable the button
+            if cmd == "NULL":
+                button.set_sensitive(False)
+                return button
+
+            # Set up click handling - LEFT CLICK
+            if use_function:
+                try:
+                    button.connect("clicked", lambda *_: use_function())
+                except Exception as e:
+                    self.logger.error_handler.handle(
+                        error=e, message="Failed to connect custom function to button."
+                    )
+                    return None
+            else:
+                try:
+                    button.connect("clicked", lambda *_: self.run_cmd(cmd))
+                except Exception as e:
+                    self.logger.error_handler.handle(
+                        error=e, message=f"Failed to connect command '{cmd}' to button."
+                    )
+                    return None
+
+            # Apply CSS class
+            try:
+                button.add_css_class(class_style)
+            except Exception as e:
+                self.logger.error_handler.handle(
+                    error=e,
+                    message=f"Failed to apply CSS class '{class_style}' to button.",
+                )
+                return None
+
             return button
 
-        # Set up click handling - LEFT CLICK
-        if use_function:
-            button.connect("clicked", lambda *_: use_function())
-        else:
-            button.connect("clicked", lambda *_: self.run_cmd(cmd))
-
-        button.add_css_class(Class_Style)
-        return button
-
-    # Remove a command from the dockbar configuration
-    def dockbar_remove(self, cmd):
-        with open(self.waypanel_cfg, "r") as f:
-            config = toml.load(f)
-        del config[cmd]
-        with open(self.waypanel_cfg, "w") as f:
-            toml.dump(config, f)
-
-    def load_topbar_config(self):
-        with open(self.waypanel_cfg, "r") as f:
-            return toml.load(f)
-
-    def create_gesture(self, widget, mouse_button, callback, arg=None):
-        gesture = Gtk.GestureClick.new()
-        if arg is None:
-            gesture.connect("released", callback)
-        else:
-            gesture.connect("released", lambda gesture, arg=arg: callback(arg))
-        gesture.set_button(mouse_button)
-        widget.add_controller(gesture)
-        self.gestures[widget] = gesture
-        return widget
-
-    def remove_gesture(self, widget):
-        if widget in self.gestures:
-            gesture = self.gestures[widget]
-            widget.remove_controller(gesture)
-            del self.gestures[widget]
-
-    def convert_size(self, size_bytes):
-        if size_bytes == 0:
-            return "0B"
-        size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
-        i = int(math.floor(math.log(size_bytes, 1024)))
-        p = math.pow(1024, i)
-        s = round(size_bytes / p, 2)
-        return "%s %s" % (s, size_name[i])
-
-    def btn_background(self, class_style, icon_name):
-        tbtn_title_b = Adw.ButtonContent()
-        tbtn_title_b.set_icon_name(icon_name)
-        return tbtn_title_b
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error_handler.handle(
+                error=e, message="Unexpected error while creating button."
+            )
+            return None

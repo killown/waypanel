@@ -44,7 +44,7 @@ Plugins are the building blocks of Waypanel. They allow developers to add new wi
 To create a plugin, follow these steps:
 
 1. **Define Metadata**
-   - Implement the `get_plugin_placement()` function to specify the plugin's position and order:
+   - Implement the `get_plugin_placement(panel_instance)` function to specify the plugin's position and order:
      ```python
      def get_plugin_placement():
          return "right", 10  # Position: right, Order: 10
@@ -82,6 +82,9 @@ To create a plugin, follow these steps:
 
 6. **Enable/Disable the Plugin**
    - Use the `ENABLE_PLUGIN` flag to enable or disable the plugin.
+
+7. Set plugin dependency
+    - Use DEPS = ["event_manager", "my_plugin"]
 
 ---
 
