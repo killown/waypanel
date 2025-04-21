@@ -4,6 +4,8 @@ import toml
 import gi
 from gi.repository import Adw, Gtk
 
+from waypanel.src.plugins.core._base import BasePlugin
+
 
 gi.require_version("Gtk", "4.0")
 
@@ -24,56 +26,30 @@ def initialize_plugin(panel_instance):
         return bt
 
 
-class BluetoothDashboard(Adw.Application):
+class BluetoothDashboard(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         self.popover_dashboard = None
-        self.obj = panel_instance
-        self.logger = self.obj.logger
-        self.top_panel = None
-        self._setup_config_paths()
-        self.utils = self.obj.utils
-
-    def append_widget(self):
-        return self.menubutton_dashboard
-
-    def _setup_config_paths(self):
-        """Set up configuration paths based on the user's home directory."""
-        self.home = os.path.expanduser("~")
-        self.scripts = os.path.join(self.home, ".config/hypr/scripts")
-        self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.style_css_config = os.path.join(self.config_path, "style.css")
-        self.waypanel_config = os.path.join(self.config_path, "waypanel.toml")
-        self.cache_folder = os.path.join(self.home, ".cache/waypanel")
-        self.psutil_store = {}
         self.bluetooth_buttons = {}
-
-    def load_config(self):
-        if not hasattr(self, "_cached_config"):
-            with open(self.waypanel_config, "r") as f:
-                self._cached_config = toml.load(f)
-        return self._cached_config
 
     def get_bluetooth_list(self):
         devices = check_output("bluetoothctl devices".split()).decode().strip()
         if not devices:
             return
         devices = [" ".join(i.split(" ")[1:]) for i in devices.split("\n")]
-        print(devices)
         return devices
 
     def create_menu_popover_bluetooth(self):
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
         bt_icon = "bluetooth"
-        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
-        if os.path.exists(waypanel_config_path):
-            config = self.load_config()
-            bt_icon = (
-                config.get("panel", {})
-                .get("top", {})
-                .get("bluetooth_icon", "bluetooth")
-            )
+        bt_icon = (
+            self.config.get("panel", {})
+            .get("top", {})
+            .get("bluetooth_icon", "bluetooth")
+        )
         self.menubutton_dashboard.set_icon_name(bt_icon)
+        self.main_widget = (self.menubutton_dashboard, "append")
         return self.menubutton_dashboard
 
     def CreateGesture(self, widget, mouse_button, arg):
@@ -161,7 +137,7 @@ class BluetoothDashboard(Adw.Application):
         if self.popover_dashboard and not self.popover_dashboard.is_visible():
             self.popover_dashboard.popup()
         if not self.popover_dashboard:
-            self.popover_dashboard = self.create_popover_bluetooth(self.obj)
+            self.popover_dashboard = self.create_popover_bluetooth()
 
     def popover_is_open(self, *_):
         return

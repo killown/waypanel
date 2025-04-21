@@ -1,6 +1,7 @@
 from gi.repository import GLib
 from waypanel.src.core.compositor.ipc import IPC
 from wayfire.extra.ipc_utils import WayfireUtils
+from waypanel.src.plugins.core._base import BasePlugin
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -17,13 +18,10 @@ def initialize_plugin(panel_instance):
         return event_manager
 
 
-class EventManagerPlugin:
+class EventManagerPlugin(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         """Initialize the plugin."""
-        self.obj = panel_instance
-        self.logger = self.obj.logger
-        self.ipc = IPC()
-        self.utils = self.obj.utils
 
         # Initialize the IPC client
         from waypanel.src.ipc.ipc_client import WayfireClientIPC

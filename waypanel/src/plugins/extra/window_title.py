@@ -1,5 +1,6 @@
 from gi.repository import Gtk
 
+from waypanel.src.plugins.core._base import BasePlugin
 
 
 def initialize_plugin(panel_instance):
@@ -25,18 +26,17 @@ def get_plugin_placement(panel_instance):
     return position, order
 
 
-class WindowTitlePlugin:
+class WindowTitlePlugin(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         """
         Initialize the Window Title plugin.
         """
-        self.obj = panel_instance
-        self.logger = self.obj.logger
-        self.utils = self.obj.utils
         self.title_length = 50
 
         # Create window title widget components
         self.window_title_content = Gtk.Box()
+        self.main_widget = (self.window_title_content, "append")
         self.window_title_label = Gtk.Label()
         self.window_title_icon = Gtk.Image.new_from_icon_name("None")
         self.window_title_icon.add_css_class("window-title-icon")
@@ -51,13 +51,10 @@ class WindowTitlePlugin:
         self.window_title_label.add_css_class("window-title-label")
 
         # first update so it will set the default it if no focus yet
-        self.update_widget("", "focus-windows")
+        self.update_title("", "focus-windows")
 
         # Subscribe to necessary events using the EventManagerPlugin
         self._subscribe_to_events()
-
-    def append_widget(self):
-        return self.window_title_content
 
     def _subscribe_to_events(self):
         """
@@ -100,7 +97,9 @@ class WindowTitlePlugin:
                 view = event_message.get("view", {})
                 self.update_title_icon(view)
         except Exception as e:
-            self.logger.error_handler.handle(f"Error handling 'view-focused' event: {e}")
+            self.logger.error_handler.handle(
+                f"Error handling 'view-focused' event: {e}"
+            )
 
     def on_view_closed(self, event_message):
         """
@@ -126,7 +125,9 @@ class WindowTitlePlugin:
                 view = event_message.get("view", {})
                 self.update_title_icon(view)
         except Exception as e:
-            self.logger.error_handler.handle(f"Error handling 'view-title-changed' event: {e}")
+            self.logger.error_handler.handle(
+                f"Error handling 'view-title-changed' event: {e}"
+            )
 
     def update_title_icon(self, view):
         """
@@ -145,7 +146,7 @@ class WindowTitlePlugin:
             icon = self.utils.get_icon(wm_class, initial_title, title)
 
             # Update the widget
-            self.update_widget(title, icon)
+            self.update_title(title, icon)
         except Exception as e:
             self.logger.error_handler.handle(f"Error updating title/icon: {e}")
 
@@ -153,7 +154,7 @@ class WindowTitlePlugin:
         """
         Clear the widget when no view is focused.
         """
-        self.update_widget("", "")
+        self.update_title("", "")
 
     def filter_title(self, title):
         """
@@ -184,7 +185,7 @@ class WindowTitlePlugin:
             title = title.split(" — ")[0]
         return title
 
-    def update_widget(self, title, icon_name):
+    def update_title(self, title, icon_name):
         """
         Update the window title widget with new title and icon.
 

@@ -1,9 +1,9 @@
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk
 
 import os
 import orjson as json
 import toml
-from waypanel.src.core.compositor.ipc import IPC
+from waypanel.src.plugins.core._base import BasePlugin
 from ...core.create_panel import (
     set_layer_position_exclusive,
     unset_layer_position_exclusive,
@@ -36,26 +36,19 @@ def initialize_plugin(panel_instance):
         return dockbar
 
 
-class DockbarPlugin:
+class DockbarPlugin(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         """Initialize the Dockbar plugin."""
-        self.logger = panel_instance.logger
-        self.obj = panel_instance
         # Subscribe to events using the event_manager
-        self.plugins = self.obj.plugin_loader.plugins
-        self.create_gesture = self.obj.plugins["gestures_setup"].create_gesture
+        self.create_gesture = self.plugins["gestures_setup"].create_gesture
         self._subscribe_to_events()
-        self.utils = self.obj.utils
         self.layer_state = False
         self.taskbar_list = []
         self.dockbar_panel = None
         self.buttons_id = {}
-        self.ipc = IPC()  # Use the shared WayfireSocket instance
         self.dockbar = None
-        self.update_widget = self.utils.update_widget
-
         # Load configuration and set up dockbar
-        self.config = panel_instance.config
         self._setup_dockbar()
 
     def is_scale_enabled(self):
@@ -216,6 +209,8 @@ class DockbarPlugin:
         self.dockbar = self.CreateFromAppList(
             self.obj.waypanel_cfg, orientation, class_style
         )
+        # this will pass to the base plugin and set the widget the plugin loader should handle
+        self.main_widget = (self.dockbar, "set_content")
         self.choose_and_set_dockbar()
         # FIXME: remove this motion_controller later to use in a example
         # motion_controller = Gtk.EventControllerMotion()
@@ -294,10 +289,6 @@ class DockbarPlugin:
         # this will set panels on bottom, hidden it from views
         self.update_widget(unset_layer_position_exclusive, self.dockbar_panel)
         self.layer_state = False
-
-    def panel_set_content(self):
-        """Return the dockbar widget to be added to the panel."""
-        return self.dockbar
 
     def handle_plugin_event(self, msg):
         """Handle plugin-related IPC events."""

@@ -4,8 +4,9 @@ import sys
 from importlib.util import find_spec
 from subprocess import Popen, check_output
 import psutil
-from gi.repository import Adw, Gtk
-import toml
+from gi.repository import Gtk
+
+from waypanel.src.plugins.core._base import BasePlugin
 
 
 # set to False or remove the plugin file to disable it
@@ -25,26 +26,10 @@ def initialize_plugin(panel_instance):
         return system
 
 
-class SystemDashboard(Adw.Application):
+class SystemDashboard(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         self.popover_dashboard = None
-        self.obj = panel_instance
-        self.logger = self.obj.logger
-        self._setup_config_paths()
-        self.utils = self.obj.utils
-
-    def append_widget(self):
-        return self.menubutton_dashboard
-
-    def _setup_config_paths(self):
-        """Set up configuration paths based on the user's home directory."""
-        self.home = os.path.expanduser("~")
-        self.scripts = os.path.join(self.home, ".config/hypr/scripts")
-        self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.style_css_config = os.path.join(self.config_path, "style.css")
-        self.waypanel_cfg = os.path.join(self.config_path, "waypanel.toml")
-        self.cache_folder = os.path.join(self.home, ".cache/waypanel")
-        self.psutil_store = {}
 
     def message(self, msg):
         # Create a message dialog
@@ -100,23 +85,19 @@ class SystemDashboard(Adw.Application):
                     "Error: waypanel-settings not found in PATH", file=sys.stderr
                 )
 
-    def load_config(self):
-        if not hasattr(self, "_cached_config"):
-            with open(self.waypanel_cfg, "r") as f:
-                self._cached_config = toml.load(f)
-        return self._cached_config
-
     def get_system_list(self):
         devices = check_output("systemctl devices".split()).decode().strip().split("\n")
         return [" ".join(i.split(" ")[1:]) for i in devices]
 
     def create_menu_popover_system(self):
         self.menubutton_dashboard = Gtk.Button()
+        self.main_widget = (self.menubutton_dashboard, "append")
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
         system_icon = "system-shutdown"
-        config = self.load_config()
         system_icon = (
-            config.get("panel", {}).get("top", {}).get("system_icon", "system-shutdown")
+            self.config.get("panel", {})
+            .get("top", {})
+            .get("system_icon", "system-shutdown")
         )
         self.menubutton_dashboard.set_icon_name(system_icon)
         return self.menubutton_dashboard

@@ -14,6 +14,8 @@ from gi.repository import Gtk4LayerShell as LayerShell
 from PIL import Image
 import re
 
+from waypanel.src.plugins.core._base import BasePlugin
+
 from ._clipboard_server import AsyncClipboardServer
 
 # set to False or remove the plugin file to disable it
@@ -141,24 +143,13 @@ def get_clipboard_items_sync() -> List[Tuple[int, str]]:
     return asyncio.run(_fetch_items())
 
 
-class MenuClipboard(Gtk.Application):
+class MenuClipboard(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         self.popover_clipboard = None
-        self.obj = panel_instance
-        self.logger = self.obj.logger
-        self._setup_config_paths()
-        self.utils = self.obj.utils
         self.find_text_using_button = {}
         self.row_content = None
         self.listbox = None
-
-    def append_widget(self):
-        return self.menubutton_clipboard
-
-    def _setup_config_paths(self):
-        """Set up configuration paths based on the user's home directory."""
-        self.home = os.path.expanduser("~")
-        self.config_path = os.path.join(self.home, ".config/waypanel")
 
     def is_image_content(self, content):
         """
@@ -299,8 +290,7 @@ class MenuClipboard(Gtk.Application):
             )
 
             # Calculate needed height
-            padding = 0  # Additional padding
-            total_height = padding
+            total_height = 0
 
             for item in items:
                 if any(
@@ -342,20 +332,14 @@ class MenuClipboard(Gtk.Application):
 
                 row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
                 image_button = Gtk.Button()
-                waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
-                if os.path.exists(waypanel_config_path):
-                    with open(waypanel_config_path, "r") as f:
-                        config = toml.load(f)
-                        clipboard_icon_delete = (
-                            config.get("panel", {})
-                            .get("top", {})
-                            .get("clipboard_icon_delete", "delete")
-                        )
-                        image_button.set_icon_name(
-                            self.utils.get_nearest_icon_name(clipboard_icon_delete)
-                        )
-                else:
-                    image_button.set_icon_name("delete")
+                clipboard_icon_delete = (
+                    self.config.get("panel", {})
+                    .get("top", {})
+                    .get("clipboard_icon_delete", "delete")
+                )
+                image_button.set_icon_name(
+                    self.utils.get_nearest_icon_name(clipboard_icon_delete)
+                )
                 image_button.connect("clicked", self.on_delete_selected)
 
                 spacer = Gtk.Label(label="    ")
@@ -390,7 +374,7 @@ class MenuClipboard(Gtk.Application):
                         if not item:
                             item = "/image"
                         item = item.split("/")[-1]
-                        row_hbox.set_size_request(-96, 96)
+                        row_hbox.set_size_request(96, 96)
 
                 line = Gtk.Label.new()
                 escaped_text = GLib.markup_escape_text(item)
@@ -421,8 +405,8 @@ class MenuClipboard(Gtk.Application):
             total_height = self.clear_and_calculate_height()
 
             # Step 2: Set the calculated height for the scrolled window
-            self.scrolled_window.set_min_content_height(total_height)
-            self.scrolled_window.set_max_content_height(600)
+            if total_height > 0:
+                self.scrolled_window.set_min_content_height(total_height)
 
             # Step 3: Populate the ListBox
             self.populate_listbox()
@@ -440,20 +424,15 @@ class MenuClipboard(Gtk.Application):
         )
         self.menubutton_clipboard = Gtk.Button.new()
         self.menubutton_clipboard.connect("clicked", self.open_popover_clipboard)
-        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
-        if os.path.exists(waypanel_config_path):
-            with open(waypanel_config_path, "r") as f:
-                config = toml.load(f)
-                clipboard_icon = (
-                    config.get("panel", {})
-                    .get("top", {})
-                    .get("clipboard_icon", "edit-paste")
-                )
-                self.menubutton_clipboard.set_icon_name(
-                    self.utils.get_nearest_icon_name(clipboard_icon)
-                )
-        else:
-            self.menubutton_clipboard.set_icon_name("edit-paste")
+        self.main_widget = (self.menubutton_clipboard, "append")
+        clipboard_icon = (
+            self.config.get("panel", {})
+            .get("top", {})
+            .get("clipboard_icon", "edit-paste")
+        )
+        self.menubutton_clipboard.set_icon_name(
+            self.utils.get_nearest_icon_name(clipboard_icon)
+        )
 
     def create_popover_clipboard(self, *_):
         # Create a popover
@@ -466,7 +445,7 @@ class MenuClipboard(Gtk.Application):
         self.obj.add_action(show_searchbar_action)
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_min_content_width(500)
-        self.scrolled_window.set_min_content_height(900)
+        self.scrolled_window.set_min_content_height(600)
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 10)
         self.main_box.set_margin_top(10)
         self.main_box.set_margin_bottom(10)

@@ -3,10 +3,9 @@ from subprocess import Popen, check_output
 
 import pulsectl
 import soundcard as sc
-from gi.repository import Adw, Gtk
+from gi.repository import Gtk
 from wayfire.ipc import WayfireSocket
-import toml
-from waypanel.src.core.compositor.ipc import IPC
+from waypanel.src.plugins.core._base import BasePlugin
 
 addr = os.getenv("WAYFIRE_SOCKET")
 sock = WayfireSocket(addr)
@@ -28,30 +27,13 @@ def initialize_plugin(panel_instance):
         return card
 
 
-class SoundCardDashboard(Adw.Application):
+class SoundCardDashboard(BasePlugin):
     def __init__(self, panel_instance):
-        self.obj = panel_instance
-        self.logger = self.obj.logger
+        super().__init__(panel_instance)
         self.popover_dashboard = None
         self.soundcard_combobox = None
         self.mic_combobox = None
         self.menubutton_dashboard = None
-        self._setup_config_paths()
-        self.utils = self.obj.utils
-        self.ipc = IPC()
-
-    def append_widget(self):
-        return self.menubutton_dashboard
-
-    def _setup_config_paths(self):
-        """Set up configuration paths based on the user's home directory."""
-        self.home = os.path.expanduser("~")
-        self.scripts = os.path.join(self.home, ".config/hypr/scripts")
-        self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.style_css_config = os.path.join(self.config_path, "style.css")
-        self.cache_folder = os.path.join(self.home, ".cache/waypanel")
-        self.waypanel_config = os.path.join(self.config_path, "waypanel.toml")
-        self.psutil_store = {}
 
     def get_view_id_by_pid(self, pid):
         lviews = self.ipc.list_views()
@@ -138,25 +120,17 @@ class SoundCardDashboard(Adw.Application):
         self.logger.info(cmd)
         Popen(cmd)
 
-    def load_config(self):
-        if not hasattr(self, "_cached_config"):
-            with open(self.waypanel_config, "r") as f:
-                self._cached_config = toml.load(f)
-        return self._cached_config
-
     def create_menu_popover_soundcard(self):
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
         s_icon = "audio-volume-high"
-        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
-        if os.path.exists(waypanel_config_path):
-            config = self.load_config()
-            s_icon = (
-                config.get("panel", {})
-                .get("top", {})
-                .get("sound_card_icon", "audio-volume-high")
-            )
+        s_icon = (
+            self.config.get("panel", {})
+            .get("top", {})
+            .get("sound_card_icon", "audio-volume-high")
+        )
         self.menubutton_dashboard.set_icon_name(s_icon)
+        self.main_widget = (self.menubutton_dashboard, "append")
         return self.menubutton_dashboard
 
     def create_popover_soundcard(self, *_):

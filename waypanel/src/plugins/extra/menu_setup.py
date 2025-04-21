@@ -4,6 +4,8 @@ from gi.repository import Gtk, Gio
 import toml
 import subprocess
 
+from waypanel.src.plugins.core._base import BasePlugin
+
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 
@@ -21,19 +23,14 @@ def initialize_plugin(panel_instance):
         return plugin
 
 
-class MenuSetupPlugin:
+class MenuSetupPlugin(BasePlugin):
     def __init__(self, panel_instance):
-        self.obj = panel_instance
-        self.logger = self.obj.logger
+        super().__init__(panel_instance)
         self.menu_button = None
-        self.utils = self.obj.utils
         self.config_path = os.path.expanduser("~/.config/waypanel/waypanel.toml")
         self.logger = self.logger
         self.widgets = []
-
-    def append_widget(self):
-        # a list of buttons
-        return self.widgets
+        self.main_widget = (self.widgets, "append")
 
     def load_menu_config(self):
         """Load menu configuration from waypanel.toml."""

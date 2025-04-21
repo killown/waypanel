@@ -455,6 +455,33 @@ class Utils(Adw.Application):
         self.logger.info(f"No icon found for application: {application_name}")
         return None
 
+    def remove_widget(self, widget):
+        """
+        Safely remove a widget from its parent using .unparent().
+        Args:
+            widget (Gtk.Widget): The widget to remove.
+        Returns:
+            bool: True if the widget was successfully removed, False otherwise.
+        """
+        if not widget or not isinstance(widget, Gtk.Widget):
+            self.logger.error("Invalid widget provided for removal.")
+            return False
+
+        parent = widget.get_parent()
+        if not parent:
+            self.logger.warning("Widget has no parent. Skipping removal.")
+            return False
+
+        try:
+            widget.unparent()  # Detach the widget from its parent
+            self.logger.debug(f"Successfully unparented widget: {widget}")
+            return True
+        except Exception as e:
+            self.logger.error_handler.handle(
+                error=e, message=f"Failed to unparent widget: {widget}", level="error"
+            )
+            return False
+
     def validate_method(self, obj, method_name):
         """
         Validate that a method exists and is callable on an object.

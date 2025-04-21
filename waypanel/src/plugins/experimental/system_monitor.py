@@ -1,6 +1,8 @@
 import psutil
 import gi
 
+from waypanel.src.plugins.core._base import BasePlugin
+
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, GLib
 
@@ -26,8 +28,9 @@ def initialize_plugin(panel_instance):
         return SystemMonitorPlugin(panel_instance)
 
 
-class SystemMonitorPlugin:
+class SystemMonitorPlugin(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         self.obj = panel_instance
         self.popover_system = None
         self.update_timeout_id = None
@@ -35,15 +38,13 @@ class SystemMonitorPlugin:
         self.prev_net_io = psutil.net_io_counters()
         self.create_menu_popover_system()
 
-    def append_widget(self):
-        return self.menubutton_system
-
     def create_menu_popover_system(self):
         """Create the system monitor button and popover."""
         # Create the system monitor button
         self.menubutton_system = Gtk.Button()
         self.menubutton_system.set_icon_name("utilities-system-monitor")  # Default icon
         self.menubutton_system.connect("clicked", self.open_popover_system)
+        self.main_widget = (self.menubutton_system, "append")
 
     def start_system_updates(self):
         """Start periodic updates for system data."""

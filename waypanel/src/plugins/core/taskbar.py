@@ -1,14 +1,9 @@
 import os
 import orjson as json
+import gi
 from gi.repository import Gtk
-from gi.repository import Gtk4LayerShell as LayerShell
-from waypanel.src.core.compositor.ipc import IPC
+from waypanel.src.plugins.core._base import BasePlugin
 
-
-from waypanel.src.core.create_panel import (
-    set_layer_position_exclusive,
-    unset_layer_position_exclusive,
-)
 
 # Enable or disable the plugin
 ENABLE_PLUGIN = True
@@ -29,44 +24,42 @@ def initialize_plugin(panel_instance):
         return TaskbarPlugin(panel_instance)
 
 
-class TaskbarPlugin(Gtk.Application):
+class TaskbarPlugin(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         """
         Initialize the Taskbar plugin. This depends on the event_manager.
         If the event takes time to start,
         the button panel set_layer top/bottom may also take time to be ready.
         """
-        self.logger = panel_instance.logger
-        self.obj = panel_instance
-        self.ipc = IPC()
-        self.plugins = self.obj.plugins
-        self.create_gesture = self.plugins["gestures_setup"].create_gesture
-        self.remove_gesture = self.plugins["gestures_setup"].remove_gesture
+
         self._subscribe_to_events()
         # will hide until scale plugin is toggled if False
         self.layer_always_exclusive = False
-        self.utils = self.obj.utils
         self.taskbar_list = []
         self.buttons_id = {}
-        self.bottom_panel = self.obj.bottom_panel
         self.update_widget = self.utils.update_widget
         self.is_scale_active = {}
+        self.create_gesture = self.plugins["gestures_setup"].create_gesture
+        self.remove_gesture = self.plugins["gestures_setup"].remove_gesture
         # Load configuration and set up taskbar
-        self.config = panel_instance.config
         self._setup_taskbar()
+
+    def set_main_widget(self):
+        self.main_widget = (self.scrolled_window, "set_content")
 
     def set_layer_exclusive(self, exclusive):
         if exclusive:
-            self.update_widget(set_layer_position_exclusive, self.bottom_panel, 48)
+            self.update_widget(self.set_layer_pos_exclusive, self.bottom_panel, 48)
         else:
-            self.update_widget(unset_layer_position_exclusive, self.bottom_panel)
+            self.update_widget(self.unset_layer_pos_exclusive, self.bottom_panel)
 
     def _setup_taskbar(self):
         """Create and configure the bottom panel."""
         self.logger.debug("Setting up bottom panel.")
         if self.layer_always_exclusive:
-            LayerShell.set_layer(self.bottom_panel, LayerShell.Layer.TOP)
-            LayerShell.auto_exclusive_zone_enable(self.bottom_panel)
+            self.layer_shell.set_layer(self.bottom_panel, self.layer_shell.Layer.TOP)
+            self.layer_shell.auto_exclusive_zone_enable(self.bottom_panel)
             self.bottom_panel.set_size_request(10, 10)
 
         # Add launcher button
@@ -597,7 +590,3 @@ class TaskbarPlugin(Gtk.Application):
         if msg["event"] == "view-unmapped":
             self.on_view_destroyed(view)
         return
-
-    def panel_set_content(self):
-        """Return the taskbar widget to be added to the panel."""
-        return self.scrolled_window

@@ -1,6 +1,7 @@
 import gi
-from waypanel.src.core.compositor.ipc import IPC
 from gi.repository import Gtk, GLib
+
+from waypanel.src.plugins.core._base import BasePlugin
 
 gi.require_version("Gtk", "4.0")
 
@@ -22,18 +23,16 @@ def initialize_plugin(panel_instance):
         return WindowControlsPlugin(panel_instance)
 
 
-class WindowControlsPlugin:
+class WindowControlsPlugin(BasePlugin):
     def __init__(self, panel_instance):
-        self.obj = panel_instance
-        self.logger = self.obj.logger
-        self.ipc = IPC()
-        self.utils = self.obj.utils
+        super().__init__(panel_instance)
 
         # Store the last focused toplevel view as an instance variable
         self.last_toplevel_focused_view = None
 
         # Initialize buttons container
         self.cf_box = Gtk.Box()
+        self.main_widget = (self.cf_box, "append")
 
         # Create buttons
         self.maximize_button = self.create_control_button(
@@ -83,9 +82,6 @@ class WindowControlsPlugin:
                 return True
 
         GLib.timeout_add_seconds(1, run_once)
-
-    def append_widget(self):
-        return self.cf_box
 
     def create_control_button(self, icon_name, css_class, callback):
         button = self.utils.create_button(

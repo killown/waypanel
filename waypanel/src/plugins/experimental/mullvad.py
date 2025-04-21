@@ -3,6 +3,8 @@ import random
 from gi.repository import Gtk, Gio, GLib
 from subprocess import Popen, check_output
 
+from waypanel.src.plugins.core._base import BasePlugin
+
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 # load the plugin only after essential plugins is loaded
@@ -23,21 +25,12 @@ def initialize_plugin(panel_instance):
         return mullvad_plugin
 
 
-class MullvadPlugin:
+class MullvadPlugin(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         self.obj = panel_instance
         self.logger = self.obj.logger
-        self._setup_config_paths()
         self.mullvad_version = self.get_mullvad_version()
-
-    def append_widget(self):
-        return self.menubutton_mullvad
-
-    def _setup_config_paths(self):
-        """Set up configuration paths based on the user's home directory."""
-        self.home = os.path.expanduser("~")
-        self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.waypanel_cfg = os.path.join(self.config_path, "waypanel.toml")
 
     def get_mullvad_version(self):
         """Retrieve the Mullvad version using the `mullvad --version` command."""
@@ -54,6 +47,7 @@ class MullvadPlugin:
         self.menubutton_mullvad = Gtk.MenuButton()
         self.menubutton_mullvad.set_icon_name("mullvad-vpn")
         self.menubutton_mullvad.add_css_class("top_right_widgets")
+        self.main_widget = (self.menubutton_mullvad, "append")
 
         # Add the MenuButton to the systray
 

@@ -157,6 +157,21 @@ class Panel(Adw.Application):
         GLib.idle_add(self.plugin_loader.load_plugins)
         self.logger.info("Plugins loading initiated.")
 
+    def save_config(self):
+        """
+        Save the current configuration back to the waypanel.toml file.
+        """
+        try:
+            with open(self.waypanel_cfg, "w") as f:
+                toml.dump(self._cached_config, f)
+            self.logger.info("Configuration saved successfully.")
+        except Exception as e:
+            self.logger.error_handler.handle(
+                error=e,
+                message="Failed to save configuration to file.",
+                level="error",
+            )
+
     def load_config(self):
         if not hasattr(self, "_cached_config"):
             with open(self.waypanel_cfg, "r") as f:

@@ -7,7 +7,9 @@ import requests
 import toml
 import wayfire.ipc as wayfire
 from bs4 import BeautifulSoup
-from gi.repository import Adw, GdkPixbuf, Gtk
+from gi.repository import GdkPixbuf, Gtk
+
+from waypanel.src.plugins.core._base import BasePlugin
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -38,8 +40,9 @@ def initialize_plugin(panel_instance):
             return bookmarks
 
 
-class PopoverBookmarks(Adw.Application):
+class PopoverBookmarks(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         self.popover_bookmarks = None
         self.obj = panel_instance
         self.logger = self.obj.logger
@@ -54,10 +57,6 @@ class PopoverBookmarks(Adw.Application):
         """Set up configuration paths based on the user's home directory."""
         self.home = os.path.expanduser("~")
         self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.style_css_config = os.path.join(self.config_path, "style.css")
-        self.topbar_config = os.path.join(self.config_path, "waypanel.toml")
-        self.cache_folder = os.path.join(self.home, ".cache/waypanel")
-        self.psutil_store = {}
         self.bookmarks_image_path = os.path.join(self.config_path, "bookmarks/images/")
         self.thumbnails_path = os.path.join(self.bookmarks_image_path, "thumbnails")
         os.makedirs(self.thumbnails_path, exist_ok=True)
@@ -65,6 +64,7 @@ class PopoverBookmarks(Adw.Application):
     def create_menu_popover_bookmarks(self):
         self.menubutton_bookmarks = Gtk.Button()
         self.menubutton_bookmarks.connect("clicked", self.open_popover_bookmarks)
+        self.main_widget = (self.menubutton_bookmarks, "append")
         waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
         if os.path.exists(waypanel_config_path):
             with open(waypanel_config_path, "r") as f:

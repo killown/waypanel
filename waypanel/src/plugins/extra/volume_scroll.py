@@ -1,8 +1,8 @@
 import gi
 
+from waypanel.src.plugins.core._base import BasePlugin
+
 gi.require_version("Gtk", "4.0")
-gi.require_version("Gtk4LayerShell", "1.0")
-from gi.repository import Gtk, GLib, Gtk4LayerShell as LayerShell
 from gi.repository import Gtk, GLib
 from subprocess import run
 import pulsectl
@@ -21,10 +21,10 @@ def initialize_plugin(panel_instance):
         return VolumeScrollPlugin(panel_instance)
 
 
-class VolumeScrollPlugin:
+class VolumeScrollPlugin(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         """Initialize the plugin."""
-        self.obj = panel_instance
         self.widget = None
         self.hide_timeout_id = None
         self.slider = None  # Initialize slider as None
@@ -53,7 +53,7 @@ class VolumeScrollPlugin:
                         )
                         break
         except Exception as e:
-            self.app.logger.error(f"Error fetching maximum volume: {e}")
+            self.logger.error(f"Error fetching maximum volume: {e}")
             self.max_volume = 150  # Fallback to default max volume
 
     def setup_scroll_event(self):
@@ -70,7 +70,7 @@ class VolumeScrollPlugin:
             adjustment = "-8%" if dy > 0 else "+8%"
             self.adjust_volume(adjustment)
         except Exception as e:
-            self.app.logger.error(f"Error handling scroll event: {e}")
+            self.logger.error(f"Error handling scroll event: {e}")
 
     def adjust_volume(self, adjustment):
         """Adjust the volume using the `pactl` command."""
@@ -86,7 +86,7 @@ class VolumeScrollPlugin:
             self.set_volume(current_volume)
             self.show_widget()
         except Exception as e:
-            self.app.logger.error(f"Error adjusting volume: {e}")
+            self.logger.error(f"Error adjusting volume: {e}")
 
     def get_current_volume(self):
         """Get the current volume level using `pulsectl`."""
@@ -99,18 +99,18 @@ class VolumeScrollPlugin:
                         return min(volume, self.max_volume)  # Clamp to max volume
             return 0  # Default to 0 if no active sink is found
         except Exception as e:
-            self.app.logger.error(f"Error fetching current volume: {e}")
+            self.logger.error(f"Error fetching current volume: {e}")
             return 0
 
     def create_floating_widget(self):
         """Create the floating volume widget."""
         self.widget = Gtk.Window()
-        LayerShell.init_for_window(self.widget)
-        LayerShell.set_layer(self.widget, LayerShell.Layer.TOP)
-        LayerShell.set_anchor(self.widget, LayerShell.Edge.BOTTOM, True)
-        LayerShell.set_anchor(self.widget, LayerShell.Edge.RIGHT, True)
-        LayerShell.set_margin(self.widget, LayerShell.Edge.BOTTOM, 50)
-        LayerShell.set_margin(self.widget, LayerShell.Edge.RIGHT, 50)
+        self.layer_shell.init_for_window(self.widget)
+        self.layer_shell.set_layer(self.widget, self.layer_shell.Layer.TOP)
+        self.layer_shell.set_anchor(self.widget, self.layer_shell.Edge.BOTTOM, True)
+        self.layer_shell.set_anchor(self.widget, self.layer_shell.Edge.RIGHT, True)
+        self.layer_shell.set_margin(self.widget, self.layer_shell.Edge.BOTTOM, 50)
+        self.layer_shell.set_margin(self.widget, self.layer_shell.Edge.RIGHT, 50)
 
         # Create the content of the widget
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)

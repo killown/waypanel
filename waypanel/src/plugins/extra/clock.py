@@ -4,6 +4,8 @@ from gi.repository import Gtk, GLib
 import requests
 import asyncio
 
+from waypanel.src.plugins.core._base import BasePlugin
+
 gi.require_version("Gtk", "4.0")
 
 # Set to False or remove the plugin file to disable it
@@ -28,9 +30,9 @@ def initialize_plugin(panel_instance):
         return clock_calendar_plugin
 
 
-class ClockCalendarPlugin:
+class ClockCalendarPlugin(BasePlugin):
     def __init__(self, panel_instance):
-        self.obj = panel_instance
+        super().__init__(panel_instance)
         self.clock_button = None
         self.clock_box = None
         self.clock_label = None
@@ -39,13 +41,11 @@ class ClockCalendarPlugin:
         self.weather_label = None  # Label for displaying weather data
         self.loop = asyncio.new_event_loop()  # Create a new asyncio event loop
 
-    def append_widget(self):
-        return self.clock_box
-
     def create_clock_widget(self):
         """Create and setup the clock widget."""
         # Create clock box container
         self.clock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.main_widget = (self.clock_box, "append")
         self.clock_box.set_halign(Gtk.Align.CENTER)
         self.clock_box.set_baseline_position(Gtk.BaselinePosition.CENTER)
 

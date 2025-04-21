@@ -3,6 +3,7 @@ import importlib
 import toml
 from waypanel.src.core.utils import Utils
 from gi.repository import GLib
+import sys
 
 
 class PluginLoader:
@@ -71,6 +72,33 @@ class PluginLoader:
         self.config_path = config_path
         self.utils = Utils(panel_instance)
         self.plugins = {}
+        self.plugins_path = {}
+
+    def disable_plugin(self, plugin_name):
+        """Disable a plugin by name."""
+        if plugin_name not in self.plugins:
+            self.logger.warning(f"Plugin '{plugin_name}' not found.")
+            return
+
+        plugin_instance = self.plugins[plugin_name]
+        if hasattr(plugin_instance, "disable"):
+            plugin_instance.disable()
+            self.logger.info(f"Disabled plugin: {plugin_name}")
+        else:
+            self.logger.warning(f"Plugin '{plugin_name}' does not support disabling.")
+
+    def enable_plugin(self, plugin_name):
+        """Enable a plugin by name."""
+        if plugin_name not in self.plugins:
+            self.logger.warning(f"Plugin '{plugin_name}' not found.")
+            return
+
+        plugin_instance = self.plugins[plugin_name]
+        if hasattr(plugin_instance, "enable"):
+            plugin_instance.enable()
+            self.logger.info(f"Enabled plugin: {plugin_name}")
+        else:
+            self.logger.warning(f"Plugin '{plugin_name}' does not support enabling.")
 
     def load_plugins(self):
         """Dynamically load all plugins from the src.plugins package."""
@@ -91,12 +119,15 @@ class PluginLoader:
 
             for file_name in files:
                 if file_name.endswith(".py") and file_name != "__init__.py":
-                    module_name = file_name[:-2]  # Remove the .py extension
+                    module_name = file_name[:-3]  # Remove the .py extension
                     module_path = (
                         os.path.relpath(os.path.join(root, file_name), plugin_dir)
                         .replace("/", ".")
                         .replace(".py", "")
                     )
+                    file_path = os.path.join(root, file_name)
+                    self.plugins_path[module_name] = file_path
+
                     self._process_plugin(
                         module_name,
                         module_path,
@@ -111,8 +142,68 @@ class PluginLoader:
         # Initialize sorted plugins
         self._initialize_sorted_plugins(plugin_metadata)
 
+    def reload_plugin(self, plugin_name):
+        """Reload a single plugin dynamically by its name."""
+        # Ensure the plugin name has a trailing dot for comparison
+
+        # Check if the plugin exists in the plugins_path dictionary
+        if plugin_name not in self.plugins_path:
+            self.logger.error(
+                f"Plugin '{plugin_name}' not found in plugins_path. Skipping reload."
+            )
+            return
+
+        try:
+            # Disable and remove the existing plugin instance
+            self.disable_plugin(plugin_name)
+            if plugin_name in self.plugins:
+                del self.plugins[plugin_name]
+
+            # Get the file path from self.plugins_path
+            file_path = self.plugins_path[plugin_name]
+            plugin_dir = os.path.join(os.path.dirname(__file__), "../plugins")
+            relative_path = os.path.relpath(file_path, plugin_dir).replace("/", ".")[
+                :-3
+            ]  # Remove .py extension
+            module_path = f"waypanel.src.plugins.{relative_path}"
+
+            # Reload the module
+            if module_path in sys.modules:
+                module = sys.modules[module_path]
+                importlib.reload(module)  # Reload the existing module
+            else:
+                module = importlib.import_module(module_path)  # Re-import the module
+
+            # Process the plugin metadata for the reloaded plugin
+            valid_plugins = []
+            plugin_metadata = []
+            self._process_plugin(
+                plugin_name, relative_path, [], valid_plugins, plugin_metadata
+            )
+
+            # Initialize the plugin using _initialize_sorted_plugins
+            if plugin_metadata:
+                self._initialize_sorted_plugins(plugin_metadata)
+                self.logger.info(f"Reloaded and initialized plugin: {plugin_name}")
+            else:
+                self.logger.error(
+                    f"Failed to process metadata for plugin: {plugin_name}"
+                )
+
+        except ModuleNotFoundError as e:
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Failed to reload plugin '{plugin_name}': {e}",
+                level="error",
+            )
+        except Exception as e:
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Error reloading plugin '{plugin_name}': {e}",
+                level="error",
+            )
+
     def _load_plugin_configuration(self):
-        """Load the TOML configuration file and parse the disabled plugins list."""
         waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
         try:
             if not os.path.exists(waypanel_config_path):
@@ -129,14 +220,13 @@ class PluginLoader:
                 config["plugins"] = {"list": "", "disabled": ""}
 
             # Parse the disabled plugins list
-            disabled_plugins = set(config["plugins"].get("disabled", "").split())
+            disabled_plugins = config["plugins"]["disabled"].split()
             return config, disabled_plugins
         except Exception as e:
             self.logger.error_handler.handle(
                 error=e,
-                message="Failed to load configuration file: {e}",
+                message=f"Failed to load configuration file: {e}",
                 level="error",
-                user_notification=lambda msg: print(f"USER NOTIFICATION: {msg}"),
             )
             return None, None
 
@@ -246,6 +336,23 @@ class PluginLoader:
 
         return True
 
+    def handle_set_widget(self, widget_action, widget_to_append, target):
+        if widget_action == "append":
+            # Append the widget(s) to the target box
+            if isinstance(widget_to_append, list):
+                for widget in widget_to_append:
+                    GLib.idle_add(target.append, widget)
+            else:
+                GLib.idle_add(target.append, widget_to_append)
+
+        if widget_action == "set_content":
+            # Append the widget(s) to the target box
+            if isinstance(widget_to_append, list):
+                for widget in widget_to_append:
+                    GLib.idle_add(target.set_content, widget)
+            else:
+                GLib.idle_add(target.set_content, widget_to_append)
+
     def _initialize_sorted_plugins(self, plugin_metadata):
         """Initialize plugins in the correct order based on priority and position."""
         # Sort plugins by priority (descending), then by order (ascending)
@@ -307,39 +414,13 @@ class PluginLoader:
                     return
 
                 # Check if the plugin has an append_widget method
-                if hasattr(plugin_instance, "append_widget"):
-                    widget_to_append = plugin_instance.append_widget()
-                    if widget_to_append is None:
-                        self.logger.error(
-                            f"append_widget returned None for plugin {plugin_name}."
-                        )
-                        return
+                if not hasattr(plugin_instance, "set_widget"):
+                    return
 
-                    # Append the widget(s) to the target box
-                    if isinstance(widget_to_append, list):
-                        for widget in widget_to_append:
-                            GLib.idle_add(target_box.append, widget)
-                    else:
-                        GLib.idle_add(target_box.append, widget_to_append)
-                elif hasattr(plugin_instance, "panel_set_content"):
-                    # Handle plugins that use panel_set_content instead of append_widget
-                    panel_content = plugin_instance.panel_set_content()
-                    if panel_content is None:
-                        self.logger.error(
-                            f"panel_set_content returned None for plugin {plugin_name}."
-                        )
-                        return
+                widget_to_append = plugin_instance.set_widget()[0]
+                widget_action = plugin_instance.set_widget()[1]
 
-                    if isinstance(panel_content, list):
-                        for widget in panel_content:
-                            GLib.idle_add(target_box.set_content, widget)
-                    else:
-                        GLib.idle_add(target_box.set_content, panel_content)
-                else:
-                    # Log background plugins without warnings
-                    self.logger.info(
-                        f"Plugin [{plugin_name}] initialized without UI interaction."
-                    )
+                self.handle_set_widget(widget_action, widget_to_append, target_box)
 
             except Exception as e:
                 self.logger.error(f"Failed to initialize plugin {plugin_name}: {e}")

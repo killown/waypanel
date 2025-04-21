@@ -4,8 +4,9 @@ import aiosqlite
 import asyncio
 from pathlib import Path
 from typing import List, Tuple
-from gi.repository import Adw, Gio, Gtk, GLib
-from gi.repository import Gtk4LayerShell as LayerShell
+from gi.repository import Gio, Gtk, GLib
+
+from waypanel.src.plugins.core._base import BasePlugin
 
 
 # set to False or remove the plugin file to disable it
@@ -82,42 +83,20 @@ def get_notes_sync() -> List[Tuple[int, str]]:
     return asyncio.run(_fetch_notes())
 
 
-class MenuNotes(Gtk.Application):
+class MenuNotes(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         self.popover_notes = None
-        self.obj = panel_instance
-        self.logger = self.obj.logger
-        self._setup_config_paths()
-        self.utils = self.obj.utils
         self.find_text_using_button = {}
         self.row_content = None
         self.listbox = None
 
-    def append_widget(self):
-        return self.menubutton_notes
-
-    def _setup_config_paths(self):
-        """Set up configuration paths based on the user's home directory."""
-        self.home = os.path.expanduser("~")
-        self.scripts = os.path.join(self.home, ".config/hypr/scripts")
-        self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.style_css_config = os.path.join(self.config_path, "style.css")
-        self.topbar_launcher_config = os.path.join(
-            self.config_path, "topbar-launcher.toml"
-        )
-        self.cache_folder = os.path.join(self.home, ".cache/waypanel")
-        self.psutil_store = {}
-
     def delete_button_icon(self):
-        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
-        if os.path.exists(waypanel_config_path):
-            with open(waypanel_config_path, "r") as f:
-                config = toml.load(f)
-                return (
-                    config.get("panel", {})
-                    .get("top", {})
-                    .get("notes_icon_delete", "edit-delete")
-                )
+        return (
+            self.config.get("panel", {})
+            .get("top", {})
+            .get("notes_icon_delete", "edit-delete")
+        )
         return
 
     def clear_notes(self, *_):
@@ -202,26 +181,21 @@ class MenuNotes(Gtk.Application):
 
     def create_popover_menu_notes(self):
         """Create the notes button in the panel"""
-        LayerShell.set_keyboard_mode(
-            self.obj.top_panel, LayerShell.KeyboardMode.ON_DEMAND
+        self.layer_shell.set_keyboard_mode(
+            self.obj.top_panel, self.layer_shell.KeyboardMode.ON_DEMAND
         )
         self.menubutton_notes = Gtk.Button.new()
+        self.main_widget = (self.menubutton_notes, "append")
         self.menubutton_notes.connect("clicked", self.open_popover_notes)
 
-        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
-        if os.path.exists(waypanel_config_path):
-            with open(waypanel_config_path, "r") as f:
-                config = toml.load(f)
-                notes_icon = (
-                    config.get("panel", {})
-                    .get("top", {})
-                    .get("notes_icon", "accessories-notes")
-                )
-                self.menubutton_notes.set_icon_name(
-                    self.utils.get_nearest_icon_name(notes_icon)
-                )
-        else:
-            self.menubutton_notes.set_icon_name("accessories-notes")
+        notes_icon = (
+            self.config.get("panel", {})
+            .get("top", {})
+            .get("notes_icon", "accessories-notes")
+        )
+        self.menubutton_notes.set_icon_name(
+            self.utils.get_nearest_icon_name(notes_icon)
+        )
 
     def create_popover_notes(self):
         """Create the notes popover content"""
@@ -337,10 +311,14 @@ class MenuNotes(Gtk.Application):
             GLib.timeout_add(100, self.popover_notes.popup)
 
     def popover_is_open(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.ON_DEMAND)
+        self.layer_shell.set_keyboard_mode(
+            self.obj.top_panel, self.layer_shell.KeyboardMode.ON_DEMAND
+        )
 
     def popover_is_closed(self, *_):
-        LayerShell.set_keyboard_mode(self.top_panel, LayerShell.KeyboardMode.NONE)
+        self.layer_shell.set_keyboard_mode(
+            self.obj.top_panel, self.layer_shell.KeyboardMode.NONE
+        )
 
     def on_show_searchbar_action_actived(self, action, parameter):
         self.searchbar.set_search_mode(True)
@@ -350,7 +328,7 @@ class MenuNotes(Gtk.Application):
 
     def on_filter_invalidate(self, row):
         search_text = self.searchbar.get_text().strip().lower()
-        if not isinstance(row, str):
+        if not self.utils.validate_string(row, "row from on_filter_invalidate"):
             row_text = row.get_child().MYTEXT.lower()
             return search_text in row_text
         return False

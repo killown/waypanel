@@ -1,8 +1,9 @@
 import os
 import random
 from subprocess import Popen
-from gi.repository import Adw, Gio, Gtk
+from gi.repository import Gio, Gtk
 from gi.repository import Gtk4LayerShell as LayerShell
+from waypanel.src.plugins.core._base import BasePlugin
 
 
 # set to False or remove the plugin file to disable it
@@ -22,22 +23,23 @@ def initialize_plugin(panel_instance):
         return menu
 
 
-class AppLauncher(Adw.Application):
+class AppLauncher(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         self.popover_launcher = None
-        self.obj = panel_instance
-        self.logger = self.obj.logger
         self.widgets_dict = {}
         self.all_apps = None
         self.menubutton_launcher = Gtk.Button()
-        self.top_panel = None
         self.search_get_child = None
         self.search_row = []
         self.recent_apps_file = os.path.expanduser("~/config/waypanel/.recent-apps")
-        self.utils = self.obj.utils
+        # The widget to be set in the panel and the action: append or set_content.
+        # If you want to build a complete right panel (for example), create a plugin called right_panel.py,
+        # use set_content to set the entire layout, then in other plugins call the instance
+        # self.plugins["right_panel"]. You can then add more widgets through it.
 
-    def append_widget(self):
-        return self.menubutton_launcher
+    def set_widget(self):
+        return (self.menubutton_launcher, "append")
 
     def create_menu_popover_launcher(self):
         self.menubutton_launcher.connect("clicked", self.open_popover_launcher)
