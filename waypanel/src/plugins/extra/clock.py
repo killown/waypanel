@@ -12,12 +12,12 @@ gi.require_version("Gtk", "4.0")
 ENABLE_PLUGIN = True
 COORDINATES = -23.5505, -46.6333  # Example coordinates (São Paulo)
 # load the plugin only after essential plugins is loaded
-DEPS = ["dockbar", "taskbar"]
+DEPS = ["dockbar", "taskbar", "top_panel"]
 
 
 def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
-    position = "center"  # Clock/calendar is usually in the center
+    position = "top-panel-center"  # Clock/calendar is usually in the center
     order = 5  # Middle priority
     return position, order
 

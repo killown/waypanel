@@ -5,6 +5,7 @@ from time import sleep
 import gi
 import numpy as np
 import toml
+from collections.abc import Iterable
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 from waypanel.src.core.compositor.ipc import IPC
 
@@ -44,6 +45,34 @@ class Utils(Adw.Application):
             "st",
             "rxvt",
         ]
+
+    def monitor_width_height(self, monitor_name):
+        focused_view = self.ipc.get_focused_view()
+        if focused_view:
+            output = self.get_monitor_info()
+            output = output[monitor_name]
+            monitor_width = output[0]
+            monitor_height = output[1]
+            return monitor_width, monitor_height
+
+    def on_css_file_changed(self, monitor, file, other_file, event_type):
+        if event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT:
+            # Reload CSS when changes are done
+            def run_once():
+                self.load_css_from_file()
+                return False
+
+            GLib.idle_add(run_once)
+
+    def load_css_from_file(self):
+        # you need to append the widgets to their parent containers first and then add_css_class
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_file(Gio.File.new_for_path(self.style_css_config))
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+        )
 
     def run_cmd(self, cmd):
         """Run a shell command in a detached process, ensuring it continues running after the panel exits."""
@@ -500,28 +529,112 @@ class Utils(Adw.Application):
             )
             return False
 
-    def validate_method(self, obj, method_name):
+    def validate_iterable(
+        self,
+        input_value,
+        name="input",
+        expected_length=None,
+        element_type=None,
+        allow_empty=True,
+    ):
         """
-        Validate that a method exists and is callable on an object.
+        Validate that the input is iterable with specific constraints.
+
+        Args:
+            input_value: The value to validate.
+            name (str): The name of the input for logging purposes.
+            expected_length (int, optional): The expected length of the iterable. If None, no length check is performed.
+            element_type (type or list[type], optional): The expected type(s) of each element in the iterable.
+                If a single type is provided, all elements must match that type.
+                If a list of types is provided, each element must match the corresponding type.
+            allow_empty (bool): Whether to allow empty iterables.
+
+        Returns:
+            bool: True if the iterable is valid, False otherwise.
+        """
+        # Check if the input is iterable
+        if not isinstance(input_value, Iterable):
+            self.logger.warning(
+                f"Invalid {name}: Expected an iterable, got {type(input_value).__name__}."
+            )
+            return False
+
+        # Convert strings to non-iterable for this context (strings are technically iterable, but often not desired)
+        if isinstance(input_value, str):
+            self.logger.warning(
+                f"Invalid {name}: Strings are not considered valid iterables in this context."
+            )
+            return False
+
+        # Check if the iterable is empty
+        if not allow_empty and not input_value:
+            self.logger.warning(f"{name} cannot be empty.")
+            return False
+
+        # Check the length of the iterable
+        if expected_length is not None and len(input_value) != expected_length:
+            self.logger.warning(
+                f"Invalid {name}: Expected an iterable of length {expected_length}, got {len(input_value)}."
+            )
+            return False
+
+        # Validate the types of the elements
+        if element_type is not None:
+            if isinstance(element_type, list):
+                # Validate each element against its corresponding type
+                if len(element_type) != len(input_value):
+                    self.logger.warning(
+                        f"Invalid {name}: Number of element types ({len(element_type)}) "
+                        f"does not match iterable length ({len(input_value)})."
+                    )
+                    return False
+                for index, (element, expected_type) in enumerate(
+                    zip(input_value, element_type)
+                ):
+                    if not isinstance(element, expected_type):
+                        self.logger.warning(
+                            f"Invalid {name}: Element at index {index} is not of type {expected_type.__name__}."
+                        )
+                        return False
+            else:
+                # Validate all elements against a single type
+                for index, element in enumerate(input_value):
+                    if not isinstance(element, element_type):
+                        self.logger.warning(
+                            f"Invalid {name}: Element at index {index} is not of type {element_type.__name__}."
+                        )
+                        return False
+
+        return True
+
+    def validate_method(self, obj, method_name):
+        """Validate that a method or attribute exists and is accessible on an object.
         Args:
             obj: The object to check.
-            method_name (str): The name of the method to validate.
-            logger: Logger instance for logging warnings or errors.
+            method_name (str): The name of the method or attribute to validate.
         Returns:
-            bool: True if the method is valid, False otherwise.
-        """
+            bool: True if the method/attribute is valid, False otherwise."""
         if not hasattr(obj, method_name):
             self.logger.warning(
-                f"Object {obj.__class__.__name__} does not have a method named '{method_name}'."
+                f"Object {obj.__class__.__name__} does not have '{method_name}'."
             )
             return False
-        method = getattr(obj, method_name)
-        if not callable(method):
-            self.logger.warning(
-                f"'{method_name}' on {obj.__class__.__name__} is not callable."
-            )
-            return False
-        return True
+
+        attr = getattr(obj, method_name)
+
+        # Check if the attribute is a valid GTK widget
+        if isinstance(attr, Gtk.Widget):
+            return True
+
+        # Check if the attribute is callable
+        if callable(attr):
+            return True
+
+        # If neither a widget nor callable, log a warning
+        self.logger.warning(
+            f"'{method_name}' on {obj.__class__.__name__} is not callable or a valid widget."
+        )
+        return False
 
     def validate_widget(self, widget, name="widget"):
         """

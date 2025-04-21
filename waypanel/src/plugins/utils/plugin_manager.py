@@ -4,15 +4,16 @@ import gi
 from waypanel.src.plugins.core._base import BasePlugin
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk
 
 # Set to True to enable the plugin
 ENABLE_PLUGIN = True
+DEPS = ["top_panel"]
 
 
 # Define the plugin's placement in the panel
 def get_plugin_placement(panel_instance):
-    position = "systray"  # Position: left side of the panel
+    position = "top-panel-systray"  # Position: left side of the panel
     order = 99  # Order: low priority (appears at the end)
     return position, order
 
@@ -86,16 +87,20 @@ class PluginManagerPlugin(BasePlugin):
         disabled_plugins = set(self.obj.config["plugins"]["disabled"].split())
         plugins = self.plugin_loader.plugins_path  # All available plugins
 
-        for plugin_name in plugins.keys():
-            print(plugin_name)
+        for plugin_name in sorted(plugins.keys()):
+            if plugin_name.startswith("_"):
+                continue
             # Create a row for the plugin
             row_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 10)
             row_box.set_margin_start(10)
             row_box.set_margin_end(10)
 
             # Plugin name label
-            plugin_label = Gtk.Label.new(plugin_name)
+            name = plugin_name.replace("_", " ")
+            name = name.capitalize()
+            plugin_label = Gtk.Label.new(name)
             plugin_label.set_hexpand(True)
+            plugin_label.set_halign(Gtk.Align.START)
             row_box.append(plugin_label)
 
             # Toggle switch for enabling/disabling the plugin

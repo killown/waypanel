@@ -9,6 +9,7 @@ import pulsectl
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):

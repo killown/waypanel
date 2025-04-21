@@ -73,7 +73,10 @@ class PluginLoader:
         self.utils = Utils(panel_instance)
         self.plugins = {}
         self.plugins_path = {}
+        self.plugins_import = {}
         self.plugin_containers = {}
+        self.plugins_dir = self.plugins_base_path()
+        self.position_mapping = {}
 
     def disable_plugin(self, plugin_name):
         """Disable a plugin by name."""
@@ -133,12 +136,11 @@ class PluginLoader:
         if config is None:
             return
 
-        plugin_dir = os.path.join(os.path.dirname(__file__), "../plugins")
         valid_plugins = []
         plugin_metadata = []
 
         # Walk through the plugin directory recursively
-        for root, dirs, files in os.walk(plugin_dir):
+        for root, dirs, files in os.walk(self.plugins_dir):
             # Exclude the 'examples' folder
             if "examples" in dirs:
                 dirs.remove("examples")  # Skip the 'examples' folder
@@ -147,7 +149,7 @@ class PluginLoader:
                 if file_name.endswith(".py") and file_name != "__init__.py":
                     module_name = file_name[:-3]  # Remove the .py extension
                     module_path = (
-                        os.path.relpath(os.path.join(root, file_name), plugin_dir)
+                        os.path.relpath(os.path.join(root, file_name), self.plugins_dir)
                         .replace("/", ".")
                         .replace(".py", "")
                     )
@@ -167,6 +169,20 @@ class PluginLoader:
 
         # Initialize sorted plugins
         self._initialize_sorted_plugins(plugin_metadata)
+
+    def plugins_base_path(self):
+        try:
+            # Try to locate the installed 'waypanel' module
+            waypanel_module_spec = importlib.util.find_spec("waypanel")
+            if waypanel_module_spec is None:
+                raise ImportError("The 'waypanel' module could not be found.")
+            waypanel_module_path = os.path.dirname(waypanel_module_spec.origin)
+        except ImportError:
+            # Fallback to the script's directory for development environments
+            waypanel_module_path = os.path.dirname(os.path.abspath(__file__))
+            self.logger.warning("Falling back to script directory for plugin loading.")
+
+        return os.path.join(waypanel_module_path, "src", "plugins")
 
     def reload_plugin(self, plugin_name):
         """
@@ -190,11 +206,11 @@ class PluginLoader:
 
             # Get the file path from self.plugins_path
             file_path = self.plugins_path[plugin_name]
-            plugin_dir = os.path.join(os.path.dirname(__file__), "../plugins")
-            relative_path = os.path.relpath(file_path, plugin_dir).replace("/", ".")[
-                :-3
-            ]  # Remove .py extension
-            module_path = f"waypanel.src.plugins.{relative_path}"
+            relative_path = os.path.relpath(file_path, self.plugins_dir).replace(
+                "/", "."
+            )[:-3]  # Remove .py extension
+
+            module_path = self.plugins_import[plugin_name]
 
             # Reload the module
             if module_path in sys.modules:
@@ -282,7 +298,7 @@ class PluginLoader:
             if not hasattr(module, "get_plugin_placement") or not hasattr(
                 module, "initialize_plugin"
             ):
-                self.logger.error_handler(
+                self.logger.error_handler.handle(
                     f"Module {module_name} is missing required functions. Skipping."
                 )
                 return
@@ -291,6 +307,10 @@ class PluginLoader:
             if not is_plugin_enabled:
                 self.logger.info(f"Skipping disabled plugin: {module_name}")
                 return
+
+            # Add the plugin to the plugins_import dictionary
+            self.plugins_import[module_name] = module_full_path
+            self.logger.debug(f"Registered plugin: {module_name} -> {module_full_path}")
 
             # Validate DEPS list
             has_plugin_deps = getattr(module, "DEPS", [])
@@ -371,7 +391,7 @@ class PluginLoader:
         Args:
             widget_action (str): The action to perform ("append" or "set_content").
             widget_to_append (Gtk.Widget or list): The widget(s) to append or set.
-            target (Gtk.Container): The target container (e.g., left_box, right_box).
+            target (Gtk.Container): The target container (e.g., self.left_panelpanel, self.right_panel).
             module_name (str): The name of the plugin (used to create a dedicated FlowBox).
         """
         if widget_action == "append":
@@ -387,24 +407,9 @@ class PluginLoader:
                         self.plugin_containers[f"{module_name}_box"].set_halign(
                             Gtk.Align.FILL
                         )
-                        self.plugin_containers[f"{module_name}_box"].set_row_spacing(
-                            0
-                        )  # Minimal row spacing
-                        self.plugin_containers[f"{module_name}_box"].set_column_spacing(
-                            0
-                        )  # Minimal column spacing
-                        self.plugin_containers[f"{module_name}_box"].set_margin_top(
-                            0
-                        )  # No top margin
-                        self.plugin_containers[f"{module_name}_box"].set_margin_bottom(
-                            0
-                        )  # No bottom margin
-                        self.plugin_containers[f"{module_name}_box"].set_margin_start(
-                            0
-                        )  # No start margin
-                        self.plugin_containers[f"{module_name}_box"].set_margin_end(
-                            0
-                        )  # No end margin
+                        self.plugin_containers[f"{module_name}_box"].set_selection_mode(
+                            Gtk.SelectionMode.NONE
+                        )
                         self.plugin_containers[f"{module_name}_box"].add_css_class(
                             "box-widgets"
                         )  # Add CSS class
@@ -436,24 +441,10 @@ class PluginLoader:
                     self.plugin_containers[f"{module_name}_box"].set_halign(
                         Gtk.Align.FILL
                     )
-                    self.plugin_containers[f"{module_name}_box"].set_row_spacing(
-                        0
-                    )  # Minimal row spacing
-                    self.plugin_containers[f"{module_name}_box"].set_column_spacing(
-                        0
-                    )  # Minimal column spacing
-                    self.plugin_containers[f"{module_name}_box"].set_margin_top(
-                        0
-                    )  # No top margin
-                    self.plugin_containers[f"{module_name}_box"].set_margin_bottom(
-                        0
-                    )  # No bottom margin
-                    self.plugin_containers[f"{module_name}_box"].set_margin_start(
-                        0
-                    )  # No start margin
-                    self.plugin_containers[f"{module_name}_box"].set_margin_end(
-                        0
-                    )  # No end margin
+                    self.plugin_containers[f"{module_name}_box"].set_selection_mode(
+                        Gtk.SelectionMode.NONE
+                    )
+
                     self.plugin_containers[f"{module_name}_box"].add_css_class(
                         "box-widgets"
                     )  # Add CSS class
@@ -568,29 +559,44 @@ class PluginLoader:
             initialize_plugin_with_deps(module, position, order, priority)
 
     def _get_target_panel_box(self, position, plugin_name=None):
-        """Determine the target panel box based on the plugin's position."""
-        if position == "left":
-            return self.panel_instance.top_panel_box_left
-        elif position == "right":
-            return self.panel_instance.top_panel_box_right
-        elif position == "center":
-            return self.panel_instance.top_panel_box_center
-        elif position == "systray":
-            return self.panel_instance.top_panel_box_systray
-        elif position == "after-systray":
-            return self.panel_instance.top_panel_box_for_buttons
-        elif position == "left-panel":
-            return self.panel_instance.left_panel
-        elif position == "right-panel":
-            return self.panel_instance.right_panel
-        elif position == "bottom-panel":
-            return self.panel_instance.bottom_panel
-        elif position == "top-panel":
-            return self.panel_instance.top_panel
-        elif position == "background":
-            return "background"
-        else:
-            self.logger.error_handler.handle(
-                f"[{plugin_name}] has an invalid position in get_plugin_placement() '{position}'."
+        """
+        Determine the target panel box based on the plugin's position.
+        Args:
+            position (str): The position of the plugin (e.g., "left", "right", "center").
+            plugin_name (str, optional): The name of the plugin for logging purposes.
+        Returns:
+            Gtk.Box or None: The target panel box, or None if the position is invalid.
+        """
+        self.position_mapping = {
+            "top-panel-left": "top_panel_box_left",
+            "top-panel-right": "top_panel_box_right",
+            "top-panel-center": "top_panel_box_center",
+            "top-panel-systray": "top_panel_box_systray",
+            "top-panel-after-systray": "top_panel_box_for_buttons",
+            "left-panel": "left_panel",
+            "right-panel": "right_panel",
+            "bottom-panel": "bottom_panel",
+            "top-panel": "top_panel",
+            "background": "background",  # Special case for background plugins
+        }
+
+        target_attr = self.position_mapping.get(position)
+        if target_attr is None:
+            self.logger.error(
+                f"Invalid position '{position}' for plugin {plugin_name}."
             )
             return None
+
+        # Handle special case for "background"
+        if target_attr == "background":
+            self.logger.debug(f"Plugin {plugin_name} is a background plugin.")
+            return "background"
+
+        # Validate that the target attribute exists on the panel instance
+        if not hasattr(self.panel_instance, target_attr):
+            self.logger.warning(
+                f"Panel box '{target_attr}' is not yet initialized for plugin {plugin_name}."
+            )
+            return None
+
+        return getattr(self.panel_instance, target_attr)

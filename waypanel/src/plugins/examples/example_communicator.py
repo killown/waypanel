@@ -9,7 +9,7 @@ ENABLE_PLUGIN = True
 
 def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
-    position = "center"
+    position = "top-panel-center"
     order = 0
     priority = 1
     return position, order, priority

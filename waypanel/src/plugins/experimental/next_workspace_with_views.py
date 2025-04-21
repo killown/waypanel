@@ -6,11 +6,12 @@ from waypanel.src.core.compositor.ipc import IPC
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
-    position = "right"
+    position = "top-panel-right"
     order = 10
     return position, order
 

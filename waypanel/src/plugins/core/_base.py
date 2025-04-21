@@ -1,4 +1,5 @@
 from waypanel.src.core import create_panel
+from gi.repository import Gtk
 
 
 class BasePlugin:
@@ -68,6 +69,71 @@ class BasePlugin:
         Returns:
             tuple: (widget, action) where action is "append" or "set_content".
         """
+        # Log the status of self.main_widget for debugging purposes
+        if self.main_widget is None:
+            self.logger.error(
+                "Critical Error: self.main_widget is still None. "
+                "This indicates that the main widget was not properly initialized before calling set_widget()."
+            )
+            self.logger.debug(
+                "Possible causes:\n"
+                "1. The main widget container (e.g., Gtk.Box, Gtk.Button) was not created.\n"
+                "2. self.main_widget was not assigned after creating the widget container.\n"
+                "3. The plugin's initialization logic is incomplete or missing."
+            )
+            return None  # Return None to indicate failure
+
+        # Ensure self.main_widget is a tuple with two elements
+        if not isinstance(self.main_widget, tuple) or len(self.main_widget) != 2:
+            self.logger.error(
+                "Invalid format for self.main_widget. Expected a tuple with two elements."
+            )
+            return None
+
+        # Validate the widget
+        widget = self.main_widget[0]
+        if isinstance(widget, list):
+            for w in widget:
+                if w is None or not isinstance(w, Gtk.Widget):
+                    self.logger.error(
+                        f"Invalid widget in self.main_widget: {w}. "
+                        "The widget must be a valid Gtk.Widget instance. Plugin: {self.__class__.__name__}"
+                    )
+                    return None
+        else:
+            if widget is None or not isinstance(widget, Gtk.Widget):
+                self.logger.error(
+                    f"Invalid widget in self.main_widget: {widget}. "
+                    "The widget must be a valid Gtk.Widget instance. Plugin: {self.__class__.__name__}"
+                )
+                return None
+
+            # Validate widget parentage
+            if widget.get_parent() is not None:
+                self.logger.warning(
+                    f"Widget {widget} already has a parent. It may not be appended correctly."
+                )
+
+        # Validate the action
+        action = self.main_widget[1]
+        if not self.utils.validate_string(
+            action, name=f"{action} from action in BasePlugin"
+        ):
+            self.logger.error(
+                f"Invalid action in self.main_widget: {action}. Must be a string."
+            )
+            return None
+        if action not in ("append", "set_content"):
+            self.logger.error(
+                f"Invalid action in self.main_widget: {action}. "
+                "The action must be either 'append' or 'set_content'."
+            )
+            return None
+
+        # Log success if self.main_widget is valid
+        self.logger.debug(
+            f"Main widget successfully defined: {widget} with action '{action}'. Plugin: {self.__class__.__name__}"
+        )
         return self.main_widget
 
     def on_start(self):

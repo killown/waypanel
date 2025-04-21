@@ -8,10 +8,11 @@ from waypanel.src.plugins.core._base import BasePlugin
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
-    position = "left"
+    position = "top-panel-left"
     order = 1
     return position, order
 
@@ -268,13 +269,14 @@ class AppLauncher(BasePlugin):
     def run_app_from_launcher(self, x, y):
         mytext = [i.get_child().MYTEXT for i in x.get_selected_children()][0]
         name, desktop, keywords = mytext
-        cmd = "gtk-launch {}".format(desktop).split()
+        desktop = desktop.split(".desktop")[0]
+        cmd = "gtk-launch {}".format(desktop)
 
         # Add the app to the recent apps list
         self.add_recent_app(name)
 
         # Launch the app
-        Popen(cmd)
+        self.utils.run_cmd(cmd)
         if self.popover_launcher:
             self.popover_launcher.popdown()
 

@@ -20,10 +20,11 @@ from ._clipboard_server import AsyncClipboardServer
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
-    return "systray", 2
+    return "top-panel-systray", 2
 
 
 def initialize_plugin(panel_instance):
@@ -150,9 +151,6 @@ class MenuClipboard(BasePlugin):
         self.find_text_using_button = {}
         self.row_content = None
         self.listbox = None
-
-    def set_widget(self):
-        self.main_widget = (self.menubutton_clipboard, "append")
 
     def is_image_content(self, content):
         """
@@ -426,6 +424,8 @@ class MenuClipboard(BasePlugin):
             self.obj.top_panel, LayerShell.KeyboardMode.ON_DEMAND
         )
         self.menubutton_clipboard = Gtk.Button.new()
+        # main_widget must be set always after the widget container is created
+        self.main_widget = (self.menubutton_clipboard, "append")
         self.menubutton_clipboard.connect("clicked", self.open_popover_clipboard)
         clipboard_icon = (
             self.config.get("panel", {})

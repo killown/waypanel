@@ -1,6 +1,4 @@
 from gi.repository import GLib
-from waypanel.src.core.compositor.ipc import IPC
-from wayfire.extra.ipc_utils import WayfireUtils
 from waypanel.src.plugins.core._base import BasePlugin
 
 # Set to False or remove the plugin file to disable it
@@ -241,6 +239,6 @@ class EventManagerPlugin(BasePlugin):
             self.ipc.unhide_view(id)
             # ***Warning*** this was freezing the panel
             # set focus will return an Exception in case the view is not toplevel
-            GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))
-            if self.utils.widget_exists(widget):
-                self.obj.top_panel_box_center.remove(widget)
+            # GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))
+            # if self.utils.widget_exists(widget):
+            # self.obj.top_panel_box_center.remove(widget)

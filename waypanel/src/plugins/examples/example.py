@@ -1,5 +1,7 @@
 import gi
-from gi.repository import Adw, Gtk
+from gi.repository import Gtk
+
+from waypanel.src.plugins.core._base import BasePlugin
 
 # NOTE: Always use GLib.idle_add for non-blocking code.
 
@@ -11,7 +13,10 @@ def get_plugin_placement(panel_instance):
     Returns:
         tuple: (position, order, priority)
     """
-    position = "center"  # loader_plugin will append: (left, right, center, systray, after-systray)
+    # Example of panel_instance usage:
+    # position = panel_instance.config["my_plugin"]["position"]
+    # the config loaded is ~/.config/waypanel/waypanel.toml
+    position = "top-panel-center"  # loader_plugin will append: (left, right, center, systray, after-systray)
     order = 10  # The order will rearrange the plugin sequence.
     priority = 10  # If there are 10 plugins, this one will load last.
     return position, order, priority
@@ -33,11 +38,10 @@ def initialize_plugin(panel_instance):
     return example
 
 
-class ExamplePluginFeatures(Adw.Application):
+class ExamplePluginFeatures(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         self.popover_example = None
-        self.obj = panel_instance
-        self.top_panel = None
 
     def append_widget(self):
         # this will tell to the plugin_loader to append the widget to the panel instance
@@ -52,6 +56,13 @@ class ExamplePluginFeatures(Adw.Application):
 
         # Setup basic button
         self.menubutton_example = Gtk.Button()
+
+        # The main widget must always be set after the main widget container to which we want to append the target_box.
+        # The available actions are `append` to append widgets to the top_panel and `set_content`,
+        # which is used to set content in other panels such as the left-panel or right-panel.
+        # This part of the code is highly important, as the plugin loader strictly requires this metadata.
+        self.main_widget = (self.menubutton_example, "append")
+
         self.menubutton_example.set_icon_name("preferences-system-symbolic")
         self.menubutton_example.connect("clicked", self.open_popover_example)
 

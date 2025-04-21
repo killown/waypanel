@@ -1,6 +1,5 @@
 import os
 import orjson as json
-import gi
 from gi.repository import Gtk
 from waypanel.src.plugins.core._base import BasePlugin
 
@@ -42,11 +41,17 @@ class TaskbarPlugin(BasePlugin):
         self.is_scale_active = {}
         self.create_gesture = self.plugins["gestures_setup"].create_gesture
         self.remove_gesture = self.plugins["gestures_setup"].remove_gesture
+        # Scrolled window setup
+        self.scrolled_window = Gtk.ScrolledWindow()
+
+        # The `main_widget` must always be defined after the main widget is created.
+        # For example, if the main widget is `self.scrolled_window`, setting `main_widget` before `scrolled_window`
+        # could result in `None` being assigned instead. This may cause the plugin to malfunction
+        # or prevent `set_content`/`append` from working properly.
+        self.main_widget = (self.scrolled_window, "set_content")
+
         # Load configuration and set up taskbar
         self._setup_taskbar()
-
-    def set_widget(self):
-        self.main_widget = (self.scrolled_window, "set_content")
 
     def set_layer_exclusive(self, exclusive):
         if exclusive:
@@ -67,8 +72,6 @@ class TaskbarPlugin(BasePlugin):
         icon = self.utils.get_nearest_icon_name("tab-new")
         self.update_widget(self.add_launcher.set_icon_name, icon)
 
-        # Scrolled window setup
-        self.scrolled_window = Gtk.ScrolledWindow()
         output = os.getenv("waypanel")
         output_name = None
         geometry = None
@@ -202,7 +205,6 @@ class TaskbarPlugin(BasePlugin):
         if wset_index_focused != wset_index_view:
             self.set_view_focus(view)
         else:
-            self.ipc.scale_toggle()
             if empty_workspace:
                 x, y = empty_workspace
                 # if set_workspace from an empity workspace before the view is focused

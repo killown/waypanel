@@ -11,10 +11,11 @@ gi.require_version("Gtk", "4.0")
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
-    position = "systray"
+    position = "top-panel-systray"
     order = 3
     return position, order
 

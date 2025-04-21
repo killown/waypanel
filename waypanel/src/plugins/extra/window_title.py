@@ -2,6 +2,10 @@ from gi.repository import Gtk
 
 from waypanel.src.plugins.core._base import BasePlugin
 
+ENABLE_PLUGIN = True
+
+DEPS = ["top_panel"]
+
 
 def initialize_plugin(panel_instance):
     """
@@ -21,7 +25,7 @@ def get_plugin_placement(panel_instance):
     Returns:
         tuple: (position, order)
     """
-    position = "left"
+    position = "top-panel-left"
     order = 5
     return position, order
 

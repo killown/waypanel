@@ -1,10 +1,12 @@
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
+from waypanel.src.core.utils import Utils
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
@@ -27,10 +29,34 @@ class GesturePlugin:
     def __init__(self, panel_instance):
         """Initialize the GesturePlugin."""
         self.obj = panel_instance
+        self.logger = panel_instance.logger
+        self.utils = Utils(panel_instance)
         self.gestures = {}  # Store gesture references
         self.appended_actions = {}  # Store additional actions for each gesture
 
     def setup_gestures(self):
+        """Set up gestures for the top panel.
+        Wait until the required panel boxes are ready."""
+        GLib.idle_add(self.check_panel_boxes_ready)
+
+    def check_panel_boxes_ready(self):
+        """Check if the required panel boxes are ready.
+        If ready, proceed with gesture setup; otherwise, retry."""
+        # Validate that the required panel box exists and is ready
+        if (
+            self.utils.validate_method(self.obj, "top_panel_box_left")
+            and self.utils.validate_method(self.obj, "top_panel_box_center")
+            and self.utils.validate_method(self.obj, "top_panel_box_full")
+            and self.utils.validate_method(self.obj, "top_panel_box_right")
+        ):
+            self.logger.info("Panel boxes are ready. Setting up gestures...")
+            self._setup_panel_gestures()
+            return False  # Stop the idle loop
+        else:
+            self.logger.debug("Panel boxes not yet ready. Retrying...")
+            return True  # Continue retrying
+
+    def _setup_panel_gestures(self):
         """Set up gestures for the top panel (left, center, and right)."""
         # Gestures for the left section of the top panel
         self.create_gesture(self.obj.top_panel_box_left, 1, self.pos_left_left_click)

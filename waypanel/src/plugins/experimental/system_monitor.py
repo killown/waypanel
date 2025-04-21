@@ -8,11 +8,12 @@ from gi.repository import Gtk, GLib
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
-    position = "systray"
+    position = "top-panel-systray"
     order = 2
     return position, order
 

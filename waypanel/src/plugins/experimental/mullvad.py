@@ -8,11 +8,12 @@ from waypanel.src.plugins.core._base import BasePlugin
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 # load the plugin only after essential plugins is loaded
+DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
-    position = "systray"
+    position = "top-panel-systray"
     order = 5
     return position, order
 

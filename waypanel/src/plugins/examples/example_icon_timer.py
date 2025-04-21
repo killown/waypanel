@@ -7,7 +7,7 @@ ENABLE_PLUGIN = True
 
 # Define the plugin's placement in the panel
 def get_plugin_placement(panel_instance):
-    position = "right"  # Position: right side of the panel
+    position = "top-panel-right"  # Position: right side of the panel
     order = 5  # Order: determines the relative position among other plugins
     return position, order
 

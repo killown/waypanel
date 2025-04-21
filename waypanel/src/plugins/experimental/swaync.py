@@ -8,6 +8,7 @@ from waypanel.src.plugins.core._base import BasePlugin
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
@@ -16,7 +17,7 @@ def get_plugin_placement(panel_instance):
     Returns:
         tuple: (position, order)
     """
-    position = "center"
+    position = "top-panel-center"
     order = 7
     return position, order
 
