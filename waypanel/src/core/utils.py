@@ -46,23 +46,41 @@ class Utils(Adw.Application):
         ]
 
     def run_cmd(self, cmd):
-        """Run a shell command without blocking the main thread."""
+        """Run a shell command in a detached process, ensuring it continues running after the panel exits."""
 
         def worker():
             try:
-                result = subprocess.run(
-                    cmd, shell=True, capture_output=True, text=True, check=True
+                # Use Popen to start the process in a new session
+                process = subprocess.Popen(
+                    cmd,
+                    shell=True,
+                    preexec_fn=os.setsid,  # Create a new process group
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
                 )
-                GLib.idle_add(lambda: self.logger.info(f"Command Output: {result}"))
-            except subprocess.CalledProcessError as e:
-                GLib.idle_add(
-                    lambda e=e: self.logger.error_handler.handle(
-                        f"Error running command '{cmd}': {e.stderr}"
+
+                # Optionally capture output (if needed)
+                stdout, stderr = process.communicate()
+
+                if process.returncode == 0:
+                    GLib.idle_add(lambda: self.logger.info(f"Command Output: {stdout}"))
+                else:
+                    GLib.idle_add(
+                        lambda: self.logger.error_handler.handle(
+                            f"Error running command '{cmd}': {stderr}"
+                        )
                     )
-                )  # Run the worker in a separate thread
+            except Exception as e:
+                GLib.idle_add(
+                    lambda: self.logger.error_handler.handle(
+                        f"Exception while running command '{cmd}': {str(e)}"
+                    )
+                )
 
         from threading import Thread
 
+        # Run the worker in a separate thread
         Thread(target=worker, daemon=True).start()
 
     def find_view_middle_cursor_position(self, view_geometry, monitor_geometry):

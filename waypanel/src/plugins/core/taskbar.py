@@ -45,7 +45,7 @@ class TaskbarPlugin(BasePlugin):
         # Load configuration and set up taskbar
         self._setup_taskbar()
 
-    def set_main_widget(self):
+    def set_widget(self):
         self.main_widget = (self.scrolled_window, "set_content")
 
     def set_layer_exclusive(self, exclusive):

@@ -37,9 +37,7 @@ class AppLauncher(BasePlugin):
         # If you want to build a complete right panel (for example), create a plugin called right_panel.py,
         # use set_content to set the entire layout, then in other plugins call the instance
         # self.plugins["right_panel"]. You can then add more widgets through it.
-
-    def set_widget(self):
-        return (self.menubutton_launcher, "append")
+        self.main_widget = (self.menubutton_launcher, "append")
 
     def create_menu_popover_launcher(self):
         self.menubutton_launcher.connect("clicked", self.open_popover_launcher)

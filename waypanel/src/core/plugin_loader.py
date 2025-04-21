@@ -2,7 +2,7 @@ import os
 import importlib
 import toml
 from waypanel.src.core.utils import Utils
-from gi.repository import GLib
+from gi.repository import GLib, Gtk
 import sys
 
 
@@ -73,6 +73,7 @@ class PluginLoader:
         self.utils = Utils(panel_instance)
         self.plugins = {}
         self.plugins_path = {}
+        self.plugin_containers = {}
 
     def disable_plugin(self, plugin_name):
         """Disable a plugin by name."""
@@ -81,24 +82,49 @@ class PluginLoader:
             return
 
         plugin_instance = self.plugins[plugin_name]
+
+        # Call the on_stop method if it exists
+        if hasattr(plugin_instance, "on_stop"):
+            try:
+                plugin_instance.on_stop()
+                self.logger.info(f"Stopped plugin: {plugin_name}")
+            except Exception as e:
+                self.logger.error(f"Error stopping plugin {plugin_name}: {e}")
+
         if hasattr(plugin_instance, "disable"):
             plugin_instance.disable()
             self.logger.info(f"Disabled plugin: {plugin_name}")
         else:
             self.logger.warning(f"Plugin '{plugin_name}' does not support disabling.")
 
-    def enable_plugin(self, plugin_name):
-        """Enable a plugin by name."""
-        if plugin_name not in self.plugins:
-            self.logger.warning(f"Plugin '{plugin_name}' not found.")
+    def enable_plugin(self, plugin_name, plugin_metadata):
+        """
+        Enable a plugin by name.
+        Args:
+            plugin_name (str): The name of the plugin to enable.
+        """
+        if plugin_name not in self.plugins_path:
+            self.logger.error(
+                f"Plugin '{plugin_name}' not found in plugins_path. Skipping enable."
+            )
             return
 
-        plugin_instance = self.plugins[plugin_name]
-        if hasattr(plugin_instance, "enable"):
-            plugin_instance.enable()
-            self.logger.info(f"Enabled plugin: {plugin_name}")
-        else:
-            self.logger.warning(f"Plugin '{plugin_name}' does not support enabling.")
+        try:
+            # Initialize the plugin using _initialize_sorted_plugins
+            if plugin_metadata:
+                self._initialize_sorted_plugins(plugin_metadata)
+                self.logger.info(f"Enabled and initialized plugin: {plugin_name}")
+            else:
+                self.logger.error(
+                    f"Failed to process metadata for plugin: {plugin_name}"
+                )
+
+        except Exception as e:
+            self.logger.error_handler.handle(
+                error=e,
+                message=f"Error enabling plugin '{plugin_name}': {e}",
+                level="error",
+            )
 
     def load_plugins(self):
         """Dynamically load all plugins from the src.plugins package."""
@@ -143,9 +169,12 @@ class PluginLoader:
         self._initialize_sorted_plugins(plugin_metadata)
 
     def reload_plugin(self, plugin_name):
-        """Reload a single plugin dynamically by its name."""
+        """
+        Reload a single plugin dynamically by its name.
+        Args:
+            plugin_name (str): The name of the plugin to reload.
+        """
         # Ensure the plugin name has a trailing dot for comparison
-
         # Check if the plugin exists in the plugins_path dictionary
         if plugin_name not in self.plugins_path:
             self.logger.error(
@@ -183,7 +212,7 @@ class PluginLoader:
 
             # Initialize the plugin using _initialize_sorted_plugins
             if plugin_metadata:
-                self._initialize_sorted_plugins(plugin_metadata)
+                self.enable_plugin(plugin_name, plugin_metadata)
                 self.logger.info(f"Reloaded and initialized plugin: {plugin_name}")
             else:
                 self.logger.error(
@@ -336,17 +365,119 @@ class PluginLoader:
 
         return True
 
-    def handle_set_widget(self, widget_action, widget_to_append, target):
+    def handle_set_widget(self, widget_action, widget_to_append, target, module_name):
+        """
+        Handle appending or setting content for a plugin's widget.
+        Args:
+            widget_action (str): The action to perform ("append" or "set_content").
+            widget_to_append (Gtk.Widget or list): The widget(s) to append or set.
+            target (Gtk.Container): The target container (e.g., left_box, right_box).
+            module_name (str): The name of the plugin (used to create a dedicated FlowBox).
+        """
         if widget_action == "append":
             # Append the widget(s) to the target box
             if isinstance(widget_to_append, list):
                 for widget in widget_to_append:
-                    GLib.idle_add(target.append, widget)
-            else:
-                GLib.idle_add(target.append, widget_to_append)
+                    # Create a dedicated FlowBox for the plugin if it doesn't exist
+                    if f"{module_name}_box" not in self.plugin_containers:
+                        self.plugin_containers[f"{module_name}_box"] = Gtk.FlowBox()
+                        self.plugin_containers[f"{module_name}_box"].set_valign(
+                            Gtk.Align.START
+                        )
+                        self.plugin_containers[f"{module_name}_box"].set_halign(
+                            Gtk.Align.FILL
+                        )
+                        self.plugin_containers[f"{module_name}_box"].set_row_spacing(
+                            0
+                        )  # Minimal row spacing
+                        self.plugin_containers[f"{module_name}_box"].set_column_spacing(
+                            0
+                        )  # Minimal column spacing
+                        self.plugin_containers[f"{module_name}_box"].set_margin_top(
+                            0
+                        )  # No top margin
+                        self.plugin_containers[f"{module_name}_box"].set_margin_bottom(
+                            0
+                        )  # No bottom margin
+                        self.plugin_containers[f"{module_name}_box"].set_margin_start(
+                            0
+                        )  # No start margin
+                        self.plugin_containers[f"{module_name}_box"].set_margin_end(
+                            0
+                        )  # No end margin
+                        self.plugin_containers[f"{module_name}_box"].add_css_class(
+                            "box-widgets"
+                        )  # Add CSS class
 
-        if widget_action == "set_content":
-            # Append the widget(s) to the target box
+                        # Add the plugin's FlowBox to the target container if not already added
+                        if (
+                            self.plugin_containers[f"{module_name}_box"].get_parent()
+                            is None
+                        ):
+                            GLib.idle_add(
+                                target.append,
+                                self.plugin_containers[f"{module_name}_box"],
+                            )
+
+                    # Clean up the FlowBox before appending new widgets
+                    self.plugin_containers[f"{module_name}_box"].remove_all()
+
+                    # Append the widget to the plugin's dedicated FlowBox
+                    GLib.idle_add(
+                        self.plugin_containers[f"{module_name}_box"].append, widget
+                    )
+            else:
+                # Single widget case
+                if f"{module_name}_box" not in self.plugin_containers:
+                    self.plugin_containers[f"{module_name}_box"] = Gtk.FlowBox()
+                    self.plugin_containers[f"{module_name}_box"].set_valign(
+                        Gtk.Align.START
+                    )
+                    self.plugin_containers[f"{module_name}_box"].set_halign(
+                        Gtk.Align.FILL
+                    )
+                    self.plugin_containers[f"{module_name}_box"].set_row_spacing(
+                        0
+                    )  # Minimal row spacing
+                    self.plugin_containers[f"{module_name}_box"].set_column_spacing(
+                        0
+                    )  # Minimal column spacing
+                    self.plugin_containers[f"{module_name}_box"].set_margin_top(
+                        0
+                    )  # No top margin
+                    self.plugin_containers[f"{module_name}_box"].set_margin_bottom(
+                        0
+                    )  # No bottom margin
+                    self.plugin_containers[f"{module_name}_box"].set_margin_start(
+                        0
+                    )  # No start margin
+                    self.plugin_containers[f"{module_name}_box"].set_margin_end(
+                        0
+                    )  # No end margin
+                    self.plugin_containers[f"{module_name}_box"].add_css_class(
+                        "box-widgets"
+                    )  # Add CSS class
+
+                    # Add the plugin's FlowBox to the target container if not already added
+                    if (
+                        self.plugin_containers[f"{module_name}_box"].get_parent()
+                        is None
+                    ):
+                        GLib.idle_add(
+                            target.append, self.plugin_containers[f"{module_name}_box"]
+                        )
+
+                # Clean up the FlowBox before appending new widgets
+                self.plugin_containers[f"{module_name}_box"].remove_all()
+
+                # Append the widget to the plugin's dedicated FlowBox
+                GLib.idle_add(
+                    self.plugin_containers[f"{module_name}_box"].append,
+                    widget_to_append,
+                )
+
+        elif widget_action == "set_content":
+            # Set the widget(s) as the content of the target container
             if isinstance(widget_to_append, list):
                 for widget in widget_to_append:
                     GLib.idle_add(target.set_content, widget)
@@ -395,6 +526,11 @@ class PluginLoader:
             # Initialize the plugin
             try:
                 plugin_instance = module.initialize_plugin(self.panel_instance)
+
+                # Call the on_start method if it exists
+                if hasattr(plugin_instance, "on_start"):
+                    plugin_instance.on_start()
+
                 self.logger.info(f"Initialized plugin: {plugin_name}")
                 self.plugins[module_name] = plugin_instance
 
@@ -420,7 +556,9 @@ class PluginLoader:
                 widget_to_append = plugin_instance.set_widget()[0]
                 widget_action = plugin_instance.set_widget()[1]
 
-                self.handle_set_widget(widget_action, widget_to_append, target_box)
+                self.handle_set_widget(
+                    widget_action, widget_to_append, target_box, module_name
+                )
 
             except Exception as e:
                 self.logger.error(f"Failed to initialize plugin {plugin_name}: {e}")

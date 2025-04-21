@@ -151,6 +151,9 @@ class MenuClipboard(BasePlugin):
         self.row_content = None
         self.listbox = None
 
+    def set_widget(self):
+        self.main_widget = (self.menubutton_clipboard, "append")
+
     def is_image_content(self, content):
         """
         Detect both image files AND raw image data.
@@ -424,7 +427,6 @@ class MenuClipboard(BasePlugin):
         )
         self.menubutton_clipboard = Gtk.Button.new()
         self.menubutton_clipboard.connect("clicked", self.open_popover_clipboard)
-        self.main_widget = (self.menubutton_clipboard, "append")
         clipboard_icon = (
             self.config.get("panel", {})
             .get("top", {})

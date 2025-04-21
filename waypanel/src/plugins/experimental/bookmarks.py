@@ -2,7 +2,6 @@ import os
 from subprocess import Popen
 from PIL import Image
 
-import gi
 import requests
 import toml
 import wayfire.ipc as wayfire
@@ -49,9 +48,6 @@ class PopoverBookmarks(BasePlugin):
         self.top_panel = None
         self._setup_config_paths()
         self.listbox = Gtk.ListBox.new()
-
-    def append_widget(self):
-        return self.menubutton_bookmarks
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""

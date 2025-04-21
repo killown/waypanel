@@ -1,6 +1,8 @@
 # Import necessary modules
 import gi
 
+from waypanel.src.plugins.core._base import BasePlugin
+
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Adw
 
@@ -18,17 +20,15 @@ def get_plugin_placement(panel_instance):
 # Initialize the plugin
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
-        return PluginManagerPlugin(panel_instance)
+        instance = PluginManagerPlugin(panel_instance)
+        instance.set_main_widget()
+        return instance
 
 
 # Plugin class
-class PluginManagerPlugin:
+class PluginManagerPlugin(BasePlugin):
     def __init__(self, panel_instance):
-        self.obj = panel_instance
-        self.logger = self.obj.logger
-        self.utils = self.obj.utils
-        self.plugin_loader = self.obj.plugin_loader
-
+        super().__init__(panel_instance)
         # Create the main button to open the popover
         self.menubutton_plugin_manager = Gtk.MenuButton()
         self.menubutton_plugin_manager.set_icon_name(
@@ -41,13 +41,8 @@ class PluginManagerPlugin:
         # Add gesture to handle interactions
         self.add_gesture_to_menu_button()
 
-    def append_widget(self):
-        """
-        Append the plugin manager button to the panel.
-        Returns:
-            Gtk.Widget: The main button of the plugin.
-        """
-        return self.menubutton_plugin_manager
+    def set_main_widget(self):
+        self.main_widget = (self.menubutton_plugin_manager, "append")
 
     def create_popover_plugin_manager(self):
         """Create and configure the popover for managing plugins."""

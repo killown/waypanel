@@ -56,6 +56,10 @@ class WindowTitlePlugin(BasePlugin):
         # Subscribe to necessary events using the EventManagerPlugin
         self._subscribe_to_events()
 
+    def disable(self):
+        print(self.main_widget)
+        self.utils.remove_widget(self.window_title_content)
+
     def _subscribe_to_events(self):
         """
         Subscribe to relevant events using the EventManagerPlugin.

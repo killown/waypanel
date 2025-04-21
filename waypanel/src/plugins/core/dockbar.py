@@ -209,8 +209,9 @@ class DockbarPlugin(BasePlugin):
         self.dockbar = self.CreateFromAppList(
             self.obj.waypanel_cfg, orientation, class_style
         )
-        # this will pass to the base plugin and set the widget the plugin loader should handle
         self.main_widget = (self.dockbar, "set_content")
+
+        # this will pass to the base plugin and set the widget the plugin loader should handle
         self.choose_and_set_dockbar()
         # FIXME: remove this motion_controller later to use in a example
         # motion_controller = Gtk.EventControllerMotion()
