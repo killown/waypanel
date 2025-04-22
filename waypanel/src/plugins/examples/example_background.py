@@ -2,6 +2,8 @@ import os
 import psutil
 import gi
 
+from waypanel.src.plugins.core._base import BasePlugin
+
 gi.require_version("Gtk", "4.0")
 from gi.repository import GLib
 
@@ -21,10 +23,9 @@ def initialize_plugin(panel_instance):
         return cpu_monitor
 
 
-class BackgroundCPUMonitor:
+class BackgroundCPUMonitor(BasePlugin):
     def __init__(self, panel_instance):
-        self.obj = panel_instance
-        self.logger = self.obj.logger
+        super().__init__(panel_instance)
         self.cpu_usage_update_interval = 5  # Update interval in seconds
         self.source_id = None  # To store the GLib timeout source ID
 

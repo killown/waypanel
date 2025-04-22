@@ -1,6 +1,8 @@
 import gi
 from gi.repository import Gtk, GLib
 
+from waypanel.src.plugins.core._base import BasePlugin
+
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 
@@ -19,11 +21,9 @@ def initialize_plugin(panel_instance):
 
 
 # Plugin class
-class IconTimerPlugin:
+class IconTimerPlugin(BasePlugin):
     def __init__(self, panel_instance):
-        self.obj = panel_instance
-        self.logger = self.obj.logger
-        self.utils = self.obj.utils
+        super().__init__(panel_instance)
 
         # Create the widget to append
         self.icon_widget = Gtk.Image.new_from_icon_name("system-run-symbolic")

@@ -3,6 +3,8 @@ import toml
 from gi.repository import Gtk, Gio
 import re
 
+from waypanel.src.plugins.core._base import BasePlugin
+
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = False
 # NOTE: If the code hangs, it will delay the execution of all plugins. Always use GLib.idle_add for non-blocking code.
@@ -12,7 +14,7 @@ def get_plugin_placement(panel_instance):
     """
     Define plugin position and order.
     """
-    return "right", 6, 6
+    return "top-panel-right", 6, 6
 
 
 def initialize_plugin(panel_instance):
@@ -32,10 +34,9 @@ def initialize_plugin(panel_instance):
         return example_menu
 
 
-class ExampleMenuPlugin:
+class ExampleMenuPlugin(BasePlugin):
     def __init__(self, panel_instance):
-        self.obj = panel_instance
-        self.logger = self.obj.logger
+        super().__init__(panel_instance)
         self._setup_config_paths()
         self.logger.info("ExampleMenuPlugin initialized.")
 

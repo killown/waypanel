@@ -74,43 +74,71 @@ class Utils(Adw.Application):
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
         )
 
+    def notify_send(self, title, message):
+        bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        bus.call_sync(
+            "org.freedesktop.Notifications",
+            "/org/freedesktop/Notifications",
+            "org.freedesktop.Notifications",
+            "Notify",
+            GLib.Variant(
+                "(susssasa{sv}i)",
+                (
+                    "waypanel",  # App name
+                    0,  # Notification ID (0 = new)
+                    "",  # Icon (leave empty)
+                    title,  # Summary (title)
+                    message,  # Body
+                    [],  # Actions (none)
+                    {},  # Hints (e.g., urgency)
+                    5000,  # Timeout (ms)
+                ),
+            ),
+            None,
+            Gio.DBusCallFlags.NONE,
+            -1,
+            None,
+        )
+
     def run_cmd(self, cmd):
-        """Run a shell command in a detached process, ensuring it continues running after the panel exits."""
+        """
+        Run a shell command using Gio.Subprocess without blocking the main GTK thread.
 
-        def worker():
-            try:
-                # Use Popen to start the process in a new session
-                process = subprocess.Popen(
-                    cmd,
-                    shell=True,
-                    preexec_fn=os.setsid,  # Create a new process group
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                )
+        Args:
+            cmd (str): The shell command to execute.
+        """
+        # Split the command into arguments
+        args = cmd.split()
 
-                # Optionally capture output (if needed)
-                stdout, stderr = process.communicate()
+        # Create a Gio.Subprocess instance
+        try:
+            subprocess = Gio.Subprocess.new(
+                args, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+            )
 
-                if process.returncode == 0:
-                    GLib.idle_add(lambda: self.logger.info(f"Command Output: {stdout}"))
-                else:
-                    GLib.idle_add(
-                        lambda: self.logger.error_handler.handle(
-                            f"Error running command '{cmd}': {stderr}"
-                        )
-                    )
-            except Exception as e:
-                GLib.idle_add(
-                    lambda: self.logger.error_handler.handle(
-                        f"Exception while running command '{cmd}': {str(e)}"
-                    )
-                )
+            # Communicate with the subprocess asynchronously
+            subprocess.communicate_utf8_async(None, None, self._on_subprocess_complete)
+        except Exception as e:
+            self.logger.error(f"Error starting subprocess: {e}")
 
-        from threading import Thread
+    def _on_subprocess_complete(self, subprocess, result):
+        """
+        Callback for when the subprocess completes.
 
-        # Run the worker in a separate thread
-        Thread(target=worker, daemon=True).start()
+        Args:
+            subprocess: The Gio.Subprocess instance.
+            result: The async result object.
+        """
+        try:
+            # Get the output of the subprocess
+            success, stdout, stderr = subprocess.communicate_utf8_finish(result)
+
+            if subprocess.get_exit_status() == 0:
+                self.logger.info(f"Command Output: {stderr}")
+            else:
+                self.logger.error(f"Error running command: {stderr}")
+        except Exception as e:
+            self.logger.error(f"Error handling subprocess result: {e}")
 
     def find_view_middle_cursor_position(self, view_geometry, monitor_geometry):
         # Calculate the middle position of the view
@@ -1504,10 +1532,8 @@ class Utils(Adw.Application):
             home = os.path.expanduser("~")
             full_path = os.path.abspath(__file__)
             directory_path = os.path.dirname(full_path)
-            parent_directory_path = os.path.dirname(directory_path)
 
             # Define key paths
-            waypanel_cfg = os.path.join(home, ".config/waypanel/waypanel.toml")
             scripts = os.path.join(home, ".config/waypanel/scripts")
             config_path = os.path.join(home, ".config/waypanel")
             style_css_config = os.path.join(config_path, "styles.css")

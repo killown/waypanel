@@ -1,7 +1,7 @@
 import os
 import random
 from subprocess import Popen
-from gi.repository import Gio, Gtk
+from gi.repository import Gio, Gtk, Pango
 from gi.repository import Gtk4LayerShell as LayerShell
 from waypanel.src.plugins.core._base import BasePlugin
 
@@ -85,7 +85,8 @@ class AppLauncher(BasePlugin):
         # Scrolled window setup
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_policy(
-            Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC
+            Gtk.PolicyType.NEVER,
+            Gtk.PolicyType.AUTOMATIC,  # Horizontal, Vertical scroll policy
         )
 
         # Main box and search bar setup
@@ -95,19 +96,33 @@ class AppLauncher(BasePlugin):
         self.searchbar.connect("search_changed", self.on_search_entry_changed)
         self.searchbar.connect("activate", self.on_keypress)
         self.searchbar.set_focus_on_click(True)
+        self.searchbar.set_placeholder_text(
+            "Search apps..."
+        )  # Optional: Add placeholder text
 
         self.main_box.append(self.searchbar)
 
         # Flowbox setup
         self.flowbox = Gtk.FlowBox()
-        self.flowbox.set_valign(Gtk.Align.START)
-        self.flowbox.set_max_children_per_line(1)
+        self.flowbox.set_valign(Gtk.Align.START)  # Align content to the top
+        self.flowbox.set_halign(Gtk.Align.FILL)  # Fill the horizontal space
+        self.flowbox.props.max_children_per_line = 30
+        self.flowbox.set_max_children_per_line(8)  # Number of icons per row
+        self.flowbox.set_homogeneous(True)  # Uniform size for all children
+        self.flowbox.set_column_spacing(10)  # Horizontal spacing between items
+        self.flowbox.set_row_spacing(10)  # Vertical spacing between rows
         self.flowbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.flowbox.set_activate_on_single_click(True)
         self.flowbox.connect("child-activated", self.run_app_from_launcher)
 
+        # Add CSS class for styling
+        self.flowbox.add_css_class("app-launcher-flowbox")
+
+        # Append the FlowBox to the main box via the scrolled window
         self.main_box.append(self.scrolled_window)
         self.scrolled_window.set_child(self.flowbox)
+
+        # Set the main box as the child of the popover
         self.popover_launcher.set_child(self.main_box)
 
     def _populate_flowbox_with_apps(self):
@@ -140,6 +155,7 @@ class AppLauncher(BasePlugin):
         min_size, natural_size = self.flowbox.get_preferred_size()
         width = natural_size.width if natural_size else 0
         self.flowbox.add_css_class("app-launcher-flowbox")
+        self.scrolled_window.set_size_request(800, 600)
         self.scrolled_window.set_min_content_width(width)
         self.scrolled_window.set_min_content_height(600)
         if self.popover_launcher:
@@ -205,29 +221,50 @@ class AppLauncher(BasePlugin):
 
         icon = app.get_icon()
         cmd = app.get_id()
+
+        # Use a fallback icon if the app does not have an icon
         if icon is None:
-            return
+            icon = Gio.ThemedIcon.new_with_default_fallbacks(
+                "application-x-executable-symbolic"
+            )
 
-        row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        self.widgets_dict[app.get_id()] = row_hbox
-        row_hbox.MYTEXT = name, cmd, keywords
+        # Create a vertical box to stack the icon and label
+        vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)  # Vertical layout with spacing
+        vbox.set_halign(Gtk.Align.CENTER)  # Center align the widget horizontally
+        vbox.set_valign(Gtk.Align.CENTER)  # Center align the widget vertically
+        vbox.set_margin_top(1)  # Add margin at the top
+        vbox.set_margin_bottom(1)  # Add margin at the bottom
+        vbox.set_margin_start(1)  # Add margin on the left
+        vbox.set_margin_end(1)  # Add margin on the right
+        vbox.add_css_class("app-launcher-vbox")
 
-        line = Gtk.Label.new()
-        line.set_label(name)
-        line.props.margin_start = 5
-        line.props.hexpand = True
-        line.set_halign(Gtk.Align.START)
-
+        # Icon
         image = Gtk.Image.new_from_gicon(icon)
-        image.props.margin_end = 5
-        image.set_halign(Gtk.Align.END)
+        # image.set_pixel_size(64)  # Set the size of the icon (adjust as needed)
+        image.set_halign(Gtk.Align.CENTER)  # Center align the icon
+        image.add_css_class(
+            "app-launcher-icon-from-popover"
+        )  # Add CSS class for styling
 
-        row_hbox.append(image)
-        row_hbox.append(line)
-        self.flowbox.append(row_hbox)
+        # Label
+        label = Gtk.Label.new(name)
+        label.set_max_width_chars(20)  # Limit the width of the label
+        label.set_ellipsize(Pango.EllipsizeMode.END)  # Add ellipsis if text is too long
+        label.set_halign(Gtk.Align.CENTER)  # Center align the label
+        label.add_css_class(
+            "app-launcher-label-from-popover"
+        )  # Add CSS class for styling
 
-        line.add_css_class("app-launcher-label-from-popover")
-        image.add_css_class("app-launcher-icon-from-popover")
+        # Add the icon and label to the vertical box
+        vbox.append(image)
+        vbox.append(label)
+
+        # Store metadata for later use
+        vbox.MYTEXT = name, cmd, keywords
+
+        # Add the vertical box to the FlowBox
+        self.flowbox.append(vbox)
+        self.flowbox.add_css_class("app-launcher-flowbox")
 
     def add_recent_app(self, app_name):
         """

@@ -1,27 +1,31 @@
 from waypanel.src.core import create_panel
 from gi.repository import Gtk
+from typing import Any
+import inspect
 
 
 class BasePlugin:
     def __init__(self, panel_instance):
         self.obj = panel_instance
-        self.bottom_panel = self.obj.bottom_panel
-        self.top_panel = self.obj.top_panel
-        self.left_panel = self.obj.left_panel
-        self.right_panel = self.obj.right_panel
+        self.bottom_panel: Any = self.obj.bottom_panel
+        self.top_panel: Any = self.obj.top_panel
+        self.left_panel: Any = self.obj.left_panel
+        self.right_panel: Any = self.obj.right_panel
         self.main_widget = None
-        self.logger = panel_instance.logger
-        self.utils = panel_instance.utils
-        self.plugins = panel_instance.plugin_loader.plugins
-        self.plugin_loader = self.obj.plugin_loader
-        self.utils = self.obj.utils
-        self.update_widget = self.utils.update_widget
-        self.config = panel_instance.config
-        self.ipc = panel_instance.ipc
-        self.dependencies = getattr(self, "DEPS", [])
-        self.layer_shell = create_panel.LayerShell
-        self.set_layer_pos_exclusive = create_panel.set_layer_position_exclusive
-        self.unset_layer_pos_exclusive = create_panel.unset_layer_position_exclusive
+        self.plugin_file = inspect.getfile(self.__class__)
+        self.logger: Any = panel_instance.logger
+        self.plugins: Any = panel_instance.plugin_loader.plugins
+        self.plugin_loader: Any = self.obj.plugin_loader
+        self.utils: Any = panel_instance.utils
+        self.update_widget: Any = self.utils.update_widget
+        self.config: Any = panel_instance.config
+        self.ipc: Any = panel_instance.ipc
+        self.dependencies: Any = getattr(self, "DEPS", [])
+        self.layer_shell: Any = create_panel.LayerShell
+        self.set_layer_pos_exclusive: Any = create_panel.set_layer_position_exclusive
+        self.unset_layer_pos_exclusive: Any = (
+            create_panel.unset_layer_position_exclusive
+        )
 
     def check_dependencies(self):
         """Check if all dependencies are loaded"""
@@ -72,7 +76,7 @@ class BasePlugin:
         # Log the status of self.main_widget for debugging purposes
         if self.main_widget is None:
             self.logger.error(
-                "Critical Error: self.main_widget is still None. "
+                f"{self.plugin_file}: Critical Error: self.main_widget is still None. "
                 "This indicates that the main widget was not properly initialized before calling set_widget()."
             )
             self.logger.debug(
@@ -91,19 +95,20 @@ class BasePlugin:
             return None
 
         # Validate the widget
+        print(self.plugin_file)
         widget = self.main_widget[0]
         if isinstance(widget, list):
             for w in widget:
                 if w is None or not isinstance(w, Gtk.Widget):
                     self.logger.error(
-                        f"Invalid widget in self.main_widget: {w}. "
+                        f"{self.plugin_file} Invalid widget in self.main_widget: {w}. "
                         "The widget must be a valid Gtk.Widget instance. Plugin: {self.__class__.__name__}"
                     )
                     return None
         else:
             if widget is None or not isinstance(widget, Gtk.Widget):
                 self.logger.error(
-                    f"Invalid widget in self.main_widget: {widget}. "
+                    f"{self.plugin_file}: Invalid widget in self.main_widget: {widget}. "
                     "The widget must be a valid Gtk.Widget instance. Plugin: {self.__class__.__name__}"
                 )
                 return None
@@ -111,7 +116,7 @@ class BasePlugin:
             # Validate widget parentage
             if widget.get_parent() is not None:
                 self.logger.warning(
-                    f"Widget {widget} already has a parent. It may not be appended correctly."
+                    f"{self.plugin_file}: Widget {widget} already has a parent. It may not be appended correctly."
                 )
 
         # Validate the action
@@ -120,19 +125,19 @@ class BasePlugin:
             action, name=f"{action} from action in BasePlugin"
         ):
             self.logger.error(
-                f"Invalid action in self.main_widget: {action}. Must be a string."
+                f"{self.plugin_file}: Invalid action in self.main_widget: {action}. Must be a string."
             )
             return None
         if action not in ("append", "set_content"):
             self.logger.error(
-                f"Invalid action in self.main_widget: {action}. "
+                f"{self.plugin_file}: Invalid action in self.main_widget: {action}. "
                 "The action must be either 'append' or 'set_content'."
             )
             return None
 
         # Log success if self.main_widget is valid
         self.logger.debug(
-            f"Main widget successfully defined: {widget} with action '{action}'. Plugin: {self.__class__.__name__}"
+            f"{self.plugin_file}: Main widget successfully defined: {widget} with action '{action}'. Plugin: {self.__class__.__name__}"
         )
         return self.main_widget
 

@@ -1,5 +1,7 @@
 import gi
 
+from waypanel.src.plugins.core._base import BasePlugin
+
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk
 
@@ -24,10 +26,9 @@ def initialize_plugin(panel_instance):
         print("Plugin Communicator initialized.")
 
 
-class PluginCommunicator:
+class PluginCommunicator(BasePlugin):
     def __init__(self, panel_instance):
-        self.obj = panel_instance
-        self.logger = self.obj.logger
+        super().__init__(panel_instance)
 
     def create_ui(self):
         """Create UI elements for the Plugin Communicator."""

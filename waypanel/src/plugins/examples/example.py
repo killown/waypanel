@@ -42,18 +42,6 @@ class ExamplePluginFeatures(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.popover_example = None
-
-    def append_widget(self):
-        # this will tell to the plugin_loader to append the widget to the panel instance
-        # the plugin loader will get position() to define where the plugin should append
-        return self.menubutton_example
-
-    def create_menu_popover_example(self):
-        # obj is a instance of class Panel(Adw.Application) from panel.py
-        # This lists all possible methods that can be called with the *obj*
-        # Use panel_methods_example for auto-completion and listing different methods
-        # Then use obj to actually call the methods and interact with the panel instance
-
         # Setup basic button
         self.menubutton_example = Gtk.Button()
 
@@ -63,13 +51,17 @@ class ExamplePluginFeatures(BasePlugin):
         # This part of the code is highly important, as the plugin loader strictly requires this metadata.
         self.main_widget = (self.menubutton_example, "append")
 
+    def append_widget(self):
+        # this will tell to the plugin_loader to append the widget to the panel instance
+        # the plugin loader will get position() to define where the plugin should append
+        return self.menubutton_example
+
+    def create_menu_popover_example(self):
         self.menubutton_example.set_icon_name("preferences-system-symbolic")
         self.menubutton_example.connect("clicked", self.open_popover_example)
 
-        # Load custom configuration if exists
         # load_config will return cached version of toml.load(waypanel_toml_file)
-        config = self.obj.load_config()
-        custom_icon = config.get("icon", "preferences-system-symbolic")
+        custom_icon = self.config.get("icon", "preferences-system-symbolic")
         self.menubutton_example.set_icon_name(custom_icon)
 
         # Create system menu popover
