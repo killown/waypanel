@@ -1,212 +1,107 @@
 import os
 import logging
 from logging.handlers import RotatingFileHandler
-from typing import Optional, Callable, Dict, Any
+import structlog
+from structlog.stdlib import ProcessorFormatter, BoundLogger
+from structlog.processors import JSONRenderer, TimeStamper, add_log_level
+from structlog.dev import ConsoleRenderer
+from rich.logging import RichHandler
 
+# Define log file path
 LOG_FILE_PATH = os.path.expanduser("~/.config/waypanel/waypanel.log")
 
-
-class ColoredFormatter(logging.Formatter):
-    """Custom formatter to add colors to log messages."""
-
-    COLORS = {
-        "DEBUG": "\033[94m",  # Blue
-        "INFO": "\033[92m",  # Green
-        "WARNING": "\033[93m",  # Yellow
-        "ERROR": "\033[91m",  # Red
-        "CRITICAL": "\033[95m",  # Magenta
-        "RESET": "\033[0m",  # Reset color
-    }
-
-    def format(self, record):
-        levelname = record.levelname
-        message = super().format(record)
-        if levelname in self.COLORS:
-            message = f"{self.COLORS[levelname]}{message}{self.COLORS['RESET']}"
-        return message
+# Ensure the log directory exists
+os.makedirs(os.path.dirname(LOG_FILE_PATH), exist_ok=True)
 
 
 class ErrorHandler:
-    """
-    A centralized error-handling utility for managing exceptions, logging, and user notifications.
-    """
-
-    def __init__(self, logger: logging.Logger):
-        """
-        Initialize the ErrorHandler with a logger instance.
-        """
-        self.logger = logger
+    def __init__(self, logger_name="WaypanelLogger"):
+        self.logger = structlog.get_logger(logger_name)
 
     def handle(
-        self,
-        error: Exception,
-        message: str = "An error occurred",
-        level: str = "error",
-        user_notification: Optional[Callable[[str], None]] = None,
-        fallback: Optional[Callable[[], Any]] = None,
-        context: Optional[Dict[str, Any]] = None,
-    ) -> None:
+        self, error, message, level="error", context=None, user_notification=None
+    ):
         """
-        Handle an exception by logging it, notifying the user (if applicable),
-        and executing a fallback mechanism.
+        Centralized error handling and logging.
 
         Args:
-            error (Exception): The exception to handle.
-            message (str): A custom error message to log and display.
-            level (str): The logging level ('debug', 'info', 'warning', 'error', 'critical').
-            user_notification (Callable[[str], None]): A function to notify the user (e.g., GUI alert).
-            fallback (Callable[[], Any]): A fallback function to execute if the error occurs.
-            context (Optional[Dict[str, Any]]): Additional contextual information to include in the log.
+            error (Exception): The exception or error to log.
+            message (str): The log message.
+            level (str): The log level (e.g., "debug", "info", "warning", "error").
+            context (dict): Additional context to include in the log.
+            user_notification (callable): A function to notify users (optional).
         """
-        # Add contextual information to the message
-        if context:
-            context_str = ", ".join(f"{k}={v}" for k, v in context.items())
-            message = f"{message} ({context_str})"
-
-        # Log the error with the specified level
+        # Get the appropriate log method based on the level
         log_method = getattr(self.logger, level.lower(), self.logger.error)
-        log_method(f"{message}: {error}", exc_info=True)
 
-        # Notify the user if a notification function is provided
-        if user_notification:
-            user_notification(message)
-
-        # Execute the fallback mechanism if provided
-        if fallback:
-            try:
-                fallback()
-            except Exception as fallback_error:
-                self.logger.error(
-                    f"Fallback mechanism failed: {fallback_error}", exc_info=True
-                )
-
-    def report_to_server(self, error: Exception, endpoint: str) -> None:
-        """
-        Report the error to a remote monitoring server.
-
-        Args:
-            error (Exception): The exception to report.
-            endpoint (str): The URL of the monitoring server.
-        """
-        import requests
-
-        try:
-            response = requests.post(
-                endpoint,
-                json={"error": str(error), "traceback": self._get_traceback(error)},
-            )
-            response.raise_for_status()
-            self.logger.info("Error reported to monitoring server successfully.")
-        except requests.RequestException as e:
-            self.logger.error(f"Failed to report error to server: {e}", exc_info=True)
-
-    @staticmethod
-    def _get_traceback(error: Exception) -> str:
-        """
-        Extract the traceback of an exception as a string.
-
-        Args:
-            error (Exception): The exception to extract the traceback from.
-
-        Returns:
-            str: The formatted traceback.
-        """
-        import traceback
-
-        return "".join(
-            traceback.format_exception(type(error), error, error.__traceback__)
+        # Log the error with additional context
+        log_method(
+            message,
+            error=str(error),
+            context=context or {},
         )
 
-    @staticmethod
-    def graceful_degradation(
-        default_value: Any, func: Callable[..., Any], *args, **kwargs
-    ) -> Any:
-        """
-        Execute a function with graceful degradation. If the function raises an exception,
-        return the default value instead.
-
-        Args:
-            default_value (Any): The value to return if the function fails.
-            func (Callable[..., Any]): The function to execute.
-            *args: Positional arguments for the function.
-            **kwargs: Keyword arguments for the function.
-
-        Returns:
-            Any: The result of the function or the default value if an error occurs.
-        """
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            logging.getLogger("WaypanelLogger").error(
-                f"Graceful degradation triggered: {e}"
-            )
-            return default_value
+        # Notify users if a notification function is provided
+        if user_notification and callable(user_notification):
+            user_notification(message)
 
 
-def setup_logging(level=logging.INFO) -> logging.Logger:
+def setup_logging(level=logging.INFO) -> BoundLogger:
     """
     Configure logging with both file and console handlers.
     Ensures no duplicate handlers are added.
 
     Returns:
-        logging.Logger: The configured logger instance.
+        BoundLogger: The configured logger instance.
     """
+    # Remove existing handlers to prevent duplicates
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+
+    # Configure structlog processors
+    structlog.configure(
+        processors=[
+            add_log_level,
+            TimeStamper(fmt="iso"),
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            ProcessorFormatter.wrap_for_formatter,  # Integrate with stdlib logging
+        ],
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
+
+    # Create a logger
     logger = logging.getLogger("WaypanelLogger")
-    logger.propagate = False  # Avoid duplicate logs
+    logger.setLevel(level)
 
-    if not logger.handlers:
-        logger.setLevel(level)
+    # File Handler with Rotation
+    file_handler = RotatingFileHandler(
+        LOG_FILE_PATH,
+        maxBytes=1024 * 1024,  # 1 MB per log file
+        backupCount=2,
+    )
+    file_handler.setLevel(level)
+    file_formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    file_handler.setFormatter(file_formatter)
+    logger.addHandler(file_handler)
 
-        # Ensure the log directory exists
-        os.makedirs(os.path.dirname(LOG_FILE_PATH), exist_ok=True)
+    # Add RichHandler for console output
+    console_handler = RichHandler(
+        rich_tracebacks=True,  # Enable rich tracebacks
+        markup=True,  # Enable Rich-style markup
+        show_path=False,  # Hide log source file/line (optional)
+    )
+    console_handler.setFormatter(logging.Formatter("%(message)s"))
+    logger.addHandler(console_handler)
 
-        # File Handler with Rotation
-        file_handler = RotatingFileHandler(
-            LOG_FILE_PATH,
-            maxBytes=1024 * 1024,  # 1 MB per log file
-            backupCount=2,
-        )
-        file_handler.setLevel(level)
-        file_formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        file_handler.setFormatter(file_formatter)
-
-        # Console Handler with Colors
-        console_handler = logging.StreamHandler()
-        console_formatter = ColoredFormatter()
-        console_handler.setFormatter(console_formatter)
-
-        # Add handlers to the logger
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
-
-    # Attach ErrorHandler to the logger
-    logger.error_handler = ErrorHandler(logger)
-
-    return logger
+    return structlog.get_logger("WaypanelLogger")
 
 
-# Example Usage
 if __name__ == "__main__":
-    logger = setup_logging()
-
-    # Example function that may fail
-    def risky_operation():
-        raise ValueError("Something went wrong!")
-
-    # Handle errors using the ErrorHandler
-    logger.error_handler.handle(
-        error=ValueError("Test error"),
-        message="A test error occurred",
-        level="error",
-        user_notification=lambda msg: print(f"USER NOTIFICATION: {msg}"),
-        fallback=lambda: print("Executing fallback mechanism..."),
-    )
-
-    # Graceful degradation example
-    result = logger.error_handler.graceful_degradation(
-        default_value="Default Value",
-        func=risky_operation,
-    )
-    print(f"Result of risky operation: {result}")
+    logger = setup_logging(level=logging.DEBUG)

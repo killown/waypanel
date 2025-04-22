@@ -17,3 +17,5 @@ watchdog
 pyperclip 
 aiosqlite 
 pillow
+structlog
+rich

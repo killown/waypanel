@@ -125,11 +125,6 @@ class DockbarPlugin(BasePlugin):
                 button, 2, lambda _, cmd=app_cmd: self.on_middle_click(cmd)
             )
 
-            # Add middle-click gesture
-            self.create_gesture(
-                button, 2, lambda _, cmd=app_cmd: self.on_middle_click(cmd)
-            )
-
             # Add right-click gesture
             self.create_gesture(
                 button, 3, lambda _, cmd=app_cmd: self.on_right_click(cmd)
