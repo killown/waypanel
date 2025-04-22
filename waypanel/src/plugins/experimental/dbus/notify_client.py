@@ -6,7 +6,7 @@ from PIL import Image
 from gi.repository import Gtk, GdkPixbuf
 from pydbus.proxy import GLib
 from waypanel.src.plugins.core._base import BasePlugin
-from waypanel.src.plugins.experimental.dbus_notifications.notify_server import (
+from waypanel.src.plugins.experimental.dbus.notify_server import (
     NotificationDaemon,
 )
 

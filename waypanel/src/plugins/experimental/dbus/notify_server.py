@@ -1,13 +1,11 @@
 import os
 import sqlite3
 import json
-import gi
 from pydbus import SessionBus
 from gi.repository import Gtk, GLib, Gio
 from pydbus.generic import signal
-import ctypes
-from pathlib import Path
 from gi.repository import Gtk, Gtk4LayerShell as LayerShell
+from wayfire import WayfireSocket
 
 
 class NotificationDaemon:
@@ -23,6 +21,7 @@ class NotificationDaemon:
         # Connect to the session bus
         self.bus = SessionBus()
         self.layer_shell = LayerShell
+        self.ipc = WayfireSocket()
 
         # Define the DBus introspection XML
         self.introspection_xml = """
@@ -229,6 +228,10 @@ class NotificationDaemon:
         Show a GTK4 popup for the notification using LayerShell.
         :param notification: Dictionary containing notification details.
         """
+        window_width = 300
+        window_height = 100
+        output_w = self.ipc.get_focused_output()["geometry"]["width"]
+        center_popup_position = (output_w - window_width) // 2
         # Create a new window for the popup
         window = Gtk.Window()
         window.add_css_class("notify-window")
@@ -246,8 +249,10 @@ class NotificationDaemon:
             window, self.layer_shell.Edge.TOP, 10
         )  # Add margin from the top
         self.layer_shell.set_margin(
-            window, self.layer_shell.Edge.RIGHT, 10
+            window, self.layer_shell.Edge.RIGHT, center_popup_position
         )  # Add margin from the right
+
+        # Center the popup horizontally by anchoring to both left and right edges
 
         # Create the content of the popup
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
@@ -281,7 +286,9 @@ class NotificationDaemon:
 
         # Set the content of the window
         window.set_child(vbox)
-        window.set_default_size(300, 100)  # Set default size for the popup
+        window.set_default_size(
+            window_width, window_height
+        )  # Set default size for the popup
 
         # Add CSS classes for styling
         vbox.add_css_class("notification-box")
