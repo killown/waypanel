@@ -8,6 +8,7 @@ import toml
 from collections.abc import Iterable
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 from waypanel.src.core.compositor.ipc import IPC
+import threading
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -102,43 +103,30 @@ class Utils(Adw.Application):
 
     def run_cmd(self, cmd):
         """
-        Run a shell command using Gio.Subprocess without blocking the main GTK thread.
+        Run a shell command using subprocess.Popen in a separate thread to avoid blocking the main GTK thread.
+        Ensures the process is detached from the panel by creating a new session.
 
         Args:
             cmd (str): The shell command to execute.
         """
-        # Split the command into arguments
-        args = cmd.split()
-
-        # Create a Gio.Subprocess instance
         try:
-            subprocess = Gio.Subprocess.new(
-                args, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+            # Start the subprocess with a new session to detach it from the panel
+            process = subprocess.Popen(
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,  # Ensure output is returned as strings
+                start_new_session=True,  # Detach the process from the parent
             )
 
-            # Communicate with the subprocess asynchronously
-            subprocess.communicate_utf8_async(None, None, self._on_subprocess_complete)
+            # Optionally, log the process details or handle errors
+            self.logger.info(f"Command started with PID: {process.pid}")
+
         except Exception as e:
-            self.logger.error(f"Error starting subprocess: {e}")
-
-    def _on_subprocess_complete(self, subprocess, result):
-        """
-        Callback for when the subprocess completes.
-
-        Args:
-            subprocess: The Gio.Subprocess instance.
-            result: The async result object.
-        """
-        try:
-            # Get the output of the subprocess
-            success, stdout, stderr = subprocess.communicate_utf8_finish(result)
-
-            if subprocess.get_exit_status() == 0:
-                self.logger.info(f"Command Output: {stderr}")
-            else:
-                self.logger.error(f"Error running command: {stderr}")
-        except Exception as e:
-            self.logger.error(f"Error handling subprocess result: {e}")
+            self.logger.error_handler.handle(
+                error=e, message=f"Error running command: {cmd}", level="error"
+            )
 
     def find_view_middle_cursor_position(self, view_geometry, monitor_geometry):
         # Calculate the middle position of the view
@@ -1560,7 +1548,7 @@ class Utils(Adw.Application):
                     os.makedirs(cache_folder)
                     self.logger.info(f"Created cache directory: {cache_folder}")
             except Exception as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e, message="Failed to create required directories."
                 )
 

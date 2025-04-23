@@ -173,7 +173,7 @@ class PopoverFolders(BasePlugin):
         return self.popover_folders
 
     def open_folder(self, x):
-        folder, filemanager = x.get_child().MYTEXT
+        folder, filemanager = x.get_child().MYTEXT.split()
         path = os.path.join(self.home, folder)
         cmd = "{0} {1}".format(filemanager, path).split()
         Popen(cmd)

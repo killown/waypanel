@@ -49,6 +49,7 @@ class AppLauncher(BasePlugin):
             )
         )
         self.menubutton_launcher.set_icon_name(menu_icon)
+        self.menubutton_launcher.add_css_class("app-launcher-menu-icon")
 
     def create_popover_launcher(self, *_):
         """Create and configure the popover launcher."""
@@ -69,7 +70,8 @@ class AppLauncher(BasePlugin):
     def _create_and_configure_popover(self):
         """Create and configure the popover."""
         popover = Gtk.Popover()
-        popover.set_has_arrow(False)
+        popover.add_css_class("app-launcher-popover")
+        popover.set_has_arrow(True)
         popover.connect("closed", self.popover_is_closed)
         popover.connect("notify::visible", self.popover_is_open)
 
@@ -91,6 +93,7 @@ class AppLauncher(BasePlugin):
 
         # Main box and search bar setup
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.main_box.add_css_class("app-launcher-main-box")
         self.searchbar = Gtk.SearchEntry.new()
         self.searchbar.grab_focus()
         self.searchbar.connect("search_changed", self.on_search_entry_changed)

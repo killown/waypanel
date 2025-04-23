@@ -298,7 +298,7 @@ class PluginLoader:
             if not hasattr(module, "get_plugin_placement") or not hasattr(
                 module, "initialize_plugin"
             ):
-                self.logger.error_handler.handle(
+                self.logger.error(
                     f"Module {module_name} is missing required functions. Skipping."
                 )
                 return

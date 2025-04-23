@@ -57,6 +57,13 @@ class NotificationPopoverPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.logger = self.obj.logger
+        # Create a vertical box to hold notification details
+        self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+        self.vbox.set_margin_top(10)
+        self.vbox.set_margin_bottom(10)
+        self.vbox.set_margin_start(10)
+        self.vbox.set_margin_end(10)
+        self.notification_on_popover = {}
 
         # Create the button to open the popover
         self.notification_button = Gtk.Button.new_from_icon_name(
@@ -71,7 +78,7 @@ class NotificationPopoverPlugin(BasePlugin):
         # Path to the notifications database
         self.db_path = os.path.expanduser("~/.config/waypanel/notifications.db")
 
-    def fetch_last_notifications(self):
+    def fetch_last_notifications(self, limit=3):
         """
         Fetch the last 3 notifications from the database.
         :return: List of notifications (dictionaries).
@@ -83,11 +90,11 @@ class NotificationPopoverPlugin(BasePlugin):
 
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT id, app_name, summary, body, app_icon, hints, timestamp
                 FROM notifications
                 ORDER BY timestamp DESC
-                LIMIT 3
+                LIMIT {limit}
             """)
             rows = cursor.fetchall()
             conn.close()
@@ -97,6 +104,9 @@ class NotificationPopoverPlugin(BasePlugin):
                 notification_id, app_name, summary, body, app_icon, hints, timestamp = (
                     row
                 )
+                if notification_id in self.notification_on_popover:
+                    continue
+
                 notifications.append(
                     {
                         "id": notification_id,
@@ -180,135 +190,231 @@ class NotificationPopoverPlugin(BasePlugin):
             print(f"Error creating pixbuf: {e}")
             return None
 
-    def create_notification_box(self, notification, notification_box):
-        """
-        Display a notification with an icon or thumbnail.
+    def create_notification_box(self, notification):
+        """Create a notification box with an optional image on the left, content on the right, and a close button.
+
         :param notification: Dictionary containing notification details.
-        :param notification_box: The box to which the notification content will be added.
+        :param notification_box: The parent box to which the notification will be added.
         :return: Gtk.Box containing the notification content.
         """
 
-        def load_icon_idle():
-            """Load the icon in an idle callback to avoid blocking the main thread."""
+        def load_icon():
+            """Load the icon/image and handle errors gracefully."""
             app_icon = notification.get("app_icon")
             hints = notification.get("hints", {})
             icon = None
 
             try:
-                # Check if hints contain raw image data
+                # Case 1: Check if hints contain raw image data
                 if "image-data" in hints:
-                    # Extract image data from hints and create a GdkPixbuf
                     width, height, rowstride, has_alpha, pixels = hints["image-data"]
-                    # FIXME: still not working with images from hints
                     pixbuf = self.create_pixbuf_from_pixels(
                         width, height, rowstride, has_alpha, pixels
                     )
-                    icon = Gtk.Image.new_from_pixbuf(pixbuf)
+                    return Gtk.Image.new_from_pixbuf(pixbuf)
 
-                # Otherwise, check if app_icon is a file path
+                # Case 2: Check if app_icon is a valid file path
                 elif app_icon and os.path.isfile(app_icon):
-                    # Generate a thumbnail for the image
                     thumbnail_path = self.load_thumbnail(app_icon)
                     if thumbnail_path:
-                        icon = Gtk.Image.new_from_file(thumbnail_path)
+                        return Gtk.Image.new_from_file(thumbnail_path)
 
-                # Fallback to a default icon if no valid icon is found
-                if not icon:
-                    icon = Gtk.Image.new_from_icon_name("image-missing")
-
-                # Set the icon size and alignment
-                icon.set_pixel_size(64)
-                icon.set_halign(Gtk.Align.START)
-                icon.add_css_class("notification-icon")
-
-                # Append the icon to the notification box
-                GLib.idle_add(notification_box.append, icon)
+                # Fallback to a default icon
+                return Gtk.Image.new_from_icon_name("image-missing")
 
             except Exception as e:
                 # Log the error and fallback to a default icon
                 print(f"Error loading app icon: {e}")
-                GLib.idle_add(
-                    notification_box.append,
-                    Gtk.Image.new_from_icon_name("image-missing"),
-                )
+                return Gtk.Image.new_from_icon_name("image-missing")
 
-        # Create the notification box
-        notification_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+        # Create a horizontal box to hold the image and text content
+        hbox = Gtk.Box.new(
+            Gtk.Orientation.HORIZONTAL, 10
+        )  # 10px spacing between columns
 
-        # Schedule the icon loading in an idle callback
-        GLib.idle_add(load_icon_idle)
+        # Left column: Icon/Image container
+        left_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+        left_box.set_halign(Gtk.Align.START)
+        left_box.set_valign(Gtk.Align.START)
 
-        return notification_box
+        # Right column: Text content container
+        right_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+        right_box.set_halign(Gtk.Align.START)
+
+        # Load the icon/image
+        icon = load_icon()
+        if icon:
+            icon.set_pixel_size(64)  # Set a fixed size for the icon
+            icon.set_halign(Gtk.Align.START)
+            icon.add_css_class("notification-icon")
+            left_box.append(icon)
+
+        # App Name
+        app_label = Gtk.Label(label=f"<b>{notification['app_name']}</b>")
+        app_label.set_use_markup(True)
+        app_label.set_halign(Gtk.Align.START)
+        right_box.append(app_label)
+
+        # Summary
+        summary_label = Gtk.Label(label=notification["summary"])
+        summary_label.set_wrap(True)
+        summary_label.set_halign(Gtk.Align.START)
+        summary_label.add_css_class("heading")
+        right_box.append(summary_label)
+
+        # Body
+        body_label = Gtk.Label(label=notification["body"])
+        body_label.set_wrap(True)
+        body_label.set_max_width_chars(50)
+        body_label.set_halign(Gtk.Align.START)
+        right_box.append(body_label)
+
+        # Timestamp
+        timestamp_label = Gtk.Label(label=notification["timestamp"])
+        timestamp_label.set_halign(Gtk.Align.START)
+        right_box.append(timestamp_label)
+
+        # Add left and right boxes to the horizontal box
+        hbox.append(left_box)
+        hbox.append(right_box)
+
+        # Add a close button
+        close_button = Gtk.Button.new_from_icon_name("window-close-symbolic")
+        close_button.set_tooltip_text("Close Notification")
+        close_button.set_margin_start(10)  # Add spacing between content and button
+        close_button.connect(
+            "clicked", lambda _: self.delete_notification(notification["id"], hbox)
+        )
+        hbox.append(close_button)
+
+        # Add the horizontal box to the notification_box
+        self.vbox.append(hbox)
+        self.notification_on_popover["id"] = notification
+
+        return hbox
+
+    def clear_all_notifications(self, *_):
+        """Clear all notifications from the database and remove them from the UI."""
+        try:
+            # Clear all notifications from the database
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM notifications")
+            conn.commit()
+            conn.close()
+
+            # Remove all notifications from the UI
+            child = self.vbox.get_first_child()
+            while child:
+                next_child = (
+                    child.get_next_sibling()
+                )  # Get the next sibling before removing
+                self.vbox.remove(child)  # Remove the current child
+                child = next_child  # Move to the next child
+
+            print("All notifications cleared.")
+        except Exception as e:
+            print(f"Error clearing notifications: {e}")
+
+    def delete_notification(self, notification_id, notification_box):
+        """Delete a notification from the database and remove it from the UI.
+        If there are older notifications, append the next oldest one to the UI.
+
+        :param notification_id: ID of the notification to delete.
+        :param notification_box: The Gtk.Box containing the notification content.
+        """
+        try:
+            # Delete the notification from the database
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM notifications WHERE id = ?", (notification_id,))
+            conn.commit()
+            conn.close()
+
+            # Remove the notification box from the UI
+            parent = notification_box.get_parent()
+            if parent:
+                parent.remove(notification_box)
+
+            print(f"Notification {notification_id} deleted.")
+
+            # Append the next oldest notification to the UI
+            self.append_next_oldest_notification()
+
+        except Exception as e:
+            print(f"Error deleting notification {notification_id}: {e}")
+
+    def append_next_oldest_notification(self):
+        """Fetch the next oldest notification from the database and append it to the UI."""
+        try:
+            # Fetch the last 3 notifications currently displayed
+            notifications = self.fetch_last_notifications(limit=1)
+            if notifications:
+                notifications = notifications[0]
+            print(notifications)
+
+            # Fetch the next oldest notification from the database
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("""
+                    SELECT id, app_name, summary, body, app_icon, hints, timestamp
+                    FROM notifications
+                    ORDER BY timestamp DESC
+                    LIMIT 1
+                """)
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                # Create a notification dictionary
+                notification = {
+                    "id": row[0],
+                    "app_name": row[1],
+                    "summary": row[2],
+                    "body": row[3],
+                    "app_icon": row[4],
+                    "hints": json.loads(row[5]),
+                    "timestamp": row[6],
+                }
+
+                vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+                vbox.set_margin_top(10)
+                vbox.set_margin_bottom(10)
+                vbox.set_margin_start(10)
+                vbox.set_margin_end(10)
+
+                # Append the notification to the UI
+                self.create_notification_box(notification)
+
+        except Exception as e:
+            print(f"Error appending next oldest notification: {e}")
 
     def open_popover_notifications(self, *_):
-        """Open a popover to display the last 3 notifications."""
+        if not hasattr(self, "popover") or not self.popover:
+            self.popover = Gtk.Popover.new()
+            self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+            self.popover.set_child(self.vbox)
+        child = self.vbox.get_first_child()
+        while child:
+            next_child = (
+                child.get_next_sibling()
+            )  # Get the next sibling before removing
+            self.vbox.remove(child)  # Remove the current child
+            child = next_child  # Move to the next child
+
         notifications = self.fetch_last_notifications()
         if not notifications:
             self.logger.info("No notifications to display.")
             return
 
-        # Create a new popover
-        popover = Gtk.Popover.new()
-        popover.set_has_arrow(False)
-        popover.set_autohide(True)
-
-        # Create a vertical box to hold notification details
-        vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
-        vbox.set_margin_top(10)
-        vbox.set_margin_bottom(10)
-        vbox.set_margin_start(10)
-        vbox.set_margin_end(10)
-
-        # Add each notification to the popover
         for notification in notifications:
-            notification_box = self.create_notification_box(notification, vbox)
+            self.create_notification_box(notification)
 
-            # Notification Details (Vertical Box)
-            details_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+        clear_button = Gtk.Button(label="Clear")
+        clear_button.connect("clicked", lambda _: self.clear_all_notifications)
+        clear_button.set_tooltip_text("Clear All Notifications")
+        clear_button.set_margin_start(10)
+        self.vbox.append(clear_button)
 
-            # App Name
-            app_label = Gtk.Label(label=f"<b>{notification['app_name']}</b>")
-            app_label.set_use_markup(True)
-            app_label.set_halign(Gtk.Align.START)
-            details_box.append(app_label)
-
-            # Summary
-            summary_label = Gtk.Label(label=notification["summary"])
-            summary_label.set_halign(Gtk.Align.START)
-            summary_label.add_css_class("heading")
-            details_box.append(summary_label)
-
-            # Body
-            body_label = Gtk.Label(label=notification["body"])
-            body_label.set_halign(Gtk.Align.START)
-            body_label.set_wrap(True)
-            details_box.append(body_label)
-
-            # Timestamp
-            timestamp_label = Gtk.Label(
-                label=f"<small>{notification['timestamp']}</small>"
-            )
-            timestamp_label.set_use_markup(True)
-            timestamp_label.set_halign(Gtk.Align.START)
-            details_box.append(timestamp_label)
-
-            # Add details box to the notification box
-            notification_box.append(details_box)
-
-            # Separator
-            separator = Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
-            notification_box.append(separator)
-
-            vbox.append(notification_box)
-
-        # Add a close button
-        close_button = Gtk.Button(label="Close")
-        close_button.connect("clicked", lambda _: popover.popdown())
-        vbox.append(close_button)
-
-        # Set the popover content
-        popover.set_child(vbox)
-
-        # Show the popover
-        popover.set_parent(self.notification_button)
-        popover.popup()
+        self.popover.set_parent(self.notification_button)
+        self.popover.popup()
