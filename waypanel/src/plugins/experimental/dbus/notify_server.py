@@ -1,14 +1,11 @@
 import os
 import sqlite3
 import json
-import time
 from pydbus import SessionBus
-from gi.repository import Gtk, GLib, Gio
+from gi.repository import Gtk, GLib, Gio, Pango
 from pydbus.generic import signal
 from gi.repository import Gtk, Gtk4LayerShell as LayerShell
 import toml
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 
 from waypanel.src.plugins.core._base import BasePlugin
 
@@ -261,8 +258,9 @@ class NotificationDaemon(BasePlugin):
             self.logger.info("Do Not Disturb mode is active. Notification suppressed.")
             return
 
-        window_width = 300
-        window_height = 100
+        # FIXME: make this data work with the config
+        window_width = 500
+        window_height = 200
         output_w = self.ipc.get_focused_output()["geometry"]["width"]
         center_popup_position = (output_w - window_width) // 2
         top_popup_position = 32
@@ -320,13 +318,20 @@ class NotificationDaemon(BasePlugin):
         # Summary
         summary_label = Gtk.Label(label=notification["summary"])
         summary_label.add_css_class("notify-server-summary-label")
+        summary_label.set_wrap(True)
         vbox.append(summary_label)
 
-        # Body
+        # Body (with forced text wrapping and ellipsis for long strings)
         body_label = Gtk.Label(label=notification["body"])
         body_label.add_css_class("notify-server-body-label")
-        body_label.set_wrap(True)
-        body_label.set_halign(Gtk.Align.START)
+        body_label.set_wrap(True)  # Enable text wrapping
+        body_label.set_max_width_chars(100)  # Limit the number of characters per line
+        body_label.set_lines(5)
+        body_label.set_ellipsize(
+            Pango.EllipsizeMode.END
+        )  # Add ellipsis (...) for overflow
+        body_label.set_halign(Gtk.Align.CENTER)
+
         vbox.append(body_label)
 
         # Close button
