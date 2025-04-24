@@ -1,14 +1,32 @@
 import os
 import sqlite3
 import json
+import time
 from pydbus import SessionBus
 from gi.repository import Gtk, GLib, Gio
 from pydbus.generic import signal
 from gi.repository import Gtk, Gtk4LayerShell as LayerShell
-from wayfire import WayfireSocket
+import toml
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
+from waypanel.src.plugins.core._base import BasePlugin
 
 
-class NotificationDaemon:
+class ConfigReloadHandler(FileSystemEventHandler):
+    def __init__(self, callback):
+        super().__init__()
+        self.callback = callback
+        self.last_modified = time.time()
+
+    def on_modified(self, event):
+        if event.src_path == os.path.expanduser("~/.config/waypanel/waypanel.toml"):
+            now = time.time()
+            if now - self.last_modified > 1:  # 1 second debounce
+                self.callback()
+
+
+class NotificationDaemon(BasePlugin):
     """
     DBus Notification Daemon implementation with database storage and GTK4 popups.
     """
@@ -17,11 +35,19 @@ class NotificationDaemon:
     NotificationClosed = signal()
     ActionInvoked = signal()
 
-    def __init__(self):
+    def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         # Connect to the session bus
         self.bus = SessionBus()
         self.layer_shell = LayerShell
-        self.ipc = WayfireSocket()
+        self.last_modified = None
+        self.start_config_watcher()
+        self.timeout = (
+            self.config.get("notify", {}).get("server", {}).get("timeout", 10)
+        )
+        self.show_messages = (
+            self.config.get("notify", {}).get("server", {}).get("show_messages", True)
+        )
 
         # Define the DBus introspection XML
         self.introspection_xml = """
@@ -90,6 +116,32 @@ class NotificationDaemon:
         self.app.connect("activate", self.on_activate)
 
         print("Notification daemon started. Listening for notifications...")
+
+    def start_config_watcher(self):
+        event_handler = ConfigReloadHandler(self.reload_config)
+        observer = Observer()
+        observer.schedule(
+            event_handler,
+            path=os.path.expanduser("~/.config/waypanel"),
+            recursive=False,
+        )
+        observer.start()
+
+    def reload_config(self):
+        self.config = self.load_config()
+        self.show_messages = (
+            self.config.get("notify", {}).get("server", {}).get("show_messages", True)
+        )
+        self.timeout = (
+            self.config.get("notify", {}).get("server", {}).get("timeout", 10)
+        )
+
+    def load_config(self):
+        config_path = os.path.expanduser("~/.config/waypanel/waypanel.toml")
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                return toml.load(f)
+        return {}
 
     def _initialize_db(self):
         """
@@ -228,10 +280,30 @@ class NotificationDaemon:
         Show a GTK4 popup for the notification using LayerShell.
         :param notification: Dictionary containing notification details.
         """
+        if not self.show_messages:
+            self.logger.info("Do Not Disturb mode is active. Notification suppressed.")
+            return
+
         window_width = 300
         window_height = 100
         output_w = self.ipc.get_focused_output()["geometry"]["width"]
         center_popup_position = (output_w - window_width) // 2
+        top_popup_position = 32
+        new_width_position = (
+            self.config.get("notify", {})
+            .get("server", {})
+            .get("popup_position_x", False)
+        )
+        new_height_position = (
+            self.config.get("notify", {})
+            .get("server", {})
+            .get("popup_position_y", False)
+        )
+        if new_width_position:
+            center_popup_position = new_width_position
+        if new_height_position:
+            top_popup_position = new_height_position
+
         # Create a new window for the popup
         window = Gtk.Window()
         window.add_css_class("notify-window")
@@ -246,7 +318,7 @@ class NotificationDaemon:
             window, self.layer_shell.Edge.RIGHT, True
         )  # Anchor to the right of the screen
         self.layer_shell.set_margin(
-            window, self.layer_shell.Edge.TOP, 10
+            window, self.layer_shell.Edge.TOP, top_popup_position
         )  # Add margin from the top
         self.layer_shell.set_margin(
             window, self.layer_shell.Edge.RIGHT, center_popup_position
@@ -260,7 +332,7 @@ class NotificationDaemon:
         vbox.set_margin_bottom(10)
         vbox.set_margin_start(10)
         vbox.set_margin_end(10)
-        vbox.add_css_class("notify-vbox")
+        vbox.add_css_class("notify-server-vbox")
 
         # Icon
         if notification["app_icon"]:
@@ -270,11 +342,12 @@ class NotificationDaemon:
 
         # Summary
         summary_label = Gtk.Label(label=notification["summary"])
-        summary_label.add_css_class("heading")
+        summary_label.add_css_class("notify-server-summary-label")
         vbox.append(summary_label)
 
         # Body
         body_label = Gtk.Label(label=notification["body"])
+        body_label.add_css_class("notify-server-body-label")
         body_label.set_wrap(True)
         body_label.set_halign(Gtk.Align.START)
         vbox.append(body_label)
@@ -298,8 +371,8 @@ class NotificationDaemon:
         # Present the window
         window.present()
 
-        # Automatically close the popup after 5 seconds
-        GLib.timeout_add_seconds(5, lambda: window.close())
+        # Automatically close the popup after self.timeout seconds
+        GLib.timeout_add_seconds(self.timeout, lambda: window.close())
 
     def on_activate(self, app):
         """
