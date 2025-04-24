@@ -1,6 +1,9 @@
 import os
 from gi.repository import Gtk, GdkPixbuf
 from PIL import Image
+import urllib.parse
+import cairosvg
+import base64
 
 
 class NotifyUtils:
@@ -50,6 +53,67 @@ class NotifyUtils:
             return pixbuf
         except Exception as e:
             print(f"Error creating pixbuf: {e}")
+            return None
+
+    def svg_to_pixbuf(self, svg_data):
+        """
+        Convert SVG data to a GdkPixbuf.Pixbuf.
+
+        :param svg_data: The raw SVG content as bytes.
+        :return: A GdkPixbuf.Pixbuf object or None if conversion fails.
+        """
+        try:
+            # Convert SVG to PNG using cairosvg
+            png_data = cairosvg.svg2png(bytestring=svg_data)
+
+            # Load the PNG data into a GdkPixbuf
+            loader = GdkPixbuf.PixbufLoader.new_with_type("png")
+            loader.write(png_data)
+            loader.close()
+            return loader.get_pixbuf()
+        except Exception as e:
+            print(f"Error converting SVG to Pixbuf: {e}")
+            return None
+
+    def load_icon_from_data_uri(self, data_uri):
+        """
+        Load an icon from a data URI.
+
+        :param data_uri: The data URI string.
+        :return: A Gtk.Image widget or None if loading fails.
+        """
+        # Step 1: Decode the data URI
+        svg_data = self.decode_data_uri(data_uri)
+        if not svg_data:
+            return None
+
+        # Step 2: Convert SVG to Pixbuf
+        pixbuf = self.svg_to_pixbuf(svg_data)
+        if not pixbuf:
+            return None
+
+        # Step 3: Create a Gtk.Image from the Pixbuf
+        image = Gtk.Image.new_from_pixbuf(pixbuf)
+        return image
+
+    def decode_data_uri(self, data_uri):
+        """
+        Decode a data URI and return the raw content.
+
+        :param data_uri: The data URI string.
+        :return: The decoded content as bytes.
+        """
+        try:
+            # Parse the data URI
+            header, encoded_data = data_uri.split(",", 1)
+            if "base64" in header:
+                # Decode base64-encoded data
+                return base64.b64decode(encoded_data)
+            else:
+                # Percent-decode non-base64 data
+                return urllib.parse.unquote(encoded_data).encode("utf-8")
+        except Exception as e:
+            print(f"Error decoding data URI: {e}")
             return None
 
     def load_thumbnail(self, image_path, max_size=(64, 64)):
@@ -102,6 +166,10 @@ class NotifyUtils:
                 except Exception as e:
                     print(f"Error loading image-data: {e}")
                     # Fallback to other cases
+
+            # Check if the icon is a data URI
+            if app_icon.startswith("data:image/svg+xml"):
+                return self.load_icon_from_data_uri(app_icon)
 
             # Case 2: Check if app_icon is a valid file path
             if self.is_valid_path(app_icon):
