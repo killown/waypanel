@@ -113,6 +113,31 @@ class Panel(Adw.Application):
                 level="error",
             )
 
+    def reload_config(self):
+        """
+        Reload the configuration from the waypanel.toml file and propagate changes to plugins.
+        """
+        try:
+            # Reload the configuration
+            new_config = self.load_config()
+
+            # Update the current configuration
+            self.config.update(new_config)
+
+            # Notify all plugins about the configuration change
+            for plugin_name, plugin_instance in self.plugins.items():
+                if hasattr(plugin_instance, "on_config_reloaded"):
+                    try:
+                        plugin_instance.on_config_reloaded(new_config)
+                    except Exception as e:
+                        self.logger.error(
+                            f"Error notifying plugin '{plugin_name}' of config reload: {e}"
+                        )
+
+            self.logger.info("Configuration reloaded successfully.")
+        except Exception as e:
+            self.logger.error(f"Error reloading configuration: {e}")
+
     def load_config(self):
         if not hasattr(self, "_cached_config"):
             with open(self.waypanel_cfg, "r") as f:
