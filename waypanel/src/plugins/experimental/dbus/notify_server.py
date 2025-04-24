@@ -13,19 +13,6 @@ from watchdog.events import FileSystemEventHandler
 from waypanel.src.plugins.core._base import BasePlugin
 
 
-class ConfigReloadHandler(FileSystemEventHandler):
-    def __init__(self, callback):
-        super().__init__()
-        self.callback = callback
-        self.last_modified = time.time()
-
-    def on_modified(self, event):
-        if event.src_path == os.path.expanduser("~/.config/waypanel/waypanel.toml"):
-            now = time.time()
-            if now - self.last_modified > 1:  # 1 second debounce
-                self.callback()
-
-
 class NotificationDaemon(BasePlugin):
     """
     DBus Notification Daemon implementation with database storage and GTK4 popups.
@@ -41,7 +28,6 @@ class NotificationDaemon(BasePlugin):
         self.bus = SessionBus()
         self.layer_shell = LayerShell
         self.last_modified = None
-        self.start_config_watcher()
         self.timeout = (
             self.config.get("notify", {}).get("server", {}).get("timeout", 10)
         )
@@ -117,17 +103,7 @@ class NotificationDaemon(BasePlugin):
 
         print("Notification daemon started. Listening for notifications...")
 
-    def start_config_watcher(self):
-        event_handler = ConfigReloadHandler(self.reload_config)
-        observer = Observer()
-        observer.schedule(
-            event_handler,
-            path=os.path.expanduser("~/.config/waypanel"),
-            recursive=False,
-        )
-        observer.start()
-
-    def reload_config(self):
+    def notify_reload_config(self):
         self.config = self.load_config()
         self.show_messages = (
             self.config.get("notify", {}).get("server", {}).get("show_messages", True)
@@ -280,6 +256,7 @@ class NotificationDaemon(BasePlugin):
         Show a GTK4 popup for the notification using LayerShell.
         :param notification: Dictionary containing notification details.
         """
+        self.notify_reload_config()
         if not self.show_messages:
             self.logger.info("Do Not Disturb mode is active. Notification suppressed.")
             return
