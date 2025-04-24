@@ -1,6 +1,8 @@
 from gi.repository import GLib
 from wayfire import WayfireSocket
 
+from waypanel.src.plugins.core._base import BasePlugin
+
 ENABLE_PLUGIN = True
 
 
@@ -13,11 +15,9 @@ def initialize_plugin(panel_instance):
         return WindowRulesPlugin(panel_instance)
 
 
-class WindowRulesPlugin:
+class WindowRulesPlugin(BasePlugin):
     def __init__(self, panel_instance):
-        self.obj = panel_instance
-        self.logger = panel_instance.logger
-        self.sock = WayfireSocket()
+        super().__init__(panel_instance)
 
         # Initialize state variables
         self.fullscreen_views = {}
@@ -27,7 +27,7 @@ class WindowRulesPlugin:
 
     def subscribe_to_events(self):
         if "event_manager" not in self.obj.plugin_loader.plugins:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 "Event Manager Plugin is not loaded. Cannot subscribe to events."
             )
             return
@@ -57,13 +57,13 @@ class WindowRulesPlugin:
                 self.on_scale_deactivated()
 
         except Exception as e:
-            self.logger.error_handler.handle(f"Error handling scale event: {e}")
+            self.logger.error(f"Error handling scale event: {e}")
 
     def set_focused_view_fullscreen_false(self):
         # the panels will disappear if the focused view is fullscreen
         # set_view_fullscreen False will make it appear then
         # we can restore the original state after scale is deactivated
-        focused_view = self.sock.get_focused_view()
+        focused_view = self.ipc.get_focused_view()
 
         # Check if the focused view exists and is in fullscreen mode
         if focused_view and focused_view.get("fullscreen"):
@@ -74,7 +74,7 @@ class WindowRulesPlugin:
 
             # Exit fullscreen
             def run_once():
-                self.sock.set_view_fullscreen(view_id, False)
+                self.ipc.set_view_fullscreen(view_id, False)
                 return False
 
             GLib.idle_add(run_once)
@@ -82,14 +82,14 @@ class WindowRulesPlugin:
     def restore_fullscreen_state(self):
         for view_id, was_fullscreen in list(self.fullscreen_views.items()):
             if was_fullscreen:
-                focused_view_id = self.sock.get_focused_view()["id"]
+                focused_view_id = self.ipc.get_focused_view()["id"]
 
                 # don't restore the state if the focus is not the fullscreen
                 if view_id != focused_view_id:
-                    self.sock.set_focus(focused_view_id)
+                    self.ipc.set_focus(focused_view_id)
                 else:
                     # Restore fullscreen state
-                    self.sock.set_view_fullscreen(view_id, True)
+                    self.ipc.set_view_fullscreen(view_id, True)
 
                 # Remove from tracking
                 del self.fullscreen_views[view_id]
@@ -98,10 +98,10 @@ class WindowRulesPlugin:
         try:
             self.set_focused_view_fullscreen_false()
         except Exception as e:
-            self.logger.error_handler.handle(f"Error handling scale activation: {e}")
+            self.logger.error(f"Error handling scale activation: {e}")
 
     def on_scale_deactivated(self):
         try:
             self.restore_fullscreen_state()
         except Exception as e:
-            self.logger.error_handler.handle(f"Error handling scale deactivation: {e}")
+            self.logger.error(f"Error handling scale deactivation: {e}")
