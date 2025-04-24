@@ -73,8 +73,11 @@ class SystemMonitorPlugin(BasePlugin):
         battery_status = self.get_battery_status()
         focused_view = self.last_toplevel_focused_view()
         process_usage = None
+        process_disk_usage = None
+
         if focused_view:
             process_usage = self.get_process_usage(focused_view["pid"])
+            process_disk_usage = self.get_process_disk_usage(focused_view["pid"])
 
         # Clear existing rows
         child = self.list_box.get_first_child()
@@ -94,13 +97,26 @@ class SystemMonitorPlugin(BasePlugin):
             )
         self.add_list_box_row("Network", network_usage)
         self.add_list_box_row("Battery", battery_status)
+
         if focused_view:
             self.add_list_box_row(
                 "Exec", self.get_process_executable(focused_view["pid"])
             )
             self.add_list_box_row("Win ID", focused_view["id"])
             self.add_list_box_row("Win PID", focused_view["pid"])
-            self.add_list_box_row("Win Memory Usage", process_usage["memory_usage"])
+            if process_usage:
+                self.add_list_box_row("Win Memory Usage", process_usage["memory_usage"])
+            if process_disk_usage:
+                self.add_list_box_row("Win Disk Read", process_disk_usage["read_bytes"])
+                self.add_list_box_row(
+                    "Win Disk Write", process_disk_usage["write_bytes"]
+                )
+                self.add_list_box_row(
+                    "Win Disk Read Count", str(process_disk_usage["read_count"])
+                )
+                self.add_list_box_row(
+                    "Win Disk Write Count", str(process_disk_usage["write_count"])
+                )
 
         # Return True to keep the timeout active
         return self.popover_system and self.popover_system.is_visible()
@@ -147,6 +163,50 @@ class SystemMonitorPlugin(BasePlugin):
             percent = battery.percent
             return f"{percent}% ({plugged})"
         return "No battery"
+
+    def get_process_disk_usage(self, pid):
+        """
+        Get the disk I/O usage for a given process PID using psutil.
+
+        Args:
+            pid (int): The process ID to monitor.
+
+        Returns:
+            dict: A dictionary containing 'read_bytes', 'write_bytes',
+                  'read_count', and 'write_count' for the given PID,
+                  or None if the PID is invalid or inaccessible.
+        """
+        try:
+            # Check if the PID exists
+            if not psutil.pid_exists(pid):
+                print(f"No process found with PID: {pid}")
+                return None
+
+            # Get the process object
+            process = psutil.Process(pid)
+
+            # Retrieve I/O counters for the process
+            io_counters = process.io_counters()
+
+            # Extract disk I/O statistics
+            disk_usage = {
+                "read_bytes": self.format_bytes(io_counters.read_bytes),
+                "write_bytes": self.format_bytes(io_counters.write_bytes),
+                "read_count": io_counters.read_count,
+                "write_count": io_counters.write_count,
+            }
+
+            return disk_usage
+
+        except psutil.NoSuchProcess:
+            print(f"Process with PID {pid} no longer exists.")
+            return None
+        except psutil.AccessDenied:
+            print(f"Access denied for process with PID: {pid}")
+            return None
+        except Exception as e:
+            print(f"Error retrieving disk usage for PID {pid}: {e}")
+            return None
 
     def get_process_usage(self, pid):
         """
@@ -209,6 +269,45 @@ class SystemMonitorPlugin(BasePlugin):
             # Launch the terminal with htop
             subprocess.Popen(full_command)
             print(f"Launched {terminal_command[0]} with htop monitoring PID {pid}.")
+            return True
+        except Exception as e:
+            print(f"Error launching terminal: {e}")
+            return False
+
+    def open_terminal_with_iotop(self, pid):
+        """
+        Open a terminal (kitty or alacritty) with iotop monitoring the specified PID.
+
+        Args:
+            pid (int): The process ID to monitor with iotop.
+
+        Returns:
+            bool: True if the terminal was successfully opened, False otherwise.
+        """
+        # Check if kitty is installed
+        if shutil.which("kitty"):
+            terminal_command = ["kitty"]
+        # Fallback to alacritty if kitty is not available
+        elif shutil.which("alacritty"):
+            terminal_command = ["alacritty"]
+        else:
+            print("Error: Neither kitty nor alacritty is installed.")
+            return False
+
+        # Construct the command to run htop with the given PID
+        htop_command = ["sudo", "iotop", "-p", str(pid)]
+        self.utils.notify_send(
+            "iotop command",
+            f"iotop requires permissions to monitor disk usage from the given PID:{pid}",
+        )
+        # Combine the terminal command with iotop command
+        full_command = terminal_command + ["-e"] + htop_command
+
+        try:
+            # Launch the terminal with iotop
+
+            subprocess.Popen(full_command)
+            print(f"Launched {terminal_command[0]} with iotop monitoring PID {pid}.")
             return True
         except Exception as e:
             print(f"Error launching terminal: {e}")
@@ -392,6 +491,17 @@ class SystemMonitorPlugin(BasePlugin):
                 lambda _, pid=last_view_pid: self.open_terminal_with_htop(pid),
             )
 
+    def create_iotop_gesture_for_focused_view_pid(self, hbox):
+        focused_view = self.last_toplevel_focused_view()
+        if focused_view is not None:
+            last_view_pid = focused_view["pid"]
+            create_gesture = self.plugins["gestures_setup"].create_gesture
+            create_gesture(
+                hbox,
+                1,
+                lambda _, pid=last_view_pid: self.open_terminal_with_iotop(pid),
+            )
+
     def create_gesture_for_focused_view_id(self, hbox):
         focused_view = self.last_toplevel_focused_view()
         if focused_view is not None:
@@ -411,6 +521,8 @@ class SystemMonitorPlugin(BasePlugin):
             self.create_gesture_for_focused_view_pid(hbox)
         if "Win ID" in name:
             self.create_gesture_for_focused_view_id(hbox)
+        if "Win Disk" in name:
+            self.create_iotop_gesture_for_focused_view_pid(hbox)
 
         hbox.set_halign(Gtk.Align.FILL)
         hbox.set_margin_top(5)
