@@ -211,6 +211,7 @@ scale {
   color: #89a899;
 }
 
+
 /*this is for menubuttons from systray menus*/
 .image-button {
   -gtk-icon-size: 16px;
@@ -248,14 +249,24 @@ scale {
 }
 
 .notify-window{
-  background-color: #282828;
+  background-color: transparent;
   color: #fff;
 }
 
+.notify-server-vbox{
+  background-color: #282828;
+  color: #ebdbb2;
+  padding: 20px;
+    font-weight: bold;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    sans-serif;
+  font-size: 16px;
 
+}
 
 /*prevent the popover menu icon from being selected*/
-.applications-menu-icon:focus {
+.app-lancuner-menu-icon:focus {
     outline: none;
     background-color: transparent;
 }
@@ -269,14 +280,19 @@ scale {
   font-size: 14px;
 }
 
-.app-launcher-popover {
-  border-color: shade(@dark_bg_color, 0.8);
+.app-launcher-popover.background {
+  border-color: transparent;
   background-image: none;
   background-color: @dark_bg_color;
   color: @dark_fg_color;
 }
 
+
 .app-launcher-flowbox {
+  background-color: transparent;
+}
+
+.app-launcher-main-box {
   background-color: transparent;
 }
 
