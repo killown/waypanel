@@ -2,11 +2,11 @@ import os
 import sqlite3
 import json
 from pydbus import SessionBus
-from gi.repository import Gtk, GLib, Gio, Pango
+from gi.repository import Gtk, GLib, Gio, Pango, GdkPixbuf
 from pydbus.generic import signal
 from gi.repository import Gtk, Gtk4LayerShell as LayerShell
 import toml
-
+from waypanel.src.plugins.experimental.dbus.utils import NotifyUtils
 from waypanel.src.plugins.core._base import BasePlugin
 
 
@@ -25,6 +25,7 @@ class NotificationDaemon(BasePlugin):
         self.bus = SessionBus()
         self.layer_shell = LayerShell
         self.last_modified = None
+        self.notify_utils = NotifyUtils()
         self.timeout = (
             self.config.get("notify", {}).get("server", {}).get("timeout", 10)
         )
@@ -309,9 +310,8 @@ class NotificationDaemon(BasePlugin):
         vbox.set_margin_end(10)
         vbox.add_css_class("notify-server-vbox")
 
-        # Icon
-        if notification["app_icon"]:
-            icon = Gtk.Image.new_from_file(notification["app_icon"])
+        icon = self.notify_utils.load_icon(notification)
+        if icon:
             icon.set_pixel_size(48)
             vbox.append(icon)
 

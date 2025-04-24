@@ -4,7 +4,7 @@ import asyncio
 import json
 from PIL import Image
 from gi.repository import Gtk, GdkPixbuf
-from pydbus.proxy import GLib
+from waypanel.src.plugins.experimental.dbus.utils import NotifyUtils
 from waypanel.src.plugins.core._base import BasePlugin
 from waypanel.src.plugins.experimental.dbus.notify_server import (
     NotificationDaemon,
@@ -60,7 +60,8 @@ class NotificationPopoverPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.logger = self.obj.logger
-        run_server_in_background(panel_instance)
+        self.notify_utils = NotifyUtils()
+        self.notification_server = run_server_in_background(panel_instance)
         # Create a vertical box to hold notification details
         self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
         self.vbox.set_margin_top(10)
@@ -160,81 +161,15 @@ class NotificationPopoverPlugin(BasePlugin):
                         "summary": summary,
                         "body": body,
                         "app_icon": app_icon,
-                        # "hints": json.loads(hints)
-                        # if hints
-                        # else {},  # Deserialize hints
+                        "hints": json.loads(hints)
+                        if hints
+                        else {},  # Deserialize hints
                         "timestamp": timestamp,
                     }
                 )
             return notifications
         except Exception as e:
-            self.logger.error(
-                f"Error fetching notifications from database: {e}"
-            )
-
-    def load_thumbnail(self, image_path, max_size=(64, 64)):
-        """
-        Load and resize an image to create a thumbnail.
-        :param image_path: Path to the original image file.
-        :param max_size: Maximum dimensions (width, height) for the thumbnail.
-        :return: Path to the temporary thumbnail file.
-        """
-        try:
-            # Open the image using Pillow
-            with Image.open(image_path) as img:
-                # Resize the image while maintaining aspect ratio
-                img.thumbnail(max_size)
-
-                # Create a temporary file to store the thumbnail
-                thumbnail_path = "/tmp/thumbnail.png"
-                img.save(thumbnail_path, format="PNG")
-
-            return thumbnail_path
-        except Exception as e:
-            print(f"Error creating thumbnail: {e}")
-            return None
-
-    def create_pixbuf_from_pixels(self, width, height, rowstride, has_alpha, pixels):
-        """
-        Create a GdkPixbuf.Pixbuf from raw pixel data.
-        :param width: Width of the image in pixels.
-        :param height: Height of the image in pixels.
-        :param rowstride: Number of bytes per row.
-        :param has_alpha: Whether the image has an alpha channel (True/False).
-        :param pixels: Raw pixel data (list, array, or bytes).
-        :return: GdkPixbuf.Pixbuf object.
-        """
-        try:
-            # Validate and convert pixels to bytes
-            if isinstance(pixels, bytes):
-                pixel_data = pixels
-            elif isinstance(pixels, (list, tuple)):
-                # Ensure all values are integers in the range 0–255
-                pixel_data = bytes(pixels)
-            elif isinstance(pixels, str):
-                # Parse the string into a list of integers
-                pixel_data = bytes([int(x.strip()) for x in pixels.split(",")])
-            else:
-                raise ValueError(
-                    "Unsupported type for pixels. Expected bytes, list, tuple, or string."
-                )
-
-            # Create the GdkPixbuf
-            pixbuf = GdkPixbuf.Pixbuf.new_from_data(
-                pixel_data,
-                GdkPixbuf.Colorspace.RGB,
-                has_alpha,
-                8,  # Bits per sample
-                width,
-                height,
-                rowstride,
-                None,  # Destroy function (None if no cleanup is needed)
-            )
-            return pixbuf
-
-        except Exception as e:
-            print(f"Error creating pixbuf: {e}")
-            return None
+            self.logger.error(f"Error fetching notifications from database: {e}")
 
     def create_notification_box(self, notification):
         """Create a notification box with an optional image on the left, content on the right, and a close button.
@@ -243,33 +178,17 @@ class NotificationPopoverPlugin(BasePlugin):
         :param notification_box: The parent box to which the notification will be added.
         :return: Gtk.Box containing the notification content.
         """
+        body_max_width_chars = (
+            self.config.get("notify", {})
+            .get("client", {})
+            .get("body_max_width_chars", 50)
+        )
 
-        def load_icon():
-            """Load the icon/image and handle errors gracefully."""
-            app_icon = notification.get("app_icon")
-            hints = notification.get("hints", {})
-            try:
-                # Case 1: Check if hints contain raw image data
-                if "image-data" in hints:
-                    width, height, rowstride, has_alpha, pixels = hints["image-data"]
-                    pixbuf = self.create_pixbuf_from_pixels(
-                        width, height, rowstride, has_alpha, pixels
-                    )
-                    return Gtk.Image.new_from_pixbuf(pixbuf)
-
-                # Case 2: Check if app_icon is a valid file path
-                elif app_icon and os.path.isfile(app_icon):
-                    thumbnail_path = self.load_thumbnail(app_icon)
-                    if thumbnail_path:
-                        return Gtk.Image.new_from_file(thumbnail_path)
-
-                # Fallback to a default icon
-                return Gtk.Image.new_from_icon_name("image-missing")
-
-            except Exception as e:
-                # Log the error and fallback to a default icon
-                print(f"Error loading app icon: {e}")
-                return Gtk.Image.new_from_icon_name("image-missing")
+        notification_icon_size = (
+            self.config.get("notify", {})
+            .get("client", {})
+            .get("notification_icon_size", 64)
+        )
 
         # Create a horizontal box to hold the image and text content
         hbox = Gtk.Box.new(
@@ -286,9 +205,9 @@ class NotificationPopoverPlugin(BasePlugin):
         right_box.set_halign(Gtk.Align.START)
 
         # Load the icon/image
-        icon = load_icon()
+        icon = self.notify_utils.load_icon(notification)
         if icon:
-            icon.set_pixel_size(64)  # Set a fixed size for the icon
+            icon.set_pixel_size(notification_icon_size)  # Set a fixed size for the icon
             icon.set_halign(Gtk.Align.START)
             icon.add_css_class("notification-icon")
             left_box.append(icon)
@@ -309,7 +228,7 @@ class NotificationPopoverPlugin(BasePlugin):
         # Body
         body_label = Gtk.Label(label=notification["body"])
         body_label.set_wrap(True)
-        body_label.set_max_width_chars(50)
+        body_label.set_max_width_chars(body_max_width_chars)
         body_label.set_halign(Gtk.Align.START)
         right_box.append(body_label)
 
@@ -436,7 +355,16 @@ class NotificationPopoverPlugin(BasePlugin):
     def open_popover_notifications(self, *_):
         if not hasattr(self, "popover") or not self.popover:
             self.popover = Gtk.Popover.new()
-
+            popover_width = (
+                self.config.get("notify", {})
+                .get("client", {})
+                .get("popover_width", 500)
+            )
+            popover_height = body_max_width_chars = (
+                self.config.get("notify", {})
+                .get("client", {})
+                .get("popover_height", 300)
+            )
             # Main vertical box for the popover content
             main_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
             main_vbox.set_margin_top(10)
@@ -456,8 +384,10 @@ class NotificationPopoverPlugin(BasePlugin):
             scrolled_window = Gtk.ScrolledWindow()
             scrolled_window.set_child(self.vbox)
             scrolled_window.set_vexpand(True)  # Ensure the scroll area expands
+            scrolled_window.set_propagate_natural_width(True)
             main_vbox.append(scrolled_window)
-            main_vbox.set_size_request(500, 380)
+            # FIXME: make this doesn't require panel restart
+            main_vbox.set_size_request(popover_width, popover_height)
 
             # Bottom controls container
             bottom_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
