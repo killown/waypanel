@@ -18,6 +18,8 @@ class BasePlugin:
         self.utils: Any = panel_instance.utils
         self.update_widget: Any = self.utils.update_widget
         self.config: Any = panel_instance.config
+        self.save_config: Any = panel_instance.save_config
+        self.reload_config: Any = panel_instance.reload_config
         self.ipc: Any = panel_instance.ipc
         self.dependencies: Any = getattr(self, "DEPS", [])
         self.layer_shell: Any = create_panel.LayerShell
