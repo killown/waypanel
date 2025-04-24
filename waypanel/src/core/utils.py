@@ -76,30 +76,88 @@ class Utils(Adw.Application):
         )
 
     def notify_send(self, title, message):
-        bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-        bus.call_sync(
-            "org.freedesktop.Notifications",
-            "/org/freedesktop/Notifications",
-            "org.freedesktop.Notifications",
-            "Notify",
-            GLib.Variant(
-                "(susssasa{sv}i)",
-                (
-                    "waypanel",  # App name
-                    0,  # Notification ID (0 = new)
-                    "",  # Icon (leave empty)
-                    title,  # Summary (title)
-                    message,  # Body
-                    [],  # Actions (none)
-                    {},  # Hints (e.g., urgency)
-                    5000,  # Timeout (ms)
+        """
+        Send a notification asynchronously using DBus to avoid blocking the main thread.
+
+        Args:
+            title (str): The title (summary) of the notification.
+            message (str): The body of the notification.
+        """
+
+        def on_notification_sent(obj, result, *args):
+            """
+            Callback function to handle the result of the asynchronous DBus call.
+            """
+            try:
+                # Finish the asynchronous call
+                obj.call_finish(result)
+                print("Notification sent successfully.")
+            except Exception as e:
+                print(f"Error sending notification: {e}")
+
+        # Get the session bus asynchronously
+        Gio.bus_get(Gio.BusType.SESSION, None, self._on_bus_acquired, (title, message))
+
+    def _on_bus_acquired(self, source, result, user_data):
+        """
+        Callback function when the session bus is acquired.
+
+        Args:
+            source: The Gio.DBusConnection object.
+            result: The result of the asynchronous bus acquisition.
+            user_data: Tuple containing the title and message for the notification.
+        """
+        try:
+            # Complete the bus acquisition
+            bus = Gio.bus_get_finish(result)
+
+            # Extract title and message from user_data
+            title, message = user_data
+
+            # Make the asynchronous DBus call to send the notification
+            bus.call(
+                "org.freedesktop.Notifications",
+                "/org/freedesktop/Notifications",
+                "org.freedesktop.Notifications",
+                "Notify",
+                GLib.Variant(
+                    "(susssasa{sv}i)",
+                    (
+                        "waypanel",  # App name
+                        0,  # Notification ID (0 = new)
+                        "",  # Icon (leave empty)
+                        title,  # Summary (title)
+                        message,  # Body
+                        [],  # Actions (none)
+                        {},  # Hints (e.g., urgency)
+                        5000,  # Timeout (ms)
+                    ),
                 ),
-            ),
-            None,
-            Gio.DBusCallFlags.NONE,
-            -1,
-            None,
-        )
+                None,  # Reply type (None for no reply)
+                Gio.DBusCallFlags.NONE,
+                -1,  # Timeout in milliseconds (-1 for default)
+                None,  # Cancellable (None for no cancellation)
+                self._on_notification_sent,  # Callback function
+                None,  # User data for the callback
+            )
+        except Exception as e:
+            print(f"Error acquiring session bus: {e}")
+
+    def _on_notification_sent(self, source, result, user_data):
+        """
+        Callback function to handle the result of the asynchronous notification call.
+
+        Args:
+            source: The Gio.DBusConnection object.
+            result: The result of the asynchronous call.
+            user_data: Optional user data passed to the callback.
+        """
+        try:
+            # Finish the asynchronous call
+            source.call_finish(result)
+            print("Notification sent successfully.")
+        except Exception as e:
+            print(f"Error sending notification: {e}")
 
     def run_cmd(self, cmd):
         """
