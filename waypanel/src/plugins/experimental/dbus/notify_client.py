@@ -72,6 +72,10 @@ class NotificationPopoverPlugin(BasePlugin):
         self.notification_button = Gtk.Button.new_from_icon_name("liteupdatesnotify")
         self.notification_button.set_tooltip_text("View Recent Notifications")
         self.notification_button.connect("clicked", self.open_popover_notifications)
+        # Initialize the Do Not Disturb switch
+        self.dnd_switch = Gtk.Switch()
+        self.dnd_switch.set_active(False)
+        self.dnd_switch.connect("state-set", self.on_dnd_toggled)
 
         # Define the main widget and action
         self.main_widget = (self.notification_button, "append")
@@ -432,8 +436,55 @@ class NotificationPopoverPlugin(BasePlugin):
     def open_popover_notifications(self, *_):
         if not hasattr(self, "popover") or not self.popover:
             self.popover = Gtk.Popover.new()
+
+            # Main vertical box for the popover content
+            main_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+            main_vbox.set_margin_top(10)
+            main_vbox.set_margin_bottom(10)
+            main_vbox.set_margin_start(10)
+            main_vbox.set_margin_end(10)
+            # Clear All button
+            clear_button = Gtk.Button(label="Clear")
+            clear_button.connect("clicked", lambda _: self.clear_all_notifications())
+            clear_button.set_tooltip_text("Clear All Notifications")
+            clear_button.set_margin_start(10)
+            main_vbox.append(clear_button)
+
+            # Notification content area (scrollable)
             self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
-            self.popover.set_child(self.vbox)
+            self.vbox.set_vexpand(True)  # Allow the vbox to expand and fill space
+            scrolled_window = Gtk.ScrolledWindow()
+            scrolled_window.set_child(self.vbox)
+            scrolled_window.set_vexpand(True)  # Ensure the scroll area expands
+            main_vbox.append(scrolled_window)
+            main_vbox.set_size_request(500, 380)
+
+            # Bottom controls container
+            bottom_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+            bottom_box.set_margin_top(10)  # Add spacing above the bottom controls
+
+            # Do Not Disturb switch
+            self.dnd_switch = Gtk.Switch()
+            self.dnd_switch.set_active(False)
+            self.dnd_switch.connect("state-set", self.on_dnd_toggled)
+
+            dnd_label = Gtk.Label(label="Do Not Disturb")
+            dnd_label.set_halign(Gtk.Align.START)
+            dnd_label.set_margin_end(10)
+
+            dnd_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 5)
+            dnd_box.append(dnd_label)
+            dnd_box.append(self.dnd_switch)
+
+            bottom_box.append(dnd_box)
+
+            # Add the bottom box to the main container
+            main_vbox.append(bottom_box)
+
+            # Set the main container as the popover's child
+            self.popover.set_child(main_vbox)
+
+        # Clear existing children from vbox
         child = self.vbox.get_first_child()
         while child:
             next_child = (
@@ -442,6 +493,7 @@ class NotificationPopoverPlugin(BasePlugin):
             self.vbox.remove(child)  # Remove the current child
             child = next_child  # Move to the next child
 
+        # Fetch and display notifications
         notifications = self.fetch_last_notifications()
         if not notifications:
             self.logger.info("No notifications to display.")
@@ -450,30 +502,7 @@ class NotificationPopoverPlugin(BasePlugin):
         for notification in notifications:
             self.create_notification_box(notification)
 
-        clear_button = Gtk.Button(label="Clear")
-        clear_button.connect("clicked", lambda _: self.clear_all_notifications)
-        clear_button.set_tooltip_text("Clear All Notifications")
-        clear_button.set_margin_start(10)
-        self.vbox.append(clear_button)
-        # Add Do Not Disturb switch
-        self.dnd_switch = Gtk.Switch()
-        self.dnd_switch.set_active(False)
-        self.dnd_switch.connect("state-set", self.on_dnd_toggled)
-
-        # Add a label for the switch
-        dnd_label = Gtk.Label(label="Do Not Disturb")
-        dnd_label.set_halign(Gtk.Align.START)
-        dnd_label.set_margin_end(10)
-
-        # Create a horizontal box to hold the label and switch
-        dnd_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 5)
-        dnd_box.append(dnd_label)
-        dnd_box.append(self.dnd_switch)
-
-        # Add the Do Not Disturb box to the vertical layout
-        self.vbox.append(dnd_box)
-
-        # Initialize the state based on the current server setting
+        # Initialize DND state
         self.update_dnd_switch_state()
 
         self.popover.set_parent(self.notification_button)
