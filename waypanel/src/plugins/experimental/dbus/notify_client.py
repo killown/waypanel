@@ -29,11 +29,16 @@ def initialize_plugin(panel_instance):
         return NotificationPopoverPlugin(panel_instance)
 
 
-def run_server_in_background():
-    """Start the clipboard server without blocking main thread"""
+def run_server_in_background(panel_instance):
+    """Start the notification server without blocking the main thread.
+
+    Args:
+        panel_instance: The main panel instance to pass to the NotificationDaemon.
+    """
 
     async def _run_server():
-        server = NotificationDaemon()
+        # Pass the panel_instance to the NotificationDaemon
+        server = NotificationDaemon(panel_instance)
         await server.run()
         print("Notification server running in background")
         while True:  # Keep alive
@@ -45,18 +50,17 @@ def run_server_in_background():
 
     import threading
 
+    # Start the thread with daemon=True to ensure it exits when the main program exits
     thread = threading.Thread(target=_start_loop, daemon=True)
     thread.start()
     return thread
-
-
-server_thread = run_server_in_background()
 
 
 class NotificationPopoverPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.logger = self.obj.logger
+        run_server_in_background(panel_instance)
         # Create a vertical box to hold notification details
         self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
         self.vbox.set_margin_top(10)
