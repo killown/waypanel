@@ -1,20 +1,85 @@
 [cmd]
 
+[plugins]
+list = "taskbar clock dockbar event_manager gestures_setup top_panel scale_rules soundcard_menu system_monitor next_workspace_with_views volume_scroll bookmarks mullvad notes bluetooth_menu clipboard_menu notify_client menu_setup places window_title app_launcher system_dashboard window_controls"
+disabled = "plugin_manager"
+
+[taskbar]
+orientation = "h"
+class_style = "taskbar-buttons"
+
+[main_panel]
+type = "top"
+
+[dockbar_panel]
+panel = "left"
+
+[plugins.clock]
+position = "right"
+priority = 1
+
+[dockbar.librewolf]
+cmd = "librewolf"
+icon = "librewolf"
+wclass = "librewolf"
+desktop_file = "librewolf"
+name = "librewolf"
+initial_title = "librewolf"
+
+[dockbar.nautilus]
+cmd = "nautilus --new-window"
+icon = "nautilus"
+wclass = "org.gnome.nautilus"
+initial_title = "org.gnome.nautilus"
+desktop_file = "org.gnome.Nautilus.desktop"
+name = "Nautilus"
+
+[dockbar.steam]
+cmd = "mullvad-exclude gtk-launch steam.desktop"
+icon = "steam"
+wclass = "steam"
+desktop_file = "steam.desktop"
+name = "Steam"
+
+[dockbar.hexchat]
+cmd = "hexchat"
+icon = "io.github.Hexchat"
+wclass = "hexchat"
+desktop_file = "io.github.hexchat.desktop"
+name = "Hexchat"
+initial_title = ""
+
+[dockbar.chromium]
+cmd = "chromium"
+icon = "chromium"
+wclass = "chromium"
+desktop_file = "chromium"
+name = "chromium"
+initial_title = "chromium"
+
+[dockbar.thunderbird]
+cmd = "thunderbird"
+icon = "thunderbird"
+wclass = "thunderbird"
+desktop_file = "thunderbird.desktop"
+name = "Thunderbird"
+
 [panel.bottom]
-enabled = "True"
+enabled = true
 position = "BOTTOM"
-Exclusive = "False"
+Exclusive = false
 size = "42"
 
 [panel.left]
-enabled = "True"
+enabled = true
 position = "BOTTOM"
-Exclusive = "False"
+Exclusive = false
 size = "64"
 
 [panel.right]
+enabled = true
 position = "BOTTOM"
-Exclusive = "False"
+Exclusive = false
 size = "42"
 
 [panel.top]
@@ -25,22 +90,24 @@ clipboard_icon = "edit-paste"
 soundcard_icon = "audio-volume-high"
 system_icon = "system-shutdown"
 bluetooth_icon = "bluetooth"
+notes_icon = "stock_notes"
+notes_icon_delete = "delete"
 position = "TOP"
-Exclusive = "True"
+Exclusive = true
 size = "12"
 max_note_lenght = 100
 
 [panel.top_background]
 position = "BOTTOM"
-Exclusive = "False"
+Exclusive = false
 size = "42"
 
 [panel.views]
-tilling = "True"
-maximize_views_on_expo = "True"
+tilling = true
+maximize_views_on_expo = true
 
 [panel.window_title_lenght]
-size = "48"
+size = 48
 
 [panel.clipboard]
 max_items = "100"
@@ -52,46 +119,28 @@ codium-insiders-url-handler = "vscodium"
 wlroots = "wayland"
 com = "{'obsproject': {'Studio': 'com.obsproject.Studio'}}"
 
-[menu.icons]
-Wayfire = "dialog-scripts"
-
-[menu.VPN]
-[[menu.VPN.item1]]
-name = "Change Server"
-cmd = "python /home/neo/.config/waypanel/scripts/mullvad-random-br.py"
-
-[[menu.VPN.item2]]
-name = "Connection Status"
-cmd = "python /home/neo/.config/waypanel/scripts/mullvad-status.py"
-
-[[menu.VPN.item3]]
-name = "Mullvad Disconnect"
-cmd = "python /home/neo/.config/waypanel/scripts/mullvad-disconnect.py"
-
-[[menu.VPN.item4]]
-name = "Mullvad Connect"
-cmd = "python /home/neo/.config/waypanel/scripts/mullvad-connect.py"
-
 [menu.Wayfire]
-[[menu.Wayfire.item0]]
-name = "Turn ON/OFF DP-2"
-cmd = "python /home/neo/Scripts/wayfire/output_dp_2.py"
+icon = "dialog-scripts"
 
-[[menu.Wayfire.item1]]
-name = "test"
-cmd = "test"
+[[menu.Wayfire.items]]
+name = "Patch wayfire and install"
+cmd = "kitty -e bash -c \"cd ~/Git/wayfire/; ~/Scripts/wayfire/patch.apply; ~/Scripts/wayfire/install\""
 
-[[menu.Wayfire.item2]]
+[[menu.Wayfire.items]]
 name = "Start Wayfire Debug"
 cmd = "/home/neo/.local/wayfire/debug-build/bin/wayfire -d &>/tmp/wayfire-debug.log"
 
-[[menu.Wayfire.item5]]
+[[menu.Wayfire.items]]
 name = "Update Waypanel"
 cmd = "cd /home/neo/Git/waypanel/ ; pip install .; notify-send waypanel updated!"
 
+[[menu.Wayfire.items]]
+name = "Wayland Color Picker"
+cmd = "wl-color-picker"
+
 [folders.Home]
 name = "Home"
-path = "/home/my_home_user"
+path = "/home/neo"
 filemanager = "nautilus"
 icon = "folder-home-symbolic"
 
@@ -131,47 +180,8 @@ path = ".config/wayfire"
 filemanager = "nautilus"
 icon = "configuration_section-symbolic"
 
-[dockbar.librewolf]
-cmd = "librewolf"
-icon = "librewolf"
-wclass = "librewolf"
-desktop_file = "librewolf"
-name = "librewolf"
-initial_title = "librewolf"
-
-[dockbar.nautilus]
-cmd = "nautilus --new-window"
-icon = "nautilus"
-wclass = "org.gnome.nautilus"
-initial_title = "org.gnome.nautilus"
-desktop_file = "org.gnome.Nautilus.desktop"
-name = "Nautilus"
-
-[dockbar.steam]
-cmd = "mullvad-exclude gtk-launch steam.desktop"
-icon = "steam"
-wclass = "steam"
-desktop_file = "steam.desktop"
-name = "Steam"
-
-[dockbar.hexchat]
-cmd = "hexchat"
-icon = "hexchat"
-wclass = "hexchat"
-desktop_file = "io.github.hexchat.desktop"
-name = "Hexchat"
-
-[dockbar.chromium]
-cmd = "/usr/lib/chromium/chromium"
-icon = "chromium"
-wclass = "chromium"
-desktop_file = "chromium.desktop"
-name = "Chromium"
-
-[launcher.notify_system]
-cmd = "swaync-client -t"
-icon = "notifyconf"
-
-[launcher.separator]
-cmd = "NULL"
-icon = "gnome-panel-separator"
+[notify.server]
+show_messages = true
+popup_position_x = 0
+popup_position_y = 0
+timeout = 10
