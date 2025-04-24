@@ -164,7 +164,7 @@ class Panel(Adw.Application):
         """
         self.logger.debug("Setting up top panel...")
 
-        exclusive = config.get("Exclusive", "True") == "True"
+        exclusive = config.get("Exclusive")
         position = config.get("position", "top")
         size = config.get("size", 32)
 
