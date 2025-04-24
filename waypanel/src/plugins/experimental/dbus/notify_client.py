@@ -66,13 +66,10 @@ class NotificationPopoverPlugin(BasePlugin):
         self.vbox.set_margin_top(10)
         self.vbox.set_margin_bottom(10)
         self.vbox.set_margin_start(10)
+        self.show_messages = None
         self.vbox.set_margin_end(10)
         self.notification_on_popover = {}
-
-        # Create the button to open the popover
-        self.notification_button = Gtk.Button.new_from_icon_name(
-            "preferences-system-notifications-symbolic"
-        )
+        self.notification_button = Gtk.Button.new_from_icon_name("liteupdatesnotify")
         self.notification_button.set_tooltip_text("View Recent Notifications")
         self.notification_button.connect("clicked", self.open_popover_notifications)
 
@@ -81,6 +78,47 @@ class NotificationPopoverPlugin(BasePlugin):
 
         # Path to the notifications database
         self.db_path = os.path.expanduser("~/.config/waypanel/notifications.db")
+
+    def update_dnd_switch_state(self):
+        """Update the Do Not Disturb switch state based on the server setting."""
+        try:
+            show_messages = (
+                self.config.get("notify", {})
+                .get("server", {})
+                .get("show_messages", True)
+            )
+            self.dnd_switch.set_active(
+                not show_messages
+            )  # Invert the value since DND is the opposite of showing messages
+        except Exception as e:
+            self.logger.error(f"Error updating DND switch state: {e}")
+
+    def on_dnd_toggled(self, switch, state):
+        """Callback when the Do Not Disturb switch is toggled."""
+        new_show_messages = (
+            not state
+        )  # Invert the state to match the `show_messages` setting
+
+        try:
+            # Update the configuration
+            if "notify" not in self.config:
+                self.config["notify"] = {}
+            if "server" not in self.config["notify"]:
+                self.config["notify"]["server"] = {}
+
+            self.config["notify"]["server"]["show_messages"] = new_show_messages
+
+            # Save the updated configuration
+            self.save_config()
+
+            # Reload the configuration in the panel instance
+            self.reload_config()
+
+            self.logger.info(
+                f"Do Not Disturb mode {'enabled' if state else 'disabled'}"
+            )
+        except Exception as e:
+            self.logger.error(f"Error toggling Do Not Disturb mode: {e}")
 
     def fetch_last_notifications(self, limit=3):
         """
@@ -206,8 +244,6 @@ class NotificationPopoverPlugin(BasePlugin):
             """Load the icon/image and handle errors gracefully."""
             app_icon = notification.get("app_icon")
             hints = notification.get("hints", {})
-            icon = None
-
             try:
                 # Case 1: Check if hints contain raw image data
                 if "image-data" in hints:
@@ -419,6 +455,26 @@ class NotificationPopoverPlugin(BasePlugin):
         clear_button.set_tooltip_text("Clear All Notifications")
         clear_button.set_margin_start(10)
         self.vbox.append(clear_button)
+        # Add Do Not Disturb switch
+        self.dnd_switch = Gtk.Switch()
+        self.dnd_switch.set_active(False)
+        self.dnd_switch.connect("state-set", self.on_dnd_toggled)
+
+        # Add a label for the switch
+        dnd_label = Gtk.Label(label="Do Not Disturb")
+        dnd_label.set_halign(Gtk.Align.START)
+        dnd_label.set_margin_end(10)
+
+        # Create a horizontal box to hold the label and switch
+        dnd_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 5)
+        dnd_box.append(dnd_label)
+        dnd_box.append(self.dnd_switch)
+
+        # Add the Do Not Disturb box to the vertical layout
+        self.vbox.append(dnd_box)
+
+        # Initialize the state based on the current server setting
+        self.update_dnd_switch_state()
 
         self.popover.set_parent(self.notification_button)
         self.popover.popup()
