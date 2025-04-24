@@ -1,6 +1,6 @@
 import os
 import orjson as json
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
 from waypanel.src.plugins.core._base import BasePlugin
 
 
@@ -207,6 +207,29 @@ class TaskbarPlugin(BasePlugin):
         scroll_controller.connect("scroll", self.on_scroll, view["id"])
         widget.add_controller(scroll_controller)
 
+    def is_view_in_focused_output(self, view_id):
+        view = self.ipc.get_view(view_id)
+        view_output = view["output-id"]
+        focused_output = self.ipc.get_focused_output()["id"]
+        if view_output != focused_output:
+            return False
+        else:
+            return True
+
+    def set_fullscreen_after_move(self, view_id):
+        try:
+            self.ipc.set_view_fullscreen(view_id, True)
+            self.set_view_focus(view_id)
+        except Exception as e:
+            self.logger.error(f"Error setting fullscreen after move: {e}")
+
+    def choose_fullscreen_state(self, view_id):
+        if self.is_view_in_focused_output(view_id):
+            self.ipc.set_view_fullscreen(view_id, False)
+        else:
+            self.ipc.set_view_fullscreen(view_id, True)
+        return False  # stop the glib loop
+
     def on_scroll(self, controller, dx, dy, view_id):
         """
         Handle scroll events on taskbar buttons.
@@ -221,12 +244,13 @@ class TaskbarPlugin(BasePlugin):
                 # Scrolling down
                 # Perform action for scroll down (e.g., switch to next workspace)
                 self.utils.send_view_to_output(view_id, "right")
-                self.set_view_focus(view_id)
+                GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
+
             elif dy < 0:
                 # Scrolling up
                 # Perform action for scroll up (e.g., switch to previous workspace)
                 self.utils.send_view_to_output(view_id, "left")
-                self.set_view_focus(view_id)
+                GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
 
         except Exception as e:
             self.logger.error(
