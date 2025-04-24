@@ -231,7 +231,7 @@ class PopoverFolders(BasePlugin):
         try:
             # Ensure the input is a Gtk.ListBoxRow
             if not isinstance(row, Gtk.ListBoxRow):
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=TypeError(
                         f"Invalid row type: {type(row).__name__}. Expected Gtk.ListBoxRow."
                     ),
@@ -243,7 +243,7 @@ class PopoverFolders(BasePlugin):
             # Get the child widget of the row
             child = row.get_child()
             if not child or not hasattr(child, "MYTEXT"):
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=ValueError("Row child does not have 'MYTEXT' attribute."),
                     message="Row child is missing the required 'MYTEXT' attribute.",
                     level="warning",
@@ -260,7 +260,7 @@ class PopoverFolders(BasePlugin):
                     row_text = " ".join(str(item) for item in row_text)
                     child.MYTEXT = row_text  # Update MYTEXT to avoid future issues
                 else:
-                    self.logger.error_handler.handle(
+                    self.logger.error(
                         error=TypeError(
                             f"Invalid row text type: {type(row_text).__name__}. Expected str."
                         ),
@@ -274,7 +274,7 @@ class PopoverFolders(BasePlugin):
             return text_to_search in row_text.lower()
 
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message="Unexpected error occurred in on_filter_invalidate.",
                 level="error",

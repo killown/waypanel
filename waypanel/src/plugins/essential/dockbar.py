@@ -65,7 +65,7 @@ class DockbarPlugin(BasePlugin):
         elif panel == "top-panel":
             return self.obj.top_panel
         else:
-            self.logger.error_handler.handle(f"Invalid panel value: {panel}")
+            self.logger.error(f"Invalid panel value: {panel}")
 
     def choose_and_set_dockbar(self):
         panel = get_plugin_placement(self.obj)[0]
@@ -79,7 +79,7 @@ class DockbarPlugin(BasePlugin):
         # Validate panel value
         valid_panels = {"left-panel", "right-panel", "bottom-panel", "top-panel"}
         if panel not in valid_panels:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 f"Invalid panel value: {panel}. Using default 'left-panel'."
             )
             panel = "left-panel"
@@ -179,7 +179,7 @@ class DockbarPlugin(BasePlugin):
             self.utils.run_cmd(cmd)
 
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e, message="Error while handling right-click action."
             )
 

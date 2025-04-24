@@ -36,7 +36,7 @@ def initialize_plugin(panel_instance):
         event_manager.subscribe_to_event("view-mapped", on_view_created)
         panel_instance.logger.info("Successfully subscribed to events.")
     except Exception as e:
-        panel_instance.logger.error_handler.handle(f"Error subscribing to events: {e}")
+        panel_instance.logger.error(f"Error subscribing to events: {e}")
 
 
 def on_view_focused(event_message):

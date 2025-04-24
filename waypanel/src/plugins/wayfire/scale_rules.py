@@ -3,16 +3,7 @@ from wayfire import WayfireSocket
 
 from waypanel.src.plugins.core._base import BasePlugin
 
-ENABLE_PLUGIN = True
-
-
-def get_plugin_placement(panel_instance):
-    return
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        return WindowRulesPlugin(panel_instance)
+ENABLE_PLUGIN = False
 
 
 class WindowRulesPlugin(BasePlugin):

@@ -69,7 +69,7 @@ class WindowTitlePlugin(BasePlugin):
         Subscribe to relevant events using the EventManagerPlugin.
         """
         if "event_manager" not in self.obj.plugin_loader.plugins:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 "Event Manager Plugin is not loaded. Cannot subscribe to events."
             )
             return
@@ -105,7 +105,7 @@ class WindowTitlePlugin(BasePlugin):
                 view = event_message.get("view", {})
                 self.update_title_icon(view)
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 f"Error handling 'view-focused' event: {e}"
             )
 
@@ -119,7 +119,7 @@ class WindowTitlePlugin(BasePlugin):
         try:
             self.clear_widget()
         except Exception as e:
-            self.logger.error_handler.handle(f"Error handling 'view-closed' event: {e}")
+            self.logger.error(f"Error handling 'view-closed' event: {e}")
 
     def on_view_title_changed(self, event_message):
         """
@@ -133,7 +133,7 @@ class WindowTitlePlugin(BasePlugin):
                 view = event_message.get("view", {})
                 self.update_title_icon(view)
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 f"Error handling 'view-title-changed' event: {e}"
             )
 
@@ -156,7 +156,7 @@ class WindowTitlePlugin(BasePlugin):
             # Update the widget
             self.update_title(title, icon)
         except Exception as e:
-            self.logger.error_handler.handle(f"Error updating title/icon: {e}")
+            self.logger.error(f"Error updating title/icon: {e}")
 
     def clear_widget(self):
         """
@@ -211,4 +211,4 @@ class WindowTitlePlugin(BasePlugin):
             else:
                 self.window_title_icon.set_from_icon_name("None")
         except Exception as e:
-            self.logger.error_handler.handle(f"Error updating window title widget: {e}")
+            self.logger.error(f"Error updating window title widget: {e}")

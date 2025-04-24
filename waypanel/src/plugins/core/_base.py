@@ -54,7 +54,7 @@ class BasePlugin:
             self.on_disable()
 
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message="Error disabling plugin.",
                 level="error",

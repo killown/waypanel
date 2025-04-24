@@ -36,7 +36,7 @@ class MenuSetupPlugin(BasePlugin):
     def load_menu_config(self):
         """Load menu configuration from waypanel.toml."""
         if not os.path.exists(self.config_path):
-            self.logger.error_handler.handle(
+            self.logger.error(
                 f"Menu config file not found: {self.config_path}"
             )
             return {}
@@ -99,4 +99,4 @@ class MenuSetupPlugin(BasePlugin):
         try:
             subprocess.Popen(cmd, shell=True)
         except Exception as e:
-            self.logger.error_handler.handle(f"Error running command '{cmd}': {e}")
+            self.logger.error(f"Error running command '{cmd}': {e}")

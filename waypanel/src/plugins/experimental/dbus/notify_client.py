@@ -168,7 +168,7 @@ class NotificationPopoverPlugin(BasePlugin):
                 )
             return notifications
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 f"Error fetching notifications from database: {e}"
             )
 

@@ -47,6 +47,179 @@ class Utils(Adw.Application):
             "rxvt",
         ]
 
+    def send_view_to_output(self, view_id, direction):
+        """
+        Move a view to a different output based on the specified direction.
+
+        This function retrieves the geometry and workspace index of the specified view and determines
+        whether the view is currently on the focused output. If the view is not on the focused output,
+        it moves the view to the focused output. Otherwise, it calculates the target output based on
+        the provided direction (e.g., "left" or "right") and moves the view to that output.
+
+        Args:
+            view_id (int): The ID of the view to be moved.
+            direction (str): The direction to move the view ("left" or "right").
+
+        Steps:
+            1. Retrieve the view's geometry and workspace index.
+            2. Check if the view is on the same workspace index as the focused output.
+            3. If not, move the view to the focused output.
+            4. If yes, calculate the target output using `get_output_from(direction)` and move the view there.
+
+        Dependencies:
+            - `get_view(view_id)`: Fetches the view object containing its geometry and workspace index.
+            - `get_focused_output()`: Retrieves the currently focused output.
+            - `get_output_from(direction)`: Determines the target output ID based on the direction.
+            - `configure_view(...)`: Configures the view's position and assigns it to a specific output.
+
+        Example:
+            # Move the view with ID 123 to the output on the left
+            send_view_to_output(123, "left")
+
+        Notes:
+            - The `direction` argument must be a valid string ("left" or "right").
+            - If the view is already on the focused output, the function uses `get_output_from(direction)`
+              to determine the target output ID.
+        """
+        view = self.ipc.get_view(view_id)
+        geo = view["geometry"]
+        wset_index_focused = self.ipc.get_focused_output()["wset-index"]
+        wset_index_view = view["wset-index"]
+        focused_output_id = self.ipc.get_focused_output()["id"]
+
+        if wset_index_focused != wset_index_view:
+            self.ipc.configure_view(
+                view_id,
+                geo["x"],
+                geo["y"],
+                geo["width"],
+                geo["height"],
+                focused_output_id,
+            )
+        else:
+            output_direction = self.get_output_from(direction)
+            self.ipc.configure_view(
+                view_id,
+                geo["x"],
+                geo["y"],
+                geo["width"],
+                geo["height"],
+                output_direction,
+            )
+
+    def get_output_from(self, direction: str):
+        """
+        Determine the output adjacent to the currently focused output in the specified direction.
+
+        This function calculates the closest output to the left or right of the currently focused output
+        based on their geometries. It iterates through all connected outputs, computes their relative
+        positions, and identifies the nearest output in the specified direction.
+
+        Args:
+            direction (str): The direction to search for an adjacent output. Must be one of:
+                             - "left": Search for the closest output to the left of the focused output.
+                             - "right": Search for the closest output to the right of the focused output.
+
+        Returns:
+            int or None:
+                - The ID of the closest output in the specified direction if one exists.
+                - `None` if no output is found in the specified direction.
+
+        Raises:
+            ValueError: If the `direction` argument is invalid (not "left" or "right").
+            Exception: If an unexpected error occurs during execution, it is logged for debugging.
+
+        Dependencies:
+            - `self.ipc.list_outputs()`: Retrieves a list of all connected outputs and their geometries.
+            - `self.ipc.get_focused_output()`: Retrieves the currently focused output and its geometry.
+            - `self.logger.error_handler.handle(...)`: Logs errors with detailed context for troubleshooting.
+
+        Example Usage:
+            # Get the output to the left of the focused output
+            left_output_id = self.get_output_from("left")
+            if left_output_id:
+                print(f"Output to the left: {left_output_id}")
+            else:
+                print("No output to the left.")
+
+            # Get the output to the right of the focused output
+            right_output_id = self.get_output_from("right")
+            if right_output_id:
+                print(f"Output to the right: {right_output_id}")
+            else:
+                print("No output to the right.")
+
+        Notes:
+            - The function uses horizontal distances (`x` coordinates) to determine adjacency.
+            - Outputs are considered "to the left" if their right edge is to the left of the focused output's left edge.
+            - Outputs are considered "to the right" if their left edge is to the right of the focused output's right edge.
+            - If multiple outputs exist in the specified direction, the closest one is returned.
+        """
+        try:
+            # Validate the direction argument
+            if direction not in ["left", "right"]:
+                raise ValueError(
+                    f"Invalid direction: {direction}. Must be 'left' or 'right'."
+                )
+
+            # Get the list of all outputs
+            outputs = self.ipc.list_outputs()
+
+            # Get the currently focused output
+            focused_output = self.ipc.get_focused_output()
+
+            if not focused_output:
+                raise ValueError("No focused output found.")
+
+            # Extract the geometry of the focused output
+            focused_geometry = focused_output["geometry"]
+            focused_x = focused_geometry["x"]
+            focused_width = focused_geometry["width"]
+
+            # Initialize variables to track the closest output in the specified direction
+            target_output_id = None
+            target_distance = float("inf")
+
+            # Iterate through all outputs to find the closest one in the specified direction
+            for output in outputs:
+                if output["id"] == focused_output["id"]:
+                    continue  # Skip the focused output
+
+                output_geometry = output["geometry"]
+                output_x = output_geometry["x"]
+
+                # Calculate the horizontal distance between the focused output and the current output
+                if direction == "left":
+                    # Output is to the left if its right edge is to the left of the focused output's left edge
+                    if output_x + output_geometry["width"] <= focused_x:
+                        distance = focused_x - (output_x + output_geometry["width"])
+                        if distance < target_distance:
+                            target_output_id = output["id"]
+                            target_distance = distance
+                elif direction == "right":
+                    # Output is to the right if its left edge is to the right of the focused output's right edge
+                    if output_x >= focused_x + focused_width:
+                        distance = output_x - (focused_x + focused_width)
+                        if distance < target_distance:
+                            target_output_id = output["id"]
+                            target_distance = distance
+
+            # Return the ID of the closest output in the specified direction
+            return target_output_id
+        except Exception as e:
+            focused_output = self.ipc.get_focused_output()
+            outputs = self.ipc.list_outputs()
+            self.logger.error_handler.handle(
+                error=e,
+                message="Error while determining the output from direction.",
+                context={
+                    "direction": direction,
+                    "focused_output": focused_output,
+                    "outputs": outputs,
+                },
+            )
+            return None
+
     def monitor_width_height(self, monitor_name):
         focused_view = self.ipc.get_focused_view()
         if focused_view:

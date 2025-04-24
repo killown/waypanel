@@ -191,18 +191,63 @@ class TaskbarPlugin(BasePlugin):
         button.connect("clicked", lambda *_: self.set_view_focus(view))
         self.create_gesture(box, 1, lambda *_: self.set_view_focus(view))
         self.create_gesture(box, 2, lambda *_: self.ipc.close_view(view_id))
-        self.create_gesture(box, 3, lambda *_: self.send_view_to_empity_workspace(view))
+        self.create_gesture(
+            box, 3, lambda *_: self.send_view_to_empity_workspace(view_id)
+        )
+        # Add scroll gesture
+        self.add_scroll_gesture(button, view)
 
         return button
 
-    def send_view_to_empity_workspace(self, view):
+    def add_scroll_gesture(self, widget, view):
+        """Add a scroll gesture to a widget."""
+        scroll_controller = Gtk.EventControllerScroll.new(
+            Gtk.EventControllerScrollFlags.VERTICAL
+        )
+        scroll_controller.connect("scroll", self.on_scroll, view["id"])
+        widget.add_controller(scroll_controller)
+
+    def on_scroll(self, controller, dx, dy, view_id):
+        """
+        Handle scroll events on taskbar buttons.
+        Args:
+            controller: The scroll controller.
+            dx: Horizontal scroll delta (not used here).
+            dy: Vertical scroll delta (positive for down, negative for up).
+            view: The associated view object.
+        """
+        try:
+            if dy > 0:
+                # Scrolling down
+                # Perform action for scroll down (e.g., switch to next workspace)
+                self.utils.send_view_to_output(view_id, "right")
+                self.set_view_focus(view_id)
+            elif dy < 0:
+                # Scrolling up
+                # Perform action for scroll up (e.g., switch to previous workspace)
+                self.utils.send_view_to_output(view_id, "left")
+                self.set_view_focus(view_id)
+
+        except Exception as e:
+            self.logger.error(
+                error=e,
+                message="Error handling scroll event",
+                context={"plugin": "taskbar", "view": view_id},
+            )
+
+    def send_view_to_empity_workspace(self, view_id):
         empty_workspace = self.utils.find_empty_workspace()
-        view_id = view["id"]
+        view = self.ipc.get_view(view_id)
+        geo = view["geometry"]
         wset_index_focused = self.ipc.get_focused_output()["wset-index"]
         wset_index_view = view["wset-index"]
+        output_id = self.ipc.get_focused_output()["id"]
         # this will prevent from trying to move the view from another output to an empity workspace
         # because it's necessary to bring the view to the current output and then move it to a empity ws
         if wset_index_focused != wset_index_view:
+            self.ipc.configure_view(
+                view_id, geo["x"], geo["y"], geo["width"], geo["height"], output_id
+            )
             self.set_view_focus(view)
         else:
             if empty_workspace:
@@ -279,9 +324,7 @@ class TaskbarPlugin(BasePlugin):
         # Create the taskbar button
         success = self.new_taskbar_button(view)
         if not success:
-            self.logger.error_handler.handle(
-                f"Failed to create taskbar button for view ID: {view_id}"
-            )
+            self.logger.error(f"Failed to create taskbar button for view ID: {view_id}")
             return False
 
         if callback:
@@ -397,7 +440,7 @@ class TaskbarPlugin(BasePlugin):
                     )
                     self.logger.debug(f"Resized view ID {view_id} to 400x400.")
             except Exception as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e,
                     message=f"Failed to retrieve or resize geometry for view ID: {view_id}",
                 )
@@ -408,9 +451,7 @@ class TaskbarPlugin(BasePlugin):
                     self.ipc.scale_toggle()
                     self.logger.debug("Scale toggled off.")
                 except Exception as e:
-                    self.logger.error_handler.handle(
-                        error=e, message="Failed to toggle scale."
-                    )
+                    self.logger.error(error=e, message="Failed to toggle scale.")
                 finally:
                     # Ensure workspace focus and cursor centering even if scale toggle fails
                     self._focus_and_center_cursor(view_id)
@@ -423,7 +464,7 @@ class TaskbarPlugin(BasePlugin):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Unexpected error while setting focus for view ID: {view_id}",
             )
@@ -440,7 +481,7 @@ class TaskbarPlugin(BasePlugin):
             self.ipc.go_workspace_set_focus(view_id)
             self.ipc.center_cursor_on_view(view_id)
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Failed to focus workspace or center cursor for view ID: {view_id}",
             )
@@ -479,7 +520,7 @@ class TaskbarPlugin(BasePlugin):
                 if self.utils.widget_exists(button):
                     return button
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message="Invalid or missing button for ID",
                 context={"plugin": "taskbar", "ID": button_id},
@@ -532,7 +573,7 @@ class TaskbarPlugin(BasePlugin):
 
             return True
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message="Error checking view existence",
                 context={"plugin": "taskbar", "view_id": view_id},

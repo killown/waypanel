@@ -115,7 +115,7 @@ class PluginManagerPlugin(BasePlugin):
             self.obj.save_config()  # Save the updated configuration
 
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Error toggling plugin '{plugin_name}': {e}",
                 level="error",

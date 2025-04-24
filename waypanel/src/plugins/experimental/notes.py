@@ -127,7 +127,7 @@ class MenuNotes(BasePlugin):
                 self.update_notes_list()
                 self.scrolled_window.set_min_content_height(50)
         except Exception as e:
-            self.logger.error_handler.handle(f"Dialog error: {e}")
+            self.logger.error(f"Dialog error: {e}")
 
     def update_notes_list(self):
         """Update the list of notes in the popover"""
@@ -210,7 +210,7 @@ class MenuNotes(BasePlugin):
         self.obj.add_action(show_searchbar_action)
 
         self.scrolled_window = Gtk.ScrolledWindow()
-        self.scrolled_window.set_min_content_width(390)
+        self.scrolled_window.set_min_content_width(600)
         self.scrolled_window.set_min_content_height(600)
 
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 10)

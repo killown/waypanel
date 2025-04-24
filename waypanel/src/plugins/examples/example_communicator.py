@@ -53,7 +53,7 @@ class PluginCommunicator(BasePlugin):
                 current_time = clock_plugin.clock_label.get_text()
                 self.logger.info(f"Current Time: {current_time}")
             except Exception as e:
-                self.logger.error_handler.handle(e)
+                self.logger.error(e)
         else:
             self.logger.info("clock plugin is not loaded")
 
@@ -65,7 +65,7 @@ class PluginCommunicator(BasePlugin):
                 max_volume = volume_plugin.max_volume
                 self.logger.info(f"Max Volume: {max_volume}")
             except AttributeError:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     "volume_scroll plugin does not have current_volume property"
                 )
         else:

@@ -218,7 +218,7 @@ class MenuClipboard(BasePlugin):
                 loader.close()
                 return loader.get_pixbuf()
         except Exception as e:
-            self.logger.error_handler.handle(f"Thumbnail generation failed: {e}")
+            self.logger.error(f"Thumbnail generation failed: {e}")
             return None
 
     def copy_to_clipboard(self, content):
@@ -234,7 +234,7 @@ class MenuClipboard(BasePlugin):
                         check=True,
                     )
                 except subprocess.CalledProcessError:
-                    self.logger.error_handler.handle(f"Failed to copy image: {content}")
+                    self.logger.error(f"Failed to copy image: {content}")
             elif self.utils.validate_bytes(
                 content, name="bytes from copy_to_clipboard"
             ):
@@ -246,7 +246,7 @@ class MenuClipboard(BasePlugin):
                         check=True,
                     )
                 except Exception as e:
-                    self.logger.error_handler.handle(
+                    self.logger.error(
                         f"Failed to copy raw image data {e}"
                     )
         else:
@@ -254,7 +254,7 @@ class MenuClipboard(BasePlugin):
             try:
                 pyperclip.copy(content)
             except Exception as e:
-                self.logger.error_handler.handle(f"Failed to copy text: {e}")
+                self.logger.error(f"Failed to copy text: {e}")
 
     def clear_and_calculate_height(self):
         """
@@ -313,7 +313,7 @@ class MenuClipboard(BasePlugin):
             return total_height
 
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message="Error clearing list or calculating height in clear_and_calculate_height.",
                 level="error",
@@ -391,7 +391,7 @@ class MenuClipboard(BasePlugin):
                 self.find_text_using_button[image_button] = line
 
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message="Error populating ListBox in populate_listbox.",
                 level="error",
@@ -413,7 +413,7 @@ class MenuClipboard(BasePlugin):
             self.populate_listbox()
 
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message="Error updating clipboard list in update_clipboard_list.",
                 level="error",
@@ -664,7 +664,7 @@ class MenuClipboard(BasePlugin):
         try:
             # Ensure the input is a Gtk.ListBoxRow
             if not isinstance(row, Gtk.ListBoxRow):
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=TypeError(
                         f"Invalid row type: {type(row).__name__}. Expected Gtk.ListBoxRow."
                     ),
@@ -676,7 +676,7 @@ class MenuClipboard(BasePlugin):
             # Get the child widget of the row
             child = row.get_child()
             if not child:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=ValueError("Row has no child widget."),
                     message="Row child widget is missing in on_filter_invalidate.",
                     level="warning",
@@ -685,7 +685,7 @@ class MenuClipboard(BasePlugin):
 
             # Ensure the child widget has the 'MYTEXT' attribute
             if not hasattr(child, "MYTEXT"):
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=AttributeError("Row child does not have 'MYTEXT' attribute."),
                     message="Row child is missing the required 'MYTEXT' attribute.",
                     level="warning",
@@ -695,7 +695,7 @@ class MenuClipboard(BasePlugin):
             # Extract the text from the child widget
             row_text = child.MYTEXT
             if not isinstance(row_text, str):
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=TypeError(
                         f"Invalid row text type: {type(row_text).__name__}. Expected str."
                     ),
@@ -709,7 +709,7 @@ class MenuClipboard(BasePlugin):
             return text_to_search in row_text.lower()
 
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message="Unexpected error occurred in on_filter_invalidate.",
                 level="error",

@@ -123,7 +123,7 @@ class PluginLoader:
                 )
 
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Error enabling plugin '{plugin_name}': {e}",
                 level="error",
@@ -236,13 +236,13 @@ class PluginLoader:
                 )
 
         except ModuleNotFoundError as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Failed to reload plugin '{plugin_name}': {e}",
                 level="error",
             )
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Error reloading plugin '{plugin_name}': {e}",
                 level="error",
@@ -268,7 +268,7 @@ class PluginLoader:
             disabled_plugins = config["plugins"]["disabled"].split()
             return config, disabled_plugins
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Failed to load configuration file: {e}",
                 level="error",
@@ -315,7 +315,7 @@ class PluginLoader:
             # Validate DEPS list
             has_plugin_deps = getattr(module, "DEPS", [])
             if not self.validate_deps_list(has_plugin_deps, module_name):
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=ValueError("Invalid DEPS list."),
                     message=f"Plugin '{module_name}' has an invalid DEPS list. Skipping.",
                     level="error",
@@ -336,7 +336,7 @@ class PluginLoader:
                         position, order = position_result
                         priority = 0
                 else:
-                    self.logger.error_handler.handle(
+                    self.logger.error(
                         f"Invalid position result for plugin {module_name}. Skipping."
                     )
                     return
@@ -345,7 +345,7 @@ class PluginLoader:
             valid_plugins.append(module_name)
             plugin_metadata.append((module, position, order, priority))
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Failed to initialize plugin: {module_name}: {e} ",
                 level="error",
