@@ -173,11 +173,14 @@ class PopoverFolders(BasePlugin):
         return self.popover_folders
 
     def open_folder(self, x):
+        if not x:
+            return
         folder, filemanager = x.get_child().MYTEXT.split()
         path = os.path.join(self.home, folder)
         cmd = "{0} {1}".format(filemanager, path).split()
         Popen(cmd)
-        self.popover_folders.popdown()
+        if self.popover_folders:
+            self.popover_folders.popdown()
 
     def open_popover_folders(self, *_):
         if self.popover_folders and self.popover_folders.is_visible():
