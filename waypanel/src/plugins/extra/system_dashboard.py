@@ -105,7 +105,7 @@ class SystemDashboard(BasePlugin):
     def create_popover_system(self, *_):
         # Create a popover
         self.popover_dashboard = Gtk.Popover.new()
-        self.popover_dashboard.set_has_arrow(False)
+        self.popover_dashboard.set_has_arrow(True)
         self.popover_dashboard.connect("closed", self.popover_is_closed)
         self.popover_dashboard.connect("notify::visible", self.popover_is_open)
         # Set width and height of the popover dashboard
