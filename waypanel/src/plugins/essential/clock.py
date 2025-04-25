@@ -71,15 +71,20 @@ class ClockPlugin(BasePlugin):
 
     def schedule_updates(self):
         """Schedule clock updates every minute."""
-        # Calculate seconds until next minute
-        now = datetime.datetime.now()
-        seconds_until_next_minute = 60 - now.second
 
-        # First update at the start of the next minute
-        GLib.timeout_add_seconds(seconds_until_next_minute, self.update_clock)
+        def schedule_next_update():
+            """Schedule the next clock update at the start of the next minute."""
+            now = datetime.datetime.now()
+            seconds_until_next_minute = 60 - now.second
+            GLib.timeout_add_seconds(seconds_until_next_minute, update_and_reschedule)
 
-        # Then update every 60 seconds
-        self.update_timeout_id = GLib.timeout_add_seconds(60, self.update_clock)
+        def update_and_reschedule():
+            """Update the clock and schedule the next update."""
+            self.update_clock()  # Update the clock immediately
+            schedule_next_update()  # Schedule the next update
+
+        # Start the update cycle
+        schedule_next_update()
 
     def stop_updates(self):
         """Stop clock updates (cleanup)."""
