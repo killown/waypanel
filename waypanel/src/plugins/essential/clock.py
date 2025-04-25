@@ -52,7 +52,7 @@ class ClockPlugin(BasePlugin):
         self.clock_button.set_child(self.clock_label)
 
         # Append clock button to the clock box
-        self.clock_box.append(self.clock_button)
+        self.update_widget_safely(self.clock_box.append, self.clock_button)
 
         # Start updating the clock
         self.update_clock()
@@ -66,7 +66,7 @@ class ClockPlugin(BasePlugin):
             )  # Includes date and time
             self.clock_label.set_label(current_time)
         except Exception as e:
-            self.logger.error(f"Error updating clock: {e}")
+            self.log_error(f"Error updating clock: {e}")
             return True  # Continue timeout
 
     def schedule_updates(self):

@@ -13,7 +13,7 @@ def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
     position = "bottom-panel"
     order = 5
-    priority = 10
+    priority = 99
     return position, order, priority
 
 
@@ -37,21 +37,18 @@ class TaskbarPlugin(BasePlugin):
         self.layer_always_exclusive = False
         self.taskbar_list = []
         self.buttons_id = {}
-        self.update_widget = self.utils.update_widget
         self.is_scale_active = {}
         self.create_gesture = self.plugins["gestures_setup"].create_gesture
         self.remove_gesture = self.plugins["gestures_setup"].remove_gesture
         # Scrolled window setup
         self.scrolled_window = Gtk.ScrolledWindow()
+        self._setup_taskbar()
 
         # The `main_widget` must always be defined after the main widget is created.
         # For example, if the main widget is `self.scrolled_window`, setting `main_widget` before `scrolled_window`
         # could result in `None` being assigned instead. This may cause the plugin to malfunction
         # or prevent `set_content`/`append` from working properly.
         self.main_widget = (self.scrolled_window, "set_content")
-
-        # Load configuration and set up taskbar
-        self._setup_taskbar()
 
     def set_layer_exclusive(self, exclusive):
         if exclusive:
@@ -61,6 +58,7 @@ class TaskbarPlugin(BasePlugin):
 
     def _setup_taskbar(self):
         """Create and configure the bottom panel."""
+        self.taskbar = Gtk.FlowBox()
         self.logger.debug("Setting up bottom panel.")
         if self.layer_always_exclusive:
             self.layer_shell.set_layer(self.bottom_panel, self.layer_shell.Layer.TOP)
@@ -74,10 +72,13 @@ class TaskbarPlugin(BasePlugin):
 
         output = os.getenv("waypanel")
         output_name = None
+        output_id = None
         geometry = None
 
         if output:
             output_name = json.loads(output).get("output_name")
+            output_id = json.loads(output).get("output_id")
+
         if output_name:
             output_id = self.ipc.get_output_id_by_name(output_name)
             if output_id:
@@ -93,7 +94,6 @@ class TaskbarPlugin(BasePlugin):
         self.update_widget(self.bottom_panel.set_content, self.scrolled_window)
 
         # Taskbar setup
-        self.taskbar = Gtk.FlowBox()
         self.update_widget(
             self.taskbar.set_halign, Gtk.Align.CENTER
         )  # Center horizontally
@@ -107,7 +107,6 @@ class TaskbarPlugin(BasePlugin):
 
         # Start the taskbar list for the bottom panel
         self.Taskbar()
-
         self.logger.info("Bottom panel setup completed.")
 
         # Unset layer position for other panels
@@ -177,12 +176,12 @@ class TaskbarPlugin(BasePlugin):
         if icon_name:
             icon = Gtk.Image()
             self.update_widget(icon.set_from_icon_name, icon_name)
-            self.update_widget(box.append, icon)
+            self.update_widget_safely(box.append, icon)
 
         # Add label
         label = Gtk.Label()
         self.update_widget(label.set_label, use_this_title)
-        self.update_widget(box.append, label)
+        self.update_widget_safely(box.append, label)
 
         # Set the box as the button's child
         self.update_widget(button.set_child, box)
@@ -209,9 +208,9 @@ class TaskbarPlugin(BasePlugin):
 
     def is_view_in_focused_output(self, view_id):
         view = self.ipc.get_view(view_id)
-        view_output = view["output-id"]
+        view_output_id = view["output-id"]
         focused_output = self.ipc.get_focused_output()["id"]
-        if view_output != focused_output:
+        if view_output_id != focused_output:
             return False
         else:
             return True
@@ -221,7 +220,7 @@ class TaskbarPlugin(BasePlugin):
             self.ipc.set_view_fullscreen(view_id, True)
             self.set_view_focus(view_id)
         except Exception as e:
-            self.logger.error(f"Error setting fullscreen after move: {e}")
+            self.log_error(f"Error setting fullscreen after move: {e}")
 
     def choose_fullscreen_state(self, view_id):
         if self.is_view_in_focused_output(view_id):
@@ -253,10 +252,8 @@ class TaskbarPlugin(BasePlugin):
                 GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
 
         except Exception as e:
-            self.logger.error(
-                error=e,
-                message="Error handling scroll event",
-                context={"plugin": "taskbar", "view": view_id},
+            self.log_error(
+                message=f"Error handling scroll event {e}",
             )
 
     def send_view_to_empity_workspace(self, view_id):
@@ -294,7 +291,7 @@ class TaskbarPlugin(BasePlugin):
         Returns:
             bool: True if the button was successfully created, False otherwise.
         """
-        self.logger.debug(f"Creating taskbar button for view: {view['id']}")
+        self.logger.info(f"Creating taskbar button for view: {view['id']}")
         id = view["id"]
         title = view["title"]
         title = self.utils.filter_utf_for_gtk(title)
@@ -307,7 +304,7 @@ class TaskbarPlugin(BasePlugin):
             return False
 
         # Append the button to the taskbar
-        self.update_widget(self.taskbar.append, button)
+        self.update_widget_safely(self.taskbar.append, button)
 
         # Store button information in dictionaries for easy access
         self.buttons_id[id] = [button, initial_title, id]
@@ -347,8 +344,9 @@ class TaskbarPlugin(BasePlugin):
 
         # Create the taskbar button
         success = self.new_taskbar_button(view)
+
         if not success:
-            self.logger.error(f"Failed to create taskbar button for view ID: {view_id}")
+            self.log_error(f"Failed to create taskbar button for view ID: {view_id}")
             return False
 
         if callback:
@@ -464,9 +462,8 @@ class TaskbarPlugin(BasePlugin):
                     )
                     self.logger.debug(f"Resized view ID {view_id} to 400x400.")
             except Exception as e:
-                self.logger.error(
-                    error=e,
-                    message=f"Failed to retrieve or resize geometry for view ID: {view_id}",
+                self.log_error(
+                    message=f"Failed to retrieve or resize geometry for view ID: {view_id} {e}",
                 )
 
             # Handle scale activation
@@ -475,7 +472,7 @@ class TaskbarPlugin(BasePlugin):
                     self.ipc.scale_toggle()
                     self.logger.debug("Scale toggled off.")
                 except Exception as e:
-                    self.logger.error(error=e, message="Failed to toggle scale.")
+                    self.log_error(message=f"Failed to toggle scale. {e}")
                 finally:
                     # Ensure workspace focus and cursor centering even if scale toggle fails
                     self._focus_and_center_cursor(view_id)
@@ -488,9 +485,8 @@ class TaskbarPlugin(BasePlugin):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error(
-                error=e,
-                message=f"Unexpected error while setting focus for view ID: {view_id}",
+            self.log_error(
+                message=f"Unexpected error while setting focus for view ID: {view_id} {e}",
             )
             return True
 
@@ -505,9 +501,8 @@ class TaskbarPlugin(BasePlugin):
             self.ipc.go_workspace_set_focus(view_id)
             self.ipc.center_cursor_on_view(view_id)
         except Exception as e:
-            self.logger.error(
-                error=e,
-                message=f"Failed to focus workspace or center cursor for view ID: {view_id}",
+            self.log_error(
+                message=f"Failed to focus workspace or center cursor for view ID: {view_id} {e}",
             )
 
     def update_taskbar_on_scale(self) -> None:
@@ -544,10 +539,8 @@ class TaskbarPlugin(BasePlugin):
                 if self.utils.widget_exists(button):
                     return button
         except Exception as e:
-            self.logger.error(
-                error=e,
-                message="Invalid or missing button for ID",
-                context={"plugin": "taskbar", "ID": button_id},
+            self.log_error(
+                message=f"Invalid or missing button for ID {e}",
             )
         return None
 
@@ -597,10 +590,8 @@ class TaskbarPlugin(BasePlugin):
 
             return True
         except Exception as e:
-            self.logger.error(
-                error=e,
-                message="Error checking view existence",
-                context={"plugin": "taskbar", "view_id": view_id},
+            self.log_error(
+                message=f"Error checking view existence {e}",
             )
             return False
 

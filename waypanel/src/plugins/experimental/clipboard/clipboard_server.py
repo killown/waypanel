@@ -9,10 +9,41 @@ from pathlib import Path
 import aiosqlite
 import subprocess
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from waypanel.src.plugins.core._base import BasePlugin
 
+ENABLE_PLUGIN = True
 LOG_ENABLED = False
+
+
+def get_plugin_placement(panel_instance):
+    return
+
+
+def initialize_plugin(panel_instance):
+    if ENABLE_PLUGIN:
+        verify_db()
+        return run_server_in_background()
+
+
+def run_server_in_background():
+    """Start the clipboard server without blocking main thread"""
+
+    async def _run_server():
+        server = AsyncClipboardServer()
+        await server.start()
+        print("🖥️ Clipboard server running in background")
+        while True:  # Keep alive
+            await asyncio.sleep(1)
+
+    # Run in dedicated thread
+    def _start_loop():
+        asyncio.run(_run_server())
+
+    import threading
+
+    thread = threading.Thread(target=_start_loop, daemon=True)
+    thread.start()
+    return thread
 
 
 def initialize_db(db_path=None):
@@ -59,29 +90,17 @@ def verify_db():
         conn.close()
 
 
-verify_db()
-
-
-class AsyncClipboardServer:
+class AsyncClipboardServer(BasePlugin):
     def __init__(self, db_path=None):
         self.db_path = db_path or self._default_db_path()
         self.last_clipboard_content = ""
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.running = False
-        self.max_items = self._load_max_items_config()
+        self.max_items = 100
+        # self.max_items = self.config.get("clipboard_server", {}).get("max_items", 100)
 
     def _default_db_path(self):
         return str(Path.home() / ".config" / "waypanel" / "clipboard_server.db")
-
-    def _load_max_items_config(self):
-        """Load max_items from TOML config with fallback to default"""
-        config_path = Path.home() / ".config" / "waypanel" / "panel.toml"
-        try:
-            with open(config_path, "rb") as f:
-                config = tomllib.load(f)
-            return config.get("clipboard", {}).get("max_items", 100)
-        except (FileNotFoundError, KeyError, tomllib.TOMLDecodeError):
-            return 100  # Default value if config not found or invalid
 
     async def _init_db(self):
         """Initialize the SQLite database."""
@@ -95,7 +114,7 @@ class AsyncClipboardServer:
             """)
             await db.commit()
             if LOG_ENABLED:
-                logger.info(f"Database initialized at {self.db_path}")
+                self.logger.info(f"Database initialized at {self.db_path}")
 
     async def add_item(self, content):
         """
@@ -114,7 +133,9 @@ class AsyncClipboardServer:
             count = (await cursor.fetchone())[0]
             if count > 0:
                 if LOG_ENABLED:
-                    logger.info(f"Duplicate item found: {content[:50]}... Skipping.")
+                    self.logger.info(
+                        f"Duplicate item found: {content[:50]}... Skipping."
+                    )
                 return
 
             # Enforce the maximum number of items
@@ -138,7 +159,7 @@ class AsyncClipboardServer:
             self.last_clipboard_content = content
 
             if LOG_ENABLED:
-                logger.info(f"Added new item: {content[:50]}...")
+                self.logger.info(f"Added new item: {content[:50]}...")
 
     async def get_items(self, limit=100):
         """Fetch recent items (newest first)."""
@@ -155,7 +176,7 @@ class AsyncClipboardServer:
             await db.execute("DELETE FROM clipboard_items")
             await db.commit()
             if LOG_ENABLED:
-                logger.info("Cleared all items.")
+                self.logger.info("Cleared all items.")
 
     async def delete_item(self, item_id):
         """Delete a specific item by ID."""
@@ -163,7 +184,7 @@ class AsyncClipboardServer:
             await db.execute("DELETE FROM clipboard_items WHERE id = ?", (item_id,))
             await db.commit()
             if LOG_ENABLED:
-                logger.info(f"Deleted item {item_id}")
+                self.logger.info(f"Deleted item {item_id}")
 
     async def monitor(self):
         """Background task: Watch clipboard for changes using wl-paste."""
@@ -195,11 +216,11 @@ class AsyncClipboardServer:
         await self._init_db()
         asyncio.create_task(self.monitor())
         if LOG_ENABLED:
-            logger.info("Clipboard monitor started.")
+            self.logger.info("Clipboard monitor started.")
 
     async def stop(self):
         """Stop the monitor."""
         self.running = False
         self.executor.shutdown()
         if LOG_ENABLED:
-            logger.info("Clipboard monitor stopped.")
+            self.logger.info("Clipboard monitor stopped.")

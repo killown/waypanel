@@ -1,13 +1,10 @@
 import asyncio
 import io
 import mimetypes
-import os
 import subprocess
 from pathlib import Path
 from typing import List, Tuple
-import toml
 import aiosqlite
-import gi
 import pyperclip
 from gi.repository import GdkPixbuf, Gio, Gtk, GLib
 from gi.repository import Gtk4LayerShell as LayerShell
@@ -16,11 +13,11 @@ import re
 
 from waypanel.src.plugins.core._base import BasePlugin
 
-from ._clipboard_server import AsyncClipboardServer
+from .clipboard_server import AsyncClipboardServer
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
-DEPS = ["top_panel"]
+DEPS = ["top_panel", "clipboard_server"]
 
 
 def get_plugin_placement(panel_instance):
@@ -29,33 +26,9 @@ def get_plugin_placement(panel_instance):
 
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
-        clipboard = MenuClipboard(panel_instance)
+        clipboard = ClipboardClient(panel_instance)
         clipboard.create_popover_menu_clipboard()
         return clipboard
-
-
-def run_server_in_background():
-    """Start the clipboard server without blocking main thread"""
-
-    async def _run_server():
-        server = AsyncClipboardServer()
-        await server.start()
-        print("🖥️ Clipboard server running in background")
-        while True:  # Keep alive
-            await asyncio.sleep(1)
-
-    # Run in dedicated thread
-    def _start_loop():
-        asyncio.run(_run_server())
-
-    import threading
-
-    thread = threading.Thread(target=_start_loop, daemon=True)
-    thread.start()
-    return thread
-
-
-server_thread = run_server_in_background()
 
 
 async def show_clipboard_popover():
@@ -144,7 +117,7 @@ def get_clipboard_items_sync() -> List[Tuple[int, str]]:
     return asyncio.run(_fetch_items())
 
 
-class MenuClipboard(BasePlugin):
+class ClipboardClient(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.popover_clipboard = None
@@ -218,7 +191,7 @@ class MenuClipboard(BasePlugin):
                 loader.close()
                 return loader.get_pixbuf()
         except Exception as e:
-            self.logger.error(f"Thumbnail generation failed: {e}")
+            self.log_error(f"Thumbnail generation failed: {e}")
             return None
 
     def copy_to_clipboard(self, content):
@@ -234,7 +207,7 @@ class MenuClipboard(BasePlugin):
                         check=True,
                     )
                 except subprocess.CalledProcessError:
-                    self.logger.error(f"Failed to copy image: {content}")
+                    self.log_error(f"Failed to copy image: {content}")
             elif self.utils.validate_bytes(
                 content, name="bytes from copy_to_clipboard"
             ):
@@ -246,15 +219,13 @@ class MenuClipboard(BasePlugin):
                         check=True,
                     )
                 except Exception as e:
-                    self.logger.error(
-                        f"Failed to copy raw image data {e}"
-                    )
+                    self.log_error(f"Failed to copy raw image data {e}")
         else:
             # Handle text copy
             try:
                 pyperclip.copy(content)
             except Exception as e:
-                self.logger.error(f"Failed to copy text: {e}")
+                self.log_error(f"Failed to copy text: {e}")
 
     def clear_and_calculate_height(self):
         """
@@ -313,10 +284,8 @@ class MenuClipboard(BasePlugin):
             return total_height
 
         except Exception as e:
-            self.logger.error(
-                error=e,
-                message="Error clearing list or calculating height in clear_and_calculate_height.",
-                level="error",
+            self.log_error(
+                message=f"Error clearing list or calculating height in clear_and_calculate_height. {e}",
             )
             return 100  # Default height in case of error
 
@@ -344,8 +313,8 @@ class MenuClipboard(BasePlugin):
                 image_button.connect("clicked", self.on_delete_selected)
 
                 spacer = Gtk.Label(label="    ")
-                row_hbox.append(image_button)
-                row_hbox.append(spacer)
+                self.update_widget_safely(row_hbox.append, image_button)
+                self.update_widget_safely(row_hbox.append, spacer)
 
                 item_id = i[0]
                 item = i[1]
@@ -354,7 +323,7 @@ class MenuClipboard(BasePlugin):
                 row_hbox.MYTEXT = f"{item_id} {item.strip()}"
 
                 # Append the row to the ListBox
-                self.listbox.append(row_hbox)
+                self.update_widget_safely(self.listbox.append, row_hbox)
 
                 if self.is_image_content(item):
                     # Create larger thumbnail (128px) with padding
@@ -369,8 +338,8 @@ class MenuClipboard(BasePlugin):
                         image_widget = Gtk.Image.new_from_pixbuf(thumb)
                         image_widget.set_margin_end(10)
                         image_widget.set_size_request(96, 96)
-                        image_box.append(image_widget)
-                        row_hbox.append(image_box)
+                        self.update_widget_safely(image_box.append, image_widget)
+                        self.update_widget_safely(row_hbox.append, image_box)
 
                         if not item:
                             item = "/image"
@@ -386,15 +355,13 @@ class MenuClipboard(BasePlugin):
                 line.props.margin_end = 5
                 line.props.hexpand = True
                 line.set_halign(Gtk.Align.START)
-                row_hbox.append(line)
+                self.update_widget_safely(row_hbox.append, line)
 
                 self.find_text_using_button[image_button] = line
 
         except Exception as e:
-            self.logger.error(
-                error=e,
-                message="Error populating ListBox in populate_listbox.",
-                level="error",
+            self.log_error(
+                message=f"Error populating ListBox in populate_listbox. {e}",
             )
 
     def update_clipboard_list(self):
@@ -413,10 +380,8 @@ class MenuClipboard(BasePlugin):
             self.populate_listbox()
 
         except Exception as e:
-            self.logger.error(
-                error=e,
-                message="Error updating clipboard list in update_clipboard_list.",
-                level="error",
+            self.log_error(
+                message=f"Error updating clipboard list in update_clipboard_list. {e}",
             )
 
     def create_popover_menu_clipboard(self):
@@ -460,7 +425,7 @@ class MenuClipboard(BasePlugin):
         self.searchbar.props.hexpand = True
         self.searchbar.props.vexpand = True
 
-        self.main_box.append(self.searchbar)
+        self.update_widget_safely(self.main_box.append, self.searchbar)
         self.button_clear = Gtk.Button()
         self.button_clear.set_label("Clear")
         self.button_clear.connect("clicked", self.clear_clipboard)
@@ -473,8 +438,8 @@ class MenuClipboard(BasePlugin):
         self.listbox.props.vexpand = True
         self.listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.listbox.set_show_separators(True)
-        self.main_box.append(self.scrolled_window)
-        self.main_box.append(self.button_clear)
+        self.update_widget_safely(self.main_box.append, self.scrolled_window)
+        self.update_widget_safely(self.main_box.append, self.button_clear)
         self.scrolled_window.set_child(self.listbox)
         self.popover_clipboard.set_child(self.main_box)
         self.update_clipboard_list()
@@ -664,7 +629,7 @@ class MenuClipboard(BasePlugin):
         try:
             # Ensure the input is a Gtk.ListBoxRow
             if not isinstance(row, Gtk.ListBoxRow):
-                self.logger.error(
+                self.log_error(
                     error=TypeError(
                         f"Invalid row type: {type(row).__name__}. Expected Gtk.ListBoxRow."
                     ),
@@ -676,7 +641,7 @@ class MenuClipboard(BasePlugin):
             # Get the child widget of the row
             child = row.get_child()
             if not child:
-                self.logger.error(
+                self.log_error(
                     error=ValueError("Row has no child widget."),
                     message="Row child widget is missing in on_filter_invalidate.",
                     level="warning",
@@ -685,7 +650,7 @@ class MenuClipboard(BasePlugin):
 
             # Ensure the child widget has the 'MYTEXT' attribute
             if not hasattr(child, "MYTEXT"):
-                self.logger.error(
+                self.log_error(
                     error=AttributeError("Row child does not have 'MYTEXT' attribute."),
                     message="Row child is missing the required 'MYTEXT' attribute.",
                     level="warning",
@@ -695,7 +660,7 @@ class MenuClipboard(BasePlugin):
             # Extract the text from the child widget
             row_text = child.MYTEXT
             if not isinstance(row_text, str):
-                self.logger.error(
+                self.log_error(
                     error=TypeError(
                         f"Invalid row text type: {type(row_text).__name__}. Expected str."
                     ),
@@ -709,7 +674,7 @@ class MenuClipboard(BasePlugin):
             return text_to_search in row_text.lower()
 
         except Exception as e:
-            self.logger.error(
+            self.log_error(
                 error=e,
                 message="Unexpected error occurred in on_filter_invalidate.",
                 level="error",

@@ -26,11 +26,11 @@ class WayfireClientIPC:
             )
             self.logger.info("Successfully connected to the Unix socket.")
         except FileNotFoundError:
-            self.logger.error_handler.handle(f"Socket file not found: {socket_path}")
+            self.logger.error(f"Socket file not found: {socket_path}")
         except ConnectionRefusedError:
-            self.logger.error_handler.handle("Connection refused by the server.")
+            self.logger.error("Connection refused by the server.")
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 f"Unexpected error connecting to socket: {e}"
             )
         finally:
@@ -55,12 +55,12 @@ class WayfireClientIPC:
                         event = json.loads(event_str)
                         self.process_event(event)
                     except json.JSONDecodeError as e:
-                        self.logger.error_handler.handle(f"JSON decode error: {e}")
+                        self.logger.error(f"JSON decode error: {e}")
             return GLib.SOURCE_CONTINUE  # Continue receiving data
         except UnicodeDecodeError as e:
-            self.logger.error_handler.handle(f"Unicode decode error: {e}")
+            self.logger.error(f"Unicode decode error: {e}")
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 f"Unexpected error handling socket event: {e}"
             )
             return (

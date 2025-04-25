@@ -7,10 +7,12 @@ import urllib.parse
 import cairosvg
 import base64
 
+from waypanel.src.plugins.core._base import BasePlugin
 
-class NotifyUtils:
-    def __init__(self):
-        pass
+
+class NotifyUtils(BasePlugin):
+    def __init__(self, panel_instance):
+        super().__init__(panel_instance)
 
     def is_valid_path(self, path):
         return os.path.exists(path)
@@ -54,7 +56,7 @@ class NotifyUtils:
             )
             return pixbuf
         except Exception as e:
-            print(f"Error creating pixbuf: {e}")
+            self.log_error(f"Error creating pixbuf: {e}")
             return None
 
     # Helper function to create a PNG from raw pixel data
@@ -87,7 +89,7 @@ class NotifyUtils:
             loader.close()
             return loader.get_pixbuf()
         except Exception as e:
-            print(f"Error converting SVG to Pixbuf: {e}")
+            self.log_error(f"Error converting SVG to Pixbuf: {e}")
             return None
 
     def load_svg_from_data_uri(self, data_uri):
@@ -196,67 +198,72 @@ class NotifyUtils:
             return None
 
     def load_icon(self, notification):
-        """
-        Load the appropriate icon/image for a notification based on multiple cases.
-
-        Args:
-            notification (dict): The notification data containing app_icon, hints, app_name, etc.
-
-        Returns:
-            Gtk.Image: The loaded image/icon or a fallback image if none could be loaded.
-        """
+        """Load the appropriate icon/image for a notification based on multiple cases."""
         # Extract necessary fields from the notification
         app_icon = notification.get("app_icon", "")
+        app_name = notification.get("app_name", "").lower()
         hints = notification.get("hints", {})
 
         try:
             # Case 1: Check if hints contain raw image data
             if "image-data" in hints:
-                try:
-                    width, height, rowstride, has_alpha, pixels = hints["image-data"]
-                    pixbuf = self.create_pixbuf_from_pixels(
-                        width, height, rowstride, has_alpha, pixels
-                    )
-                    icon = Gtk.Image.new_from_pixbuf(pixbuf)
-                    return icon  # Successfully loaded from image-data
-                except Exception as e:
-                    print(f"Error loading image-data: {e}")
-                    # Fallback to other cases
+                image_data = hints["image-data"]
 
-            # Check if the icon is a data URI
-            if app_icon.startswith("data:image/svg+xml"):
-                return self.load_svg_from_data_uri(app_icon)
+                # Validate the structure of image_data
+                if isinstance(image_data, (list, tuple)) and len(image_data) == 5:
+                    width, height, rowstride, has_alpha, pixels = image_data
 
-            if app_icon.startswith("data:image/png"):
-                return self.load_png_from_data_uri(app_icon)
-
-            # Case 2: Check if app_icon is a valid file path
-            if self.is_valid_path(app_icon):
-                try:
-                    thumbnail_path = self.load_thumbnail(
-                        app_icon
-                    )  # Optional: Use thumbnails if needed
-                    if thumbnail_path:
-                        icon = Gtk.Image.new_from_file(thumbnail_path)
+                    # Validate individual components
+                    if (
+                        isinstance(width, int)
+                        and isinstance(height, int)
+                        and isinstance(rowstride, int)
+                        and isinstance(has_alpha, bool)
+                        and isinstance(pixels, (bytes, list, tuple))
+                    ):
+                        # Proceed to create GdkPixbuf
+                        pixbuf = self.create_pixbuf_from_pixels(
+                            width, height, rowstride, has_alpha, pixels
+                        )
+                        icon = Gtk.Image.new_from_pixbuf(pixbuf)
+                        return icon  # Successfully loaded from image-data
                     else:
-                        icon = Gtk.Image.new_from_file(app_icon)
-                    return icon  # Successfully loaded from file path
-                except Exception as e:
-                    print(f"Error loading app_icon from file path: {e}")
+                        self.logger.error("Invalid image-data format: Incorrect types.")
+                else:
+                    # self.logger.error(f"Malformed image-data: {image_data}")
+                    # too much log spam
+                    pass
 
-            # Case 3: Use app_icon directly as an icon name
+            # Case 2: Use app_icon as a file path or icon name
             if app_icon:
-                try:
-                    icon = Gtk.Image.new_from_icon_name(app_icon)
-                    return icon  # Successfully loaded from icon name
-                except Exception as e:
-                    print(f"Error loading app_icon as icon name: {e}")
+                if self.is_valid_path(app_icon):
+                    try:
+                        thumbnail_path = self.load_thumbnail(app_icon)
+                        if thumbnail_path:
+                            icon = Gtk.Image.new_from_file(thumbnail_path)
+                        else:
+                            icon = Gtk.Image.new_from_file(app_icon)
+                        return icon  # Successfully loaded from file path
+                    except Exception as e:
+                        self.logger.error(f"Error loading app_icon from file: {e}")
+                else:
+                    try:
+                        icon = Gtk.Image.new_from_icon_name(app_icon)
+                        return icon  # Successfully loaded from icon name
+                    except Exception as e:
+                        self.logger.error(f"Error loading app_icon as icon name: {e}")
 
-            # Case 4: Fallback to using app_name as the icon name
-            app_name = notification.get("app_name", "image-missing").lower()
-            icon = Gtk.Image.new_from_icon_name(app_name)
-            return icon  # Fallback icon
+            # Case 3: Use app_name as the icon name
+            if app_name:
+                try:
+                    icon = Gtk.Image.new_from_icon_name(app_name)
+                    return icon  # Successfully loaded from app_name
+                except Exception as e:
+                    self.logger.error(f"Error loading app_name as icon name: {e}")
+
+            # Case 4: Fallback to a default icon
+            return Gtk.Image.new_from_icon_name("image-missing")  # Final fallback icon
 
         except Exception as e:
-            print(f"Unexpected error while loading icon: {e}")
-            return Gtk.Image.new_from_icon_name("image-missing")  # Final fallback icon
+            self.logger.error(f"Unexpected error while loading icon: {e}")
+            return Gtk.Image.new_from_icon_name("message-new")  # Final fallback icon

@@ -36,15 +36,13 @@ class WindowTitlePlugin(BasePlugin):
         """
         Initialize the Window Title plugin.
         """
-        self.title_length = 50
-
         # Create window title widget components
         self.window_title_content = Gtk.Box()
         self.main_widget = (self.window_title_content, "append")
         self.window_title_label = Gtk.Label()
         self.window_title_icon = Gtk.Image.new_from_icon_name("None")
         self.window_title_icon.add_css_class("window-title-icon")
-        self.title_length = 50
+        self.title_length = self.config.get("window_title", {}).get("title_length", 50)
 
         # Assemble the widget
         self.window_title_content.append(self.window_title_icon)
@@ -69,7 +67,7 @@ class WindowTitlePlugin(BasePlugin):
         Subscribe to relevant events using the EventManagerPlugin.
         """
         if "event_manager" not in self.obj.plugin_loader.plugins:
-            self.logger.error(
+            self.log_error(
                 "Event Manager Plugin is not loaded. Cannot subscribe to events."
             )
             return
@@ -105,9 +103,7 @@ class WindowTitlePlugin(BasePlugin):
                 view = event_message.get("view", {})
                 self.update_title_icon(view)
         except Exception as e:
-            self.logger.error(
-                f"Error handling 'view-focused' event: {e}"
-            )
+            self.log_error(f"Error handling 'view-focused' event: {e}")
 
     def on_view_closed(self, event_message):
         """
@@ -119,7 +115,7 @@ class WindowTitlePlugin(BasePlugin):
         try:
             self.clear_widget()
         except Exception as e:
-            self.logger.error(f"Error handling 'view-closed' event: {e}")
+            self.log_error(f"Error handling 'view-closed' event: {e}")
 
     def on_view_title_changed(self, event_message):
         """
@@ -133,9 +129,7 @@ class WindowTitlePlugin(BasePlugin):
                 view = event_message.get("view", {})
                 self.update_title_icon(view)
         except Exception as e:
-            self.logger.error(
-                f"Error handling 'view-title-changed' event: {e}"
-            )
+            self.log_error(f"Error handling 'view-title-changed' event: {e}")
 
     def update_title_icon(self, view):
         """
@@ -156,7 +150,7 @@ class WindowTitlePlugin(BasePlugin):
             # Update the widget
             self.update_title(title, icon)
         except Exception as e:
-            self.logger.error(f"Error updating title/icon: {e}")
+            self.log_error(f"Error updating title/icon: {e}")
 
     def clear_widget(self):
         """
@@ -211,4 +205,4 @@ class WindowTitlePlugin(BasePlugin):
             else:
                 self.window_title_icon.set_from_icon_name("None")
         except Exception as e:
-            self.logger.error(f"Error updating window title widget: {e}")
+            self.log_error(f"Error updating window title widget: {e}")

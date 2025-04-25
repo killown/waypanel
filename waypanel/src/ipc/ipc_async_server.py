@@ -44,7 +44,7 @@ class WayfireEventServer:
             try:
                 self.reconnect_wayfire_socket()
             except Exception as e:
-                self.logger.error_handler.handle(f"Retrying in 10 seconds: {e}")
+                self.logger.error(f"Retrying in 10 seconds: {e}")
                 time.sleep(10)
                 return False
         return True
@@ -59,7 +59,7 @@ class WayfireEventServer:
                 event = self.ipc.read_next_event()
                 asyncio.run_coroutine_threadsafe(self.event_queue.put(event), self.loop)
             except Exception as e:
-                self.logger.error_handler.handle(f"Event read failed: {e}")
+                self.logger.error(f"Event read failed: {e}")
                 if not self.ipc.is_connected():
                     time.sleep(1)
                     continue

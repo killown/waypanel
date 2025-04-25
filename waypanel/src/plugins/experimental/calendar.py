@@ -12,10 +12,7 @@ DEPS = ["clock"]
 
 
 def get_plugin_placement(panel_instance):
-    """Define the plugin's position and order."""
-    position = "top-panel-center"  # Calendar is appended to the clock plugin
-    order = 6  # After the clock
-    return position, order
+    return
 
 
 def initialize_plugin(panel_instance):
@@ -36,7 +33,7 @@ class CalendarPlugin(BasePlugin):
         """Setup the calendar popover."""
         # Ensure the clock plugin is loaded
         if "clock" not in self.obj.plugins:
-            self.logger.error("Clock plugin is not loaded. Cannot append calendar.")
+            self.log_error("Clock plugin is not loaded. Cannot append calendar.")
             return
 
         # Get the clock button from the clock plugin

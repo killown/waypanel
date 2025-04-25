@@ -48,7 +48,7 @@ class EventManagerPlugin(BasePlugin):
                             f"Event '{event_type}' triggered for plugin '{plugin_name}'"
                         )
                 except Exception as e:
-                    self.logger.error_handler(
+                    self.log_error_handler(
                         f"Error executing callback for event '{event_type}': {e}"
                     )
 

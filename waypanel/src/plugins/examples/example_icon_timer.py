@@ -45,7 +45,7 @@ class IconTimerPlugin(BasePlugin):
             # Return the widget to be appended by the plugin loader
             return self.icon_widget
         except Exception as e:
-            self.logger.error(
+            self.log_error(
                 error=e,
                 message="Error appending widget in IconTimerPlugin.",
                 level="error",
@@ -63,7 +63,7 @@ class IconTimerPlugin(BasePlugin):
             else:
                 self.logger.warning("Icon widget does not exist. Skipping removal.")
         except Exception as e:
-            self.logger.error(
+            self.log_error(
                 error=e,
                 message="Error removing widget in IconTimerPlugin.",
                 level="error",

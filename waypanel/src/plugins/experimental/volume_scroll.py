@@ -54,7 +54,7 @@ class VolumeScrollPlugin(BasePlugin):
                         )
                         break
         except Exception as e:
-            self.logger.error(f"Error fetching maximum volume: {e}")
+            self.log_error(f"Error fetching maximum volume: {e}")
             self.max_volume = 150  # Fallback to default max volume
 
     def setup_scroll_event(self):
@@ -71,7 +71,7 @@ class VolumeScrollPlugin(BasePlugin):
             adjustment = "-8%" if dy > 0 else "+8%"
             self.adjust_volume(adjustment)
         except Exception as e:
-            self.logger.error(f"Error handling scroll event: {e}")
+            self.log_error(f"Error handling scroll event: {e}")
 
     def adjust_volume(self, adjustment):
         """Adjust the volume using the `pactl` command."""
@@ -87,7 +87,7 @@ class VolumeScrollPlugin(BasePlugin):
             self.set_volume(current_volume)
             self.show_widget()
         except Exception as e:
-            self.logger.error(f"Error adjusting volume: {e}")
+            self.log_error(f"Error adjusting volume: {e}")
 
     def get_current_volume(self):
         """Get the current volume level using `pulsectl`."""
@@ -100,7 +100,7 @@ class VolumeScrollPlugin(BasePlugin):
                         return min(volume, self.max_volume)  # Clamp to max volume
             return 0  # Default to 0 if no active sink is found
         except Exception as e:
-            self.logger.error(f"Error fetching current volume: {e}")
+            self.log_error(f"Error fetching current volume: {e}")
             return 0
 
     def create_floating_widget(self):

@@ -132,7 +132,7 @@ class Utils(Adw.Application):
         Dependencies:
             - `self.ipc.list_outputs()`: Retrieves a list of all connected outputs and their geometries.
             - `self.ipc.get_focused_output()`: Retrieves the currently focused output and its geometry.
-            - `self.logger.error_handler.handle(...)`: Logs errors with detailed context for troubleshooting.
+            - `self.logger.error(...)`: Logs errors with detailed context for troubleshooting.
 
         Example Usage:
             # Get the output to the left of the focused output
@@ -209,7 +209,7 @@ class Utils(Adw.Application):
         except Exception as e:
             focused_output = self.ipc.get_focused_output()
             outputs = self.ipc.list_outputs()
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message="Error while determining the output from direction.",
                 context={
@@ -355,7 +355,7 @@ class Utils(Adw.Application):
             self.logger.info(f"Command started with PID: {process.pid}")
 
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e, message=f"Error running command: {cmd}", level="error"
             )
 
@@ -449,7 +449,7 @@ class Utils(Adw.Application):
             if matches:
                 return matches[0]  # Return first match
         except Exception as e:
-            self.logger.error_handler.handle(f"Icon search error: {e}")
+            self.logger.error(f"Icon search error: {e}")
 
         # Final fallbacks
         for fallback in [
@@ -472,24 +472,43 @@ class Utils(Adw.Application):
         """
         GLib.idle_add(function_method, *args)
 
-    def append_widget_if_ready(self, container, widget):
+    def update_widget_safely(self, method, *args):
         """
-        Append a widget to a container if the widget is valid and not already parented.
+        Safely call a method with provided arguments if all validations pass.
         Ensures the operation is performed on the main thread using GLib.idle_add.
 
         Args:
-            container (Gtk.Container): The container to which the widget will be appended.
-            widget (Gtk.Widget): The widget to append.
+            method: The callable method to invoke (e.g., container.append or set_layer_position_exclusive).
+            *args: Arguments to pass to the method.
 
         Returns:
-            bool: True if the widget was successfully appended, False otherwise.
+            bool: True if the method was successfully called, False otherwise.
         """
-        if widget is None or not isinstance(widget, Gtk.Widget):
-            self.logger.error_handler.handle("Error: Invalid widget provided")
+        # Validate the method
+        if not callable(method):
+            self.logger.error("Error: Provided method is not callable.")
             return False
 
-        if not widget.get_parent():
-            self.update_widget(container.append, widget)
+        # Perform additional validation for specific use cases
+        if len(args) > 0:
+            first_arg = args[0]
+            if isinstance(first_arg, Gtk.Widget):
+                # If the first argument is a Gtk.Widget, validate it
+                if first_arg is None or not isinstance(first_arg, Gtk.Widget):
+                    self.logger.error("Error: Invalid widget provided")
+                    return False
+                if first_arg.get_parent():
+                    self.logger.warning(
+                        "Widget already has a parent. Skipping operation."
+                    )
+                    return False
+
+        # Safely update the widget using GLib.idle_add
+        try:
+            self.update_widget(method, *args)
+        except Exception as e:
+            self.logger.error(f"Error calling method {method.__name__}: {e}")
+            return False
 
         return True
 
@@ -511,7 +530,7 @@ class Utils(Adw.Application):
             # Get the default display
             screen = Gdk.Display.get_default()
             if not screen:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=RuntimeError("Failed to retrieve default display."),
                     message="No default display found.",
                 )
@@ -547,7 +566,7 @@ class Utils(Adw.Application):
 
                 except Exception as e:
                     # Log errors for individual monitors without failing the entire process
-                    self.logger.error_handler.handle(
+                    self.logger.error(
                         error=e,
                         message="Error retrieving information for a monitor.",
                         context={"monitor": str(monitor)},
@@ -557,7 +576,7 @@ class Utils(Adw.Application):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message="Unexpected error while retrieving monitor information.",
                 level="error",
@@ -606,7 +625,7 @@ class Utils(Adw.Application):
                     self.logger.info(f"Creating temporary directory: {temp_dir}")
                     os.makedirs(temp_dir)
             except Exception as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e, message=f"Failed to create temporary directory: {temp_dir}"
                 )
                 return
@@ -616,7 +635,7 @@ class Utils(Adw.Application):
                 self.logger.info(f"Cloning repository from: {repo_url}")
                 subprocess.run(["git", "clone", repo_url, temp_dir], check=True)
             except subprocess.CalledProcessError as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e, message="Failed to clone the gtk4-layer-shell repository."
                 )
                 return
@@ -625,7 +644,7 @@ class Utils(Adw.Application):
             try:
                 os.chdir(temp_dir)
             except Exception as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e, message=f"Failed to change directory to: {temp_dir}"
                 )
                 return
@@ -646,7 +665,7 @@ class Utils(Adw.Application):
                     check=True,
                 )
             except subprocess.CalledProcessError as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e,
                     message="Failed to configure the build environment with Meson.",
                 )
@@ -657,7 +676,7 @@ class Utils(Adw.Application):
                 self.logger.info("Building the project...")
                 subprocess.run(["ninja", "-C", build_dir], check=True)
             except subprocess.CalledProcessError as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e, message="Failed to build the gtk4-layer-shell project."
                 )
                 return
@@ -667,7 +686,7 @@ class Utils(Adw.Application):
                 self.logger.info("Installing the project...")
                 subprocess.run(["ninja", "-C", build_dir, "install"], check=True)
             except subprocess.CalledProcessError as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e, message="Failed to install the gtk4-layer-shell project."
                 )
                 return
@@ -676,7 +695,7 @@ class Utils(Adw.Application):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message="Unexpected error during gtk4-layer-shell installation.",
             )
@@ -727,13 +746,13 @@ class Utils(Adw.Application):
                                         )
                                         return icon_name
                         except Exception as e:
-                            self.logger.error_handler.handle(
+                            self.logger.error(
                                 error=e,
                                 message=f"Error reading desktop file: {file_path}",
                                 context={"file": file_path},
                             )
                 except Exception as e:
-                    self.logger.error_handler.handle(
+                    self.logger.error(
                         error=e,
                         message=f"Error listing files in directory: {search_path}",
                         context={"directory": search_path},
@@ -741,7 +760,7 @@ class Utils(Adw.Application):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e, message="Unexpected error while extracting icon info."
             )
 
@@ -771,7 +790,7 @@ class Utils(Adw.Application):
             self.logger.debug(f"Successfully unparented widget: {widget}")
             return True
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e, message=f"Failed to unparent widget: {widget}", level="error"
             )
             return False
@@ -1080,7 +1099,7 @@ class Utils(Adw.Application):
             try:
                 all_apps = Gio.AppInfo.get_all()
             except Exception as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e, message="Failed to retrieve installed applications."
                 )
                 return None
@@ -1104,7 +1123,7 @@ class Utils(Adw.Application):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Unexpected error while searching for desktop file with WM_CLASS: {app_id}",
             )
@@ -1153,7 +1172,7 @@ class Utils(Adw.Application):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Unexpected error while checking if icon exists for argument: {argument}",
             )
@@ -1230,7 +1249,7 @@ class Utils(Adw.Application):
                 return None
         except Exception as e:
             # Log any unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message="Error while finding an empty workspace.",
                 level="error",
@@ -1276,14 +1295,10 @@ class Utils(Adw.Application):
                         button.set_image(image)
                         button.set_always_show_image(True)
                     else:
-                        self.logger.error_handler.handle(
-                            "Error: Invalid image provided"
-                        )
+                        self.logger.error("Error: Invalid image provided")
                         button.set_icon_name("default-icon-name")
                 except Exception as e:
-                    self.logger.error_handler.handle(
-                        f"Error loading icon from file: {e}"
-                    )
+                    self.logger.error(f"Error loading icon from file: {e}")
                     button.set_icon_name("default-icon-name")
             else:
                 # Handle icon names directly
@@ -1291,7 +1306,7 @@ class Utils(Adw.Application):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Unexpected error while handling icon for button: {app_id}",
             )
@@ -1326,7 +1341,7 @@ class Utils(Adw.Application):
             try:
                 app_list = Gio.AppInfo.get_all()
             except Exception as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e, message="Failed to retrieve installed applications."
                 )
                 return None
@@ -1360,7 +1375,7 @@ class Utils(Adw.Application):
                                 return file_path
 
                 except Exception as e:
-                    self.logger.error_handler.handle(
+                    self.logger.error(
                         error=e, message=f"Error processing application: {app_info_id}"
                     )
 
@@ -1370,7 +1385,7 @@ class Utils(Adw.Application):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Unexpected error while finding icon for app_id: {app_id}",
             )
@@ -1411,7 +1426,7 @@ class Utils(Adw.Application):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e, message="Unexpected error while retrieving Wayfire PID."
             )
             return None
@@ -1446,13 +1461,13 @@ class Utils(Adw.Application):
                             self.logger.debug(f"Found shared library: {lib_path}")
 
         except FileNotFoundError:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=FileNotFoundError(f"Maps file not found: {maps_file}"),
                 message=f"Failed to read /proc/{pid}/maps",
             )
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Unexpected error while listing shared libraries for PID: {pid}",
             )
@@ -1506,7 +1521,7 @@ class Utils(Adw.Application):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Unexpected error while checking for library '{lib_name}' in Wayfire process.",
             )
@@ -1527,7 +1542,7 @@ class Utils(Adw.Application):
             return self.check_lib_in_wayfire(lib_name)
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Unexpected error while finding library '{lib_name}' in Wayfire.",
             )
@@ -1546,9 +1561,7 @@ class Utils(Adw.Application):
         try:
             # Validate that the configuration file exists
             if not os.path.exists(config_file_path):
-                self.logger.error_handler.handle(
-                    f"Config file '{config_file_path}' not found."
-                )
+                self.logger.error(f"Config file '{config_file_path}' not found.")
                 return None
 
             # Load and parse the TOML configuration file
@@ -1556,7 +1569,7 @@ class Utils(Adw.Application):
                 with open(config_file_path, "r") as file:
                     config = toml.load(file)
             except toml.TomlDecodeError as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e, message=f"Failed to parse TOML file: {config_file_path}"
                 )
                 return None
@@ -1580,7 +1593,7 @@ class Utils(Adw.Application):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Unexpected error while retrieving default monitor name from '{config_file_path}'.",
             )
@@ -1603,7 +1616,7 @@ class Utils(Adw.Application):
             try:
                 original_alpha = self.ipc.get_view_alpha(view_id)["alpha"]
             except Exception as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e,
                     message=f"Failed to retrieve alpha value for view ID: {view_id}",
                 )
@@ -1620,7 +1633,7 @@ class Utils(Adw.Application):
                     self.ipc.set_view_alpha(view_id, alpha)
                     sleep(0.02)  # Small delay for the animation effect
                 except Exception as e:
-                    self.logger.error_handler.handle(
+                    self.logger.error(
                         error=e,
                         message=f"Failed to set alpha value ({alpha}) for view ID: {view_id}",
                     )
@@ -1629,14 +1642,14 @@ class Utils(Adw.Application):
             try:
                 self.ipc.set_view_alpha(view_id, original_alpha)
             except Exception as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e,
                     message=f"Failed to restore original alpha value ({original_alpha}) for view ID: {view_id}",
                 )
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Unexpected error while applying focus indicator effect for view ID: {view_id}",
             )
@@ -1676,7 +1689,7 @@ class Utils(Adw.Application):
             try:
                 view_ids = [i["id"] for i in self.ipc.list_views()]
             except Exception as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e, message="Failed to retrieve active view IDs."
                 )
                 return False
@@ -1691,7 +1704,7 @@ class Utils(Adw.Application):
             try:
                 view = self.ipc.get_view(view_id)
             except Exception as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e, message=f"Failed to fetch view details for ID: {view_id}"
                 )
                 return False
@@ -1723,7 +1736,7 @@ class Utils(Adw.Application):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e, message=f"Unexpected error while validating view ID: {view_id}"
             )
             return False
@@ -1734,7 +1747,6 @@ class Utils(Adw.Application):
         # Set instance variables from the dictionary
         self.home = config_paths["home"]
         self.webapps_applications = os.path.join(self.home, ".local/share/applications")
-        self.scripts = config_paths["scripts"]
         self.config_path = config_paths["config_path"]
         self.style_css_config = config_paths["style_css_config"]
         self.cache_folder = config_paths["cache_folder"]
@@ -1744,7 +1756,7 @@ class Utils(Adw.Application):
         Set up and return configuration paths for the application.
 
         Returns:
-            dict: A dictionary containing paths for home, scripts, config, styles, and cache.
+            dict: A dictionary containing paths for home, config, styles, and cache.
         """
         try:
             # Determine the user's home directory and script directory
@@ -1753,27 +1765,15 @@ class Utils(Adw.Application):
             directory_path = os.path.dirname(full_path)
 
             # Define key paths
-            scripts = os.path.join(home, ".config/waypanel/scripts")
             config_path = os.path.join(home, ".config/waypanel")
             style_css_config = os.path.join(config_path, "styles.css")
             cache_folder = os.path.join(home, ".cache/waypanel")
-
-            # Fallback for scripts if the default path does not exist
-            if not os.path.isfile(scripts):
-                self.logger.warning(
-                    f"Scripts directory not found at {scripts}. Using fallback."
-                )
-                scripts = "../config/scripts"
 
             # Ensure required directories exist
             try:
                 if not os.path.exists(config_path):
                     os.makedirs(config_path)
                     self.logger.info(f"Created config directory: {config_path}")
-
-                if not os.path.exists(scripts):
-                    os.makedirs(scripts)
-                    self.logger.info(f"Created scripts directory: {scripts}")
 
                 if not os.path.exists(cache_folder):
                     os.makedirs(cache_folder)
@@ -1786,7 +1786,6 @@ class Utils(Adw.Application):
             # Return the configuration paths
             return {
                 "home": home,
-                "scripts": scripts,
                 "config_path": config_path,
                 "style_css_config": style_css_config,
                 "cache_folder": cache_folder,
@@ -1794,7 +1793,7 @@ class Utils(Adw.Application):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message="Unexpected error while setting up configuration paths.",
             )
@@ -1848,7 +1847,7 @@ class Utils(Adw.Application):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message=f"Unexpected error while filtering UTF for GTK: {byte_string}",
                 context={"input_type": type(byte_string).__name__},
@@ -1882,14 +1881,14 @@ class Utils(Adw.Application):
         try:
             # Validate inputs
             if not icon_name and not use_label:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=ValueError("Either icon_name or use_label must be provided."),
                     message="Invalid input: No icon or label provided for button creation.",
                 )
                 return None
 
             if not isinstance(class_style, str):
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=TypeError(
                         f"Invalid class_style type: {type(class_style).__name__}"
                     ),
@@ -1914,7 +1913,7 @@ class Utils(Adw.Application):
                         icon = Gtk.Image.new_from_icon_name(icon_name)
                         box.append(icon)
                     except Exception as e:
-                        self.logger.error_handler.handle(
+                        self.logger.error(
                             error=e,
                             message=f"Failed to create icon with name: {icon_name}",
                         )
@@ -1933,7 +1932,7 @@ class Utils(Adw.Application):
                 try:
                     button.connect("clicked", lambda *_: use_function(use_args))
                 except Exception as e:
-                    self.logger.error_handler.handle(
+                    self.logger.error(
                         error=e, message="Failed to connect custom function to button."
                     )
                     return None
@@ -1941,7 +1940,7 @@ class Utils(Adw.Application):
                 try:
                     button.connect("clicked", lambda *_: self.run_cmd(cmd))
                 except Exception as e:
-                    self.logger.error_handler.handle(
+                    self.logger.error(
                         error=e, message=f"Failed to connect command '{cmd}' to button."
                     )
                     return None
@@ -1950,7 +1949,7 @@ class Utils(Adw.Application):
             try:
                 button.add_css_class(class_style)
             except Exception as e:
-                self.logger.error_handler.handle(
+                self.logger.error(
                     error=e,
                     message=f"Failed to apply CSS class '{class_style}' to button.",
                 )
@@ -1960,7 +1959,7 @@ class Utils(Adw.Application):
 
         except Exception as e:
             # Catch-all for unexpected errors
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e, message="Unexpected error while creating button."
             )
             return None

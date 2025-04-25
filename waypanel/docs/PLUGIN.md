@@ -1,112 +1,73 @@
-# Plugin Development Guide for Waypanel
+Managing Plugins:
 
-Waypanel is designed to be highly extensible through plugins. This guide explains how plugins work, how they are loaded, and how you can create your own plugins to extend the functionality of the panel.
+1.  Plugin Loading:
+    
+    *   Plugins are automatically loaded from directories under `src/plugins`.
+    *   The system looks for specific metadata in each plugin file.
+2.  Configuration:
+    
+    *   Plugins can be enabled or disabled via a flag or by removing the plugin file.
+    *   Use the `ENABLE_PLUGIN` flag to enable or disable individual plugins.
+    *   Manage plugin dependencies using the `DEPS` list.
+3.  Plugin Placement:
+    
+    *   Define plugin position and order using `get_plugin_placement(panel_instance)`.
+    *   Positions can be "left", "right", "center", "systray", or "after-systray".
+    *   Order determines the sequence of plugins within the same position.
+4.  Initialization:
+    
+    *   Implement `initialize_plugin(panel_instance)` to initialize the plugin.
+    *   This function should return the plugin instance.
 
----
+Developing Plugins:
 
-## Overview of Plugins
+1.  Plugin Structure:
+    
+    *   Each plugin must define:
+        *   `get_plugin_placement()` function
+        *   `initialize_plugin(panel_instance)` function
+        *   A plugin class that encapsulates its functionality
+2.  Base Class:
+    
+    *   Inherit from `BasePlugin` class.
+    *   Implement lifecycle methods if needed:
+        *   `on_enable()`
+        *   `on_stop()`
+        *   `on_reload()`
+        *   `on_cleanup()`
+3.  UI Integration:
+    
+    *   Use `self.main_widget = (self.any_widget, "append")` to add widgets to the panel.
+    *   Use `self.main_widget = (self.any_widget, "panel_set_content")` to set the content to a specific panel.
+    use `get_plugin_placement()` to define which panel it should set the content:
+    position = "left" for example.
 
-Plugins are the building blocks of Waypanel. They allow developers to add new widgets, handle events, or interact with the system. Each plugin is automatically loaded based on metadata and configuration. Plugins can be enabled or disabled via a flag or by removing the plugin file.
-
----
-
-## How Plugins Work
-
-1. **Automatic Loading**
-   - Plugins are automatically loaded by scanning directories under `src/plugins`.
-   - The system looks for specific metadata in each plugin file:
-     - `get_plugin_placement()`: Defines the plugin's position (e.g., "left", "right", "center") and order.
-     - `initialize_plugin(panel_instance)`: Initializes the plugin and returns its instance.
-
-2. **Plugin Structure**
-   - Each plugin must define:
-     - A `get_plugin_placement()` function to specify where the plugin should appear in the panel.
-     - An `initialize_plugin(panel_instance)` function to initialize the plugin.
-     - A plugin class that encapsulates its functionality.
-
-3. **Interacting with the Panel**
-   - Plugins interact with the `Panel` instance to modify the UI dynamically.
-   - Key methods provided by the `Panel` instance:
-     - `append_widget()`: Adds a widget to the panel.
-     - `panel_set_content(widget)`: Sets content directly into a specific panel (e.g., bottom, left).
-
-4. **Event Handling**
-   - Plugins can subscribe to IPC events from Wayfire using the `EventManagerPlugin`.
-   - Events include "view-focused", "view-mapped", "output-gain-focus", etc.
-
-5. **Gestures**
-   - Plugins can define custom gestures (e.g., swipe, click) and associate them with callbacks.
-
----
-
-## Creating a Simple Plugin
-
-To create a plugin, follow these steps:
-
-1. **Define Metadata**
-   - Implement the `get_plugin_placement(panel_instance)` function to specify the plugin's position and order:
-     ```python
-     def get_plugin_placement():
-         return "right", 10  # Position: right, Order: 10
-     ```
-
-2. **Initialize the Plugin**
-   - Implement the `initialize_plugin(panel_instance)` function:
-     ```python
-     def initialize_plugin(panel_instance):
-         if ENABLE_PLUGIN:
-             return MySimplePlugin(panel_instance)
-     ```
-
-3. **Create the Plugin Class**
-   - Define a class for your plugin:
-     ```python
-     class MySimplePlugin:
-         def __init__(self, panel_instance):
-             self.panel_instance = panel_instance
-             self.widget = Gtk.Button(label="Click Me")
-         
-         def append_widget(self):
-             return self.widget
-     ```
-
-4. **Append the Widget**
-   - Use the `append_widget()` method to add the widget to the panel.
-
-5. **Optional: Set Content for Other Panels**
-   - If your plugin needs to set content in other panels (e.g., bottom, left), implement the `panel_set_content()` method:
-     ```python
-     def panel_set_content(self):
-         return self.my_custom_widget
-     ```
-
-6. **Enable/Disable the Plugin**
-   - Use the `ENABLE_PLUGIN` flag to enable or disable the plugin.
-
-7. Set plugin dependency
-    - Use DEPS = ["event_manager", "my_plugin"]
-
----
-
-## Key Concepts
-
-### Panel Instance
-- The `Panel` instance is the central object that manages all panels and plugins.
-- It provides access to:
-  - Panels in different directions (top, bottom, left, right).
-  - Utility functions (e.g., `update_widget`, `utils`).
-  - The plugin loader (`plugin_loader`).
-
-### `append_widget()`
-- A method used by plugins to append widgets to the panel.
-- The widget is added to the appropriate section based on the plugin's placement.
-
-### `panel_set_content(widget)`
-- A method used to set content directly into a specific panel (e.g., bottom, left).
-- This is useful when you need to manage widgets in panels other than the one associated with the plugin's position.
-
----
-
-## Conclusion
-
-Waypanel provides a flexible and extensible framework for building a customizable panel for Wayfire. By leveraging the `Panel` instance, plugins can dynamically modify the UI and respond to system events. The automatic plugin loading system simplifies development, allowing developers to focus on creating unique features.
+4.  Event Handling:
+    
+    *   Subscribe to IPC events from Wayfire using the `EventManagerPlugin`.
+    *   Handle events like "view-focused", "view-mapped", etc.
+5.  Gestures:
+    
+    *   Define custom gestures (swipe, click) and associate them with callbacks.
+6.  Dependencies:
+    
+    *   Specify dependencies using the `DEPS` list.
+    *   Use `check_dependencies()` to ensure all dependencies are loaded.
+7.  Reloading:
+    
+    *   Implement support for dynamic reloading if necessary.
+    *   Use `reload_plugin(plugin_name)` for dynamic reloading.
+8.  Configuration:
+    
+    *   Use `waypanel.toml` for plugin-specific configuration if needed.
+    *   Load configuration using `_load_plugin_configuration()`.
+9.  Error Handling:
+    
+    *   Implement proper error handling and logging.
+    *   Use the provided logger for error messages and debugging information.
+10.  Best Practices:
+    
+    *   Keep plugins lightweight and independent.
+    *   Only implement configuration if necessary.
+    *   Use GLib.idle\_add for non-blocking code execution.
+    *   Test plugins thoroughly to avoid hanging the entire plugin system.

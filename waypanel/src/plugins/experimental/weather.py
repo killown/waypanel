@@ -33,7 +33,7 @@ class WeatherPlugin(BasePlugin):
         """Set up the weather functionality."""
         # Ensure the calendar plugin is loaded
         if "calendar" not in self.plugins:
-            self.logger.error(
+            self.log_error(
                 "Calendar plugin is not loaded. Cannot initialize weather."
             )
             return
@@ -41,7 +41,7 @@ class WeatherPlugin(BasePlugin):
         # Get the calendar popover from the calendar plugin
         calendar_plugin = self.plugins["calendar"]
         if not calendar_plugin.popover_calendar:
-            self.logger.error("Calendar popover not found. Cannot attach weather.")
+            self.log_error("Calendar popover not found. Cannot attach weather.")
             return
 
         # Attach weather label to the calendar popover
@@ -85,7 +85,7 @@ class WeatherPlugin(BasePlugin):
             ]["air_temperature"]
             return temperature
         except Exception as e:
-            self.logger.error(f"Failed to fetch weather data: {e}")
+            self.log_error(f"Failed to fetch weather data: {e}")
             return None
 
     def fetch_and_update_weather(self):

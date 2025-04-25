@@ -65,7 +65,7 @@ class DockbarPlugin(BasePlugin):
         elif panel == "top-panel":
             return self.obj.top_panel
         else:
-            self.logger.error(f"Invalid panel value: {panel}")
+            self.log_error(f"Invalid panel value: {panel}")
 
     def choose_and_set_dockbar(self):
         panel = get_plugin_placement(self.obj)[0]
@@ -79,9 +79,7 @@ class DockbarPlugin(BasePlugin):
         # Validate panel value
         valid_panels = {"left-panel", "right-panel", "bottom-panel", "top-panel"}
         if panel not in valid_panels:
-            self.logger.error(
-                f"Invalid panel value: {panel}. Using default 'left-panel'."
-            )
+            self.log_error(f"Invalid panel value: {panel}. Using default 'left-panel'.")
             panel = "left-panel"
 
         self.dockbar_panel = self.get_dockbar_position(panel)
@@ -131,7 +129,7 @@ class DockbarPlugin(BasePlugin):
             )
 
             # Append the button to the box
-            self.update_widget(box.append, button)
+            self.update_widget_safely(box.append, button)
 
         return box
 
@@ -179,9 +177,7 @@ class DockbarPlugin(BasePlugin):
             self.utils.run_cmd(cmd)
 
         except Exception as e:
-            self.logger.error(
-                error=e, message="Error while handling right-click action."
-            )
+            self.log_error(error=e, message="Error while handling right-click action.")
 
     def on_middle_click(self, cmd):
         # Check for empty workspace
@@ -254,10 +250,10 @@ class DockbarPlugin(BasePlugin):
 
         if icon_name:
             icon = Gtk.Image.new_from_icon_name(icon_name)
-            box.append(icon)
+            self.update_widget_safely(box.append, icon)
 
         label = Gtk.Label(label=title[:30])
-        box.append(label)
+        self.update_widget_safely(box.append, label)
 
         button.set_child(box)
         button.add_css_class("dockbar-button")
@@ -277,13 +273,15 @@ class DockbarPlugin(BasePlugin):
         focused_output_name = self.ipc.get_focused_output()["name"]
         # only set layer if the focused output is the same as the defined in panel creation
         if layer_set_on_output_name == focused_output_name:
-            self.update_widget(set_layer_position_exclusive, self.dockbar_panel, 64)
+            self.update_widget_safely(
+                set_layer_position_exclusive, self.dockbar_panel, 64
+            )
             self.layer_state = True
 
     def on_scale_desactivated(self):
         """Handle scale plugin deactivation."""
         # this will set panels on bottom, hidden it from views
-        self.update_widget(unset_layer_position_exclusive, self.dockbar_panel)
+        self.update_widget_safely(unset_layer_position_exclusive, self.dockbar_panel)
         self.layer_state = False
 
     def handle_plugin_event(self, msg):

@@ -3,7 +3,7 @@ import sqlite3
 import asyncio
 import json
 from gi.repository import Gtk
-from waypanel.src.plugins.experimental.dbus.utils import NotifyUtils
+from waypanel.src.plugins.experimental.dbus._utils import NotifyUtils
 from waypanel.src.plugins.core._base import BasePlugin
 from waypanel.src.plugins.experimental.dbus.notify_server import (
     NotificationDaemon,
@@ -12,7 +12,7 @@ from waypanel.src.plugins.experimental.dbus.notify_server import (
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 
-DEPS = ["top_panel"]
+DEPS = ["top_panel", "notify_server"]
 
 
 def get_plugin_placement(panel_instance):
@@ -59,15 +59,18 @@ def run_server_in_background(panel_instance):
 class NotificationPopoverPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
-        self.logger = self.obj.logger
-        self.notify_utils = NotifyUtils()
-        self.notification_server = run_server_in_background(panel_instance)
+        self.notify_utils = NotifyUtils(self.obj)
+        self.notification_server = self.plugins["notify_server"]
         # Create a vertical box to hold notification details
         self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
         self.vbox.set_margin_top(10)
         self.vbox.set_margin_bottom(10)
         self.vbox.set_margin_start(10)
         self.show_messages = None
+        self.max_notifications = (
+            self.config.get("notify", {}).get("client", {}).get("max_notifications", 5)
+        )
+
         self.vbox.set_margin_end(10)
         self.notification_on_popover = {}
         self.notification_button = Gtk.Button.new_from_icon_name("liteupdatesnotify")
@@ -96,7 +99,7 @@ class NotificationPopoverPlugin(BasePlugin):
                 not show_messages
             )  # Invert the value since DND is the opposite of showing messages
         except Exception as e:
-            self.logger.error(f"Error updating DND switch state: {e}")
+            self.log_error(f"Error updating DND switch state: {e}")
 
     def on_dnd_toggled(self, switch, state):
         """Callback when the Do Not Disturb switch is toggled."""
@@ -123,9 +126,10 @@ class NotificationPopoverPlugin(BasePlugin):
                 f"Do Not Disturb mode {'enabled' if state else 'disabled'}"
             )
         except Exception as e:
-            self.logger.error(f"Error toggling Do Not Disturb mode: {e}")
+            self.log_error(f"Error toggling Do Not Disturb mode: {e}")
 
-    def fetch_last_notifications(self, limit=3):
+    def fetch_last_notifications(self, limit=5):
+        limit = self.max_notifications
         """
         Fetch the last 3 notifications from the database.
         :return: List of notifications (dictionaries).
@@ -138,7 +142,7 @@ class NotificationPopoverPlugin(BasePlugin):
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             cursor.execute(f"""
-                SELECT id, app_name, summary, body, app_icon, hints, timestamp
+                SELECT id, app_name, summary, body, app_icon, actions, hints, timestamp
                 FROM notifications
                 ORDER BY timestamp DESC
                 LIMIT {limit}
@@ -148,9 +152,16 @@ class NotificationPopoverPlugin(BasePlugin):
 
             notifications = []
             for row in rows:
-                notification_id, app_name, summary, body, app_icon, hints, timestamp = (
-                    row
-                )
+                (
+                    notification_id,
+                    app_name,
+                    summary,
+                    body,
+                    app_icon,
+                    actions,
+                    hints,
+                    timestamp,
+                ) = row
                 if notification_id in self.notification_on_popover:
                     continue
 
@@ -161,6 +172,7 @@ class NotificationPopoverPlugin(BasePlugin):
                         "summary": summary,
                         "body": body,
                         "app_icon": app_icon,
+                        "actions": actions,
                         "hints": json.loads(hints)
                         if hints
                         else {},  # Deserialize hints
@@ -169,7 +181,60 @@ class NotificationPopoverPlugin(BasePlugin):
                 )
             return notifications
         except Exception as e:
-            self.logger.error(f"Error fetching notifications from database: {e}")
+            self.log_error(f"Error fetching notifications from database: {e}")
+
+    def on_notification_click(self, notification, widget):
+        """Handle click action on a notification."""
+        try:
+            actions = notification.get("actions", [])
+            if isinstance(actions, tuple):
+                action_id, action_label = actions[0]  # Default to the first action
+                if action_id == "default":
+                    self.handle_default_action(notification, widget)
+                else:
+                    self.logger.error(f"Unexpected action_id: {action_id}")
+            else:
+                actions = actions.split(",")[0]
+                if actions == "default":
+                    self.handle_default_action(notification, widget)
+                else:
+                    self.logger.error(f"Unexpected action_id: {actions}")
+        except Exception as e:
+            self.logger.error(f"Error handling notification click: {e}")
+
+    def handle_default_action(self, notification, widget):
+        """Handle the default action for a notification."""
+        # FIXME: need a proper way to handle those actions
+        try:
+            hints = notification.get("hints", {})
+            url = hints.get("url", "")
+            desktop_entry = hints.get("desktop-entry", "").lower()
+            print(desktop_entry)
+
+            if url:
+                # Open the URL if provided
+                self.utils.open_url(url)
+            elif desktop_entry:
+                # Launch the application if an app ID is provided
+                self.utils.run_cmd(desktop_entry)
+                # self.delete_notification(notification["id"], widget)
+                self.popover.popdown()
+                return True  # ready to delete the notification
+            else:
+                self.logger.info("No default action defined in hints.")
+        except Exception as e:
+            self.logger.error(f"Error handling default action: {e}")
+
+    def execute_default_action(self, action, notification):
+        """Execute the default action specified in hints."""
+        try:
+            self.logger.info(f"Executing default action: {action}")
+            # Implement your logic here to execute the default action
+            if action.startswith("app://"):
+                app_id = action.split("://")[1]
+                self.utils.run_app(app_id)
+        except Exception as e:
+            self.logger.error(f"Error executing default action '{action}': {e}")
 
     def create_notification_box(self, notification):
         """Create a notification box with an optional image on the left, content on the right, and a close button.
@@ -192,8 +257,9 @@ class NotificationPopoverPlugin(BasePlugin):
 
         # Create a horizontal box to hold the image and text content
         hbox = Gtk.Box.new(
-            Gtk.Orientation.HORIZONTAL, 10
+            Gtk.Orientation.HORIZONTAL, 30
         )  # 10px spacing between columns
+        hbox.add_css_class("notify-client-box")
 
         # Add a close button
         close_button = Gtk.Button.new_from_icon_name("window-close-symbolic")
@@ -202,7 +268,7 @@ class NotificationPopoverPlugin(BasePlugin):
         close_button.connect(
             "clicked", lambda _: self.delete_notification(notification["id"], hbox)
         )
-        hbox.append(close_button)
+        self.update_widget_safely(hbox.append, close_button)
 
         # Left column: Icon/Image container
         left_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
@@ -213,45 +279,59 @@ class NotificationPopoverPlugin(BasePlugin):
         right_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
         right_box.set_halign(Gtk.Align.START)
 
+        # Make the entire hbox clickable
+
+        if "gestures_setup" in self.plugins:
+            gestures_setup = self.plugins["gestures_setup"]
+            gestures_setup.create_gesture(
+                widget=hbox,
+                mouse_button=1,  # Left mouse button
+                callback=lambda widget: self.on_notification_click(
+                    notification, widget
+                ),
+            )
+
         # Load the icon/image
         icon = self.notify_utils.load_icon(notification)
         if icon:
             icon.set_pixel_size(notification_icon_size)  # Set a fixed size for the icon
             icon.set_halign(Gtk.Align.START)
             icon.add_css_class("notification-icon")
-            left_box.append(icon)
+            self.update_widget_safely(left_box.append, icon)
 
         # App Name
         app_label = Gtk.Label(label=f"<b>{notification['app_name']}</b>")
         app_label.set_use_markup(True)
         app_label.set_halign(Gtk.Align.START)
-        right_box.append(app_label)
+        self.update_widget_safely(left_box.append, app_label)
 
         # Summary
         summary_label = Gtk.Label(label=notification["summary"])
         summary_label.set_wrap(True)
         summary_label.set_halign(Gtk.Align.START)
-        summary_label.add_css_class("heading")
-        right_box.append(summary_label)
+        summary_label.add_css_class("notify-client-heading")
+        self.update_widget_safely(right_box.append, summary_label)
 
         # Body
         body_label = Gtk.Label(label=notification["body"])
         body_label.set_wrap(True)
         body_label.set_max_width_chars(body_max_width_chars)
         body_label.set_halign(Gtk.Align.START)
-        right_box.append(body_label)
+        self.update_widget_safely(right_box.append, body_label)
+        body_label.add_css_class("notify-client-body-label")
 
         # Timestamp
         timestamp_label = Gtk.Label(label=notification["timestamp"])
         timestamp_label.set_halign(Gtk.Align.START)
-        right_box.append(timestamp_label)
+        timestamp_label.add_css_class("notify-client-timestamp")
+        self.update_widget_safely(right_box.append, timestamp_label)
 
         # Add left and right boxes to the horizontal box
-        hbox.append(left_box)
-        hbox.append(right_box)
+        self.update_widget_safely(hbox.append, left_box)
+        self.update_widget_safely(hbox.append, right_box)
 
         # Add the horizontal box to the notification_box
-        self.vbox.append(hbox)
+        self.update_widget_safely(self.vbox.append, hbox)
         self.notification_on_popover["id"] = notification
 
         return hbox
@@ -320,7 +400,7 @@ class NotificationPopoverPlugin(BasePlugin):
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             cursor.execute("""
-                    SELECT id, app_name, summary, body, app_icon, hints, timestamp
+                    SELECT id, app_name, summary, body, app_icon, actions, hints, timestamp
                     FROM notifications
                     ORDER BY timestamp DESC
                     LIMIT 1
@@ -336,8 +416,9 @@ class NotificationPopoverPlugin(BasePlugin):
                     "summary": row[2],
                     "body": row[3],
                     "app_icon": row[4],
-                    "hints": json.loads(row[5]),
-                    "timestamp": row[6],
+                    "actions": row[5],
+                    "hints": json.loads(row[6]),
+                    "timestamp": row[7],
                 }
 
                 vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
@@ -350,7 +431,7 @@ class NotificationPopoverPlugin(BasePlugin):
                 self.create_notification_box(notification)
 
         except Exception as e:
-            print(f"Error appending next oldest notification: {e}")
+            self.log_error(f"Error appending next oldest notification: {e}")
 
     def open_popover_notifications(self, *_):
         if not hasattr(self, "popover") or not self.popover:
@@ -360,7 +441,7 @@ class NotificationPopoverPlugin(BasePlugin):
                 .get("client", {})
                 .get("popover_width", 500)
             )
-            popover_height = body_max_width_chars = (
+            popover_height = (
                 self.config.get("notify", {})
                 .get("client", {})
                 .get("popover_height", 300)
@@ -376,7 +457,7 @@ class NotificationPopoverPlugin(BasePlugin):
             clear_button.connect("clicked", lambda _: self.clear_all_notifications())
             clear_button.set_tooltip_text("Clear All Notifications")
             clear_button.set_margin_start(10)
-            main_vbox.append(clear_button)
+            self.update_widget_safely(main_vbox.append, clear_button)
 
             # Notification content area (scrollable)
             self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
@@ -385,7 +466,7 @@ class NotificationPopoverPlugin(BasePlugin):
             scrolled_window.set_child(self.vbox)
             scrolled_window.set_vexpand(True)  # Ensure the scroll area expands
             scrolled_window.set_propagate_natural_width(True)
-            main_vbox.append(scrolled_window)
+            self.update_widget_safely(main_vbox.append, scrolled_window)
             # FIXME: make this doesn't require panel restart
             main_vbox.set_size_request(popover_width, popover_height)
 
@@ -403,16 +484,20 @@ class NotificationPopoverPlugin(BasePlugin):
             dnd_label.set_margin_end(10)
 
             dnd_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 5)
-            dnd_box.append(dnd_label)
-            dnd_box.append(self.dnd_switch)
+            self.update_widget_safely(dnd_box.append, dnd_label)
+            self.update_widget_safely(dnd_box.append, self.dnd_switch)
 
-            bottom_box.append(dnd_box)
+            self.update_widget_safely(bottom_box.append, dnd_box)
 
             # Add the bottom box to the main container
-            main_vbox.append(bottom_box)
+            self.update_widget_safely(main_vbox.append, bottom_box)
 
             # Set the main container as the popover's child
             self.popover.set_child(main_vbox)
+
+        # Ensure no existing parent conflicts
+        if self.popover.get_parent():
+            self.popover.unparent()
 
         # Clear existing children from vbox
         child = self.vbox.get_first_child()

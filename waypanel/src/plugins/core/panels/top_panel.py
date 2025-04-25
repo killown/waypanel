@@ -39,14 +39,16 @@ class TopPanelPlugin(BasePlugin):
         self.obj.top_panel_box_systray = Gtk.Box()
         self.obj.top_panel_box_for_buttons = Gtk.Box()
         self.obj.top_panel_box_widgets_left = Gtk.Box()
-        self.obj.top_panel_box_left.append(self.obj.top_panel_box_widgets_left)
+        self.update_widget_safely(
+            self.obj.top_panel_box_left.append, self.obj.top_panel_box_widgets_left
+        )
         self.obj.top_panel_box_right = Gtk.Box()
         self.spacer = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
 
         # will set position of new widgets Gtk.Align.END
         self.spacer.set_hexpand(True)
         self.spacer.add_css_class("right-box-spacer")
-        self.obj.top_panel_box_right.append(self.spacer)
+        self.update_widget_safely(self.obj.top_panel_box_right.append, self.spacer)
         self.obj.top_panel_grid_right = Gtk.Grid()
         self.obj.top_panel_grid_right.attach(self.obj.top_panel_box_right, 1, 0, 1, 2)
         self.obj.top_panel_grid_right.attach_next_to(
@@ -99,23 +101,23 @@ class TopPanelPlugin(BasePlugin):
             and self.utils.is_widget_ready(self.obj.top_panel_box_full)
         ):
             # Apply CSS classes
-            self.update_widget(
+            self.update_widget_safely(
                 self.obj.top_panel_box_left.add_css_class, "top_panel_box_left"
             )
-            self.update_widget(
+            self.update_widget_safely(
                 self.obj.top_panel_box_widgets_left.add_css_class,
                 "top_panel_box_widgets_left",
             )
-            self.update_widget(
+            self.update_widget_safely(
                 self.obj.top_panel_box_right.add_css_class, "top_panel_box_right"
             )
-            self.update_widget(
+            self.update_widget_safely(
                 self.obj.top_panel_box_systray.add_css_class, "top_panel_box_systray"
             )
-            self.update_widget(
+            self.update_widget_safely(
                 self.obj.top_panel_box_center.add_css_class, "top_panel_box_center"
             )
-            self.update_widget(
+            self.update_widget_safely(
                 self.obj.top_panel_box_full.add_css_class, "top_panel_box_full"
             )
 

@@ -188,7 +188,7 @@ class SystemDashboard(BasePlugin):
         try:
             connected_devices = check_output(connected_devices).decode()
         except Exception as e:
-            self.logger.error(e)
+            self.log_error(e)
             return
 
         if device_id in connected_devices:

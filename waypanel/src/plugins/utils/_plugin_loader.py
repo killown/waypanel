@@ -540,7 +540,7 @@ class PluginLoader:
                     )
                     return
 
-                # Check if the plugin has an append_widget method
+                # Check if the plugin has an set_widget method
                 if not hasattr(plugin_instance, "set_widget"):
                     return
 

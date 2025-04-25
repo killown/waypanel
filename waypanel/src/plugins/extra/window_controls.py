@@ -138,7 +138,7 @@ class WindowControlsPlugin(BasePlugin):
     #             return
     #         button = Gtk.Button()
     #         button.connect("clicked", lambda widget: self.on_hidden_view(widget, view))
-    #         self.update_widget(self.obj.top_panel_box_center.append, button)
+    #         self.update_widget_safely(self.obj.top_panel_box_center.append, button)
     #         self.utils.handle_icon_for_button(view, button)
     #         self.ipc.hide_view(view["id"])
     #
@@ -150,4 +150,4 @@ class WindowControlsPlugin(BasePlugin):
     #         # set focus will return an Exception in case the view is not toplevel
     #         GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))
     #         if self.utils.widget_exists(widget):
-    #             self.update_widget(self.top_panel_box_center.remove, widget)
+    #             self.update_widget_safely(self.top_panel_box_center.remove, widget)

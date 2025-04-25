@@ -387,9 +387,9 @@ def find_config_path():
         print(f"using {home_config_path}")
         return home_config_path
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_dir = os.path.dirname(os.path.abspath(__file__))
     default_config_path = os.path.join(
-        os.path.dirname(script_dir), "config/waypanel.toml"
+        os.path.dirname(config_dir), "config/waypanel.toml"
     )
     print(f"Using default config path: {default_config_path}")
 

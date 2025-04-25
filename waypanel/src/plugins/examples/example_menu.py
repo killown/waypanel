@@ -150,4 +150,4 @@ class ExampleMenuPlugin(BasePlugin):
         try:
             self.utils.run_app(app_id)
         except Exception as e:
-            self.logger.error(f"Error running application {app_id}: {e}")
+            self.log_error(f"Error running application {app_id}: {e}")

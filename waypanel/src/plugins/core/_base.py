@@ -1,21 +1,23 @@
 from waypanel.src.core import create_panel
 from gi.repository import Gtk
 from typing import Any
+import inspect
 
 
 class BasePlugin:
     def __init__(self, panel_instance):
         self.obj = panel_instance
+        self.utils: Any = panel_instance.utils
         self.bottom_panel: Any = self.obj.bottom_panel
         self.top_panel: Any = self.obj.top_panel
         self.left_panel: Any = self.obj.left_panel
         self.right_panel: Any = self.obj.right_panel
         self.main_widget = None
         self.plugin_file = None
+        self.update_widget_safely: Any = self.utils.update_widget_safely
         self.logger: Any = panel_instance.logger
         self.plugins: Any = panel_instance.plugin_loader.plugins
-        self.plugin_loader: Any = self.obj.plugin_loader
-        self.utils: Any = panel_instance.utils
+        self.plugin_loader: Any = panel_instance.plugin_loader
         self.update_widget: Any = self.utils.update_widget
         self.config: Any = panel_instance.config
         self.save_config: Any = panel_instance.save_config
@@ -27,6 +29,28 @@ class BasePlugin:
         self.unset_layer_pos_exclusive: Any = (
             create_panel.unset_layer_position_exclusive
         )
+
+    def log_error(self, message):
+        # Get the caller's frame (two levels up: one for this function, one for the caller)
+        frame = inspect.currentframe().f_back  # type: ignore
+        try:
+            # Extract caller's filename, package, and function name
+            caller_file = frame.f_code.co_filename.split("/")[-1]  # type: ignore
+            caller_package = frame.f_globals.get("__package__", "unknown")  # type: ignore
+            caller_func = frame.f_code.co_name  # type: ignore
+
+            # Log the error with the caller's context
+            self.logger.error(
+                message,
+                extra={
+                    "file": caller_file,
+                    "package": caller_package,
+                    "func": caller_func,
+                },
+            )
+        finally:
+            # Ensure the frame is cleared to avoid memory leaks
+            del frame
 
     def check_dependencies(self):
         """Check if all dependencies are loaded"""
@@ -54,10 +78,8 @@ class BasePlugin:
             self.on_disable()
 
         except Exception as e:
-            self.logger.error(
-                error=e,
+            self.log_error(
                 message="Error disabling plugin.",
-                level="error",
             )
 
     def on_enable(self):
@@ -76,7 +98,7 @@ class BasePlugin:
         """
         # Log the status of self.main_widget for debugging purposes
         if self.main_widget is None:
-            self.logger.error(
+            self.log_error(
                 "Critical Error: self.main_widget is still None. "
                 "This indicates that the main widget was not properly initialized before calling set_widget()."
             )
@@ -90,7 +112,7 @@ class BasePlugin:
 
         # Ensure self.main_widget is a tuple with two elements
         if not isinstance(self.main_widget, tuple) or len(self.main_widget) != 2:
-            self.logger.error(
+            self.log_error(
                 "Invalid format for self.main_widget. Expected a tuple with two elements."
             )
             return None
@@ -100,14 +122,14 @@ class BasePlugin:
         if isinstance(widget, list):
             for w in widget:
                 if w is None or not isinstance(w, Gtk.Widget):
-                    self.logger.error(
+                    self.log_error(
                         f"Invalid widget in self.main_widget: {w}."
                         "The widget must be a valid Gtk.Widget instance. Plugin: {self.__class__.__name__}"
                     )
                     return None
         else:
             if widget is None or not isinstance(widget, Gtk.Widget):
-                self.logger.error(
+                self.log_error(
                     f"Invalid widget in self.main_widget: {widget}. "
                     "The widget must be a valid Gtk.Widget instance. Plugin: {self.__class__.__name__}"
                 )
@@ -124,12 +146,12 @@ class BasePlugin:
         if not self.utils.validate_string(
             action, name=f"{action} from action in BasePlugin"
         ):
-            self.logger.error(
+            self.log_error(
                 f"Invalid action in self.main_widget: {action}. Must be a string."
             )
             return None
         if action not in ("append", "set_content"):
-            self.logger.error(
+            self.log_error(
                 f"Invalid action in self.main_widget: {action}. "
                 "The action must be either 'append' or 'set_content'."
             )

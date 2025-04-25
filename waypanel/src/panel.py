@@ -71,7 +71,6 @@ class Panel(Adw.Application):
         config_paths = self.utils.setup_config_paths()
         self.home = config_paths["home"]
         self.waypanel_cfg = os.path.join(self.home, ".config/waypanel/waypanel.toml")
-        self.scripts = config_paths["scripts"]
         self.config_path = config_paths["config_path"]
         self.style_css_config = config_paths["style_css_config"]
         self.cache_folder = config_paths["cache_folder"]
@@ -107,7 +106,7 @@ class Panel(Adw.Application):
                 toml.dump(self._cached_config, f)
             self.logger.info("Configuration saved successfully.")
         except Exception as e:
-            self.logger.error_handler.handle(
+            self.logger.error(
                 error=e,
                 message="Failed to save configuration to file.",
                 level="error",

@@ -186,7 +186,7 @@ class MullvadPlugin(BasePlugin):
             msg = f"Mudando para {relay_choice}"
             Popen(["notify-send", msg])
         except Exception as e:
-            self.logger.error(
+            self.log_error(
                 f"Error setting random Brazilian relay: {e}"
             )
 

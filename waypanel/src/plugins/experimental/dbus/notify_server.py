@@ -1,13 +1,53 @@
 import os
 import sqlite3
 import json
+import asyncio
 from pydbus import SessionBus
 from gi.repository import Gtk, GLib, Gio, Pango, GdkPixbuf
 from pydbus.generic import signal
 from gi.repository import Gtk, Gtk4LayerShell as LayerShell
 import toml
-from waypanel.src.plugins.experimental.dbus.utils import NotifyUtils
+from waypanel.src.plugins.experimental.dbus._utils import NotifyUtils
 from waypanel.src.plugins.core._base import BasePlugin
+
+ENABLE_PLUGIN = True
+
+
+def get_plugin_placement(panel_instance):
+    return
+
+
+def initialize_plugin(panel_instance):
+    """Initialize the Notification Popover Plugin."""
+    if ENABLE_PLUGIN:
+        return run_server_in_background(panel_instance)
+
+
+def run_server_in_background(panel_instance):
+    """Start the notification server without blocking the main thread.
+
+    Args:
+        panel_instance: The main panel instance to pass to the NotificationDaemon.
+    """
+
+    async def _run_server():
+        # Pass the panel_instance to the NotificationDaemon
+        server = NotificationDaemon(panel_instance)
+        await server.run()
+        print("Notification server running in background")
+        while True:  # Keep alive
+            await asyncio.sleep(1)
+
+    # Run in dedicated thread
+    def _start_loop():
+        asyncio.run(_run_server())
+
+    import threading
+
+    # Start the thread with daemon=True to ensure it exits when the main program exits
+    thread = threading.Thread(target=_start_loop, daemon=True)
+    thread.start()
+    return thread
 
 
 class NotificationDaemon(BasePlugin):
@@ -25,7 +65,7 @@ class NotificationDaemon(BasePlugin):
         self.bus = SessionBus()
         self.layer_shell = LayerShell
         self.last_modified = None
-        self.notify_utils = NotifyUtils()
+        self.notify_utils = NotifyUtils(panel_instance)
         self.timeout = (
             self.config.get("notify", {}).get("server", {}).get("timeout", 10)
         )

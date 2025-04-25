@@ -1,9 +1,17 @@
 from gi.repository import GLib
-from wayfire import WayfireSocket
 
 from waypanel.src.plugins.core._base import BasePlugin
 
-ENABLE_PLUGIN = False
+ENABLE_PLUGIN = True
+
+
+def get_plugin_placement(panel_instance):
+    return
+
+
+def initialize_plugin(panel_instance):
+    if ENABLE_PLUGIN:
+        return WindowRulesPlugin(panel_instance)
 
 
 class WindowRulesPlugin(BasePlugin):
@@ -18,7 +26,7 @@ class WindowRulesPlugin(BasePlugin):
 
     def subscribe_to_events(self):
         if "event_manager" not in self.obj.plugin_loader.plugins:
-            self.logger.error(
+            self.log_error(
                 "Event Manager Plugin is not loaded. Cannot subscribe to events."
             )
             return
@@ -48,7 +56,7 @@ class WindowRulesPlugin(BasePlugin):
                 self.on_scale_deactivated()
 
         except Exception as e:
-            self.logger.error(f"Error handling scale event: {e}")
+            self.log_error(f"Error handling scale event: {e}")
 
     def set_focused_view_fullscreen_false(self):
         # the panels will disappear if the focused view is fullscreen
@@ -89,10 +97,10 @@ class WindowRulesPlugin(BasePlugin):
         try:
             self.set_focused_view_fullscreen_false()
         except Exception as e:
-            self.logger.error(f"Error handling scale activation: {e}")
+            self.log_error(f"Error handling scale activation: {e}")
 
     def on_scale_deactivated(self):
         try:
             self.restore_fullscreen_state()
         except Exception as e:
-            self.logger.error(f"Error handling scale deactivation: {e}")
+            self.log_error(f"Error handling scale deactivation: {e}")
