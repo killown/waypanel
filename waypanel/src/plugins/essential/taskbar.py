@@ -37,6 +37,7 @@ class TaskbarPlugin(BasePlugin):
         self.layer_always_exclusive = False
         self.taskbar_list = []
         self.buttons_id = {}
+        self.allow_move_view_scroll = True
         self.is_scale_active = {}
         self.create_gesture = self.plugins["gestures_setup"].create_gesture
         self.remove_gesture = self.plugins["gestures_setup"].remove_gesture
@@ -229,6 +230,10 @@ class TaskbarPlugin(BasePlugin):
             self.ipc.set_view_fullscreen(view_id, True)
         return False  # stop the glib loop
 
+    def set_allow_move_view_scroll(self):
+        self.allow_move_view_scroll = True
+        return False
+
     def on_scroll(self, controller, dx, dy, view_id):
         """
         Handle scroll events on taskbar buttons.
@@ -239,19 +244,25 @@ class TaskbarPlugin(BasePlugin):
             view: The associated view object.
         """
         try:
-            if dy > 0:
-                # Scrolling down
-                # Perform action for scroll down (e.g., switch to next workspace)
-                self.utils.send_view_to_output(view_id, "right")
-                GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
+            if self.allow_move_view_scroll:
+                # for 100 ms not allowed to send the view again
+                self.allow_move_view_scroll = False
+                if dy > 0:
+                    GLib.timeout_add(300, self.set_allow_move_view_scroll)
+                    # Scrolling down
+                    # Perform action for scroll down (e.g., switch to next workspace)
+                    self.utils.send_view_to_output(view_id, "right")
+                    GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
 
-            elif dy < 0:
-                # Scrolling up
-                # Perform action for scroll up (e.g., switch to previous workspace)
-                self.utils.send_view_to_output(view_id, "left")
-                GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
+                elif dy < 0:
+                    GLib.timeout_add(300, self.set_allow_move_view_scroll)
+                    # Scrolling up
+                    # Perform action for scroll up (e.g., switch to previous workspace)
+                    self.utils.send_view_to_output(view_id, "left")
+                    GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
 
         except Exception as e:
+            GLib.timeout_add(300, self.set_allow_move_view_scroll)
             self.log_error(
                 message=f"Error handling scroll event {e}",
             )
@@ -291,7 +302,6 @@ class TaskbarPlugin(BasePlugin):
         Returns:
             bool: True if the button was successfully created, False otherwise.
         """
-        self.logger.info(f"Creating taskbar button for view: {view['id']}")
         id = view["id"]
         title = view["title"]
         title = self.utils.filter_utf_for_gtk(title)
