@@ -2,8 +2,7 @@ import os
 import sqlite3
 import asyncio
 import json
-from PIL import Image
-from gi.repository import Gtk, GdkPixbuf
+from gi.repository import Gtk
 from waypanel.src.plugins.experimental.dbus.utils import NotifyUtils
 from waypanel.src.plugins.core._base import BasePlugin
 from waypanel.src.plugins.experimental.dbus.notify_server import (
@@ -20,7 +19,8 @@ def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
     position = "top-panel-center"  # Position: right side of the panel
     order = 10  # Order: determines the relative position among other plugins
-    return position, order
+    priority = 99
+    return position, order, priority
 
 
 def initialize_plugin(panel_instance):
@@ -195,6 +195,15 @@ class NotificationPopoverPlugin(BasePlugin):
             Gtk.Orientation.HORIZONTAL, 10
         )  # 10px spacing between columns
 
+        # Add a close button
+        close_button = Gtk.Button.new_from_icon_name("window-close-symbolic")
+        close_button.set_tooltip_text("Close Notification")
+        close_button.set_margin_start(10)  # Add spacing between content and button
+        close_button.connect(
+            "clicked", lambda _: self.delete_notification(notification["id"], hbox)
+        )
+        hbox.append(close_button)
+
         # Left column: Icon/Image container
         left_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
         left_box.set_halign(Gtk.Align.START)
@@ -240,15 +249,6 @@ class NotificationPopoverPlugin(BasePlugin):
         # Add left and right boxes to the horizontal box
         hbox.append(left_box)
         hbox.append(right_box)
-
-        # Add a close button
-        close_button = Gtk.Button.new_from_icon_name("window-close-symbolic")
-        close_button.set_tooltip_text("Close Notification")
-        close_button.set_margin_start(10)  # Add spacing between content and button
-        close_button.connect(
-            "clicked", lambda _: self.delete_notification(notification["id"], hbox)
-        )
-        hbox.append(close_button)
 
         # Add the horizontal box to the notification_box
         self.vbox.append(hbox)
