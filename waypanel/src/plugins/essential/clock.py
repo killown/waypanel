@@ -67,7 +67,7 @@ class ClockPlugin(BasePlugin):
             self.clock_label.set_label(current_time)
         except Exception as e:
             self.log_error(f"Error updating clock: {e}")
-            return True  # Continue timeout
+        return True  # Continue timeout
 
     def schedule_updates(self):
         """Schedule clock updates every minute."""
