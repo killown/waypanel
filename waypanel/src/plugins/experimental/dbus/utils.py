@@ -1,6 +1,8 @@
 import os
 from gi.repository import Gtk, GdkPixbuf
 from PIL import Image
+from io import BytesIO
+
 import urllib.parse
 import cairosvg
 import base64
@@ -55,6 +57,19 @@ class NotifyUtils:
             print(f"Error creating pixbuf: {e}")
             return None
 
+    # Helper function to create a PNG from raw pixel data
+    def create_png_from_pixel_data(self, width, height, pixel_data):
+        # Create an image from raw pixel data
+        img = Image.new("RGBA", (width, height))
+        img.putdata(
+            [tuple(pixel_data[i : i + 4]) for i in range(0, len(pixel_data), 4)]
+        )
+
+        # Save the image to a bytes buffer in PNG format
+        buffer = BytesIO()
+        img.save(buffer, format="PNG")
+        return buffer.getvalue()
+
     def svg_to_pixbuf(self, svg_data):
         """
         Convert SVG data to a GdkPixbuf.Pixbuf.
@@ -75,7 +90,7 @@ class NotifyUtils:
             print(f"Error converting SVG to Pixbuf: {e}")
             return None
 
-    def load_icon_from_data_uri(self, data_uri):
+    def load_svg_from_data_uri(self, data_uri):
         """
         Load an icon from a data URI.
 
@@ -95,6 +110,47 @@ class NotifyUtils:
         # Step 3: Create a Gtk.Image from the Pixbuf
         image = Gtk.Image.new_from_pixbuf(pixbuf)
         return image
+
+    def load_png_from_data_uri(self, data_uri):
+        """
+        Load an icon from a PNG data URI or raw pixel data.
+
+        :param data_uri: The data URI string or raw pixel data parameters.
+        :return: A Gtk.Image widget or None if loading fails.
+        """
+        try:
+            # Step 1: Check if the input is a data URI
+            if isinstance(data_uri, str) and data_uri.startswith("data:image/png"):
+                # Decode the data URI
+                png_data = self.decode_data_uri(data_uri)
+                if not png_data:
+                    return None
+            else:
+                # Assume raw pixel data is provided as a dictionary or tuple
+                width = data_uri.get("width", 0)
+                height = data_uri.get("height", 0)
+                pixel_data = data_uri.get("pixels", [])
+                png_data = self.create_png_from_pixel_data(width, height, pixel_data)
+                if not png_data:
+                    return None
+
+            # Step 2: Load the PNG data into a GdkPixbuf
+            try:
+                loader = GdkPixbuf.PixbufLoader.new_with_type("png")
+                loader.write(png_data)
+                loader.close()
+                pixbuf = loader.get_pixbuf()
+            except Exception as e:
+                print(f"Error loading PNG into GdkPixbuf: {e}")
+                return None
+
+            # Step 3: Create a Gtk.Image from the Pixbuf
+            image = Gtk.Image.new_from_pixbuf(pixbuf)
+            return image
+
+        except Exception as e:
+            print(f"Error in load_png_from_data_uri: {e}")
+            return None
 
     def decode_data_uri(self, data_uri):
         """
@@ -169,7 +225,10 @@ class NotifyUtils:
 
             # Check if the icon is a data URI
             if app_icon.startswith("data:image/svg+xml"):
-                return self.load_icon_from_data_uri(app_icon)
+                return self.load_svg_from_data_uri(app_icon)
+
+            if app_icon.startswith("data:image/png"):
+                return self.load_png_from_data_uri(app_icon)
 
             # Case 2: Check if app_icon is a valid file path
             if self.is_valid_path(app_icon):
