@@ -19,6 +19,7 @@ def get_plugin_placement(panel_instance):
     position = "top-panel-center"  # loader_plugin will append: (left, right, center, systray, after-systray)
     order = 10  # The order will rearrange the plugin sequence.
     priority = 10  # If there are 10 plugins, this one will load last.
+    # if the plugin has no UI, just `return`
     return position, order, priority
 
 

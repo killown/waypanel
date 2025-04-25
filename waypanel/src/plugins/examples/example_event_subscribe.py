@@ -5,6 +5,7 @@ DEPS = ["event_manager"]
 
 def get_plugin_placement(panel_instance):
     """Background plugin"""
+    # just return, do not use None or None, None
     return
 
 
