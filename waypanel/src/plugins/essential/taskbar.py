@@ -244,22 +244,31 @@ class TaskbarPlugin(BasePlugin):
             view: The associated view object.
         """
         try:
+            view_output_id = self.ipc.get_view(view_id)["output-id"]
             if self.allow_move_view_scroll:
                 # for 100 ms not allowed to send the view again
                 self.allow_move_view_scroll = False
                 if dy > 0:
                     GLib.timeout_add(300, self.set_allow_move_view_scroll)
-                    # Scrolling down
-                    # Perform action for scroll down (e.g., switch to next workspace)
-                    self.utils.send_view_to_output(view_id, "right")
-                    GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
+                    output_from_right = self.utils.get_output_from("right")
+                    # do not allow scroll up send the view back to left
+                    # this should only be done by `dy < 0`
+                    if view_output_id != output_from_right:
+                        # Scrolling down
+                        # Perform action for scroll down (e.g., switch to next workspace)
+                        self.utils.send_view_to_output(view_id, "right")
+                        GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
 
                 elif dy < 0:
                     GLib.timeout_add(300, self.set_allow_move_view_scroll)
-                    # Scrolling up
-                    # Perform action for scroll up (e.g., switch to previous workspace)
-                    self.utils.send_view_to_output(view_id, "left")
-                    GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
+                    output_from_left = self.utils.get_output_from("left")
+                    # do not allow scroll up send the view back to right
+                    # this should only be done by `dy > 0`
+                    if view_output_id != output_from_left:
+                        # Scrolling up
+                        # Perform action for scroll up (e.g., switch to previous workspace)
+                        self.utils.send_view_to_output(view_id, "left")
+                        GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
 
         except Exception as e:
             GLib.timeout_add(300, self.set_allow_move_view_scroll)
