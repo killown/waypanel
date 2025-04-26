@@ -1,73 +1,104 @@
-Managing Plugins:
+## Plugin Documentation
 
-1.  Plugin Loading:
-    
-    *   Plugins are automatically loaded from directories under `src/plugins`.
-    *   The system looks for specific metadata in each plugin file.
-2.  Configuration:
-    
-    *   Plugins can be enabled or disabled via a flag or by removing the plugin file.
-    *   Use the `ENABLE_PLUGIN` flag to enable or disable individual plugins.
-    *   Manage plugin dependencies using the `DEPS` list.
-3.  Plugin Placement:
-    
-    *   Define plugin position and order using `get_plugin_placement(panel_instance)`.
-    *   Positions can be "left", "right", "center", "systray", or "after-systray".
-    *   Order determines the sequence of plugins within the same position.
-4.  Initialization:
-    
-    *   Implement `initialize_plugin(panel_instance)` to initialize the plugin.
-    *   This function should return the plugin instance.
+### Loading Plugins
 
-Developing Plugins:
+Plugins are loaded dynamically from two primary locations:
 
-1.  Plugin Structure:
-    
-    *   Each plugin must define:
-        *   `get_plugin_placement()` function
-        *   `initialize_plugin(panel_instance)` function
-        *   A plugin class that encapsulates its functionality
-2.  Base Class:
-    
-    *   Inherit from `BasePlugin` class.
-    *   Implement lifecycle methods if needed:
-        *   `on_enable()`
-        *   `on_stop()`
-        *   `on_reload()`
-        *   `on_cleanup()`
-3.  UI Integration:
-    
-    *   Use `self.main_widget = (self.any_widget, "append")` to add widgets to the panel.
-    *   Use `self.main_widget = (self.any_widget, "panel_set_content")` to set the content to a specific panel.
-    use `get_plugin_placement()` to define which panel it should set the content:
-    position = "left" for example.
+1. **Built-in Plugins**: Located in the `src.plugins` package (e.g., `waypanel/src/plugins`).
+2. **Custom Plugins**: Located in the user's configuration directory (`~/config/waypanel/plugins`).
 
-4.  Event Handling:
-    
-    *   Subscribe to IPC events from Wayfire using the `EventManagerPlugin`.
-    *   Handle events like "view-focused", "view-mapped", etc.
-5.  Gestures:
-    
-    *   Define custom gestures (swipe, click) and associate them with callbacks.
-6.  Dependencies:
-    
-    *   Specify dependencies using the `DEPS` list.
-    *   Use `check_dependencies()` to ensure all dependencies are loaded.
-7.  Reloading:
-    
-    *   Implement support for dynamic reloading if necessary.
-    *   Use `reload_plugin(plugin_name)` for dynamic reloading.
-8.  Configuration:
-    
-    *   Use `waypanel.toml` for plugin-specific configuration if needed.
-    *   Load configuration using `_load_plugin_configuration()`.
-9.  Error Handling:
-    
-    *   Implement proper error handling and logging.
-    *   Use the provided logger for error messages and debugging information.
-10.  Best Practices:
-    
-    *   Keep plugins lightweight and independent.
-    *   Only implement configuration if necessary.
-    *   Use GLib.idle\_add for non-blocking code execution.
-    *   Test plugins thoroughly to avoid hanging the entire plugin system.
+The `PluginLoader` automatically clears the cache directory (`../custom/cache`) and copies all custom plugins from `~/config/waypanel/plugins` to the cache before loading them.
+
+---
+
+### Plugin Structure
+
+#### `get_plugin_placement(panel_instance)`
+
+Defines where the plugin should be placed in the panel and its order of appearance. It returns a tuple `(position, order, priority)`:
+
+- **Position**: `"top-panel-left"`, `"top-panel-right"`, `"top-panel-center"`, etc.
+- **Order**: Determines the sequence of plugins within the same position.
+- **Priority**: Determines the initialization order of plugins.
+
+#### `initialize_plugin(panel_instance)`
+
+Initializes the plugin and returns its instance.
+
+---
+
+### BasePlugin Class
+
+All plugins should inherit from the `BasePlugin` class, which provides essential utilities and lifecycle methods.
+
+#### Initialization
+
+Call `super().__init__(panel_instance)` in the constructor to set up the plugin's connection to the panel instance.
+
+#### Lifecycle Methods
+
+Optional methods that can be overridden:
+
+- `on_enable()`: Called when the plugin is enabled.
+- `on_stop()`: Called when the plugin is stopped or disabled.
+- `on_reload()`: Called when the configuration is reloaded.
+- `on_cleanup()`: Called during cleanup to release resources.
+
+---
+
+### Defining the Main Widget
+
+Plugins that add UI elements to the panel must define `self.main_widget`. This tells the `PluginLoader` how to integrate the plugin's widget into the panel.
+
+#### Syntax
+
+`self.main_widget = (widget, action)`
+
+- **`widget`**: The widget to be added to the panel (e.g., a `Gtk.Button` or `Gtk.Box`).
+- **`action`**: Specifies how the widget should be added:
+  - `"append"`: Adds the widget to the specified panel section.
+  - `"set_content"`: Sets the widget as the main content of a specific panel.
+
+#### Background Plugins
+
+If `get_plugin_placement()` returns `None`, the plugin is treated as a **background plugin** with no UI.
+
+---
+
+### Accessing Utilities
+
+The `panel_instance` passed to the plugin provides access to various utilities:
+
+- **Logger**: `self.logger` for logging messages.
+- **IPC Client**: `self.ipc` for inter-process communication.
+- **Configuration**: `self.config` for accessing plugin-specific settings from `waypanel.toml`.
+
+---
+
+### Dependencies
+
+Plugins can specify dependencies using the `DEPS` list. The `PluginLoader` ensures that dependent plugins are loaded before the current plugin.
+
+---
+
+### Best Practices
+
+1. **Keep Plugins Lightweight**:
+   - Focus on a single responsibility for each plugin.
+   - Avoid heavy computations in the main thread; use `GLib.idle_add()` for non-blocking tasks.
+
+2. **Error Handling**:
+   - Implement proper error handling to avoid crashing the entire plugin system.
+   - Use the logger (`self.logger.error()`) to report issues.
+
+3. **Configuration**:
+   - Use `waypanel.toml` for plugin-specific settings only when necessary.
+   - Load configuration using `self.config` and handle missing keys gracefully.
+
+---
+
+### Additional Notes
+
+- **Logging**: Use the `logger` utility for consistent and structured logs.
+- **Theming**: Custom CSS can be applied to widgets for styling.
+- **Performance**: Waypanel is lightweight and avoids unnecessary monitoring of Bluetooth, network, etc.
