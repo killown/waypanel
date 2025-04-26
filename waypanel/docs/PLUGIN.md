@@ -102,3 +102,4 @@ Plugins can specify dependencies using the `DEPS` list. The `PluginLoader` ensur
 - **Logging**: Use the `logger` utility for consistent and structured logs.
 - **Theming**: Custom CSS can be applied to widgets for styling.
 - **Performance**: Waypanel is lightweight and avoids unnecessary monitoring of Bluetooth, network, etc.
+- **some examples**: waypanel/src/plugins/examples
