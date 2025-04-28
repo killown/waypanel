@@ -1,0 +1,168 @@
+import asyncio
+from dbus_next.aio.message_bus import MessageBus
+from dbus_next.service import ServiceInterface, method, signal
+from dbus_next.constants import BusType, NameFlag, RequestNameReply
+from gi.repository import GLib
+from .notify_server_db import Database
+from .notify_server_ui import UI
+
+ENABLE_PLUGIN = True
+
+
+def get_plugin_placement(panel_instance):
+    return
+
+
+def initialize_plugin(panel_instance):
+    if ENABLE_PLUGIN:
+        return run_server_in_background(panel_instance)
+
+
+def run_server_in_background(panel_instance):
+    async def _run_server():
+        # Pass the panel_instance to the NotificationDaemon
+        server = NotificationDaemon(panel_instance)
+        await server.run()
+        print("Notification server running in background")
+        while True:  # Keep alive
+            await asyncio.sleep(1)
+
+    # Run in dedicated thread
+    def _start_loop():
+        asyncio.run(_run_server())
+
+    import threading
+
+    # Start the thread with daemon=True to ensure it exits when the main program exits
+    thread = threading.Thread(target=_start_loop, daemon=True)
+    thread.start()
+    return thread
+
+
+class NotificationDaemon(ServiceInterface):
+    def __init__(self, panel_instance):
+        super().__init__("org.freedesktop.Notifications")
+        # Connect to the session bus
+        self.last_modified = None
+        self.db = Database()
+        self.ui = UI(panel_instance)
+        self.config = self.ui.config
+        self.logger = self.ui.logger
+        self.timeout = (
+            self.config.get("notify", {}).get("server", {}).get("timeout", 10)
+        )
+        self.show_messages = (
+            self.config.get("notify", {}).get("server", {}).get("show_messages", True)
+        )
+
+        # Initialize the database
+        self.db_path = self.db._initialize_db()
+
+        # Store notifications
+        self.notifications = {}
+        self.next_id = 1
+
+        self.logger.info("Notification daemon started. Listening for notifications...")
+
+    @method()
+    async def Notify(
+        self,
+        app_name: "s",
+        replaces_id: "u",
+        app_icon: "s",
+        summary: "s",
+        body: "s",
+        actions: "as",
+        hints: "a{sv}",
+        expire_timeout: "i",
+    ) -> "u":
+        """Handle incoming notifications."""
+        notification_id = replaces_id if replaces_id != 0 else self.next_id
+        self.next_id += 1
+        notification = {
+            "app_name": app_name,
+            "summary": summary,
+            "body": body,
+            "app_icon": app_icon,
+            "actions": actions,
+            "hints": {k: v.value for k, v in hints.items()},
+            "expire_timeout": expire_timeout,
+        }
+        self.notifications[notification_id] = notification
+
+        # Save the notification to the database
+        self.db._save_notification_to_db(notification, self.db_path)
+        # self.logger.info(f"Received notification {notification_id}:")
+        # self.logger.info(f" App: {app_name}")
+        # self.logger.info(f" Summary: {summary}")
+        # self.logger.info(f" Body: {body}")
+        # self.logger.info(f" Icon: {app_icon}")
+
+        # Show a popup for the notification
+        GLib.idle_add(self.ui.show_popup, notification)
+
+        # Emit the NotificationClosed signal after the timeout
+        if expire_timeout > 0:
+            GLib.timeout_add(
+                expire_timeout, self.close_notification, notification_id, 1
+            )
+
+        return notification_id
+
+    @method()
+    def CloseNotification(self, id: "u"):
+        if id in self.notifications:
+            del self.notifications[id]
+            self.NotificationClosed(id, 1)
+        else:
+            self.logger.info(f"Attempted to close non-existent notification {id}")
+
+    @signal()
+    def NotificationClosed(self, id: "u", reason: "u") -> "uu":
+        self.logger.info(
+            f"Emitting NotificationClosed signal: id={id}, reason={reason}"
+        )
+        return [id, reason]
+
+    @signal()
+    def ActionInvoked(self, id: "u", action_key: "s") -> "us":
+        self.logger.info(
+            f"Emitting ActionInvoked signal: id={id}, action_key={action_key}"
+        )
+        return [id, action_key]
+
+    @method()
+    def GetCapabilities(self) -> "as":
+        return ["actions", "body", "icon-static"]
+
+    @method()
+    def GetServerInformation(self) -> "ssss":
+        return ["waypanel", "notify_server_plugin", "0.1", "0.1"]
+
+    def close_notification(self, id, reason):
+        if id in self.notifications:
+            del self.notifications[id]
+            self.NotificationClosed(id, reason)
+
+    async def run(self):
+        """Start the notification daemon."""
+        try:
+            bus = await MessageBus(bus_type=BusType.SESSION).connect()
+            bus.export("/org/freedesktop/Notifications", self)
+            reply = await bus.request_name(
+                "org.freedesktop.Notifications",
+                flags=NameFlag.ALLOW_REPLACEMENT
+                | NameFlag.REPLACE_EXISTING
+                | NameFlag.DO_NOT_QUEUE,
+            )
+            if reply != RequestNameReply.PRIMARY_OWNER:
+                self.logger.info(
+                    "Failed to acquire the org.freedesktop.Notifications name. Is another daemon running?"
+                )
+                return
+            self.logger.info(
+                "Notification daemon started. Listening for notifications..."
+            )
+            await asyncio.Future()
+        except Exception as e:
+            self.logger.error(f"Error starting notification daemon: {e}")

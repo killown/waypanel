@@ -1,0 +1,130 @@
+import os
+import sqlite3
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+from waypanel.src.plugins.core._base import BasePlugin
+import logging
+
+# Set to False or remove the plugin file to disable it
+ENABLE_PLUGIN = True
+
+# Dependencies: Ensure the notify_client plugin is loaded first
+DEPS = ["notify_client"]
+
+
+def get_plugin_placement(panel_instance):
+    """Define the plugin's position and order."""
+    return
+
+
+def initialize_plugin(panel_instance):
+    """Initialize the Notify Watcher Plugin."""
+    if ENABLE_PLUGIN:
+        watcher = NotifyWatcherPlugin(panel_instance)
+        watcher.start_watching()
+        return watcher
+
+
+class NotifyWatcherPlugin(BasePlugin):
+    def __init__(self, panel_instance):
+        super().__init__(panel_instance)
+        self.notify_client = None
+        self.notification_button = None
+        self.db_path = os.path.expanduser("~/.config/waypanel/notifications.db")
+        self.logger = logging.getLogger(__name__)
+        self.observer = None
+        self.last_db_state = None  # Tracks the last known state of the database
+
+    def start_watching(self):
+        """Start watching for notifications by monitoring the database file."""
+        try:
+            # Get the notify_client instance
+            self.notify_client = self.obj.plugins.get("notify_client")
+            if not self.notify_client:
+                self.log_error("Notify client plugin is not loaded.")
+                return
+
+            # Get the notification button from notify_client
+            self.notification_button = getattr(
+                self.notify_client, "notification_button", None
+            )
+            if not self.notification_button:
+                self.log_error("Notification button not found in notify_client.")
+                return
+
+            # Start monitoring the database file for changes
+            self.monitor_database()
+
+        except Exception as e:
+            self.log_error(f"Error initializing Notify Watcher Plugin: {e}")
+
+    def monitor_database(self):
+        """Monitor the database file for changes using watchdog."""
+        try:
+            # Check the current state of the database
+            self.check_notifications()
+
+            # Set up a file watcher for the database
+            event_handler = DatabaseChangeHandler(self)
+            self.observer = Observer()
+            self.observer.schedule(
+                event_handler, path=os.path.dirname(self.db_path), recursive=False
+            )
+            self.observer.start()
+
+        except Exception as e:
+            self.log_error(f"Error setting up database monitoring: {e}")
+
+    def check_notifications(self):
+        """Check if there are any notifications in the database."""
+        try:
+            if not os.path.exists(self.db_path):
+                has_notifications = False
+            else:
+                conn = sqlite3.connect(self.db_path)
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM notifications")
+                count = cursor.fetchone()[0]
+                conn.close()
+                has_notifications = count > 0
+
+            # Update the button visibility if the state has changed
+            if has_notifications != self.last_db_state:
+                self.last_db_state = has_notifications
+                self.update_button_visibility(has_notifications)
+
+        except Exception as e:
+            self.log_error(f"Error checking database for notifications: {e}")
+
+    def update_button_visibility(self, visible):
+        """Update the visibility of the notification button."""
+        try:
+            if self.notification_button:
+                if visible:
+                    self.notification_button.set_visible(True)
+                    self.logger.info("Notification button is now visible.")
+                else:
+                    self.notification_button.set_visible(False)
+                    self.logger.info("Notification button is now hidden.")
+
+        except Exception as e:
+            self.log_error(f"Error updating button visibility: {e}")
+
+    def log_error(self, message):
+        """Log an error message."""
+        self.logger.error(message)
+
+
+class DatabaseChangeHandler(FileSystemEventHandler):
+    """Handles file system events for the database file."""
+
+    def __init__(self, plugin):
+        self.plugin = plugin
+
+    def on_modified(self, event):
+        """Triggered when the database file is modified."""
+        if event.src_path == self.plugin.db_path:
+            self.plugin.logger.info(
+                "Database file modified. Checking for notifications."
+            )
+            self.plugin.check_notifications()
