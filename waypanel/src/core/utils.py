@@ -86,7 +86,6 @@ class Utils(Adw.Application):
         wset_index_focused = self.ipc.get_focused_output()["wset-index"]
         wset_index_view = view["wset-index"]
         focused_output_id = self.ipc.get_focused_output()["id"]
-
         if wset_index_focused != wset_index_view:
             self.ipc.configure_view(
                 view_id,
@@ -1598,6 +1597,41 @@ class Utils(Adw.Application):
                 message=f"Unexpected error while retrieving default monitor name from '{config_file_path}'.",
             )
             return None
+
+    def view_focus_effect_selected(self, view, alpha=0.5, selected=False):
+        """
+        Apply a focus indicator effect by animating the view's alpha (transparency).
+
+        Args:
+            view_id (int): The ID of the view to apply the effect to.
+        """
+        try:
+            view_id = view["id"]
+            if not self.is_view_valid(view):
+                self.logger.warning(f"Invalid or non-existent view ID: {view_id}")
+                return
+
+            # Retrieve the current alpha value of the view
+            try:
+                original_alpha = self.ipc.get_view_alpha(view_id)["alpha"]
+            except Exception as e:
+                self.logger.error(
+                    error=e,
+                    message=f"Failed to retrieve alpha value for view ID: {view_id}",
+                )
+                return
+
+            if selected:
+                self.ipc.set_view_alpha(view_id, alpha)
+            else:
+                self.ipc.set_view_alpha(view_id, 1)
+
+        except Exception as e:
+            # Catch-all for unexpected errors
+            self.logger.error(
+                error=e,
+                message=f"Unexpected error while applying focus indicator effect for view ID: {view_id}",
+            )
 
     def view_focus_indicator_effect(self, view):
         """
