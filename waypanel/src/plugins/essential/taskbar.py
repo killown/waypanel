@@ -197,7 +197,19 @@ class TaskbarPlugin(BasePlugin):
         # Add scroll gesture
         self.add_scroll_gesture(button, view)
 
+        # Add motion controller for hover effect
+        motion_controller = Gtk.EventControllerMotion()
+        motion_controller.connect("enter", lambda *_: self.on_button_hover(view))
+        motion_controller.connect("leave", lambda *_: self.on_button_hover_leave(view))
+        button.add_controller(motion_controller)
+
         return button
+
+    def on_button_hover(self, view):
+        self.utils.view_focus_effect_selected(view, 0.6, True)
+
+    def on_button_hover_leave(self, view):
+        self.utils.view_focus_effect_selected(view, False)
 
     def add_scroll_gesture(self, widget, view):
         """Add a scroll gesture to a widget."""
