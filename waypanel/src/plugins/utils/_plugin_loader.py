@@ -4,6 +4,7 @@ import toml
 from waypanel.src.core.utils import Utils
 from gi.repository import GLib, Gtk
 import sys
+import shutil
 
 
 class PluginLoader:
@@ -77,6 +78,53 @@ class PluginLoader:
         self.plugin_containers = {}
         self.plugins_dir = self.plugins_base_path()
         self.position_mapping = {}
+        self.cache_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "../custom/cache")
+        )
+        self.user_plugins_dir = os.path.expanduser("~/.config/waypanel/plugins")
+        # Clear the cache and copy plugins before loading
+        self._clear_and_copy_plugins()
+
+    def _clear_and_copy_plugins(self):
+        """Clear the cache directory and copy plugins from the user's custom directory."""
+        try:
+            # Ensure the cache directory exists
+            os.makedirs(self.cache_dir, exist_ok=True)
+
+            # Clear the cache directory
+            for item in os.listdir(self.cache_dir):
+                item_path = os.path.join(self.cache_dir, item)
+                if os.path.isfile(item_path) or os.path.islink(item_path):
+                    os.unlink(item_path)
+                elif os.path.isdir(item_path):
+                    shutil.rmtree(item_path)
+
+            self.logger.info("Cleared plugin cache directory.")
+
+            # Check if the user's custom plugin directory exists
+            if not os.path.exists(self.user_plugins_dir):
+                self.logger.warning(
+                    f"User plugin directory not found: {self.user_plugins_dir}"
+                )
+                return
+
+            # Copy plugins from the user's directory to the cache
+            for item in os.listdir(self.user_plugins_dir):
+                print(item)
+                source_path = os.path.join(self.user_plugins_dir, item)
+                destination_path = os.path.join(self.cache_dir, item)
+
+                if os.path.isfile(source_path):
+                    shutil.copy2(source_path, destination_path)
+                elif os.path.isdir(source_path):
+                    shutil.copytree(source_path, destination_path)
+
+            self.logger.info(
+                f"Copied plugins from {self.user_plugins_dir} to {self.cache_dir}."
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error during plugin cache update: {e}", exc_info=True)
 
     def disable_plugin(self, plugin_name):
         """Disable a plugin by name."""
