@@ -102,23 +102,23 @@ class TopPanelPlugin(BasePlugin):
         ):
             # Apply CSS classes
             self.update_widget_safely(
-                self.obj.top_panel_box_left.add_css_class, "top_panel_box_left"
+                self.obj.top_panel_box_left.add_css_class, "top-panel-box-left"
             )
             self.update_widget_safely(
                 self.obj.top_panel_box_widgets_left.add_css_class,
-                "top_panel_box_widgets_left",
+                "top-panel-box-widgets-left",
             )
             self.update_widget_safely(
-                self.obj.top_panel_box_right.add_css_class, "top_panel_box_right"
+                self.obj.top_panel_box_right.add_css_class, "top-panel-box-right"
             )
             self.update_widget_safely(
-                self.obj.top_panel_box_systray.add_css_class, "top_panel_box_systray"
+                self.obj.top_panel_box_systray.add_css_class, "top-panel-box-systray"
             )
             self.update_widget_safely(
-                self.obj.top_panel_box_center.add_css_class, "top_panel_box_center"
+                self.obj.top_panel_box_center.add_css_class, "top-panel-box-center"
             )
             self.update_widget_safely(
-                self.obj.top_panel_box_full.add_css_class, "top_panel_box_full"
+                self.obj.top_panel_box_full.add_css_class, "top-panel-box-full"
             )
 
             return False
