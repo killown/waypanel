@@ -23,6 +23,8 @@ class BasePlugin:
         self.save_config: Any = panel_instance.save_config
         self.reload_config: Any = panel_instance.reload_config
         self.ipc: Any = panel_instance.ipc
+        self.ipc_client = None
+        self.ipc_server = panel_instance.ipc_server
         self.dependencies: Any = getattr(self, "DEPS", [])
         self.layer_shell: Any = create_panel.LayerShell
         self.set_layer_pos_exclusive: Any = create_panel.set_layer_position_exclusive
