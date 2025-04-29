@@ -24,6 +24,7 @@ class WayfireEventServer:
         self.executor = ThreadPoolExecutor()
         self.event_queue = asyncio.Queue()
         self.clients = []
+        self.event_subscribers = {}
         self.loop = None
 
     def _cleanup_sockets(self):
@@ -64,17 +65,70 @@ class WayfireEventServer:
                     time.sleep(1)
                     continue
 
-    async def handle_event(self):
-        """Process and broadcast events to connected clients"""
-        while True:
-            event = await self.event_queue.get()
-            serialized_event = json.dumps(event)
-            for client in self.clients:
+    def add_event_subscriber(self, event_type, callback):
+        """
+        Add a subscriber for a specific event type.
+        Args:
+            event_type (str): The type of event to subscribe to.
+            callback (function): The callback to invoke when the event occurs.
+        """
+        if event_type not in self.event_subscribers:
+            self.event_subscribers[event_type] = []
+        self.event_subscribers[event_type].append(callback)
+        self.logger.info(f"new event: {event_type}")
+
+    def handle_msg(self, msg):
+        # Notify subscribers for the specific event type
+        event_type = msg.get("event")
+        if event_type in self.event_subscribers:
+            for callback in self.event_subscribers[event_type]:
                 try:
-                    client.write(serialized_event + b"\n")
+                    # Execute the callback asynchronously
+                    asyncio.create_task(callback(msg))
+                    self.logger.debug(f"Invoked callback for event: {event_type}")
+                except Exception as e:
+                    self.logger.error(
+                        f"Error executing callback for event '{event_type}': {e}"
+                    )
+        else:
+            self.logger.debug(f"No subscribers for event: {event_type}")
+
+    async def handle_event(self):
+        """
+        Process and broadcast events to connected clients.
+        Also invoke callbacks for subscribed event types.
+        """
+        while True:
+            # Get the next event from the queue
+            event = await self.event_queue.get()
+
+            # Serialize the event to JSON
+            serialized_event = json.dumps(event) + b"\n"
+
+            # Broadcast the serialized event to all connected clients
+            for client in self.clients[:]:  # Iterate over a copy of the list
+                try:
+                    client.write(serialized_event)
                     await client.drain()
                 except (ConnectionResetError, BrokenPipeError):
+                    # Remove disconnected clients
                     self.clients.remove(client)
+                    self.logger.warning("Removed disconnected client during broadcast.")
+
+            # Notify subscribers for the specific event type
+            event_type = event.get("event")
+            if event_type in self.event_subscribers:
+                for callback in self.event_subscribers[event_type]:
+                    try:
+                        # Execute the callback asynchronously
+                        asyncio.create_task(callback(event))
+                        self.logger.debug(f"Invoked callback for event: {event_type}")
+                    except Exception as e:
+                        self.logger.error(
+                            f"Error executing callback for event '{event_type}': {e}"
+                        )
+            else:
+                self.logger.debug(f"No subscribers for event: {event_type}")
 
     async def handle_client(self, reader, writer):
         """Manage individual client connections"""
@@ -108,3 +162,18 @@ class WayfireEventServer:
         finally:
             # Cleanup logic if needed
             pass
+
+    async def broadcast_message(self, message):
+        """
+        Broadcast a custom message to all connected clients.
+        Args:
+            message (dict): The message to broadcast.
+        """
+        serialized_message = json.dumps(message) + b"\n"
+        for client in self.clients[:]:  # Iterate over a copy of the list
+            try:
+                client.write(serialized_message)
+                await client.drain()
+            except (ConnectionResetError, BrokenPipeError):
+                self.clients.remove(client)
+                self.logger.warning("Removed disconnected client during broadcast.")
