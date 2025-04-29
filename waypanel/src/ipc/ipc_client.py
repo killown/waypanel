@@ -30,9 +30,7 @@ class WayfireClientIPC:
         except ConnectionRefusedError:
             self.logger.error("Connection refused by the server.")
         except Exception as e:
-            self.logger.error(
-                f"Unexpected error connecting to socket: {e}"
-            )
+            self.logger.error(f"Unexpected error connecting to socket: {e}")
         finally:
             if "self.client_socket" in locals() and self.client_socket:
                 self.client_socket.close()
@@ -60,9 +58,7 @@ class WayfireClientIPC:
         except UnicodeDecodeError as e:
             self.logger.error(f"Unicode decode error: {e}")
         except Exception as e:
-            self.logger.error(
-                f"Unexpected error handling socket event: {e}"
-            )
+            self.logger.error(f"Unexpected error handling socket event: {e}")
             return (
                 GLib.SOURCE_REMOVE
             )  # Stop receiving data if an unexpected error occurs
