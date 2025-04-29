@@ -12,7 +12,7 @@ from waypanel.src.plugins.utils._plugin_loader import PluginLoader
 
 
 class Panel(Adw.Application):
-    def __init__(self, logger, application_id=None):
+    def __init__(self, logger, ipc_server, application_id=None):
         super().__init__(application_id=application_id)
         """
         Initializes the application and sets up required configurations and components.
@@ -28,6 +28,7 @@ class Panel(Adw.Application):
         self.plugin_loader = PluginLoader(self, logger, self.config_path)
         self.plugins = self.plugin_loader.plugins
         self.ipc = IPC()
+        self.ipc_server = ipc_server
         self.args = sys.argv
         self.monitor = None
         self.update_widget = self.utils.update_widget
