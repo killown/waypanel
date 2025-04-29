@@ -110,11 +110,39 @@ def ipc_server(logger):
 
 
 def start_ipc_server(logger):
-    """Launch the IPC server in a daemon thread."""
+    """
+    Launch the IPC server in a daemon thread and return the server instance.
+    Args:
+        logger: The logger instance for logging messages.
+    Returns:
+        WayfireEventServer: The instance of the IPC server.
+    """
     logger.debug("Spawning IPC server thread")
-    ipc_thread = threading.Thread(target=ipc_server, args=(logger,), daemon=True)
+
+    # Create a container to store the server instance
+    server_container = {}
+
+    def _ipc_server_wrapper():
+        """Wrapper to start the IPC server and store its instance."""
+        try:
+            logger.info("Starting IPC server")
+            server = WayfireEventServer(logger)
+            server_container["instance"] = server  # Store the server instance
+            asyncio.run(server.main())
+        except Exception as e:
+            logger.error(f"IPC server crashed: {e}", exc_info=True)
+            raise
+
+    # Start the IPC server in a daemon thread
+    ipc_thread = threading.Thread(target=_ipc_server_wrapper, daemon=True)
     ipc_thread.start()
     logger.info("IPC server started in background thread")
+
+    # Wait briefly to ensure the server instance is created
+    while "instance" not in server_container:
+        time.sleep(0.1)  # Poll until the server instance is available
+
+    return server_container["instance"]
 
 
 def verify_required_wayfire_plugins():
@@ -153,7 +181,7 @@ def verify_required_wayfire_plugins():
     logger.info("All required plugins are enabled.")
 
 
-def load_panel():
+def load_panel(ipc_server):
     """Load and configure the panel with proper typelib paths."""
     primary_path = os.path.expanduser(
         f"{GTK_LAYER_SHELL_INSTALL_PATH}/lib/girepository-1.0"
@@ -189,7 +217,7 @@ def load_panel():
             monitor_name = sys.argv[-1].strip()
 
         app_name = f"com.waypanel.{monitor_name}"
-        panel = Panel(application_id=app_name, logger=logger)
+        panel = Panel(application_id=app_name, ipc_server=ipc_server, logger=logger)
         panel.set_panel_instance(panel)
 
         append_to_env("output_name", monitor_name)
@@ -407,10 +435,10 @@ def main():
         verify_required_wayfire_plugins()
         layer_shell_check()
         check_config_path()
-        start_ipc_server(logger)
+        ipc_server = start_ipc_server(logger)
 
         logger.info("Loading panel...")
-        panel = load_panel()
+        panel = load_panel(ipc_server)
 
         logger.info("Starting panel...")
         panel.run(logger=logger)
