@@ -13,6 +13,7 @@ def get_plugin_placement(panel_instance):
     Returns:
         tuple: (position, order, priority)
     """
+    plugin_require_ui = True
     # Example of panel_instance usage:
     # position = panel_instance.config["my_plugin"]["position"]
     # the config loaded is ~/.config/waypanel/waypanel.toml
@@ -20,7 +21,11 @@ def get_plugin_placement(panel_instance):
     order = 10  # The order will rearrange the plugin sequence.
     priority = 10  # If there are 10 plugins, this one will load last.
     # if the plugin has no UI, just `return`
-    return position, order, priority
+    if plugin_require_ui:
+        return position, order, priority
+    else:
+        # the plugin loader will threat the plugin as background
+        return
 
 
 def initialize_plugin(panel_instance):
