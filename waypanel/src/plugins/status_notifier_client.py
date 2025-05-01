@@ -55,7 +55,7 @@ class SystrayClientPlugin(BasePlugin):
         self.menus_layout = {}
         self.new_message = {}
         self.tray_button = {}
-        self.tray_box = Gtk.Box()
+        self.tray_box = Gtk.FlowBox()
         self.items = {}
         self.loop = global_loop
         self.main_widget = (self.tray_box, "append")
@@ -78,45 +78,17 @@ class SystrayClientPlugin(BasePlugin):
             event_type="tray_icon_removed", callback=self.on_tray_icon_removed
         )
 
-    def safe_unparent(self, widget):
-        """
-        Safely unparent a widget with checks.
-        Returns True if successfully unparented, False otherwise.
-        """
-        if widget is None:
-            return False
-
-        if not isinstance(widget, Gtk.Widget):
-            return False
-
-        parent = widget.get_parent()
-        if parent is not None:
-            try:
-                widget.unparent()
-                return True
-            except Exception as e:
-                print(f"Error unparenting widget: {e}")
-                return False
-
-        return False  # Already unparented
-
     async def on_tray_icon_removed(self, message):
         service_name = message["data"]["service_name"]
-        print(f"Tray icon removed for service: {service_name}")
+        self.logger.info(f"Tray icon removed for service: {service_name}")
 
         if service_name in self.tray_button:
             button = self.tray_button[service_name]
-            success = self.safe_unparent(button)
-
-            if success:
-                del self.tray_button[service_name]
-                del self.messages[service_name]
-                del self.menus_layout[service_name]
-                del self.menus[service_name]
-            else:
-                print(
-                    f"Failed to unparent widget for {service_name}, skipping cleanup."
-                )
+            self.tray_box.remove(button)
+            del self.tray_button[service_name]
+            del self.messages[service_name]
+            del self.menus_layout[service_name]
+            del self.menus[service_name]
 
     def set_message_data(self, service_name):
         self.messages[service_name] = {
@@ -416,6 +388,7 @@ class SystrayClientPlugin(BasePlugin):
             menu_data (list): List of menu items as dictionaries.
             service_name (str): The name of the service associated with the menu.
         """
+        # TODO: add support for submenus
         # Ensure the service_name exists in self.menus
         if service_name not in self.menus:
             self.menus[service_name] = []
