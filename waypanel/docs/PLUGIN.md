@@ -1,105 +1,205 @@
-## Plugin Documentation
+# 🧩 Creating Your First Plugin in 5 Minutes (All-in-One Guide)
 
-### Loading Plugins
-
-Plugins are loaded dynamically from two primary locations:
-
-1. **Built-in Plugins**: Located in the `src.plugins` package (e.g., `waypanel/src/plugins`).
-2. **Custom Plugins**: Located in the user's configuration directory (`~/config/waypanel/plugins`).
-
-The `PluginLoader` automatically clears the cache directory (`../custom/cache`) and copies all custom plugins from `~/config/waypanel/plugins` to the cache before loading them.
+This guide walks you through everything you need to create a simple plugin for **waypanel**. By the end, you'll have a working plugin that shows a button and displays a random number when clicked.
 
 ---
 
-### Plugin Structure
-
-#### `get_plugin_placement(panel_instance)`
-
-Defines where the plugin should be placed in the panel and its order of appearance. It returns a tuple `(position, order, priority)`:
-
-- **Position**: `"top-panel-left"`, `"top-panel-right"`, `"top-panel-center"`, etc.
-- **Order**: Determines the sequence of plugins within the same position.
-- **Priority**: Determines the initialization order of plugins.
-
-#### `initialize_plugin(panel_instance)`
-
-Initializes the plugin and returns its instance.
+## 📌 Table of Contents
+1. [Prerequisites](#prerequisites)
+2. [Step 1: Create the Plugin File](#step-1-create-the-plugin-file)
+3. [Step 2: Reload or Restart waypanel](#step-2-reload-or-restart-waypanel)
+4. [Understanding the Code](#understanding-the-code)
+5. [Customization Ideas](#customization-ideas)
+6. [Tips & Troubleshooting](#tips--troubleshooting)
+7. [Next Steps](#next-steps)
 
 ---
 
-### BasePlugin Class
+## ✅ Prerequisites
 
-All plugins should inherit from the `BasePlugin` class, which provides essential utilities and lifecycle methods.
-
-#### Initialization
-
-Call `super().__init__(panel_instance)` in the constructor to set up the plugin's connection to the panel instance.
-
-#### Lifecycle Methods
-
-Optional methods that can be overridden:
-
-- `on_enable()`: Called when the plugin is enabled.
-- `on_stop()`: Called when the plugin is stopped or disabled.
-- `on_reload()`: Called when the configuration is reloaded.
-- `on_cleanup()`: Called during cleanup to release resources.
+Before starting:
+- Ensure `waypanel` is installed and running
+- You should be using a Wayland compositor like **Wayfire**, **Sway**, or similar
+- Basic Python knowledge is helpful but not required
 
 ---
 
-### Defining the Main Widget
+## 🛠️ Step 1: Create the Plugin File
 
-Plugins that add UI elements to the panel must define `self.main_widget`. This tells the `PluginLoader` how to integrate the plugin's widget into the panel.
+Create a new file in your plugins directory:
 
-#### Syntax
+```bash
+mkdir -p ~/.config/waypanel/plugins
+nano ~/.config/waypanel/plugins/random_plugin.py
+```
 
-`self.main_widget = (widget, action)`
+## 🔧 Paste this complete plugin code:
 
-- **`widget`**: The widget to be added to the panel (e.g., a `Gtk.Button` or `Gtk.Box`).
-- **`action`**: Specifies how the widget should be added:
-  - `"append"`: Adds the widget to the specified panel section.
-  - `"set_content"`: Sets the widget as the main content of a specific panel.
+```python
 
-#### Background Plugins
+from gi.repository import Gtk, GLib
+import random
+from waypanel.src.plugins.core._base import BasePlugin
 
-If `get_plugin_placement()` returns `None`, the plugin is treated as a **background plugin** with no UI.
+# Enable or disable the plugin
+ENABLE_PLUGIN = True
 
----
+# Define where the plugin should appear
+def get_plugin_placement(panel_instance):
+    position = "top-panel-right"
+    order = 10
+    return position, order
 
-### Accessing Utilities
+def initialize_plugin(panel_instance):
+    if ENABLE_PLUGIN:
+        return RandomNumberPlugin(panel_instance)
 
-The `panel_instance` passed to the plugin provides access to various utilities:
+class RandomNumberPlugin(BasePlugin):
+    def __init__(self, panel_instance):
+        super().__init__(panel_instance)
+        self.popover = None
+        self.button = None
 
-- **Logger**: `self.logger` for logging messages.
-- **IPC Client**: `self.ipc` for inter-process communication.
-- **Configuration**: `self.config` for accessing plugin-specific settings from `waypanel.toml`.
+    def create_widget(self):
+        """Create the main widget for the plugin."""
+        self.button = Gtk.Button()
+        self.button.set_icon_name("dialog-information-symbolic")
+        self.button.connect("clicked", self.on_button_clicked)
+        self.button.set_tooltip_text("Show random number")
+        return self.button
 
----
+    def on_button_clicked(self, widget):
+        """Handle button click to show a random number."""
+        if not self.popover:
+            self.popover = Gtk.Popover()
+            self.popover.set_parent(self.button)
+            self.popover.set_autohide(True)
 
-### Dependencies
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            box.set_margin_top(10)
+            box.set_margin_bottom(10)
+            box.set_margin_start(10)
+            box.set_margin_end(10)
 
-Plugins can specify dependencies using the `DEPS` list. The `PluginLoader` ensures that dependent plugins are loaded before the current plugin.
+            label = Gtk.Label.new(f"🎲 Random Number: {random.randint(1, 100)}")
+            box.append(label)
 
----
+            refresh_btn = Gtk.Button(label="Generate Again")
+            refresh_btn.connect("clicked", self.refresh_random_number, label)
+            box.append(refresh_btn)
 
-### Best Practices
+            self.popover.set_child(box)
 
-1. **Keep Plugins Lightweight**:
-   - Focus on a single responsibility for each plugin.
-   - Avoid heavy computations in the main thread; use `GLib.idle_add()` for non-blocking tasks.
+        self.popover.popup()
 
-2. **Error Handling**:
-   - Implement proper error handling to avoid crashing the entire plugin system.
-   - Use the logger (`self.logger.error()`) to report issues.
+    def refresh_random_number(self, button, label):
+        """Refresh the random number in the popover."""
+        label.set_text(f"🎲 Random Number: {random.randint(1, 100)}")
 
-3. **Configuration**:
-   - Use `waypanel.toml` for plugin-specific settings only when necessary.
-   - Load configuration using `self.config` and handle missing keys gracefully.
+    def set_widget(self):
+        """Return the widget and append mode."""
+        return self.create_widget(), "append"
+```
 
----
+## 🔄 Step 2: Reload or Restart waypanel
 
-### Additional Notes
+After saving the file, reload or restart waypanel to load the plugin:
+bash
 
-- **Logging**: Use the `logger` utility for consistent and structured logs.
-- **Theming**: Custom CSS can be applied to widgets for styling.
-- **Performance**: Waypanel is lightweight and avoids unnecessary monitoring of Bluetooth, network, etc.
-- **some examples**: waypanel/src/plugins/examples
+killall waypanel
+waypanel
+
+## 🎯 Understanding the Code
+
+### Let's break down the structure so you can modify it later.
+🔹 ENABLE_PLUGIN = True
+
+    Enables/disables the plugin globally.
+
+🔹 get_plugin_placement()
+
+    Determines where the plugin appears (top-panel-left, top-panel-right, etc.)
+
+    order sets its priority within that area.
+
+🔹 initialize_plugin()
+
+    Instantiates the plugin class if enabled.
+
+🔹 RandomNumberPlugin Class
+
+    Inherits from BasePlugin
+
+    Contains logic for creating the UI and handling interactions
+
+🔹 create_widget()
+
+    Returns the main widget (in this case, a button with an icon)
+
+🔹 on_button_clicked()
+
+    Creates a popover with a random number and a refresh button
+
+🔹 refresh_random_number()
+
+    Updates the label with a new random number
+
+🔹 set_widget()
+
+    Tells waypanel how to place the widget (append adds it at the end)
+
+## 🛠️ Tips & Troubleshooting
+
+
+### ❗ Common Issues
+Problem	Solution
+Plugin doesn't show up	Make sure ENABLE_PLUGIN = True
+Button appears but nothing happens	Ensure Gtk.Popover is properly initialized
+No logs visible	Add self.logger.info("Debug message")
+Import errors	Confirm path matches waypanel/src/plugins/core/_base.py
+🚀 Next Steps
+
+Once you've created your first plugin, try these advanced steps:
+
+    🎯 Create a background service plugin (e.g., clock or battery monitor)
+
+    🧬 Subscribe to events using event_manager.subscribe_to_event("view-focused", callback)
+
+    🧪 Test different placements (bottom-panel, left-panel, etc.)
+
+## 📘 Bonus: Minimal Template
+
+Use this as a boilerplate for future plugins:
+```python
+
+from gi.repository import Gtk
+from waypanel.src.plugins.core._base import BasePlugin
+
+ENABLE_PLUGIN = True
+
+def get_plugin_placement(panel_instance):
+    return "top-panel-right", 10
+
+def initialize_plugin(panel_instance):
+    if ENABLE_PLUGIN:
+        return MyPlugin(panel_instance)
+
+class MyPlugin(BasePlugin):
+    def __init__(self, panel_instance):
+        super().__init__(panel_instance)
+        self.button = None
+
+    def create_widget(self):
+        self.button = Gtk.Button(label="Click Me!")
+        self.button.connect("clicked", self.on_click)
+        return self.button
+
+    def on_click(self, _):
+        print("Button clicked!")
+
+    def set_widget(self):
+        return self.create_widget(), "append"
+```
+
+
+Happy coding! 🚀
