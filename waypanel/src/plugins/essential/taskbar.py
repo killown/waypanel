@@ -53,9 +53,9 @@ class TaskbarPlugin(BasePlugin):
 
     def set_layer_exclusive(self, exclusive):
         if exclusive:
-            self.update_widget(self.set_layer_pos_exclusive, self.bottom_panel, 48)
+            self.set_layer_pos_exclusive(self.bottom_panel, 48)
         else:
-            self.update_widget(self.unset_layer_pos_exclusive, self.bottom_panel)
+            self.unset_layer_pos_exclusive(self.bottom_panel)
 
     def _setup_taskbar(self):
         """Create and configure the bottom panel."""
@@ -69,7 +69,7 @@ class TaskbarPlugin(BasePlugin):
         # Add launcher button
         self.add_launcher = Gtk.Button()
         icon = self.utils.get_nearest_icon_name("tab-new")
-        self.update_widget(self.add_launcher.set_icon_name, icon)
+        self.add_launcher.set_icon_name(icon)
 
         output = os.getenv("waypanel")
         output_name = None
@@ -87,21 +87,15 @@ class TaskbarPlugin(BasePlugin):
 
         if geometry:
             monitor_width = geometry["width"]
-            self.update_widget(
-                self.scrolled_window.set_size_request, monitor_width / 1.2, 64
-            )
+            self.scrolled_window.set_size_request(monitor_width / 1.2, 64)
 
         # Set content for the bottom panel
-        self.update_widget(self.bottom_panel.set_content, self.scrolled_window)
+        self.bottom_panel.set_content(self.scrolled_window)
 
         # Taskbar setup
-        self.update_widget(
-            self.taskbar.set_halign, Gtk.Align.CENTER
-        )  # Center horizontally
-        self.update_widget(
-            self.taskbar.set_valign, Gtk.Align.CENTER
-        )  # Center vertically
-        self.update_widget(self.scrolled_window.set_child, self.taskbar)
+        self.taskbar.set_halign(Gtk.Align.CENTER)
+        self.taskbar.set_valign(Gtk.Align.CENTER)
+        self.scrolled_window.set_child(self.taskbar)
         self.taskbar.add_css_class("taskbar")
 
         # Present the panel if enabled
@@ -176,16 +170,16 @@ class TaskbarPlugin(BasePlugin):
         # Add icon if available
         if icon_name:
             icon = Gtk.Image()
-            self.update_widget(icon.set_from_icon_name, icon_name)
-            self.update_widget_safely(box.append, icon)
+            icon.set_from_icon_name(icon_name)
+            box.append(icon)
 
         # Add label
         label = Gtk.Label()
-        self.update_widget(label.set_label, use_this_title)
-        self.update_widget_safely(box.append, label)
+        label.set_label(use_this_title)
+        box.append(label)
 
         # Set the box as the button's child
-        self.update_widget(button.set_child, box)
+        button.set_child(box)
 
         # Create gesture handlers for the button
         button.connect("clicked", lambda *_: self.set_view_focus(view))
@@ -335,7 +329,7 @@ class TaskbarPlugin(BasePlugin):
             return False
 
         # Append the button to the taskbar
-        self.update_widget_safely(self.taskbar.append, button)
+        self.taskbar.append(button)
 
         # Store button information in dictionaries for easy access
         self.buttons_id[id] = [button, initial_title, id]
@@ -589,7 +583,7 @@ class TaskbarPlugin(BasePlugin):
             return
 
         # Remove the button from the taskbar and clean up
-        self.update_widget(self.taskbar.remove, button)
+        self.taskbar.remove(button)
         self.taskbar_list.remove(view_id)
         self.remove_gesture(button)
         del self.buttons_id[view_id]
