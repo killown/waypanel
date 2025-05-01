@@ -2,7 +2,10 @@ import os
 import orjson as json
 from gi.repository import Gtk, GLib
 from waypanel.src.plugins.core._base import BasePlugin
-
+from waypanel.src.core.create_panel import (
+    set_layer_position_exclusive,
+    unset_layer_position_exclusive,
+)
 
 # Enable or disable the plugin
 ENABLE_PLUGIN = True
@@ -53,9 +56,11 @@ class TaskbarPlugin(BasePlugin):
 
     def set_layer_exclusive(self, exclusive):
         if exclusive:
-            self.set_layer_pos_exclusive(self.bottom_panel, 48)
+            self.update_widget_safely(
+                set_layer_position_exclusive, self.bottom_panel, 48
+            )
         else:
-            self.unset_layer_pos_exclusive(self.bottom_panel)
+            self.update_widget_safely(unset_layer_position_exclusive, self.bottom_panel)
 
     def _setup_taskbar(self):
         """Create and configure the bottom panel."""
@@ -550,7 +555,6 @@ class TaskbarPlugin(BasePlugin):
             and not self.layer_always_exclusive
         ):
             self.set_layer_exclusive(True)
-        self.update_taskbar_on_scale()
 
     def on_scale_desactivated(self):
         """Handle scale plugin deactivation."""
