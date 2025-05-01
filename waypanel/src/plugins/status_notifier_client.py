@@ -1,6 +1,8 @@
 from gi.repository import Gtk, Gio, Gdk
 from waypanel.src.plugins.core.event_loop import global_loop
 from dbus_fast import Variant
+import re
+from unidecode import unidecode
 
 # Local imports
 from waypanel.src.plugins.core._base import BasePlugin
@@ -76,21 +78,45 @@ class SystrayClientPlugin(BasePlugin):
             event_type="tray_icon_removed", callback=self.on_tray_icon_removed
         )
 
+    def safe_unparent(self, widget):
+        """
+        Safely unparent a widget with checks.
+        Returns True if successfully unparented, False otherwise.
+        """
+        if widget is None:
+            return False
+
+        if not isinstance(widget, Gtk.Widget):
+            return False
+
+        parent = widget.get_parent()
+        if parent is not None:
+            try:
+                widget.unparent()
+                return True
+            except Exception as e:
+                print(f"Error unparenting widget: {e}")
+                return False
+
+        return False  # Already unparented
+
     async def on_tray_icon_removed(self, message):
-        """
-        Handle the removal of a tray icon.
-        Args:
-            item (StatusNotifierItem): The removed tray icon.
-        """
         service_name = message["data"]["service_name"]
         print(f"Tray icon removed for service: {service_name}")
-        # remove button from tray
+
         if service_name in self.tray_button:
-            self.tray_button[service_name].unparent()
-            del self.tray_button[service_name]
-            del self.messages[service_name]
-            del self.menus_layout[service_name]
-            del self.menus[service_name]
+            button = self.tray_button[service_name]
+            success = self.safe_unparent(button)
+
+            if success:
+                del self.tray_button[service_name]
+                del self.messages[service_name]
+                del self.menus_layout[service_name]
+                del self.menus[service_name]
+            else:
+                print(
+                    f"Failed to unparent widget for {service_name}, skipping cleanup."
+                )
 
     def set_message_data(self, service_name):
         self.messages[service_name] = {
@@ -322,22 +348,19 @@ class SystrayClientPlugin(BasePlugin):
             *args: Variable-length arguments passed by the signal handler.
         """
         # update menu structure and proxy object
+
         try:
             action, parameter, self.label_index, self.service_name = args
-
+            object_path = self.messages[self.service_name]["object_path"]
             event_id = "clicked"
             timestamp = Gdk.CURRENT_TIME
-
+            await self.set_menu_layout(self.service_name)
             dbusmenu = self.menus_layout[self.service_name]["dbusmenu"]
             layout = self.menus_layout[self.service_name]["layout"]
-
-            print(layout, self.label_index, len(layout))
             self.item_id = layout[self.label_index]["id"]
-
             await dbusmenu.call_event(
                 self.item_id, event_id, Variant("s", ""), timestamp
             )
-
             print(f"Action triggered for menu item: {self.item_id}")
 
         except Exception as e:
@@ -345,16 +368,43 @@ class SystrayClientPlugin(BasePlugin):
                 f"Failed to trigger action for menu item and service_name: {self.service_name} : {e}"
             )
 
+    def sanitize_gio_action_name(self, name: str) -> str:
+        """
+        Sanitize a string to be a valid Gio.SimpleAction or GMenu detailed action name.
+        - Only allows [a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)* format.
+        - Removes all special characters except letters and numbers.
+        - Ensures no invalid sequences like leading digits or repeated dots.
+        """
+
+        # Step 1: Normalize Unicode (optional but recommended)
+        name = unidecode(name)
+
+        # Step 2: Convert to lowercase
+        name = name.lower()
+
+        # Step 3: Remove all non-alphanumeric characters
+        name = re.sub(r"[^a-z0-9]", "", name)
+
+        # Step 4: Ensure starts with a letter
+        if not name or not name[0].isalpha():
+            name = "action" + name
+
+        # Step 5: Prevent empty result
+        if not name:
+            return "empty"
+
+        return name
+
     def create_menu_item(self, menu, name, label_index, service_name, panel_instance):
         """Create a menu item with the specified name and command."""
-        action_name = f"app.run-command-{name.replace(' ', '-')}"
+        name_for_action = self.sanitize_gio_action_name(name)
+        action_name = f"app.run-command-{name_for_action}"
         action = Gio.SimpleAction.new(action_name, None)
         # quick reminder, the issue of not call_event working, is here
         action.connect(
             "activate", self._on_menu_item_clicked_wrapper, label_index, service_name
         )
         panel_instance.add_action(action)
-
         menu_item = Gio.MenuItem.new(name, f"app.{action_name}")
         menu.append_item(menu_item)
 
@@ -430,7 +480,26 @@ class SystrayClientPlugin(BasePlugin):
             # The first two elements are metadata; skip them
             self.set_menu_items(menu_data, service_name)
             items = self.menus[service_name]
+            last_item_was_separator = False
             for item in items:
+                if item["type"] == "separator":
+                    if last_item_was_separator:
+                        last_item_was_separator = False
+                        continue
+                    menu_item = Gio.MenuItem.new("-" * 30, "app.separator")
+                    menu.append_item(menu_item)
+                    last_item_was_separator = True
+                    continue
+                # FIXME: identify why apps like steam create labels like: "Item 1", "Item 100"
+                if (
+                    len(item["label"].split()) == 2
+                    and item["label"].split()[0].startswith("Item")
+                    and item["label"].split()[-1].isalnum()
+                ):
+                    menu_item = Gio.MenuItem.new("-" * 30, "app.separator")
+                    menu.append_item(menu_item)
+                    continue
+
                 self.create_menu_item(
                     gio_menu, item["label"], item["label_id"], service_name, self.obj
                 )
@@ -440,7 +509,7 @@ class SystrayClientPlugin(BasePlugin):
 
         # Set the menu model and insert the action group into the MenuButton
         menubutton.set_menu_model(menu)
-
+        menubutton.add_css_class("tray_icon")
         # Add the MenuButton to the tray box
         self.tray_box.append(menubutton)
         return menubutton

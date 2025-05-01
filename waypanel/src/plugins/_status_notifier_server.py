@@ -218,10 +218,23 @@ class StatusNotifierWatcher(ServiceInterface):
         try:
             if message.member == "NameOwnerChanged":
                 service_name, old_owner, new_owner = message.body
+                # Extract the object path from the message body
+                object_path = None
+                raw_object_path = message.body[0] if message.body else None
+
+                # Unwrap the Variant object if necessary
+                if hasattr(raw_object_path, "value"):
+                    object_path = raw_object_path.value
+                else:
+                    object_path = raw_object_path
+
+                if object_path:
+                    self.loop.create_task(
+                        self.host.register_item(self.bus, service_name, object_path)
+                    )
                 print(
                     f"NameOwnerChanged: {service_name}, Old Owner: {old_owner}, New Owner: {new_owner}"
                 )
-
                 # If the new owner is empty, the service has been unregistered
                 if not new_owner:
                     self.unregister_item(service_name)
@@ -530,38 +543,40 @@ class StatusNotifierItem(BasePlugin):
 
     async def initialize(self, broadcast=True) -> bool:
         try:
+            # Proceed with normal initialization
             introspection = await self.bus.introspect(
                 self.service_name, self.object_path
             )
             self.proxy_object = self.bus.get_proxy_object(
                 self.service_name, self.object_path, introspection=introspection
             )
+
+            # Try to find matching interface
             ifaces = [
                 "org.kde.StatusNotifierItem",
                 "org.freedesktop.StatusNotifierItem",
             ]
-
             for interface in ifaces:
                 try:
                     self.item = self.proxy_object.get_interface(interface)
                     break
-                except InterfaceNotFoundError:
+                except Exception:
                     continue
-            if not hasattr(self, "item"):
-                print(
-                    f"No valid interface found for {self.service_name}{self.object_path}"
-                )
+            else:
+                self.logger.warning("No valid interface found.")
                 return False
-            # Fetch the IconName property
+
+            # Fetch icon name and broadcast
             try:
                 self.icon_name = await self.item.get_icon_name()
-                # if broadcast is true and call initialize in client, it will cause recursion
                 if broadcast:
                     await self.on_new_tray_icon()
-            except AttributeError as e:
-                print(f"Failed to fetch IconName: {e}")
+            except Exception as e:
+                self.logger.error(f"Failed to fetch IconName: {e}")
                 return False
+
             return True
+
         except Exception as e:
-            print(f"Failed to initialize StatusNotifierItem: {e}")
+            self.logger.error(f"Failed to initialize StatusNotifierItem: {e}")
             return False
