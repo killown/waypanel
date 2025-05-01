@@ -20,4 +20,4 @@ pillow
 structlog
 rich
 cairosvg
-
+unidecode
