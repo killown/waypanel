@@ -1,10 +1,10 @@
-import os
-import toml
 import aiosqlite
+import datetime
+import re
 import asyncio
 from pathlib import Path
 from typing import List, Tuple
-from gi.repository import Gio, Gtk, GLib
+from gi.repository import Gio, Gtk, GLib, Pango
 
 from waypanel.src.plugins.core._base import BasePlugin
 
@@ -161,23 +161,37 @@ class MenuNotes(BasePlugin):
             row_hbox.append(spacer)
 
             # Store note ID in the row's data
-            row_hbox.MYTEXT = f"{note_id} {content.strip()}"
-            row_hbox.note_id = note_id  # Store the ID directly on the row
+            row_hbox.MYTEXT = f"{note_id} {content.strip()}"  # pyright: ignore
+            row_hbox.note_id = note_id  # pyright: ignore
 
             # Add note content
             note_label = Gtk.Label.new()
             note_label.set_wrap(True)
-            escaped_text = GLib.markup_escape_text(content)
-            note_label.set_markup(
-                f'<span font="DejaVu Sans Mono">{escaped_text}</span>'
-            )
-            note_label.props.margin_end = 5
+            timestamp = content[:16]  # Extract "YYYY-MM-DD HH:MM"
+            message = content[19:]  # Skip " — "
+
+            if timestamp and message:
+                markup = f"{timestamp} — {message}"
+            else:
+                markup = content
+
+            note_label.set_markup(f'<span font="DejaVu Sans Mono">{markup}</span>')
+            note_label.props.margin_end = 10
             note_label.props.hexpand = True
+            note_label.set_wrap(True)
+            note_label.set_ellipsize(Pango.EllipsizeMode.NONE)  # Prevent truncation
+            note_label.set_halign(Gtk.Align.FILL)  # Fill horizontal space
+            note_label.set_hexpand(True)  # Expand horizontally
+            note_label.set_valign(Gtk.Align.CENTER)  # Vertically center text
+            note_label.set_vexpand(False)  # Don't expand vertically
+            note_label.set_xalign(0)  # Left-aligned text
+            note_label.set_yalign(0.5)
+            note_label.set_margin_end(5)
             note_label.set_halign(Gtk.Align.START)
             row_hbox.append(note_label)
             row_hbox.append(delete_button)
 
-            self.listbox.append(row_hbox)
+            self.listbox.append(row_hbox)  # pyright: ignore
             self.find_text_using_button[delete_button] = row_hbox
 
     def create_popover_menu_notes(self):
@@ -268,10 +282,12 @@ class MenuNotes(BasePlugin):
         await manager.add_note(content)
 
     def on_add_note(self, *_):
-        """Handle adding a new note"""
+        """Handle adding a new note with timestamp"""
         content = self.entry_add_note.get_text().strip()
         if content:
-            asyncio.run(self.async_add_note(content))
+            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+            content_with_time = f"{now} — {content}"
+            asyncio.run(self.async_add_note(content_with_time))
             self.entry_add_note.set_text("")
             self.update_notes_list()
 
