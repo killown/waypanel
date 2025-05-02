@@ -2,9 +2,10 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 import structlog
-from structlog.stdlib import ProcessorFormatter, BoundLogger
+from structlog.stdlib import ProcessorFormatter, BoundLogger, add_logger_name
 from structlog.processors import JSONRenderer, TimeStamper, add_log_level
 from rich.logging import RichHandler
+import colorama
 
 # Define log file path
 LOG_FILE_PATH = os.path.expanduser("~/.config/waypanel/waypanel.log")
@@ -13,7 +14,7 @@ LOG_FILE_PATH = os.path.expanduser("~/.config/waypanel/waypanel.log")
 os.makedirs(os.path.dirname(LOG_FILE_PATH), exist_ok=True)
 
 
-def setup_logging(level=logging.INFO) -> BoundLogger:
+def setup_logging(level=logging.DEBUG) -> BoundLogger:
     """Configure logging with both file and console handlers.
     Ensures no duplicate handlers are added.
 
@@ -61,14 +62,52 @@ def setup_logging(level=logging.INFO) -> BoundLogger:
 
         logger.propagate = False  # Disable propagation to the root logger
 
+    cr = structlog.dev.ConsoleRenderer(
+        columns=[
+            # Render the timestamp without the key name in yellow.
+            structlog.dev.Column(
+                "timestamp",
+                structlog.dev.KeyValueColumnFormatter(
+                    key_style=None,
+                    value_style=colorama.Fore.YELLOW,
+                    reset_style=colorama.Style.RESET_ALL,
+                    value_repr=str,
+                ),
+            ),
+            # Render the event without the key name in bright magenta.
+            structlog.dev.Column(
+                "event",
+                structlog.dev.KeyValueColumnFormatter(
+                    key_style=None,
+                    value_style=colorama.Style.BRIGHT + colorama.Fore.MAGENTA,
+                    reset_style=colorama.Style.RESET_ALL,
+                    value_repr=str,
+                ),
+            ),
+            # Default formatter for all keys not explicitly mentioned. The key is
+            # cyan, the value is green.
+            structlog.dev.Column(
+                "",
+                structlog.dev.KeyValueColumnFormatter(
+                    key_style=colorama.Fore.CYAN,
+                    value_style=colorama.Fore.GREEN,
+                    reset_style=colorama.Style.RESET_ALL,
+                    value_repr=str,
+                ),
+            ),
+        ]
+    )
+
+    # Configure structlog processors
     # Configure structlog processors
     structlog.configure(
         processors=[
-            add_log_level,
-            TimeStamper(fmt="iso"),
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.format_exc_info,
-            ProcessorFormatter.wrap_for_formatter,  # Integrate with stdlib logging
+            add_log_level,  # Add log level (info, debug, etc.)
+            add_logger_name,  # Add logger name
+            TimeStamper(fmt="iso"),  # Timestamp in ISO format
+            structlog.processors.StackInfoRenderer(),  # Include stack info if available
+            structlog.processors.format_exc_info,  # Pretty-print exceptions
+            cr if level <= logging.DEBUG else ProcessorFormatter.wrap_for_formatter,
         ],
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
@@ -80,4 +119,4 @@ def setup_logging(level=logging.INFO) -> BoundLogger:
 
 
 if __name__ == "__main__":
-    logger = setup_logging(level=logging.INFO)
+    logger = setup_logging(level=logging.DEBUG)
