@@ -172,7 +172,7 @@ class WayfireEventServer:
         serialized_message = json.dumps(message) + b"\n"
         for client in self.clients[:]:  # Iterate over a copy of the list
             try:
-                client.write(serialized_message)
+                await client.write(serialized_message)
                 await client.drain()
             except (ConnectionResetError, BrokenPipeError):
                 self.clients.remove(client)
