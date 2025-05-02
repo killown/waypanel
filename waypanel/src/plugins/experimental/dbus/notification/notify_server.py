@@ -24,8 +24,8 @@ from dbus_next.aio.message_bus import MessageBus
 from dbus_next.service import ServiceInterface, method, signal
 from dbus_next.constants import BusType, NameFlag, RequestNameReply
 from gi.repository import GLib
-from .notify_server_db import Database
-from .notify_server_ui import UI
+from ._notify_server_db import Database
+from ._notify_server_ui import UI
 
 ENABLE_PLUGIN = True
 
