@@ -9,6 +9,9 @@ import base64
 
 from waypanel.src.plugins.core._base import BasePlugin
 
+# TODO: allow hardcoded custom icon but add an option in the config too
+CUSTOM_ICON = {"notify-send": "cs-notifications-symbolic"}
+
 
 class NotifyUtils(BasePlugin):
     def __init__(self, panel_instance):
@@ -256,7 +259,10 @@ class NotifyUtils(BasePlugin):
             # Case 3: Use app_name as the icon name
             if app_name:
                 try:
-                    icon = Gtk.Image.new_from_icon_name(app_name)
+                    if app_name not in CUSTOM_ICON:
+                        icon = Gtk.Image.new_from_icon_name(app_name)
+                    else:
+                        icon = Gtk.Image.new_from_icon_name(CUSTOM_ICON[app_name])
                     return icon  # Successfully loaded from app_name
                 except Exception as e:
                     self.logger.error(f"Error loading app_name as icon name: {e}")
