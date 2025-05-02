@@ -5,7 +5,130 @@ import inspect
 
 
 class BasePlugin:
+    """
+    Base class for all waypanel plugins.
+
+    Plugins are the primary mechanism for extending functionality in waypanel.
+    Each plugin can optionally provide a UI widget and register event handlers,
+    timers, or background services.
+
+    ## Plugin Lifecycle
+
+    A plugin follows this lifecycle:
+
+    1. **Initialization**: `initialize_plugin(panel_instance)` returns an instance of the plugin.
+    2. **Startup**: If defined, `on_start()` is called after initialization.
+    3. **Runtime**: The plugin listens for events, updates its state, and may update the UI.
+    4. **Stop/Disable**: If defined, `on_stop()` is called when the plugin is disabled or reloaded.
+    5. **Cleanup**: If defined, `on_cleanup()` is called before full removal.
+
+    ## Placement Behavior
+
+    Plugins define their placement by implementing:
+
+        def get_plugin_placement(panel_instance):
+            return position, order, priority
+
+    Where:
+        - `position`: where to place the plugin (e.g., `"top-panel-left"`, `"bottom-panel-right"`)
+        - `order`: render order within the same panel section
+        - `priority`: initialization order (lower numbers first)
+
+    ### Special Return Values
+
+    - Returning `"background"` or `None` marks the plugin as a **background service** with no UI.
+      These plugins run silently and do not appear in the panel layout.
+
+    Example:
+        ```python
+        def get_plugin_placement(panel_instance):
+            return "background"
+        ```
+
+    ## Dependencies
+
+    Plugins can declare dependencies using the `DEPS` list. The PluginLoader ensures dependent plugins
+    are loaded before the current one.
+
+    Example:
+        ```python
+        DEPS = ["event_manager", "calendar"]
+        ```
+
+    ## Creating a Plugin
+
+    To create a new plugin:
+
+    1. Inherit from `BasePlugin`
+    2. Implement `initialize_plugin(panel_instance)`
+    3. Optionally override lifecycle methods: `on_start()`, `on_stop()`, `on_reload()`, `on_cleanup()`
+    4. Define placement via `get_plugin_placement(panel_instance)`
+
+    ## Event Handling
+
+    Plugins typically interact with the system through the IPC interface (`self.ipc`) and event manager.
+    Use `GLib.idle_add()` for non-blocking operations to avoid freezing the panel.
+
+    ## UI Integration
+
+    If your plugin provides a UI element:
+    - Set `self.main_widget` to a tuple containing the widget and the append method
+    - Supported append methods: `"append"`, `"set_content"`
+
+    Example:
+        ```python
+        self.main_widget = (self.button, "append")
+        ```
+    """
+
     def __init__(self, panel_instance):
+        """
+        Base class for all waypanel plugins.
+
+        This class provides core access to shared components used by all plugins.
+        Subclasses must always call `super().__init__(panel_instance)` in their constructor
+        to ensure proper initialization.
+
+        ### Available Attributes (Do NOT reassign)
+
+        These are initialized directly from `panel_instance` and ready to use:
+
+        - `self.obj`: Reference to the main Panel instance
+        - `self.logger`: Logger object (`self.logger.info(...)`, etc.)
+        - `self.ipc`: IPC client for communicating with the compositor
+        - `self.config`: Optional plugin-specific configuration from `waypanel.toml`
+        - `self.utils`: Utility module with helper functions
+        - `self.plugin_loader`: Reference to the plugin loader
+        - `self.plugins`: Dictionary of loaded plugins (`self.plugins["event_manager"]`)
+        - `self.save_config`: Function to save updated config to disk
+        - `self.reload_config`: Function to reload config at runtime
+        - `self.update_widget_safely`: Safe method to update UI widgets
+        - `self.update_widget`: Low-level widget updater
+        - `self.ipc_server`: Optional IPC server instance
+        - `self.dependencies`: List of required plugin names (`DEPS`)
+        - `self.layer_shell`: Reference to LayerShell for setting panel layers
+        - `self.set_layer_pos_exclusive`: Helper to set exclusive layer position
+        - `self.unset_layer_pos_exclusive`: Helper to unset exclusive layer position
+
+        ### Usage Example
+
+        ```python
+        class MyPlugin(BasePlugin):
+            def __init__(self, panel_instance):
+                super().__init__(panel_instance)  # Required!
+                self.logger.info("MyPlugin initialized")
+
+                if "event_manager" in self.plugins:
+                    event_manager = self.plugins["event_manager"]
+                    event_manager.subscribe_to_event("view-focused", self.on_view_focused)
+        ```
+
+        ### Notes
+
+        - Never reassign any of these attributes — they are already initialized.
+        - Always call `super().__init__(panel_instance)` first in subclass `__init__`.
+        - Plugins that don’t need a UI should return `"background"` from `get_plugin_placement()`.
+        """
         self.obj = panel_instance
         self.utils: Any = panel_instance.utils
         self.bottom_panel: Any = self.obj.bottom_panel
