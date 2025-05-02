@@ -462,13 +462,6 @@ class Utils(Adw.Application):
         return "image-missing"
 
     def update_widget(self, function_method, *args):
-        """
-        Safely update a GTK widget's property or method using GLib.idle_add.
-
-        Args:
-            function_method: The method to call on the widget (e.g., widget.set_label).
-            *args: Arguments to pass to the method.
-        """
         GLib.idle_add(function_method, *args)
 
     def update_widget_safely(self, method, *args):
