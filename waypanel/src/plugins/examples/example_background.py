@@ -13,7 +13,13 @@ ENABLE_PLUGIN = False  # Set to True to enable this plugin
 
 
 def get_plugin_placement(panel_instance):
-    return
+    """
+    Background plugin with no UI.
+
+    Returning 'background' or None tells the plugin loader to treat this plugin
+    as a background service with no widget to display.
+    """
+    return "background"
 
 
 def initialize_plugin(panel_instance):
