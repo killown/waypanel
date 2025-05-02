@@ -630,11 +630,7 @@ class ClipboardClient(BasePlugin):
             # Ensure the input is a Gtk.ListBoxRow
             if not isinstance(row, Gtk.ListBoxRow):
                 self.log_error(
-                    error=TypeError(
-                        f"Invalid row type: {type(row).__name__}. Expected Gtk.ListBoxRow."
-                    ),
-                    message="Invalid row type encountered in on_filter_invalidate.",
-                    level="warning",
+                    f"Invalid row type: {type(row).__name__}. Expected Gtk.ListBoxRow."
                 )
                 return False
 
@@ -642,18 +638,14 @@ class ClipboardClient(BasePlugin):
             child = row.get_child()
             if not child:
                 self.log_error(
-                    error=ValueError("Row has no child widget."),
                     message="Row child widget is missing in on_filter_invalidate.",
-                    level="warning",
                 )
                 return False
 
             # Ensure the child widget has the 'MYTEXT' attribute
             if not hasattr(child, "MYTEXT"):
                 self.log_error(
-                    error=AttributeError("Row child does not have 'MYTEXT' attribute."),
                     message="Row child is missing the required 'MYTEXT' attribute.",
-                    level="warning",
                 )
                 return False
 
@@ -661,11 +653,7 @@ class ClipboardClient(BasePlugin):
             row_text = child.MYTEXT
             if not isinstance(row_text, str):
                 self.log_error(
-                    error=TypeError(
-                        f"Invalid row text type: {type(row_text).__name__}. Expected str."
-                    ),
-                    message=f"Invalid row text encountered: {row_text}.",
-                    level="warning",
+                    f"Invalid row text type: {type(row_text).__name__}. Expected str."
                 )
                 return False
 
@@ -675,8 +663,6 @@ class ClipboardClient(BasePlugin):
 
         except Exception as e:
             self.log_error(
-                error=e,
                 message="Unexpected error occurred in on_filter_invalidate.",
-                level="error",
             )
             return False

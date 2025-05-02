@@ -21,7 +21,7 @@ def get_plugin_placement(panel_instance):
 
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
-        verify_db()
+        verify_db(panel_instance)
         return run_server_in_background()
 
 
@@ -70,14 +70,15 @@ def initialize_db(db_path=None):
         raise RuntimeError(f"Database initialization failed: {e}")
 
 
-def verify_db():
+def verify_db(panel_instance):
+    logger = panel_instance.logger
     db_path = str(Path.home() / ".config" / "waypanel" / "clipboard_server.db")
 
     if not os.path.exists(db_path):
-        print("Database doesn't exist. Creating...")
+        logger.info("Database doesn't exist. Creating...")
         initialize_db()
     else:
-        print(f"Database exists at {db_path}")
+        logger.info(f"Database exists at {db_path}")
         # Verify table structure
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -85,7 +86,7 @@ def verify_db():
             "SELECT name FROM sqlite_master WHERE type='table' AND name='clipboard_items'"
         )
         if not cursor.fetchone():
-            print("Table missing. Recreating...")
+            logger.warning("Table missing. Recreating...")
             initialize_db(db_path)
         conn.close()
 
