@@ -94,9 +94,6 @@ class TaskbarPlugin(BasePlugin):
             monitor_width = geometry["width"]
             self.scrolled_window.set_size_request(monitor_width / 1.2, 64)
 
-        # Set content for the bottom panel
-        self.bottom_panel.set_content(self.scrolled_window)
-
         # Taskbar setup
         self.taskbar.set_halign(Gtk.Align.CENTER)
         self.taskbar.set_valign(Gtk.Align.CENTER)
