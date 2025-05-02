@@ -116,9 +116,7 @@ class PluginManagerPlugin(BasePlugin):
 
         except Exception as e:
             self.log_error(
-                error=e,
                 message=f"Error toggling plugin '{plugin_name}': {e}",
-                level="error",
             )
 
     def populate_stack_with_plugins(self):
