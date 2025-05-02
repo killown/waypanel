@@ -126,7 +126,7 @@ class AppLauncher(BasePlugin):
         self.scrolled_window.set_child(self.flowbox)
 
         # Set the main box as the child of the popover
-        self.popover_launcher.set_child(self.main_box)
+        self.popover_launcher.set_child(self.main_box)  # pyright: ignore
 
     def _populate_flowbox_with_apps(self):
         """Populate the flowbox with application buttons."""
@@ -263,7 +263,7 @@ class AppLauncher(BasePlugin):
         vbox.append(label)
 
         # Store metadata for later use
-        vbox.MYTEXT = name, cmd, keywords
+        vbox.MYTEXT = name, cmd, keywords  # pyright: ignore
 
         # Add the vertical box to the FlowBox
         self.flowbox.append(vbox)
@@ -355,12 +355,12 @@ class AppLauncher(BasePlugin):
             self.flowbox.invalidate_filter()
 
     def on_show_searchbar_action_actived(self, action, parameter):
-        self.searchbar.set_search_mode(
+        self.searchbar.set_search_mode(  # pyright: ignore
             True
         )  # Ctrl+F To Active show_searchbar and show searchbar
 
     def search_entry_grab_focus(self):
-        self.searchentry.grab_focus()
+        self.searchentry.grab_focus()  # pyright: ignore
 
     def select_first_visible_child(self):
         """Select the first visible child in the flowbox."""
@@ -372,7 +372,7 @@ class AppLauncher(BasePlugin):
             return False  # Continue iteration
 
         # Iterate over visible children and select the first one
-        self.flowbox.selected_foreach(on_child)
+        self.flowbox.selected_foreach(on_child)  # pyright: ignore
         return False  # Stops the GLib.idle_add loop
 
     def on_search_entry_changed(self, searchentry):
