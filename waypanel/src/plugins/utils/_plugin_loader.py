@@ -8,65 +8,35 @@ import shutil
 
 
 class PluginLoader:
+    """
+    Manages dynamic discovery, loading, validation, and initialization of waypanel plugins.
+
+    The PluginLoader scans both built-in and user-defined plugin directories,
+    loads them dynamically, ensures required interfaces exist, respects dependencies,
+    and initializes plugins in the correct order based on priority and position.
+
+    ### Key Responsibilities
+    - Discovers all available plugins in `src.plugins` and custom directories.
+    - Validates that each plugin implements required functions: `get_plugin_placement`, `initialize_plugin`.
+    - Loads configuration from `waypanel.toml` to determine which plugins are enabled/disabled.
+    - Sorts plugins by priority and order for consistent layout and behavior.
+    - Initializes plugins after resolving dependencies.
+
+    ### Usage Example
+    ```python
+    plugin_loader = PluginLoader(panel_instance, logger, config_path)
+    plugin_loader.load_plugins()
+    ```
+    """
+
     def __init__(self, panel_instance, logger, config_path):
         """
-        The PluginLoader is responsible for discovering, validating, and initializing plugins
-        from the `src.plugins` package. It ensures that plugins are loaded in the correct order,
-        based on their priority and position, and integrates with the `waypanel.toml` configuration
-        file to manage plugin settings.
+        Initialize the PluginLoader with core components.
 
-        ### Design Philosophy
-        The PluginLoader adheres to the principle of simplicity and modularity:
-        - Plugins are designed to be self-contained and functional without requiring external dependencies.
-        - Integration with `waypanel.toml` is optional, allowing plugin developers to decide whether
-          their plugin needs configuration or can operate with default behavior.
-        - This approach lowers the barrier for new plugin developers, as they can focus on core functionality
-          without needing to understand or implement complex configuration management.
-
-        ### Why Plugins Do Not Use Config by Default
-        1. **Simplicity**: By not enforcing a centralized `Config` class, plugins remain lightweight and
-           independent. Developers can create plugins with minimal boilerplate code.
-        2. **Flexibility**: Plugins that do not require configuration can function immediately without
-           additional setup. Only plugins that need user-defined settings (e.g., themes, intervals, or
-           custom paths) should interact with `waypanel.toml`.
-        3. **Separation of Concerns**: The PluginLoader itself does not impose configuration on plugins.
-           Instead, it provides utilities (e.g., `_load_plugin_configuration`) to load and parse
-           `waypanel.toml`, leaving it up to individual plugins to decide how to use this data.
-        4. **Ease of Contribution**: New contributors can quickly create plugins without worrying about
-           integrating with a centralized configuration system. They can later enhance their plugins to
-           support configuration if needed.
-
-        ### Responsibilities
-        - **Dynamic Loading**: Discovers all available plugins in the `src.plugins` package.
-        - **Validation**: Ensures that each plugin implements the required interface (e.g., `initialize_plugin`).
-        - **Configuration Management**: Loads the `waypanel.toml` file to determine which plugins are enabled,
-          disabled, or have custom settings.
-        - **Sorting and Initialization**: Sorts plugins by priority and order, then initializes them in the
-          correct sequence.
-
-        ### Usage
-        To use the PluginLoader:
-        1. Instantiate the PluginLoader with the main panel object, logger, and configuration path.
-        2. Call the `load_plugins` method to dynamically load and initialize all plugins.
-        3. Access initialized plugins via the `plugins` dictionary.
-
-        ### Example
-        ```python
-        plugin_loader = PluginLoader(panel_instance, logger, config_path)
-        plugin_loader.load_plugins()
-        dockbar_plugin = plugin_loader.plugins.get("dockbar")
-        ```
-
-        ### Notes
-        - Plugins that require configuration should define their own logic for loading and using settings
-          from `waypanel.toml`. A utility function like `load_config` can be provided to simplify this process.
-        - Disabled plugins are skipped during initialization based on the `disabled` list in `waypanel.toml`.
-
-        ### Methods
-        - `_load_plugin_configuration`: Loads and parses the `waypanel.toml` file to determine plugin settings.
-        - `_process_plugin`: Validates and processes a single plugin module.
-        - `_update_plugin_configuration`: Updates the `waypanel.toml` file with the latest plugin list.
-        - `_initialize_sorted_plugins`: Initializes plugins in the correct order based on priority and position.
+        Args:
+            panel_instance: Main Panel object (used for plugin access and event management).
+            logger: Logger instance for structured logging.
+            config_path: Path to `waypanel.toml` for plugin enable/disable settings.
         """
         self.panel_instance = panel_instance
         self.logger = logger
@@ -178,7 +148,19 @@ class PluginLoader:
             )
 
     def load_plugins(self):
-        """Dynamically load all plugins from the src.plugins package."""
+        """
+        Load and initialize all plugins from built-in and custom directories.
+
+        ### Workflow:
+        1. Load configuration from `waypanel.toml`
+        2. Discover `.py` files in `src.plugins` and custom plugin directory
+        3. Filter out invalid or disabled modules
+        4. Sort plugins by priority and order
+        5. Ensure dependencies are resolved before initializing plugins
+        6. Initialize each plugin and store reference in `self.plugins`
+
+        Plugins not implementing `initialize_plugin()` or marked as disabled are skipped.
+        """
         # Load configuration and initialize plugin lists
         config, disabled_plugins = self._load_plugin_configuration()
         if config is None:
@@ -221,7 +203,7 @@ class PluginLoader:
     def plugins_base_path(self):
         try:
             # Try to locate the installed 'waypanel' module
-            waypanel_module_spec = importlib.util.find_spec("waypanel")
+            waypanel_module_spec = importlib.util.find_spec("waypanel")  # pyright: ignore
             if waypanel_module_spec is None:
                 raise ImportError("The 'waypanel' module could not be found.")
             waypanel_module_path = os.path.dirname(waypanel_module_spec.origin)
@@ -297,6 +279,16 @@ class PluginLoader:
             )
 
     def _load_plugin_configuration(self):
+        """
+        Load plugin-specific settings from `waypanel.toml`.
+
+        Parses the `[plugins]` section to:
+            - Determine which plugins are enabled/disabled
+            - Allow individual plugins to read their own config blocks
+
+        Returns:
+            Tuple[Dict, List]: (config_dict, disabled_plugins_list)
+        """
         waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
         try:
             if not os.path.exists(waypanel_config_path):
@@ -376,18 +368,21 @@ class PluginLoader:
             position = "background"
             priority = 0
             order = 0
-            if position_result:
-                if self.utils.validate_tuple(position_result, name="position_result"):
-                    if len(position_result) == 3:
-                        position, order, priority = position_result
+            if position_result != "background":
+                if position_result:
+                    if self.utils.validate_tuple(
+                        position_result, name="position_result"
+                    ):
+                        if len(position_result) == 3:
+                            position, order, priority = position_result
+                        else:
+                            position, order = position_result
+                            priority = 0
                     else:
-                        position, order = position_result
-                        priority = 0
-                else:
-                    self.logger.error(
-                        f"Invalid position result for plugin {module_name}. Skipping."
-                    )
-                    return
+                        self.logger.error(
+                            f"Invalid position result for plugin {module_name}. Skipping."
+                        )
+                        return
 
             # Add to valid plugins and metadata
             valid_plugins.append(module_name)
@@ -524,7 +519,17 @@ class PluginLoader:
                 GLib.idle_add(target.set_content, widget_to_append)
 
     def _initialize_sorted_plugins(self, plugin_metadata):
-        """Initialize plugins in the correct order based on priority and position."""
+        """
+        Sort plugins by priority (descending), then order (ascending),
+        and initialize them in sequence.
+
+        Ensures:
+            - 'event_manager' is always loaded first
+            - Plugins with dependencies are initialized after their deps
+
+        Args:
+            plugin_metadata: List of tuples containing module info and metadata
+        """
         # Sort plugins by priority (descending), then by order (ascending)
         plugin_metadata.sort(key=lambda x: (-x[3], x[2]))
 
@@ -608,12 +613,14 @@ class PluginLoader:
 
     def _get_target_panel_box(self, position, plugin_name=None):
         """
-        Determine the target panel box based on the plugin's position.
+        Determines where to place the plugin's widget in the panel.
+
         Args:
-            position (str): The position of the plugin (e.g., "left", "right", "center").
-            plugin_name (str, optional): The name of the plugin for logging purposes.
+            position: A string (e.g., 'top-panel-left') or None/'background'
+            plugin_name: Name of the plugin for logging
+
         Returns:
-            Gtk.Box or None: The target panel box, or None if the position is invalid.
+            str: Target box name, or 'background' if plugin has no UI.
         """
         self.position_mapping = {
             "top-panel-left": "top_panel_box_left",
