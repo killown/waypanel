@@ -1,4 +1,5 @@
 import os
+import pwd
 import asyncio
 import orjson as json
 import time
@@ -14,8 +15,9 @@ class WayfireEventServer:
 
     def __init__(self, logger):
         self.logger = logger
+        self.username = pwd.getpwuid(os.getuid()).pw_name
         self.ipcet_paths = [
-            "/tmp/waypanel.sock",
+            f"/tmp/waypanel-{self.get_username()}.sock",
         ]
         self._cleanup_sockets()
         self.ipc = IPC()
@@ -177,3 +179,12 @@ class WayfireEventServer:
             except (ConnectionResetError, BrokenPipeError):
                 self.clients.remove(client)
                 self.logger.warning("Removed disconnected client during broadcast.")
+
+    def get_username(self):
+        """we use this for unique socket filename based on current username"""
+        uid = os.getuid()
+        try:
+            return pwd.getpwuid(uid).pw_name
+        except KeyError:
+            print(f"No user found for UID {uid}")
+            return f"user_{uid}"

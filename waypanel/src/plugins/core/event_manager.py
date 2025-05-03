@@ -1,5 +1,7 @@
 from gi.repository import GLib
 from waypanel.src.plugins.core._base import BasePlugin
+import pwd
+import os
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -25,7 +27,9 @@ class EventManagerPlugin(BasePlugin):
         from waypanel.src.ipc.ipc_client import WayfireClientIPC
 
         self.ipc_client = WayfireClientIPC(self.handle_event, self.obj)
-        self.ipc_client.wayfire_events_setup("/tmp/waypanel.sock")
+        self.ipc_client.wayfire_events_setup(
+            f"/tmp/waypanel-{self.get_username()}.sock"
+        )
         self.event_subscribers = {}  # Dictionary to store event subscribers
 
     def handle_event(self, msg):
@@ -242,3 +246,11 @@ class EventManagerPlugin(BasePlugin):
             # GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))
             # if self.utils.widget_exists(widget):
             # self.obj.top_panel_box_center.remove(widget)
+
+    def get_username(self):
+        uid = os.getuid()
+        try:
+            return pwd.getpwuid(uid).pw_name
+        except KeyError:
+            print(f"No user found for UID {uid}")
+            return f"user_{uid}"
