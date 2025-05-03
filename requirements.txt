@@ -9,6 +9,8 @@ setuptools==69.5.1
 SoundCard==0.4.3
 toml==0.10.2
 colorama
+dbus-next
+dbus-fast
 wayfire
 pygobject-stubs
 orjson
