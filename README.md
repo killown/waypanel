@@ -28,6 +28,7 @@ Clone the `waypanel` repository from GitHub:
     mkdir ~/.config/waypanel
     cp -r waypanel/config/* ~/.config/waypanel
 
+
 ### Step 2: Set Up a Virtual Environment (Recommended)
 
   **Create a virtual environment**:
@@ -37,13 +38,20 @@ Clone the `waypanel` repository from GitHub:
   **Activate the virtual environment**:
        
       source waypanel-env/bin/activate
-      
 
+      
 ### Step 3: Install `waypanel`
 
 Once the virtual environment is activated, install `waypanel` using the following command:
 
     python3 -m pip install .
+
+
+### configure wayfire.ini
+   section [core]
+   
+   include ipc and ipc-rules in plugins =
+
 
 ## run `waypanel`
 ~/.local/bin/waypanel
@@ -56,10 +64,9 @@ yay -S gruvbox-plus-icon-theme-git
 gsettings set org.gnome.desktop.interface icon-theme 'Gruvbox-Plus-Dark'
 
 
-
 ### wayfire.ini
 
-required plugins: stipc, scale, ipc, ipc-rules
+required plugins: ipc, ipc-rules
 
 
 ## License
