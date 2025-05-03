@@ -19,42 +19,36 @@ This guide provides step-by-step instructions to install `waypanel`, both using 
 Installing `waypanel` from github Source
 -------------------------------------------------
 
-### Step 1: Clone the `waypanel` Repository and copy the config
-
-Clone the `waypanel` repository from GitHub:
-
+### Step 1: Clone the repository, copy the config and configure wayfire
     git clone https://github.com/killown/waypanel.git
     cd waypanel
     mkdir ~/.config/waypanel
     cp -r waypanel/config/* ~/.config/waypanel/
-
+   
+   ##### configure wayfire.ini
+   Ensure the following plugins are enabled in your ~/.config/wayfire.ini: 
+    
+    [core]
+    plugins = ipc ipc-rules
 
 ### Step 2: Set Up a Virtual Environment (Recommended)
 
   **Create a virtual environment**:
     
-      python3 -m venv waypanel-env
-    
-  **Activate the virtual environment**:
-       
-      source waypanel-env/bin/activate
+    python3 -m venv waypanel-env
+    # For bash/zsh:
+    source waypanel-env/bin/activate
+    # For fish:
+    source waypanel-env/bin/activate.fish
+      
 
       
-### Step 3: Install `waypanel`
+### Step 3: Install and run
 
 Once the virtual environment is activated, install `waypanel` using the following command:
 
     python3 -m pip install .
-
-
-### configure wayfire.ini
-   section [core]
-   
-   include ipc and ipc-rules in plugins =
-
-
-## run `waypanel`
-waypanel-env/bin/waypanel
+    waypanel-env/bin/waypanel
 
 
 ### Theme Compatibility
@@ -62,6 +56,7 @@ waypanel-env/bin/waypanel
 yay -S gruvbox-plus-icon-theme-git
 
 gsettings set org.gnome.desktop.interface icon-theme 'Gruvbox-Plus-Dark'
+
 
 
 ## License
