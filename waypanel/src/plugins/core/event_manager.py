@@ -1,6 +1,5 @@
 from gi.repository import GLib
 from waypanel.src.plugins.core._base import BasePlugin
-import pwd
 import os
 
 # Set to False or remove the plugin file to disable it
@@ -27,9 +26,8 @@ class EventManagerPlugin(BasePlugin):
         from waypanel.src.ipc.ipc_client import WayfireClientIPC
 
         self.ipc_client = WayfireClientIPC(self.handle_event, self.obj)
-        self.ipc_client.wayfire_events_setup(
-            f"/tmp/waypanel-{self.get_username()}.sock"
-        )
+        self.get_socket_path = self.ipc_server.get_socket_path
+        self.ipc_client.wayfire_events_setup(self.get_socket_path())
         self.event_subscribers = {}  # Dictionary to store event subscribers
 
     def handle_event(self, msg):
@@ -52,7 +50,7 @@ class EventManagerPlugin(BasePlugin):
                             f"Event '{event_type}' triggered for plugin '{plugin_name}'"
                         )
                 except Exception as e:
-                    self.log_error_handler(
+                    self.logger.error(
                         f"Error executing callback for event '{event_type}': {e}"
                     )
 
@@ -246,11 +244,9 @@ class EventManagerPlugin(BasePlugin):
             # GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))
             # if self.utils.widget_exists(widget):
             # self.obj.top_panel_box_center.remove(widget)
+            #
 
-    def get_username(self):
-        uid = os.getuid()
-        try:
-            return pwd.getpwuid(uid).pw_name
-        except KeyError:
-            print(f"No user found for UID {uid}")
-            return f"user_{uid}"
+    def get_socket_path(self):
+        runtime_dir = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+        socket_name = "waypanel.sock"
+        return os.path.join(runtime_dir, socket_name)
