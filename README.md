@@ -19,12 +19,14 @@ This guide provides step-by-step instructions to install `waypanel`, both using 
 Installing `waypanel` from github Source
 -------------------------------------------------
 
-### Step 1: Clone the `waypanel` Repository
+### Step 1: Clone the `waypanel` Repository and copy the config
 
 Clone the `waypanel` repository from GitHub:
 
     git clone https://github.com/killown/waypanel.git
     cd waypanel
+    mkdir ~/.config/waypanel
+    cp -r waypanel/config/* ~/.config/waypanel/
 
 
 ### Step 2: Set Up a Virtual Environment (Recommended)
