@@ -56,6 +56,9 @@ class IPC:
         """Retrieve the value of a specific Wayfire option."""
         return self.sock.get_option_value(option_name)
 
+    def set_option_values(self, values: dict):
+        return self.sock.set_option_values(values)
+
     def watch(self):
         """Start watching for Wayfire events."""
         return self.sock.watch()
