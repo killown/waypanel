@@ -12,7 +12,7 @@ import orjson as json
 import gi
 import sys
 import time
-
+import tempfile
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from waypanel.src.ipc.ipc_async_server import WayfireEventServer
@@ -27,7 +27,10 @@ DEFAULT_CONFIG_PATH = "~/.config/waypanel"
 GTK_LAYER_SHELL_INSTALL_PATH = "~/.local/lib/gtk4-layer-shell"
 GTK_LAYER_SHELL_REPO = "https://github.com/wmww/gtk4-layer-shell.git"
 WAYPANEL_REPO = "https://github.com/killown/waypanel.git"
-TEMP_DIRS = {"gtk_layer_shell": "/tmp/gtk4-layer-shell", "waypanel": "/tmp/waypanel"}
+TEMP_DIRS = {
+    "gtk_layer_shell": "~/.cache/gtk4-layer-shell",
+    "waypanel": "~/.cache/waypanel",
+}
 CONFIG_SUBDIR = "waypanel/config"
 
 
@@ -168,16 +171,14 @@ def verify_required_wayfire_plugins():
         "scale",
     }
 
-    enabled_plugins = set(sock.get_option_value("core/plugins")["value"].split())
-    missing_plugins = required_plugins - enabled_plugins
+    enabled_plugins = sock.get_option_value("core/plugins")["value"].split()
 
-    if missing_plugins:
-        logger.error(
-            f"\n\033[91mERROR:\033[0m The following plugins are required to start the shell: {missing_plugins}"
-        )
-        logger.info(f"Required Plugin List: {required_plugins}")
-        sys.exit()
+    for plugin_name in required_plugins:
+        if plugin_name not in enabled_plugins:
+            enabled_plugins.append(plugin_name)
 
+    # Update configuration
+    sock.set_option_values({"core/plugins": " ".join(enabled_plugins)})
     logger.info("All required plugins are enabled.")
 
 
@@ -288,29 +289,49 @@ def layer_shell_check():
 def create_first_config():
     """Initialize the configuration directory with default files."""
     dest_dir = os.path.expanduser(DEFAULT_CONFIG_PATH)
-    temp_dir = TEMP_DIRS["waypanel"]
+    logger.info(f"Creating config directory at: {dest_dir}")
+
+    # Create destination dir
+    os.makedirs(dest_dir, exist_ok=True)
+
+    # Create a secure temp dir
+    temp_dir = tempfile.mkdtemp(prefix="waypanel_config_")
+    logger.debug(f"Using temporary directory: {temp_dir}")
 
     try:
-        os.makedirs(dest_dir, exist_ok=True)
-
-        if os.path.exists(temp_dir):
-            logger.debug(f"Cleaning existing temporary directory: {temp_dir}")
-            shutil.rmtree(temp_dir)
-
+        # Clone repo
         logger.info(f"Cloning repository: {WAYPANEL_REPO}")
-        subprocess.run(["git", "clone", WAYPANEL_REPO, temp_dir], check=True)
+        result = subprocess.run(
+            ["git", "clone", WAYPANEL_REPO, temp_dir],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            logger.error(f"Git clone failed:\n{result.stdout}")
+            raise RuntimeError("Failed to clone repository")
 
+        # Determine source config path
         src_config_dir = os.path.join(temp_dir, CONFIG_SUBDIR)
+        logger.debug(f"Looking for config in: {src_config_dir}")
+
         if not os.path.exists(src_config_dir):
-            logger.info(f"Creating missing config directory: {src_config_dir}")
+            logger.warning(
+                f"Config subdir '{CONFIG_SUBDIR}' not found. Creating empty one."
+            )
             os.makedirs(src_config_dir)
 
+        if not os.listdir(src_config_dir):
+            logger.warning(f"Source config directory is empty: {src_config_dir}")
+
+        # Copy files
         logger.info(f"Copying config files from {src_config_dir} to {dest_dir}")
         shutil.copytree(src_config_dir, dest_dir, dirs_exist_ok=True)
-
         logger.info("Configuration setup completed successfully")
+
     except Exception as e:
-        logger.error(f"Failed to create config: {e}", exc_info=True)
+        logger.critical(f"Failed to create config: {e}", exc_info=True)
         raise
     finally:
         if os.path.exists(temp_dir):
