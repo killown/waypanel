@@ -8,6 +8,7 @@ Requests==2.32.3
 setuptools==69.5.1
 SoundCard==0.4.3
 toml==0.10.2
+colorama
 wayfire
 pygobject-stubs
 orjson
