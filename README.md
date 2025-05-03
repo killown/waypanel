@@ -2,9 +2,9 @@
 
 ![example1](https://github.com/user-attachments/assets/6f9bc597-4089-4ffb-b49f-5fcb2f446864)
 
-##### _Gtk4/Adwaita panel made for wayfire_
+##### _Wayfire GTK4 panel_
 
-The core of this panel lies in leveraging a shell overview, reminiscent of GNOME, to elegantly showcase all windows, dock bars, and more. Its primary goal is to optimize CPU usage exclusively during non-overview mode. The panel actively monitors command output, title changes, and widgets only when the overview is active in the background. This means that no unnecessary checks will occur, ensuring that CPU usage remains as low as possible.
+Waypanel  is a lightweight, modular, and highly customizable status panel designed for the Wayfire  compositor. Built with Python and leveraging GTK 4/Adwaita , it mimics a shell-like interface while prioritizing efficiency and extensibility. Supports multiple panels (top, bottom, left, right) with customizable styling. Plugins can append widgets (e.g., system monitors, app launchers) or manage gestures for interactive workflows. 
 
 How to Install `waypanel`
 =========================
