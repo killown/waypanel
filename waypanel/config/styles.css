@@ -232,7 +232,7 @@ scale {
   background-color: #4479e1;
   color: white;
   border: none;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   font-size: 18px;
 }
 
@@ -243,26 +243,53 @@ scale {
   box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
-.notify-vbox{
-  background-color: #282828;
-  color: #fff;
+.notify-client-box{
+    background-color: #558588;
+    border-radius: 10px;
+    margin: 3px;
+
+}
+
+.notify-client-heading{
+  margin-top: 12px;
+  font-weight: bold;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    sans-serif;
+  font-size: 16px;
+}
+
+.notify-client-body-label{
+  margin: 3px;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    sans-serif;
+}
+
+.notify-client-timestamp{
+  margin: 3px;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    sans-serif;
+  font-size: 13px;
 }
 
 .notify-window{
   background-color: transparent;
   color: #fff;
+  border-radius: 10px;
 }
 
 .notify-server-vbox{
   background-color: #282828;
   color: #ebdbb2;
-  padding: 20px;
-    font-weight: bold;
+  padding: 10px;
+  font-weight: bold;
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
     sans-serif;
   font-size: 16px;
-
+  border-radius: 10px;
 }
 
 /*prevent the popover menu icon from being selected*/
@@ -340,12 +367,25 @@ scale {
   background-color: transparent;
 }
 
+
+.tray_icon {
+    background-color: #000;
+    min-width: 24px;
+    min-height: 24px;
+   -gtk-icon-size: 16px;
+}
+
+
+.tray-menu-button {
+  border-radius: 8px;
+  margin-left: 5px;
+}
+
 /*system dashboard: if gsettings prefer-dark, then changes for white colors is necessary*/
 .system_dashboard_stack {
-  color: #282828;
-  box-shadow: 10px 10px 30px #2d2d2d;
+  color: #fff;
   font-family: 'Segoe UI', sans-serif;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 400;
 }
 
@@ -355,6 +395,13 @@ scale {
   color: #e0e0e0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   font-weight: 400;
+}
+
+.top-panel-box-right {
+  background-color: #282828;
+  color: #e0e0e0;
+  font-weight: 400;
+
 }
 
 .top_panel_box_left {
