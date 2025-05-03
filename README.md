@@ -62,11 +62,7 @@ gsettings set org.gnome.desktop.interface icon-theme 'Gruvbox-Plus-Dark'
 required plugins: stipc, scale, ipc, ipc-rules
 
 
-```
-
 ## License
 waypanel is licensed under the MIT license. [See LICENSE for more information](https://github.com/killown/waypanel/blob/main/LICENSE).
 
-```
 
-```
