@@ -3,8 +3,8 @@ from gi.repository import Gtk
 import os
 import orjson as json
 import toml
-from src.plugins.core._base import BasePlugin
-from ...core.create_panel import (
+from core._base import BasePlugin
+from src.core.create_panel import (
     set_layer_position_exclusive,
     unset_layer_position_exclusive,
 )

@@ -229,11 +229,10 @@ class SystemDashboard(BasePlugin):
     def on_action(self, button, action):
         if action == "Exit Waypanel":
             # FIXME: need a better way to exit the panel
-            self.kill_process_by_name("waypanel")
+            self.kill_process_by_name("waypanel/main.py")
         if action == "Restart Waypanel":
             # FIXME: need a better way to exit the panel
-            self.run_later("/home/neo/.local/bin/waypanel&", 0.4)
-            self.kill_process_by_name("waypanel")
+            self.run_later("waypanel &", 0.1)
 
         if action == "Logout":
             Popen("wayland-logout".split())

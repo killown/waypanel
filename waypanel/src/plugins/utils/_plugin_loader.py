@@ -124,6 +124,7 @@ class PluginLoader:
         plugin_metadata = []
 
         # Walk through the plugin directory recursively
+        sys.path.append(self.plugins_dir)
         for root, dirs, files in os.walk(self.plugins_dir):
             # Exclude the 'examples' folder
             if "examples" in dirs:
@@ -137,6 +138,7 @@ class PluginLoader:
                         .replace("/", ".")
                         .replace(".py", "")
                     )
+                    print(module_path)
                     file_path = os.path.join(root, file_name)
                     self.plugins_path[module_name] = file_path
 
@@ -303,13 +305,7 @@ class PluginLoader:
 
         try:
             # Import the plugin module dynamically
-            module_full_path = None
-            if module_path is not None:
-                module_full_path = f"src.plugins.{module_path}"
-            if module_full_path is not None:
-                module = importlib.import_module(module_full_path)
-            else:
-                module = importlib.import_module(module_name)
+            module = importlib.import_module(module_path)
 
             is_plugin_enabled = getattr(module, "ENABLE_PLUGIN", True)
 
@@ -328,12 +324,9 @@ class PluginLoader:
                 return
 
             # Add the plugin to the plugins_import dictionary
-            if module_full_path is not None:
-                self.plugins_import[module_name] = module_full_path
-            else:
-                self.plugins_import[module_name] = module_name
+            self.plugins_import[module_name] = module_path
 
-            self.logger.debug(f"Registered plugin: {module_name} -> {module_full_path}")
+            self.logger.debug(f"Registered plugin: {module_name} -> {module_path}")
 
             # Validate DEPS list
             has_plugin_deps = getattr(module, "DEPS", [])
