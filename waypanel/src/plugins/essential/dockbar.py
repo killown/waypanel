@@ -266,8 +266,6 @@ class DockbarPlugin(BasePlugin):
     def on_scale_activated(self):
         """Handle scale wayfire plugin activation."""
         # set layer exclusive so the panels becomes clickable
-        print("scale is activated!")
-
         output_info = os.getenv("waypanel")
         layer_set_on_output_name = None
         if output_info:
