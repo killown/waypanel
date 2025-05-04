@@ -48,7 +48,19 @@ class PluginLoader:
         self.plugin_containers = {}
         self.plugins_dir = self.plugins_base_path()
         self.position_mapping = {}
-        self.user_plugins_dir = os.path.expanduser("~/.config/waypanel/plugins")
+        self.user_plugins_dir = os.path.join(
+            self.get_real_user_home(), ".config", "waypanel", "plugins"
+        )
+
+    def get_real_user_home(self):
+        # Try SUDO_USER first
+        if "SUDO_USER" in os.environ:
+            return os.path.expanduser(f"~{os.environ['SUDO_USER']}")
+        # Fallback to PKEXEC_UID (used by pkexec)
+        elif "PKEXEC_UID" in os.environ:
+            return os.path.expanduser(f"~{os.environ['PKEXEC_UID']}")
+        # Default case (non-root or not running via sudo/pkexec)
+        return os.path.expanduser("~")
 
     def disable_plugin(self, plugin_name):
         """Disable a plugin by name."""
@@ -138,7 +150,6 @@ class PluginLoader:
                         .replace("/", ".")
                         .replace(".py", "")
                     )
-                    print(module_path)
                     file_path = os.path.join(root, file_name)
                     self.plugins_path[module_name] = file_path
 
@@ -157,7 +168,12 @@ class PluginLoader:
             for file_name in files:
                 if file_name.endswith(".py") and file_name != "__init__.py":
                     module_name = file_name[:-3]  # Remove the .py extension
-                    module_path = None
+                    root = root.split("config/waypanel/plugins")[-1]
+                    module_path = (
+                        os.path.relpath(os.path.join(root, file_name))
+                        .replace("/", ".")
+                        .replace(".py", "")
+                    )
                     file_path = os.path.join(root, file_name)
                     self.plugins_path[module_name] = file_path
 
@@ -178,16 +194,64 @@ class PluginLoader:
     def plugins_base_path(self):
         try:
             # Try to locate the installed 'waypanel' module
-            waypanel_module_spec = importlib.util.find_spec("waypanel")  # pyright: ignore
+            waypanel_module_spec = importlib.util.find_spec("waypanel")
             if waypanel_module_spec is None:
                 raise ImportError("The 'waypanel' module could not be found.")
-            waypanel_module_path = os.path.dirname(waypanel_module_spec.origin)
-        except ImportError:
-            # Fallback to the script's directory for development environments
-            waypanel_module_path = os.path.dirname(os.path.abspath(__file__))
-            self.logger.warning("Falling back to script directory for plugin loading.")
 
-        return os.path.join(waypanel_module_path, "src", "plugins")
+            # Get the root path of the module (e.g. site-packages/waypanel or dev dir)
+            waypanel_module_path = waypanel_module_spec.origin  # points to __init__.py
+
+            # Traverse up until we find the "waypanel" folder
+            while os.path.basename(waypanel_module_path) != "waypanel":
+                waypanel_module_path = os.path.dirname(waypanel_module_path)
+
+            # At this point, waypanel_module_path points to the base package folder
+            plugin_path = os.path.join(waypanel_module_path, "plugins")
+
+            # If it exists in the installed layout, return it
+            if os.path.exists(plugin_path):
+                return plugin_path
+
+        except ImportError:
+            self.logger.debug(
+                "No installed 'waypanel' module found. Trying dev paths..."
+            )
+
+        # Fallback 1: Check if we are running from source root (i.e. /path/to/waypanel/plugins/)
+        dev_plugins_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..", "plugins")
+        )
+        if os.path.exists(dev_plugins_path):
+            self.logger.warning(f"Falling back to dev plugin path: {dev_plugins_path}")
+            return dev_plugins_path
+
+        # Fallback 2: Check if we are inside the inner 'waypanel/' directory after git clone
+        # e.g., waypanel/waypanel/plugins
+        inner_plugins_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "plugins")
+        )
+        if os.path.exists(inner_plugins_path):
+            self.logger.warning(
+                f"Falling back to inner plugin path: {inner_plugins_path}"
+            )
+            return inner_plugins_path
+
+        # Fallback 3: Check if we're one level above inner package (for direct execution)
+        # i.e., waypanel/src/.. -> waypanel/plugins
+        alt_plugins_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..", "..", "plugins")
+        )
+        if os.path.exists(alt_plugins_path):
+            self.logger.warning(
+                f"Falling back to alternate dev plugin path: {alt_plugins_path}"
+            )
+            return alt_plugins_path
+
+        # Final fallback: Warn user about missing plugin path
+        self.logger.error("Could not find plugins directory in any known location.")
+        raise FileNotFoundError(
+            "Plugins directory not found. Please ensure you are running from a valid development or install directory."
+        )
 
     def reload_plugin(self, plugin_name):
         """
