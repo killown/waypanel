@@ -6,7 +6,7 @@ from subprocess import Popen, check_output
 import psutil
 from gi.repository import Gtk
 
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 
 
 # set to False or remove the plugin file to disable it

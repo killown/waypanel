@@ -2,7 +2,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import GLib
-from waypanel.src.core.compositor.ipc import IPC
+from src.core.compositor.ipc import IPC
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True

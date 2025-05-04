@@ -2,7 +2,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, GLib
-from waypanel.src.core.utils import Utils
+from src.core.utils import Utils
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True

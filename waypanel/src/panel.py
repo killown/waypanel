@@ -2,13 +2,13 @@ import os
 import sys
 import toml
 from gi.repository import Adw, Gio, GLib
-from waypanel.src.core.compositor.ipc import IPC
+from src.core.compositor.ipc import IPC
 
-from waypanel.src.core.create_panel import (
+from src.core.create_panel import (
     CreatePanel,
 )
-from waypanel.src.core.utils import Utils
-from waypanel.src.plugins.utils._plugin_loader import PluginLoader
+from src.core.utils import Utils
+from src.plugins.utils._plugin_loader import PluginLoader
 
 
 class Panel(Adw.Application):

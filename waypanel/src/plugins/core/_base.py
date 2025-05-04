@@ -1,4 +1,4 @@
-from waypanel.src.core import create_panel
+from src.core import create_panel
 from gi.repository import Gtk
 from typing import Any
 import inspect

@@ -3,7 +3,7 @@ import random
 from subprocess import Popen
 from gi.repository import Gio, Gtk, Pango
 from gi.repository import Gtk4LayerShell as LayerShell
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 
 
 # set to False or remove the plugin file to disable it
@@ -110,10 +110,8 @@ class AppLauncher(BasePlugin):
         self.flowbox.set_valign(Gtk.Align.START)  # Align content to the top
         self.flowbox.set_halign(Gtk.Align.FILL)  # Fill the horizontal space
         self.flowbox.props.max_children_per_line = 30
-        self.flowbox.set_max_children_per_line(8)  # Number of icons per row
-        self.flowbox.set_homogeneous(True)  # Uniform size for all children
-        self.flowbox.set_column_spacing(10)  # Horizontal spacing between items
-        self.flowbox.set_row_spacing(10)  # Vertical spacing between rows
+        self.flowbox.set_max_children_per_line(5)  # Number of icons per row
+        self.flowbox.set_homogeneous(False)  # Uniform size for all children
         self.flowbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.flowbox.set_activate_on_single_click(True)
         self.flowbox.connect("child-activated", self.run_app_from_launcher)
@@ -158,9 +156,9 @@ class AppLauncher(BasePlugin):
         min_size, natural_size = self.flowbox.get_preferred_size()
         width = natural_size.width if natural_size else 0
         self.flowbox.add_css_class("app-launcher-flowbox")
-        self.scrolled_window.set_size_request(800, 600)
+        self.scrolled_window.set_size_request(720, 570)
         self.scrolled_window.set_min_content_width(width)
-        self.scrolled_window.set_min_content_height(600)
+        self.scrolled_window.set_min_content_height(500)
         if self.popover_launcher:
             self.popover_launcher.set_parent(self.menubutton_launcher)
             self.popover_launcher.popup()

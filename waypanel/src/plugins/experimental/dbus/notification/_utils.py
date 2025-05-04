@@ -7,7 +7,7 @@ import urllib.parse
 import cairosvg
 import base64
 
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 
 # TODO: allow hardcoded custom icon but add an option in the config too
 CUSTOM_ICON = {"notify-send": "cs-notifications-symbolic"}

@@ -11,7 +11,7 @@ from gi.repository import Gtk4LayerShell as LayerShell
 from PIL import Image
 import re
 
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 
 from .clipboard_server import AsyncClipboardServer
 

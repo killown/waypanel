@@ -1,6 +1,6 @@
 from gi.repository import Gtk, GLib, Pango
 from gi.repository import Gtk, Gtk4LayerShell as LayerShell
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 import os
 import toml
 from ._utils import NotifyUtils

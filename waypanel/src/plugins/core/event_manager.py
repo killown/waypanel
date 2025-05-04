@@ -1,5 +1,5 @@
 from gi.repository import GLib
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 import os
 
 # Set to False or remove the plugin file to disable it
@@ -23,7 +23,7 @@ class EventManagerPlugin(BasePlugin):
         """Initialize the plugin."""
 
         # Initialize the IPC client
-        from waypanel.src.ipc.ipc_client import WayfireClientIPC
+        from src.ipc.ipc_client import WayfireClientIPC
 
         self.ipc_client = WayfireClientIPC(self.handle_event, self.obj)
         self.get_socket_path = self.ipc_server.get_socket_path

@@ -5,7 +5,7 @@ import asyncio
 import orjson as json
 import time
 from concurrent.futures import ThreadPoolExecutor
-from waypanel.src.core.compositor.ipc import IPC
+from src.core.compositor.ipc import IPC
 
 
 class WayfireEventServer:

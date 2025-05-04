@@ -1,6 +1,6 @@
 import requests
 from gi.repository import Gtk, GLib
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True

@@ -7,7 +7,7 @@ import numpy as np
 import toml
 from collections.abc import Iterable
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
-from waypanel.src.core.compositor.ipc import IPC
+from src.core.compositor.ipc import IPC
 import threading
 
 gi.require_version("Gtk", "4.0")

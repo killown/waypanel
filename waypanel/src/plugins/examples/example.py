@@ -1,7 +1,7 @@
 import gi
 from gi.repository import Gtk
 
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 
 # NOTE: Always use GLib.idle_add for non-blocking code.
 

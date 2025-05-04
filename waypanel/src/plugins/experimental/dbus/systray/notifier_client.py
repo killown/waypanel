@@ -1,11 +1,11 @@
 from gi.repository import Gtk, Gio, Gdk
-from waypanel.src.plugins.core._event_loop import global_loop
+from src.plugins.core._event_loop import global_loop
 from dbus_fast import Variant
 import re
 from unidecode import unidecode
 
 # Local imports
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 from ._notifier_watcher import (
     StatusNotifierWatcher,
 )

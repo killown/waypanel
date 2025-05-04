@@ -8,7 +8,7 @@ import wayfire.ipc as wayfire
 from bs4 import BeautifulSoup
 from gi.repository import GdkPixbuf, Gtk
 
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True

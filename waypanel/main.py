@@ -15,9 +15,9 @@ import time
 import tempfile
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from waypanel.src.ipc.ipc_async_server import WayfireEventServer
-from waypanel.src.core.compositor.ipc import IPC
-from waypanel.src.core.log_setup import setup_logging
+from src.ipc.ipc_async_server import WayfireEventServer
+from src.core.compositor.ipc import IPC
+from src.core.log_setup import setup_logging
 
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -203,7 +203,7 @@ def load_panel(ipc_server):
         gi.require_version("Playerctl", "2.0")
         gi.require_version("Adw", "1")
 
-        from waypanel.src.panel import Panel
+        from src.panel import Panel
         from wayfire import WayfireSocket
         from wayfire.extra.ipc_utils import WayfireUtils
 

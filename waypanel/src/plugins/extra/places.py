@@ -3,10 +3,10 @@ from subprocess import Popen
 
 import gi
 import toml
-from waypanel.src.core.utils import Utils
+from src.core.utils import Utils
 from gi.repository import Gio, Gtk
 
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 
 
 # set to False or remove the plugin file to disable it

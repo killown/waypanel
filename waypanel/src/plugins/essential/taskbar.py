@@ -1,8 +1,8 @@
 import os
 import orjson as json
 from gi.repository import Gtk, GLib
-from waypanel.src.plugins.core._base import BasePlugin
-from waypanel.src.core.create_panel import (
+from src.plugins.core._base import BasePlugin
+from src.core.create_panel import (
     set_layer_position_exclusive,
     unset_layer_position_exclusive,
 )

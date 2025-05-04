@@ -26,7 +26,7 @@ import json
 import threading
 from gi.repository import Gtk
 from ._utils import NotifyUtils
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 from .notify_server import (
     NotificationDaemon,
 )

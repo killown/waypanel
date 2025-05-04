@@ -21,7 +21,7 @@ title = "youtube.com"
 """
 
 from gi.repository import GLib
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 import logging
 
 ENABLE_PLUGIN = True

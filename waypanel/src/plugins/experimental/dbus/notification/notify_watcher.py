@@ -2,7 +2,7 @@ import os
 import sqlite3
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 import logging
 
 # Set to False or remove the plugin file to disable it

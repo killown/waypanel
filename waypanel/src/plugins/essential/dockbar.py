@@ -3,7 +3,7 @@ from gi.repository import Gtk
 import os
 import orjson as json
 import toml
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 from ...core.create_panel import (
     set_layer_position_exclusive,
     unset_layer_position_exclusive,
@@ -266,6 +266,8 @@ class DockbarPlugin(BasePlugin):
     def on_scale_activated(self):
         """Handle scale wayfire plugin activation."""
         # set layer exclusive so the panels becomes clickable
+        print("scale is activated!")
+
         output_info = os.getenv("waypanel")
         layer_set_on_output_name = None
         if output_info:

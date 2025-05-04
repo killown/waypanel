@@ -1,12 +1,11 @@
 import aiosqlite
 import datetime
-import re
 import asyncio
 from pathlib import Path
 from typing import List, Tuple
 from gi.repository import Gio, Gtk, GLib, Pango
 
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 
 
 # set to False or remove the plugin file to disable it

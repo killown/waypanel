@@ -1,10 +1,11 @@
 import os
 import importlib
 import toml
-from waypanel.src.core.utils import Utils
+from src.core.utils import Utils
 from gi.repository import GLib, Gtk
 import sys
 import shutil
+import traceback
 
 
 class PluginLoader:
@@ -330,7 +331,7 @@ class PluginLoader:
 
         try:
             # Import the plugin module dynamically
-            module_full_path = f"waypanel.src.plugins.{module_path}"
+            module_full_path = f"src.plugins.{module_path}"
             module = importlib.import_module(module_full_path)
 
             is_plugin_enabled = getattr(module, "ENABLE_PLUGIN", True)
@@ -388,12 +389,8 @@ class PluginLoader:
             valid_plugins.append(module_name)
             plugin_metadata.append((module, position, order, priority))
         except Exception as e:
-            self.logger.error(
-                error=e,
-                message=f"Failed to initialize plugin: {module_name}: {e} ",
-                level="error",
-                user_notification=lambda msg: print(f"USER NOTIFICATION: {msg}"),
-            )
+            self.logger.error("Failed to initialize the plugin:")
+            print(f" {e}:\n{traceback.format_exc()}")
 
     def _update_plugin_configuration(self, config, valid_plugins, disabled_plugins):
         """Update the [plugins] section in the TOML configuration."""
@@ -605,7 +602,8 @@ class PluginLoader:
                 )
 
             except Exception as e:
-                self.logger.error(f"Failed to initialize plugin {plugin_name}: {e}")
+                self.logger.error(f"Failed to initialize plugin '{plugin_name}': {e}")
+                print(traceback.format_exc())
 
         # Process all plugins
         for module, position, order, priority in plugin_metadata:

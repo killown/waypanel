@@ -1,6 +1,6 @@
 # Import necessary modules
 import os
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 from gi.repository import Gtk
 
 # Set to True to enable the plugin

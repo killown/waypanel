@@ -26,8 +26,8 @@ from dbus_fast.service import ServiceInterface, dbus_property, signal, method
 from dbus_fast import Variant, DBusError, BusType, PropertyAccess
 import asyncio
 
-from waypanel.src.plugins.core._event_loop import global_loop
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._event_loop import global_loop
+from src.plugins.core._base import BasePlugin
 
 # XML Introspection Data for StatusNotifierItem
 SPEC = """

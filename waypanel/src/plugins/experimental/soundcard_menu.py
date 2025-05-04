@@ -5,7 +5,7 @@ import pulsectl
 import soundcard as sc
 from gi.repository import Gtk
 from wayfire.ipc import WayfireSocket
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 
 addr = os.getenv("WAYFIRE_SOCKET")
 sock = WayfireSocket(addr)
