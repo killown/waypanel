@@ -102,24 +102,11 @@ class CalendarNotesPlugin(BasePlugin):
         """Handle day selection in calendar and display notes."""
         date_time = calendar.get_date()
         year = date_time.get_year()
-        month = date_time.get_month()  # 1-based
+        month = date_time.get_month()
         day = date_time.get_day_of_month()
         selected_date = f"{year}-{month:02d}-{day:02d}"
 
-        # Clear previous notes
-        self.clear_container(self.notes_box)
-
-        # Dummy example (replace with real DB query later)
-        dummy_notes = [
-            f"{selected_date} — Meeting at 10 AM",
-            f"{selected_date} — Grocery shopping",
-        ]
-
-        # Append new notes
-        for note in dummy_notes:
-            label = Gtk.Label(label=note)
-            label.set_halign(Gtk.Align.START)
-            self.notes_box.append(label)
+        self.load_and_display_notes(selected_date)
 
     async def get_all_note_dates(self):
         try:
