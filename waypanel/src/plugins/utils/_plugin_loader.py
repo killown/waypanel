@@ -315,9 +315,18 @@ class PluginLoader:
             return
 
         try:
-            # Import the plugin module dynamically
-            module_full_path = f"src.plugins.{module_path}"
-            module = importlib.import_module(module_full_path)
+            # Try importing directly first (for built-in plugins)
+            try:
+                module_full_path = f"src.plugins.{module_path}"
+                module = importlib.import_module(module_full_path)
+            except ModuleNotFoundError:
+                # If that fails, try loading from custom path
+                plugin_dir = os.path.dirname(self.plugins_path[module_name])
+                if plugin_dir not in sys.path:
+                    sys.path.insert(0, plugin_dir)
+
+                # Import directly by name (no src.plugins prefix)
+                module = importlib.import_module(module_name)
 
             is_plugin_enabled = getattr(module, "ENABLE_PLUGIN", True)
             # Check if the plugin has required functions
@@ -335,8 +344,8 @@ class PluginLoader:
                 return
 
             # Add the plugin to the plugins_import dictionary
-            self.plugins_import[module_name] = module_full_path
-            self.logger.debug(f"Registered plugin: {module_name} -> {module_full_path}")
+            self.plugins_import[module_name] = module.__name__
+            self.logger.debug(f"Registered plugin: {module_name} -> {module.__name__}")
 
             # Validate DEPS list
             has_plugin_deps = getattr(module, "DEPS", [])
