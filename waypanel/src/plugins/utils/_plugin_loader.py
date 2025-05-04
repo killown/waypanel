@@ -44,7 +44,7 @@ class PluginLoader:
         self.utils = Utils(panel_instance)
         self.plugins = {}
         self.plugins_path = {}
-        self.builtin_plugins_dir = self.plugins_base_path()
+        self.user_plugins_dir = os.path.expanduser("~/.config/waypanel/plugins")
         self.plugins_import = {}
         self.plugin_containers = {}
         self.plugins_dir = self.plugins_base_path()
@@ -124,55 +124,67 @@ class PluginLoader:
         valid_plugins = []
         plugin_metadata = []
 
-        # Helper function to scan a directory for plugins
-        def scan_plugin_directory(directory):
-            if not os.path.exists(directory):
-                return
-            for root, dirs, files in os.walk(directory):
-                # Exclude the 'examples' folder
+        # Walk through the plugin directory recursively
+        for root, dirs, files in os.walk(self.plugins_dir):
+            # Exclude the 'examples' folder
+            if "examples" in dirs:
+                dirs.remove("examples")  # Skip the 'examples' folder
+
+            for file_name in files:
+                if file_name.endswith(".py") and file_name != "__init__.py":
+                    module_name = file_name[:-3]  # Remove the .py extension
+                    module_path = (
+                        os.path.relpath(os.path.join(root, file_name), self.plugins_dir)
+                        .replace("/", ".")
+                        .replace(".py", "")
+                    )
+                    file_path = os.path.join(root, file_name)
+                    self.plugins_path[module_name] = file_path
+
+                    self._process_plugin(
+                        module_name,
+                        module_path,
+                        disabled_plugins,
+                        valid_plugins,
+                        plugin_metadata,
+                    )
+
+        # >>> BEGIN CUSTOM PLUGIN CHANGES <<<
+        # Scan custom plugin directory (~/.config/waypanel/plugins)
+        if os.path.exists(self.user_plugins_dir):
+            for root, dirs, files in os.walk(self.user_plugins_dir):
                 if "examples" in dirs:
-                    dirs.remove("examples")  # Skip the 'examples' folder
+                    dirs.remove("examples")  # Also skip examples in user dir
 
                 for file_name in files:
                     if file_name.endswith(".py") and file_name != "__init__.py":
-                        module_name = file_name[:-3]  # Remove the .py extension
-                        rel_path = os.path.relpath(root, directory)
-                        full_module_path = (
-                            os.path.join(rel_path, file_name)
-                            .replace("/", ".")
-                            .replace(".py", "")
+                        module_name = file_name[:-3]
+                        rel_path = os.path.relpath(root, self.user_plugins_dir)
+                        full_module_path = os.path.join(rel_path, file_name)
+                        module_path = full_module_path.replace("/", ".").replace(
+                            ".py", ""
                         )
-                        file_path = os.path.join(root, file_name)
 
-                        # Avoid duplicate module names
+                        # Avoid duplicate module names (prefer built-in over custom)
                         if module_name in self.plugins_path:
-                            existing = self.plugins_path[module_name]
-                            if (
-                                os.path.commonpath([existing, self.builtin_plugins_dir])
-                                == self.builtin_plugins_dir
-                            ):
-                                continue  # Prefer built-in over custom if same name
+                            continue
 
+                        file_path = os.path.join(root, file_name)
                         self.plugins_path[module_name] = file_path
 
                         self._process_plugin(
                             module_name,
-                            full_module_path,
+                            module_path,
                             disabled_plugins,
                             valid_plugins,
                             plugin_metadata,
                         )
-
-        # Scan built-in plugins
-        scan_plugin_directory(self.builtin_plugins_dir)
-
-        # Scan custom plugins
-        scan_plugin_directory(self.user_plugins_dir)
+        # <<< END CUSTOM PLUGIN CHANGES >>>
 
         # Update the [plugins] section in the TOML configuration
         self._update_plugin_configuration(config, valid_plugins, disabled_plugins)
 
-        # Initialize sorted plugins
+        # Sort and initialize plugins
         self._initialize_sorted_plugins(plugin_metadata)
 
     def plugins_base_path(self):
