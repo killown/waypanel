@@ -29,6 +29,45 @@ if ! command -v python3 &>/dev/null; then
   exit 1
 fi
 
+# === CONFIG SETUP ===
+CONFIG_DIR="$HOME/.config/$APP_NAME"
+CONFIG_FILE="$CONFIG_DIR/waypanel.toml"
+SYSTEM_CONFIG="/usr/lib/$APP_NAME/config"      # System install path
+LOCAL_DEV_CONFIG="$SCRIPT_DIR/waypanel/config" # Git clone dev path
+ALT_DEV_CONFIG="$SCRIPT_DIR/config"            # Alternate dev path (flat structure)
+
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "[INFO] Config not found at $CONFIG_FILE. Attempting to copy defaults..."
+
+  # Try system install first
+  if [ -d "$SYSTEM_CONFIG" ]; then
+    mkdir -p "$CONFIG_DIR"
+    cp -r "$SYSTEM_CONFIG"/* "$CONFIG_DIR/"
+    echo "[INFO] Default config copied from system: $SYSTEM_CONFIG"
+
+  # Then try local dev path (waypanel/config)
+  elif [ -d "$LOCAL_DEV_CONFIG" ]; then
+    mkdir -p "$CONFIG_DIR"
+    cp -r "$LOCAL_DEV_CONFIG"/* "$CONFIG_DIR/"
+    echo "[INFO] Default config copied from dev path: $LOCAL_DEV_CONFIG"
+
+  # Fallback: alternate dev layout (config/)
+  elif [ -d "$ALT_DEV_CONFIG" ]; then
+    mkdir -p "$CONFIG_DIR"
+    cp -r "$ALT_DEV_CONFIG"/* "$CONFIG_DIR/"
+    echo "[INFO] Default config copied from alt dev path: $ALT_DEV_CONFIG"
+
+  else
+    echo "[ERROR] No default config found in any known location." >&2
+    echo "Tried:" >&2
+    echo " - $SYSTEM_CONFIG" >&2
+    echo " - $LOCAL_DEV_CONFIG" >&2
+    echo " - $ALT_DEV_CONFIG" >&2
+    echo "Please ensure waypanel is installed properly or run from a valid git clone." >&2
+    exit 1
+  fi
+fi
+
 # Create virtual environment if not exists
 if [ ! -d "$VENV_DIR" ]; then
   echo "[INFO] Creating virtual environment..."
