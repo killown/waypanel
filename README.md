@@ -9,46 +9,26 @@ Waypanel  is a lightweight, modular, and highly customizable status panel design
 How to Install `waypanel`
 =========================
 
-This guide provides step-by-step instructions to install `waypanel`, both using `pip` and via `git`. It also includes instructions for setting up a virtual environment.
-
-#### archlinux
+##### configure wayfire.ini
+Ensure the following plugins are enabled in your ~/.config/wayfire.ini: 
     
-    pacman -S gtk4-layer-shell gobject-introspection vala playerctl python-gobject wayland-protocols ninja mesa playerctl libadwaita bluez-tools
+[core]
 
+plugins = ipc ipc-rules
+
+##### Option 1: aur (archlinux)
+yay -S waypanel-git 
+
+##### Option 2: manual install (archlinux): 
+pacman -S gtk4-layer-shell gobject-introspection vala playerctl python-gobject wayland-protocols ninja mesa playerctl libadwaita bluez-tools
 
 Installing `waypanel` from github Source
 -------------------------------------------------
 
-### Step 1: Clone the repository, copy the config and configure wayfire
+### Clone the repository and run waypanel.sh
     git clone https://github.com/killown/waypanel.git
     cd waypanel
-    mkdir ~/.config/waypanel
-    cp -r waypanel/config/* ~/.config/waypanel/
-   
-   ##### configure wayfire.ini
-   Ensure the following plugins are enabled in your ~/.config/wayfire.ini: 
-    
-    [core]
-    plugins = ipc ipc-rules
-
-### Step 2: Set Up a Virtual Environment (Recommended)
-
-  **Create a virtual environment**:
-    
-    python3 -m venv waypanel-env
-    # For bash/zsh:
-    source waypanel-env/bin/activate
-    # For fish:
-    source waypanel-env/bin/activate.fish
-      
-
-      
-### Step 3: Install and run
-
-Once the virtual environment is activated, install `waypanel` using the following command:
-
-    python3 -m pip install .
-    waypanel-env/bin/waypanel
+    sh waypanel.sh # This will set up the venv automatically and run the panel
 
 
 ### Theme Compatibility
