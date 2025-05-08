@@ -477,8 +477,9 @@ class SystemMonitorPlugin(BasePlugin):
         self.popover_system.set_parent(self.menubutton_system)
 
     def last_toplevel_focused_view(self):
-        window_controls = self.plugins["window_controls"]
-        return window_controls.last_toplevel_focused_view
+        # requires taskbar plugin to get the last focused view
+        taskbar = self.plugins["taskbar"]
+        return taskbar.last_toplevel_focused_view
 
     def create_gesture_for_focused_view_pid(self, hbox):
         focused_view = self.last_toplevel_focused_view()

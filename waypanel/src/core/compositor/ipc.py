@@ -232,6 +232,9 @@ class IPC:
     def get_workspaces_without_views(self):
         return self.wf_utils.get_workspaces_without_views()
 
+    def get_workspace_from_view(self, view_id):
+        return self.wf_utils.get_workspace_from_view(view_id)
+
     def hide_view(self, view_id):
         message = get_msg_template("hide-view/hide")
         message["data"]["view-id"] = view_id

@@ -45,7 +45,8 @@ class AppLauncher(BasePlugin):
         self.menubutton_launcher.add_css_class("app-launcher-menu-button")
         menu_icon = self.utils.get_nearest_icon_name(
             self.obj.config.get("top", {}).get(
-                "menu_icon", self.utils.get_nearest_icon_name("archlinux")
+                "menu_icon",
+                self.utils.get_nearest_icon_name("app-launcher"),
             )
         )
         self.menubutton_launcher.set_icon_name(menu_icon)

@@ -62,7 +62,7 @@ class ClockPlugin(BasePlugin):
         """Update the clock display with current time and date."""
         try:
             current_time = datetime.datetime.now().strftime(
-                "%b %d %H:%M"
+                "%d %b %H:%M"
             )  # Includes date and time
             self.clock_label.set_label(current_time)
         except Exception as e:

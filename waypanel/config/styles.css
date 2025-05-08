@@ -1,17 +1,15 @@
 .window-title-content {
   background-color: transparent;
-  margin-top: 5px;
+  margin-top: 6px;
   margin-left: 8px;
 
 }
 
 .window-title-label {
   margin-left: 8px;
-  font-size: 15px;
-  font-weight: bold;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
-    sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: "Roboto", "Helvetica Neue", sans-serif;
   color: #ebdbb2;
 }
 
@@ -21,12 +19,12 @@
 
 .left-panel {
   -gtk-icon-size: 48px;
-  background: transparent;
+  background: #000000fb;
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.08); 
-  border-radius: 8px;
+  border-radius: 10px;
   border-style: none;
   color: #ebdbb2;
-  padding: 6px;
+  padding: 1px;
     box-shadow:
     rgba(0, 0, 0, 0.507) 0 2px 0px,
     rgba(0, 0, 0, 0.555) 0 2px 0px,
@@ -48,7 +46,7 @@
 }
 
 .dockbar-buttons {
-  background-color: #1d2021de;
+  background-color: #282828;
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
   color: #ebdbb2;
   font-family:
@@ -216,7 +214,7 @@ scale {
 .image-button {
   -gtk-icon-size: 16px;
   color: #ffffffd8;
-  background-color: #ffffff00;
+  background-color: #18181800;
 }
 
 .text-button {
@@ -241,6 +239,10 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   color: white;
   border: none;
   box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.notification-panel-button {
+  padding-top: 6px;
 }
 
 .notify-client-box{
@@ -300,23 +302,28 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 
 /*icons from bookbarks menu*/
 .app-launcher-icon-from-popover {
-  -gtk-icon-size: 52px;
+  -gtk-icon-size: 68px;
+    transition: all 0.2s ease;
+    padding: 1px;
 }
 
 .app-launcher-label-from-popover {
-  font-size: 14px;
+  font-size: 10px;
+  font-weight: bold;
 }
 
-.app-launcher-popover.background {
-  border-color: transparent;
-  background-image: none;
-  background-color: @dark_bg_color;
-  color: @dark_fg_color;
+.app-launcher-popover {
+  background-color: transparent;
 }
-
 
 .app-launcher-flowbox {
   background-color: transparent;
+}
+
+
+.app-launcher-icon-from-popover:hover {
+    background-color: #282828;
+    border-radius: 10px;
 }
 
 .app-launcher-main-box {
@@ -342,18 +349,22 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .clock-label {
-  /* Complete transparency */
+  /* Background & Border */
   background-color: transparent;
   border: none;
   box-shadow: none;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
-    sans-serif;
+  padding-top: 5px;
+
+  /* Font Styling */
+  font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
+  font-size: 16px;
+  color: #ebdbb2; /* Soft yellow (Gruvbox-like) */
   text-decoration: none;
-  color: #ebdbb2;
-  font-family: inherit;
-  text-decoration: none;
-  font-size: 18px;
+
+  /* Optional: LCD glow effect */
+  text-shadow: 
+    0 0 2px rgba(235, 219, 178, 0.3), /* Subtle glow */
+    0 0 5px rgba(235, 219, 178, 0.1); /* Wider blur */
 }
 
 .Clock-box {
@@ -383,14 +394,13 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 
 /*system dashboard: if gsettings prefer-dark, then changes for white colors is necessary*/
 .system_dashboard_stack {
-  color: #fff;
   font-family: 'Segoe UI', sans-serif;
   font-size: 14px;
   font-weight: 400;
 }
 
 .top-panel {
-  background-color: #282828;
+  background-color: #000000fb;
   border-bottom: 1px solid #1a1a1a;
   color: #e0e0e0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -398,39 +408,42 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .top-panel-box-right {
-  background-color: #282828;
+  background-color: #f0f1f4;
   color: #e0e0e0;
   font-weight: 400;
 
 }
 
 .top_panel_box_left {
-  -gtk-icon-size: 28px;
+  -gtk-icon-size: 32px;
 }
 
 .right-box-spacer {
-  background-color: #282828;
+  background-color: transparent;
 }
 
-.top_panel_box_right {
-  background-color: #fff;
+.top-panel-box-right {
+  background-color: transparent;
 }
 
 
 .app-launcher-menu-button,
 .bookmarks-menu-button,
 .places-menu-button {
-  -gtk-icon-size: 28px;
+  -gtk-icon-size: 29px;
 }
 
-.top_panel_box_systray {
-  -gtk-icon-size: 22px;
-  background-color: transparent;
-  border: none;
-  box-shadow: none;
-  color: inherit;
-  font-family: inherit;
-  text-decoration: none;
+.top-panel-box-systray {
+  background: linear-gradient(145deg, #0a0a0a, #000000); /* Subtle gradient for depth */
+  border-radius: 10px;
+  padding-top: 2px;
+  margin-right: 5px;
+  margin-top: 1px;
+  margin-bottom: 1px;
+  box-shadow: 
+    inset 3px 3px 5px rgba(255, 255, 255, 0.05), /* Top-left highlight */
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5),     /* Bottom-right shadow */
+    2px 2px 5px rgba(0, 0, 0, 0.3);             /* Outer drop shadow */
 }
 
 .top_panel_box_center {
@@ -480,12 +493,11 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .taskbar-button {
-  background-color: #1d2021de;
+  background-color: #000000fb;
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
   color: #ebdbb2;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
-    sans-serif;
+  font-weight: 500;
+  font-family: "Roboto", "Helvetica Neue", sans-serif;
   border-radius: 8px;
   border-style: none;
   padding: 5px 5px 5px 5px;

@@ -69,6 +69,7 @@ class NotificationPopoverPlugin(BasePlugin):
         self.vbox.set_margin_end(10)
         self.notification_on_popover = {}
         self.notification_button = Gtk.Button.new_from_icon_name("liteupdatesnotify")
+        self.notification_button.add_css_class("notification-panel-button")
         self.notification_button.set_tooltip_text("View Recent Notifications")
         self.notification_button.connect("clicked", self.open_popover_notifications)
         # Initialize the Do Not Disturb switch

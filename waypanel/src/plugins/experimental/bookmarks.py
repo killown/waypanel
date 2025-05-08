@@ -69,7 +69,7 @@ class PopoverBookmarks(BasePlugin):
                 bookmarks_icon = (
                     config.get("panel", {})
                     .get("top", {})
-                    .get("bookmarks_icon", "librewolf")
+                    .get("bookmarks_icon", "internet-web-browser")
                 )
                 self.menubutton_bookmarks.set_icon_name(bookmarks_icon)
         else:
@@ -181,9 +181,7 @@ class PopoverBookmarks(BasePlugin):
                 )
                 image = Gtk.Image.new_from_pixbuf(thumbnail_pixbuf)
             except Exception as e:
-                self.log_error(
-                    f"Error processing image for {url}: {e}"
-                )
+                self.log_error(f"Error processing image for {url}: {e}")
                 # Fallback to symbolic icon
                 image = Gtk.Image.new_from_icon_name("web-browser-symbolic")
                 image.set_pixel_size(THUMBNAIL_SIZE[0])

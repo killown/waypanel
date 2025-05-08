@@ -6,7 +6,7 @@ from src.plugins.core._base import BasePlugin
 gi.require_version("Gtk", "4.0")
 
 # Set to False or remove the plugin file to disable it
-ENABLE_PLUGIN = True
+ENABLE_PLUGIN = False
 DEPS = ["top_panel"]
 
 

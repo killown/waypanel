@@ -229,7 +229,7 @@ class SystemDashboard(BasePlugin):
     def on_action(self, button, action):
         if action == "Exit Waypanel":
             # FIXME: need a better way to exit the panel
-            self.kill_process_by_name("waypanel/main.py")
+            Popen("pkill -f waypanel/main.py".split())
         if action == "Restart Waypanel":
             # FIXME: need a better way to exit the panel
             self.run_later("waypanel &", 0.1)
@@ -246,12 +246,12 @@ class SystemDashboard(BasePlugin):
             # FIXME: allow the user set their own cmd in toml
             Popen(
                 """swaylock --screenshots --clock --indicator
-                    --grace-no-mouse --indicator-radius 100
-                    --indicator-thickness 7 --effect-blur 7x5
-                    --effect-vignette 0.5:0.5  --ring-color ffffff
-                    --key-hl-color 880033 --line-color 00000000
-                    --inside-color 00000088 --separator-color 00000000
-                    --grace 2 --fade-in 4""".split()
+                    --grace-no-mouse --indicator-radius 99
+                    --indicator-thickness 6 --effect-blur 7x5
+                    --effect-vignette -1.5:0.5  --ring-color ffffff
+                    --key-hl-color 880032 --line-color 00000000
+                    --inside-color 00000087 --separator-color 00000000
+                    --grace 1 --fade-in 4""".split()
             )
         if action == "Settings":
             if self.is_settings_installed():

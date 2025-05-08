@@ -38,6 +38,7 @@ class TaskbarPlugin(BasePlugin):
         self._subscribe_to_events()
         # will hide until scale plugin is toggled if False
         self.layer_always_exclusive = False
+        self.last_toplevel_focused_view = None
         self.taskbar_list = []
         self.buttons_id = {}
         self.allow_move_view_scroll = True
@@ -411,7 +412,11 @@ class TaskbarPlugin(BasePlugin):
 
     def on_view_focused(self, view):
         """Handle when a view gains focus."""
-        self.update_taskbar_list(view)
+        try:
+            if view.get("role") == "toplevel":
+                self.last_toplevel_focused_view = view
+        except Exception as e:
+            print(f"Error handling 'view-focused' event: {e}")
 
     def on_view_created(self, view):
         """Handle creation of new views."""
@@ -665,8 +670,7 @@ class TaskbarPlugin(BasePlugin):
             # self.on_app_id_changed(msg["view"])
             return
         if msg["event"] == "view-focused":
-            # self.on_view_role_toplevel_focused(view)
-            # self.on_view_focused()
+            self.on_view_focused(view)
             # self.last_focused_output = view["output-id"]
             return
         if msg["event"] == "view-mapped":
