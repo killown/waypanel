@@ -29,6 +29,12 @@ class CalendarNotesPlugin(BasePlugin):
         super().__init__(panel_instance)
         self.notes_box = None
         self.selected_date_label = None
+        self.calendar = self.plugins["calendar"]
+        self.calendar.calendar.connect("day-selected", self.on_day_selected)
+        self.calendar.popover_calendar.connect(
+            "notify::visible", self.on_calendar_visibility_changed
+        )
+
         self.note_dates = set()
 
         # Schedule attaching to calendar after it's initialized
@@ -38,6 +44,19 @@ class CalendarNotesPlugin(BasePlugin):
         dates = await self.get_all_note_dates()
         self.note_dates = set(dates)
         self.mark_days_with_notes()
+
+    def on_calendar_visibility_changed(self, popover, param):
+        """Callback when the calendar popover visibility changes."""
+        if popover.get_visible():
+            # Get current date and reload notes
+            date_time = self.calendar.calendar.get_date()
+            year = date_time.get_year()
+            month = date_time.get_month()  # 1-based
+            day = date_time.get_day_of_month()
+
+            selected_date = f"{year}-{month:02d}-{day:02d}"
+            self.load_and_display_notes(selected_date)
+            self.mark_days_with_notes()  # Optional: re-mark days with notes
 
     def mark_days_with_notes(self):
         calendar = self.plugins["calendar"].calendar
@@ -64,11 +83,10 @@ class CalendarNotesPlugin(BasePlugin):
             self.logger.warning("Calendar plugin not loaded yet. Retrying...")
             return True  # Keep retrying
         asyncio.run(self.load_note_dates())
-        calendar_plugin = self.plugins["calendar"]
 
         if (
-            not hasattr(calendar_plugin, "popover_calendar")
-            or not calendar_plugin.popover_calendar
+            not hasattr(self.calendar, "popover_calendar")
+            or not self.calendar.popover_calendar
         ):
             self.logger.warning("Calendar popover not initialized yet.")
             return True  # Retry
@@ -83,14 +101,11 @@ class CalendarNotesPlugin(BasePlugin):
         self.grid.attach(self.selected_date_label, 0, 2, 2, 1)  # Row below calendar
 
         # Create box for notes
-        self.notes_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        self.notes_box = Gtk.ListBox()
         self.notes_box.set_margin_top(10)
         self.notes_box.set_margin_start(10)
         self.notes_box.set_margin_end(10)
         self.grid.attach(self.notes_box, 0, 2, 2, 1)
-
-        # Connect calendar signal
-        calendar_plugin.calendar.connect("day-selected", self.on_day_selected)
 
         # Load today’s notes by default
         today = datetime.now().strftime("%Y-%m-%d")
@@ -141,8 +156,9 @@ class CalendarNotesPlugin(BasePlugin):
     def load_and_display_notes(self, date_str):
         """Load and display notes for the given date"""
         # Clear previous notes
-        for child in self.notes_box:
-            self.notes_box.remove(child)
+        if self.notes_box is not None:
+            if hasattr(self.notes_box, "remove_all"):
+                self.notes_box.remove_all()
 
         # Fetch notes for this date
         try:
@@ -159,6 +175,8 @@ class CalendarNotesPlugin(BasePlugin):
 
         for note_id, content in notes:
             content = " ".join(content.split()[1:])  # skip the date
+
+            # Create label for the note
             note_label = Gtk.Label()
             note_label.set_markup(
                 f'<span font="DejaVu Sans Mono">{GLib.markup_escape_text(content)}</span>'
@@ -166,4 +184,10 @@ class CalendarNotesPlugin(BasePlugin):
             note_label.set_wrap(True)
             note_label.set_halign(Gtk.Align.START)
             note_label.set_margin_bottom(5)
-            self.notes_box.append(note_label)
+
+            # Wrap the label in a ListBoxRow
+            row = Gtk.ListBoxRow()
+            row.set_child(note_label)
+
+            # Append the row to the listbox
+            self.notes_box.append(row)
