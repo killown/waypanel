@@ -1,6 +1,8 @@
 ## waypanel
 
-![example1](https://github.com/user-attachments/assets/6f9bc597-4089-4ffb-b49f-5fcb2f446864)
+![test](https://github.com/user-attachments/assets/a4179a9a-4916-4939-af2b-3dd8e63e383d)
+![test1](https://github.com/user-attachments/assets/a57d691f-989c-4ff2-a858-107f8d646920)
+
 
 ##### _Wayfire GTK4 panel_
 
