@@ -653,38 +653,54 @@ class PluginLoader:
         Determines where to place the plugin's widget in the panel.
 
         Args:
-            position: A string (e.g., 'top-panel-left') or None/'background'
-            plugin_name: Name of the plugin for logging
+            position (str): A string like 'top-panel-left', 'left-panel-top', etc.
+            plugin_name (str): Name of the plugin (for logging)
 
         Returns:
-            str: Target box name, or 'background' if plugin has no UI.
+            object: Target box/widget if found, or 'background' if no UI is needed.
+            None: If invalid position or missing target.
         """
         self.position_mapping = {
+            # Top Panel
+            "top-panel": "top_panel",
             "top-panel-left": "top_panel_box_left",
-            "top-panel-right": "top_panel_box_right",
             "top-panel-center": "top_panel_box_center",
+            "top-panel-right": "top_panel_box_right",
             "top-panel-systray": "top_panel_box_systray",
             "top-panel-after-systray": "top_panel_box_for_buttons",
-            "left-panel": "left_panel",
-            "right-panel": "right_panel",
+            # Bottom Panel
             "bottom-panel": "bottom_panel",
-            "top-panel": "top_panel",
-            "background": "background",  # Special case for background plugins
+            "bottom-panel-left": "bottom_panel_box_left",
+            "bottom-panel-center": "bottom_panel_box_center",
+            "bottom-panel-right": "bottom_panel_box_right",
+            # Left Panel
+            "left-panel": "left_panel",
+            "left-panel-top": "left_panel_box_top",
+            "left-panel-center": "left_panel_box_center",
+            "left-panel-bottom": "left_panel_box_bottom",
+            # Right Panel
+            "right-panel": "right_panel",
+            "right-panel-top": "right_panel_box_top",
+            "right-panel-center": "right_panel_box_center",
+            "right-panel-bottom": "right_panel_box_bottom",
+            # Background (no UI)
+            "background": "background",  # Special case
         }
 
         target_attr = self.position_mapping.get(position)
+
         if target_attr is None:
             self.logger.error(
                 f"Invalid position '{position}' for plugin {plugin_name}."
             )
             return None
 
-        # Handle special case for "background"
+        # Handle background plugins
         if target_attr == "background":
             self.logger.debug(f"Plugin {plugin_name} is a background plugin.")
             return "background"
 
-        # Validate that the target attribute exists on the panel instance
+        # Check if the target attribute exists on the panel instance
         if not hasattr(self.panel_instance, target_attr):
             self.logger.warning(
                 f"Panel box '{target_attr}' is not yet initialized for plugin {plugin_name}."
