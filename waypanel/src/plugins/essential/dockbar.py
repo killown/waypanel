@@ -16,14 +16,14 @@ DEPS = ["event_manager", "gestures_setup"]
 
 def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
-    position = "right-panel"
+    position = "left-panel-center"
     # priority position is from waypanel.toml [dockbar_panel.position] = "left"
     # the dockbar will be on left ignoring hardcoded position
     dockbar_config = panel_instance.config.get("dockbar_panel", {})
     if dockbar_config:
         if "panel" in dockbar_config:
             position = dockbar_config["panel"]
-            position = f"{position}-panel"
+            position = f"{position}"
     order = 5
     priority = 1
     return position, order, priority
@@ -45,11 +45,42 @@ class DockbarPlugin(BasePlugin):
         self._subscribe_to_events()
         self.layer_state = False
         self.taskbar_list = []
-        self.dockbar_panel = None
+        self.dockbar_panel = self.get_panel()
         self.buttons_id = {}
         self.dockbar = None
         # Load configuration and set up dockbar
         self._setup_dockbar()
+
+    def get_panel(self):
+        """
+        Returns the appropriate panel object (e.g., self.obj.left_panel)
+        based on the dockbar configuration.
+        """
+        dockbar_config = self.obj.config.get("dockbar_panel", {})
+        if not dockbar_config or "panel" not in dockbar_config:
+            self.logger.warning(
+                "Dockbar panel config is missing or invalid. Using default: left-panel."
+            )
+            return self.obj.left_panel
+
+        position = dockbar_config["panel"].lower()  # e.g., 'left-panel'
+        valid_panels = {
+            "left": self.obj.left_panel,
+            "right": self.obj.right_panel,
+            "top": self.obj.top_panel,
+            "bottom": self.obj.bottom_panel,
+        }
+
+        # Extract base panel name (e.g., 'left' from 'left-panel')
+        panel_key = position.split("-")[0]
+
+        if panel_key in valid_panels:
+            return valid_panels[panel_key]
+        else:
+            self.logger.error(
+                f"Invalid panel value: {position}. Defaulting to left-panel."
+            )
+            return self.obj.left_panel
 
     def is_scale_enabled(self):
         plugins = self.ipc.get_option_value("core/plugins")["value"].split()
@@ -67,23 +98,6 @@ class DockbarPlugin(BasePlugin):
         else:
             self.log_error(f"Invalid panel value: {panel}")
 
-    def choose_and_set_dockbar(self):
-        panel = get_plugin_placement(self.obj)[0]
-
-        dockbar_config = self.config.get("dockbar_panel", {})
-        if dockbar_config:
-            if "panel" in dockbar_config:
-                position = dockbar_config["panel"]
-                panel = f"{position}-panel"
-
-        # Validate panel value
-        valid_panels = {"left-panel", "right-panel", "bottom-panel", "top-panel"}
-        if panel not in valid_panels:
-            self.log_error(f"Invalid panel value: {panel}. Using default 'left-panel'.")
-            panel = "left-panel"
-
-        self.dockbar_panel = self.get_dockbar_position(panel)
-
     def CreateFromAppList(
         self, config, orientation, class_style, callback=None, use_label=False
     ):
@@ -98,13 +112,6 @@ class DockbarPlugin(BasePlugin):
             config_data = toml.load(f)["dockbar"]
 
         for app in config_data:
-            app_id = None
-            initial_title = None
-            try:
-                app_id = config_data[app]["wclass"]
-            except KeyError:
-                pass
-
             # Retrieve the command for this app
             app_cmd = config_data[app]["cmd"]
 
@@ -177,7 +184,7 @@ class DockbarPlugin(BasePlugin):
             self.utils.run_cmd(cmd)
 
         except Exception as e:
-            self.log_error(error=e, message="Error while handling right-click action.")
+            self.log_error(f"Error while handling right-click action: {e}")
 
     def on_middle_click(self, cmd):
         # Check for empty workspace
@@ -200,10 +207,8 @@ class DockbarPlugin(BasePlugin):
         self.dockbar = self.CreateFromAppList(
             self.obj.waypanel_cfg, orientation, class_style
         )
-        self.main_widget = (self.dockbar, "set_content")
+        self.main_widget = (self.dockbar, "append")
 
-        # this will pass to the base plugin and set the widget the plugin loader should handle
-        self.choose_and_set_dockbar()
         # FIXME: remove this motion_controller later to use in a example
         # motion_controller = Gtk.EventControllerMotion()
         # motion_controller.connect("enter", self.on_mouse_enter)
