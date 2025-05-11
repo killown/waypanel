@@ -108,7 +108,6 @@ class StatusNotifierHost(BasePlugin):
         Args:
             service_name (str): The D-Bus service name of the tray icon.
         """
-        print(self.items, "remove")
         if service_name in self.items:
             item = self.items.pop(service_name, None)
             if item:
@@ -488,6 +487,7 @@ class StatusNotifierItem(BasePlugin):
         self.service_name = service_name
         self.object_path = object_path
         self.icon_name = None
+        self.icon_pixmap = None
         self.is_hidden = False  # Track the window's visibility state
 
     async def broadcast_message(self, message):
@@ -508,6 +508,7 @@ class StatusNotifierItem(BasePlugin):
                 "service_name": self.service_name,
                 "object_path": self.object_path,
                 "icon_name": self.icon_name,
+                "icon_pixmap": self.icon_pixmap,
                 "item": self.item,
                 "bus": self.bus,
             },
@@ -561,6 +562,8 @@ class StatusNotifierItem(BasePlugin):
             # Fetch icon name and broadcast
             try:
                 self.icon_name = await self.item.get_icon_name()
+                if hasattr(self.item, "get_icon_pixmap"):
+                    self.icon_pixmap = await self.item.get_icon_pixmap()
                 if broadcast:
                     await self.on_new_tray_icon()
             except Exception as e:

@@ -1,4 +1,4 @@
-from gi.repository import Gtk, Gio, Gdk
+from gi.repository import Gtk, Gio, Gdk, GdkPixbuf, GLib
 from src.plugins.core._event_loop import global_loop
 from dbus_fast import Variant
 import re
@@ -97,7 +97,47 @@ class SystrayClientPlugin(BasePlugin):
             "object_path": self.new_message["data"]["object_path"],
             "item": self.new_message["data"]["item"],
             "icon_name": self.new_message["data"]["icon_name"],
+            "icon_pixmap": self.new_message["data"]["icon_pixmap"],
         }
+
+    def create_pixbuf_from_pixels(self, pixmap_data):
+        try:
+            if (
+                not pixmap_data
+                or not isinstance(pixmap_data, (list, tuple))
+                or len(pixmap_data) == 0
+            ):
+                raise ValueError("Invalid pixmap data")
+
+            width = int(pixmap_data[0])
+            height = int(pixmap_data[1])
+            pixel_data = pixmap_data[2]
+
+            # Ensure pixel_data is a bytes object
+            if isinstance(pixel_data, list):
+                pixel_data = bytes(pixel_data)
+            elif isinstance(pixel_data, str):
+                pixel_data = pixel_data.encode("latin1")
+            elif not isinstance(pixel_data, bytes):
+                raise ValueError(f"Unsupported pixel data type: {type(pixel_data)}")
+
+            rowstride = width * 4  # Assuming RGBA format
+            has_alpha = True
+
+            return GdkPixbuf.Pixbuf.new_from_data(
+                pixel_data,
+                GdkPixbuf.Colorspace.RGB,
+                has_alpha,
+                8,
+                width,
+                height,
+                rowstride,
+                None,
+                None,
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to create pixbuf: {e}")
+            return None
 
     async def fetch_menu_path(self, service_name):
         """
@@ -423,6 +463,11 @@ class SystrayClientPlugin(BasePlugin):
             except Exception as e:
                 self.log_error(f"Error processing menu item: {item}. Error: {e}")
 
+    def get_best_icon_entry(self, pixmap_data, target_size=24):
+        for entry in sorted(pixmap_data, key=lambda x: abs(x[0] - target_size)):
+            return entry
+        return pixmap_data[0]  # fallback
+
     def create_menubutton(self, menu_structure, service_name):
         """
         Create a MenuButton with the given menu structure.
@@ -434,15 +479,23 @@ class SystrayClientPlugin(BasePlugin):
             Gtk.MenuButton: A MenuButton with the parsed menu structure.
         """
         icon_name = self.messages[service_name]["icon_name"]
-
-        # Create the MenuButton
+        icon_pixmap = None
         menubutton = Gtk.MenuButton()
-        menubutton.set_icon_name(icon_name)
-        icon = Gtk.Image.new_from_icon_name(icon_name)
-        icon.set_halign(Gtk.Align.CENTER)
-        icon.set_valign(Gtk.Align.CENTER)
+        if self.messages[service_name]["icon_pixmap"] is not None:
+            icon_pixmap = self.messages[service_name]["icon_pixmap"]
+            icon_pixmap = self.get_best_icon_entry(icon_pixmap, target_size=32)
+            icon_pixmap = self.create_pixbuf_from_pixels(icon_pixmap)
+            icon = Gtk.Image.new_from_pixbuf(icon_pixmap)
 
-        menubutton.set_child(icon)
+            # icon = Gtk.Image.new_from_icon_name(icon_name)
+            icon.set_halign(Gtk.Align.CENTER)
+            icon.set_valign(Gtk.Align.CENTER)
+
+            menubutton.set_child(icon)
+
+        else:
+            menubutton.set_icon_name(icon_name)
+
         menubutton.add_css_class("tray_icon")
 
         # Create a Gio.Menu
