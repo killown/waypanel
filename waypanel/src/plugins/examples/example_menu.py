@@ -12,7 +12,41 @@ ENABLE_PLUGIN = False
 
 def get_plugin_placement(panel_instance):
     """
-    Define plugin position and order.
+    Define where the plugin should be placed in the panel and its order.
+    plugin_loader will use this metadata to append the widget to the panel instance.
+
+    Returns:
+        tuple: (position, order, priority) for UI plugins
+        str: "background" for non-UI/background plugins
+
+    Valid Positions:
+        - Top Panel:
+            "top-panel-left"
+            "top-panel-center"
+            "top-panel-right"
+            "top-panel-systray"
+            "top-panel-after-systray"
+
+        - Bottom Panel:
+            "bottom-panel-left"
+            "bottom-panel-center"
+            "bottom-panel-right"
+
+        - Left Panel:
+            "left-panel-top"
+            "left-panel-center"
+            "left-panel-bottom"
+
+        - Right Panel:
+            "right-panel-top"
+            "right-panel-center"
+            "right-panel-bottom"
+
+        - Background:
+            "background"  # For plugins that don't have a UI
+
+    Parameters:
+        panel_instance: The main panel object. Can be used to access config or other panels.
     """
     return "top-panel-right", 6, 6
 
