@@ -14,7 +14,7 @@ DEPS = ["event_manager", "gestures_setup"]
 
 def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
-    position = "bottom-panel"
+    position = "bottom-panel-center"
     order = 5
     priority = 99
     return position, order, priority
@@ -53,7 +53,7 @@ class TaskbarPlugin(BasePlugin):
         # For example, if the main widget is `self.scrolled_window`, setting `main_widget` before `scrolled_window`
         # could result in `None` being assigned instead. This may cause the plugin to malfunction
         # or prevent `set_content`/`append` from working properly.
-        self.main_widget = (self.scrolled_window, "set_content")
+        self.main_widget = (self.scrolled_window, "append")
 
     def set_layer_exclusive(self, exclusive):
         if exclusive:
