@@ -22,6 +22,8 @@ title = "youtube.com"
 
 from gi.repository import GLib
 from core._base import BasePlugin
+from src.plugins.core.event_handler_decorator import subscribe_to_event
+
 import logging
 
 ENABLE_PLUGIN = True
@@ -48,19 +50,7 @@ class AutoFullscreenAppPlugin(BasePlugin):
         self.match_items = self.plugin_config.get("items", [])
         self.fullscreen_views = {}  # Track which views are fullscreened
 
-        self.setup()
-
-    def setup(self):
-        if "event_manager" not in self.obj.plugin_loader.plugins:
-            self.logger.warning("Event Manager not loaded. Cannot subscribe.")
-            return
-
-        event_manager = self.obj.plugin_loader.plugins["event_manager"]
-        event_manager.subscribe_to_event("view-focused", self.on_view_focused)
-        event_manager.subscribe_to_event(
-            "view-title-changed", self.on_view_title_changed
-        )
-
+    @subscribe_to_event("view-focused")
     def on_view_focused(self, msg):
         view = msg.get("view")
         if not view:
@@ -72,6 +62,7 @@ class AutoFullscreenAppPlugin(BasePlugin):
 
         GLib.idle_add(self.fullscreen_if_match, view_id)
 
+    @subscribe_to_event("view-title-changed")
     def on_view_title_changed(self, msg):
         view = msg.get("view")
         if not view:

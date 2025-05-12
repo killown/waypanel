@@ -1,12 +1,13 @@
 import gi
 from gi.repository import Gtk, GLib
+from src.plugins.core.event_handler_decorator import subscribe_to_event
 
 from src.plugins.core._base import BasePlugin
 
 gi.require_version("Gtk", "4.0")
 
 # Set to False or remove the plugin file to disable it
-ENABLE_PLUGIN = False
+ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 
 
@@ -62,34 +63,13 @@ class WindowControlsPlugin(BasePlugin):
         # Add CSS class
         self.cf_box.add_css_class("window-controls-box")
 
-        # Subscribe to the 'view-focused' event
-
-        def run_once():
-            if "event_manager" in self.obj.plugin_loader.plugins:
-                event_manager = self.obj.plugin_loader.plugins["event_manager"]
-                event_manager.subscribe_to_event(
-                    "view-focused",
-                    self.on_view_focused,
-                    plugin_name="window_controls",
-                )
-                self.logger.info(
-                    "Window Constrols plugin subscribed to view-focused event!"
-                )
-                return False
-            else:
-                self.logger.info(
-                    "Window Constrols plugin waiting for event_manager to be ready"
-                )
-                return True
-
-        GLib.timeout_add_seconds(1, run_once)
-
     def create_control_button(self, icon_name, css_class, callback):
         button = self.utils.create_button(
             icon_name, None, css_class, None, use_function=callback
         )
         return button
 
+    @subscribe_to_event("view-focused")
     def on_view_focused(self, event_message):
         """
         Handle when a view gains focus.

@@ -1,3 +1,5 @@
+from src.plugins.core.event_handler_decorator import subscribe_to_event
+
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 DEPS = ["event_manager"]
@@ -21,25 +23,8 @@ def initialize_plugin(panel_instance):
         panel_instance.logger.info("Plugin is disabled.")
         return
 
-    # Ensure the EventManagerPlugin is loaded
-    if "event_manager" not in panel_instance.plugins:
-        panel_instance.logger.info(
-            "Error: EventManagerPlugin is not loaded. Cannot subscribe to events."
-        )
-        return
 
-    event_manager = panel_instance.plugin_loader.plugins["event_manager"]
-    print("Subscribing to events..." * 100)
-
-    # Subscribe to events with callbacks
-    try:
-        event_manager.subscribe_to_event("view-focused", on_view_focused)
-        event_manager.subscribe_to_event("view-mapped", on_view_created)
-        panel_instance.logger.info("Successfully subscribed to events.")
-    except Exception as e:
-        panel_instance.logger.error(f"Error subscribing to events: {e}")
-
-
+@subscribe_to_event("view-focused")
 def on_view_focused(event_message):
     """
     Handle when a view gains focus.
@@ -55,6 +40,7 @@ def on_view_focused(event_message):
         print(f"Error handling 'view-focused' event: {e}")
 
 
+@subscribe_to_event("view-mapped")
 def on_view_created(event_message):
     """
     Handle when a view is created.

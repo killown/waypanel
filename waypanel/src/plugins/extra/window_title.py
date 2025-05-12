@@ -1,5 +1,5 @@
 from gi.repository import Gtk
-
+from src.plugins.core.event_handler_decorator import subscribe_to_event
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
@@ -55,42 +55,11 @@ class WindowTitlePlugin(BasePlugin):
         # first update so it will set the default it if no focus yet
         self.update_title("", "focus-windows")
 
-        # Subscribe to necessary events using the EventManagerPlugin
-        self._subscribe_to_events()
-
     def disable(self):
         print(self.main_widget)
         self.utils.remove_widget(self.window_title_content)
 
-    def _subscribe_to_events(self):
-        """
-        Subscribe to relevant events using the EventManagerPlugin.
-        """
-        if "event_manager" not in self.obj.plugin_loader.plugins:
-            self.log_error(
-                "Event Manager Plugin is not loaded. Cannot subscribe to events."
-            )
-            return
-
-        event_manager = self.obj.plugin_loader.plugins["event_manager"]
-
-        # Subscribe to view-related events
-        event_manager.subscribe_to_event(
-            "view-focused", self.on_view_focused, plugin_name="window_title"
-        )
-        event_manager.subscribe_to_event(
-            "view-closed",
-            self.on_view_closed,
-            plugin_name="window_title",
-        )
-        event_manager.subscribe_to_event(
-            "view-title-changed",
-            self.on_view_title_changed,
-            plugin_name="window_title",
-        )
-
-        self.logger.info("Window Title Plugin subscribed to view events.")
-
+    @subscribe_to_event("view-focused")
     def on_view_focused(self, event_message):
         """
         Handle when a view gains focus.
@@ -105,6 +74,7 @@ class WindowTitlePlugin(BasePlugin):
         except Exception as e:
             self.log_error(f"Error handling 'view-focused' event: {e}")
 
+    @subscribe_to_event("view-closed")
     def on_view_closed(self, event_message):
         """
         Handle when a view is closed.
@@ -117,6 +87,7 @@ class WindowTitlePlugin(BasePlugin):
         except Exception as e:
             self.log_error(f"Error handling 'view-closed' event: {e}")
 
+    @subscribe_to_event("view-title-changed")
     def on_view_title_changed(self, event_message):
         """
         Handle when a view's title changes.

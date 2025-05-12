@@ -1,4 +1,5 @@
 from gi.repository import GLib
+from src.plugins.core.event_handler_decorator import subscribe_to_event
 
 from core._base import BasePlugin
 
@@ -21,27 +22,7 @@ class WindowRulesPlugin(BasePlugin):
         # Initialize state variables
         self.fullscreen_views = {}
 
-        # Subscribe to scale events
-        self.subscribe_to_events()
-
-    def subscribe_to_events(self):
-        if "event_manager" not in self.obj.plugin_loader.plugins:
-            self.log_error(
-                "Event Manager Plugin is not loaded. Cannot subscribe to events."
-            )
-            return
-
-        event_manager = self.obj.plugin_loader.plugins["event_manager"]
-
-        # Subscribe to scale activation/deactivation events
-        event_manager.subscribe_to_event(
-            "plugin-activation-state-changed",
-            self.handle_scale_event,
-            plugin_name="scale",
-        )
-
-        self.logger.info("Scale Rules Plugin subscribed to scale events.")
-
+    @subscribe_to_event("plugin-activation-state-changed")
     def handle_scale_event(self, event_message):
         try:
             plugin = event_message.get("plugin")
