@@ -1,4 +1,3 @@
-import math
 import os
 import subprocess
 from time import sleep
@@ -8,7 +7,7 @@ import toml
 from collections.abc import Iterable
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 from src.core.compositor.ipc import IPC
-import threading
+from typing import Dict, Any, Optional, Tuple, Callable, List, Union, Type, Iterable
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -106,7 +105,7 @@ class Utils(Adw.Application):
                 output_direction,
             )
 
-    def get_output_from(self, direction: str):
+    def get_output_from(self, direction: str) -> int:
         """
         Determine the output adjacent to the currently focused output in the specified direction.
 
@@ -204,7 +203,11 @@ class Utils(Adw.Application):
                             target_distance = distance
 
             # Return the ID of the closest output in the specified direction
+            if target_output_id is None:
+                return -1
+
             return target_output_id
+
         except Exception as e:
             focused_output = self.ipc.get_focused_output()
             outputs = self.ipc.list_outputs()
@@ -217,9 +220,9 @@ class Utils(Adw.Application):
                     "outputs": outputs,
                 },
             )
-            return None
+            return -1
 
-    def monitor_width_height(self, monitor_name):
+    def monitor_width_height(self, monitor_name: str) -> Optional[Tuple[int, int]]:
         focused_view = self.ipc.get_focused_view()
         if focused_view:
             output = self.get_monitor_info()
@@ -228,7 +231,9 @@ class Utils(Adw.Application):
             monitor_height = output[1]
             return monitor_width, monitor_height
 
-    def on_css_file_changed(self, monitor, file, other_file, event_type):
+    def on_css_file_changed(
+        self, monitor, file, other_file, event_type: Gio.FileMonitorEvent
+    ):
         if event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT:
             # Reload CSS when changes are done
             def run_once():
@@ -247,7 +252,7 @@ class Utils(Adw.Application):
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
         )
 
-    def notify_send(self, title, message):
+    def notify_send(self, title: str, message: str):
         """
         Send a notification asynchronously using DBus to avoid blocking the main thread.
 
@@ -270,7 +275,12 @@ class Utils(Adw.Application):
         # Get the session bus asynchronously
         Gio.bus_get(Gio.BusType.SESSION, None, self._on_bus_acquired, (title, message))
 
-    def _on_bus_acquired(self, source, result, user_data):
+    def _on_bus_acquired(
+        self,
+        source: Gio.DBusConnection,
+        result: Gio.AsyncResult,
+        user_data: tuple[str, str],
+    ) -> None:
         """
         Callback function when the session bus is acquired.
 
@@ -315,7 +325,12 @@ class Utils(Adw.Application):
         except Exception as e:
             print(f"Error acquiring session bus: {e}")
 
-    def _on_notification_sent(self, source, result, user_data):
+    def _on_notification_sent(
+        self,
+        source: Gio.DBusConnection,
+        result: Gio.AsyncResult,
+        user_data: object,
+    ) -> None:
         """
         Callback function to handle the result of the asynchronous notification call.
 
@@ -331,7 +346,7 @@ class Utils(Adw.Application):
         except Exception as e:
             print(f"Error sending notification: {e}")
 
-    def run_cmd(self, cmd):
+    def run_cmd(self, cmd: str) -> None:
         """
         Run a shell command using subprocess.Popen in a separate thread to avoid blocking the main GTK thread.
         Ensures the process is detached from the panel by creating a new session.
@@ -358,46 +373,95 @@ class Utils(Adw.Application):
                 error=e, message=f"Error running command: {cmd}", level="error"
             )
 
-    def find_view_middle_cursor_position(self, view_geometry, monitor_geometry):
-        # Calculate the middle position of the view
-        view_middle_x = view_geometry["x"] + view_geometry["width"] // 2
-        view_middle_y = view_geometry["y"] + view_geometry["height"] // 2
+    def find_view_middle_cursor_position(
+        self,
+        view_geometry: Dict[str, int],
+        monitor_geometry: Dict[str, int],
+    ) -> Tuple[int, int]:
+        """
+        Calculate the cursor position at the center of the given view relative to the monitor.
 
-        # Calculate the offset from the monitor's top-left corner
-        cursor_x = monitor_geometry["x"] + view_middle_x
-        cursor_y = monitor_geometry["y"] + view_middle_y
+        Args:
+            view_geometry: A dictionary containing the keys "x", "y", "width", and "height"
+                           representing the geometry of the view/window.
+            monitor_geometry: A dictionary containing the keys "x" and "y" representing
+                              the monitor's top-left corner coordinates.
+
+        Returns:
+            A tuple (cursor_x, cursor_y) representing the calculated cursor position.
+        """
+        # Find the center point of the view
+        view_center_x = view_geometry["x"] + view_geometry["width"] // 2
+        view_center_y = view_geometry["y"] + view_geometry["height"] // 2
+
+        # Position cursor relative to monitor origin
+        cursor_x = monitor_geometry["x"] + view_center_x
+        cursor_y = monitor_geometry["y"] + view_center_y
 
         return cursor_x, cursor_y
 
-    def move_cursor_middle(self, view_id):
+    def move_cursor_middle(self, view_id: str) -> None:
+        """
+        Move the cursor to the center of the specified view on its output (monitor).
+
+        Args:
+            view_id (str): The unique identifier of the view/window.
+        """
+        # Get the view data from IPC
         view = self.ipc.get_view(view_id)
+        if not view:
+            self.logger.warning(f"View with ID '{view_id}' not found.")
+            return
+
+        # Extract relevant geometries
         output_id = view["output-id"]
         view_geometry = view["geometry"]
-        output_geometry = self.ipc.get_output(output_id)["geometry"]
+
+        output = self.ipc.get_output(output_id)
+        if not output:
+            self.logger.warning(f"Output with ID '{output_id}' not found.")
+            return
+
+        output_geometry = output["geometry"]
+
+        # Calculate center position and move cursor
         cursor_x, cursor_y = self.find_view_middle_cursor_position(
             view_geometry, output_geometry
         )
         self.ipc.move_cursor(cursor_x, cursor_y)
 
-    def widget_exists(self, widget):
-        return widget is not None and isinstance(widget, Gtk.Widget)
-
-    def is_widget_ready(self, container):
+    def widget_exists(self, widget: Any) -> bool:
         """
-        Check if the container and widget are both ready for appending.
+        Check if the given object is a valid Gtk.Widget instance.
 
         Args:
-            container (Gtk.Widget): The container to which the widget will be appended.
-            widget (Gtk.Widget): The widget to be appended.
+            widget (Any): The object to check.
 
         Returns:
-            bool: True if the container and widget are both valid, realized, and visible.
+            bool: True if the object is a non-None Gtk.Widget; False otherwise.
         """
-        # Check if both the container and widget are not None and are instances of Gtk.Widget
+        return widget is not None and isinstance(widget, Gtk.Widget)
+
+    def is_widget_ready(self, container: Any) -> bool:
+        """
+        Check if the container is ready for appending widgets.
+
+        This checks whether the container:
+        - Is a valid Gtk.Widget instance
+        - Is realized (has an associated window)
+        - Is visible
+
+        Args:
+            container (Any): The widget container to check.
+
+        Returns:
+            bool: True if the container is valid, realized, and visible; False otherwise.
+        """
+        # Check if container is a valid GTK widget
         if not self.widget_exists(container):
             return False
 
-        # Check if the container is realized and visible
+        # Check if container is realized and visible
         if not Gtk.Widget.get_realized(container) or not Gtk.Widget.get_visible(
             container
         ):
@@ -461,10 +525,17 @@ class Utils(Adw.Application):
 
         return "image-missing"
 
-    def update_widget(self, function_method, *args):
+    def update_widget(self, function_method: Callable[..., None], *args: Any) -> None:
+        """
+        Schedule a widget update to run in the main GTK thread using GLib.idle_add.
+
+        Args:
+            function_method (Callable): The callable method to execute.
+            *args (Any): Variable-length argument list for the callable.
+        """
         GLib.idle_add(function_method, *args)
 
-    def update_widget_safely(self, method, *args):
+    def update_widget_safely(self, method: Callable[..., None], *args: Any) -> bool:
         """
         Safely call a method with provided arguments if all validations pass.
         Ensures the operation is performed on the main thread using GLib.idle_add.
@@ -476,16 +547,10 @@ class Utils(Adw.Application):
         Returns:
             bool: True if the method was successfully called, False otherwise.
         """
-        # Validate the method
-        if not callable(method):
-            self.logger.error("Error: Provided method is not callable.")
-            return False
-
         # Perform additional validation for specific use cases
-        if len(args) > 0:
+        if args:
             first_arg = args[0]
             if isinstance(first_arg, Gtk.Widget):
-                # If the first argument is a Gtk.Widget, validate it
                 if first_arg is None or not isinstance(first_arg, Gtk.Widget):
                     self.logger.error("Error: Invalid widget provided")
                     return False
@@ -504,95 +569,99 @@ class Utils(Adw.Application):
 
         return True
 
-    def get_monitor_info(self):
+    def get_monitor_info(self) -> Dict[str, List[int]]:
         """
         Retrieve information about the connected monitors.
 
-        This function retrieves information about the connected monitors,
-        such as their dimensions and names, and returns the information
-        as a dictionary.
+        This function gathers details about each connected monitor,
+        including their dimensions and names, and returns the data as a dictionary.
 
         Returns:
-            dict: A dictionary containing information about the connected monitors.
-                  The keys are monitor names, and the values are lists containing
-                  [width, height]. If no monitors are detected or an error occurs,
-                  an empty dictionary is returned.
+            dict: A dictionary where keys are monitor names (str), and values are lists
+                  containing [width (int), height (int)].
+                  If no monitors are detected or an error occurs, returns an empty dictionary.
         """
         try:
             # Get the default display
-            screen = Gdk.Display.get_default()
-            if not screen:
-                self.logger.error(
-                    error=RuntimeError("Failed to retrieve default display."),
-                    message="No default display found.",
-                )
+            display = Gdk.Display.get_default()
+            if not display:
+                self.logger.error("Failed to retrieve default display.")
                 return {}
 
             # Retrieve the list of monitors
-            monitors = screen.get_monitors()
+            monitors = display.get_monitors()
             if not monitors:
                 self.logger.warning("No monitors detected.")
                 return {}
 
             # Build the monitor info dictionary
-            monitor_info = {}
+            monitor_info: Dict[str, List[int]] = {}
             for monitor in monitors:
                 try:
-                    # Safely retrieve monitor properties
-                    monitor_width = monitor.get_geometry().width
-                    monitor_height = monitor.get_geometry().height
-                    name = monitor.props.connector
+                    geometry = monitor.get_geometry()
+                    name: Optional[str] = monitor.props.connector
 
-                    # Validate monitor name
-                    if not name or not isinstance(name, str):
+                    if not isinstance(name, str) or not name.strip():
                         self.logger.warning(
                             f"Invalid or missing monitor name for monitor: {monitor}"
                         )
                         continue
 
-                    # Add monitor info to the dictionary
-                    monitor_info[name] = [monitor_width, monitor_height]
+                    monitor_info[name] = [geometry.width, geometry.height]
                     self.logger.debug(
-                        f"Detected monitor: {name} ({monitor_width}x{monitor_height})"
+                        f"Detected monitor: {name} ({geometry.width}x{geometry.height})"
                     )
 
                 except Exception as e:
-                    # Log errors for individual monitors without failing the entire process
                     self.logger.error(
-                        error=e,
-                        message="Error retrieving information for a monitor.",
-                        context={"monitor": str(monitor)},
+                        f"Error retrieving information for a monitor: {e}",
+                        exc_info=True,
                     )
 
             return monitor_info
 
         except Exception as e:
-            # Catch-all for unexpected errors
             self.logger.error(
-                error=e,
-                message="Unexpected error while retrieving monitor information.",
-                level="error",
+                f"Unexpected error while retrieving monitor information: {e}",
+                exc_info=True,
             )
             return {}
 
-    def search_local_desktop(self, initial_title):
+    def search_local_desktop(self, initial_title: str) -> Optional[str]:
+        """
+        Search for a desktop file matching the given title in the webapps directory.
+
+        This function scans `.desktop` files in the `self.webapps_applications` directory,
+        checking if their filename starts with specific prefixes (chrome, msedge, FFPWA-).
+        It then searches for the given title inside each file and returns the first match.
+
+        Args:
+            initial_title (str): The title to search for inside the desktop files.
+
+        Returns:
+            Optional[str]: The matched desktop file name if found, otherwise None.
+        """
         for deskfile in os.listdir(self.webapps_applications):
-            if deskfile.startswith(("chrome", "msedge", "FFPWA-")):
-                pass
-            else:
+            if not deskfile.startswith(("chrome", "msedge", "FFPWA-")):
                 continue
+
             webapp_path = os.path.join(self.webapps_applications, deskfile)
-            desktop_file_found = self.search_str_inside_file(
-                webapp_path, initial_title.lower()
-            )
-            if desktop_file_found:
+            if self.search_str_inside_file(webapp_path, initial_title.lower()):
                 return deskfile
+
         return None
 
-    def layer_shell_check(self):
+    def layer_shell_check(self) -> None:
         """
-        Check if gtk4-layer-shell is installed, and install it if not.
-        Logs detailed information about each step and handles errors gracefully.
+        Check if gtk4-layer-shell is installed; clone and build it from source if not.
+
+        This function performs the following steps:
+        1. Checks for an existing installation by looking for a key shared library file.
+        2. If not found, clones the repository from GitHub into a temporary directory.
+        3. Sets up the build environment using Meson.
+        4. Builds and installs gtk4-layer-shell locally under ~/.local/lib/gtk4-layer-shell.
+
+        Logs are generated at each step for transparency and debugging.
         """
         try:
             # Define paths
@@ -692,15 +761,18 @@ class Utils(Adw.Application):
                 message="Unexpected error during gtk4-layer-shell installation.",
             )
 
-    def extract_icon_info(self, application_name):
+    def extract_icon_info(self, application_name: str) -> Optional[str]:
         """
         Extract the icon name for a given application by searching desktop files.
+
+        This function searches through standard desktop file directories to find an entry
+        matching the provided application name, then returns the associated icon name.
 
         Args:
             application_name (str): The name of the application to search for.
 
         Returns:
-            str: The icon name if found, or None if no matching application is found.
+            Optional[str]: The icon name if found, or None if no matching application is found.
         """
         # Paths to search for desktop files
         search_paths = [
@@ -760,15 +832,17 @@ class Utils(Adw.Application):
         self.logger.info(f"No icon found for application: {application_name}")
         return None
 
-    def remove_widget(self, widget):
+    def remove_widget(self, widget: Any) -> bool:
         """
         Safely remove a widget from its parent using .unparent().
+
         Args:
-            widget (Gtk.Widget): The widget to remove.
+            widget (Any): The widget to remove. Must be a Gtk.Widget instance.
+
         Returns:
-            bool: True if the widget was successfully removed, False otherwise.
+            bool: True if the widget was successfully unparented, False otherwise.
         """
-        if not widget or not isinstance(widget, Gtk.Widget):
+        if not isinstance(widget, Gtk.Widget):
             self.logger.error("Invalid widget provided for removal.")
             return False
 
@@ -783,32 +857,32 @@ class Utils(Adw.Application):
             return True
         except Exception as e:
             self.logger.error(
-                error=e, message=f"Failed to unparent widget: {widget}", level="error"
+                f"Failed to unparent widget: {widget} - Error: {e}", exc_info=True
             )
             return False
 
     def validate_iterable(
         self,
-        input_value,
-        name="input",
-        expected_length=None,
-        element_type=None,
-        allow_empty=True,
-    ):
+        input_value: Any,
+        name: str = "input",
+        expected_length: Optional[int] = None,
+        element_type: Optional[Union[Type, List[Type]]] = None,
+        allow_empty: bool = True,
+    ) -> bool:
         """
-        Validate that the input is iterable with specific constraints.
+        Validate that the input is an iterable with optional constraints.
 
         Args:
-            input_value: The value to validate.
-            name (str): The name of the input for logging purposes.
-            expected_length (int, optional): The expected length of the iterable. If None, no length check is performed.
-            element_type (type or list[type], optional): The expected type(s) of each element in the iterable.
-                If a single type is provided, all elements must match that type.
-                If a list of types is provided, each element must match the corresponding type.
+            input_value (Any): The value to validate.
+            name (str): Name of the input for logging purposes.
+            expected_length (Optional[int]): Expected length of the iterable. If provided, must match exactly.
+            element_type (Optional[Union[Type, List[Type]]]): Expected type(s) of elements in the iterable.
+                - If a single type: all elements must be of this type.
+                - If a list of types: each element must match the corresponding type by position.
             allow_empty (bool): Whether to allow empty iterables.
 
         Returns:
-            bool: True if the iterable is valid, False otherwise.
+            bool: True if validation passes, False otherwise.
         """
         # Check if the input is iterable
         if not isinstance(input_value, Iterable):
@@ -817,61 +891,68 @@ class Utils(Adw.Application):
             )
             return False
 
-        # Convert strings to non-iterable for this context (strings are technically iterable, but often not desired)
+        # Exclude strings from being considered valid iterables (unless explicitly allowed)
         if isinstance(input_value, str):
             self.logger.warning(
                 f"Invalid {name}: Strings are not considered valid iterables in this context."
             )
             return False
 
-        # Check if the iterable is empty
-        if not allow_empty and not input_value:
+        # Convert to a tuple or list for length-based checks
+        try:
+            iterator = list(input_value)
+        except Exception:
+            self.logger.warning(f"Invalid {name}: Could not iterate over input.")
+            return False
+
+        # Check emptiness
+        if not allow_empty and len(iterator) == 0:
             self.logger.warning(f"{name} cannot be empty.")
             return False
 
-        # Check the length of the iterable
-        if expected_length is not None and len(input_value) != expected_length:
+        # Check length
+        if expected_length is not None and len(iterator) != expected_length:
             self.logger.warning(
-                f"Invalid {name}: Expected an iterable of length {expected_length}, got {len(input_value)}."
+                f"Invalid {name}: Expected an iterable of length {expected_length}, got {len(iterator)}."
             )
             return False
 
-        # Validate the types of the elements
+        # Check element types
         if element_type is not None:
             if isinstance(element_type, list):
-                # Validate each element against its corresponding type
-                if len(element_type) != len(input_value):
+                if len(element_type) != len(iterator):
                     self.logger.warning(
                         f"Invalid {name}: Number of element types ({len(element_type)}) "
-                        f"does not match iterable length ({len(input_value)})."
+                        f"does not match iterable length ({len(iterator)})."
                     )
                     return False
-                for index, (element, expected_type) in enumerate(
-                    zip(input_value, element_type)
-                ):
-                    if not isinstance(element, expected_type):
+                for idx, (element, typ) in enumerate(zip(iterator, element_type)):
+                    if not isinstance(element, typ):
                         self.logger.warning(
-                            f"Invalid {name}: Element at index {index} is not of type {expected_type.__name__}."
+                            f"Invalid {name}: Element at index {idx} is not of type {typ.__name__}."
                         )
                         return False
             else:
-                # Validate all elements against a single type
-                for index, element in enumerate(input_value):
+                for idx, element in enumerate(iterator):
                     if not isinstance(element, element_type):
                         self.logger.warning(
-                            f"Invalid {name}: Element at index {index} is not of type {element_type.__name__}."
+                            f"Invalid {name}: Element at index {idx} is not of type {element_type.__name__}."
                         )
                         return False
 
         return True
 
-    def validate_method(self, obj, method_name):
-        """Validate that a method or attribute exists and is accessible on an object.
+    def validate_method(self, obj: Any, method_name: str) -> bool:
+        """
+        Validate that a method or attribute exists and is callable or a valid GTK widget.
+
         Args:
-            obj: The object to check.
+            obj (Any): The object to check.
             method_name (str): The name of the method or attribute to validate.
+
         Returns:
-            bool: True if the method/attribute is valid, False otherwise."""
+            bool: True if the method/attribute is callable or a valid GTK widget, False otherwise.
+        """
         if not hasattr(obj, method_name):
             self.logger.warning(
                 f"Object {obj.__class__.__name__} does not have '{method_name}'."
@@ -880,41 +961,42 @@ class Utils(Adw.Application):
 
         attr = getattr(obj, method_name)
 
-        # Check if the attribute is a valid GTK widget
-        if isinstance(attr, Gtk.Widget):
+        # Accept either callable or Gtk.Widget instances
+        if callable(attr) or isinstance(attr, Gtk.Widget):
             return True
 
-        # Check if the attribute is callable
-        if callable(attr):
-            return True
-
-        # If neither a widget nor callable, log a warning
         self.logger.warning(
-            f"'{method_name}' on {obj.__class__.__name__} is not callable or a valid widget."
+            f"'{method_name}' on {obj.__class__.__name__} is neither callable nor a valid GTK widget."
         )
         return False
 
-    def validate_widget(self, widget, name="widget"):
+    def validate_widget(self, widget: Any, name: str = "widget") -> bool:
         """
-        Validate that the widget exists and is valid.
+        Validate that the given object is a valid widget.
+
         Args:
-            widget: The widget to validate.
-            name (str): The name of the widget for logging purposes.
+            widget (Any): The object to validate.
+            name (str): Name of the widget for logging purposes.
+
         Returns:
-            bool: True if valid, False otherwise.
+            bool: True if the widget is valid, False otherwise.
         """
-        if not widget:
-            self.logger.warning(f"{name} is None or invalid.")
+        if not isinstance(widget, Gtk.Widget):
+            self.logger.warning(f"{name} is not a valid Gtk.Widget.")
             return False
         return True
 
-    def validate_string(self, input_value, name="input", allow_empty=False):
+    def validate_string(
+        self, input_value: Any, name: str = "input", allow_empty: bool = False
+    ) -> bool:
         """
         Validate that the input is a non-empty string.
+
         Args:
-            input_value: The value to validate.
-            name (str): The name of the input for logging purposes.
-            allow_empty (bool): Whether to allow empty strings.
+            input_value (Any): The value to validate.
+            name (str): Name of the input for logging purposes.
+            allow_empty (bool): Whether to accept empty or whitespace-only strings.
+
         Returns:
             bool: True if valid, False otherwise.
         """
@@ -923,21 +1005,29 @@ class Utils(Adw.Application):
                 f"Invalid {name}: Expected a string, got {type(input_value).__name__}."
             )
             return False
+
         if not allow_empty and not input_value.strip():
             self.logger.warning(f"{name} cannot be empty.")
             return False
+
         return True
 
     def validate_integer(
-        self, input_value, name="input", min_value=None, max_value=None
-    ):
+        self,
+        input_value: Any,
+        name: str = "input",
+        min_value: Optional[int] = None,
+        max_value: Optional[int] = None,
+    ) -> bool:
         """
-        Validate that the input is an integer within a specified range.
+        Validate that the input is an integer within an optional range.
+
         Args:
-            input_value: The value to validate.
-            name (str): The name of the input for logging purposes.
-            min_value (int): Minimum allowed value (inclusive).
-            max_value (int): Maximum allowed value (inclusive).
+            input_value (Any): The value to validate.
+            name (str): Name of the input for logging purposes.
+            min_value (Optional[int]): Minimum allowed value (inclusive).
+            max_value (Optional[int]): Maximum allowed value (inclusive).
+
         Returns:
             bool: True if valid, False otherwise.
         """
@@ -946,92 +1036,106 @@ class Utils(Adw.Application):
                 f"Invalid {name}: Expected an integer, got {type(input_value).__name__}."
             )
             return False
+
         if min_value is not None and input_value < min_value:
             self.logger.warning(f"{name} must be >= {min_value}.")
             return False
+
         if max_value is not None and input_value > max_value:
             self.logger.warning(f"{name} must be <= {max_value}.")
             return False
+
         return True
 
     def validate_tuple(
-        self, input_value, expected_length=None, element_types=None, name="input"
-    ):
+        self,
+        input_value: Any,
+        expected_length: Optional[int] = None,
+        element_types: Optional[Union[Type, List[Type]]] = None,
+        name: str = "input",
+    ) -> bool:
         """
-        Validate that the input is a tuple with specific constraints.
+        Validate that the input is a tuple with optional type and length constraints.
+
         Args:
-            input_value: The value to validate.
-            expected_length (int, optional): The expected length of the tuple. If None, no length check is performed.
-            element_types (list or type, optional): The expected type(s) of each element in the tuple.
-                                                   If a single type is provided, all elements must match that type.
-                                                   If a list of types is provided, each element must match the corresponding type.
-            name (str): The name of the input for logging purposes.
+            input_value (Any): The value to validate.
+            expected_length (Optional[int]): Expected length of the tuple. If provided, must match exactly.
+            element_types (Optional[Union[Type, List[Type]]]): Expected type(s) of elements in the tuple.
+                - If a single type: all elements must be of this type.
+                - If a list of types: each element must match the corresponding type by position.
+            name (str): Name of the input for logging purposes.
+
         Returns:
-            bool: True if the tuple is valid, False otherwise.
+            bool: True if validation passes, False otherwise.
         """
-        # Check if the input is a tuple
+        # Check if input is a tuple
         if not isinstance(input_value, tuple):
             self.logger.warning(
                 f"Invalid {name}: Expected a tuple, got {type(input_value).__name__}."
             )
             return False
 
-        # Check the length of the tuple
+        # Check tuple length
         if expected_length is not None and len(input_value) != expected_length:
             self.logger.warning(
                 f"Invalid {name}: Expected a tuple of length {expected_length}, got {len(input_value)}."
             )
             return False
 
-        # Check the types of the elements
+        # Validate element types
         if element_types is not None:
             if isinstance(element_types, list):
-                # Validate each element against its corresponding type
                 if len(element_types) != len(input_value):
                     self.logger.warning(
                         f"Invalid {name}: Number of element types ({len(element_types)}) "
                         f"does not match tuple length ({len(input_value)})."
                     )
                     return False
-                for index, (element, expected_type) in enumerate(
-                    zip(input_value, element_types)
-                ):
-                    if not isinstance(element, expected_type):
+                for idx, (element, typ) in enumerate(zip(input_value, element_types)):
+                    if not isinstance(element, typ):
                         self.logger.warning(
-                            f"Invalid element type at index {index} in {name}: "
-                            f"Expected {expected_type.__name__}, got {type(element).__name__}."
+                            f"Invalid element type at index {idx} in {name}: "
+                            f"Expected {typ.__name__}, got {type(element).__name__}."
                         )
                         return False
             elif isinstance(element_types, type):
-                # Validate all elements against a single type
-                for index, element in enumerate(input_value):
+                for idx, element in enumerate(input_value):
                     if not isinstance(element, element_types):
                         self.logger.warning(
-                            f"Invalid element type at index {index} in {name}: "
+                            f"Invalid element type at index {idx} in {name}: "
                             f"Expected {element_types.__name__}, got {type(element).__name__}."
                         )
                         return False
+            else:
+                self.logger.warning(
+                    f"Invalid element_types for {name}: Expected a type or list of types, got {type(element_types).__name__}."
+                )
+                return False
 
         return True
 
-    def validate_bytes(self, input_value, expected_length=None, name="input"):
+    def validate_bytes(
+        self, input_value: Any, expected_length: int | None = None, name: str = "input"
+    ) -> bool:
         """
-        Validate that the input is a bytes object with specific constraints.
+        Validate that the input is a bytes object with optional length constraints.
+
         Args:
-            input_value: The value to validate.
-            expected_length (int, optional): The expected length of the bytes object. If None, no length check is performed.
-            name (str): The name of the input for logging purposes.
+            input_value (Any): The value to validate.
+            expected_length (Optional[int]): Expected length of the bytes object. If provided, must match exactly.
+            name (str): Name of the input for logging purposes.
+
         Returns:
-            bool: True if the bytes object is valid, False otherwise.
+            bool: True if validation passes, False otherwise.
         """
-        # Check if the input is a bytes object
+        # Check if input is a bytes object
         if not isinstance(input_value, bytes):
             self.logger.warning(
                 f"Invalid {name}: Expected bytes, got {type(input_value).__name__}."
             )
             return False
 
-        # Check the length of the bytes object
+        # Check length if specified
         if expected_length is not None and len(input_value) != expected_length:
             self.logger.warning(
                 f"Invalid {name}: Expected bytes of length {expected_length}, got {len(input_value)}."
@@ -1041,26 +1145,37 @@ class Utils(Adw.Application):
         return True
 
     def validate_list(
-        self, input_list, name="input", element_type=None, allow_empty=True
-    ):
+        self,
+        input_list: Any,
+        name: str = "input",
+        element_type: Optional[Type] = None,
+        allow_empty: bool = True,
+    ) -> bool:
         """
-        Validate that the input is a list with elements of a specific type.
+        Validate that the input is a list with optional element type constraints.
+
         Args:
-            input_list: The list to validate.
-            name (str): The name of the input for logging purposes.
-            element_type: The expected type of each element in the list.
+            input_list (Any): The value to validate.
+            name (str): Name of the input for logging purposes.
+            element_type (Optional[Type]): Expected type of each element in the list. If None, no type check is performed.
             allow_empty (bool): Whether to allow empty lists.
+
         Returns:
-            bool: True if valid, False otherwise.
+            bool: True if validation passes, False otherwise.
         """
+        # Check if input is a list
         if not isinstance(input_list, list):
             self.logger.warning(
                 f"Invalid {name}: Expected a list, got {type(input_list).__name__}."
             )
             return False
+
+        # Check if the list is empty
         if not allow_empty and not input_list:
             self.logger.warning(f"{name} cannot be empty.")
             return False
+
+        # Validate element types
         if element_type is not None:
             for index, element in enumerate(input_list):
                 if not isinstance(element, element_type):
@@ -1069,22 +1184,26 @@ class Utils(Adw.Application):
                         f"Expected {element_type.__name__}, got {type(element).__name__}."
                     )
                     return False
+
         return True
 
-    def search_desktop(self, app_id):
+    def search_desktop(self, app_id: str) -> Optional[str]:
         """
-        Search for a desktop file associated with the given WM_CLASS.
+        Search for a desktop file associated with the given application ID.
+
+        This function searches through installed applications to find a matching desktop file
+        whose ID contains the provided `app_id`.
 
         Args:
-            wm_class (str): The window manager class to search for.
+            app_id (str): The application ID or WM_CLASS to search for.
 
         Returns:
-            str: The ID of the first matching desktop file if found, or None if no match is found.
+            Optional[str]: The ID of the first matching desktop file if found, or None if no match is found.
         """
         try:
             # Validate input
-            if not app_id or not self.validate_string(app_id):
-                self.logger.warning(f"Invalid or missing WM_CLASS: {app_id}")
+            if not self.validate_string(app_id):
+                self.logger.warning(f"Invalid or missing app_id: {app_id}")
                 return None
 
             # Retrieve all installed applications
@@ -1092,38 +1211,40 @@ class Utils(Adw.Application):
                 all_apps = Gio.AppInfo.get_all()
             except Exception as e:
                 self.logger.error(
-                    error=e, message="Failed to retrieve installed applications."
+                    "Failed to retrieve installed applications.", exc_info=True
                 )
                 return None
 
-            # Filter desktop files based on WM_CLASS
+            # Filter desktop files based on app_id
             desktop_files = [
                 app.get_id().lower()
                 for app in all_apps
                 if app.get_id() and app_id.lower() in app.get_id().lower()
             ]
 
-            # Log the result
+            # Return the first match if any
             if desktop_files:
                 self.logger.debug(
-                    f"Found desktop file for WM_CLASS '{app_id}': {desktop_files[0]}"
+                    f"Found desktop file for app_id '{app_id}': {desktop_files[0]}"
                 )
                 return desktop_files[0]
             else:
-                self.logger.info(f"No desktop file found for WM_CLASS: {app_id}")
+                self.logger.info(f"No desktop file found for app_id: {app_id}")
                 return None
 
         except Exception as e:
-            # Catch-all for unexpected errors
             self.logger.error(
-                error=e,
-                message=f"Unexpected error while searching for desktop file with WM_CLASS: {app_id}",
+                f"Unexpected error while searching for desktop file with app_id: {app_id}",
+                exc_info=True,
             )
             return None
 
-    def icon_exist(self, argument):
+    def icon_exist(self, argument: str) -> str:
         """
-        Check if an icon exists based on the given argument.
+        Check if an icon exists based on the given application identifier.
+
+        This function attempts to find a matching icon by searching through registered
+        Gio.AppInfo entries and icon names.
 
         Args:
             argument (str): The application name or identifier to search for.
@@ -1133,61 +1254,91 @@ class Utils(Adw.Application):
         """
         try:
             # Validate input
-            if not argument or not isinstance(argument, str):
+            if not isinstance(argument, str) or not argument.strip():
                 self.logger.warning(f"Invalid or missing argument: {argument}")
                 return ""
 
-            # Search in Gio.AppInfo list
-            exist = [
-                i.get_icon()
-                for i in self.gio_icon_list
-                if argument.lower() in i.get_id().lower()
+            # Try finding in Gio.AppInfo list
+            matches = [
+                app_info.get_icon()
+                for app_info in getattr(self, "gio_icon_list", [])
+                if argument.lower() in app_info.get_id().lower()
             ]
 
-            if exist:
-                # Check for methods to extract icon names
-                if hasattr(exist[0], "get_names") and callable(exist[0].get_names):
-                    return exist[0].get_names()[0]
-                elif hasattr(exist[0], "get_name") and callable(exist[0].get_name):
-                    return exist[0].get_name()
+            if matches:
+                icon = matches[0]
+                # Extract icon name using available methods
+                if hasattr(icon, "get_names") and callable(icon.get_names):
+                    names = icon.get_names()
+                    if names:
+                        return names[0]
+                elif hasattr(icon, "get_name") and callable(icon.get_name):
+                    return icon.get_name()
 
-            # Fallback to searching in icon names
-            exist = [
-                name for name in self.icon_names if argument.lower() in name.lower()
+            # Fallback: Search directly in known icon names
+            icon_matches = [
+                name
+                for name in getattr(self, "icon_names", [])
+                if argument.lower() in name.lower()
             ]
-            if exist:
-                return exist[0]
+            if icon_matches:
+                return icon_matches[0]
 
-            # Log if no icon is found
+            # No icon found
             self.logger.debug(f"No icon found for argument: {argument}")
             return ""
 
         except Exception as e:
-            # Catch-all for unexpected errors
             self.logger.error(
-                error=e,
-                message=f"Unexpected error while checking if icon exists for argument: {argument}",
+                f"Unexpected error while checking if icon exists for argument: {argument}",
+                exc_info=True,
             )
             return ""
 
-    def search_str_inside_file(self, file_path, word):
-        with open(file_path, "r") as file:
-            content = file.read()
-            if "name={}".format(word.lower()) in content.lower():
-                return True
-            else:
-                return False
+    def search_str_inside_file(self, file_path: str, word: str) -> bool:
+        """
+        Search for a formatted string inside a file.
 
-    def get_icon(self, wm_class, initial_title, title):
+        This function looks for the pattern 'name=<word>' (case-insensitive)
+        within the specified file.
+
+        Args:
+            file_path (str): Path to the file to search in.
+            word (str): The word to search for, formatted as 'name=<word>'.
+
+        Returns:
+            bool: True if the pattern is found, False otherwise.
+        """
+        try:
+            with open(file_path, "r", encoding="utf-8") as file:
+                content = file.read().lower()
+                return f"name={word.lower()}" in content
+        except Exception as e:
+            self.logger.warning(f"Error reading file '{file_path}': {e}")
+            return False
+
+    def get_icon(self, wm_class: str, initial_title: str, title: str) -> Optional[str]:
+        """
+        Retrieve an appropriate icon name based on window metadata.
+
+        Args:
+            wm_class (str): The window manager class of the application.
+            initial_title (str): The original title of the window.
+            title (str): The current title of the window.
+
+        Returns:
+            Optional[str]: The icon name if found, otherwise None.
+        """
         title = self.filter_utf_for_gtk(title)
         initial_title = title.split()[0]
+
         for terminal in self.terminal_emulators:
             if terminal in wm_class and terminal not in title.lower():
                 title_icon = self.icon_exist(initial_title)
                 if title_icon:
                     return title_icon
 
-        # only works for microsoft edges web apps
+        # Special handling for Microsoft Edge web apps
         web_apps = {
             "msedge",
             "microsoft-edge",
@@ -1211,23 +1362,38 @@ class Utils(Adw.Application):
 
         return None
 
-    def list_app_ids(self):
+    def list_app_ids(self) -> list[str]:
+        """
+        Get a list of lowercase app IDs from all views currently managed by the compositor.
+
+        Returns:
+            List[str]: A list of lowercase app IDs (excluding "nil").
+        """
         views = self.ipc.list_views()
         return [i["app-id"].lower() for i in views if i["app-id"] != "nil"]
 
-    def focus_view_when_ready(self, view):
-        """this function is meant to be used with GLib timeout or idle_add"""
+    def focus_view_when_ready(self, view: dict) -> bool:
+        """
+        Attempt to focus the given view if it's ready. Meant to be used with GLib.idle_add.
+
+        Args:
+            view (dict): The view data dictionary containing 'role' and 'focusable'.
+
+        Returns:
+            bool: True if the view isn't ready and should be retried, False if done.
+        """
         if view["role"] == "toplevel" and view["focusable"] is True:
             self.ipc.set_focus(view["id"])
             return False  # Stop idle processing
         return True  # Continue idle processing
 
-    def find_empty_workspace(self):
+    def find_empty_workspace(self) -> Optional[tuple]:
         """
         Find an empty workspace using wf_utils.get_workspaces_without_views().
 
         Returns:
-            tuple: (x, y) coordinates of the first empty workspace, or None if no empty workspace is found.
+            Optional[tuple]: (x, y) coordinates of the first empty workspace,
+                             or None if no empty workspace is found.
         """
         try:
             # Get the list of workspaces without views
@@ -1236,26 +1402,28 @@ class Utils(Adw.Application):
             if empty_workspaces:
                 # Return the first empty workspace as a tuple (x, y)
                 return empty_workspaces[0]
-            else:
-                # No empty workspace found
-                return None
-        except Exception as e:
-            # Log any unexpected errors
-            self.logger.error(
-                error=e,
-                message="Error while finding an empty workspace.",
-                level="error",
-            )
+
             return None
 
-    def move_view_to_empty_workspace(self, view_id):
-        ws = self.ipc.get_active_workspace()
+        except Exception as e:
+            # Log any unexpected errors
+            self.logger.error(f"Error while finding an empty workspace: {e}")
+            return None
+
+    def move_view_to_empty_workspace(self, view_id: str) -> None:
+        """
+        Move the given view to an empty workspace.
+
+        Args:
+            view_id (str): The ID of the view to move.
+        """
+        ws = self.ipc.get_current_workspace()
         if ws:
             x, y = ws.values()
             self.ipc.set_workspace(x, y, view_id)
 
     # this function is useful because it will handle icon_name and icon_path
-    def handle_icon_for_button(self, view, button):
+    def handle_icon_for_button(self, view: dict, button: Gtk.Button) -> None:
         """
         Set an appropriate icon for the button based on the view's details.
 
@@ -1283,9 +1451,9 @@ class Utils(Adw.Application):
             if icon_path.startswith("/"):
                 try:
                     image = Gtk.Image.new_from_file(icon_path)
-                    if image and isinstance(image, Gtk.Image):
-                        button.set_image(image)
-                        button.set_always_show_image(True)
+                    if isinstance(image, Gtk.Image):
+                        # Use set_child instead of set_image
+                        button.set_child(image)
                     else:
                         self.logger.error("Error: Invalid image provided")
                         button.set_icon_name("default-icon-name")
@@ -1299,12 +1467,12 @@ class Utils(Adw.Application):
         except Exception as e:
             # Catch-all for unexpected errors
             self.logger.error(
-                error=e,
-                message=f"Unexpected error while handling icon for button: {app_id}",
+                f"Unexpected error while handling icon for button: {app_id}, {e}",
+                exc_info=True,
             )
             button.set_icon_name("default-icon-name")
 
-    def find_icon_for_app_id(self, app_id):
+    def find_icon_for_app_id(self, app_id: str) -> Optional[str]:
         """
         Find an icon for a given application ID.
 
@@ -1312,7 +1480,7 @@ class Utils(Adw.Application):
             app_id (str): The application ID to search for.
 
         Returns:
-            str or None: The icon name or path if found, otherwise None.
+            Optional[str]: The icon name or path if found, otherwise None.
         """
         try:
             # Validate input
@@ -1320,7 +1488,7 @@ class Utils(Adw.Application):
                 self.logger.warning(f"Invalid or missing app_id: {app_id}")
                 return None
 
-            def normalize_icon_name(app_id):
+            def normalize_icon_name(app_id: str) -> str:
                 if "." in app_id:
                     return app_id.split(".")[-1]  # Extract the last part
                 return app_id
@@ -1334,7 +1502,7 @@ class Utils(Adw.Application):
                 app_list = Gio.AppInfo.get_all()
             except Exception as e:
                 self.logger.error(
-                    error=e, message="Failed to retrieve installed applications."
+                    f"Failed to retrieve installed applications: {e}", exc_info=True
                 )
                 return None
 
@@ -1368,7 +1536,7 @@ class Utils(Adw.Application):
 
                 except Exception as e:
                     self.logger.error(
-                        error=e, message=f"Error processing application: {app_info_id}"
+                        f"Error processing application: {e}", exc_info=True
                     )
 
             # Log if no icon is found
@@ -1378,17 +1546,17 @@ class Utils(Adw.Application):
         except Exception as e:
             # Catch-all for unexpected errors
             self.logger.error(
-                error=e,
-                message=f"Unexpected error while finding icon for app_id: {app_id}",
+                f"Unexpected error while finding icon for app_id {app_id}: {e}",
+                exc_info=True,
             )
             return None
 
-    def get_wayfire_pid(self):
+    def get_wayfire_pid(self) -> Optional[int]:
         """
         Retrieve the PID of the Wayfire compositor process.
 
         Returns:
-            str or None: The PID of the Wayfire process if found, otherwise None.
+            Optional[str]: The PID of the Wayfire process if found, otherwise None.
         """
         try:
             # Iterate over all entries in /proc
@@ -1404,7 +1572,7 @@ class Utils(Adw.Application):
                             self.logger.debug(
                                 f"Found Wayfire process with PID: {entry}"
                             )
-                            return entry
+                            return int(entry)
                 except IOError as e:
                     # Log and skip unreadable entries
                     self.logger.warning(
@@ -1419,16 +1587,17 @@ class Utils(Adw.Application):
         except Exception as e:
             # Catch-all for unexpected errors
             self.logger.error(
-                error=e, message="Unexpected error while retrieving Wayfire PID."
+                f"Unexpected error while retrieving Wayfire PID: {e}",
+                exc_info=True,
             )
             return None
 
-    def list_libs_in_process(self, pid):
+    def list_libs_in_process(self, pid: Union[int, str]) -> list:
         """
         Retrieve the list of shared libraries (.so files) loaded by a process.
 
         Args:
-            pid (int or str): The Process ID of the target process.
+            pid (Union[int, str]): The Process ID of the target process.
 
         Returns:
             list: A list of unique shared library paths loaded by the process.
@@ -1460,13 +1629,13 @@ class Utils(Adw.Application):
         except Exception as e:
             # Catch-all for unexpected errors
             self.logger.error(
-                error=e,
-                message=f"Unexpected error while listing shared libraries for PID: {pid}",
+                f"Unexpected error while listing shared libraries for PID -> {pid}: {e}",
+                exc_info=True,
             )
 
         return libs
 
-    def check_lib_in_wayfire(self, lib_name):
+    def check_lib_in_wayfire(self, lib_name: str) -> bool:
         """
         Check if a specific shared library is loaded by the Wayfire process.
 
@@ -1514,12 +1683,12 @@ class Utils(Adw.Application):
         except Exception as e:
             # Catch-all for unexpected errors
             self.logger.error(
-                error=e,
-                message=f"Unexpected error while checking for library '{lib_name}' in Wayfire process.",
+                f"Unexpected error while checking for library '{lib_name}' in Wayfire process: {e}",
+                exc_info=True,
             )
             return False
 
-    def find_wayfire_lib(self, lib_name):
+    def find_wayfire_lib(self, lib_name: str) -> bool:
         """
         Check if a specific shared library is loaded by the Wayfire process.
 
@@ -1535,12 +1704,12 @@ class Utils(Adw.Application):
         except Exception as e:
             # Catch-all for unexpected errors
             self.logger.error(
-                error=e,
-                message=f"Unexpected error while finding library '{lib_name}' in Wayfire.",
+                f"Unexpected error while finding library '{lib_name}' in Wayfire: {e}",
+                exc_info=True,
             )
             return False
 
-    def get_default_monitor_name(self, config_file_path):
+    def get_default_monitor_name(self, config_file_path: str) -> Optional[str]:
         """
         Retrieve the default monitor name from a TOML configuration file.
 
@@ -1548,7 +1717,7 @@ class Utils(Adw.Application):
             config_file_path (str): The path to the configuration file.
 
         Returns:
-            str or None: The default monitor name if found, otherwise None.
+            Optional[str]: The default monitor name if found, otherwise None.
         """
         try:
             # Validate that the configuration file exists
@@ -1562,7 +1731,7 @@ class Utils(Adw.Application):
                     config = toml.load(file)
             except toml.TomlDecodeError as e:
                 self.logger.error(
-                    error=e, message=f"Failed to parse TOML file: {config_file_path}"
+                    f"Failed to parse TOML file: {config_file_path}", exc_info=True
                 )
                 return None
 
@@ -1586,18 +1755,23 @@ class Utils(Adw.Application):
         except Exception as e:
             # Catch-all for unexpected errors
             self.logger.error(
-                error=e,
-                message=f"Unexpected error while retrieving default monitor name from '{config_file_path}'.",
+                f"Unexpected error while retrieving default monitor name from '{config_file_path} and {e}'.",
+                exc_info=True,
             )
             return None
 
-    def view_focus_effect_selected(self, view, alpha=0.5, selected=False):
+    def view_focus_effect_selected(
+        self, view: dict, alpha: float = 0.7, selected: bool = False
+    ) -> None:
         """
         Apply a focus indicator effect by animating the view's alpha (transparency).
 
         Args:
-            view_id (int): The ID of the view to apply the effect to.
+          view (dict): The view dictionary containing at least the 'id' key.
+          alpha (float): The transparency level to apply when selected (0.0 to 1.0).
+          selected (bool): Whether the view is currently selected/focused.
         """
+        view_id = None
         try:
             view_id = view["id"]
             if not self.is_view_valid(view):
@@ -1605,34 +1779,37 @@ class Utils(Adw.Application):
                 return
 
             # Retrieve the current alpha value of the view
+            # FIXME:: try to fallback to original view alpha
+            original_alpha = 1.0
             try:
                 original_alpha = self.ipc.get_view_alpha(view_id)["alpha"]
             except Exception as e:
                 self.logger.error(
-                    error=e,
-                    message=f"Failed to retrieve alpha value for view ID: {view_id}",
+                    f"Failed to retrieve alpha value for view ID: {view_id} and {e}",
+                    exc_info=True,
                 )
                 return
 
             if selected:
                 self.ipc.set_view_alpha(view_id, alpha)
             else:
-                self.ipc.set_view_alpha(view_id, 1)
+                self.ipc.set_view_alpha(view_id, 1.0)
 
         except Exception as e:
             # Catch-all for unexpected errors
             self.logger.error(
-                error=e,
-                message=f"Unexpected error while applying focus indicator effect for view ID: {view_id}",
+                f"Unexpected error while applying focus indicator effect for view ID: {view_id} and {e}",
+                exc_info=True,
             )
 
-    def view_focus_indicator_effect(self, view):
+    def view_focus_indicator_effect(self, view: dict) -> None:
         """
         Apply a focus indicator effect by animating the view's alpha (transparency).
 
         Args:
-            view_id (int): The ID of the view to apply the effect to.
+            view (dict): The view dictionary containing at least the 'id' key.
         """
+        view_id = None
         try:
             view_id = view["id"]
             if not self.is_view_valid(view):
@@ -1644,8 +1821,8 @@ class Utils(Adw.Application):
                 original_alpha = self.ipc.get_view_alpha(view_id)["alpha"]
             except Exception as e:
                 self.logger.error(
-                    error=e,
-                    message=f"Failed to retrieve alpha value for view ID: {view_id}",
+                    f"Failed to retrieve alpha value for view ID: {view_id} and {e}",
+                    exc_info=True,
                 )
                 return
 
@@ -1661,8 +1838,8 @@ class Utils(Adw.Application):
                     sleep(0.02)  # Small delay for the animation effect
                 except Exception as e:
                     self.logger.error(
-                        error=e,
-                        message=f"Failed to set alpha value ({alpha}) for view ID: {view_id}",
+                        f"Failed to set alpha value ({alpha}) for view ID: {view_id} and {e}",
+                        exc_info=True,
                     )
 
             # Restore the original alpha value
@@ -1670,40 +1847,47 @@ class Utils(Adw.Application):
                 self.ipc.set_view_alpha(view_id, original_alpha)
             except Exception as e:
                 self.logger.error(
-                    error=e,
-                    message=f"Failed to restore original alpha value ({original_alpha}) for view ID: {view_id}",
+                    f"Failed to restore original alpha value ({original_alpha}) for view ID: {view_id} and {e}",
+                    exc_info=True,
                 )
 
         except Exception as e:
             # Catch-all for unexpected errors
             self.logger.error(
-                error=e,
-                message=f"Unexpected error while applying focus indicator effect for view ID: {view_id}",
+                f"Unexpected error while applying focus indicator effect for view ID: {view_id} and {e}",
+                exc_info=True,
             )
 
-    def is_view_valid(self, view):
+    def is_view_valid(self, view: Union[int, dict]) -> Union[dict, bool]:
         """
         Validate if a view is valid based on its ID or dictionary.
 
         Args:
-            view_id (int or dict): The ID of the view or a dictionary containing view details.
+            view (Union[int, dict]): The ID of the view or a dictionary containing view details.
 
         Returns:
-            dict or False: The view object if valid, otherwise False.
+            Union[dict, bool]: The view object if valid, otherwise False.
         """
         view_id = None
         try:
             if view is None:
-                return
-            view_id = view["id"]
-            # Extract the ID if view_id is a dictionary
+                return False
+
+            # Extract view_id from dictionary or use directly if it's an int
             if isinstance(view, dict):
-                view = view.get("id")
-                if not view:
+                view_id = view.get("id")
+                if view_id is None:
                     self.logger.warning(
                         "Invalid dictionary provided: Missing 'id' key."
                     )
                     return False
+            elif isinstance(view, int):
+                view_id = view
+            else:
+                self.logger.warning(
+                    f"Invalid view type: {type(view).__name__}. Expected int or dict."
+                )
+                return False
 
             # Ensure view_id is an integer
             if not isinstance(view_id, int):
@@ -1717,7 +1901,7 @@ class Utils(Adw.Application):
                 view_ids = [i["id"] for i in self.ipc.list_views()]
             except Exception as e:
                 self.logger.error(
-                    error=e, message="Failed to retrieve active view IDs."
+                    f"Failed to retrieve active view IDs: {e}", exc_info=True
                 )
                 return False
 
@@ -1729,68 +1913,74 @@ class Utils(Adw.Application):
 
             # Fetch the view details
             try:
-                view = self.ipc.get_view(view_id)
+                fetched_view = self.ipc.get_view(view_id)
             except Exception as e:
                 self.logger.error(
-                    error=e, message=f"Failed to fetch view details for ID: {view_id}"
+                    f"Failed to fetch view details for ID: {view_id} and {e}",
+                    exc_info=True,
                 )
                 return False
 
-            if not view:
+            if not fetched_view:
                 self.logger.debug(f"No view details found for ID: {view_id}")
                 return False
 
             # Perform additional checks
-            if view.get("role") != "toplevel":
+            if fetched_view.get("role") != "toplevel":
                 self.logger.debug(
-                    f"View ID {view_id} has an invalid role: {view.get('role')}"
+                    f"View ID {view_id} has an invalid role: {fetched_view.get('role')}"
                 )
                 return False
 
-            if view.get("pid") == -1:
+            if fetched_view.get("pid") == -1:
                 self.logger.debug(
-                    f"View ID {view_id} has an invalid PID: {view.get('pid')}"
+                    f"View ID {view_id} has an invalid PID: {fetched_view.get('pid')}"
                 )
                 return False
 
-            if view.get("app-id") in ["", "nil"]:
+            if fetched_view.get("app-id") in ["", "nil"]:
                 self.logger.debug(
-                    f"View ID {view_id} has an invalid app-id: {view.get('app-id')}"
+                    f"View ID {view_id} has an invalid app-id: {fetched_view.get('app-id')}"
                 )
                 return False
 
-            return view
+            return fetched_view
 
         except Exception as e:
             # Catch-all for unexpected errors
             self.logger.error(
-                error=e, message=f"Unexpected error while validating view ID: {view_id}"
+                f"Unexpected error while validating view ID: {view_id} and {e}",
+                exc_info=True,
             )
             return False
 
-    def _setup_config_paths(self):
-        """Set up configuration paths based on the user's home directory."""
+    def _setup_config_paths(self) -> None:
+        """
+        Set up configuration paths based on the user's home directory.
+        This initializes instance variables used throughout the application.
+        """
         config_paths = self.setup_config_paths()
-        # Set instance variables from the dictionary
-        self.home = config_paths["home"]
-        self.webapps_applications = os.path.join(self.home, ".local/share/applications")
-        self.config_path = config_paths["config_path"]
-        self.style_css_config = config_paths["style_css_config"]
-        self.cache_folder = config_paths["cache_folder"]
 
-    def setup_config_paths(self):
+        # Set instance variables from the dictionary
+        self.home: str = config_paths["home"]
+        self.webapps_applications: str = os.path.join(
+            self.home, ".local/share/applications"
+        )
+        self.config_path: str = config_paths["config_path"]
+        self.style_css_config: str = config_paths["style_css_config"]
+        self.cache_folder: str = config_paths["cache_folder"]
+
+    def setup_config_paths(self) -> Dict[str, str]:
         """
         Set up and return configuration paths for the application.
 
         Returns:
-            dict: A dictionary containing paths for home, config, styles, and cache.
+            Dict[str, str]: A dictionary containing paths for home, config, styles, and cache.
+                            Returns an empty dict if setup fails.
         """
         try:
             # Determine the user's home directory and script directory
             home = os.path.expanduser("~")
-            full_path = os.path.abspath(__file__)
-            directory_path = os.path.dirname(full_path)
-
             # Define key paths
             config_path = os.path.join(home, ".config/waypanel")
             style_css_config = os.path.join(config_path, "styles.css")
@@ -1807,7 +1997,7 @@ class Utils(Adw.Application):
                     self.logger.info(f"Created cache directory: {cache_folder}")
             except Exception as e:
                 self.logger.error(
-                    error=e, message="Failed to create required directories."
+                    f"Failed to create required directories: {e}", exc_info=True
                 )
 
             # Return the configuration paths
@@ -1821,17 +2011,17 @@ class Utils(Adw.Application):
         except Exception as e:
             # Catch-all for unexpected errors
             self.logger.error(
-                error=e,
-                message="Unexpected error while setting up configuration paths.",
+                f"Unexpected error while setting up configuration paths: {e}",
+                exc_info=True,
             )
             return {}
 
-    def filter_utf_for_gtk(self, byte_string):
+    def filter_utf_for_gtk(self, byte_string: Union[bytes, str]) -> str:
         """
         Safely decode a byte string to UTF-8, handling all encoding issues, with priority to UTF-8.
 
         Args:
-            byte_string (bytes or str): The input byte string to be filtered.
+            byte_string (Union[bytes, str]): The input byte string or already decoded string.
 
         Returns:
             str: The decoded string with invalid characters replaced or ignored.
@@ -1863,7 +2053,7 @@ class Utils(Adw.Application):
                             f"Failed to decode using {encoding}. Details: {e}"
                         )
 
-                # Fallback to 'latin-1' if all other encodings fail
+                # Fallback to 'latin-1' if all other fail
                 self.logger.info(
                     "All UTF decoding attempts failed, falling back to 'latin-1'."
                 )
@@ -1875,21 +2065,23 @@ class Utils(Adw.Application):
         except Exception as e:
             # Catch-all for unexpected errors
             self.logger.error(
-                error=e,
-                message=f"Unexpected error while filtering UTF for GTK: {byte_string}",
-                context={"input_type": type(byte_string).__name__},
+                f"Unexpected error while filtering UTF for GTK: {byte_string} and {e}",
+                exc_info=True,
+                extra={"input_type": type(byte_string).__name__},
             )
             return ""  # Return an empty string as a fallback
 
+    from gi.repository import Gtk
+
     def create_button(
         self,
-        icon_name,
-        cmd,
-        class_style,
-        use_label=False,
-        use_function=False,
-        use_args=False,
-    ):
+        icon_name: str,
+        cmd: str,
+        class_style: str,
+        use_label: bool = False,
+        use_function: Optional[Callable] = None,
+        use_args: Optional[Any] = None,
+    ) -> Optional[Gtk.Button]:
         """
         Create a Gtk.Button with an icon or label, click behavior, and CSS styling.
 
@@ -1897,29 +2089,26 @@ class Utils(Adw.Application):
             icon_name (str): The name of the icon or label text.
             cmd (str): The command to execute on button click. Use "NULL" to disable the button.
             class_style (str): The CSS class to apply to the button.
-            app_id (str): The application ID associated with the button.
-            initial_title (str, optional): The initial title for the button.
-            use_label (bool, optional): Whether to use a label instead of an icon.
-            use_function (callable, optional): A function to execute on button click.
+            use_label (bool): Whether to use a label instead of an icon.
+            use_function (Optional[Callable]): A function to execute on button click.
+            use_args (Optional[Any]): Arguments to pass to the custom function.
 
         Returns:
-            Gtk.Button: The created button, or None if an error occurs.
+            Optional[Gtk.Button]: The created button, or None if creation failed.
         """
         try:
             # Validate inputs
             if not icon_name and not use_label:
                 self.logger.error(
-                    error=ValueError("Either icon_name or use_label must be provided."),
-                    message="Invalid input: No icon or label provided for button creation.",
+                    "Invalid input: Either icon_name or use_label must be provided.",
+                    exc_info=True,
                 )
                 return None
 
             if not isinstance(class_style, str):
                 self.logger.error(
-                    error=TypeError(
-                        f"Invalid class_style type: {type(class_style).__name__}"
-                    ),
-                    message="Invalid input: class_style must be a string.",
+                    f"Invalid class_style type: {type(class_style).__name__}",
+                    exc_info=True,
                 )
                 return None
 
@@ -1941,8 +2130,8 @@ class Utils(Adw.Application):
                         box.append(icon)
                     except Exception as e:
                         self.logger.error(
-                            error=e,
-                            message=f"Failed to create icon with name: {icon_name}",
+                            f"Failed to create icon with name: {icon_name}",
+                            exc_info=True,
                         )
                         return None
 
@@ -1960,7 +2149,8 @@ class Utils(Adw.Application):
                     button.connect("clicked", lambda *_: use_function(use_args))
                 except Exception as e:
                     self.logger.error(
-                        error=e, message="Failed to connect custom function to button."
+                        f"Failed to connect custom function to button: {e}",
+                        exc_info=True,
                     )
                     return None
             else:
@@ -1968,7 +2158,8 @@ class Utils(Adw.Application):
                     button.connect("clicked", lambda *_: self.run_cmd(cmd))
                 except Exception as e:
                     self.logger.error(
-                        error=e, message=f"Failed to connect command '{cmd}' to button."
+                        f"Failed to connect command '{cmd}' to button: {e}",
+                        exc_info=True,
                     )
                     return None
 
@@ -1977,8 +2168,8 @@ class Utils(Adw.Application):
                 button.add_css_class(class_style)
             except Exception as e:
                 self.logger.error(
-                    error=e,
-                    message=f"Failed to apply CSS class '{class_style}' to button.",
+                    f"Failed to apply CSS class '{class_style}' to button: {e}",
+                    exc_info=True,
                 )
                 return None
 
@@ -1987,6 +2178,6 @@ class Utils(Adw.Application):
         except Exception as e:
             # Catch-all for unexpected errors
             self.logger.error(
-                error=e, message="Unexpected error while creating button."
+                f"Unexpected error while creating button: {e}", exc_info=True
             )
             return None
