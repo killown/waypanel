@@ -581,6 +581,19 @@ class PluginLoader:
         if event_manager_metadata:
             plugin_metadata.insert(0, event_manager_metadata)
 
+        # Remove 'event_handler_decorator' if exists, so we can append at end
+        event_handler_decorator_metadata = None
+        for i, metadata in enumerate(plugin_metadata):
+            if metadata[0].__name__.endswith("event_handler_decorator"):
+                event_handler_decorator_metadata = metadata
+                del plugin_metadata[i]
+                break
+
+        # Append event_handler_decorator at the end
+        # This plugin only works for plugins that load earlier
+        if event_handler_decorator_metadata:
+            plugin_metadata.append(event_handler_decorator_metadata)
+
         # Initialize plugins
         def initialize_plugin_with_deps(module, position, order, priority):
             module_name = module.__name__.split(".")[-1]
