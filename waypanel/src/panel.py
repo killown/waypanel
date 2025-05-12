@@ -3,7 +3,7 @@ import sys
 import toml
 from gi.repository import Adw, Gio, GLib
 from src.core.compositor.ipc import IPC
-
+from typing import Dict, Any
 from src.core.create_panel import (
     CreatePanel,
 )
@@ -138,7 +138,7 @@ class Panel(Adw.Application):
         except Exception as e:
             self.logger.error(f"Error reloading configuration: {e}")
 
-    def load_config(self):
+    def load_config(self) -> Dict[str, Any]:
         if not hasattr(self, "_cached_config"):
             with open(self.waypanel_cfg, "r") as f:
                 self._cached_config = toml.load(f)
