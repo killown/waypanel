@@ -1,8 +1,8 @@
 import os
-from gi.repository import Gtk, GdkPixbuf
+from gi.repository import Gtk, GdkPixbuf, GLib
 from PIL import Image
 from io import BytesIO
-
+from typing import Optional, Dict, Any, Union, List, Tuple
 import urllib.parse
 import cairosvg
 import base64
@@ -20,7 +20,14 @@ class NotifyUtils(BasePlugin):
     def is_valid_path(self, path):
         return os.path.exists(path)
 
-    def create_pixbuf_from_pixels(self, width, height, rowstride, has_alpha, pixels):
+    def create_pixbuf_from_pixels(
+        self,
+        width: int,
+        height: int,
+        rowstride: int,
+        has_alpha: bool,
+        pixels: Union[bytes, List[int], Tuple[int, ...], str],
+    ) -> Optional[GdkPixbuf.Pixbuf]:
         """
         Create a GdkPixbuf.Pixbuf from raw pixel data.
 
@@ -28,8 +35,8 @@ class NotifyUtils(BasePlugin):
         :param height: Height of the image in pixels.
         :param rowstride: Number of bytes per row.
         :param has_alpha: Whether the image has an alpha channel (True/False).
-        :param pixels: Raw pixel data (list, array, or bytes).
-        :return: GdkPixbuf.Pixbuf object.
+        :param pixels: Raw pixel data as bytes, list/tuple of integers, or comma-separated string.
+        :return: GdkPixbuf.Pixbuf object or None on failure.
         """
         try:
             # Validate and convert pixels to bytes
@@ -41,10 +48,6 @@ class NotifyUtils(BasePlugin):
             elif isinstance(pixels, str):
                 # Parse the string into a list of integers
                 pixel_data = bytes([int(x.strip()) for x in pixels.split(",")])
-            else:
-                raise ValueError(
-                    "Unsupported type for pixels. Expected bytes, list, tuple, or string."
-                )
 
             # Create the GdkPixbuf
             pixbuf = GdkPixbuf.Pixbuf.new_from_data(
@@ -55,7 +58,7 @@ class NotifyUtils(BasePlugin):
                 width,
                 height,
                 rowstride,
-                None,  # Destroy function (None if no cleanup is needed)
+                None,  # Destroy notification callback
             )
             return pixbuf
         except Exception as e:
@@ -63,7 +66,9 @@ class NotifyUtils(BasePlugin):
             return None
 
     # Helper function to create a PNG from raw pixel data
-    def create_png_from_pixel_data(self, width, height, pixel_data):
+    def create_png_from_pixel_data(
+        self, width: int, height: int, pixel_data: bytes
+    ) -> Optional[bytes]:
         # Create an image from raw pixel data
         img = Image.new("RGBA", (width, height))
         img.putdata(
@@ -75,7 +80,7 @@ class NotifyUtils(BasePlugin):
         img.save(buffer, format="PNG")
         return buffer.getvalue()
 
-    def svg_to_pixbuf(self, svg_data):
+    def svg_to_pixbuf(self, svg_data: bytes) -> Optional[GdkPixbuf.Pixbuf]:
         """
         Convert SVG data to a GdkPixbuf.Pixbuf.
 
@@ -88,14 +93,17 @@ class NotifyUtils(BasePlugin):
 
             # Load the PNG data into a GdkPixbuf
             loader = GdkPixbuf.PixbufLoader.new_with_type("png")
-            loader.write(png_data)
-            loader.close()
-            return loader.get_pixbuf()
+            if png_data:
+                loader.write(png_data)
+                loader.close()
+                return loader.get_pixbuf()
+            else:
+                self.logger.info("svg to pixbuf: no png data found")
         except Exception as e:
             self.log_error(f"Error converting SVG to Pixbuf: {e}")
             return None
 
-    def load_svg_from_data_uri(self, data_uri):
+    def load_svg_from_data_uri(self, data_uri) -> Optional[Gtk.Image]:
         """
         Load an icon from a data URI.
 
@@ -113,10 +121,9 @@ class NotifyUtils(BasePlugin):
             return None
 
         # Step 3: Create a Gtk.Image from the Pixbuf
-        image = Gtk.Image.new_from_pixbuf(pixbuf)
-        return image
+        return Gtk.Image.new_from_pixbuf(pixbuf)
 
-    def load_png_from_data_uri(self, data_uri):
+    def load_png_from_data_uri(self, data_uri) -> Optional[Gtk.Image]:
         """
         Load an icon from a PNG data URI or raw pixel data.
 
@@ -150,14 +157,13 @@ class NotifyUtils(BasePlugin):
                 return None
 
             # Step 3: Create a Gtk.Image from the Pixbuf
-            image = Gtk.Image.new_from_pixbuf(pixbuf)
-            return image
+            return Gtk.Image.new_from_pixbuf(pixbuf)
 
         except Exception as e:
             print(f"Error in load_png_from_data_uri: {e}")
             return None
 
-    def decode_data_uri(self, data_uri):
+    def decode_data_uri(self, data_uri) -> Optional[bytes]:
         """
         Decode a data URI and return the raw content.
 
@@ -177,7 +183,7 @@ class NotifyUtils(BasePlugin):
             print(f"Error decoding data URI: {e}")
             return None
 
-    def load_thumbnail(self, image_path, max_size=(64, 64)):
+    def load_thumbnail(self, image_path, max_size=(64, 64)) -> Optional[str]:
         """
         Load and resize an image to create a thumbnail.
 
@@ -200,7 +206,7 @@ class NotifyUtils(BasePlugin):
             print(f"Error creating thumbnail: {e}")
             return None
 
-    def load_icon(self, notification):
+    def load_icon(self, notification: Dict[str, Any]) -> Optional[Gtk.Image]:
         """Load the appropriate icon/image for a notification based on multiple cases."""
         # Extract necessary fields from the notification
         app_icon = notification.get("app_icon", "")
