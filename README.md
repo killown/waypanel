@@ -13,6 +13,9 @@ How to Install `waypanel`
 
 ##### if using wayfire: configure wayfire.ini
 Ensure the following plugins are enabled in your ~/.config/wayfire.ini: 
+
+##### if using sway: 
+install https://github.com/killown/pysway
     
 [core]
 
