@@ -30,7 +30,7 @@ class EventManagerPlugin(BasePlugin):
         self.ipc_client.wayfire_events_setup(self.get_socket_path())
         self.event_subscribers = {}  # Dictionary to store event subscribers
 
-    def handle_event(self, msg):
+    def handle_event(self, msg) -> None:
         """
         Handle incoming IPC events and notify subscribers.
 
@@ -64,7 +64,7 @@ class EventManagerPlugin(BasePlugin):
         elif event_type.startswith("workspace-"):
             self.handle_workspace_event(msg)
 
-    def _validate_event(self, msg, required_keys=None):
+    def _validate_event(self, msg, required_keys=None) -> bool:
         """
         Validate the incoming event message.
 
@@ -88,7 +88,7 @@ class EventManagerPlugin(BasePlugin):
 
         return True
 
-    def handle_view_event(self, msg):
+    def handle_view_event(self, msg) -> None:
         """Handle view-related events."""
         view = msg.get("view")
         event = msg.get("event")
@@ -115,7 +115,7 @@ class EventManagerPlugin(BasePlugin):
         elif event == "view-mapped":
             self.on_view_created(view)
 
-    def handle_plugin_event(self, msg):
+    def handle_plugin_event(self, msg) -> None:
         """Handle plugin-related events."""
         if not self._validate_event(msg, required_keys=["event", "plugin", "state"]):
             return
@@ -136,7 +136,7 @@ class EventManagerPlugin(BasePlugin):
         elif plugin == "move":
             self.on_moving_view()
 
-    def handle_output_event(self, msg):
+    def handle_output_event(self, msg) -> None:
         """Handle output-related events."""
         if not self._validate_event(msg, required_keys=["event"]):
             return
@@ -146,13 +146,13 @@ class EventManagerPlugin(BasePlugin):
         if event == "output-gain-focus":
             self.on_output_gain_focus()
 
-    def handle_workspace_event(self, msg):
+    def handle_workspace_event(self, msg) -> None:
         """Handle workspace-related events."""
         if "event" not in msg:
             return
         # Add workspace-specific logic here
 
-    def subscribe_to_event(self, event_type, callback, plugin_name=None):
+    def subscribe_to_event(self, event_type, callback, plugin_name=None) -> None:
         """
         Allow plugins to subscribe to specific events.
 
@@ -175,58 +175,58 @@ class EventManagerPlugin(BasePlugin):
         else:
             self.logger.info(f"Anonymous plugin subscribed to event: {event_type}")
 
-    def unsubscribe_from_event(self, event_type, callback):
+    def unsubscribe_from_event(self, event_type, callback) -> None:
         """Allow plugins to unsubscribe from specific events."""
         if event_type in self.event_subscribers:
             self.event_subscribers[event_type].remove(callback)
             self.logger.info(f"Unsubscribed from event: {event_type}")
 
     # Event callbacks
-    def on_view_focused(self, view):
+    def on_view_focused(self, view) -> None:
         """Handle when any view gains focus."""
         self.logger.debug("View focused.")
 
-    def on_view_created(self, view):
+    def on_view_created(self, view) -> None:
         """Handle when a view is created."""
         self.logger.debug(f"View created: {view}")
 
-    def on_view_destroyed(self, view):
+    def on_view_destroyed(self, view) -> None:
         """Handle when a view is destroyed."""
         self.logger.debug(f"View destroyed: {view}")
 
-    def on_title_changed(self, view):
+    def on_title_changed(self, view) -> None:
         """Handle title changes for views."""
         self.logger.debug(f"Title changed for view: {view}")
 
-    def on_app_id_changed(self, view):
+    def on_app_id_changed(self, view) -> None:
         """Handle changes in app-id of a view."""
         self.logger.debug(f"App ID changed for view: {view}")
 
-    def on_expo_activated(self):
+    def on_expo_activated(self) -> None:
         """Handle expo plugin activation."""
         self.logger.debug("Expo plugin activated.")
 
-    def on_expo_desactivated(self):
+    def on_expo_desactivated(self) -> None:
         """Handle expo plugin deactivation."""
         self.logger.debug("Expo plugin deactivated.")
 
-    def on_scale_activated(self):
+    def on_scale_activated(self) -> None:
         """Handle scale plugin activation."""
         self.logger.debug("Scale plugin activated.")
 
-    def on_scale_desactivated(self):
+    def on_scale_desactivated(self) -> None:
         """Handle scale plugin deactivation."""
         self.logger.debug("Scale plugin deactivated.")
 
-    def on_moving_view(self):
+    def on_moving_view(self) -> None:
         """Handle moving view events."""
         self.logger.debug("Moving view event triggered.")
 
-    def on_output_gain_focus(self):
+    def on_output_gain_focus(self) -> None:
         """Handle output gain focus events."""
         self.logger.debug("Output gained focus.")
 
-    def on_view_role_toplevel_focused(self, view_id):
+    def on_view_role_toplevel_focused(self, view_id) -> None:
         # last view focus only for top level Windows
         # means that views like layer shell won't have focus set in this var
         # this is necessary for example, if you click in the maximize buttons
@@ -235,7 +235,7 @@ class EventManagerPlugin(BasePlugin):
         # big comment because I am sure I will forget why I did this
         self.last_toplevel_focused_view = view_id
 
-    def on_hidden_view(self, widget, view):
+    def on_hidden_view(self, widget, view) -> None:
         id = view["id"]
         if id in self.ipc.list_ids():
             self.ipc.unhide_view(id)
@@ -246,7 +246,7 @@ class EventManagerPlugin(BasePlugin):
             # self.obj.top_panel_box_center.remove(widget)
             #
 
-    def get_socket_path(self):
+    def get_socket_path(self) -> str:
         runtime_dir = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
         socket_name = "waypanel.sock"
         return os.path.join(runtime_dir, socket_name)

@@ -29,8 +29,9 @@ class Panel(Adw.Application):
         self.plugins = self.plugin_loader.plugins
         self.ipc = IPC()
         self.ipc_server = ipc_server
+        self.display = None
         self.args = sys.argv
-        self.monitor = None
+        self.css_monitor = None
         self.update_widget = self.utils.update_widget
         self.config = self.load_config()
         self._set_monitor_dimensions()
@@ -49,6 +50,8 @@ class Panel(Adw.Application):
             (output for output in self.ipc.list_outputs() if "-1" in output["name"]),
             self.ipc.list_outputs()[0],
         )
+
+        self.display = monitor
 
         # Default dimensions from the monitor geometry
         self.monitor_width, self.monitor_height = (
@@ -146,10 +149,10 @@ class Panel(Adw.Application):
 
     def do_activate(self):
         self.utils.load_css_from_file()
-        self.monitor = Gio.File.new_for_path(self.style_css_config).monitor(
+        self.css_monitor = Gio.File.new_for_path(self.style_css_config).monitor(
             Gio.FileMonitorFlags.NONE, None
         )
-        self.monitor.connect("changed", self.utils.on_css_file_changed)
+        self.css_monitor.connect("changed", self.utils.on_css_file_changed)
         self.setup_panels()
 
     def setup_panels(self):

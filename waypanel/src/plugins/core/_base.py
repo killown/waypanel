@@ -155,7 +155,7 @@ class BasePlugin:
             create_panel.unset_layer_position_exclusive
         )
 
-    def log_error(self, message):
+    def log_error(self, message) -> None:
         # Get the caller's frame (two levels up: one for this function, one for the caller)
         frame = inspect.currentframe().f_back  # type: ignore
         try:
@@ -177,15 +177,15 @@ class BasePlugin:
             # Ensure the frame is cleared to avoid memory leaks
             del frame
 
-    def check_dependencies(self):
+    def check_dependencies(self) -> bool:
         """Check if all dependencies are loaded"""
         return all(dep in self.obj.plugin_loader.plugins for dep in self.dependencies)
 
-    def enable(self):
+    def enable(self) -> None:
         """Enable the plugin"""
         self.on_enable()
 
-    def disable(self):
+    def disable(self) -> None:
         """
         Disable the plugin and remove its widget.
         """
@@ -204,7 +204,7 @@ class BasePlugin:
 
         except Exception as e:
             self.log_error(
-                message="Error disabling plugin.",
+                message=f"Error disabling plugin: {e}",
             )
 
     def on_enable(self):

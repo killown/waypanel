@@ -1,5 +1,6 @@
 from src.plugins.core._base import BasePlugin
 import logging
+import inspect
 
 ENABLE_PLUGIN = True
 DEPS = ["event_manager"]
@@ -42,37 +43,48 @@ class EventHandlerDecoratorPlugin(BasePlugin):
         self.logger = logging.getLogger(__name__)
         self._register_handlers()
 
-    def _register_handlers(self):
+    def _register_handlers(self) -> None:
         """Register all decorated event handlers from other plugins."""
         if "event_manager" not in self.obj.plugins:
             self.logger.error("Event Manager is not available.")
             return
 
         event_manager = self.obj.plugins["event_manager"]
+        registered = set()
 
-        # Loop through all loaded plugins
         for plugin_name, plugin in self.obj.plugins.items():
-            if plugin == self:
+            if plugin_name == "event_handler_decorator":
                 continue  # Skip self
 
             try:
-                # Check all methods of the plugin
-                for attr_name in dir(plugin):
-                    attr = getattr(plugin, attr_name)
+                # Use inspect.getmembers() to get only callable members
+                for attr_name, attr in inspect.getmembers(
+                    plugin, predicate=inspect.isroutine
+                ):
+                    if hasattr(attr, "_is_event_handler") and getattr(
+                        attr, "_is_event_handler"
+                    ):
+                        event_type = getattr(attr, "_event_type")
+                        key = (plugin_name, attr_name, event_type)
 
-                    # Only consider bound methods (has __func__ means it's a bound method)
-                    if hasattr(attr, "__func__"):
-                        func = attr.__func__
+                        if key in registered:
+                            continue
+                        registered.add(key)
 
-                        if hasattr(func, "_is_event_handler"):
-                            event_type = getattr(func, "_event_type")
-                            handler_func = attr  # Use the bound method
-
-                            # Subscribe
-                            event_manager.subscribe_to_event(event_type, handler_func)
-                            self.logger.debug(
-                                f"Subscribed {plugin_name}.{attr_name} to '{event_type}'"
+                        # Validate signature
+                        sig = inspect.signature(attr)
+                        params = list(sig.parameters.values())
+                        if len(params) < 1:
+                            self.logger.warning(
+                                f"Handler {plugin_name}.{attr_name} has incorrect signature."
                             )
+                            continue
+
+                        # Subscribe
+                        event_manager.subscribe_to_event(event_type, attr)
+                        self.logger.debug(
+                            f"Subscribed {plugin_name}.{attr_name} to '{event_type}'"
+                        )
 
             except Exception as e:
                 self.logger.error(

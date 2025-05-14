@@ -6,6 +6,7 @@ from src.core.create_panel import (
     set_layer_position_exclusive,
     unset_layer_position_exclusive,
 )
+from src.plugins.core.event_handler_decorator import subscribe_to_event
 
 # Enable or disable the plugin
 ENABLE_PLUGIN = True
@@ -55,7 +56,7 @@ class TaskbarPlugin(BasePlugin):
         # or prevent `set_content`/`append` from working properly.
         self.main_widget = (self.scrolled_window, "append")
 
-    def set_layer_exclusive(self, exclusive):
+    def set_layer_exclusive(self, exclusive) -> None:
         if exclusive:
             self.update_widget_safely(
                 set_layer_position_exclusive, self.bottom_panel, 48
@@ -63,7 +64,7 @@ class TaskbarPlugin(BasePlugin):
         else:
             self.update_widget_safely(unset_layer_position_exclusive, self.bottom_panel)
 
-    def _setup_taskbar(self):
+    def _setup_taskbar(self) -> None:
         """Create and configure the bottom panel."""
         self.taskbar = Gtk.FlowBox()
         self.logger.debug("Setting up bottom panel.")
@@ -109,7 +110,7 @@ class TaskbarPlugin(BasePlugin):
 
         # Unset layer position for other panels
 
-    def _subscribe_to_events(self):
+    def _subscribe_to_events(self) -> bool:
         """Subscribe to relevant events using the event_manager."""
         if "event_manager" not in self.obj.plugin_loader.plugins:
             self.logger.debug("Taskbar is waiting for EventManagerPlugin.")
@@ -144,6 +145,7 @@ class TaskbarPlugin(BasePlugin):
                 self.handle_plugin_event,
                 plugin_name="taskbar",
             )
+        return False
 
     def create_taskbar_button(self, view):
         app_id = view["app-id"]

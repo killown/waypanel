@@ -1423,7 +1423,7 @@ class Utils(Adw.Application):
             self.ipc.set_workspace(x, y, view_id)
 
     # this function is useful because it will handle icon_name and icon_path
-    def handle_icon_for_button(self, view: dict, button: Gtk.Button) -> None:
+    def handle_icon_for_button(self, view: dict, button) -> None:
         """
         Set an appropriate icon for the button based on the view's details.
 
@@ -1440,6 +1440,7 @@ class Utils(Adw.Application):
 
             # Retrieve the icon path or name
             icon_path = self.get_icon(app_id, title, initial_title)
+            icon_path = self.get_nearest_icon_name(icon_path)
             if not icon_path:
                 self.logger.debug(f"No icon found for view: {app_id}")
                 button.set_icon_name("default-icon-name")

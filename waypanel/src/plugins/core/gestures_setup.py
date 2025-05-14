@@ -34,12 +34,12 @@ class GesturePlugin:
         self.gestures = {}  # Store gesture references
         self.appended_actions = {}  # Store additional actions for each gesture
 
-    def setup_gestures(self):
+    def setup_gestures(self) -> None:
         """Set up gestures for the top panel.
         Wait until the required panel boxes are ready."""
         GLib.idle_add(self.check_panel_boxes_ready)
 
-    def check_panel_boxes_ready(self):
+    def check_panel_boxes_ready(self) -> bool:
         """Check if the required panel boxes are ready.
         If ready, proceed with gesture setup; otherwise, retry."""
         # Validate that the required panel box exists and is ready
@@ -56,7 +56,7 @@ class GesturePlugin:
             self.logger.debug("Panel boxes not yet ready. Retrying...")
             return True  # Continue retrying
 
-    def _setup_panel_gestures(self):
+    def _setup_panel_gestures(self) -> None:
         """Set up gestures for the top panel (left, center, and right)."""
         # Gestures for the left section of the top panel
         self.create_gesture(self.obj.top_panel_box_left, 1, self.pos_left_left_click)
@@ -84,7 +84,7 @@ class GesturePlugin:
         )
         self.create_gesture(self.obj.top_panel_box_right, 3, self.pos_right_right_click)
 
-    def create_gesture(self, widget, mouse_button, callback):
+    def create_gesture(self, widget, mouse_button, callback) -> None:
         """
         Create a gesture for a widget and attach it to the specified callback.
         Args:
@@ -98,13 +98,13 @@ class GesturePlugin:
         widget.add_controller(gesture)
         self.gestures[widget] = gesture
 
-    def remove_gesture(self, widget):
+    def remove_gesture(self, widget) -> None:
         if widget in self.gestures:
             gesture = self.gestures[widget]
             widget.remove_controller(gesture)
             del self.gestures[widget]
 
-    def execute_callback(self, callback, event=None):
+    def execute_callback(self, callback, event=None) -> None:
         """
         Execute the callback and any appended actions.
         Args:
@@ -118,7 +118,7 @@ class GesturePlugin:
             for action in self.appended_actions[callback.__name__]:
                 action()
 
-    def append_action(self, callback_name, action):
+    def append_action(self, callback_name, action) -> None:
         """
         Append an additional action to a specific gesture callback.
         Args:

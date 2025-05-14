@@ -47,17 +47,19 @@ class WindowRulesPlugin(BasePlugin):
 
         # Check if the focused view exists and is in fullscreen mode
         if focused_view and focused_view.get("fullscreen"):
-            view_id = focused_view["id"]
+            # the rules will apply only to the display that contains the panel
+            if self.obj.display["id"] == self.ipc.get_focused_output()["id"]:
+                view_id = focused_view["id"]
 
-            # Store the fullscreen state
-            self.fullscreen_views[view_id] = True
+                # Store the fullscreen state
+                self.fullscreen_views[view_id] = True
 
-            # Exit fullscreen
-            def run_once():
-                self.ipc.set_view_fullscreen(view_id, False)
-                return False
+                # Exit fullscreen
+                def run_once():
+                    self.ipc.set_view_fullscreen(view_id, False)
+                    return False
 
-            GLib.idle_add(run_once)
+                GLib.idle_add(run_once)
 
     def restore_fullscreen_state(self):
         for view_id, was_fullscreen in list(self.fullscreen_views.items()):
