@@ -15,7 +15,7 @@ import time
 import tempfile
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from src.ipc.ipc_async_server import WayfireEventServer
+from src.ipc.ipc_async_server import EventServer
 from src.core.compositor.ipc import IPC
 from src.core.log_setup import setup_logging
 
@@ -80,18 +80,19 @@ def restart_application():
 
 def start_config_watcher():
     """Start watching wayfire.ini for changes"""
-    wayfire_ini = os.path.expanduser(os.getenv("WAYFIRE_CONFIG_FILE"))
-    if not os.path.exists(wayfire_ini):
-        logger.warning(
-            f"wayfire.ini not found at {wayfire_ini} - config watching disabled"
-        )
-        return None
+    if os.getenv("WAYFIRE_SOCKET"):
+        wayfire_ini = os.path.expanduser(os.getenv("WAYFIRE_CONFIG_FILE"))
+        if not os.path.exists(wayfire_ini):
+            logger.warning(
+                f"wayfire.ini not found at {wayfire_ini} - config watching disabled"
+            )
+            return None
 
-    event_handler = ConfigReloadHandler(restart_application)
-    observer = Observer()
-    observer.schedule(event_handler, path=os.path.dirname(wayfire_ini))
-    observer.start()
-    return observer
+        event_handler = ConfigReloadHandler(restart_application)
+        observer = Observer()
+        observer.schedule(event_handler, path=os.path.dirname(wayfire_ini))
+        observer.start()
+        return observer
 
 
 def cleanup_resources():
@@ -105,7 +106,7 @@ def ipc_server(logger):
     """Start the IPC server in an asyncio event loop."""
     logger.info("Starting IPC server")
     try:
-        server = WayfireEventServer(logger)
+        server = EventServer(logger)
         asyncio.run(server.main())
     except Exception as e:
         logger.error(f"IPC server crashed: {e}", exc_info=True)
@@ -129,7 +130,7 @@ def start_ipc_server(logger):
         """Wrapper to start the IPC server and store its instance."""
         try:
             logger.info("Starting IPC server")
-            server = WayfireEventServer(logger)
+            server = EventServer(logger)
             server_container["instance"] = server  # Store the server instance
             asyncio.run(server.main())
         except Exception as e:
@@ -183,6 +184,7 @@ def verify_required_wayfire_plugins():
 
 
 def load_panel(ipc_server):
+    # FIXME: need refactor to work well any supported compositor
     """Load and configure the panel with proper typelib paths."""
     primary_path = os.path.expanduser(
         f"{GTK_LAYER_SHELL_INSTALL_PATH}/lib/girepository-1.0"
@@ -207,8 +209,15 @@ def load_panel(ipc_server):
         from wayfire import WayfireSocket
         from wayfire.extra.ipc_utils import WayfireUtils
 
-        sock = WayfireSocket()
-        utils = WayfireUtils(sock)
+        sock = None
+        utils = None
+        if os.getenv("WAYFIRE_SOCKET"):
+            sock = WayfireSocket()
+            utils = WayfireUtils(sock)
+        if os.getenv("SWAYSOCK") and not os.getenv("WAYFIRE_SOCKET"):
+            from pysway.ipc import SwayIPC
+
+            sock = SwayIPC()
 
         config_path = find_config_path()
         config = load_config(config_path)["panel"]
@@ -222,16 +231,25 @@ def load_panel(ipc_server):
         panel.set_panel_instance(panel)
 
         append_to_env("output_name", monitor_name)
-        append_to_env("output_id", utils.get_output_id_by_name(monitor_name))
+        if utils:
+            if os.getenv("WAYFIRE_SOCKET"):
+                append_to_env("output_id", utils.get_output_id_by_name(monitor_name))
+        if sock:
+            if os.getenv("SWAYSOCK"):
+                output = [i for i in sock.list_outputs() if i["name"] == monitor_name][
+                    0
+                ]
+                append_to_env("output_id", output["id"])
 
         panel.run(None)
         # sock.watch(["event"])
 
-        while True:
-            msg = sock.read_message()
-            if "output" in msg and monitor_name == msg["output-data"]["name"]:
-                if msg["event"] == "output-added":
-                    panel.run(None)
+        if os.getenv("WAYFIRE_SOCKET"):
+            while True:
+                msg = sock.read_message()
+                if "output" in msg and monitor_name == msg["output-data"]["name"]:
+                    if msg["event"] == "output-added":
+                        panel.run(None)
     except ImportError as e:
         logger.error(f"Failed to load panel: {e}", exc_info=True)
         raise
@@ -452,8 +470,11 @@ def main():
         logger.info("Starting Waypanel initialization")
 
         # Start config watcher first
-        config_observer = start_config_watcher()
-        verify_required_wayfire_plugins()
+        config_observer = None
+        if os.getenv("WAYFIRE_SOCKET"):
+            config_observer = start_config_watcher()
+        if os.getenv("WAYFIRE_SOCKET"):
+            verify_required_wayfire_plugins()
         layer_shell_check()
         check_config_path()
         ipc_server = start_ipc_server(logger)

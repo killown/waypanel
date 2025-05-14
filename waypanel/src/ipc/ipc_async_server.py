@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from src.core.compositor.ipc import IPC
 
 
-class WayfireEventServer:
+class EventServer:
     """
     The goal of this additional IPC server:
     is to handle compositor IPC issues and prevent code from hanging.
@@ -19,7 +19,8 @@ class WayfireEventServer:
         ]
         self._cleanup_sockets()
         self.ipc = IPC()
-        self.ipc.watch()
+        if os.getenv("WAYFIRE_SOCKET"):
+            self.ipc.watch()
 
         self.executor = ThreadPoolExecutor()
         self.event_queue = asyncio.Queue()
@@ -27,19 +28,19 @@ class WayfireEventServer:
         self.event_subscribers = {}
         self.loop = None
 
-    def _cleanup_sockets(self):
+    def _cleanup_sockets(self) -> None:
         """Remove existing socket files"""
         for path in self.ipcet_paths:
             if os.path.exists(path):
                 os.remove(path)
 
-    def reconnect_wayfire_socket(self):
+    def reconnect_wayfire_socket(self) -> None:
         """Reconnect to Wayfire socket"""
         self.logger.info("reconnecting wayfire ipc")
         self.ipc.close()
         self.ipc.watch()
 
-    def is_socket_active(self):
+    def is_socket_active(self) -> bool:
         """Check if socket is connected, reconnect if not"""
         if not self.ipc.is_connected():
             try:
@@ -50,7 +51,7 @@ class WayfireEventServer:
                 return False
         return True
 
-    def read_events(self):
+    def read_events(self) -> None:
         """Read events from Wayfire socket in background thread"""
         while True:
             if not self.is_socket_active():
@@ -65,7 +66,7 @@ class WayfireEventServer:
                     time.sleep(1)
                     continue
 
-    def add_event_subscriber(self, event_type, callback):
+    def add_event_subscriber(self, event_type, callback) -> None:
         """
         Add a subscriber for a specific event type.
         Args:
@@ -77,7 +78,7 @@ class WayfireEventServer:
         self.event_subscribers[event_type].append(callback)
         self.logger.info(f"new event: {event_type}")
 
-    def handle_msg(self, msg):
+    def handle_msg(self, msg) -> None:
         # Notify subscribers for the specific event type
         event_type = msg.get("event")
         if event_type in self.event_subscribers:
@@ -93,7 +94,7 @@ class WayfireEventServer:
         else:
             self.logger.debug(f"No subscribers for event: {event_type}")
 
-    async def handle_event(self):
+    async def handle_event(self) -> None:
         """
         Process and broadcast events to connected clients.
         Also invoke callbacks for subscribed event types.
@@ -130,7 +131,7 @@ class WayfireEventServer:
             else:
                 self.logger.debug(f"No subscribers for event: {event_type}")
 
-    async def handle_client(self, reader, writer):
+    async def handle_client(self, reader, writer) -> None:
         """Manage individual client connections"""
         self.clients.append(writer)
         try:
@@ -143,7 +144,7 @@ class WayfireEventServer:
             writer.close()
             await writer.wait_closed()
 
-    async def start_server(self, path):
+    async def start_server(self, path) -> None:
         """Start UNIX socket server on specified path"""
         server = await asyncio.start_unix_server(
             lambda r, w: self.handle_client(r, w), path=path
@@ -151,7 +152,7 @@ class WayfireEventServer:
         async with server:
             await server.serve_forever()
 
-    async def main(self):
+    async def main(self) -> None:
         """Main server entry point"""
         servers = [self.start_server(path) for path in self.ipcet_paths]
         self.loop = asyncio.get_running_loop()
@@ -163,7 +164,7 @@ class WayfireEventServer:
             # Cleanup logic if needed
             pass
 
-    async def broadcast_message(self, message):
+    async def broadcast_message(self, message) -> None:
         """
         Broadcast a custom message to all connected clients.
         Args:
@@ -178,7 +179,7 @@ class WayfireEventServer:
                 self.clients.remove(client)
                 self.logger.warning("Removed disconnected client during broadcast.")
 
-    def get_socket_path(self):
+    def get_socket_path(self) -> str:
         runtime_dir = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
         socket_name = "waypanel.sock"
         return os.path.join(runtime_dir, socket_name)
