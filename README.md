@@ -13,13 +13,14 @@ How to Install `waypanel`
 
 ##### if using wayfire: configure wayfire.ini
 Ensure the following plugins are enabled in your ~/.config/wayfire.ini: 
-
-##### if using sway: 
-install https://github.com/killown/pysway
     
 [core]
 
 plugins = ipc ipc-rules
+
+
+##### if using sway: 
+install https://github.com/killown/pysway
 
 ##### Option 1: aur (archlinux)
 yay -S waypanel-git 
