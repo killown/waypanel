@@ -1,6 +1,5 @@
 import logging
 import os
-from wayfire.core.template import get_msg_template
 
 from typing import (
     Any,
@@ -143,8 +142,11 @@ class IPC:
     """
 
     def __init__(self):
-        self.is_compositor_socket_ready = False
+        self.compositor_name = self.setup_compositor_socket()
+
+    def setup_compositor_socket(self):
         if os.getenv("WAYFIRE_SOCKET"):
+            from wayfire.core.template import get_msg_template
             from wayfire import WayfireSocket
             from wayfire.extra.ipc_utils import WayfireUtils
             from wayfire.extra.stipc import Stipc
@@ -152,37 +154,40 @@ class IPC:
             self.sock = WayfireSocket()
             self.wf_utils = WayfireUtils(self.sock)
             self.stipc = Stipc(self.sock)
-            self.is_compositor_socket_ready = True
-        if os.getenv("SWAYSOCK") and self.is_compositor_socket_ready is False:
+            self.is_compositor_socket_set_up = True
+            self.get_msg_template = get_msg_template
+            return "wayfire"
+
+        if os.getenv("SWAYSOCK"):
             from pysway.ipc import SwayIPC
 
             self.sock = SwayIPC()
+            return "sway"
 
-    def get_view(self, id: int) -> Dict[str, Any]:
+    def get_view(self, id: int) -> Optional[Dict[str, Any]]:
         """Get the view by the given id"""
         return self.sock.get_view(id)
 
     def set_focus(self, view_id: int) -> Any:
         """Set focus to the specified view"""
-        return self.sock.set_focus(view_id)
-
-    def get_view_alpha(self, id: int) -> float:
-        """Get the view alpha by the given id"""
-        return self.sock.get_view_alpha(id)
+        if self.compositor_name == "wayfire":
+            return self.sock.set_focus(view_id)  # pyright: ignore
+        if self.compositor_name == "sway":
+            return self.sock.set_view_focus(view_id)  # pyright: ignore
 
     def set_view_alpha(self, id: int, alpha: float) -> Any:
         """Set the view alpha by the given id"""
         return self.sock.set_view_alpha(id, alpha)
 
-    def list_outputs(self) -> List[Dict[str, Any]]:
+    def list_outputs(self) -> Optional[List[Dict[str, Any]]]:
         """List all outputs connected to Wayfire"""
         return self.sock.list_outputs()
 
-    def get_focused_output(self) -> Dict[str, Any]:
+    def get_focused_output(self) -> Optional[Dict[str, Any]]:
         """Get the currently focused output"""
         return self.sock.get_focused_output()
 
-    def get_focused_view(self) -> Dict[str, Any]:
+    def get_focused_view(self) -> Optional[Dict[str, Any]]:
         """Get the currently focused view"""
         return self.sock.get_focused_view()
 
@@ -190,19 +195,11 @@ class IPC:
         """List all views managed by Wayfire"""
         return self.sock.list_views()
 
-    def get_option_value(self, option_name: str) -> Union[str, int, float, bool, None]:
-        """Retrieve the value of a specific Wayfire option"""
-        return self.sock.get_option_value(option_name)
-
-    def set_option_values(self, values: Dict[str, Any]) -> Any:
-        """Set multiple Wayfire option values"""
-        return self.sock.set_option_values(values)
-
-    def watch(self) -> Any:
+    def watch(self, events=None) -> Any:
         """Start watching for Wayfire events"""
-        return self.sock.watch()
+        return self.sock.watch(events)
 
-    def read_next_event(self) -> Dict[str, Any]:
+    def read_next_event(self) -> Optional[Dict[str, Any]]:
         """Read the next event from Wayfire"""
         return self.sock.read_next_event()
 
@@ -213,10 +210,6 @@ class IPC:
     def close(self) -> Any:
         """Close the Wayfire socket connection"""
         return self.sock.close()
-
-    def scale_toggle(self) -> Any:
-        """Toggle the scale plugin"""
-        return self.sock.scale_toggle()
 
     def set_workspace(self, x: int, y: int, view_id: Optional[int] = None) -> Any:
         """Set the workspace to the specified coordinates"""
@@ -229,9 +222,11 @@ class IPC:
         """Get a list of all view IDs"""
         return [view["id"] for view in self.sock.list_views()]
 
-    def get_view_geometry(self, view_id: int) -> Dict[str, int]:
+    def get_view_geometry(self, view_id: int) -> Optional[Dict[str, Any]]:
         """Get the geometry of a specific view"""
-        return self.sock.get_view(view_id)["geometry"]
+        view = self.sock.get_view(view_id)
+        if view:
+            return view["geometry"]
 
     def configure_view(
         self,
@@ -243,7 +238,8 @@ class IPC:
         output_id: Optional[int] = None,
     ) -> Any:
         """Configure a view's position and size"""
-        return self.sock.configure_view(view_id, x, y, w, h, output_id)
+        if hasattr(self.sock, "configure_view"):
+            return self.sock.configure_view(view_id, x, y, w, h, output_id)  # pyright: ignore
 
     def go_workspace_set_focus(self, view_id: int) -> None:
         """Set focus to a view and go to its workspace"""
@@ -261,56 +257,35 @@ class IPC:
         """Simulate mouse button click"""
         return self.stipc.click_button(button, mode)
 
-    def list_input_devices(self) -> List[Dict[str, Any]]:
+    def list_input_devices(self) -> Optional[Dict[str, Any]]:
         """Retrieve a list of input devices managed by Wayfire"""
         return self.sock.list_input_devices()
 
     def configure_input_device(self, device_id: int, enable: bool) -> None:
         """Enable or disable an input device"""
-        return self.sock.configure_input_device(device_id, enable)
+        if hasattr(self.sock, "configure_input_device"):
+            return self.sock.configure_input_device(device_id, enable)  # pyright: ignore
 
-    def get_output(self, output_id: int) -> Dict[str, Any]:
+    def get_output(self, output_id: int) -> Optional[Dict[str, Any]]:
         """Get detailed information about a specific output"""
         return self.sock.get_output(output_id)
 
-    def get_current_workspace(self) -> Dict[str, int]:
+    def get_current_workspace(self) -> Optional[Dict[str, Any]]:
         """Get the current workspace coordinates"""
-        return self.sock.get_focused_output().get("workspace", {})
+        focused_output = self.sock.get_focused_output()
+        if focused_output is not None:
+            return focused_output.get("workspace", {})
 
-    def get_active_workspace_number(self) -> int:
+    def get_active_workspace_number(self) -> Optional[int]:
         """Retrieve the number of the currently active workspace"""
-        workspace_info = self.sock.get_focused_output().get("workspace", {})
-        return self.get_workspace_number(workspace_info["x"], workspace_info["y"])
+        focused_output = self.sock.get_focused_output()
+        if focused_output is not None:
+            workspace_info = focused_output.get("workspace", {})
+            return self.get_workspace_number(workspace_info["x"], workspace_info["y"])
 
     def get_workspace_number(self, workspace_x: int, workspace_y: int) -> int:
         """Convert workspace coordinates to a workspace number"""
         return self.wf_utils.get_workspace_number(workspace_x, workspace_y)  # pyright: ignore
-
-    def disable_input_device(self, device_id: int) -> None:
-        """Disable an input device based on its ID"""
-        return self.sock.configure_input_device(device_id, False)
-
-    def enable_input_device(self, device_id: int) -> None:
-        """Enable an input device based on its ID"""
-        return self.sock.configure_input_device(device_id, True)
-
-    def find_device_id(self, name_or_id_or_type: str) -> int:
-        """Find the ID of an input device based on its name, ID, or type"""
-        devices = self.sock.list_input_devices()
-        for dev in devices:
-            if (
-                dev["name"] == name_or_id_or_type
-                or str(dev["id"]) == name_or_id_or_type
-                or dev["type"] == name_or_id_or_type
-            ):
-                return dev["id"]
-        raise ValueError(
-            f"Device with name, ID, or type '{name_or_id_or_type}' not found."
-        )
-
-    def assign_slot(self, view_id: int, slot: str) -> None:
-        """Assign a slot to a view"""
-        return self.sock.assign_slot(view_id, slot)
 
     def set_view_minimized(self, view_id: int, state: bool) -> None:
         """Set the minimized state of a view"""
@@ -326,45 +301,11 @@ class IPC:
 
     def set_view_focus(self, view_id: int) -> None:
         """Set focus to a specific view"""
-        return self.sock.set_focus(view_id)
+        return self.set_focus(view_id)
 
-    def close_view(self, view_id: int) -> None:
+    def close_view(self, view_id: int) -> bool:
         """Close a specific view"""
         return self.sock.close_view(view_id)
-
-    def toggle_showdesktop(self) -> None:
-        """Toggle the 'show desktop' mode"""
-        return self.sock.toggle_showdesktop()
-
-    def toggle_expo(self) -> None:
-        """Toggle the Expo mode"""
-        return self.sock.toggle_expo()
-
-    def create_headless_output(self, width: int, height: int) -> Dict[str, Any]:
-        """Create a headless output with the specified dimensions"""
-        return self.sock.create_headless_output(width, height)
-
-    def destroy_headless_output(
-        self, output_name: Optional[str] = None, output_id: Optional[int] = None
-    ) -> None:
-        """Destroy a headless output by its name or ID"""
-        return self.sock.destroy_headless_output(output_name, output_id)
-
-    def cube_activate(self) -> bool:
-        """Activate the cube effect"""
-        return self.sock.cube_activate()
-
-    def cube_rotate_left(self) -> bool:
-        """Rotate the cube to the left"""
-        return self.sock.cube_rotate_left()
-
-    def cube_rotate_right(self) -> bool:
-        """Rotate the cube to the right"""
-        return self.sock.cube_rotate_right()
-
-    def scale_toggle_all(self) -> bool:
-        """Toggle the Scale mode for all workspaces"""
-        return self.sock.scale_toggle_all()
 
     def create_wayland_output(self) -> None:
         """Create a Wayland output using Stipc"""
@@ -376,14 +317,18 @@ class IPC:
 
     def get_output_id_by_name(self, output_name: str) -> Optional[int]:
         """Get output ID by its name"""
-        for output in self.sock.list_outputs():
-            if output["name"] == output_name:
-                return output["id"]
-        return None
+        outputs = self.sock.list_outputs()
+        if outputs:
+            for output in outputs:
+                if output["name"] == output_name:
+                    return output["id"]
+            return None
 
-    def get_output_geometry(self, output_id: int) -> Dict[str, int]:
+    def get_output_geometry(self, output_id: int) -> Optional[Dict[str, Any]]:
         """Get geometry of a specific output"""
-        return self.sock.get_output(output_id)["geometry"]
+        output = self.sock.get_output(output_id)
+        if output:
+            return output["geometry"]
 
     def get_workspaces_without_views(self) -> List[List[int]]:
         """Get workspaces that don't contain any views.
@@ -398,18 +343,6 @@ class IPC:
         """Get workspace coordinates for a specific view"""
         return self.wf_utils.get_workspace_from_view(view_id)  # pyright: ignore
 
-    def hide_view(self, view_id: int) -> None:
-        """Hide a specific view"""
-        message = get_msg_template("hide-view/hide")
-        message["data"]["view-id"] = view_id
-        self.sock.send_json(message)
-
-    def unhide_view(self, view_id: int) -> None:
-        """Unhide a specific view"""
-        message = get_msg_template("hide-view/unhide")
-        message["data"]["view-id"] = view_id
-        self.sock.send_json(message)
-
     def get_focused_output_views(self) -> List[Dict[str, Any]]:
         """Get all views on the focused output"""
         return [
@@ -418,9 +351,78 @@ class IPC:
             if view["output-id"] == self.get_focused_output_id()
         ]
 
-    def get_focused_output_id(self) -> int:
+    def get_focused_output_id(self) -> Optional[int]:
         """Get ID of the currently focused output"""
-        return self.sock.get_focused_output()["id"]
+        focused_output = self.sock.get_focused_output()
+        if focused_output:
+            return focused_output["id"]
+
+    #  WARNING: wayfire specific functions -------------------
+    def get_view_alpha(self, id: int) -> float:
+        """Get the view alpha by the given id"""
+        return self.sock.get_view_alpha(id)  # pyright: ignore
+
+    def hide_view(self, view_id: int) -> None:
+        """Hide a specific view"""
+        message = self.get_msg_template("hide-view/hide")
+        message["data"]["view-id"] = view_id
+        self.sock.send_json(message)  # pyright: ignore
+
+    def unhide_view(self, view_id: int) -> None:
+        """Unhide a specific view"""
+        message = self.get_msg_template("hide-view/unhide")
+        message["data"]["view-id"] = view_id
+        self.sock.send_json(message)  # pyright: ignore
+
+    def toggle_showdesktop(self) -> None:
+        """Toggle the 'show desktop' mode"""
+        return self.sock.toggle_showdesktop()  # pyright: ignore
+
+    def toggle_expo(self) -> None:
+        """Toggle the Expo mode"""
+        return self.sock.toggle_expo()  # pyright: ignore
+
+    def create_headless_output(self, width: int, height: int) -> Dict[str, Any]:
+        """Create a headless output with the specified dimensions"""
+        return self.sock.create_headless_output(width, height)  # pyright: ignore
+
+    def destroy_headless_output(
+        self, output_name: Optional[str] = None, output_id: Optional[int] = None
+    ) -> None:
+        """Destroy a headless output by its name or ID"""
+        return self.sock.destroy_headless_output(output_name, output_id)  # pyright: ignore
+
+    def cube_activate(self) -> bool:
+        """Activate the cube effect"""
+        return self.sock.cube_activate()  # pyright: ignore
+
+    def cube_rotate_left(self) -> bool:
+        """Rotate the cube to the left"""
+        return self.sock.cube_rotate_left()  # pyright: ignore
+
+    def cube_rotate_right(self) -> bool:
+        """Rotate the cube to the right"""
+        return self.sock.cube_rotate_right()  # pyright: ignore
+
+    def scale_toggle_all(self) -> bool:
+        """Toggle the Scale mode for all workspaces"""
+        return self.sock.scale_toggle_all()  # pyright: ignore
+
+    def scale_toggle(self) -> Any:
+        """Toggle the scale plugin"""
+        return self.sock.scale_toggle()  # pyright: ignore
+
+    def assign_slot(self, view_id: int, slot: str) -> None:
+        """Assign a slot to a view"""
+        return self.sock.assign_slot(view_id, slot)  # pyright: ignore
+
+    def get_option_value(self, option_name: str) -> Union[str, int, float, bool, None]:
+        """Retrieve the value of a specific Wayfire option"""
+        return self.sock.get_option_value(option_name)  # pyright: ignore
+
+    def set_option_values(self, values: Dict[str, Any]) -> Any:
+        """Set multiple Wayfire option values"""
+        return self.sock.set_option_values(values)  # pyright: ignore
 
     def _calculate_intersection_area(
         self, view: dict, ws_x: int, ws_y: int, monitor: dict

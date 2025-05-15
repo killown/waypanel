@@ -54,10 +54,22 @@ class Panel(Adw.Application):
         self.display = monitor
 
         # Default dimensions from the monitor geometry
-        self.monitor_width, self.monitor_height = (
-            monitor["geometry"]["width"],
-            monitor["geometry"]["height"],
-        )
+        # FIXME: need a proper way to handle that,
+        # better case is format sway ipc data to have a default data pattern as wayfire
+        if (
+            "current_mode" not in monitor
+        ):  # in case current_mode is in monitor, then it's swayIPC
+            # wayfire socket here
+            self.monitor_width, self.monitor_height = (
+                monitor["geometry"]["width"],
+                monitor["geometry"]["height"],
+            )
+        else:
+            # sway socket here
+            self.monitor_width, self.monitor_height = (
+                monitor["current_mode"]["width"],
+                monitor["current_mode"]["height"],
+            )
 
         # Override dimensions if specified in the configuration
         if "monitor" in self.config:

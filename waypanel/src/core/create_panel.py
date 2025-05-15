@@ -87,7 +87,6 @@ def get_monitor_info() -> Dict[str, Dict[str, Any]]:
                 "width": monitor_width,
                 "height": monitor_height,
             }
-
     return monitor_info
 
 

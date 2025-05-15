@@ -4,11 +4,8 @@ from subprocess import Popen, check_output
 import pulsectl
 import soundcard as sc
 from gi.repository import Gtk
-from wayfire.ipc import WayfireSocket
 from src.plugins.core._base import BasePlugin
 
-addr = os.getenv("WAYFIRE_SOCKET")
-sock = WayfireSocket(addr)
 
 # set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
