@@ -102,6 +102,14 @@ class WindowTitlePlugin(BasePlugin):
         except Exception as e:
             self.log_error(f"Error handling 'view-title-changed' event: {e}")
 
+    def sway_translate_ipc(self, view):
+        v = None
+        if view["type"] == "con" or view["type"] == "floating_con":
+            v = view
+            v["app-id"] = view["app_id"]
+            v["title"] = view["name"]
+        return v
+
     def update_title_icon(self, view):
         """
         Update the title and icon based on the focused view.
@@ -110,16 +118,29 @@ class WindowTitlePlugin(BasePlugin):
             view: The view object containing details like title, app-id, etc.
         """
         try:
-            view = self.utils.is_view_valid(view)
-            if not view:
-                return
-            title = self.filter_title(view.get("title", ""))
-            wm_class = view.get("app-id", "").lower()
-            initial_title = title.split()[0].lower() if title else ""
-            icon = self.utils.get_icon(wm_class, initial_title, title)
+            # check if the view is from sway socket
+            if "app_id" in view:
+                view = self.sway_translate_ipc(view)
+            if view:
+                # view = self.utils.is_view_valid(view)
+                # if not view:
+                #    return
+                title = self.filter_title(view.get("title", ""))
+                app_id = None
+                # FIXME: the issue here is if new compositors is added, it would get too complex
+                # to adjust every compositor data to fit the plugins
+                # fix this by working in the ipc to provide exactly same data from every compositor
+                if "window_properties" in view:
+                    # SWAY
+                    app_id = view["window_properties"].get("class", None)
+                else:
+                    # Wayfire
+                    app_id = view.get("app-id", "").lower()
+                initial_title = title.split()[0].lower() if title else ""
+                icon = self.utils.get_icon(app_id, initial_title, title)
 
-            # Update the widget
-            self.update_title(title, icon)
+                # Update the widget
+                self.update_title(title, icon)
         except Exception as e:
             self.log_error(f"Error updating title/icon: {e}")
 

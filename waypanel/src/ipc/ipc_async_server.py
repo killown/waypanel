@@ -4,6 +4,7 @@ import orjson as json
 import time
 from concurrent.futures import ThreadPoolExecutor
 from src.core.compositor.ipc import IPC
+from src.plugins.core._event_loop import global_loop
 
 
 class EventServer:
@@ -19,14 +20,13 @@ class EventServer:
         ]
         self._cleanup_sockets()
         self.ipc = IPC()
-        if os.getenv("WAYFIRE_SOCKET"):
-            self.ipc.watch()
+        self.ipc.watch()
 
         self.executor = ThreadPoolExecutor()
         self.event_queue = asyncio.Queue()
         self.clients = []
         self.event_subscribers = {}
-        self.loop = None
+        self.loop = global_loop
 
     def _cleanup_sockets(self) -> None:
         """Remove existing socket files"""
@@ -51,6 +51,35 @@ class EventServer:
                 return False
         return True
 
+    # FIXME: need to move this function for some new file
+    def sway_translate_ipc(self, ev):
+        translated_signal = None
+        event = None
+        if "container" in ev:
+            if (
+                ev["container"]["type"] == "con"
+                or ev["container"]["type"] == "floating_con"
+            ):
+                if ev["change"] == "focus":
+                    translated_signal = "view-focused"
+                    event = {"event": translated_signal, "view": ev["container"]}
+                if ev["change"] == "new":
+                    translated_signal = "view-mapped"
+                    event = {"event": translated_signal, "view": ev["container"]}
+                if ev["change"] == "title":
+                    translated_signal = "view-title-changed"
+                    event = {"event": translated_signal, "view": ev["container"]}
+                if ev["change"] == "close":
+                    translated_signal = "view-closed"
+                    event = {"event": translated_signal, "view": ev["container"]}
+
+        if "old" in ev:
+            if ev["change"] == "focus" and ev["old"] is not None:
+                if ev["old"]["type"] == "workspace":
+                    translated_signal = "workspace-lose-focus"
+                    event = {"event": translated_signal, "workspace": ev["old"]}
+        return event
+
     def read_events(self) -> None:
         """Read events from Wayfire socket in background thread"""
         while True:
@@ -59,7 +88,27 @@ class EventServer:
 
             try:
                 event = self.ipc.read_next_event()
-                asyncio.run_coroutine_threadsafe(self.event_queue.put(event), self.loop)
+
+                # translate events from sway ipc
+                if "change" in event:
+                    event = self.sway_translate_ipc(event)
+
+                if self.loop and not self.loop.is_closed():
+                    try:
+                        asyncio.run_coroutine_threadsafe(
+                            self.event_queue.put(event), self.loop
+                        )
+                    except RuntimeError as e:
+                        if "This event loop is closed" in str(e):
+                            self.logger.warning(
+                                "Event loop is closed. Cannot put event in queue."
+                            )
+                        else:
+                            raise
+                else:
+                    self.logger.warning(
+                        "Event loop not available or already closed. Skipping event."
+                    )
             except Exception as e:
                 self.logger.error(f"Event read failed: {e}")
                 if not self.ipc.is_connected():
@@ -117,19 +166,22 @@ class EventServer:
                     self.logger.warning("Removed disconnected client during broadcast.")
 
             # Notify subscribers for the specific event type
-            event_type = event.get("event")
-            if event_type in self.event_subscribers:
-                for callback in self.event_subscribers[event_type]:
-                    try:
-                        # Execute the callback asynchronously
-                        asyncio.create_task(callback(event))
-                        self.logger.debug(f"Invoked callback for event: {event_type}")
-                    except Exception as e:
-                        self.logger.error(
-                            f"Error executing callback for event '{event_type}': {e}"
-                        )
+            if event:
+                event_type = event.get("event")
+                if event_type in self.event_subscribers:
+                    for callback in self.event_subscribers[event_type]:
+                        try:
+                            # Execute the callback asynchronously
+                            asyncio.create_task(callback(event))
+                            self.logger.debug(
+                                f"Invoked callback for event: {event_type}"
+                            )
+                        except Exception as e:
+                            self.logger.error(
+                                f"Error executing callback for event '{event_type}': {e}"
+                            )
             else:
-                self.logger.debug(f"No subscribers for event: {event_type}")
+                self.logger.debug(f"No subscribers for event: {event}")
 
     async def handle_client(self, reader, writer) -> None:
         """Manage individual client connections"""

@@ -160,8 +160,11 @@ class IPC:
 
         if os.getenv("SWAYSOCK"):
             from pysway.ipc import SwayIPC
+            from pysway.extra.utils import SwayUtils
 
             self.sock = SwayIPC()
+            self.utils = SwayUtils(self.sock)
+
             return "sway"
 
     def get_view(self, id: int) -> Optional[Dict[str, Any]]:
@@ -291,7 +294,7 @@ class IPC:
         """Set the minimized state of a view"""
         return self.sock.set_view_minimized(view_id, state)
 
-    def set_view_maximized(self, view_id: int, state: bool) -> None:
+    def set_view_maximized(self, view_id: int) -> None:
         """Set the maximized state of a specific view"""
         return self.wf_utils.set_view_maximized(view_id)
 

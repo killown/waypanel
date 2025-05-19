@@ -62,7 +62,8 @@ class WayfireClientIPC:
                 if event_str.strip():  # Ignore empty strings
                     try:
                         event: Dict[str, Any] = json.loads(event_str)
-                        self.process_event(event)
+                        if hasattr(event, "get"):
+                            self.process_event(event)
                     except json.JSONDecodeError as e:
                         self.logger.error(f"JSON decode error: {e}")
                         self.logger.debug(f"Failed to decode: {event_str}")

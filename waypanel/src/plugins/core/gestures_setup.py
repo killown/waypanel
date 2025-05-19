@@ -119,15 +119,13 @@ class GesturePlugin:
                 action()
 
     def append_action(self, callback_name, action) -> None:
-        """
-        Append an additional action to a specific gesture callback.
-        Args:
-            callback_name: The name of the callback function to append the action to.
-            action: The additional action to append (a callable function).
-        """
         if callback_name not in self.appended_actions:
             self.appended_actions[callback_name] = []
-        self.appended_actions[callback_name].append(action)
+
+        # Prevent duplicate actions
+        current_ids = [id(a) for a in self.appended_actions[callback_name]]
+        if id(action) not in current_ids:
+            self.appended_actions[callback_name].append(action)
 
     # Gesture Handlers
     def pos_left_left_click(self, *_):

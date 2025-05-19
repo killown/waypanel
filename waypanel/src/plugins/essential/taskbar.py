@@ -10,6 +10,12 @@ from src.plugins.core.event_handler_decorator import subscribe_to_event
 
 # Enable or disable the plugin
 ENABLE_PLUGIN = True
+
+# disabled for sway compositor
+if not os.getenv("WAYFIRE_SOCKET"):
+    ENABLE_PLUGIN = False
+
+
 DEPS = ["event_manager", "gestures_setup"]
 
 

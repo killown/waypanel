@@ -1,8 +1,11 @@
 import gi
+import os
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import GLib
 from src.core.compositor.ipc import IPC
+from src.plugins.core._base import BasePlugin
+
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -28,12 +31,10 @@ def initialize_plugin(panel_instance):
         return plugin
 
 
-class GoNextWorkspaceWithViewsPlugin:
+class GoNextWorkspaceWithViewsPlugin(BasePlugin):
     def __init__(self, panel_instance):
+        super().__init__(panel_instance)
         """Initialize the plugin."""
-        self.obj = panel_instance
-        self.logger = self.obj.logger
-        self.ipc = IPC()
         self.gestures_setup_plugin = None
 
     def setup_plugin(self):
@@ -67,7 +68,8 @@ class GoNextWorkspaceWithViewsPlugin:
 
         # Append the action to the existing gesture callback
         self.gestures_setup_plugin.append_action(
-            callback_name=callback_name, action=self.go_next_workspace_with_views
+            callback_name=callback_name,
+            action=self.go_next_workspace_with_views,
         )
 
     def get_workspaces_with_views(self):
@@ -127,6 +129,21 @@ class GoNextWorkspaceWithViewsPlugin:
         """
         Navigate to the next workspace with views, skipping empty workspaces.
         """
+        # FIXME: need a better way to detect which compositor is active
+        if not os.getenv("WAYFIRE_SOCKET"):
+            # it's necessary to re-import and get a new instance every time we call next_workpace
+            # if not, it will use old instances and duplicate workspaces and cause some bugs
+            from pysway.extra.utils import SwayUtils
+            from pysway.ipc import SwayIPC
+
+            sock = SwayIPC()
+            utils = SwayUtils(sock)
+            workspace_name = utils.get_next_workspace_with_views()
+            if workspace_name is None:
+                return
+            self.ipc.sock.run_command(f"workspace {workspace_name}")
+            return
+
         workspaces_with_views = self.get_workspaces_with_views()
         if not workspaces_with_views:
             self.logger.info("No workspaces with views found.")

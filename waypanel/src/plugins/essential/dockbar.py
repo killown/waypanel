@@ -11,6 +11,11 @@ from src.core.create_panel import (
 
 # Enable or disable the plugin
 ENABLE_PLUGIN = True
+
+# disabled for sway compositor
+if not os.getenv("WAYFIRE_SOCKET"):
+    ENABLE_PLUGIN = False
+
 DEPS = ["event_manager", "gestures_setup"]
 
 

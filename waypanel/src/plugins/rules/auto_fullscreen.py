@@ -122,7 +122,12 @@ class AutoFullscreenAppPlugin(BasePlugin):
             if not view:
                 return
 
-            app_id = view.get("app-id", "").lower()
+            app_id = None
+            if "window_properties" in view:
+                # SWAY
+                app_id = view["window_properties"].get("class", None)
+            else:
+                app_id = view.get("app-id", "").lower()
             title = view.get("title", "").lower()
 
             for item in self.match_items:
