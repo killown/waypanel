@@ -119,17 +119,24 @@ class WindowTitlePlugin(BasePlugin):
         """
         try:
             # check if the view is from sway socket
-            if "app_id" in view:
-                view = self.sway_translate_ipc(view)
+
             if view:
-                # view = self.utils.is_view_valid(view)
-                # if not view:
-                #    return
+                if "app_id" in view:
+                    view = self.sway_translate_ipc(view)
+
+                if self.compositor == "wayfire":
+                    view = self.utils.is_view_valid(view)
+                if not view:
+                    return
                 title = self.filter_title(view.get("title", ""))
                 app_id = None
-                # FIXME: the issue here is if new compositors is added, it would get too complex
-                # to adjust every compositor data to fit the plugins
-                # fix this by working in the ipc to provide exactly same data from every compositor
+                # FIXME: The current approach becomes unwieldy when adding new compositors,
+                # Solution: Standardize data output across compositors via IPC.
+                # Implementation idea:
+                # - Organize plugins by compositor (e.g., `sway/window_title.py`, `wayfire/window_title.py`)
+                # - Auto-detect the active session (Sway/Wayfire/etc.)
+                # - Plugin loader skips irrelevant compositor folders
+                # This keeps things clean while maintaining compositor-specific logic where needed.
                 if "window_properties" in view:
                     # SWAY
                     app_id = view["window_properties"].get("class", None)

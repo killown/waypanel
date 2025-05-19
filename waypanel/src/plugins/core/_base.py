@@ -148,6 +148,7 @@ class BasePlugin:
         self.ipc: Any = panel_instance.ipc
         self.ipc_client = None
         self.ipc_server = panel_instance.ipc_server
+        self.compositor = panel_instance.ipc_server.compositor
         self.dependencies: Any = getattr(self, "DEPS", [])
         self.layer_shell: Any = create_panel.LayerShell
         self.set_layer_pos_exclusive: Any = create_panel.set_layer_position_exclusive

@@ -1912,7 +1912,6 @@ class Utils(Adw.Application):
                 )
                 return False
 
-            # Fetch the view details
             try:
                 fetched_view = self.ipc.get_view(view_id)
             except Exception as e:
@@ -1922,28 +1921,30 @@ class Utils(Adw.Application):
                 )
                 return False
 
-            if not fetched_view:
-                self.logger.debug(f"No view details found for ID: {view_id}")
-                return False
+            # NOTE: Wayfire-only check
+            if "role" in fetched_view and "app-id" in fetched_view:
+                if not fetched_view:
+                    self.logger.debug(f"No view details found for ID: {view_id}")
+                    return False
 
-            # Perform additional checks
-            if fetched_view.get("role") != "toplevel":
-                self.logger.debug(
-                    f"View ID {view_id} has an invalid role: {fetched_view.get('role')}"
-                )
-                return False
+                # Perform additional checks
+                if fetched_view.get("role") != "toplevel":
+                    self.logger.debug(
+                        f"View ID {view_id} has an invalid role: {fetched_view.get('role')}"
+                    )
+                    return False
 
-            if fetched_view.get("pid") == -1:
-                self.logger.debug(
-                    f"View ID {view_id} has an invalid PID: {fetched_view.get('pid')}"
-                )
-                return False
+                if fetched_view.get("pid") == -1:
+                    self.logger.debug(
+                        f"View ID {view_id} has an invalid PID: {fetched_view.get('pid')}"
+                    )
+                    return False
 
-            if fetched_view.get("app-id") in ["", "nil"]:
-                self.logger.debug(
-                    f"View ID {view_id} has an invalid app-id: {fetched_view.get('app-id')}"
-                )
-                return False
+                if fetched_view.get("app-id") in ["", "nil"]:
+                    self.logger.debug(
+                        f"View ID {view_id} has an invalid app-id: {fetched_view.get('app-id')}"
+                    )
+                    return False
 
             return fetched_view
 

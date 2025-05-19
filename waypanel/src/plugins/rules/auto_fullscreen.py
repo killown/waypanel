@@ -3,21 +3,6 @@ Auto Fullscreen App Matcher Plugin for waypanel
 
 This plugin listens for 'view-focused' events and automatically sets views
 to fullscreen if their app-id and (optional) title match any defined in the configuration file.
-
-Example usage in waypanel.toml:
--------------------------------
-[plugins.auto_fullscreen_app]
-enabled = true
-
-[auto_fullscreen_app]
-enabled = true
-[[auto_fullscreen_app.items]]
-app_id = "kitty"
-title = "nvim"
-
-[[auto_fullscreen_app.items]]
-app_id = "librewolf"
-title = "youtube.com"
 """
 
 from gi.repository import GLib

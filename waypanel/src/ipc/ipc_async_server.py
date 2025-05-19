@@ -5,6 +5,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from src.core.compositor.ipc import IPC
 from src.plugins.core._event_loop import global_loop
+from src.ipc.utils import translate_ipc
 
 
 class EventServer:
@@ -21,6 +22,7 @@ class EventServer:
         self._cleanup_sockets()
         self.ipc = IPC()
         self.ipc.watch()
+        self.compositor = None
 
         self.executor = ThreadPoolExecutor()
         self.event_queue = asyncio.Queue()
@@ -51,35 +53,6 @@ class EventServer:
                 return False
         return True
 
-    # FIXME: need to move this function for some new file
-    def sway_translate_ipc(self, ev):
-        translated_signal = None
-        event = None
-        if "container" in ev:
-            if (
-                ev["container"]["type"] == "con"
-                or ev["container"]["type"] == "floating_con"
-            ):
-                if ev["change"] == "focus":
-                    translated_signal = "view-focused"
-                    event = {"event": translated_signal, "view": ev["container"]}
-                if ev["change"] == "new":
-                    translated_signal = "view-mapped"
-                    event = {"event": translated_signal, "view": ev["container"]}
-                if ev["change"] == "title":
-                    translated_signal = "view-title-changed"
-                    event = {"event": translated_signal, "view": ev["container"]}
-                if ev["change"] == "close":
-                    translated_signal = "view-closed"
-                    event = {"event": translated_signal, "view": ev["container"]}
-
-        if "old" in ev:
-            if ev["change"] == "focus" and ev["old"] is not None:
-                if ev["old"]["type"] == "workspace":
-                    translated_signal = "workspace-lose-focus"
-                    event = {"event": translated_signal, "workspace": ev["old"]}
-        return event
-
     def read_events(self) -> None:
         """Read events from Wayfire socket in background thread"""
         while True:
@@ -88,10 +61,7 @@ class EventServer:
 
             try:
                 event = self.ipc.read_next_event()
-
-                # translate events from sway ipc
-                if "change" in event:
-                    event = self.sway_translate_ipc(event)
+                event = translate_ipc(event, self)
 
                 if self.loop and not self.loop.is_closed():
                     try:

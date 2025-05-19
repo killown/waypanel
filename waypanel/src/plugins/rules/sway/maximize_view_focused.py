@@ -30,7 +30,6 @@ class AutoMaximizePlugin(BasePlugin):
         self.logger.info("AutoMaximizePlugin initialized.")
 
     @subscribe_to_event("view-mapped")
-    @subscribe_to_event("view-focused")
     def on_view_focused(self, event_message):
         """
         Handle 'view-focused' event by maximizing the view.
@@ -41,6 +40,7 @@ class AutoMaximizePlugin(BasePlugin):
         try:
             if "view" in event_message:
                 view = event_message["view"]
+                print(view)
                 view_id = view.get("id")
 
                 if not view_id:
