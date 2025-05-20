@@ -44,9 +44,6 @@ class PopoverBookmarks(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.popover_bookmarks = None
-        self.obj = panel_instance
-        self.logger = self.obj.logger
-        self.top_panel = None
         self._setup_config_paths()
         self.listbox = Gtk.ListBox.new()
 
@@ -253,11 +250,10 @@ class PopoverBookmarks(BasePlugin):
 
     def open_url_from_bookmarks(self, x, *_):
         url, container = [i.get_child().MYTEXT for i in x.get_selected_children()][0]
-        sock = self.compositor()
-        all_windows = sock.list_views()
+        all_windows = self.ipc.list_views()
         view = [i["id"] for i in all_windows if "librewolf" in i["app-id"]]
         if view:
-            sock.set_focus(view[0])
+            self.ipc.set_focus(view[0])
         cmd = [
             "librewolf",
             "ext+container:name={0}&url={1}".format(container, url),
@@ -284,7 +280,3 @@ class PopoverBookmarks(BasePlugin):
 
     def popover_is_closed(self, *_):
         return
-
-    def compositor(self):
-        addr = os.getenv("WAYFIRE_SOCKET")
-        return wayfire.WayfireSocket(addr)

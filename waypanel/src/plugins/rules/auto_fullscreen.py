@@ -11,7 +11,7 @@ from src.plugins.core.event_handler_decorator import subscribe_to_event
 
 import logging
 
-ENABLE_PLUGIN = True
+ENABLE_PLUGIN = False
 DEPS = ["event_manager"]
 
 

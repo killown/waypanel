@@ -54,7 +54,15 @@ class UI(BasePlugin):
         popup_height = (
             self.config.get("notify", {}).get("server", {}).get("popup_height", 150)
         )
-        output_w = self.ipc.get_focused_output()["geometry"]["width"]
+
+        focused_output = self.ipc.get_focused_output()
+        # WAYFIRE
+        output_w = focused_output["geometry"]["width"]
+
+        # SWAY
+        if "rect" in focused_output:
+            output_w = focused_output["rect"]["width"]
+
         center_popup_position = (output_w - popup_width) // 2
         top_popup_position = 32
         new_width_position = (

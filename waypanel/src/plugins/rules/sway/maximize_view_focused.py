@@ -1,4 +1,5 @@
 from gi.repository import Gtk
+import os
 from waypanel.src.plugins.core._base import BasePlugin
 from src.plugins.core.event_handler_decorator import subscribe_to_event
 
@@ -7,6 +8,11 @@ ENABLE_PLUGIN = True
 
 # This plugin depends on the event manager to receive events
 DEPS = ["event_manager"]
+
+# FIXME: need a proper way to handle plugins for certain compositors
+# disable the plugin for wayfire
+if os.getenv("WAYFIRE_SOCKET"):
+    ENABLE_PLUGIN = False
 
 
 def get_plugin_placement(panel_instance):
@@ -48,12 +54,10 @@ class AutoMaximizePlugin(BasePlugin):
                     return
 
                 # Use SwayUtils to maximize the view
-                success = self.ipc.utils.maximize_view(view_id)
-
-                if success:
-                    self.logger.info(f"Maximized view with ID: {view_id}")
-                else:
-                    self.logger.warning(f"Failed to maximize view with ID: {view_id}")
+                for _ in range(3):
+                    # call more times so we are sure it really maximize the view
+                    # sometimes one call isn't enough to move the view to the right position
+                    self.ipc.utils.maximize_view(view_id)
 
         except Exception as e:
             self.logger.error(f"Error handling event: {e}")
