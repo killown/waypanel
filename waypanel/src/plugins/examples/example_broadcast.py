@@ -52,7 +52,10 @@ class ExampleBroadcastPlugin(BasePlugin):
         # Create a button widget
         self.button = self.create_broadcast_button()
 
-        # Define the main widget for the plugin
+        # The main widget must always be set after the main widget container to which we want to append the target_box.
+        # The available actions are `append` to append widgets to the top_panel and `set_content`,
+        # which is used to set content in other panels such as the left-panel or right-panel.
+        # This part of the code is highly important, as the plugin loader strictly requires this metadata.
         self.main_widget = (self.button, "append")  # Add the button to the panel
 
     def create_broadcast_button(self):
