@@ -76,7 +76,10 @@ class QuickActionsPlugin(BasePlugin):
         self.menu_button.set_icon_name("system-shutdown-symbolic")
         self.menu_button.add_css_class("quick-actions-button")
 
-        # Define the main widget for the plugin loader
+        # The main widget must always be set after the main widget container to which we want to append the target_box.
+        # The available actions are `append` to append widgets to the top_panel and `set_content`,
+        # which is used to set content in other panels such as the left-panel or right-panel.
+        # This part of the code is highly important, as the plugin loader strictly requires this metadata.
         self.main_widget = (self.menu_button, "append")
 
         # Create the popover menu

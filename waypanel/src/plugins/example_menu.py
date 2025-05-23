@@ -6,7 +6,7 @@ import re
 from src.plugins.core._base import BasePlugin
 
 # Set to False or remove the plugin file to disable it
-ENABLE_PLUGIN = False
+ENABLE_PLUGIN = True
 # NOTE: If the code hangs, it will delay the execution of all plugins. Always use GLib.idle_add for non-blocking code.
 
 # DEPS list is where you add required plugins to load before this example_menu plugin loads,
@@ -75,43 +75,32 @@ def initialize_plugin(panel_instance):
 class ExampleMenuPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
-        self._setup_config_paths()
         self.logger.info("ExampleMenuPlugin initialized.")
-
-    def append_widget(self):
-        return self.menubutton_example
-
-    def _setup_config_paths(self):
-        """Set up configuration paths based on the user's home directory."""
-        self.home = os.path.expanduser("~")
-        self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.waypanel_cfg = os.path.join(self.config_path, "waypanel.toml")
-        self.utils = self.obj.utils
 
     def create_menu_popover_example(self):
         """
         Create a menu button and attach it to the panel.
         """
         self.logger.info("Creating menu popover example.")
-
-        # Create the MenuButton
         self.menubutton_example = Gtk.MenuButton()
+        # The main widget must always be set after the main widget container to which we want to append the target_box.
+        # The available actions are `append` to append widgets to the top_panel and `set_content`,
+        # which is used to set content in other panels such as the left-panel or right-panel.
+        # This part of the code is highly important, as the plugin loader strictly requires this metadata.
+        self.main_widget = (self.menubutton_example, "append")
+        # Create the MenuButton
         self.menubutton_example.set_icon_name("preferences-system-symbolic")
         self.menubutton_example.add_css_class("top_left_widgets")
 
         # Load custom icon from config if available
-        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
-        if os.path.exists(waypanel_config_path):
-            with open(waypanel_config_path, "r") as f:
-                config = toml.load(f)
-                menu_icon = (
-                    config.get("panel", {})
-                    .get("top", {})
-                    .get("example_icon", "preferences-system-symbolic")
-                )
-                self.menubutton_example.set_icon_name(
-                    self.utils.get_nearest_icon_name(menu_icon)
-                )
+        menu_icon = (
+            self.config.get("panel", {})
+            .get("top", {})
+            .get("example_icon", "preferences-system-symbolic")
+        )
+        self.menubutton_example.set_icon_name(
+            self.utils.get_nearest_icon_name(menu_icon)
+        )
 
         # use append_widget instead
         # obj.top_panel_box_systray.append(self.menubutton_example)
