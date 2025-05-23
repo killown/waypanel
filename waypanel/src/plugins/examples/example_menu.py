@@ -9,6 +9,10 @@ from src.plugins.core._base import BasePlugin
 ENABLE_PLUGIN = False
 # NOTE: If the code hangs, it will delay the execution of all plugins. Always use GLib.idle_add for non-blocking code.
 
+# DEPS list is where you add required plugins to load before this example_menu plugin loads,
+# Adding DEPS isn't mandatory, but if top_panel doesn't load before example_menu, example_menu will fail too.
+DEPS = ["top_panel"]
+
 
 def get_plugin_placement(panel_instance):
     """

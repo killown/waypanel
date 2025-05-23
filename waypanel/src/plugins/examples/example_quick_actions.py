@@ -8,6 +8,11 @@ from src.plugins.core._base import BasePlugin
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 
+# DEPS list is where you add required plugins to load before this example_quick_actions plugin loads,
+# Adding DEPS isn't mandatory, but if top_panel doesn't load before example_quick_actions,
+# example_quick_actions will fail too.
+DEPS = ["top_panel"]
+
 
 # Define the plugin's position and order
 def get_plugin_placement(panel_instance):

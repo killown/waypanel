@@ -6,6 +6,11 @@ from src.plugins.core._base import BasePlugin
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 
+# DEPS list is where you add required plugins to load before this example_icon_timer plugin loads,
+# Adding DEPS isn't mandatory, but if top_panel doesn't load before example_icon_timer,
+# example_icon_timer will fail too.
+DEPS = ["top_panel"]
+
 
 # Define the plugin's placement in the panel
 def get_plugin_placement(panel_instance):

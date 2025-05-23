@@ -5,6 +5,10 @@ from src.plugins.core._base import BasePlugin
 
 # NOTE: Always use GLib.idle_add for non-blocking code.
 
+# DEPS list is where you add required plugins to load before this main_example plugin loads,
+# Adding DEPS isn't mandatory, but if top_panel doesn't load before main_example, main_example will fail too.
+DEPS = ["top_panel"]
+
 
 def get_plugin_placement(panel_instance):
     """
