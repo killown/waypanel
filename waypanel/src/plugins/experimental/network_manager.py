@@ -1,6 +1,5 @@
 from gi.repository import Gtk, GLib
 import subprocess
-import os
 from typing import Optional
 from src.plugins.core._base import BasePlugin
 
@@ -96,14 +95,41 @@ class NetworkMonitorPlugin(BasePlugin):
         scrolled_window = Gtk.ScrolledWindow()
         scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         scrolled_window.set_min_content_width(600)
-        scrolled_window.set_min_content_height(400)
 
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
 
         output = self.run_nmcli_device_show()
         devices = self.parse_nmcli_output(output)
 
+        # Store all revealers to track open/closed state
+        revealers = []
+
+        def update_scrolled_window_height(*_):
+            """Update height based on whether any revealer is open."""
+            if any(r.get_reveal_child() for r in revealers):
+                scrolled_window.set_min_content_height(500)
+            else:
+                # Set height dynamically: 60px per device header
+                scrolled_window.set_min_content_height(60 * len(devices))
+
         for idx, device in enumerate(devices):
+            interface_name = device.get("GENERAL.DEVICE", "Unknown")
+
+            header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            header_label = Gtk.Label(label=f"{interface_name}")
+            arrow_icon = Gtk.Image.new_from_icon_name("pan-down-symbolic")
+            header_box.append(header_label)
+            header_box.append(arrow_icon)
+
+            toggle_button = Gtk.Button()
+            toggle_button.set_child(header_box)
+
+            revealer = Gtk.Revealer()
+            revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_DOWN)
+            revealer.set_reveal_child(False)
+            revealer.connect("notify::reveal-child", update_scrolled_window_height)
+            revealers.append(revealer)
+
             grid = Gtk.Grid()
             grid.set_row_spacing(6)
             grid.set_column_spacing(12)
@@ -117,31 +143,38 @@ class NetworkMonitorPlugin(BasePlugin):
                 label_value = Gtk.Label(label=value.strip())
                 label_value.set_halign(Gtk.Align.START)
                 label_value.set_selectable(True)
+                label_value.set_wrap(True)
 
                 grid.attach(label_key, 0, row, 1, 1)
                 grid.attach(label_value, 1, row, 1, 1)
                 row += 1
 
-            vbox.append(grid)
+            revealer.set_child(grid)
+
+            def on_toggled(btn, r=revealer, icon=arrow_icon):
+                revealed = r.get_reveal_child()
+                r.set_reveal_child(not revealed)
+                icon.set_from_icon_name(
+                    "pan-up-symbolic" if revealed else "pan-down-symbolic"
+                )
+
+            toggle_button.connect("clicked", on_toggled)
+
+            vbox.append(toggle_button)
+            vbox.append(revealer)
 
             if idx < len(devices) - 1:
-                separator = Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
-                vbox.append(separator)
+                vbox.append(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
 
         scrolled_window.set_child(vbox)
-
-        # Add scroll area to main box
         main_box.append(scrolled_window)
 
-        # Refresh button
-        refresh_button = Gtk.Button(label="Refresh")
-        refresh_button.connect("clicked", lambda _: self.update_icon_and_popover())
-        main_box.append(refresh_button)
-
-        # Configure connections button
         config_button = Gtk.Button(label="Configure Connections")
         config_button.connect("clicked", self.on_config_clicked)
         main_box.append(config_button)
+
+        # Set initial size based on number of devices
+        update_scrolled_window_height()
 
         return main_box
 
