@@ -6,17 +6,29 @@ DEPS = ["event_manager"]
 
 # List of all known Wayfire IPC events to subscribe to
 ALL_EVENTS = [
+    # Emitted when a view gains focus (e.g., user clicks or tabs into it)
     "view-focused",
+    # Emitted when a view is unmapped (hidden/closed, but not destroyed yet)
     "view-unmapped",
+    # Emitted when a view is mapped (i.e., becomes visible on screen)
     "view-mapped",
+    # Emitted when the title of a view changes (e.g., browser tab changes title)
     "view-title-changed",
+    # Emitted when the application ID (app_id) of a view changes
     "view-app-id-changed",
+    # Emitted when a view is moved to a different output (monitor)
     "view-set-output",
+    # Emitted when a view moves from one workspace to another
     "view-workspace-changed",
+    # Emitted when the geometry (position and size) of a view changes
     "view-geometry-changed",
+    # Emitted when the active workspace set of an output changes
     "wset-workspace-changed",
+    # Emitted when a workspace is activated (user switches to it)
     "workspace-activated",
+    # Emitted when a plugin is activated or deactivated
     "plugin-activation-state-changed",
+    # Emitted when an output gains input focus (e.g., mouse enters its area)
     "output-gain-focus",
 ]
 
