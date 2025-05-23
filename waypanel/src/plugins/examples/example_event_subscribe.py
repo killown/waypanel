@@ -4,6 +4,22 @@ from src.plugins.core.event_handler_decorator import subscribe_to_event
 ENABLE_PLUGIN = True
 DEPS = ["event_manager"]
 
+# List of all known Wayfire IPC events to subscribe to
+ALL_EVENTS = [
+    "view-focused",
+    "view-unmapped",
+    "view-mapped",
+    "view-title-changed",
+    "view-app-id-changed",
+    "view-set-output",
+    "view-workspace-changed",
+    "view-geometry-changed",
+    "wset-workspace-changed",
+    "workspace-activated",
+    "plugin-activation-state-changed",
+    "output-gain-focus",
+]
+
 
 def get_plugin_placement(panel_instance):
     """Background plugin"""
