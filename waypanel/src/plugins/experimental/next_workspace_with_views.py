@@ -14,9 +14,7 @@ DEPS = ["top_panel"]
 
 def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
-    position = "top-panel-right"
-    order = 10
-    return position, order
+    return
 
 
 def initialize_plugin(panel_instance):
