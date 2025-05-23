@@ -9,13 +9,13 @@ ALL_EVENTS = [
     "view-mapped",
     "view-title-changed",
     "view-app-id-changed",
-    "view-closed",
-    "output-added",
-    "output-removed",
+    "view-set-output",
+    "view-workspace-changed",
+    "view-geometry-changed",
     "wset-workspace-changed",
     "workspace-activated",
-    "command-binding",
     "plugin-activation-state-changed",
+    "output-gain-focus",
 ]
 
 
