@@ -211,7 +211,7 @@ class TaskbarPlugin(BasePlugin):
         return button
 
     def on_button_hover(self, view):
-        self.utils.view_focus_effect_selected(view, 0.6, True)
+        self.utils.view_focus_effect_selected(view, 0.80, True)
 
     def on_button_hover_leave(self, view):
         self.utils.view_focus_effect_selected(view, False)
