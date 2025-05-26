@@ -22,10 +22,22 @@ ALL_EVENTS = [
     "view-workspace-changed",
     # Emitted when the geometry (position and size) of a view changes
     "view-geometry-changed",
+    # Emitted when a view is tiled (snapped to a side or maximized in tiling layout)
+    "view-tiled",
+    # Emitted when a view is minimized (hidden but still exists)
+    "view-minimized",
+    # Emitted when a view enters fullscreen mode
+    "view-fullscreen",
+    # Emitted when a view becomes sticky (visible across all workspaces)
+    "view-sticky",
     # Emitted when the active workspace set of an output changes
     "wset-workspace-changed",
     # Emitted when a workspace is activated (user switches to it)
     "workspace-activated",
+    # Emitted when an output's workspace set (wset) changes
+    "output-wset-changed",
+    # Emitted when a view's assigned workspace set (wset) changes
+    "view-wset-changed",
     # Emitted when a plugin is activated or deactivated
     "plugin-activation-state-changed",
     # Emitted when an output gains input focus (e.g., mouse enters its area)
