@@ -24,3 +24,4 @@ structlog
 rich
 cairosvg
 unidecode
+pygments
