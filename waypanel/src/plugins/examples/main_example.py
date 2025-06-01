@@ -1,7 +1,7 @@
 import gi
 from gi.repository import Gtk
 
-from src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin  # this is required for every plugin
 
 # NOTE: Always use GLib.idle_add for non-blocking code.
 
@@ -81,7 +81,14 @@ def initialize_plugin(panel_instance):
 
 
 class ExamplePluginFeatures(BasePlugin):
+    """BasePlugin is a class that provides a basic structure for plugins"""
+
+    # WARNING:: BasePlugin is Required for every plugin
+
     def __init__(self, panel_instance):
+        # NOTE: the following line ensures your plugin gets all the shared tools, attributes,
+        # and integration it needs to work properly inside Waypanel
+        # WARNING: super is required for every plugin
         super().__init__(panel_instance)
         self.popover_example = None
         # Setup basic button
