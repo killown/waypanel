@@ -53,6 +53,15 @@ class PluginLoader:
         )
 
     def get_real_user_home(self):
+        """Determine the real user's home directory, even when running with elevated privileges.
+
+        This function identifies the original user's home path by checking environment variables
+        commonly set when using privilege escalation tools like sudo or pkexec. It ensures correct
+        behavior whether running as root or a regular user.
+
+        Returns:
+            str: The absolute path to the real user's home directory.
+        """
         # Try SUDO_USER first
         if "SUDO_USER" in os.environ:
             return os.path.expanduser(f"~{os.environ['SUDO_USER']}")
@@ -63,7 +72,15 @@ class PluginLoader:
         return os.path.expanduser("~")
 
     def disable_plugin(self, plugin_name):
-        """Disable a plugin by name."""
+        """Disable a plugin by name.
+
+        Safely stops and disables a plugin instance, ensuring proper cleanup
+        by calling available lifecycle methods. Handles both plugins that
+        support custom disable logic and those that don't.
+
+        Args:
+            plugin_name (str): The name of the plugin to disable.
+        """
         if plugin_name not in self.plugins:
             self.logger.warning(f"Plugin '{plugin_name}' not found.")
             return
@@ -85,10 +102,14 @@ class PluginLoader:
             self.logger.warning(f"Plugin '{plugin_name}' does not support disabling.")
 
     def enable_plugin(self, plugin_name, plugin_metadata):
-        """
-        Enable a plugin by name.
+        """Enable a plugin by name.
+
+        Initializes and activates a plugin using the provided metadata,
+        ensuring proper error handling during the process.
+
         Args:
             plugin_name (str): The name of the plugin to enable.
+            plugin_metadata (list or None): Metadata required for initializing the plugin.
         """
         if plugin_name not in self.plugins_path:
             self.logger.error(
@@ -192,6 +213,19 @@ class PluginLoader:
         self._initialize_sorted_plugins(plugin_metadata)
 
     def plugins_base_path(self):
+        """Determine the base path where plugins are located.
+
+        Tries to locate the plugins directory by checking multiple possible paths,
+        starting with the installed package location and falling back to common
+        development directory structures. Logs appropriate warnings/errors when
+        fallbacks are used or when no valid path is found.
+
+        Returns:
+            str: Absolute path to the plugins directory.
+
+        Raises:
+            FileNotFoundError: If no valid plugins directory can be located.
+        """
         try:
             # Try to locate the installed 'waypanel' module
             waypanel_module_spec = importlib.util.find_spec("waypanel")
@@ -256,6 +290,11 @@ class PluginLoader:
     def reload_plugin(self, plugin_name):
         """
         Reload a single plugin dynamically by its name.
+
+        Performs a clean reload by disabling the plugin, removing its instance,
+        reloading the module from disk, and reinitializing it with the latest code
+        and configuration.
+
         Args:
             plugin_name (str): The name of the plugin to reload.
         """
@@ -357,7 +396,18 @@ class PluginLoader:
     def _process_plugin(
         self, module_name, module_path, disabled_plugins, valid_plugins, plugin_metadata
     ):
-        """Process and validate a single plugin."""
+        """Process and validate a single plugin.
+
+        Validates the plugin's structure, checks for required functions,
+        verifies dependencies, and prepares it for initialization if valid.
+
+        Args:
+            module_name (str): Name of the plugin module.
+            module_path (str): Path to the plugin module.
+            disabled_plugins (list): List of plugins that are currently disabled.
+            valid_plugins (list): List of plugins that have passed validation so far.
+            plugin_metadata (list): List to store collected metadata for valid plugins.
+        """
 
         # Skipping files with _name_conventions
         if module_name.startswith("_"):

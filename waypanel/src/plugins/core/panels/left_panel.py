@@ -17,6 +17,17 @@ def initialize_plugin(panel_instance):
 
 class LeftPanelPlugin(BasePlugin):
     def __init__(self, panel_instance):
+        """Initialize the LeftPanelPlugin and set up its UI components.
+
+        This plugin creates the structure for the left panel by setting up
+        the necessary boxes (top, center, bottom, full) and attaching them to
+        the main grid. It also ensures that CSS classes are applied once the
+        widgets are ready.
+
+        Args:
+            panel_instance: The main panel object that provides access to shared resources
+                            like configuration, logger, and widget containers.
+        """
         super().__init__(panel_instance)
         self._setup_boxes()
         self.add_css_class()

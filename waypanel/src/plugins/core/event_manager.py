@@ -19,6 +19,15 @@ def initialize_plugin(panel_instance):
 
 class EventManagerPlugin(BasePlugin):
     def __init__(self, panel_instance):
+        """Initialize the Event Manager Plugin.
+
+        Sets up the IPC client for receiving compositor events and initializes
+        the event subscription system to allow other plugins to register handlers.
+
+        Args:
+            panel_instance: The main panel object providing access to shared resources
+                            such as configuration, logger, and plugin loader.
+        """
         super().__init__(panel_instance)
         """Initialize the plugin."""
 

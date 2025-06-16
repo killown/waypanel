@@ -154,6 +154,11 @@ class Panel(Adw.Application):
             self.logger.error(f"Error reloading configuration: {e}")
 
     def load_config(self) -> Dict[str, Any]:
+        """Load and cache the panel configuration from the waypanel.toml file.
+
+        Returns:
+            dict: Parsed TOML configuration data. If already loaded, returns the cached version.
+        """
         if not hasattr(self, "_cached_config"):
             with open(self.waypanel_cfg, "r") as f:
                 self._cached_config = toml.load(f)

@@ -40,11 +40,27 @@ logger = setup_logging(level=logging.INFO)
 
 class ConfigReloadHandler(FileSystemEventHandler):
     def __init__(self, callback):
+        """Initialize the handler to monitor configuration file changes.
+
+        Sets up a file system event handler to detect modifications to the wayfire.ini
+        configuration file, with a debounce mechanism to prevent rapid successive reloads.
+
+        Args:
+            callback: Function to be called when a valid config modification is detected.
+        """
         super().__init__()
         self.callback = callback
         self.last_modified = time.time()
 
     def on_modified(self, event):
+        """Handle the file modified event for wayfire.ini.
+
+        If the modified file is wayfire.ini and the debounce delay has passed,
+        triggers the reload callback.
+
+        Args:
+            event: The file system event object containing metadata about the change.
+        """
         if event.src_path == os.path.expanduser(os.getenv("WAYFIRE_CONFIG_FILE")):
             now = time.time()
             if now - self.last_modified > 1:  # 1 second debounce
@@ -54,6 +70,19 @@ class ConfigReloadHandler(FileSystemEventHandler):
 
 
 def global_exception_handler(exc_type, exc_value, exc_traceback):
+    """Handle uncaught exceptions globally and log detailed error information.
+
+    This function is intended to be used as a global exception handler to catch and log
+    unhandled exceptions, providing detailed context including the thread name where
+    the exception occurred. It ensures that KeyboardInterrupt exceptions are handled
+    by the default handler.
+
+    Args:
+        exc_type: The type of the exception.
+        exc_value: The exception instance.
+        exc_traceback: A traceback object encapsulating the call stack at the point
+                       where the exception was raised.
+    """
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
@@ -401,6 +430,17 @@ def set_gi_typelib_path(primary_path, fallback_path):
 
 
 def append_to_env(app_name, monitor_name, env_var="waypanel"):
+    """Update the specified environment variable with a JSON object mapping app_name to monitor_name.
+
+    This function reads the current value of the environment variable (or starts with an empty object),
+    adds or updates the entry for app_name with the provided monitor_name, and writes the updated
+    JSON back to the environment variable.
+
+    Args:
+        app_name (str): The application name used as the key in the JSON object.
+        monitor_name (str): The monitor name associated with the application.
+        env_var (str, optional): The name of the environment variable to update. Defaults to "waypanel".
+    """
     existing_env = os.getenv(env_var, "{}")
     env_dict = json.loads(existing_env)
     env_dict[app_name] = monitor_name
@@ -438,6 +478,19 @@ def load_config(config_path):
 
 
 def get_monitor_name(config, sock):
+    """Retrieve the name of the monitor based on configuration or default output.
+
+    Determines which monitor name to use by first checking the command line arguments,
+    then the configuration file, and finally falling back to a default monitor name
+    from the compositor's list of outputs.
+
+    Args:
+        config (dict): Configuration dictionary potentially containing a "monitor" section.
+        sock: Socket object used to interact with the compositor for retrieving outputs.
+
+    Returns:
+        str: The name of the selected monitor. Defaults to "-1" if no suitable monitor is found.
+    """
     monitor = next(
         (output for output in sock.list_outputs() if "-1" in output["name"]),
         sock.list_outputs()[0],
@@ -447,6 +500,15 @@ def get_monitor_name(config, sock):
 
 
 def find_config_path():
+    """Determine the correct path to the waypanel.toml configuration file.
+
+    Checks two potential locations in order of preference:
+    1. User-specific config in ~/.config/waypanel/
+    2. Default config relative to the script's location
+
+    Returns:
+        str: Full path to the waypanel.toml configuration file.
+    """
     home_config_path = os.path.join(
         os.path.expanduser("~"), ".config/waypanel", "waypanel.toml"
     )

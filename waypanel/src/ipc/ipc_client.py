@@ -6,6 +6,16 @@ from typing import Any, Dict
 
 class WayfireClientIPC:
     def __init__(self, handle_event, panel_instance):
+        """Initialize the Wayfire IPC client for communication with the compositor.
+        Sets up core components for socket communication and event handling,
+        including initial configuration of the event buffer and socket state.
+
+        Args:
+            handle_event: Callback function to process incoming IPC events
+            panel_instance: Reference to the main panel instance providing context
+                           and access to shared resources like logger
+        """
+
         self.obj = panel_instance
         self.logger = self.obj.logger
         self.client_socket = None
@@ -15,6 +25,18 @@ class WayfireClientIPC:
         self.handle_event = handle_event  # Store the custom handle_event function
 
     def connect_socket(self, socket_path) -> None:
+        """Establish a connection to the specified Unix domain socket.
+        Sets up a UNIX socket connection and configures GLib IO watch for incoming data events.
+        If connection fails, logs appropriate error messages and ensures socket cleanup.
+
+        Args:
+            socket_path: Path to the Unix socket file to connect to.
+
+        Raises:
+            FileNotFoundError: If the specified socket file does not exist.
+            ConnectionRefusedError: If the server refuses the connection.
+            Exception: For any other unexpected errors during connection setup.
+        """
         try:
             self.socket_path = socket_path
             self.client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -85,13 +107,25 @@ class WayfireClientIPC:
             return GLib.SOURCE_REMOVE  # Stop on unexpected errors
 
     def process_event(self, event) -> None:
+        """Process an incoming event by forwarding it to the custom handle_event function.
+        Args:
+            event: A dictionary containing event data to be processed.
+        """
         self.handle_event(event)  # Call the custom handle_event function
 
     def disconnect_socket(self) -> None:
+        """Gracefully disconnect the Unix socket connection.
+        Removes the GLib IO watch source if active and closes the client socket
+        if it exists, ensuring proper cleanup of resources.
+        """
         if self.source:
             self.source.remove()
         if self.client_socket:
             self.client_socket.close()
 
     def wayfire_events_setup(self, socket_path) -> None:
+        """Set up event listeners for Wayfire IPC events by establishing a socket connection.
+        Args:
+            socket_path: Path to the Unix socket used for connecting to the Wayfire compositor.
+        """
         self.connect_socket(socket_path)

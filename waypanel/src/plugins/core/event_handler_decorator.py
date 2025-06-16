@@ -39,6 +39,16 @@ def initialize_plugin(panel_instance):
 
 class EventHandlerDecoratorPlugin(BasePlugin):
     def __init__(self, panel_instance):
+        """Initialize the plugin to register event handlers for the Compositor events.
+
+        This plugin scans other plugins for decorated event handler functions
+        and registers them with the event manager for dispatching when matching
+        events occur.
+
+        Args:
+            panel_instance: The main panel object providing access to shared resources,
+                            including the logger and loaded plugins.
+        """
         super().__init__(panel_instance)
         self.logger = logging.getLogger(__name__)
         self._register_handlers()

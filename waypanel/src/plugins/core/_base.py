@@ -157,6 +157,15 @@ class BasePlugin:
         )
 
     def log_error(self, message) -> None:
+        """Log an error message with contextual information about the caller.
+
+        Captures the caller's filename, package, and function name to provide
+        detailed context in the log entry. Ensures proper cleanup of internal
+        frame references to prevent memory leaks.
+
+        Args:
+            message (str): The error message to be logged.
+        """
         # Get the caller's frame (two levels up: one for this function, one for the caller)
         frame = inspect.currentframe().f_back  # type: ignore
         try:

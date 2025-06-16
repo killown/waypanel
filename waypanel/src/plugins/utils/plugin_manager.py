@@ -26,6 +26,17 @@ def initialize_plugin(panel_instance):
 # Plugin class
 class PluginManagerPlugin(BasePlugin):
     def __init__(self, panel_instance):
+        """Initialize the Plugin Manager Plugin.
+
+        Sets up a menu button for accessing the plugin manager interface,
+        configures a stack and stack switcher for organizing plugins,
+        creates the popover UI for plugin management, and attaches gestures
+        for user interaction.
+
+        Args:
+            panel_instance: The main panel object providing access to shared resources
+                            such as logger, configuration, and UI containers.
+        """
         super().__init__(panel_instance)
         # Create the main button to open the popover
         self.menubutton_plugin_manager = Gtk.MenuButton()

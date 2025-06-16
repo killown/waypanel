@@ -24,9 +24,15 @@ def initialize_plugin(panel_instance):
 class TopPanelPlugin(BasePlugin):
     def __init__(self, panel_instance):
         """
-        Initialize the plugin.
+        Initialize the TopPanelPlugin and prepare its UI structure.
+
+        Sets up the internal box layout for the top panel (left, systray, button container),
+        applies CSS styling, and initializes a readiness flag to indicate when the panel
+        is fully constructed and ready for use.
+
         Args:
-            panel_instance: The main panel object from panel.py
+            panel_instance: The main panel object from panel.py,
+                            providing access to shared resources and widgets.
         """
         super().__init__(panel_instance)
         self._setup_panel_boxes()

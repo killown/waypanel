@@ -27,7 +27,15 @@ def initialize_plugin(panel_instance):
 
 class GesturePlugin:
     def __init__(self, panel_instance):
-        """Initialize the GesturePlugin."""
+        """Initialize the GesturePlugin.
+
+        Sets up core components for managing gestures on UI elements within the panel,
+        including storage for gesture references and associated actions.
+
+        Args:
+            panel_instance: The main panel object providing access to shared resources
+                            such as logger, utilities, and UI components.
+        """
         self.obj = panel_instance
         self.logger = panel_instance.logger
         self.utils = Utils(panel_instance)

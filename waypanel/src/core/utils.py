@@ -15,6 +15,15 @@ gi.require_version("Adw", "1")
 
 class Utils(Adw.Application):
     def __init__(self, panel_instance):
+        """Initialize utility class with shared resources and configuration paths.
+
+        Sets up commonly used components like logging, icon themes, configuration paths,
+        and process-related utilities for use across the application.
+
+        Args:
+            panel_instance: The main panel object providing access to shared resources
+                            such as logger, config, and UI containers.
+        """
         self.obj = panel_instance
         self.logger = self.obj.logger
         self._setup_config_paths()
