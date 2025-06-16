@@ -64,6 +64,27 @@ class SystemMonitorPlugin(BasePlugin):
             GLib.source_remove(self.update_timeout_id)
             self.update_timeout_id = None
 
+    def add_gpu(self):
+        try:
+            import pyamdgpuinfo
+
+            if pyamdgpuinfo.detect_gpus():
+                gpu = pyamdgpuinfo.get_gpu(0)
+                total_vram_mb = round(gpu.memory_info["vram_size"] / (1024 * 1024))
+                used_vram_bytes = round(gpu.query_vram_usage())
+                gpu_load = gpu.query_load()
+                used_vram_mb = used_vram_bytes / (1024 * 1024)
+                usage_percent = (used_vram_bytes / gpu.memory_info["vram_size"]) * 100
+                self.add_list_box_row("GPU", gpu.name)
+                self.add_list_box_row(
+                    "VRAM", f"{used_vram_mb:.2f}/{total_vram_mb:.2f} MB"
+                )
+                self.add_list_box_row("GFX", f"{gpu_load:.2f}%")
+                self.add_list_box_row("VRAM Usage", f"{usage_percent:.2f}%")
+        except ImportError:
+            pass  # pyamdgpuinfo not installed — skip silently
+        return False
+
     def fetch_and_update_system_data(self):
         """Fetch system data and update the list box."""
         cpu_usage = self.get_cpu_usage()
@@ -91,6 +112,9 @@ class SystemMonitorPlugin(BasePlugin):
         # Add new rows to the list box
         self.add_list_box_row("CPU Usage", f"{cpu_usage}%")
         self.add_list_box_row("Memory Usage", f"{memory_usage}%")
+        # AMD GPU Monitoring - Only if available
+        GLib.idle_add(self.add_gpu)
+
         for usage in disk_usages:
             self.add_list_box_row(
                 f"Disk ({usage['mountpoint']})", f"{usage['percent']}%"
