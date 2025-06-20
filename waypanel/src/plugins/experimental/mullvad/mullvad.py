@@ -2,8 +2,8 @@ import os
 import random
 from gi.repository import Gtk, Gio, GLib
 from subprocess import Popen, check_output
-
 from src.plugins.core._base import BasePlugin
+from .mullvad_info import MullvadStatusDialog
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -149,13 +149,8 @@ class MullvadPlugin(BasePlugin):
 
     def check_status(self, action, parameter=None):
         """Check the status of the Mullvad VPN."""
-        self.logger.info("Checking Mullvad VPN status...")
-        try:
-            status = check_output(["mullvad", "status"]).decode().strip()
-            self.status_label.set_text(status)
-            Popen(["notify-send", status])
-        except Exception as e:
-            self.logger.info(f"Error checking Mullvad status: {e}")
+        dialog = MullvadStatusDialog()
+        dialog.present()
 
     def random_br_relay(self, action, parameter=None):
         """Set a random Brazilian relay for Mullvad."""
@@ -186,9 +181,7 @@ class MullvadPlugin(BasePlugin):
             msg = f"Mudando para {relay_choice}"
             Popen(["notify-send", msg])
         except Exception as e:
-            self.log_error(
-                f"Error setting random Brazilian relay: {e}"
-            )
+            self.log_error(f"Error setting random Brazilian relay: {e}")
 
     def update_vpn_status(self):
         """Check the status of the Mullvad VPN and update the UI."""
