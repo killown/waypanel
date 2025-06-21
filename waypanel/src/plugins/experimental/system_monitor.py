@@ -64,31 +64,45 @@ class SystemMonitorPlugin(BasePlugin):
             GLib.source_remove(self.update_timeout_id)
             self.update_timeout_id = None
 
+    def get_ram_info(self):
+        mem = psutil.virtual_memory()
+        total_gb = mem.total / (1024**3)
+        used_gb = mem.used / (1024**3)
+        percent = mem.percent
+
+        return f"({percent}%) {used_gb:.1f} / {total_gb:.0f}GB"
+
     def add_gpu(self):
+        """Add GPU information with VRAM in GB to the list box."""
         try:
             import pyamdgpuinfo
 
             if pyamdgpuinfo.detect_gpus():
                 gpu = pyamdgpuinfo.get_gpu(0)
-                total_vram_mb = round(gpu.memory_info["vram_size"] / (1024 * 1024))
-                used_vram_bytes = round(gpu.query_vram_usage())
-                gpu_load = gpu.query_load()
-                used_vram_mb = used_vram_bytes / (1024 * 1024)
+                total_vram_gb = gpu.memory_info["vram_size"] / (
+                    1024**3
+                )  # Convert to GB
+                used_vram_bytes = gpu.query_vram_usage()
+                used_vram_gb = used_vram_bytes / (1024**3)  # Convert to GB
                 usage_percent = (used_vram_bytes / gpu.memory_info["vram_size"]) * 100
+                gpu_load = gpu.query_load()
+
                 self.add_list_box_row("GPU", gpu.name)
                 self.add_list_box_row(
-                    "VRAM", f"{used_vram_mb:.2f}/{total_vram_mb:.2f} MB"
+                    "VRAM",
+                    f"({usage_percent:.1f}%) {used_vram_gb:.1f} / {total_vram_gb:.1f} GB",
                 )
-                self.add_list_box_row("GFX", f"{gpu_load:.2f}%")
-                self.add_list_box_row("VRAM Usage", f"{usage_percent:.2f}%")
+                self.add_list_box_row("GPU Load", f"{gpu_load:.1f}%")
         except ImportError:
             pass  # pyamdgpuinfo not installed — skip silently
+        except Exception as e:
+            print(f"Error getting GPU info: {e}")
         return False
 
     def fetch_and_update_system_data(self):
         """Fetch system data and update the list box."""
         cpu_usage = self.get_cpu_usage()
-        memory_usage = self.get_memory_usage()
+        memory_usage = self.get_ram_info()
         disk_usages = self.get_disk_usages()
         network_usage = self.get_network_usage()
         battery_status = self.get_battery_status()
@@ -111,16 +125,19 @@ class SystemMonitorPlugin(BasePlugin):
 
         # Add new rows to the list box
         self.add_list_box_row("CPU Usage", f"{cpu_usage}%")
-        self.add_list_box_row("Memory Usage", f"{memory_usage}%")
+        self.add_list_box_row("RAM Usage", f"{memory_usage}")
         # AMD GPU Monitoring - Only if available
         GLib.idle_add(self.add_gpu)
 
         for usage in disk_usages:
-            self.add_list_box_row(
-                f"Disk ({usage['mountpoint']})", f"{usage['percent']}%"
-            )
+            mountpoint = usage["mountpoint"]
+            used = usage["used"]
+            total = usage["total"]
+
+            self.add_list_box_row(f"Disk ({mountpoint})", f"{used:.1f} / {total:.0f}GB")
         self.add_list_box_row("Network", network_usage)
-        self.add_list_box_row("Battery", battery_status)
+        if battery_status is not None:
+            self.add_list_box_row("Battery", battery_status)
 
         if focused_view:
             self.add_list_box_row(
@@ -155,15 +172,27 @@ class SystemMonitorPlugin(BasePlugin):
         return mem.percent
 
     def get_disk_usages(self):
-        """Get disk usage for all mounted partitions."""
+        """Get disk usage for all mounted partitions with values in GB."""
         disk_usages = []
-        for part in psutil.disk_partitions(all=False):  # Exclude loop devices etc.
+        for part in psutil.disk_partitions(all=False):  # Exclude special devices
             try:
                 usage = psutil.disk_usage(part.mountpoint)
                 disk_usages.append(
-                    {"mountpoint": part.mountpoint, "percent": usage.percent}
+                    {
+                        "mountpoint": part.mountpoint,
+                        "total": round(
+                            usage.total / (1024**3), 1
+                        ),  # Convert to GB with 1 decimal
+                        "used": round(
+                            usage.used / (1024**3), 1
+                        ),  # Convert to GB with 1 decimal
+                        "free": round(
+                            usage.free / (1024**3), 1
+                        ),  # Convert to GB with 1 decimal
+                        "percent": round(usage.percent, 1),  # Percentage with 1 decimal
+                    }
                 )
-            except PermissionError:
+            except (PermissionError, psutil.AccessDenied):
                 continue
         return disk_usages
 
@@ -186,7 +215,7 @@ class SystemMonitorPlugin(BasePlugin):
             plugged = "Plugged" if battery.power_plugged else "Not Plugged"
             percent = battery.percent
             return f"{percent}% ({plugged})"
-        return "No battery"
+        return None
 
     def get_process_disk_usage(self, pid):
         """
@@ -262,6 +291,38 @@ class SystemMonitorPlugin(BasePlugin):
         except Exception as e:
             print(f"Error retrieving process usage for PID {pid}: {e}")
             return None
+
+    # FIXME: make it work for other gpu tools too
+    def open_terminal_with_amdgpu_top(self, *__):
+        """
+        Open a terminal (kitty or alacritty) with amdgpu_top for GPU monitoring.
+
+        Returns:
+            bool: True if the terminal was successfully opened, False otherwise.
+        """
+        # Check if kitty is installed
+        if shutil.which("kitty"):
+            terminal_command = ["kitty"]
+        # Fallback to alacritty if kitty is not available
+        elif shutil.which("alacritty"):
+            terminal_command = ["alacritty"]
+        else:
+            print("Error: Neither kitty nor alacritty is installed.")
+            return False
+
+        # Check if amdgpu_top is installed
+        if not shutil.which("amdgpu_top"):
+            print("Error: amdgpu_top is not installed.")
+            return False
+
+        try:
+            # Launch the terminal with amdgpu_top
+            subprocess.Popen(terminal_command + ["-e", "amdgpu_top"])
+            print(f"Launched {terminal_command[0]} with amdgpu_top.")
+            return True
+        except Exception as e:
+            print(f"Error launching terminal: {e}")
+            return False
 
     def open_terminal_with_htop(self, pid):
         """
@@ -505,6 +566,15 @@ class SystemMonitorPlugin(BasePlugin):
         taskbar = self.plugins["taskbar"]
         return taskbar.last_toplevel_focused_view
 
+    def create_gesture_for_amdgpu_top(self, hbox):
+        """Create a gesture to launch amdgpu_top in a terminal."""
+        create_gesture = self.plugins["gestures_setup"].create_gesture
+        create_gesture(
+            hbox,
+            1,
+            self.open_terminal_with_amdgpu_top,
+        )
+
     def create_gesture_for_focused_view_pid(self, hbox):
         focused_view = self.last_toplevel_focused_view()
         if focused_view is not None:
@@ -548,6 +618,9 @@ class SystemMonitorPlugin(BasePlugin):
             self.create_gesture_for_focused_view_id(hbox)
         if "Win Disk" in name:
             self.create_iotop_gesture_for_focused_view_pid(hbox)
+
+        if "GPU" in name:
+            self.create_gesture_for_amdgpu_top(hbox)
 
         hbox.set_halign(Gtk.Align.FILL)
         hbox.set_margin_top(5)
