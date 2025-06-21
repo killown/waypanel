@@ -16,7 +16,7 @@ DEPS = ["top_panel"]
 
 # set the plugin location, order, position
 def get_plugin_placement(panel_instance):
-    position = "top-panel-left"
+    position = "top-panel-box-widgets-left"
     order = 3
     return position, order
 

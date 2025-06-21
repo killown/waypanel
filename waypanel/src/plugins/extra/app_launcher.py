@@ -12,7 +12,7 @@ DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
-    position = "top-panel-left"
+    position = "top-panel-box-widgets-left"
     order = 1
     return position, order
 

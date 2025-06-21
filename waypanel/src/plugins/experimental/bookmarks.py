@@ -16,7 +16,7 @@ DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
-    position = "top-panel-left"
+    position = "top-panel-box-widgets-left"
     order = 2
     return position, order
 
@@ -70,7 +70,7 @@ class PopoverBookmarks(BasePlugin):
                 )
                 self.menubutton_bookmarks.set_icon_name(bookmarks_icon)
         else:
-            self.menubutton_bookmarks.set_icon_name("librewolf")
+            self.menubutton_bookmarks.set_icon_name("firefox-developer-edition")
         self.menubutton_bookmarks.add_css_class("bookmarks-menu-button")
 
     def create_popover_bookmarks(self, *_):
@@ -251,11 +251,13 @@ class PopoverBookmarks(BasePlugin):
     def open_url_from_bookmarks(self, x, *_):
         url, container = [i.get_child().MYTEXT for i in x.get_selected_children()][0]
         all_windows = self.ipc.list_views()
-        view = [i["id"] for i in all_windows if "librewolf" in i["app-id"]]
+        view = [
+            i["id"] for i in all_windows if "firefox-developer-edition" in i["app-id"]
+        ]
         if view:
             self.ipc.set_focus(view[0])
         cmd = [
-            "librewolf",
+            "firefox-developer-edition",
             "ext+container:name={0}&url={1}".format(container, url),
         ]
         Popen(cmd)
