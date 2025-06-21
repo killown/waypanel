@@ -727,6 +727,7 @@ class PluginLoader:
             # Top Panel
             "top-panel": "top_panel",
             "top-panel-left": "top_panel_box_left",
+            "top-panel-box-widgets-left": "top_panel_box_widgets_left",
             "top-panel-center": "top_panel_box_center",
             "top-panel-right": "top_panel_box_right",
             "top-panel-systray": "top_panel_box_systray",
