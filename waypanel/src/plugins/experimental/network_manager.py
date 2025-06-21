@@ -51,6 +51,8 @@ class NetworkMonitorPlugin(BasePlugin):
         self.update_icon()
         self.button.set_icon_name(self.icon)
         self.button.set_popover(self.popover)
+        self.popover.set_parent(self.button)
+        self.update_icon()
         self.main_widget = (self.button, "append")
 
     def update_icon(self):
@@ -73,6 +75,53 @@ class NetworkMonitorPlugin(BasePlugin):
         """Update popover content without changing the icon."""
         content = self.create_scrollable_grid_content()
         self.popover.set_child(content)
+
+    def on_wifi_scan_clicked(self, button):
+        self.wifi_list_box.remove_all()
+
+        networks = self.scan_wifi_networks()
+        if not networks:
+            empty_label = Gtk.Label(label="No networks found.")
+            self.wifi_list_box.append(empty_label)
+            return
+
+        for network in networks:
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            ssid_label = Gtk.Label(label=f"{network['ssid']}")
+            signal_label = Gtk.Label(label=f"{network['signal']}%")
+            security_label = Gtk.Label(label=f"{network['security']}")
+            box.append(ssid_label)
+            box.append(signal_label)
+            box.append(security_label)
+            self.wifi_list_box.append(box)
+
+    def scan_wifi_networks(self):
+        """Scan for available WiFi networks using nmcli."""
+        try:
+            result = subprocess.run(
+                ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=True,
+            )
+            lines = result.stdout.strip().split("\n")
+            networks = []
+            for line in lines:
+                parts = line.split(":")
+                if len(parts) >= 3:
+                    ssid, signal, security = parts[0], parts[1], parts[2]
+                    networks.append(
+                        {
+                            "ssid": ssid or "<unknown>",
+                            "signal": int(signal),
+                            "security": security,
+                        }
+                    )
+            return networks
+        except Exception as e:
+            self.logger.error(f"Failed to scan WiFi networks: {e}")
+            return []
 
     def is_internet_connected(self):
         """
@@ -168,6 +217,22 @@ class NetworkMonitorPlugin(BasePlugin):
 
         scrolled_window.set_child(vbox)
         main_box.append(scrolled_window)
+
+        # === START: WiFi Scan Section ===
+        # FIXME: missing connect to the network?
+        wifi_scan_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        wifi_scan_box.set_margin_top(12)
+
+        scan_button = Gtk.Button(label="Scan WiFi Networks")
+        scan_button.connect("clicked", self.on_wifi_scan_clicked)
+        wifi_scan_box.append(scan_button)
+
+        self.wifi_list_box = Gtk.ListBox()
+        self.wifi_list_box.set_selection_mode(Gtk.SelectionMode.NONE)
+        wifi_scan_box.append(self.wifi_list_box)
+
+        main_box.append(wifi_scan_box)
+        # === END: WiFi Scan Section ===
 
         config_button = Gtk.Button(label="Configure Connections")
         config_button.connect("clicked", self.on_config_clicked)
