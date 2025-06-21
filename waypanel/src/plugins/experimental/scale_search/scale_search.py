@@ -4,6 +4,7 @@ from gi.repository import GLib
 import shutil
 import os
 
+# install https://codeberg.org/dnkl/fuzzel to enable the plugin
 ENABLE_PLUGIN = shutil.which("fuzzel") is not None
 DEPS = ["event_manager"]  # Depends on the event manager to receive events
 
@@ -90,7 +91,6 @@ class fuzzelWatcherPlugin(BasePlugin):
                 current_script_path = os.path.abspath(__file__)
                 current_folder_path = os.path.dirname(current_script_path)
                 fuzzel_config = os.path.join(current_folder_path, "fuzzel.ini")
-                print(fuzzel_config)
                 self.fuzzel_process = subprocess.Popen(
                     ["fuzzel", "--hide-before-typing", "--config", fuzzel_config],
                 )
