@@ -1,7 +1,7 @@
 [cmd]
 
 [plugins]
-list = "taskbar clock dockbar event_manager gestures_setup top_panel scale_rules auto_fullscreen soundcard_menu system_monitor next_workspace_with_views volume_scroll bookmarks mullvad notes bluetooth_menu clipboard_client clipboard_server notifier_client notify_server notify_watcher notify_client weather calendar calendar_notes menu_setup places window_title app_launcher system_dashboard window_controls"
+list = "taskbar clock dockbar event_manager event_handler_decorator gestures_setup top_panel right_panel bottom_panel left_panel soundcard_menu system_monitor next_workspace_with_views volume_scroll bookmarks notes network_manager pacman bluetooth_manager clipboard_client clipboard_server notifier_client notify_server notify_watcher notify_client weather calendar calendar_notes mullvad scale_search scale_rules menu_setup places window_title app_launcher system_dashboard window_controls ai_prompt cripto"
 disabled = "plugin_manager"
 custom_path = "~/.config/waypanel/plugins"
 
@@ -13,7 +13,7 @@ class_style = "taskbar-buttons"
 type = "top"
 
 [dockbar_panel]
-panel = "left"
+panel = "left-panel-center"
 
 [window_title]
 title_lenght = 50
@@ -42,14 +42,6 @@ codium-insiders-url-handler = "vscodium"
 wlroots = "wayland"
 com = "{'obsproject': {'Studio': 'com.obsproject.Studio'}}"
 
-[dockbar.librewolf]
-cmd = "librewolf"
-icon = "librewolf"
-wclass = "librewolf"
-desktop_file = "librewolf"
-name = "librewolf"
-initial_title = "librewolf"
-
 [dockbar.nautilus]
 cmd = "nautilus --new-window"
 icon = "nautilus"
@@ -57,6 +49,14 @@ wclass = "org.gnome.nautilus"
 initial_title = "org.gnome.nautilus"
 desktop_file = "org.gnome.Nautilus.desktop"
 name = "Nautilus"
+
+[dockbar.firefox-developer-edition]
+cmd = "firefox-developer-edition"
+icon = "firefox-developer-edition"
+wclass = "firefox-developer-edition"
+desktop_file = "firefox-developer-edition"
+name = "firefox-developer-edition"
+initial_title = "firefox-developer-edition"
 
 [dockbar.steam]
 cmd = "mullvad-exclude gtk-launch steam.desktop"
@@ -100,24 +100,24 @@ initial_title = "cinny"
 enabled = true
 position = "BOTTOM"
 Exclusive = false
-size = "42"
+size = 42
 
 [panel.left]
 enabled = true
 position = "BOTTOM"
 Exclusive = false
-size = "64"
+size = 64
 
 [panel.right]
 enabled = true
 position = "BOTTOM"
 Exclusive = false
-size = "42"
+size = 42
 
 [panel.top]
 menu_icon = "archlinux-logo"
 folder_icon = "folder"
-bookmarks_icon = "librewolf"
+bookmarks_icon = "internet-web-browser"
 clipboard_icon = "edit-paste"
 soundcard_icon = "audio-volume-high"
 system_icon = "system-shutdown"
@@ -126,20 +126,8 @@ notes_icon = "stock_notes"
 notes_icon_delete = "delete"
 position = "TOP"
 Exclusive = true
-size = "12"
+size = 12
 max_note_lenght = 100
-
-[[menu.Wayfire.items]]
-name = "Patch wayfire and install"
-cmd = "kitty -e bash -c \"cd ~/Git/wayfire/; ~/Scripts/wayfire/patch.apply; ~/Scripts/wayfire/install\""
-
-[[menu.Wayfire.items]]
-name = "Start Wayfire Debug"
-cmd = "/home/neo/.local/wayfire/debug-build/bin/wayfire -d &>/tmp/wayfire-debug.log"
-
-[[menu.Wayfire.items]]
-name = "Turn ON/OFF DP-2"
-cmd = "python /home/neo/Scripts/wayfire/output_dp_2.py"
 
 [folders.Home]
 name = "Home"
@@ -153,17 +141,9 @@ path = "Downloads"
 filemanager = "nautilus"
 icon = "folder-downloads-symbolic"
 
-[folders.Documentos]
-name = "Documentos"
-path = "Documentos"
-filemanager = "nautilus"
-icon = "folder-documents-symbolic"
-
-[folders.Imagens]
-name = "Imagens"
-path = "Imagens"
-filemanager = "thunar"
-icon = "folder-image-symbolic"
+[launcher.separator]
+cmd = "NULL"
+icon = "gnome-panel-separator"
 
 [notify.server]
 show_messages = true
