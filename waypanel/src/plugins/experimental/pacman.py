@@ -2,7 +2,7 @@ import subprocess
 import shutil
 from gi.repository import Gtk, GLib
 from src.plugins.core._base import BasePlugin
-from waypanel.src.plugins.experimental.system_monitor import ENABLE_PLUGIN
+from src.plugins.experimental.system_monitor import ENABLE_PLUGIN
 
 
 # ENABLE_PLUGIN = bool(shutil.which("pacman"))
