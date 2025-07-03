@@ -427,6 +427,26 @@ class IPC:
         """Set multiple Wayfire option values"""
         return self.sock.set_option_values(values)  # pyright: ignore
 
+    def tile_show_maximized(self, id, should_maximize):
+        self.sock.tile_show_maximized(id, should_maximize)
+
+    def register_binding(self, binding, command, exec_always=True, mode="normal"):
+        return self.sock.register_binding(
+            binding=binding,
+            command=command,
+            exec_always=True,
+            mode=mode,
+        )
+
+    def clear_bindings(self):
+        return self.sock.clear_bindings()
+
+    def set_tiling_layout(self, wset, wsx, wsy, desired_layout):
+        return self.sock.set_tiling_layout(wset, wsx, wsy, desired_layout)
+
+    def get_tiling_layout(self, wset, wsx, wsy):
+        return self.sock.get_tiling_layout(wset, wsx, wsy)
+
     def _calculate_intersection_area(
         self, view: dict, ws_x: int, ws_y: int, monitor: dict
     ) -> int:
