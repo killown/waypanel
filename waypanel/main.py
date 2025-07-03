@@ -38,6 +38,15 @@ CONFIG_SUBDIR = "waypanel/config"
 logger = setup_logging(level=logging.INFO)
 
 
+# FIXME: Clear registered bindings
+# Prevents duplicate bindings when the panel restarts, avoiding multiple command calls
+# Also removes any bindings registered by external scripts
+# If you are sure you would disable this, grep the panel dir to look for register_bindings
+# so you can disable those plugins using it and don't create any conflicts
+# a wayfire PR is necessary to override existent bindings instead of duplicating it
+sock.clear_bindings()
+
+
 class ConfigReloadHandler(FileSystemEventHandler):
     def __init__(self, callback):
         """Initialize the handler to monitor configuration file changes.
