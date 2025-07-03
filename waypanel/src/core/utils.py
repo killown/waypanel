@@ -1,13 +1,14 @@
 import os
 import subprocess
-from time import sleep
 import gi
-import numpy as np
 import toml
 from collections.abc import Iterable
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 from src.core.compositor.ipc import IPC
 from typing import Dict, Any, Optional, Tuple, Callable, List, Union, Type, Iterable
+import configparser
+import importlib.util
+
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -54,6 +55,10 @@ class Utils(Adw.Application):
             "st",
             "rxvt",
         ]
+        self.original_alpha_views_values = {
+            view["id"]: self.ipc.get_view_alpha(view["id"])["alpha"]
+            for view in self.ipc.list_views()
+        }
 
     def send_view_to_output(self, view_id, direction):
         """
@@ -1771,7 +1776,7 @@ class Utils(Adw.Application):
             return None
 
     def view_focus_effect_selected(
-        self, view: dict, alpha: float = 0.7, selected: bool = False
+        self, view: dict, alpha: float = 1.0, selected: bool = False
     ) -> None:
         """
         Apply a focus indicator effect by animating the view's alpha (transparency).
@@ -1788,78 +1793,13 @@ class Utils(Adw.Application):
                 self.logger.warning(f"Invalid or non-existent view ID: {view_id}")
                 return
 
-            # Retrieve the current alpha value of the view
-            # FIXME:: try to fallback to original view alpha
-            original_alpha = 1.0
-            try:
-                original_alpha = self.ipc.get_view_alpha(view_id)["alpha"]
-            except Exception as e:
-                self.logger.error(
-                    f"Failed to retrieve alpha value for view ID: {view_id} and {e}",
-                    exc_info=True,
-                )
-                return
-
             if selected:
                 self.ipc.set_view_alpha(view_id, alpha)
             else:
-                self.ipc.set_view_alpha(view_id, 1.0)
-
-        except Exception as e:
-            # Catch-all for unexpected errors
-            self.logger.error(
-                f"Unexpected error while applying focus indicator effect for view ID: {view_id} and {e}",
-                exc_info=True,
-            )
-
-    def view_focus_indicator_effect(self, view: dict) -> None:
-        """
-        Apply a focus indicator effect by animating the view's alpha (transparency).
-
-        Args:
-            view (dict): The view dictionary containing at least the 'id' key.
-        """
-        view_id = None
-        try:
-            view_id = view["id"]
-            if not self.is_view_valid(view):
-                self.logger.warning(f"Invalid or non-existent view ID: {view_id}")
-                return
-
-            # Retrieve the current alpha value of the view
-            try:
-                original_alpha = self.ipc.get_view_alpha(view_id)["alpha"]
-            except Exception as e:
-                self.logger.error(
-                    f"Failed to retrieve alpha value for view ID: {view_id} and {e}",
-                    exc_info=True,
-                )
-                return
-
-            # Define the sequence of alpha values for the animation
-            precision = 1
-            values = np.arange(0.1, 1, 0.1)
-            float_sequence = [round(value, precision) for value in values]
-
-            # Apply the alpha animation
-            for alpha in float_sequence:
-                try:
-                    self.ipc.set_view_alpha(view_id, alpha)
-                    sleep(0.02)  # Small delay for the animation effect
-                except Exception as e:
-                    self.logger.error(
-                        f"Failed to set alpha value ({alpha}) for view ID: {view_id} and {e}",
-                        exc_info=True,
-                    )
-
-            # Restore the original alpha value
-            try:
-                self.ipc.set_view_alpha(view_id, original_alpha)
-            except Exception as e:
-                self.logger.error(
-                    f"Failed to restore original alpha value ({original_alpha}) for view ID: {view_id} and {e}",
-                    exc_info=True,
-                )
+                # FIXME: sometimes it's not set to original value
+                # original_alpha_value = self.original_alpha_views_values[view_id]
+                original_alpha_value = 1.0
+                self.ipc.set_view_alpha(view_id, original_alpha_value)
 
         except Exception as e:
             # Catch-all for unexpected errors
@@ -2192,3 +2132,119 @@ class Utils(Adw.Application):
                 f"Unexpected error while creating button: {e}", exc_info=True
             )
             return None
+
+    def is_plugin_enabled(self, plugin_name):
+        config_file = os.getenv(
+            "WAYFIRE_CONFIG_FILE", os.path.expanduser("~/.config/wayfire.ini")
+        )
+
+        if not os.path.exists(config_file):
+            print(f"Config file not found: {config_file}")
+            return False
+
+        parser = configparser.ConfigParser()
+
+        try:
+            parser.read(config_file)
+        except Exception as e:
+            print(f"Error reading config file: {e}")
+            return False
+
+        if "core" not in parser.sections():
+            print("No [core] section in config")
+            return False
+
+        plugins_line = parser["core"].get("plugins", "").strip()
+        if not plugins_line:
+            print("plugins= line missing or empty in [core]")
+            return False
+
+        plugins = [p.strip() for p in plugins_line.split(" ")]
+
+        return plugin_name in plugins
+
+    def is_keybind_used(self, keybinding):
+        """
+        Search line-by-line in the Wayfire config file for any line that ends with
+        the given keybinding (after optional '=' and whitespace), after normalizing whitespace.
+
+        Returns True if found, False otherwise.
+        """
+        config_file = os.getenv(
+            "WAYFIRE_CONFIG_FILE", os.path.expanduser("~/.config/wayfire.ini")
+        )
+
+        if not os.path.exists(config_file):
+            print(f"Config file not found: {config_file}")
+            return False
+
+        try:
+            with open(config_file, "r", encoding="utf-8") as f:
+                for line_number, line in enumerate(f, start=1):
+                    stripped_line = line.strip()
+                    if stripped_line.startswith("#"):
+                        continue  # Skip comments
+
+                    if "=" not in stripped_line:
+                        continue  # Not a binding line
+
+                    key_part = stripped_line.split("=", 1)[1].strip()
+
+                    normalized_key_part = " ".join(key_part.split())
+                    normalized_target = " ".join(keybinding.strip().split())
+
+                    if normalized_key_part == normalized_target:
+                        print(
+                            f"Pattern '{keybinding}' matched on line {line_number}: {stripped_line}"
+                        )
+                        return True
+            return False
+        except Exception as e:
+            print(f"Error reading config file: {e}")
+            return False
+
+    def get_wayctl_path(self):
+        try:
+            # Try to locate the installed 'waypanel' module
+            waypanel_module_spec = importlib.util.find_spec("waypanel")
+            if waypanel_module_spec is None:
+                raise ImportError("The 'waypanel' module could not be found.")
+
+            # Get the root path of the module (e.g. site-packages/waypanel or dev dir)
+            waypanel_module_path = waypanel_module_spec.origin  # points to __init__.py
+
+            # Traverse up until we find the "waypanel" folder
+            while os.path.basename(waypanel_module_path) != "waypanel":
+                waypanel_module_path = os.path.dirname(waypanel_module_path)
+
+            # Now construct the path to wayctl.py
+            wayctl_path = os.path.join(
+                waypanel_module_path, "src", "plugins", "utils", "tools", "wayctl.py"
+            )
+
+            if not os.path.exists(wayctl_path):
+                raise FileNotFoundError(f"wayctl.py not found at {wayctl_path}")
+
+            return wayctl_path
+
+        except Exception as e:
+            raise RuntimeError(f"Failed to locate wayctl.py: {e}")
+
+    def register_wayctl_binding(self, keybind, keybind_fallback, args):
+        if self.is_keybind_used(keybind):
+            if keybind_fallback is None:
+                return
+            keybind = keybind_fallback
+            if self.is_keybind_used(keybind):
+                self.logger.warning(
+                    f"Keybind '{keybind}' already used. Skipping registration."
+                )
+                return
+
+        self.logger.info(f"Registering keybinding: {keybind}")
+        self.ipc.register_binding(
+            binding=keybind,
+            command=f"python3 {self.get_wayctl_path()} {args}",
+            exec_always=True,
+            mode="normal",
+        )
