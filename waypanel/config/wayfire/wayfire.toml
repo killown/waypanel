@@ -1,0 +1,368 @@
+#WARNING: this config file will override any wayfire.ini options
+
+#NOTE: you must use toml format which is distinct from wayfire.ini 
+# the following commented lines is just an example of how to use
+
+# [animate]
+# close_animation = "none"
+# duration = "0ms circle"
+# enabled_for = "(type equals \"toplevel\" | (type equals \"x-or\" & focusable equals true))"
+# fade_duration = "300ms circle"
+# fade_enabled_for = "type equals \"overlay\""
+# fire_color = "#B22303FF"
+# fire_duration = "300ms circle"
+# fire_enabled_for = "none"
+# minimize_animation = "zoom"
+# open_animation = "none"
+# spin_duration = "300ms circle"
+# squeezimize_duration = "500ms linear"
+# startup_duration = "600ms circle"
+# zap_duration = "300ms sigmoid"
+# zoom_duration = "300ms easeOutElastic"
+# zoom_enabled_for = "none"
+# fire_particle_size = 10.0
+# fire_particles = 2000
+# random_fire_color = true
+# spin_rotations = 3
+#
+# [bench]
+# position = "top_center"
+# average_frames = 25
+#
+# [blur]
+# blur_by_default = "type is \"toplevel\""
+# method = "gaussian"
+# toggle = "<shift> BTN_LEFT"
+# bokeh_degrade = 1
+# bokeh_iterations = 15
+# bokeh_offset = 5.0
+# box_degrade = 1
+# box_iterations = 2
+# box_offset = 0.7
+# gaussian_degrade = 1
+# gaussian_iterations = 2
+# gaussian_offset = 1.0
+# kawase_degrade = 3
+# kawase_iterations = 2
+# kawase_offset = 1.7
+# saturation = 0.6
+#
+# [blur-to-background]
+# enabled_for = "none"
+#
+# [core]
+# background_color = "#1A1A1AFF"
+# close_top_view = "<alt> KEY_Q | <alt> KEY_F4"
+# exit = "<alt> <ctrl> KEY_BACKSPACE"
+# focus_buttons = "BTN_LEFT | BTN_MIDDLE | BTN_RIGHT"
+# plugins = "stipc alpha autostart command foreign-toplevel idle gtk-shell ipc ipc-rules resize shortcuts-inhibit window-rules xdg-activation wayfire-shell wsets focus-steal-prevent session-lock oswitch expo focus-change vswitch grid place force-fullscreen move hide-view zoom wm-actions vswipe view-shot fast-switcher switcher cube wobbly extra-animations animate scale"
+# preferred_decoration_mode = "server"
+# xwayland_startup_script = ""
+#
+# [expo]
+# background = "#1A1A1AFF"
+# duration = "300ms circle"
+# toggle = "<super> KEY_E"
+# inactive_brightness = 0.7
+# keyboard_interaction = true
+# offset = 10
+# transition_length = 200
+#
+#
+# [focus-change]
+# down = "<shift> <super> KEY_DOWN"
+# left = "<shift> <super> KEY_LEFT"
+# right = "<shift> <super> KEY_RIGHT"
+# up = "<shift> <super> KEY_UP"
+# cross-output = false
+# cross-workspace = false
+# grace-down = 1
+# grace-left = 1
+# grace-right = 1
+# grace-up = 1
+# raise-on-change = true
+# scan-height = 0
+# scan-width = 0
+#
+# [focus-steal-prevent]
+# cancel_keys = "KEY_ENTER"
+# deny_focus_views = "none"
+# timeout = 1000
+#
+# [follow-focus]
+# change_output = true
+# change_view = true
+# focus_delay = 0
+# raise_on_top = true
+# threshold = 400
+#
+# [force-fullscreen]
+# constraint_area = "view"
+# key_toggle_fullscreen = "<alt> <super> KEY_F"
+# constrain_pointer = false
+# preserve_aspect = true
+# transparent_behind_views = true
+# x_skew = 0.0
+# y_skew = 0.0
+#
+# [grid]
+# duration = "300ms circle"
+# restore = "<super> KEY_DOWN | <alt> KEY_KP0"
+# slot_b = "<alt> KEY_KP2"
+# slot_bl = "<alt> KEY_KP1"
+# slot_br = "<alt> KEY_KP3"
+# slot_c = "<super> KEY_UP | <alt> KEY_KP5"
+# slot_l = "<super> KEY_LEFT | <alt> KEY_KP4"
+# slot_r = "<super> KEY_RIGHT | <alt> KEY_KP6"
+# slot_t = "<alt> KEY_KP8"
+# slot_tl = "<alt> KEY_KP7"
+# slot_tr = "<alt> KEY_KP9"
+# type = "crossfade"
+#
+# [hide-cursor]
+# toggle = "<ctrl> <super> KEY_H"
+# hide_delay = 2000
+#
+# [idle]
+# toggle = "<ctrl> <shift> KEY_F1"
+# cube_max_zoom = 1.5
+# cube_rotate_speed = 1.0
+# cube_zoom_speed = 1000
+# disable_initially = false
+# disable_on_fullscreen = true
+# dpms_timeout = -1
+# screensaver_timeout = 3600
+#
+# [input]
+# click_method = "default"
+# cursor_theme = "default"
+# mouse_accel_profile = "default"
+# scroll_method = "default"
+# tablet_motion_mode = "default"
+# touchpad_accel_profile = "default"
+# xkb_layout = "br, us"
+# xkb_model = "br, us"
+# xkb_options = ""
+# xkb_rules = "evdev"
+# xkb_variant = ""
+#
+# [invert]
+# toggle = "<alt> KEY_I"
+# preserve_hue = false
+#
+# [keycolor]
+# color = "#CC3333FF"
+# opacity = 0.25
+# threshold = 0.5
+#
+# [mag]
+# toggle = "<alt> <super> KEY_M"
+# default_height = 500
+# zoom_level = 75
+#
+# [move]
+# activate = "<super> BTN_LEFT"
+# preview_base_border = "#404080CC"
+# preview_base_color = "#8080FF80"
+# preview_border_width = 3
+# enable_snap = false
+# enable_snap_off = false
+# join_views = false
+# quarter_snap_threshold = 50
+# snap_off_threshold = 10
+# snap_threshold = 10
+# workspace_switch_after = 0
+#
+#
+# [oswitch]
+# next_output = "<alt> KEY_O"
+# next_output_with_win = "<alt> <shift> KEY_O"
+# prev_output = ""
+# prev_output_with_win = ""
+#
+# [output]
+# icc_profile = ""
+# mode = "auto"
+# position = "auto"
+# transform = "normal"
+# depth = 8
+# scale = 1.0
+# vrr = false
+#
+#
+# ["output:DP-1"]
+# icc_profile = ""
+# mode = "1920x1080@165000"
+# position = "auto"
+# transform = "normal"
+# depth = 8
+# scale = 1.0
+# vrr = false
+#
+# ["output:DP-2"]
+# icc_profile = ""
+# mode = "2560x1080@75000"
+# position = "0, 0"
+# transform = "normal"
+# depth = 8
+# scale = 1.0
+# vrr = true
+#
+#
+# [place]
+# mode = 'maximize'
+#
+# [preserve-output]
+# last_output_focus_timeout = 10000
+#
+# [primary-monitor-switch]
+# external-monitor = 'HDMI-A-2'
+#
+# [resist-edge]
+# command = 'python -c "from wayfire import WayfireSocket; sock = WayfireSocket(); sock.toggle_expo()"'
+# edge-height = 100
+# edge-width = 10
+# resistance = 0.000000
+#
+# [resize]
+# activate = '<alt> BTN_RIGHT'
+# min_height = 0
+# min_width = 0
+#
+# [scale]
+# bg_color = '#000000FF'
+# close_on_new_view = false
+# duration = '200ms circle'
+# text_color = '#CCCCCCFF'
+# title_font_size = 22
+# title_overlay = 'never'
+# title_position = 'center'
+# toggle = 'BTN_SIDE'
+# toggle_all = '<super> KEY_S'
+# allow_zoom = false
+# inactive_alpha = 1.000000
+# include_minimized = false
+# middle_click_close = true
+# minimized_alpha = 0.000000
+# outer_margin = 60
+# spacing = 50
+#
+# [shortcuts-inhibit]
+# break_grab = 'none'
+# ignore_views = 'none'
+# inhibit_by_default = 'none'
+#
+# [show-cursor]
+# toggle = 'none'
+# start_enabled = true
+#
+# [showrepaint]
+# toggle = '<alt> <super> KEY_S'
+# reduce_flicker = true
+#
+# [simple-tile]
+# animation_duration = "0ms circle"
+# button_move = "<alt> BTN_LEFT"
+# button_resize = "<alt> BTN_RIGHT"
+# key_focus_above = "<super> KEY_K"
+# key_focus_below = "<super> KEY_J"
+# key_focus_left = "<super> KEY_H"
+# key_focus_right = "<super> KEY_L"
+# key_toggle = "<super> KEY_T"
+# preview_base_border = "#404080CC"
+# preview_base_color = "#8080FF80"
+# preview_border_width = 4
+# tile_by_default = "all"
+# inner_gap_size = 8
+# keep_fullscreen_on_adjacent = true
+# outer_horiz_gap_size = 8
+# outer_vert_gap_size = 8
+#
+# [switch-kb-layouts]
+# toggle = "<shift> <super> KEY_SPACE"
+#
+# [switcher]
+# next_view = "<alt> <ctrl> KEY_TAB"
+# prev_view = "<alt> <shift> KEY_TAB"
+# speed = "0ms sigmoid"
+# view_thumbnail_rotation = 0
+# view_thumbnail_scale = 0.8
+#
+# [view-shot]
+# capture = "<alt> <super> BTN_MIDDLE"
+# command = 'notify-send "The view under cursor was captured to %f"'
+# filename = "/tmp/snapshot-%F-%T.png"
+#
+# [vswipe]
+# background = "#1A1A1AFF"
+# delta_threshold = 24.0
+# duration = "180ms circle"
+# enable_free_movement = false
+# enable_horizontal = true
+# enable_smooth_transition = false
+# enable_vertical = true
+# fingers = 4
+# gap = 32.0
+# speed_cap = 0.05
+# speed_factor = 256.0
+# threshold = 0.35
+#
+# [vswitch]
+# background = "#1A1A1AFF"
+# binding_down = "<alt> <ctrl> KEY_DOWN"
+# binding_last = ""
+# binding_left = "<alt> <ctrl> KEY_LEFT"
+# binding_right = "<alt> <ctrl> KEY_RIGHT"
+# binding_up = "<alt> <ctrl> KEY_UP"
+# duration = "80ms circle"
+# send_win_down = ""
+# send_win_last = ""
+# send_win_left = ""
+# send_win_right = ""
+# send_win_up = ""
+# with_win_down = "<alt> <ctrl> <shift> KEY_DOWN"
+# with_win_last = "<alt> <ctrl> <super> KEY_KP5"
+# with_win_left = "<alt> <ctrl> <shift> KEY_LEFT"
+# with_win_right = "<alt> <ctrl> <shift> KEY_RIGHT"
+# with_win_up = "<alt> <ctrl> <shift> KEY_UP"
+# gap = 20
+# wraparound = false
+#
+# [wm-actions]
+# minimize = "none"
+# send_to_back = "none"
+# toggle_always_on_top = "<alt> <ctrl> <shift> <super> KEY_P"
+# toggle_fullscreen = "<alt> KEY_F"
+# toggle_maximize = "none"
+# toggle_showdesktop = "<super> KEY_P"
+# toggle_sticky = "<alt> <shift> KEY_X"
+#
+#
+# [wobbly]
+# friction = 8.000000
+# grid_resolution = 200
+# spring_k = 8.000000
+#
+# [workarounds]
+# app_id_mode = "stock"
+# all_dialogs_modal = true
+# disable_primary_selection = true
+# discard_command_output = true
+# dynamic_repaint_delay = false
+# enable_input_method_v2 = false
+# enable_opaque_region_damage_optimizations = false
+# enable_so_unloading = false
+# focus_main_surface_instead_of_popup = false
+# force_frame_sync = false
+# force_preferred_decoration_mode = true
+# max_buffer_size = 4096
+# remove_output_limits = false
+# use_external_output_configuration = true
+#
+# [wsets]
+# label_duration = "2000ms circle"
+#
+# [xdg-activation]
+# check_surface = false
+# only_last_request = false
+# timeout = 30
