@@ -158,3 +158,7 @@ body_max_width_chars = 80
 popover_width = 500
 popover_height = 600
 max_notifications = 5
+
+[custom_keybindings]
+binding_terminal = "<ctrl><alt><super><shift> KEY_ENTER"
+command_terminal = "alacritty"
