@@ -208,6 +208,7 @@ def verify_required_wayfire_plugins():
         "grid",
         "place",
         "scale",
+        "alpha",
     }
 
     enabled_plugins = sock.get_option_value("core/plugins")["value"].split()
