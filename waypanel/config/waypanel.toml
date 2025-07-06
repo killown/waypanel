@@ -162,3 +162,6 @@ max_notifications = 5
 [custom_keybindings]
 binding_terminal = "<ctrl><alt><super><shift> KEY_ENTER"
 command_terminal = "alacritty"
+
+[window_rules]
+rule1 = 'on created if app_id is "testing_window_rule" then start_on_output "DP-1"'
