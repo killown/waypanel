@@ -73,6 +73,7 @@ class TaskbarPlugin(BasePlugin):
     def _setup_taskbar(self) -> None:
         """Create and configure the bottom panel."""
         self.taskbar = Gtk.FlowBox()
+        self.taskbar.set_selection_mode(Gtk.SelectionMode.NONE)
         self.logger.debug("Setting up bottom panel.")
         if self.layer_always_exclusive:
             self.layer_shell.set_layer(self.bottom_panel, self.layer_shell.Layer.TOP)
