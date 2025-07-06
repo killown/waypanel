@@ -1,5 +1,8 @@
 from waypanel.src.plugins.core._base import BasePlugin
+import os
+import toml
 
+CONFIG_PATH = os.path.expanduser("~/.config/waypanel/wayfire/wayfire.toml")
 ENABLE_PLUGIN = True  # Toggle plugin activation
 DEPS = []  # No dependencies
 
@@ -20,10 +23,18 @@ class WindowRulesPlugin(BasePlugin):
         self.logger.info("[WindowRulesPlugin] Loading window rules from config...")
         self.apply_rules_from_config()
 
+    def load_config(self):
+        try:
+            with open(CONFIG_PATH, "r") as f:
+                return toml.load(f)
+        except Exception as e:
+            self.logger.error(f"[Failed to load config: {e}")
+            return {}
+
     def apply_rules_from_config(self):
         try:
-            # Get [window_rules] section from waypanel.toml
-            config_section = self.config.get("window_rules", {})
+            # Get [window_rules] section from wayfire.toml
+            config_section = self.load_config().get("window_rules", {})
 
             # Extract all keys (like rule1, rule2...) and sort them
             rule_items = sorted(
