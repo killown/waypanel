@@ -36,15 +36,46 @@ class WayfireConfigWatcherPlugin(BasePlugin):
             self.panel.logger.error(f"[{self.PLUGIN_NAME}] Failed to load config: {e}")
             return {}
 
+    def apply_command_section(self, config):
+        command_section = config.get("command", {})
+
+        # Format for set_option_values
+        binding_tuples = []
+
+        for name, entry in command_section.items():
+            if isinstance(entry, list) and len(entry) >= 2:
+                keybind = entry[0]
+                command = entry[1]
+                binding_tuples.append((command, keybind))
+
+        payload = {"command": {"bindings": binding_tuples}}
+
+        self.logger.info(f"Applying command bindings: {payload}")
+        self.ipc.set_option_values(payload)
+
+    def apply_window_rules_section(self, config):
+        window_rules_section = config.get("window-rules", {})
+
+        rules = []
+        for key, value in window_rules_section.items():
+            if key.startswith("rule"):
+                rules.append(value)
+
+        if rules:
+            self.ipc.set_option_values({"window-rules": {"rules": rules}})
+
     def apply_config(self, config):
         updates = {}
 
-        def flatten(table, prefix=""):
+        def apply(table, prefix=""):
             for key, value in table.items():
+                # command and window-rules have custom ways to apply
+                if key == "window-rules" or key == "command":
+                    continue
                 full_key = f"{prefix}{key}"
 
                 if isinstance(value, dict):
-                    flatten(value, prefix=f"{full_key}/")
+                    apply(value, prefix=f"{full_key}/")
                 else:
                     if isinstance(value, bool):
                         value = str(value).lower()
@@ -55,9 +86,12 @@ class WayfireConfigWatcherPlugin(BasePlugin):
 
                     updates[full_key] = value
 
-        flatten(config)
+        apply(config)
 
         self.ipc.set_option_values(updates)
+
+        self.apply_command_section(config)
+        self.apply_window_rules_section(config)
 
     def start_watching(self):
         event_handler = ConfigFileHandler(self)
