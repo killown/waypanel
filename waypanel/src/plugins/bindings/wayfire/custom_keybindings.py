@@ -1,5 +1,8 @@
 from src.plugins.core._base import BasePlugin
+import os
+import toml
 
+CONFIG_PATH = os.path.expanduser("~/.config/waypanel/wayfire/wayfire.toml")
 ENABLE_PLUGIN = True
 DEPS = []
 
@@ -22,8 +25,16 @@ class CustomKeybindingsPlugin(BasePlugin):
         self.plugin_name = PLUGIN_NAME
         self.register_all_bindings()
 
+    def load_config(self):
+        try:
+            with open(CONFIG_PATH, "r") as f:
+                return toml.load(f)
+        except Exception as e:
+            self.logger.error(f"[Failed to load config: {e}")
+            return {}
+
     def register_all_bindings(self):
-        config_section = self.config.get("custom_keybindings", {})
+        config_section = self.load_config().get("command", {})
 
         for key in config_section:
             if key.startswith("binding_"):
