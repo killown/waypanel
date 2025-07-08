@@ -118,6 +118,7 @@ class SystemDashboard(BasePlugin):
             ("Logout", "", "gnome-logout-symbolic"): "",
             ("Reboot", "", "system-reboot-symbolic"): "",
             ("Shutdown", "", "gnome-shutdown-symbolic"): "",
+            ("Suspend", "", "system-suspend-symbolic"): "",
             ("Lock", "", "system-lock-screen-symbolic"): "",
             ("Turn Off Monitors", "", "display-symbolic"): "",
             ("Exit Waypanel", "", "display-symbolic"): "",
@@ -238,6 +239,8 @@ class SystemDashboard(BasePlugin):
             Popen("wayland-logout".split())
         if action == "Shutdown":
             Popen("shutdown -h now".split())
+        if action == "Suspend":
+            Popen("systemctl suspend".split())
         if action == "Reboot":
             Popen("reboot".split())
         if action == "Turn Off Monitors":
