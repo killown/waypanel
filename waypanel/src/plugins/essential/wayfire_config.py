@@ -57,9 +57,8 @@ class WayfireConfigWatcherPlugin(BasePlugin):
         window_rules_section = config.get("window-rules", {})
 
         rules = []
-        for key, value in window_rules_section.items():
-            if key.startswith("rule"):
-                rules.append(value)
+        for value in window_rules_section.values():
+            rules.append(value)
 
         if rules:
             self.ipc.set_option_values({"window-rules": {"rules": rules}})
