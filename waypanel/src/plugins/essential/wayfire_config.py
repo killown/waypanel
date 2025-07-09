@@ -50,11 +50,9 @@ class WayfireConfigWatcherPlugin(BasePlugin):
 
         for key, value in options.items():
             try:
-                # Try setting this single option
                 self.ipc.set_option_values({key: value})
                 successful[key] = value
             except Exception as e:
-                # Skip invalid option silently or log warning
                 self.logger.warning(f"Skipping invalid config option: {key}")
                 continue
 
