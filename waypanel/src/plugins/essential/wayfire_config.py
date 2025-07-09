@@ -36,6 +36,30 @@ class WayfireConfigWatcherPlugin(BasePlugin):
             self.panel.logger.error(f"[{self.PLUGIN_NAME}] Failed to load config: {e}")
             return {}
 
+    def safe_set_option_values(self, options):
+        """
+        Apply config options one by one, skipping any that fail.
+
+        Args:
+            options (dict): Dictionary of config options to apply.
+
+        Returns:
+            dict: A subset of `options` that were successfully applied.
+        """
+        successful = {}
+
+        for key, value in options.items():
+            try:
+                # Try setting this single option
+                self.ipc.set_option_values({key: value})
+                successful[key] = value
+            except Exception as e:
+                # Skip invalid option silently or log warning
+                self.logger.warning(f"Skipping invalid config option: {key}")
+                continue
+
+        return successful
+
     def apply_command_section(self, config):
         command_section = config.get("command", {})
 
@@ -51,7 +75,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
         payload = {"command": {"bindings": binding_tuples}}
 
         self.logger.info(f"Applying command bindings: {payload}")
-        self.ipc.set_option_values(payload)
+        self.safe_set_option_values(payload)
 
     def apply_window_rules_section(self, config):
         window_rules_section = config.get("window-rules", {})
@@ -61,7 +85,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
             rules.append(value)
 
         if rules:
-            self.ipc.set_option_values({"window-rules": {"rules": rules}})
+            self.safe_set_option_values({"window-rules": {"rules": rules}})
 
     def apply_config(self, config):
         updates = {}
@@ -87,7 +111,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
 
         apply(config)
 
-        self.ipc.set_option_values(updates)
+        self.safe_set_option_values(updates)
 
         self.apply_command_section(config)
         self.apply_window_rules_section(config)
