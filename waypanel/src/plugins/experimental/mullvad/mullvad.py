@@ -82,12 +82,18 @@ class MullvadPlugin(BasePlugin):
         connect_item = Gio.MenuItem.new("Connect", "app.connect")
         disconnect_item = Gio.MenuItem.new("Disconnect", "app.disconnect")
         status_item = Gio.MenuItem.new("Check Status", "app.status")
-        random_br_item = Gio.MenuItem.new("Random BR Relay", "app.random_br")
+        random_item_city = Gio.MenuItem.new(
+            f"Random {self.city_code.capitalize()} Relay", "app.random_city"
+        )
+        random_item_global = Gio.MenuItem.new(
+            "Random Global Relay", "app.random_global"
+        )
 
         menu.append_item(connect_item)
         menu.append_item(disconnect_item)
         menu.append_item(status_item)
-        menu.append_item(random_br_item)
+        menu.append_item(random_item_city)
+        menu.append_item(random_item_global)
 
         # Set the menu model to the MenuButton
         self.menubutton_mullvad.set_menu_model(menu)
@@ -97,19 +103,25 @@ class MullvadPlugin(BasePlugin):
         connect_action = Gio.SimpleAction.new("connect", None)
         disconnect_action = Gio.SimpleAction.new("disconnect", None)
         status_action = Gio.SimpleAction.new("status", None)
-        random_br_action = Gio.SimpleAction.new("random_br", None)
+        random_action_city = Gio.SimpleAction.new("random_city", None)
+        random_action_global = Gio.SimpleAction.new("random_global", None)
 
         connect_action.connect("activate", self.connect_vpn)
         disconnect_action.connect("activate", self.disconnect_vpn)
         status_action.connect("activate", self.check_status)
-        random_br_action.connect(
+        random_action_city.connect(
             "activate",
             lambda *args: self.loop.create_task(self.set_mullvad_relay_by_city()),
+        )
+        random_action_global.connect(
+            "activate",
+            lambda *args: self.loop.create_task(self.set_mullvad_relay_random_global()),
         )
         action_group.add_action(connect_action)
         action_group.add_action(disconnect_action)
         action_group.add_action(status_action)
-        action_group.add_action(random_br_action)
+        action_group.add_action(random_action_city)
+        action_group.add_action(random_action_global)
 
         self.menubutton_mullvad.insert_action_group("app", action_group)
 
@@ -146,12 +158,20 @@ class MullvadPlugin(BasePlugin):
         status_button.connect("clicked", self.check_status)
         vbox.append(status_button)
 
-        random_br_button = Gtk.Button(label="Random BR Relay")
-        random_br_button.connect(
+        random_button_city = Gtk.Button(
+            label=f"Random {self.city_code.capitalize()} Relay"
+        )
+        random_button_city.connect(
             "clicked",
             lambda *args: self.loop.create_task(self.set_mullvad_relay_by_city()),
         )
-        vbox.append(random_br_button)
+        random_button_global = Gtk.Button(label="Random Global Relay")
+        random_button_global.connect(
+            "clicked",
+            lambda *args: self.loop.create_task(self.set_mullvad_relay_random_global()),
+        )
+        vbox.append(random_button_city)
+        vbox.append(random_button_global)
 
         self.popover_mullvad.set_child(vbox)
 
@@ -192,7 +212,9 @@ class MullvadPlugin(BasePlugin):
     async def set_mullvad_relay_by_city(self, *_):
         url = "https://api.mullvad.net/www/relays/wireguard/"
         try:
-            self.logger.info(f"Mullvad is setting a random {self.city_code} relay...")
+            self.logger.info(
+                f"Mullvad is setting a random {self.city_code.capitalize()} relay..."
+            )
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
                     response.raise_for_status()
@@ -220,6 +242,41 @@ class MullvadPlugin(BasePlugin):
             )
         except Exception as e:
             print(f"Error: {e}")
+
+    async def set_mullvad_relay_random_global(self, *_):
+        """
+        Set a random Mullvad relay from any city and country.
+        """
+        url = "https://api.mullvad.net/www/relays/wireguard/"
+
+        try:
+            self.logger.info("Mullvad is setting a random global relay...")
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    relays = await response.json()
+
+            if not relays:
+                raise RuntimeError("No relays found in the relay list.")
+
+            current = await self.get_current_relay_hostname()
+
+            # Filter out current relay to avoid reconnecting to the same one
+            available = [r for r in relays if r["hostname"] != current]
+
+            if not available:
+                print("No new relays available different from current.")
+                return
+
+            relay_choice = random.choice(available)["hostname"]
+            msg = f"Changing Mullvad relay to {relay_choice}"
+            Popen(["notify-send", msg])
+            await asyncio.create_subprocess_exec(
+                "mullvad", "relay", "set", "location", relay_choice
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error setting random global relay: {e}")
 
     def update_vpn_status(self):
         """Check the status of the Mullvad VPN and update the UI."""
