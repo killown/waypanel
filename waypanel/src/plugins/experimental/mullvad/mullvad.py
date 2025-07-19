@@ -1,9 +1,13 @@
 import os
 import random
+import asyncio
+import aiohttp
+import json
 from gi.repository import Gtk, Gio, GLib
 from subprocess import Popen, check_output
 from src.plugins.core._base import BasePlugin
 from .mullvad_info import MullvadStatusDialog
+from src.plugins.core._event_loop import global_loop
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -32,6 +36,8 @@ class MullvadPlugin(BasePlugin):
         self.obj = panel_instance
         self.logger = self.obj.logger
         self.mullvad_version = self.get_mullvad_version()
+        self.loop = global_loop
+        self.city_code = self.get_city_code()
 
     def get_mullvad_version(self):
         """Retrieve the Mullvad version using the `mullvad --version` command."""
@@ -41,6 +47,15 @@ class MullvadPlugin(BasePlugin):
         except Exception as e:
             self.logger.info(f"Error retrieving Mullvad version: {e}")
             return "Mullvad Version Unavailable"
+
+    def get_city_code(self):
+        """Get the city code from the plugin's config section in waypanel.toml."""
+        plugin_config = self.config.get("plugins", {}).get("mullvad", {})
+        # more infor: https://api.mullvad.net/www/relays/wireguard/
+        # waypanel.toml config example:
+        # [plugins.mullvad]
+        # city_code = "sao"
+        return plugin_config.get("city_code", "sao")
 
     def create_menu_popover_mullvad(self):
         """Create a menu button and attach it to the panel."""
@@ -87,8 +102,10 @@ class MullvadPlugin(BasePlugin):
         connect_action.connect("activate", self.connect_vpn)
         disconnect_action.connect("activate", self.disconnect_vpn)
         status_action.connect("activate", self.check_status)
-        random_br_action.connect("activate", self.random_br_relay)
-
+        random_br_action.connect(
+            "activate",
+            lambda *args: self.loop.create_task(self.set_mullvad_relay_by_city()),
+        )
         action_group.add_action(connect_action)
         action_group.add_action(disconnect_action)
         action_group.add_action(status_action)
@@ -130,7 +147,10 @@ class MullvadPlugin(BasePlugin):
         vbox.append(status_button)
 
         random_br_button = Gtk.Button(label="Random BR Relay")
-        random_br_button.connect("clicked", self.random_br_relay)
+        random_br_button.connect(
+            "clicked",
+            lambda *args: self.loop.create_task(self.set_mullvad_relay_by_city()),
+        )
         vbox.append(random_br_button)
 
         self.popover_mullvad.set_child(vbox)
@@ -152,36 +172,54 @@ class MullvadPlugin(BasePlugin):
         dialog = MullvadStatusDialog()
         dialog.present()
 
-    def random_br_relay(self, action, parameter=None):
-        """Set a random Brazilian relay for Mullvad."""
-        self.logger.info("Setting random Brazilian relay...")
+    async def get_current_relay_hostname(self) -> str:
         try:
-            # Fetch the list of relays
-            mullvad_list = check_output(["mullvad", "relay", "list"]).decode()
-            mullvad_list = (
-                mullvad_list.split("Brazil (br)")[-1].split("Bulgaria")[0].strip()
+            proc = await asyncio.create_subprocess_exec(
+                "mullvad",
+                "status",
+                "--json",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
             )
-            mullvad_list = mullvad_list.split("\n")
-            mullvad_list = [i.split(" ")[0].strip() for i in mullvad_list[1:]]
-
-            # Get the current status
-            status = check_output(["mullvad", "status"]).decode().strip()
-            try:
-                current_relay = status.split(" ")[2].strip()
-            except IndexError:
-                current_relay = None
-
-            # Choose a random relay that is not the current one
-            relay_choice = random.choice(
-                [i for i in mullvad_list if i != current_relay]
-            )
-            Popen(["mullvad", "relay", "set", "location", relay_choice])
-            Popen(["mullvad", "disconnect"])
-            Popen(["mullvad", "connect"])
-            msg = f"Mudando para {relay_choice}"
-            Popen(["notify-send", msg])
+            stdout, _ = await proc.communicate()
+            if stdout:
+                data = json.loads(stdout.decode())
+                return data.get("relay", {}).get("hostname")
         except Exception as e:
-            self.log_error(f"Error setting random Brazilian relay: {e}")
+            print(f"Failed to get current relay: {e}")
+        return ""
+
+    async def set_mullvad_relay_by_city(self, *_):
+        url = "https://api.mullvad.net/www/relays/wireguard/"
+        try:
+            self.logger.info(f"Mullvad is setting a random {self.city_code} relay...")
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    relays = await response.json()
+
+            city_relays = [r for r in relays if r.get("city_code") == self.city_code]
+
+            if not city_relays:
+                raise RuntimeError(f"No relays found for city code '{self.city_code}'.")
+
+            current = await self.get_current_relay_hostname()
+            available = [r for r in city_relays if r["hostname"] != current]
+
+            if not available:
+                print(
+                    f"No new relays available in '{self.city_code}' different from current: {current}"
+                )
+                return
+
+            relay_choice = random.choice(available)["hostname"]
+            msg = f"Changing Mullvad relay to {relay_choice}"
+            Popen(["notify-send", msg])
+            await asyncio.create_subprocess_exec(
+                "mullvad", "relay", "set", "location", relay_choice
+            )
+        except Exception as e:
+            print(f"Error: {e}")
 
     def update_vpn_status(self):
         """Check the status of the Mullvad VPN and update the UI."""
