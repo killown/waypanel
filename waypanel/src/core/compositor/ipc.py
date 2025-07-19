@@ -438,6 +438,9 @@ class IPC:
             mode=mode,
         )
 
+    def get_cursor_position(self):
+        return self.sock.get_cursor_position()
+
     def clear_bindings(self):
         return self.sock.clear_bindings()
 
