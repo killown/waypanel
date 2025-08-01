@@ -2219,7 +2219,7 @@ class Utils(Adw.Application):
 
             # Now construct the path to wayctl.py
             wayctl_path = os.path.join(
-                waypanel_module_path, "src", "plugins", "utils", "tools", "wayctl.py"
+                waypanel_module_path, "src", "plugins", "utils", "tools", "_wayctl.py"
             )
 
             if not os.path.exists(wayctl_path):
