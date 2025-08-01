@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import logging
-from logging.handlers import RotatingFileHandler
 import os
 import asyncio
 import threading
@@ -70,7 +69,9 @@ class ConfigReloadHandler(FileSystemEventHandler):
         Args:
             event: The file system event object containing metadata about the change.
         """
-        if event.src_path == os.path.expanduser(os.getenv("WAYFIRE_CONFIG_FILE")):
+        if event.src_path == os.path.expanduser(
+            "~/.config/waypanel/wayfire/wayfire.toml"
+        ):
             now = time.time()
             if now - self.last_modified > 1:  # 1 second debounce
                 logger.info("wayfire.ini modified - triggering reload")
@@ -119,7 +120,7 @@ def restart_application():
 def start_config_watcher():
     """Start watching wayfire.ini for changes"""
     if os.getenv("WAYFIRE_SOCKET"):
-        wayfire_ini = os.path.expanduser(os.getenv("WAYFIRE_CONFIG_FILE"))
+        wayfire_ini = os.path.expanduser("~/.config/waypanel/wayfire/wayfire.toml")
         if not os.path.exists(wayfire_ini):
             logger.warning(
                 f"wayfire.ini not found at {wayfire_ini} - config watching disabled"
