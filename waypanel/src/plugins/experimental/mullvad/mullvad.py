@@ -6,7 +6,7 @@ import json
 from gi.repository import Gtk, Gio, GLib
 from subprocess import Popen, check_output
 from src.plugins.core._base import BasePlugin
-from .mullvad_info import MullvadStatusDialog
+from ._mullvad_info import MullvadStatusDialog
 from src.plugins.core._event_loop import global_loop
 
 # Set to False or remove the plugin file to disable it
