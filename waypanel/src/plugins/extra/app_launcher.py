@@ -6,7 +6,6 @@ from gi.repository import Gtk4LayerShell as LayerShell
 from src.plugins.core._base import BasePlugin
 
 
-# set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 
@@ -41,6 +40,7 @@ class AppLauncher(BasePlugin):
         self.main_widget = (self.menubutton_launcher, "append")
 
     def create_menu_popover_launcher(self):
+        """Create the menu button and connect its signal to open the popover launcher."""
         self.menubutton_launcher.connect("clicked", self.open_popover_launcher)
         self.menubutton_launcher.add_css_class("app-launcher-menu-button")
         menu_icon = self.utils.get_nearest_icon_name(
@@ -166,6 +166,7 @@ class AppLauncher(BasePlugin):
             self.popover_launcher.add_css_class("app-launcher-popover")
 
     def on_keypress(self, *_):
+        """Open the app selected from the search bar."""
         cmd = "gtk-launch {}".format(self.search_get_child).split()
         Popen(cmd)
         if self.popover_launcher:
@@ -298,6 +299,7 @@ class AppLauncher(BasePlugin):
             f.flush()  # Ensure data is written to disk immediately
 
     def get_recent_apps(self):
+        """Get the list of recent apps from the file."""
         if os.path.exists(self.recent_apps_file):
             with open(self.recent_apps_file, "r") as f:
                 recent_apps = f.read().splitlines()
@@ -306,6 +308,7 @@ class AppLauncher(BasePlugin):
             return []
 
     def run_app_from_launcher(self, x, y):
+        """Run the selected app from the launcher."""
         mytext = [i.get_child().MYTEXT for i in x.get_selected_children()][0]
         name, desktop, keywords = mytext
         desktop = desktop.split(".desktop")[0]
@@ -323,6 +326,7 @@ class AppLauncher(BasePlugin):
         self.update_flowbox()
 
     def open_popover_launcher(self, *_):
+        """Open or close the popover launcher."""
         if self.popover_launcher and self.popover_launcher.is_visible():
             self.popover_launcher.popdown()
             self.popover_is_closed()
@@ -336,6 +340,7 @@ class AppLauncher(BasePlugin):
             self.popover_launcher = self.create_popover_launcher(self.obj)
 
     def popover_is_open(self, *_):
+        """Set the keyboard mode to ON_DEMAND when the popover is opened."""
         LayerShell.set_keyboard_mode(
             self.obj.top_panel, LayerShell.KeyboardMode.ON_DEMAND
         )
@@ -345,6 +350,7 @@ class AppLauncher(BasePlugin):
         return
 
     def popover_is_closed(self, *_):
+        """Set the keyboard mode to NONE when the popover is closed."""
         LayerShell.set_keyboard_mode(self.obj.top_panel, LayerShell.KeyboardMode.NONE)
         self.obj.top_panel.grab_focus()
         toplevel = self.obj.top_panel.get_root()
@@ -354,11 +360,13 @@ class AppLauncher(BasePlugin):
             self.flowbox.invalidate_filter()
 
     def on_show_searchbar_action_actived(self, action, parameter):
+        """Show the search bar when the show_searchbar action is activated."""
         self.searchbar.set_search_mode(  # pyright: ignore
             True
         )  # Ctrl+F To Active show_searchbar and show searchbar
 
     def search_entry_grab_focus(self):
+        """Grab focus to the search entry."""
         self.searchentry.grab_focus()  # pyright: ignore
 
     def select_first_visible_child(self):
@@ -383,6 +391,7 @@ class AppLauncher(BasePlugin):
         self.flowbox.invalidate_filter()
 
     def on_filter_invalidate(self, row):
+        """Filter the flowbox rows based on the search entry."""
         # get the Entry search
         text_to_search = self.searchbar.get_text().strip()
         if not isinstance(row, str):
