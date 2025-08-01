@@ -58,6 +58,46 @@ class WayfireConfigWatcherPlugin(BasePlugin):
 
         return successful
 
+    def apply_config(self, config):
+        updates = {}
+
+        def apply(table, prefix=""):
+            for key, value in table.items():
+                if key in ("window-rules", "command"):
+                    continue
+
+                full_key = f"{prefix}{key}"
+
+                if isinstance(value, dict):
+                    apply(value, prefix=f"{full_key}/")
+                else:
+                    if isinstance(value, bool):
+                        value = str(value).lower()
+                    elif isinstance(value, (int, float)):
+                        value = str(value)
+                    elif isinstance(value, list):
+                        value = " ".join(str(v) for v in value)
+                    updates[full_key] = value
+
+        apply(config)
+
+        # Only apply if value differs from current
+        for key, new_value in updates.items():
+            try:
+                current_value = self.ipc.get_option_value(key)
+                if current_value != new_value:
+                    self.safe_set_option_values({key: new_value})
+                    self.logger.info(
+                        f"Updated '{key}' from '{current_value}' to '{new_value}'"
+                    )
+                else:
+                    self.logger.debug(f"Skipped '{key}' - value unchanged.")
+            except Exception as e:
+                self.logger.warning(f"Failed to apply '{key}': {e}")
+
+        self.apply_command_section(config)
+        self.apply_window_rules_section(config)
+
     def apply_command_section(self, config):
         command_section = config.get("command", {})
 
@@ -84,35 +124,6 @@ class WayfireConfigWatcherPlugin(BasePlugin):
 
         if rules:
             self.safe_set_option_values({"window-rules": {"rules": rules}})
-
-    def apply_config(self, config):
-        updates = {}
-
-        def apply(table, prefix=""):
-            for key, value in table.items():
-                # command and window-rules have custom ways to apply
-                if key == "window-rules" or key == "command":
-                    continue
-                full_key = f"{prefix}{key}"
-
-                if isinstance(value, dict):
-                    apply(value, prefix=f"{full_key}/")
-                else:
-                    if isinstance(value, bool):
-                        value = str(value).lower()
-                    elif isinstance(value, (int, float)):
-                        value = str(value)
-                    elif isinstance(value, list):
-                        value = " ".join(str(v) for v in value)
-
-                    updates[full_key] = value
-
-        apply(config)
-
-        self.safe_set_option_values(updates)
-
-        self.apply_command_section(config)
-        self.apply_window_rules_section(config)
 
     def start_watching(self):
         event_handler = ConfigFileHandler(self)
