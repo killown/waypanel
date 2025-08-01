@@ -1,8 +1,7 @@
 .window-title-content {
   background-color: transparent;
-  margin-top: 6px;
-  margin-left: 8px;
-
+  margin-top: 8px;
+  margin-left: 15px;
 }
 
 .window-title-label {
@@ -14,18 +13,18 @@
 }
 
 .window-title-icon {
-   -gtk-icon-size: 28px;
+  -gtk-icon-size: 28px;
 }
 
 .left-panel {
   -gtk-icon-size: 48px;
-  background: #000000fb;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08); 
+  margin-left: 5px;
+  background: transparent;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
   border-radius: 10px;
   border-style: none;
   color: #ebdbb2;
-  padding: 1px;
-    box-shadow:
+  box-shadow:
     rgba(0, 0, 0, 0.507) 0 2px 0px,
     rgba(0, 0, 0, 0.555) 0 2px 0px,
     #00000075 0 -4px 0 inset;
@@ -34,36 +33,29 @@
 .right-panel {
   -gtk-icon-size: 42px;
   background: transparent;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08); 
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
   border-radius: 8px;
   border-style: none;
   color: #ebdbb2;
   padding: 6px;
-    box-shadow:
+  box-shadow:
     rgba(0, 0, 0, 0.507) 0 2px 0px,
     rgba(0, 0, 0, 0.555) 0 2px 0px,
     #00000075 0 -4px 0 inset;
 }
 
 .dockbar-buttons {
-  background-color: #282828;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
-  color: #ebdbb2;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
-    sans-serif;
-  border-radius: 8px;
-  border-style: none;
-  padding: 6px 8px 6px 8px;
-  margin: 1px;
+  background: #1d2021dc;
+  border-radius: 7px;
+  padding: 5px;
   box-shadow:
-    rgba(0, 0, 0, 0.507) 0 2px 0px,
-    rgba(0, 0, 0, 0.555) 0 2px 0px,
-    #00000075 0 -4px 0 inset;
+    inset 3px 3px 5px rgba(255, 255, 255, 0.05),
+    /* Top-left highlight */ inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    /* Bottom-right shadow */ #00000075 0 -4px 0 inset;
+
   -gtk-icon-size: 42px;
   font-size: 16px;
 }
-
 
 .dockbar-buttons:hover {
   color: #282828;
@@ -71,10 +63,9 @@
   text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
 }
 
-.box-widgets{
+.box-widgets {
   margin: -3px;
-     padding: 1px;
-
+  padding: 1px;
 }
 
 .window-controls-box {
@@ -83,9 +74,26 @@
   margin: 5px;
 }
 
+.window-controls-close-button:hover,
+.window-controls-maximize-button:hover,
+.window-controls-minimize-button:hover {
+  background-color: #5c8f97;
+  box-shadow:
+    rgba(0, 0, 0, 0.6) 0 2px 4px,
+    rgba(0, 0, 0, 0.5) 0 2px 4px,
+    #00000075 0 -2px 0 inset;
+  transform: scale(1.05);
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
 .window-controls-close-button {
   -gtk-icon-size: 20px;
-  background-color: #cc241d;
+  background: linear-gradient(
+    145deg,
+    #cc241d,
+    #32302f
+  ); /* Subtle gradient for depth */
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
@@ -101,7 +109,12 @@
 
 .window-controls-maximize-button {
   -gtk-icon-size: 20px;
-  background-color: #458588;
+  background: linear-gradient(
+    145deg,
+    #458588,
+    #32302f
+  ); /* Subtle gradient for depth */
+
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
@@ -117,7 +130,12 @@
 
 .window-controls-minimize-button {
   -gtk-icon-size: 20px;
-  background-color: #458588;
+  background-color: #98971a;
+  background: linear-gradient(
+    145deg,
+    #98971a,
+    #32302f
+  ); /* Subtle gradient for depth */
   box-shadow:
     rgba(0, 0, 0, 0.507) 0 1px 1px,
     rgba(0, 0, 0, 0.555) 0 1px 1px,
@@ -133,26 +151,25 @@
 
 /* notes plugin */
 .notes_button_clear.text-button {
-  background-color: #FF0000;
+  background-color: #ff0000;
   color: white;
   border: none;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .notes_button_add.text-button {
   background-color: #008000;
   color: white;
   border: none;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .notes_button_delete.image-button {
-  background-color: #FF0000;
+  background-color: #ff0000;
   color: white;
   border: none;
-  box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
 }
-
 
 /* Hover states */
 .close-button:hover {
@@ -180,16 +197,17 @@
   background-color: #28c94099;
 }
 
-.top_panel_box_widgets_left {
-  /* Complete transparency */
-  background-color: transparent;
-  border: none;
-  box-shadow: none;
-  margin: 2px;
-
-  /* Text styling only */
-  font-family: inherit;
-  text-decoration: none;
+.top-panel-box-widgets-left {
+  background: linear-gradient(
+    145deg,
+    #1d2021af,
+    #1d20214f
+  ); /* Subtle gradient for depth */
+  border-radius: 7px;
+  box-shadow:
+    inset 3px 3px 5px rgba(255, 255, 255, 0.05),
+    /* Top-left highlight */ inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    /* Bottom-right shadow */ 2px 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 scale slider {
@@ -208,7 +226,6 @@ scale {
   background-color: transparent;
   color: #89a899;
 }
-
 
 /*this is for menubuttons from systray menus*/
 .image-button {
@@ -230,29 +247,28 @@ scale {
   background-color: #4479e1;
   color: white;
   border: none;
-box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   font-size: 18px;
 }
 
 .button_clear_from_clipboard {
-  background-color: #FF0000;
+  background-color: #ff0000;
   color: white;
   border: none;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .notification-panel-button {
   padding-top: 6px;
 }
 
-.notify-client-box{
-    background-color: #558588;
-    border-radius: 10px;
-    margin: 3px;
-
+.notify-client-box {
+  background-color: #558588;
+  border-radius: 10px;
+  margin: 3px;
 }
 
-.notify-client-heading{
+.notify-client-heading {
   margin-top: 12px;
   font-weight: bold;
   font-family:
@@ -261,14 +277,14 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   font-size: 16px;
 }
 
-.notify-client-body-label{
+.notify-client-body-label {
   margin: 3px;
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
     sans-serif;
 }
 
-.notify-client-timestamp{
+.notify-client-timestamp {
   margin: 3px;
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
@@ -276,13 +292,13 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   font-size: 13px;
 }
 
-.notify-window{
+.notify-window {
   background-color: transparent;
   color: #fff;
   border-radius: 10px;
 }
 
-.notify-server-vbox{
+.notify-server-vbox {
   background-color: #282828;
   color: #ebdbb2;
   padding: 10px;
@@ -296,15 +312,15 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 
 /*prevent the popover menu icon from being selected*/
 .app-lancuner-menu-icon:focus {
-    outline: none;
-    background-color: transparent;
+  outline: none;
+  background-color: transparent;
 }
 
 /*icons from bookbarks menu*/
 .app-launcher-icon-from-popover {
   -gtk-icon-size: 68px;
-    transition: all 0.2s ease;
-    padding: 1px;
+  transition: all 0.2s ease;
+  padding: 1px;
 }
 
 .app-launcher-label-from-popover {
@@ -320,10 +336,9 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   background-color: transparent;
 }
 
-
 .app-launcher-icon-from-popover:hover {
-    background-color: #282828;
-    border-radius: 10px;
+  background-color: #282828;
+  border-radius: 10px;
 }
 
 .app-launcher-main-box {
@@ -350,21 +365,29 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 
 .clock-label {
   /* Background & Border */
-  background-color: transparent;
-  border: none;
-  box-shadow: none;
-  padding-top: 5px;
+  background: linear-gradient(
+    145deg,
+    #1d202154,
+    #1d2021ce
+  ); /* Subtle gradient for depth */
+  border-radius: 7px;
+  padding: 3px;
+  box-shadow:
+    inset 3px 3px 5px rgba(255, 255, 255, 0.05),
+    /* Top-left highlight */ inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    /* Bottom-right shadow */ 2px 2px 5px rgba(0, 0, 0, 0.3);
 
   /* Font Styling */
   font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
-  font-size: 16px;
+
+  font-size: 18px;
   color: #ebdbb2; /* Soft yellow (Gruvbox-like) */
   text-decoration: none;
 
   /* Optional: LCD glow effect */
-  text-shadow: 
-    0 0 2px rgba(235, 219, 178, 0.3), /* Subtle glow */
-    0 0 5px rgba(235, 219, 178, 0.1); /* Wider blur */
+  text-shadow:
+    0 0 2px rgba(235, 219, 178, 0.1),
+    /* Subtle glow */ 0 0 5px rgba(235, 219, 178, 0.1); /* Wider blur */
 }
 
 .Clock-box {
@@ -378,14 +401,12 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   background-color: transparent;
 }
 
-
 .tray_icon {
-    background-color: #000;
-    min-width: 24px;
-    min-height: 24px;
-   -gtk-icon-size: 16px;
+  background-color: #202020;
+  min-width: 24px;
+  min-height: 24px;
+  -gtk-icon-size: 16px;
 }
-
 
 .tray-menu-button {
   border-radius: 8px;
@@ -394,13 +415,13 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 
 /*system dashboard: if gsettings prefer-dark, then changes for white colors is necessary*/
 .system_dashboard_stack {
-  font-family: 'Segoe UI', sans-serif;
+  font-family: "Segoe UI", sans-serif;
   font-size: 14px;
   font-weight: 400;
 }
 
 .top-panel {
-  background-color: #000000fb;
+  background-color: #1d202186;
   border-bottom: 1px solid #1a1a1a;
   color: #e0e0e0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -411,10 +432,9 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   background-color: #f0f1f4;
   color: #e0e0e0;
   font-weight: 400;
-
 }
 
-.top_panel_box_left {
+.top-panel-box-left {
   -gtk-icon-size: 32px;
 }
 
@@ -426,24 +446,33 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   background-color: transparent;
 }
 
-
 .app-launcher-menu-button,
 .bookmarks-menu-button,
 .places-menu-button {
   -gtk-icon-size: 29px;
 }
 
+.ai-prompt-label:hover {
+  color: #282828;
+  background-color: #d5c4a1;
+  text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
+}
+
 .top-panel-box-systray {
-  background: linear-gradient(145deg, #0a0a0a, #000000); /* Subtle gradient for depth */
+  background: linear-gradient(
+    145deg,
+    #1d2021b6,
+    #1d2021a9
+  ); /* Subtle gradient for depth */
   border-radius: 10px;
   padding-top: 2px;
   margin-right: 5px;
   margin-top: 1px;
   margin-bottom: 1px;
-  box-shadow: 
-    inset 3px 3px 5px rgba(255, 255, 255, 0.05), /* Top-left highlight */
-    inset -3px -3px 5px rgba(0, 0, 0, 0.5),     /* Bottom-right shadow */
-    2px 2px 5px rgba(0, 0, 0, 0.3);             /* Outer drop shadow */
+  box-shadow:
+    inset 3px 3px 5px rgba(255, 255, 255, 0.05),
+    /* Top-left highlight */ inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    /* Bottom-right shadow */ 2px 2px 5px rgba(0, 0, 0, 0.3); /* Outer drop shadow */
 }
 
 .top_panel_box_center {
@@ -451,24 +480,24 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .floating-volume-widget {
-    background-color: rgba(30, 30, 30, 0.6);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+  background-color: rgba(30, 30, 30, 0.6);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
 }
 
 .floating-volume-icon {
-    color: #fff; 
+  color: #fff;
 }
 
 .floating-volume-label {
-    font-size: 14px;
-    font-weight: bold;
-    color: #ffffff; 
+  font-size: 14px;
+  font-weight: bold;
+  color: #ffffff;
 }
 
 .mullvad-header-label {
-    font-weight: bold;
-    font-size: 14px;
-    color: #ffffff;
+  font-weight: bold;
+  font-size: 14px;
+  color: #ffffff;
 }
 
 .BottomBar {
@@ -481,19 +510,20 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   border-radius: 8px;
   -gtk-icon-size: 42px;
   background: transparent;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08); 
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
   border-radius: 8px;
   border-style: none;
   color: #ebdbb2;
   padding: 6px;
-    box-shadow:
+  box-shadow:
     rgba(0, 0, 0, 0.507) 0 2px 0px,
     rgba(0, 0, 0, 0.555) 0 2px 0px,
     #00000075 0 -4px 0 inset;
 }
 
 .taskbar-button {
-  background-color: #000000fb;
+  background-color: #1d20218e;
+
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
   color: #ebdbb2;
   font-weight: 500;
@@ -514,4 +544,3 @@ box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   background-color: #d5c4a1;
   text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
 }
-
