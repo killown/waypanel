@@ -130,6 +130,8 @@ class PopoverFolders(BasePlugin):
             row_hbox.append(line)
             line.add_css_class("places-label-from-popover")
             image.add_css_class("places-icon-from-popover")
+            self.create_row_right_click(row_hbox, folders_path)
+            self.create_row_middle_click(row_hbox, folders_path)
 
         for folder in self.home_folders:
             folders_path = os.path.join(self.home, folder)
@@ -161,6 +163,8 @@ class PopoverFolders(BasePlugin):
             # Add label and image to the bookmark box
             row_hbox.append(image)
             row_hbox.append(line)
+            self.create_row_right_click(row_hbox, folders_path)
+            self.create_row_middle_click(row_hbox, folders_path)
 
         # Configure listbox filter function
         self.listbox.set_filter_func(self.on_filter_invalidate)
@@ -170,6 +174,30 @@ class PopoverFolders(BasePlugin):
         self.popover_folders.popup()
 
         return self.popover_folders
+
+    def create_row_right_click(self, row_hbox, folder_path):
+        create_gesture = self.plugins["gestures_setup"].create_gesture
+        create_gesture(
+            row_hbox,
+            3,
+            lambda _, folder_path=folder_path: self.open_baobab(folder_path),
+        )
+
+    def create_row_middle_click(self, row_hbox, folder_path):
+        create_gesture = self.plugins["gestures_setup"].create_gesture
+        create_gesture(
+            row_hbox,
+            2,
+            lambda _, folder_path=folder_path: self.open_kitty(folder_path),
+        )
+
+    def open_kitty(self, folder_path):
+        cmd = "kitty --working-directory={0}".format(folder_path).split()
+        Popen(cmd)
+
+    def open_baobab(self, folder_path):
+        cmd = "baobab {0}".format(folder_path).split()
+        Popen(cmd)
 
     def open_folder(self, x):
         if not x:
