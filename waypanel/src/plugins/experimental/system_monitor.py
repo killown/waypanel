@@ -3,6 +3,8 @@ import gi
 import subprocess
 import shutil
 import shlex
+import tempfile
+import os
 from src.plugins.core._base import BasePlugin
 
 gi.require_version("Gtk", "4.0")
@@ -29,6 +31,77 @@ def initialize_plugin(panel_instance):
     """
     if ENABLE_PLUGIN:
         return SystemMonitorPlugin(panel_instance)
+
+
+ALL_EVENTS = [
+    "view-focused",
+    "view-unmapped",
+    "view-mapped",
+    "view-title-changed",
+    "view-app-id-changed",
+    "view-set-output",
+    "view-workspace-changed",
+    "view-geometry-changed",
+    "view-tiled",
+    "view-minimized",
+    "view-fullscreen",
+    "view-sticky",
+    "wset-workspace-changed",
+    "workspace-activated",
+    "output-wset-changed",
+    "view-wset-changed",
+    "plugin-activation-state-changed",
+    "output-gain-focus",
+]
+
+SELECT_EVENT_WATCH_SCRIPT = f"""
+import sys
+try:
+    from wayfire import WayfireSocket
+    from rich.pretty import pprint
+    from rich import print
+except ImportError as e:
+    print(f"Missing dependency: {{e}}", file=sys.stderr)
+    sys.exit(1)
+
+ALL_EVENTS = {ALL_EVENTS!r}
+
+print("Select an event to watch:")
+for i, event in enumerate(ALL_EVENTS, 1):
+    print(f"{{i}}: {{event}}")
+
+selected = None
+while selected is None:
+    try:
+        s = input("Enter event number: ").strip()
+        if s.isdigit():
+            idx = int(s) - 1
+            if 0 <= idx < len(ALL_EVENTS):
+                selected = ALL_EVENTS[idx]
+            else:
+                print(f"Invalid number. Please enter 1 to {{len(ALL_EVENTS)}}.")
+        else:
+            print("Please enter a valid number.")
+    except (EOFError, KeyboardInterrupt):
+        print("\\nCancelled.")
+        sys.exit(0)
+
+try:
+    sock = WayfireSocket()
+    sock.watch([selected])
+    print(f"[bold]Watching event:[/bold] {{selected}} (press Ctrl+C to exit)")
+    print("=" * 50)
+
+    while True:
+        event = sock.read_next_event()
+        pprint(event)
+        print()
+except KeyboardInterrupt:
+    print("\\n\\nExiting...")
+except Exception as e:
+    print(f"Error: {{e}}", file=sys.stderr)
+    sys.exit(1)
+"""
 
 
 class SystemMonitorPlugin(BasePlugin):
@@ -129,7 +202,6 @@ class SystemMonitorPlugin(BasePlugin):
         self.add_list_box_row("RAM Usage", f"{memory_usage}")
         # AMD GPU Monitoring - Only if available
         GLib.idle_add(self.add_gpu)
-        self.add_list_box_row("Watch events", "all")
 
         for usage in disk_usages:
             mountpoint = usage["mountpoint"]
@@ -161,6 +233,8 @@ class SystemMonitorPlugin(BasePlugin):
                 self.add_list_box_row(
                     "Win Disk Write Count", str(process_disk_usage["write_count"])
                 )
+
+        self.add_list_box_row("Watch events", "all")
 
         # Return True to keep the timeout active
         return self.popover_system and self.popover_system.is_visible()
@@ -400,6 +474,42 @@ class SystemMonitorPlugin(BasePlugin):
         except Exception as e:
             print(f"Error launching terminal: {e}")
             return False
+
+    def open_kitty_with_prompt_and_watch_selected_event(self, *__):
+        def is_installed(cmd):
+            return shutil.which(cmd) is not None
+
+        if not is_installed("kitty"):
+            self.logger.info("kitty terminal is not installed.")
+            return
+
+        if not is_installed("ipython") and not is_installed("python"):
+            self.logger.error("Neither ipython nor python is available.")
+            return
+
+        # Build the script content
+
+        # Write to temp file
+        try:
+            fd, temp_path = tempfile.mkstemp(suffix=".py", text=True)
+            os.write(fd, SELECT_EVENT_WATCH_SCRIPT.encode("utf-8"))
+            os.close(fd)
+
+            # Choose runner: prefer ipython if available
+            if is_installed("ipython"):
+                cmd = ["ipython", temp_path]
+            else:
+                cmd = ["python", temp_path]
+
+            # Launch kitty with the command, then drop into shell on exit
+            full_bash_cmd = f"{' '.join(map(shlex.quote, cmd))}; exec bash"
+
+            subprocess.Popen(["kitty", "bash", "-c", full_bash_cmd])
+
+            # Optional: clean up later? Or let OS handle it.
+            # You could spawn a delayed cleanup, but risky if still in use.
+        except Exception as e:
+            self.logger.error(f"Failed to create or run script: {e}")
 
     def open_kitty_with_rich_events_view(self, *__):
         def is_installed(cmd):
@@ -692,6 +802,7 @@ class SystemMonitorPlugin(BasePlugin):
             1,
             self.open_kitty_with_rich_events_view,
         )
+        create_gesture(hbox, 3, self.open_kitty_with_prompt_and_watch_selected_event)
 
     def create_gesture_for_focused_view_id(self, hbox):
         focused_view = self.last_toplevel_focused_view()
