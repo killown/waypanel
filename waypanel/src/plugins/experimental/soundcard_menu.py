@@ -136,7 +136,6 @@ class SoundCardDashboard(BasePlugin):
         if self.popover_dashboard is None:
             # Create the popover dashboard once
             self.popover_dashboard = Gtk.Popover.new()
-            self.popover_dashboard.set_has_arrow(False)
             self.popover_dashboard.connect("closed", self.popover_is_closed)
             self.popover_dashboard.connect("notify::visible", self.popover_is_open)
 
