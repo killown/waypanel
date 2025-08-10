@@ -2,6 +2,7 @@ import psutil
 import gi
 import subprocess
 import shutil
+import shlex
 from src.plugins.core._base import BasePlugin
 
 gi.require_version("Gtk", "4.0")
@@ -128,6 +129,7 @@ class SystemMonitorPlugin(BasePlugin):
         self.add_list_box_row("RAM Usage", f"{memory_usage}")
         # AMD GPU Monitoring - Only if available
         GLib.idle_add(self.add_gpu)
+        self.add_list_box_row("Watch events", "all")
 
         for usage in disk_usages:
             mountpoint = usage["mountpoint"]
@@ -144,7 +146,8 @@ class SystemMonitorPlugin(BasePlugin):
                 "Exec", self.get_process_executable(focused_view["pid"])
             )
             self.add_list_box_row("Win ID", focused_view["id"])
-            self.add_list_box_row("Win PID", focused_view["pid"])
+            hbox = self.add_list_box_row("Win PID", focused_view["pid"])
+            hbox.set_tooltip_text("Right click to kill process")
             if process_usage:
                 self.add_list_box_row("Win Memory Usage", process_usage["memory_usage"])
             if process_disk_usage:
@@ -398,6 +401,78 @@ class SystemMonitorPlugin(BasePlugin):
             print(f"Error launching terminal: {e}")
             return False
 
+    def open_kitty_with_rich_events_view(self, *__):
+        def is_installed(cmd):
+            return shutil.which(cmd) is not None
+
+        if not is_installed("python3"):
+            self.logger.info("python3 is not installed.")
+            return
+
+        terminal = None
+        if is_installed("kitty"):
+            terminal = "kitty"
+        elif is_installed("alacritty"):
+            terminal = "alacritty"
+        else:
+            self.logger.info(
+                "Neither kitty nor alacritty terminal emulators are installed."
+            )
+            return
+
+        # Comando Python em string para passar ao ipython -c
+        python_cmd = (
+            "from wayfire import WayfireSocket; "
+            "from rich.pretty import pprint; "
+            "from rich import print; "
+            "sock=WayfireSocket(); "
+            "sock.watch(); "
+            "print('[bold]Wayfire Events Monitor[/bold] (press Ctrl+C to exit)'); "
+            "print('='*40); "
+            "import itertools; "
+            "[(pprint(sock.read_next_event()), print()) for _ in itertools.repeat(None)]"
+        )
+
+        # Monta o comando ipython -c "python_cmd" como string única
+        full_cmd = f"ipython -c {shlex.quote(python_cmd)}"
+
+        if terminal == "kitty":
+            subprocess.Popen([terminal, "bash", "-c", f"{full_cmd}; exec bash"])
+        else:  # alacritty
+            subprocess.Popen([terminal, "-e", "bash", "-c", f"{full_cmd}; exec bash"])
+
+    def open_kitty_with_ipython_view(self, view):
+        def is_installed(cmd):
+            return shutil.which(cmd) is not None
+
+        if not is_installed("ipython"):
+            self.logger.info("ipython is not installed.")
+            return
+
+        terminal = None
+        if is_installed("kitty"):
+            terminal = "kitty"
+        elif is_installed("alacritty"):
+            terminal = "alacritty"
+        else:
+            self.logger.info(
+                "Neither kitty nor alacritty terminal emulators are installed."
+            )
+            return
+
+        view_id = view["id"]
+        code = (
+            "from wayfire import WayfireSocket; "
+            "sock = WayfireSocket(); "
+            f"sock.get_view({view_id})"
+        )
+        cmd = f'ipython -i -c "{code}"'
+
+        if terminal == "kitty":
+            subprocess.Popen([terminal, "bash", "-c", f"{cmd} ; exec bash"])
+        else:  # alacritty
+            subprocess.Popen([terminal, "-e", "bash", "-c", f"{cmd} ; exec bash"])
+
     def open_view_info_window(self, id):
         try:
             # Fetch the view details using the provided ID
@@ -585,6 +660,19 @@ class SystemMonitorPlugin(BasePlugin):
                 1,
                 lambda _, pid=last_view_pid: self.open_terminal_with_htop(pid),
             )
+            create_gesture(
+                hbox,
+                3,
+                lambda _, pid=last_view_pid: self.kill_process(pid),
+            )
+
+    def kill_process(self, pid):
+        try:
+            p = psutil.Process(pid)
+            p.terminate()
+            p.wait(3)
+        except psutil.NoSuchProcess:
+            pass
 
     def create_iotop_gesture_for_focused_view_pid(self, hbox):
         focused_view = self.last_toplevel_focused_view()
@@ -597,6 +685,14 @@ class SystemMonitorPlugin(BasePlugin):
                 lambda _, pid=last_view_pid: self.open_terminal_with_iotop(pid),
             )
 
+    def create_watch_events_gesture(self, hbox):
+        create_gesture = self.plugins["gestures_setup"].create_gesture
+        create_gesture(
+            hbox,
+            1,
+            self.open_kitty_with_rich_events_view,
+        )
+
     def create_gesture_for_focused_view_id(self, hbox):
         focused_view = self.last_toplevel_focused_view()
         if focused_view is not None:
@@ -605,7 +701,9 @@ class SystemMonitorPlugin(BasePlugin):
             create_gesture(
                 hbox,
                 1,
-                lambda _, id=last_view_id: self.open_view_info_window(id),
+                lambda _, id=last_view_id: self.open_kitty_with_ipython_view(
+                    focused_view
+                ),
             )
 
     def add_list_box_row(self, name, value):
@@ -621,6 +719,8 @@ class SystemMonitorPlugin(BasePlugin):
 
         if "GPU" in name:
             self.create_gesture_for_amdgpu_top(hbox)
+        if "Watch events" in name:
+            self.create_watch_events_gesture(hbox)
 
         hbox.set_halign(Gtk.Align.FILL)
         hbox.set_margin_top(5)
@@ -639,6 +739,7 @@ class SystemMonitorPlugin(BasePlugin):
 
         row.set_child(hbox)
         self.list_box.append(row)
+        return hbox
 
     def popover_is_open(self, *_):
         """Callback when the popover is opened."""
