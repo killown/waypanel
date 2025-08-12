@@ -159,7 +159,7 @@ class WindowTitlePlugin(BasePlugin):
 
     def filter_title(self, title):
         """
-        Filter and shorten the title based on certain rules.
+        Filter and shorten the title based on certain rules, including limiting long words.
 
         Args:
             title: The raw title string.
@@ -173,17 +173,31 @@ class WindowTitlePlugin(BasePlugin):
         # Remove UTF-8 issues
         title = self.utils.filter_utf_for_gtk(title)
 
-        # Shorten the title if too long
-        if len(title) > self.title_length:
-            words = title.split()
-            first_word_length = len(words[0]) if words else 0
-            if first_word_length > 10:
-                title = words[0]
-            else:
-                title = title[: self.title_length]
+        # Maximum length for any single word (e.g., truncate after 50 chars)
+        MAX_WORD_LENGTH = 50
+        # Overall title length limit
+        MAX_TITLE_LENGTH = self.title_length
 
+        # Handle separator: take part before " — "
         if " — " in title:
             title = title.split(" — ")[0]
+
+        # Split into words and limit each word's length
+        words = title.split()
+        shortened_words = []
+        for word in words:
+            if len(word) > MAX_WORD_LENGTH:
+                word = word[:MAX_WORD_LENGTH] + "…"  # Add ellipsis for truncated words
+            shortened_words.append(word)
+
+        # Rebuild title
+        title = " ".join(shortened_words)
+
+        # Final truncation to respect overall title length
+        if len(title) > MAX_TITLE_LENGTH:
+            # Preserve space for ellipsis
+            title = title[: MAX_TITLE_LENGTH - 1] + "…"
+
         return title
 
     def update_title(self, title, icon_name):
