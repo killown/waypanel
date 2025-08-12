@@ -170,11 +170,13 @@ class TaskbarPlugin(BasePlugin):
         if not title:
             return None
 
-        # Determine title to use based on its length
-        use_this_title = title[:30]
-        first_word_length = len(title.split()[0])
-        if first_word_length > 13:
-            use_this_title = title.split()[0]
+        # Limit individual word length and total title
+        words = title.split()
+        shortened_words = [w[:50] + "…" if len(w) > 50 else w for w in words]
+        title = " ".join(shortened_words)
+        use_this_title = (
+            title[:30] if len(title.split()[0]) <= 13 else title.split()[0][:30]
+        )
 
         # Create a box to hold icon and label
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
