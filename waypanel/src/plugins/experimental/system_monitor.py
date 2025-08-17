@@ -217,21 +217,23 @@ class SystemMonitorPlugin(BasePlugin):
             self.add_list_box_row(
                 "Exec", self.get_process_executable(focused_view["pid"])
             )
-            self.add_list_box_row("Win ID", focused_view["id"])
-            hbox = self.add_list_box_row("Win PID", focused_view["pid"])
+            self.add_list_box_row(
+                "APP ID", f"({focused_view['app-id']}): {focused_view['id']}"
+            )
+            hbox = self.add_list_box_row("APP PID", focused_view["pid"])
             hbox.set_tooltip_text("Right click to kill process")
             if process_usage:
                 self.add_list_box_row("Win Memory Usage", process_usage["memory_usage"])
             if process_disk_usage:
                 self.add_list_box_row("Win Disk Read", process_disk_usage["read_bytes"])
                 self.add_list_box_row(
-                    "Win Disk Write", process_disk_usage["write_bytes"]
+                    "APP Disk Write", process_disk_usage["write_bytes"]
                 )
                 self.add_list_box_row(
-                    "Win Disk Read Count", str(process_disk_usage["read_count"])
+                    "APP Disk Read Count", str(process_disk_usage["read_count"])
                 )
                 self.add_list_box_row(
-                    "Win Disk Write Count", str(process_disk_usage["write_count"])
+                    "APP Disk Write Count", str(process_disk_usage["write_count"])
                 )
 
         self.add_list_box_row("Watch events", "all")
@@ -368,6 +370,9 @@ class SystemMonitorPlugin(BasePlugin):
         except Exception as e:
             print(f"Error retrieving process usage for PID {pid}: {e}")
             return None
+
+    def open_system_monitor(self):
+        subprocess.Popen(["gnome-system-monitor"])
 
     # FIXME: make it work for other gpu tools too
     def open_terminal_with_amdgpu_top(self, *__):
@@ -574,7 +579,9 @@ class SystemMonitorPlugin(BasePlugin):
         code = (
             "from wayfire import WayfireSocket; "
             "sock = WayfireSocket(); "
-            f"sock.get_view({view_id})"
+            f"id = {view_id};"
+            f"view = sock.get_view({view_id});"
+            "view;"
         )
         cmd = f'ipython -i -c "{code}"'
 
@@ -772,6 +779,11 @@ class SystemMonitorPlugin(BasePlugin):
             )
             create_gesture(
                 hbox,
+                2,
+                lambda _, pid=last_view_pid: self.open_system_monitor(),
+            )
+            create_gesture(
+                hbox,
                 3,
                 lambda _, pid=last_view_pid: self.kill_process(pid),
             )
@@ -821,11 +833,11 @@ class SystemMonitorPlugin(BasePlugin):
         """Add a row to the ListBox."""
         row = Gtk.ListBoxRow()
         hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=10)
-        if "Win PID" in name:
+        if "APP PID" in name:
             self.create_gesture_for_focused_view_pid(hbox)
-        if "Win ID" in name:
+        if "APP ID" in name:
             self.create_gesture_for_focused_view_id(hbox)
-        if "Win Disk" in name:
+        if "APP Disk" in name:
             self.create_iotop_gesture_for_focused_view_pid(hbox)
 
         if "GPU" in name:
