@@ -1,6 +1,5 @@
-import os
 from subprocess import Popen, check_output
-import toml
+import time
 import gi
 from gi.repository import Adw, Gtk
 
@@ -72,7 +71,6 @@ class BluetoothDashboard(BasePlugin):
 
         # Create a popover
         self.popover_dashboard = Gtk.Popover.new()
-        self.popover_dashboard.set_has_arrow(False)
         self.popover_dashboard.connect("closed", self.popover_is_closed)
         self.popover_dashboard.connect("notify::visible", self.popover_is_open)
 
@@ -116,6 +114,9 @@ class BluetoothDashboard(BasePlugin):
         self.popover_dashboard.popup()
         return self.popover_dashboard
 
+    def notify(self, title, message):
+        Popen(["notify-send", title, message])
+
     def on_bluetooth_clicked(self, gesture, *_):
         button = gesture.get_widget()
         device_name = button.get_label()
@@ -129,12 +130,19 @@ class BluetoothDashboard(BasePlugin):
         try:
             connected_devices = check_output(connected_devices).decode()
         except Exception as e:
-            print(e)
-            return
+            self.logger.info(e)
+            pass
 
         if device_id in connected_devices:
+            self.notify(
+                "Bluetooth plugin", f"Disconnecting bluetooth device: {device_name}"
+            )
             cmd = "bluetoothctl disconnect {0}".format(device_id).split()
             Popen(cmd)
+        else:
+            self.notify(
+                "Bluetooth plugin", f"Connecting bluetooth device: {device_name}"
+            )
 
     def open_popover_dashboard(self, *_):
         if self.popover_dashboard and self.popover_dashboard.is_visible():
