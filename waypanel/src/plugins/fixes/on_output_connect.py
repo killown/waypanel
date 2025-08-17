@@ -1,3 +1,10 @@
+# This plugin will restart Waypanel when the primary output is reconnected
+# or disconnected.
+
+# NOTE: the following config must to be set.
+# [panel]
+# primary_output = "Output-Name"
+
 import sys
 import os
 from gi.repository import GLib
@@ -18,7 +25,7 @@ def initialize_plugin(panel_instance):
 
 
 class RestartOnMovePlugin(BasePlugin):
-    """Restart Waypanel when the primary output becomes active."""
+    """Restart Waypanel when the primary output disconnects or reconnects."""
 
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
@@ -30,12 +37,12 @@ class RestartOnMovePlugin(BasePlugin):
             )
         else:
             self.logger.info(
-                f"Monitoring for primary output activation: {self.primary_output_name}"
+                f"Monitoring for primary output connect/disconnect: {self.primary_output_name}"
             )
 
     @subscribe_to_event("output-wset-changed")
     def on_output_wset_changed(self, event_message):
-        """React when an output's workspace set changes (indicates power/state change)."""
+        """React when the primary output connects or disconnects."""
         if not self.primary_output_name:
             return
 
@@ -58,34 +65,43 @@ class RestartOnMovePlugin(BasePlugin):
             if self._debounce_timeout_id:
                 GLib.source_remove(self._debounce_timeout_id)
 
-            # Wait 500ms to ensure output is fully ready
-            self._debounce_timeout_id = GLib.timeout_add(500, self._check_and_restart)
+            # Use 1000ms to allow full disconnect/reconnect settle
+            self._debounce_timeout_id = GLib.timeout_add(1000, self._check_and_restart)
 
         except Exception as e:
-            self.logger.error(f"Error in on_output_wset_changed: {e}", exc_info=True)
+            self.logger.error(f"Error in on_output_wset-changed: {e}", exc_info=True)
 
     def _check_and_restart(self):
-        """After debounce, verify the primary output is active and restart."""
+        """After delay, check if primary output is missing or present, then restart."""
         self._debounce_timeout_id = None
 
         try:
             outputs_list = self.ipc.list_outputs()
-            active_outputs = [o.get("name") for o in outputs_list if o.get("name")]
+            active_output_names = [o.get("name") for o in outputs_list if o.get("name")]
 
-            if self.primary_output_name in active_outputs:
+            # If primary output is NOT in active outputs → it was disconnected
+            # If primary output IS in active outputs → it was connected
+            # In both cases, we want to restart to reinitialize panel on correct output
+            if self.primary_output_name not in active_output_names:
                 self.logger.info(
-                    f"Primary output '{self.primary_output_name}' is active. Restarting Waypanel."
+                    f"Primary output '{self.primary_output_name}' is now disconnected. Restarting Waypanel."
                 )
-                self.restart_application()
             else:
-                self.logger.debug(
-                    f"Primary output '{self.primary_output_name}' not found in active outputs after delay."
+                self.logger.info(
+                    f"Primary output '{self.primary_output_name}' is now active. Restarting Waypanel."
                 )
+
+            # Always restart if event was triggered for primary output
+            # If the panel is moved to another output, it will be restarted,
+            # the reason is because another output could have a different resolution
+            # and the panel would still keep the same size from the last output is was connected
+            # to prevent that behaviour, restart the panel on the available output
+            self.restart_application()
 
         except Exception as e:
             self.logger.error(f"Error in delayed restart check: {e}", exc_info=True)
 
-        return False  # Required: stops GLib from repeating the timeout
+        return False  # Required: stop GLib from repeating
 
     def restart_application(self):
         """Restart the current Waypanel process."""
