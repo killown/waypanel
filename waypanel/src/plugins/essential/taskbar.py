@@ -426,8 +426,17 @@ class TaskbarPlugin(BasePlugin):
         try:
             if view.get("role") == "toplevel":
                 self.last_toplevel_focused_view = view
+                self.update_focused_button_style(view["id"])
         except Exception as e:
-            print(f"Error handling 'view-focused' event: {e}")
+            self.logger.error(f"Error handling 'view-focused' event: {e}")
+
+    def update_focused_button_style(self, focused_view_id):
+        """button will have a special style when its view is focused"""
+        for view_id, (button, title, _) in self.buttons_id.items():
+            if view_id == focused_view_id:
+                button.add_css_class("focused")
+            else:
+                button.remove_css_class("focused")
 
     def on_view_created(self, view):
         """Handle creation of new views."""
@@ -521,6 +530,7 @@ class TaskbarPlugin(BasePlugin):
                     self._focus_and_center_cursor(view_id)
             else:
                 # Focus workspace and center cursor without scale handling
+                self.ipc.scale_toggle()
                 self._focus_and_center_cursor(view_id)
 
             # Apply focus indicator effect
