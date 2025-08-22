@@ -539,6 +539,21 @@ scale {
   font-size: 16px;
 }
 
+.taskbar-button.focused {
+  background-color: #d5c4a1;
+  color: #282828;
+  font-weight: bold;
+  border: 1px solid white;
+  box-shadow: 0 0 8px rgba(100, 180, 255, 0.5);
+}
+
+.taskbar-button.focused:hover {
+  background-color: #282828;
+  transform: scale(1.05);
+  transition: all 0.1s ease;
+  color: #d5c4a1;
+}
+
 .taskbar-button:hover {
   color: #282828;
   background-color: #d5c4a1;
