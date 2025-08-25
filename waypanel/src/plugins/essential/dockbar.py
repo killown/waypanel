@@ -130,6 +130,8 @@ class DockbarPlugin(BasePlugin):
                 app_cmd,
             )
 
+            self.utils.add_cursor_effect(button)
+
             # Add middle-click gesture
             self.create_gesture(
                 button, 2, lambda _, cmd=app_cmd: self.on_middle_click(cmd)

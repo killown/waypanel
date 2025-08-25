@@ -36,9 +36,7 @@ class MenuSetupPlugin(BasePlugin):
     def load_menu_config(self):
         """Load menu configuration from waypanel.toml."""
         if not os.path.exists(self.config_path):
-            self.log_error(
-                f"Menu config file not found: {self.config_path}"
-            )
+            self.log_error(f"Menu config file not found: {self.config_path}")
             return {}
 
         with open(self.config_path, "r") as f:
@@ -76,6 +74,7 @@ class MenuSetupPlugin(BasePlugin):
         for menu_name, menu_data in menu_config.items():
             menu = Gio.Menu()
             menu_button = Gtk.MenuButton(label=menu_name)
+            self.utils.add_cursor_effect(menu_button)
 
             # Set icon if specified in the configuration
             if "icon" in menu_data:

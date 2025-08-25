@@ -50,6 +50,7 @@ class ClockPlugin(BasePlugin):
         self.clock_label = Gtk.Label()
         self.clock_label.add_css_class("clock-label")
         self.clock_button.set_child(self.clock_label)
+        self.utils.add_cursor_effect(self.clock_button)
 
         # Append clock button to the clock box
         self.update_widget_safely(self.clock_box.append, self.clock_button)

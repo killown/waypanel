@@ -51,6 +51,7 @@ class NetworkMonitorPlugin(BasePlugin):
         self.update_icon()
         self.button.set_icon_name(self.icon)
         self.button.set_popover(self.popover)
+        self.utils.add_cursor_effect(self.button)
         self.popover.set_parent(self.button)
         self.update_icon()
         self.main_widget = (self.button, "append")
@@ -222,6 +223,7 @@ class NetworkMonitorPlugin(BasePlugin):
         # FIXME: missing connect to the network?
         wifi_scan_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         wifi_scan_box.set_margin_top(12)
+        self.utils.add_cursor_effect(wifi_scan_box)
 
         scan_button = Gtk.Button(label="Scan WiFi Networks")
         scan_button.connect("clicked", self.on_wifi_scan_clicked)
@@ -235,6 +237,7 @@ class NetworkMonitorPlugin(BasePlugin):
         # === END: WiFi Scan Section ===
 
         config_button = Gtk.Button(label="Configure Connections")
+        self.utils.add_cursor_effect(config_button)
         config_button.connect("clicked", self.on_config_clicked)
         main_box.append(config_button)
 

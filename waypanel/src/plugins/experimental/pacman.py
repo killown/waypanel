@@ -33,6 +33,7 @@ class UpdateCheckerPlugin(BasePlugin):
 
         self.button.connect("clicked", self._on_button_click)
         self.menu_button.set_icon_name("software-update-available-symbolic")
+        self.utils.add_cursor_effect(self.menu_button)
 
         # Main widget to be added to the panel
         self.main_widget = (self.menu_button, "append")
@@ -58,11 +59,13 @@ class UpdateCheckerPlugin(BasePlugin):
 
         refresh_btn = Gtk.Button(label="Refresh")
         refresh_btn.connect("clicked", self._manual_refresh)
+        self.utils.add_cursor_effect(refresh_btn)
         self.popover_box.append(refresh_btn)
 
         update_btn = Gtk.Button(label="Update Now")
         update_btn.connect("clicked", self._launch_terminal)
         self.popover_box.append(update_btn)
+        self.utils.add_cursor_effect(update_btn)
 
         self.popover.connect("notify::visible", self._on_popover_visibility_changed)
 

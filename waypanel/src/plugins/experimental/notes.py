@@ -201,6 +201,7 @@ class MenuNotes(BasePlugin):
         self.menubutton_notes = Gtk.Button.new()
         self.main_widget = (self.menubutton_notes, "append")
         self.menubutton_notes.connect("clicked", self.open_popover_notes)
+        self.utils.add_cursor_effect(self.menubutton_notes)
 
         notes_icon = (
             self.config.get("panel", {})

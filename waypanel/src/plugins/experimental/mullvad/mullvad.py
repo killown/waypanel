@@ -63,6 +63,7 @@ class MullvadPlugin(BasePlugin):
         self.menubutton_mullvad = Gtk.MenuButton()
         self.menubutton_mullvad.set_icon_name("mullvad-vpn")
         self.menubutton_mullvad.add_css_class("top_right_widgets")
+        self.utils.add_cursor_effect(self.menubutton_mullvad)
         self.main_widget = (self.menubutton_mullvad, "append")
 
         # Add the MenuButton to the systray

@@ -401,6 +401,8 @@ class ClipboardClient(BasePlugin):
             self.utils.get_nearest_icon_name(clipboard_icon)
         )
 
+        self.utils.add_cursor_effect(self.menubutton_clipboard)
+
     def create_popover_clipboard(self, *_):
         # Create a popover
         self.popover_clipboard = Gtk.Popover.new()  # Create a new popover menu

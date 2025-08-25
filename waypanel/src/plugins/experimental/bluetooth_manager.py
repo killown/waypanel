@@ -46,6 +46,7 @@ class BluetoothDashboard(BasePlugin):
     def create_menu_popover_bluetooth(self):
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
+        self.utils.add_cursor_effect(self.menubutton_dashboard)
         bt_icon = "bluetooth"
         bt_icon = (
             self.config.get("panel", {})

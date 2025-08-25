@@ -120,6 +120,7 @@ class SystemMonitorPlugin(BasePlugin):
         self.menubutton_system = Gtk.Button()
         self.menubutton_system.set_icon_name("utilities-system-monitor")  # Default icon
         self.menubutton_system.connect("clicked", self.open_popover_system)
+        self.utils.add_cursor_effect(self.menubutton_system)
         self.main_widget = (self.menubutton_system, "append")
 
     def start_system_updates(self):

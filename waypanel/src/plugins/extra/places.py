@@ -48,6 +48,7 @@ class PopoverFolders(BasePlugin):
         menu_icon = self.config.get("top", {}).get("folder_icon", "folder-home")
         self.menubutton_folders.set_icon_name(menu_icon)
         self.menubutton_folders.add_css_class("places-menu-button")
+        self.utils.add_cursor_effect(self.menubutton_folders)
 
     def create_popover_folders(self):
         """
@@ -132,6 +133,7 @@ class PopoverFolders(BasePlugin):
             image.add_css_class("places-icon-from-popover")
             self.create_row_right_click(row_hbox, folders_path)
             self.create_row_middle_click(row_hbox, folders_path)
+            self.utils.add_cursor_effect(line)
 
         for folder in self.home_folders:
             folders_path = os.path.join(self.home, folder)
@@ -165,6 +167,8 @@ class PopoverFolders(BasePlugin):
             row_hbox.append(line)
             self.create_row_right_click(row_hbox, folders_path)
             self.create_row_middle_click(row_hbox, folders_path)
+
+            self.utils.add_cursor_effect(line)
 
         # Configure listbox filter function
         self.listbox.set_filter_func(self.on_filter_invalidate)

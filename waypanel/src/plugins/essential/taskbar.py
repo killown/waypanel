@@ -211,6 +211,8 @@ class TaskbarPlugin(BasePlugin):
         motion_controller.connect("leave", lambda *_: self.on_button_hover_leave(view))
         button.add_controller(motion_controller)
 
+        self.utils.add_cursor_effect(button)
+
         return button
 
     def on_button_hover(self, view):

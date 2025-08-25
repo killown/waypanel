@@ -1,7 +1,7 @@
 import os
 import random
 from subprocess import Popen
-from gi.repository import Gio, Gtk, Pango
+from gi.repository import Gio, Gtk, Pango, Gdk
 from gi.repository import Gtk4LayerShell as LayerShell
 from src.plugins.core._base import BasePlugin
 
@@ -51,6 +51,7 @@ class AppLauncher(BasePlugin):
         )
         self.menubutton_launcher.set_icon_name(menu_icon)
         self.menubutton_launcher.add_css_class("app-launcher-menu-icon")
+        self.utils.add_cursor_effect(self.menubutton_launcher)
 
     def create_popover_launcher(self, *_):
         """Create and configure the popover launcher."""
@@ -248,6 +249,8 @@ class AppLauncher(BasePlugin):
         image.add_css_class(
             "app-launcher-icon-from-popover"
         )  # Add CSS class for styling
+
+        self.utils.add_cursor_effect(image)
 
         # Label
         label = Gtk.Label.new(name)

@@ -69,9 +69,11 @@ class PopoverBookmarks(BasePlugin):
                     .get("bookmarks_icon", "internet-web-browser")
                 )
                 self.menubutton_bookmarks.set_icon_name(bookmarks_icon)
+
         else:
             self.menubutton_bookmarks.set_icon_name("firefox-developer-edition")
         self.menubutton_bookmarks.add_css_class("bookmarks-menu-button")
+        self.utils.add_cursor_effect(self.menubutton_bookmarks)
 
     def create_popover_bookmarks(self, *_):
         """
@@ -189,6 +191,7 @@ class PopoverBookmarks(BasePlugin):
             # Add label and image to the bookmark box
             row_hbox.append(image)
             row_hbox.append(line)
+            self.utils.add_cursor_effect(line)
             self.flowbox.append(row_hbox)
             line.add_css_class("bookmarks-label-from-popover")
             image.add_css_class("bookmarks-icon-from-popover")

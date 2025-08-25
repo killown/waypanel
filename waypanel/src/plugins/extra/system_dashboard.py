@@ -100,6 +100,7 @@ class SystemDashboard(BasePlugin):
             .get("system_icon", "system-shutdown")
         )
         self.menubutton_dashboard.set_icon_name(system_icon)
+        self.utils.add_cursor_effect(self.menubutton_dashboard)
         return self.menubutton_dashboard
 
     def create_popover_system(self, *_):
@@ -166,6 +167,7 @@ class SystemDashboard(BasePlugin):
             button.connect("clicked", self.on_action, data[0])
             name_label.add_css_class("system_dash_label")
             summary_label.add_css_class("system_dash_summary")
+            self.utils.add_cursor_effect(button)
 
         self.main_box.append(self.stack)
 

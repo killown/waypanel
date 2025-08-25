@@ -59,6 +59,7 @@ class WindowControlsPlugin(BasePlugin):
         self.cf_box.append(self.minimize_button)
         self.cf_box.append(self.maximize_button)
         self.cf_box.append(self.close_button)
+        self.utils.add_cursor_effect(self.cf_box)
 
         # Add CSS class
         self.cf_box.add_css_class("window-controls-box")

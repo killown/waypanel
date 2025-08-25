@@ -2022,7 +2022,16 @@ class Utils(Adw.Application):
             )
             return ""  # Return an empty string as a fallback
 
-    from gi.repository import Gtk
+    def add_cursor_effect(self, widget):
+        motion = Gtk.EventControllerMotion()
+        motion.connect(
+            "enter",
+            lambda c, x, y: widget.set_cursor(
+                Gdk.Cursor.new_from_name("pointer", None)
+            ),
+        )
+        motion.connect("leave", lambda c, x, y: widget.set_cursor(None))
+        widget.add_controller(motion)
 
     def create_button(
         self,

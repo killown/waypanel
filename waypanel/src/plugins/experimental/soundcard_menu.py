@@ -129,6 +129,7 @@ class SoundCardDashboard(BasePlugin):
         )
         self.menubutton_dashboard.set_icon_name(s_icon)
         self.main_widget = (self.menubutton_dashboard, "append")
+        self.utils.add_cursor_effect(self.menubutton_dashboard)
         return self.menubutton_dashboard
 
     def create_popover_soundcard(self, *_):
