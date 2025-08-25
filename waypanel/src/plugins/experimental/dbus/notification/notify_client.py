@@ -72,6 +72,7 @@ class NotificationPopoverPlugin(BasePlugin):
         self.notification_button.add_css_class("notification-panel-button")
         self.notification_button.set_tooltip_text("View Recent Notifications")
         self.notification_button.connect("clicked", self.open_popover_notifications)
+        self.utils.add_cursor_effect(self.notification_button)
         # Initialize the Do Not Disturb switch
         self.dnd_switch = Gtk.Switch()
         self.dnd_switch.set_active(False)
@@ -260,6 +261,8 @@ class NotificationPopoverPlugin(BasePlugin):
         # Add a close button
         close_button = Gtk.Button.new_from_icon_name("window-close-symbolic")
         close_button.set_tooltip_text("Close Notification")
+        self.utils.add_cursor_effect(close_button)
+
         close_button.set_margin_start(10)  # Add spacing between content and button
         close_button.connect(
             "clicked", lambda _: self.delete_notification(notification["id"], hbox)
@@ -448,6 +451,7 @@ class NotificationPopoverPlugin(BasePlugin):
             clear_button.connect("clicked", lambda _: self.clear_all_notifications())
             clear_button.set_tooltip_text("Clear All Notifications")
             clear_button.set_margin_start(10)
+            self.utils.add_cursor_effect(clear_button)
             self.update_widget_safely(self.main_vbox.append, clear_button)
 
             # Notification content area (scrollable)
@@ -467,6 +471,7 @@ class NotificationPopoverPlugin(BasePlugin):
             self.dnd_switch = Gtk.Switch()
             self.dnd_switch.set_active(False)
             self.dnd_switch.connect("state-set", self.on_dnd_toggled)
+            self.utils.add_cursor_effect(self.dnd_switch)
 
             dnd_label = Gtk.Label(label="Do Not Disturb")
             dnd_label.set_halign(Gtk.Align.START)
