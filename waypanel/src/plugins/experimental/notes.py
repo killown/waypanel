@@ -153,6 +153,7 @@ class MenuNotes(BasePlugin):
             delete_button = Gtk.Button()
             delete_button.add_css_class("notes_button_delete")
             delete_button.set_icon_name(button_icon)
+            self.utils.add_cursor_effect(delete_button)
 
             delete_button.connect("clicked", self.on_delete_note)
 
@@ -251,11 +252,13 @@ class MenuNotes(BasePlugin):
         self.button_add = Gtk.Button.new_with_label("Add")
         self.button_add.add_css_class("notes_button_add")
         self.button_add.connect("clicked", self.on_add_note)
+        self.utils.add_cursor_effect(self.button_add)
         buttons_box.append(self.button_add)
 
         self.button_clear = Gtk.Button.new_with_label("Clear All")
         self.button_clear.add_css_class("notes_button_clear")
         self.button_clear.connect("clicked", self.clear_notes)
+        self.utils.add_cursor_effect(self.button_clear)
         buttons_box.append(self.button_clear)
 
         self.main_box.append(buttons_box)
