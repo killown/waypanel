@@ -1,11 +1,12 @@
 import os
 import toml
+from gi.repository import GLib
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
-DEPS = []
+DEPS = ["dockbar", "taskbar", "top_panel", "left_panel", "bottom_panel"]
 
 
 def get_plugin_placement(panel_instance):
@@ -25,8 +26,17 @@ class WayfireConfigWatcherPlugin(BasePlugin):
         super().__init__(panel_instance)
         self.panel = panel_instance
         self.config = self.load_config()
-        self.apply_config(self.config)
+        GLib.idle_add(self._apply_config_idle)
         self.observer = self.start_watching()
+
+    def _apply_config_idle(self):
+        """Apply config in a non-blocking way via GLib idle loop."""
+        try:
+            self.apply_config(self.config)
+            self.logger.info("Initial config applied successfully.")
+        except Exception as e:
+            self.logger.error(f"Error applying initial config: {e}")
+        return False  # Run only once
 
     def load_config(self):
         try:
@@ -165,11 +175,31 @@ class ConfigFileHandler(FileSystemEventHandler):
         self.plugin.logger.info(f"[{self.plugin.PLUGIN_NAME}] Restarted observer")
 
     def reload_config(self):
+        """Schedule config reload in the main thread, once, without blocking."""
+        # Avoid duplicate pending reloads
+        if getattr(self, "_pending_reload", False):
+            return
+
         try:
             new_config = self.plugin.load_config()
-            self.plugin.apply_config(new_config)
-            print("wayfire.toml was reloaded")
+
+            def apply_in_main_thread():
+                self._pending_reload = False
+                try:
+                    self.plugin.apply_config(new_config)
+                    self.plugin.logger.info("Configuration reloaded and applied.")
+                except Exception as e:
+                    self.plugin.panel.logger.error(
+                        f"[{self.plugin.PLUGIN_NAME}] Failed to apply config: {e}"
+                    )
+                return False  # Run only once
+
+            self._pending_reload = True
+            GLib.idle_add(apply_in_main_thread)
+            print("Scheduled non-blocking config reload...")
+
         except Exception as e:
             self.plugin.panel.logger.error(
-                f"[{self.plugin.PLUGIN_NAME}] error reloading config: {e}"
+                f"[{self.plugin.PLUGIN_NAME}] Failed to load config: {e}"
             )
+            self._pending_reload = False
