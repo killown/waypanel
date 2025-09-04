@@ -1,12 +1,9 @@
-# ~/.config/waypanel/plugins/wayfire_plugins_realtime.py
-
 import os
 import toml
 from gi.repository import Gio, Gtk, Pango
 from src.plugins.core._base import BasePlugin
 import xml.etree.ElementTree as ET
 
-# === CONFIGURATION ===
 WAYFIRE_METADATA_DIR = "/usr/share/wayfire/metadata"
 WAYFIRE_TOML_PATH = os.path.expanduser("~/.config/waypanel/wayfire/wayfire.toml")
 
@@ -212,16 +209,13 @@ class WayfireRealtimePluginsPlugin(BasePlugin):
             new_value = " ".join(plugin_list)
             self.ipc.set_option_values({"core/plugins": new_value})
 
-            # Reflect change immediately
             for p in self.wf_plugins:
                 if p["name"] == plugin_name:
                     p["enabled"] = enable
                     break
 
-            # Persist to TOML
             self.save_to_toml()
 
-            # Refresh UI if open
             if self.popover and self.popover.is_visible():
                 self._refresh_popover()
 
@@ -316,7 +310,7 @@ class WayfireRealtimePluginsPlugin(BasePlugin):
         self.flowbox.append(vbox)
 
     def on_plugin_clicked(self, flowbox, child):
-        plugin_name = child.get_child().MYTEXT  # assume stored
+        plugin_name = child.get_child().MYTEXT
         self.plugins["wayfire_plugin_details"].open_plugin_config_window(plugin_name)
 
     def on_toggle(self, switch, _pspec, name):
