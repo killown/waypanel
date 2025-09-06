@@ -2142,35 +2142,11 @@ class Utils(Adw.Application):
             )
             return None
 
-    def is_plugin_enabled(self, plugin_name):
-        config_file = os.getenv(
-            "WAYFIRE_CONFIG_FILE", os.path.expanduser("~/.config/wayfire.ini")
-        )
-
-        if not os.path.exists(config_file):
-            print(f"Config file not found: {config_file}")
-            return False
-
-        parser = configparser.ConfigParser()
-
-        try:
-            parser.read(config_file)
-        except Exception as e:
-            print(f"Error reading config file: {e}")
-            return False
-
-        if "core" not in parser.sections():
-            print("No [core] section in config")
-            return False
-
-        plugins_line = parser["core"].get("plugins", "").strip()
-        if not plugins_line:
-            print("plugins= line missing or empty in [core]")
-            return False
-
-        plugins = [p.strip() for p in plugins_line.split(" ")]
-
-        return plugin_name in plugins
+    def is_plugin_enabled(self, plugin_name: str) -> bool:
+        """
+        Check if a Wayfire plugin is enabled.
+        """
+        return plugin_name in self.ipc.get_option_value("core/plugins")["value"]
 
     def is_keybind_used(self, keybinding):
         """
@@ -2211,6 +2187,10 @@ class Utils(Adw.Application):
         except Exception as e:
             print(f"Error reading config file: {e}")
             return False
+
+    def tile_maximize_all_from_active_workspace(self, should_maxmize):
+        view_ids = self.ipc.get_views_from_active_workspace()
+        [self.ipc.set_tiling_maximized(view_id, should_maxmize) for view_id in view_ids]
 
     def get_wayctl_path(self):
         try:
