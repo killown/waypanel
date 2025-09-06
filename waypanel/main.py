@@ -130,7 +130,7 @@ def start_config_watcher():
         event_handler = ConfigReloadHandler(restart_application)
         observer = Observer()
         observer.schedule(event_handler, path=os.path.dirname(wayfire_ini))
-        observer.start()
+        # observer.start()
         return observer
 
 
@@ -170,7 +170,7 @@ def start_ipc_server(logger):
         try:
             logger.info("Starting IPC server")
             server = EventServer(logger)
-            server_container["instance"] = server  # Store the server instance
+            server_container["instance"] = server
             asyncio.run(server.main())
         except Exception as e:
             logger.error(f"IPC server crashed: {e}", exc_info=True)
@@ -288,7 +288,7 @@ def load_panel(ipc_server):
             while True:
                 msg = sock.read_message()
                 if "output" in msg and monitor_name == msg["output-data"]["name"]:
-                    if msg["event"] == "output-added":
+                    if msg["event"] == "output-gain-focus":
                         panel.run(None)
     except ImportError as e:
         logger.error(f"Failed to load panel: {e}", exc_info=True)
