@@ -1,6 +1,7 @@
 import os
 import re
 import toml
+import math
 from gi.repository import Gtk, Pango, GLib, Gio, Gdk
 from xml.etree import ElementTree as ET
 from src.plugins.core._base import BasePlugin
@@ -336,8 +337,7 @@ class PluginDetailsHandler(BasePlugin):
         label.set_halign(Gtk.Align.START)
         label.set_valign(Gtk.Align.CENTER)
         label.set_tooltip_text(opt["long"]) if opt["long"] else None
-        label.set_width_chars(20)
-        label.set_max_width_chars(20)
+        label.set_width_chars(30)
         label.set_ellipsize(Pango.EllipsizeMode.END)
 
         widget = None
@@ -356,15 +356,29 @@ class PluginDetailsHandler(BasePlugin):
             except (ValueError, TypeError):
                 value = float(opt["default"])
 
+            step = float(opt["precision"]) if opt["precision"] else 1.0
+            if step <= 0:
+                step = 1.0
+
             adj = Gtk.Adjustment(
                 lower=float(opt["min"]) if opt["min"] is not None else 0.0,
                 upper=float(opt["max"]) if opt["max"] is not None else 100.0,
-                step_increment=float(opt["precision"]) if opt["precision"] else 1.0,
+                step_increment=step,
+                page_increment=step * 10.0,
                 value=value,
             )
             widget = Gtk.SpinButton()
             widget.set_adjustment(adj)
-            widget.connect("value-changed", self.on_numeric_change, full_key)
+            widget.set_digits(3 if opt["type"] == "double" else 0)
+
+            def on_spin_changed(spin_btn, option_key, option_type):
+                val = spin_btn.get_value()
+                if option_type == "int":
+                    val = int(round(val))
+                self.ipc.set_option_values({option_key: str(val)})
+                self._save_value_to_toml(option_key, val)
+
+            widget.connect("value-changed", on_spin_changed, full_key, opt["type"])
             GLib.idle_add(self._load_numeric_value, widget, full_key)
 
         elif opt["type"] == "color":
@@ -594,7 +608,7 @@ class PluginDetailsHandler(BasePlugin):
         self.ipc.set_option_values({key: val})
 
     def on_numeric_change(self, spin, key):
-        val = str(spin.get_value())
+        val = str(round(spin.get_value()))
         self.ipc.set_option_values({key: val})
 
     def on_string_change(self, entry, key):
