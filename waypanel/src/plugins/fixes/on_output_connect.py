@@ -1,6 +1,3 @@
-# This plugin will restart Waypanel when the primary output is reconnected
-# or disconnected.
-
 # NOTE: the following config must to be set.
 # [panel]
 # primary_output = "Output-Name"
