@@ -22,7 +22,7 @@ DEPS = [
 
 
 def get_plugin_placement(panel_instance):
-    return "top-panel-right", 10, 10
+    return "top-panel-center", 10, 10
 
 
 def initialize_plugin(panel_instance):
