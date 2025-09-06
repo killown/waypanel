@@ -252,6 +252,9 @@ class IPC:
         """Center cursor on the specified view"""
         return self.wf_utils.center_cursor_on_view(view_id)
 
+    def get_views_from_active_workspace(self):
+        return self.wf_utils.get_views_from_active_workspace()
+
     def move_cursor(self, x: int, y: int) -> None:
         """Move the cursor to the specified coordinates"""
         return self.stipc.move_cursor(x, y)
@@ -449,6 +452,9 @@ class IPC:
 
     def get_tiling_layout(self, wset, wsx, wsy):
         return self.sock.get_tiling_layout(wset, wsx, wsy)
+
+    def set_tiling_maximized(self, view_id, should_maximize):
+        self.sock.set_tiling_maximized(view_id, should_maximize)
 
     def _calculate_intersection_area(
         self, view: dict, ws_x: int, ws_y: int, monitor: dict
