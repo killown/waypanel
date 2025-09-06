@@ -218,10 +218,17 @@ class StatusNotifierWatcher(ServiceInterface):
                     object_path = raw_object_path.value
                 else:
                     object_path = raw_object_path
-
-                if object_path:
+                # Only proceed if object_path is a valid D-Bus object path
+                if isinstance(object_path, str) and object_path.startswith("/"):
                     self.loop.create_task(
                         self.host.register_item(self.bus, service_name, object_path)
+                    )
+                else:
+                    # If not, assume it's a service name and use default path
+                    self.loop.create_task(
+                        self.host.register_item(
+                            self.bus, service_name, "/StatusNotifierItem"
+                        )
                     )
                 # print(
                 #    f"NameOwnerChanged: {service_name}, Old Owner: {old_owner}, New Owner: {new_owner}"
@@ -418,6 +425,14 @@ class StatusNotifierWatcher(ServiceInterface):
             str | None: The current service name, or None if unresolved.
         """
         try:
+            if not object_path.startswith("/"):
+                return None
+            else:
+                print(
+                    f"Invalid object path received in NameOwnerChanged: {object_path}, using /StatusNotifierItem"
+                )
+                path_to_use = "/StatusNotifierItem"
+
             # Check if the object_path exists in the dictionary
             if object_path in self.object_path_to_bus_name:
                 bus_name = self.object_path_to_bus_name[object_path]
@@ -535,43 +550,51 @@ class StatusNotifierItem(BasePlugin):
         await self.broadcast_message(message)
 
     async def initialize(self, broadcast=True) -> bool:
-        try:
-            # Proceed with normal initialization
-            introspection = await self.bus.introspect(
-                self.service_name, self.object_path
-            )
-            self.proxy_object = self.bus.get_proxy_object(
-                self.service_name, self.object_path, introspection=introspection
-            )
-
-            # Try to find matching interface
-            ifaces = [
-                "org.kde.StatusNotifierItem",
-                "org.freedesktop.StatusNotifierItem",
-            ]
-            for interface in ifaces:
-                try:
-                    self.item = self.proxy_object.get_interface(interface)
-                    break
-                except Exception:
-                    continue
-            else:
-                self.logger.warning("No valid interface found.")
-                return False
-
-            # Fetch icon name and broadcast
+        for attempt in range(3):
             try:
-                self.icon_name = await self.item.get_icon_name()
-                if hasattr(self.item, "get_icon_pixmap"):
-                    self.icon_pixmap = await self.item.get_icon_pixmap()
-                if broadcast:
-                    await self.on_new_tray_icon()
+                introspection = await self.bus.introspect(
+                    self.service_name, self.object_path
+                )
+                self.proxy_object = self.bus.get_proxy_object(
+                    self.service_name, self.object_path, introspection=introspection
+                )
+
+                ifaces = [
+                    "org.kde.StatusNotifierItem",
+                    "org.freedesktop.StatusNotifierItem",
+                ]
+                for interface in ifaces:
+                    try:
+                        self.item = self.proxy_object.get_interface(interface)
+                        break
+                    except Exception:
+                        continue
+                else:
+                    if attempt < 2:
+                        await asyncio.sleep(0.3)
+                        continue
+                    self.logger.warning("No valid interface found after retries.")
+                    return False
+
+                try:
+                    self.icon_name = await self.item.get_icon_name()
+                    if hasattr(self.item, "get_icon_pixmap"):
+                        self.icon_pixmap = await self.item.get_icon_pixmap()
+                    if broadcast:
+                        await self.on_new_tray_icon()
+                except Exception as e:
+                    self.logger.error(f"Failed to fetch IconName: {e}")
+                    return False
+
+                return True
+
             except Exception as e:
-                self.logger.error(f"Failed to fetch IconName: {e}")
-                return False
-
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Failed to initialize StatusNotifierItem: {e}")
-            return False
+                self.logger.error(
+                    f"Failed to initialize StatusNotifierItem (attempt {attempt + 1}): {e}"
+                )
+                if attempt < 2:
+                    await asyncio.sleep(0.3)
+                else:
+                    self.logger.error(f"Initialization failed after 3 attempts: {e}")
+                    return False
+        return False
