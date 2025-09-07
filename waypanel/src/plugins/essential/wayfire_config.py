@@ -6,7 +6,7 @@ from watchdog.events import FileSystemEventHandler
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
-DEPS = ["dockbar", "taskbar", "top_panel", "left_panel", "bottom_panel"]
+DEPS = ["dockbar", "taskbar", "event_manager"]
 
 
 def get_plugin_placement(panel_instance):
@@ -69,44 +69,100 @@ class WayfireConfigWatcherPlugin(BasePlugin):
         return successful
 
     def apply_config(self, config):
+        """Apply only values that differ from current runtime.
+
+        Note: returns False at the end so glib.idle_add will not repeat this job.
+        """
+        try:
+            response = self.ipc.sock.list_config_options()
+            if response.get("result") != "ok":
+                self.logger.warning("Failed to fetch runtime config")
+                return False
+
+            # Build runtime[section][option] -> value (ignore None sections)
+            runtime = {
+                section: {
+                    name: option["value"]
+                    for name, option in opts.items()
+                    if option is not None
+                    and isinstance(option, dict)
+                    and "value" in option
+                }
+                for section, opts in response["options"].items()
+                if opts is not None
+            }
+
+        except Exception as e:
+            self.logger.error(f"Failed to get runtime config: {e}")
+            return False
+
         updates = {}
 
-        def apply(table, prefix=""):
+        def flatten(table, prefix=""):
             for key, value in table.items():
-                if key in ("window-rules", "command"):
+                if key in ("command", "window-rules"):
                     continue
-
                 full_key = f"{prefix}{key}"
-
                 if isinstance(value, dict):
-                    apply(value, prefix=f"{full_key}/")
+                    flatten(value, prefix=f"{full_key}/")
                 else:
                     if isinstance(value, bool):
-                        value = str(value).lower()
+                        value = "true" if value else "false"
                     elif isinstance(value, (int, float)):
                         value = str(value)
                     elif isinstance(value, list):
                         value = " ".join(str(v) for v in value)
+                    else:
+                        value = str(value)
                     updates[full_key] = value
 
-        apply(config)
+        flatten(config)
 
-        # Only apply if value differs from current
-        for key, new_value in updates.items():
-            try:
-                current_value = self.ipc.get_option_value(key)
-                if current_value != new_value:
-                    self.safe_set_option_values({key: new_value})
-                    self.logger.info(
-                        f"Updated '{key}' from '{current_value}' to '{new_value}'"
-                    )
+        # Apply only what's different
+        for key, toml_value in updates.items():
+            parts = key.split("/")
+            if len(parts) < 2:
+                # If user provides a top-level key with no section, try to match it as-is
+                section = parts[0]
+                option = None
+            else:
+                section, option = parts[0], parts[-1]
+
+            section_options = runtime.get(section, {})
+
+            # if option is None, caller used a key without a section; try best-effort match
+            if option is None:
+                # try to compare section to a single-value section, otherwise skip
+                if isinstance(section_options, dict) and len(section_options) == 1:
+                    current_value = next(iter(section_options.values()))
                 else:
-                    self.logger.debug(f"Skipped '{key}' - value unchanged.")
-            except Exception as e:
-                self.logger.warning(f"Failed to apply '{key}': {e}")
+                    current_value = None
+            else:
+                current_value = section_options.get(option)
 
-        self.apply_command_section(config)
-        self.apply_window_rules_section(config)
+            # current_value is already a string (from runtime construction)
+            if current_value != toml_value:
+                try:
+                    self.ipc.set_option_values({key: toml_value})
+                    self.logger.info(f"Updated '{key}' → '{toml_value}'")
+                except Exception as e:
+                    self.logger.warning(f"Failed to set '{key}': {e}")
+            else:
+                self.logger.debug(f"Skipped '{key}' — already correct")
+
+        # Always re-apply command and window-rules (can't be read reliably)
+        try:
+            self.apply_command_section(config)
+        except Exception as e:
+            self.logger.warning(f"apply_command_section failed: {e}")
+
+        try:
+            self.apply_window_rules_section(config)
+        except Exception as e:
+            self.logger.warning(f"apply_window_rules_section failed: {e}")
+
+        # IMPORTANT: return False so glib.idle_add won't call this again.
+        return False
 
     def apply_command_section(self, config):
         command_section = config.get("command", {})
@@ -140,7 +196,12 @@ class WayfireConfigWatcherPlugin(BasePlugin):
         observer = Observer()
         watch_dir = os.path.dirname(os.path.abspath(self.CONFIG_PATH))
         observer.schedule(event_handler, path=watch_dir, recursive=False)
-        observer.start()
+
+        def start_observer():
+            observer.start()
+            return False
+
+        GLib.idle_add(start_observer)
         self.logger.info(f"[{self.PLUGIN_NAME}] Watching config dir: {watch_dir}")
         return observer
 
@@ -186,7 +247,7 @@ class ConfigFileHandler(FileSystemEventHandler):
             def apply_in_main_thread():
                 self._pending_reload = False
                 try:
-                    self.plugin.apply_config(new_config)
+                    GLib.idle_add(self.plugin.apply_config, new_config)
                     self.plugin.logger.info("Configuration reloaded and applied.")
                 except Exception as e:
                     self.plugin.panel.logger.error(
