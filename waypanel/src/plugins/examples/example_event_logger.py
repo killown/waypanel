@@ -40,6 +40,10 @@ ALL_EVENTS = [
     "plugin-activation-state-changed",
     # Emitted when an output gains input focus (e.g., mouse enters its area)
     "output-gain-focus",
+    # Emmited when an output is added
+    "output-added",
+    # Emitted when an output is removed
+    "output-removed",
 ]
 
 
