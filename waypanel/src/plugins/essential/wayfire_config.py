@@ -1,11 +1,11 @@
 import os
+import time
 import toml
 from gi.repository import GLib
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from src.plugins.core._base import BasePlugin
 
-ENABLE_PLUGIN = True
 DEPS = ["dockbar", "taskbar", "event_manager"]
 
 
@@ -14,8 +14,13 @@ def get_plugin_placement(panel_instance):
 
 
 def initialize_plugin(panel_instance):
+    ENABLE_PLUGIN = hasattr(panel_instance.ipc.sock, "list_config_options")
     if ENABLE_PLUGIN:
         return WayfireConfigWatcherPlugin(panel_instance)
+    else:
+        panel_instance.logger.info(
+            "plugin Wayfire_Config disabled, list_config_options method not found"
+        )
 
 
 class WayfireConfigWatcherPlugin(BasePlugin):
@@ -46,28 +51,6 @@ class WayfireConfigWatcherPlugin(BasePlugin):
             self.panel.logger.error(f"[{self.PLUGIN_NAME}] Failed to load config: {e}")
             return {}
 
-    def safe_set_option_values(self, options):
-        """
-        Apply config options one by one, skipping any that fail.
-
-        Args:
-            options (dict): Dictionary of config options to apply.
-
-        Returns:
-            dict: A subset of `options` that were successfully applied.
-        """
-        successful = {}
-
-        for key, value in options.items():
-            try:
-                self.ipc.set_option_values({key: value})
-                successful[key] = value
-            except Exception as e:
-                self.logger.warning(f"Skipping invalid config option: {key}")
-                continue
-
-        return successful
-
     def apply_config(self, config):
         """Apply only values that differ from current runtime.
 
@@ -79,7 +62,6 @@ class WayfireConfigWatcherPlugin(BasePlugin):
                 self.logger.warning("Failed to fetch runtime config")
                 return False
 
-            # Build runtime[section][option] -> value (ignore None sections)
             runtime = {
                 section: {
                     name: option["value"]
@@ -118,21 +100,17 @@ class WayfireConfigWatcherPlugin(BasePlugin):
 
         flatten(config)
 
-        # Apply only what's different
+        batch_updates = {}
         for key, toml_value in updates.items():
             parts = key.split("/")
             if len(parts) < 2:
-                # If user provides a top-level key with no section, try to match it as-is
                 section = parts[0]
                 option = None
             else:
                 section, option = parts[0], parts[-1]
 
             section_options = runtime.get(section, {})
-
-            # if option is None, caller used a key without a section; try best-effort match
             if option is None:
-                # try to compare section to a single-value section, otherwise skip
                 if isinstance(section_options, dict) and len(section_options) == 1:
                     current_value = next(iter(section_options.values()))
                 else:
@@ -140,15 +118,16 @@ class WayfireConfigWatcherPlugin(BasePlugin):
             else:
                 current_value = section_options.get(option)
 
-            # current_value is already a string (from runtime construction)
             if current_value != toml_value:
-                try:
-                    self.ipc.set_option_values({key: toml_value})
-                    self.logger.info(f"Updated '{key}' → '{toml_value}'")
-                except Exception as e:
-                    self.logger.warning(f"Failed to set '{key}': {e}")
-            else:
-                self.logger.debug(f"Skipped '{key}' — already correct")
+                batch_updates[key] = toml_value
+
+        if batch_updates:
+            try:
+                self.ipc.set_option_values(batch_updates)
+                for key in batch_updates:
+                    self.logger.info(f"Updated '{key}' → '{batch_updates[key]}'")
+            except Exception as e:
+                self.logger.warning(f"Failed to apply batch updates: {e}")
 
         # Always re-apply command and window-rules (can't be read reliably)
         try:
@@ -161,15 +140,12 @@ class WayfireConfigWatcherPlugin(BasePlugin):
         except Exception as e:
             self.logger.warning(f"apply_window_rules_section failed: {e}")
 
-        # IMPORTANT: return False so glib.idle_add won't call this again.
         return False
 
     def apply_command_section(self, config):
         command_section = config.get("command", {})
 
-        # Format for set_option_values
         binding_tuples = []
-
         for name, entry in command_section.items():
             if isinstance(entry, list) and len(entry) >= 2:
                 keybind = entry[0]
@@ -177,19 +153,24 @@ class WayfireConfigWatcherPlugin(BasePlugin):
                 binding_tuples.append((command, keybind))
 
         payload = {"command": {"bindings": binding_tuples}}
-
         self.logger.info(f"Applying command bindings: {payload}")
-        self.safe_set_option_values(payload)
+
+        try:
+            self.ipc.set_option_values(payload)
+        except Exception as e:
+            self.logger.warning(f"Failed to apply command bindings: {e}")
 
     def apply_window_rules_section(self, config):
         window_rules_section = config.get("window-rules", {})
 
-        rules = []
-        for value in window_rules_section.values():
-            rules.append(value)
+        rules = list(window_rules_section.values())  # Simplified
 
         if rules:
-            self.safe_set_option_values({"window-rules": {"rules": rules}})
+            payload = {"window-rules": {"rules": rules}}
+            try:
+                self.ipc.set_option_values(payload)
+            except Exception as e:
+                self.logger.warning(f"Failed to apply window rules: {e}")
 
     def start_watching(self):
         event_handler = ConfigFileHandler(self)
@@ -211,6 +192,9 @@ class ConfigFileHandler(FileSystemEventHandler):
         self.plugin = plugin
         self.watch_path = os.path.abspath(plugin.CONFIG_PATH)
         self.watch_dir = os.path.dirname(self.watch_path)
+        self._last_reload = 0
+        self._debounce_sec = 0.5
+        self._pending_reload = False
 
     def on_modified(self, event):
         if event.src_path == self.watch_path:
@@ -237,8 +221,12 @@ class ConfigFileHandler(FileSystemEventHandler):
 
     def reload_config(self):
         """Schedule config reload in the main thread, once, without blocking."""
-        # Avoid duplicate pending reloads
-        if getattr(self, "_pending_reload", False):
+        now = time.time()
+        if now - self._last_reload < self._debounce_sec:
+            return  # Skip if too soon
+        self._last_reload = now
+
+        if self._pending_reload:
             return
 
         try:
@@ -247,7 +235,8 @@ class ConfigFileHandler(FileSystemEventHandler):
             def apply_in_main_thread():
                 self._pending_reload = False
                 try:
-                    GLib.idle_add(self.plugin.apply_config, new_config)
+                    # Pass new_config to _apply_config_idle
+                    GLib.idle_add(self.plugin._apply_config_idle, new_config)
                     self.plugin.logger.info("Configuration reloaded and applied.")
                 except Exception as e:
                     self.plugin.panel.logger.error(
