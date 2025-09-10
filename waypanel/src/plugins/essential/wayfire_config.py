@@ -123,11 +123,30 @@ class WayfireConfigWatcherPlugin(BasePlugin):
 
         if batch_updates:
             try:
+                # Try to apply the entire batch first (fast path)
                 self.ipc.set_option_values(batch_updates)
                 for key in batch_updates:
                     self.logger.info(f"Updated '{key}' → '{batch_updates[key]}'")
-            except Exception as e:
-                self.logger.warning(f"Failed to apply batch updates: {e}")
+            except Exception as batch_e:
+                self.logger.warning(
+                    f"Batch update failed, falling back to individual updates: {batch_e}"
+                )
+                self.logger.warning(
+                    "This update method is slower, try removing any invalid options from wayfire.toml"
+                )
+                self.utils.notify_send(
+                    "Wayfire Config Plugin",
+                    f"Batch update failed, falling back to individual updates: {batch_e}",
+                )
+                # Fallback: Apply options one by one
+                for key, value in batch_updates.items():
+                    try:
+                        self.ipc.set_option_values({key: value})
+                        self.logger.info(f"Updated (individual) '{key}' → '{value}'")
+                    except Exception as single_e:
+                        self.logger.error(
+                            f"Failed to set option '{key}' even individually: {single_e}"
+                        )
 
         # Always re-apply command and window-rules (can't be read reliably)
         try:
