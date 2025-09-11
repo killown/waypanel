@@ -64,23 +64,40 @@ class SoundCardDashboard(BasePlugin):
         return sc.all_microphones()
 
     def get_soundcard_list_names(self):
+        blacklist = self.config.get("soundcard", {}).get("blacklist", [])
         soundcard_list = []
-        soundcard_list.append(self.get_default_soundcard_name())
+
+        # Add default soundcard if it's not blacklisted
+        default_name = self.get_default_soundcard_name()
+        if not any(b in default_name for b in blacklist):
+            soundcard_list.append(default_name)
+
+        # Add other soundcards, skipping duplicates and blacklisted names
         for soundcard in self.get_soundcard_list():
             name = soundcard.name
-            if name not in soundcard_list:
+            if name not in soundcard_list and not any(b in name for b in blacklist):
                 soundcard_list.append(name)
+
         return soundcard_list
 
     def get_mic_list_names(self):
         mic_list = []
+        blacklist = self.config.get("microphone", {}).get("blacklist", [])
+
         default_mic = self.get_default_mic_name()
         mic_list_names = [mic.name for mic in self.get_mic_list()]
-        if default_mic in mic_list_names:
+
+        # Add default mic if it's not blacklisted
+        if default_mic in mic_list_names and not any(
+            b in default_mic for b in blacklist
+        ):
             mic_list.append(default_mic)
+
+        # Add other mics, skipping duplicates and blacklisted names
         for mic in mic_list_names:
-            if mic not in mic_list:
+            if mic not in mic_list and not any(b in mic for b in blacklist):
                 mic_list.append(mic)
+
         return mic_list
 
     def find_soundcard_id_by_name(self, name):
@@ -89,6 +106,7 @@ class SoundCardDashboard(BasePlugin):
 
         if id_found:
             return id_found[0]
+        return None
 
     def find_mic_id_by_name(self, name):
         micl = self.get_mic_list()
@@ -200,9 +218,13 @@ class SoundCardDashboard(BasePlugin):
     def update_soundcard_list(self):
         """Update the soundcard list in the combobox."""
         self.soundcard_combobox.remove_all()
-        for soundcard in self.get_soundcard_list_names():
+
+        soundcards = self.get_soundcard_list_names()
+        for soundcard in soundcards:
             self.soundcard_combobox.append_text(soundcard)
-        self.soundcard_combobox.set_active(0)
+
+        if soundcards:
+            self.soundcard_combobox.set_active(0)  # select first item if available
 
     def update_mic_list(self):
         """Update the microphone list in the combobox."""
