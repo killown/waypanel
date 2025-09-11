@@ -121,7 +121,6 @@ class SystemDashboard(BasePlugin):
             ("Shutdown", "", "gnome-shutdown-symbolic"): "",
             ("Suspend", "", "system-suspend-symbolic"): "",
             ("Lock", "", "system-lock-screen-symbolic"): "",
-            ("Turn Off Monitors", "", "display-symbolic"): "",
             ("Exit Waypanel", "", "display-symbolic"): "",
             ("Restart Waypanel", "", "display-symbolic"): "",
             ("Settings", "", "preferences-activities-symbolic"): "",
@@ -245,8 +244,6 @@ class SystemDashboard(BasePlugin):
             Popen("systemctl suspend".split())
         if action == "Reboot":
             Popen("reboot".split())
-        if action == "Turn Off Monitors":
-            Popen("wayctl --dpms off_all".split())
         if action == "Lock":
             # FIXME: allow the user set their own cmd in toml
             Popen(
