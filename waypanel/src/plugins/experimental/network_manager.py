@@ -5,7 +5,7 @@ from src.plugins.core._base import BasePlugin
 
 # Enable or disable the plugin globally
 ENABLE_PLUGIN = True
-DEPS = ["top_panel"]
+DEPS = ["top_panel", "gestures_setup"]
 
 # Icon names - adjust to match your system's icon theme
 ICON_CONNECTED = "notification-network-wired"
@@ -76,53 +76,6 @@ class NetworkMonitorPlugin(BasePlugin):
         """Update popover content without changing the icon."""
         content = self.create_scrollable_grid_content()
         self.popover.set_child(content)
-
-    def on_wifi_scan_clicked(self, button):
-        self.wifi_list_box.remove_all()
-
-        networks = self.scan_wifi_networks()
-        if not networks:
-            empty_label = Gtk.Label(label="No networks found.")
-            self.wifi_list_box.append(empty_label)
-            return
-
-        for network in networks:
-            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-            ssid_label = Gtk.Label(label=f"{network['ssid']}")
-            signal_label = Gtk.Label(label=f"{network['signal']}%")
-            security_label = Gtk.Label(label=f"{network['security']}")
-            box.append(ssid_label)
-            box.append(signal_label)
-            box.append(security_label)
-            self.wifi_list_box.append(box)
-
-    def scan_wifi_networks(self):
-        """Scan for available WiFi networks using nmcli."""
-        try:
-            result = subprocess.run(
-                ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=True,
-            )
-            lines = result.stdout.strip().split("\n")
-            networks = []
-            for line in lines:
-                parts = line.split(":")
-                if len(parts) >= 3:
-                    ssid, signal, security = parts[0], parts[1], parts[2]
-                    networks.append(
-                        {
-                            "ssid": ssid or "<unknown>",
-                            "signal": int(signal),
-                            "security": security,
-                        }
-                    )
-            return networks
-        except Exception as e:
-            self.logger.error(f"Failed to scan WiFi networks: {e}")
-            return []
 
     def is_internet_connected(self):
         """
@@ -219,27 +172,18 @@ class NetworkMonitorPlugin(BasePlugin):
         scrolled_window.set_child(vbox)
         main_box.append(scrolled_window)
 
-        # === START: WiFi Scan Section ===
-        # FIXME: missing connect to the network?
-        wifi_scan_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        wifi_scan_box.set_margin_top(12)
-        self.utils.add_cursor_effect(wifi_scan_box)
-
-        scan_button = Gtk.Button(label="Scan WiFi Networks")
-        scan_button.connect("clicked", self.on_wifi_scan_clicked)
-        wifi_scan_box.append(scan_button)
-
-        self.wifi_list_box = Gtk.ListBox()
-        self.wifi_list_box.set_selection_mode(Gtk.SelectionMode.NONE)
-        wifi_scan_box.append(self.wifi_list_box)
-
-        main_box.append(wifi_scan_box)
-        # === END: WiFi Scan Section ===
-
-        config_button = Gtk.Button(label="Configure Connections")
+        config_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        config_label = Gtk.Label(label="Network Settings")
+        config_button = Gtk.Button()
+        config_button.set_icon_name("gnome-control-center-symbolic")
+        config_box.append(config_button)
+        config_box.append(config_label)
         self.utils.add_cursor_effect(config_button)
-        config_button.connect("clicked", self.on_config_clicked)
-        main_box.append(config_button)
+        self.plugins["gestures_setup"].create_gesture(
+            config_box, 1, self.on_config_clicked
+        )
+        self.utils.add_cursor_effect(config_box)
+        main_box.append(config_box)
 
         # Set initial size based on number of devices
         update_scrolled_window_height()
@@ -255,7 +199,10 @@ class NetworkMonitorPlugin(BasePlugin):
     def on_config_clicked(self, button):
         """Launch nm-connection-editor when button is clicked."""
         try:
-            subprocess.Popen(["nm-connection-editor"])
+            subprocess.Popen(
+                "env XDG_CURRENT_DESKTOP=GNOME gnome-control-center network".split()
+            )
+            self.popover.popdown()
         except Exception as e:
             print(f"Failed to launch nm-connection-editor: {e}")
 
