@@ -120,7 +120,7 @@ class PluginLoader:
         try:
             # Initialize the plugin using _initialize_sorted_plugins
             if plugin_metadata:
-                self._initialize_sorted_plugins(plugin_metadata)
+                GLib.idle_add(self._initialize_sorted_plugins, plugin_metadata)
                 self.logger.info(f"Enabled and initialized plugin: {plugin_name}")
             else:
                 self.logger.error(
@@ -710,6 +710,8 @@ class PluginLoader:
         # Process all plugins
         for module, position, order, priority in plugin_metadata:
             initialize_plugin_with_deps(module, position, order, priority)
+
+        return False  # stops glib loop
 
     def _get_target_panel_box(self, position, plugin_name=None):
         """
