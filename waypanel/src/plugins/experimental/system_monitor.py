@@ -49,6 +49,7 @@ ALL_EVENTS = [
     "wset-workspace-changed",
     "workspace-activated",
     "output-wset-changed",
+    "output-layout-changed",
     "view-wset-changed",
     "plugin-activation-state-changed",
     "output-gain-focus",
