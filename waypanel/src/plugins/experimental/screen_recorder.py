@@ -1,8 +1,7 @@
-import os
+from gi.repository import Gtk, Gio, GLib
 import subprocess
 import shutil
-import sys
-from gi.repository import Gtk, Gio, GLib
+import os
 from src.plugins.core._base import BasePlugin
 from src.core.compositor.ipc import IPC
 
@@ -43,6 +42,7 @@ class RecordingPlugin(BasePlugin):
         self.video_dir = f"/tmp/wfrec_{os.getpid()}"  # Unique temp folder
         self.final_dir = self._get_user_videos_dir()  # User's Videos directory
         self.is_recording = False
+        self.record_audio = False  # NEW: State of the audio switch (OFF by default)
         self._setup_directories()
         # IMPORTANT: Create the button widget here, but DO NOT create/populate the popover yet.
         # We'll create the popover lazily when needed.
@@ -150,6 +150,29 @@ class RecordingPlugin(BasePlugin):
         separator2 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
         main_box.append(separator2)
 
+        # NEW: Add "Record Region (slurp)" button
+        slurp_btn = Gtk.Button(label="Record Region (slurp)")
+        slurp_btn.connect("clicked", self.on_record_slurp_clicked)
+        slurp_btn.add_css_class("record-slurp-button")
+        self.utils.add_cursor_effect(slurp_btn)
+        main_box.append(slurp_btn)
+
+        # NEW: Add Audio Switch
+        audio_switch_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        audio_switch_label = Gtk.Label(label="Record Audio:")
+        audio_switch_label.set_halign(Gtk.Align.START)
+        audio_switch_box.append(audio_switch_label)
+
+        self.audio_switch = Gtk.Switch()
+        self.audio_switch.set_active(self.record_audio)  # Set initial state
+        self.audio_switch.connect("state-set", self.on_audio_switch_toggled)
+        audio_switch_box.append(self.audio_switch)
+        main_box.append(audio_switch_box)
+
+        # Add separator
+        separator3 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        main_box.append(separator3)
+
         # Add "Stop All & Join" button
         stop_join_btn = Gtk.Button(label="Stop All & Join Videos")
         stop_join_btn.connect("clicked", self.on_stop_and_join_clicked)
@@ -195,12 +218,19 @@ class RecordingPlugin(BasePlugin):
 
         for output in outputs:
             name = output["name"]
-            path = os.path.join(self.video_dir, f"{name}.mkv")
+            path = os.path.join(self.video_dir, f"{name}.mp4")
             self.output_files.append(path)
 
-            self.logger.info(f"Starting wf-recorder for {name} -> {path}")
+            cmd = ["wf-recorder", "-f", path, "-o", name]
+            # NEW: Add --audio flag if switch is ON
+            if self.record_audio:
+                cmd.append("--audio")
+
+            self.logger.info(
+                f"Starting wf-recorder for {name} -> {path} {'with audio' if self.record_audio else ''}"
+            )
             try:
-                proc = subprocess.Popen(["wf-recorder", "-f", path, "-o", name])
+                proc = subprocess.Popen(cmd)
                 self.record_processes.append(proc)
             except Exception as e:
                 self.logger.error(f"Failed to start wf-recorder for {name}: {e}")
@@ -227,12 +257,19 @@ class RecordingPlugin(BasePlugin):
         self.record_processes = []
         self.output_files = []
 
-        path = os.path.join(self.final_dir, f"{output_name}.mkv")
+        path = os.path.join(self.final_dir, f"{output_name}.mp4")
         self.output_files.append(path)
 
-        self.logger.info(f"Starting wf-recorder for output '{output_name}' -> {path}")
+        cmd = ["wf-recorder", "-f", path, "-o", output_name]
+        # NEW: Add --audio flag if switch is ON
+        if self.record_audio:
+            cmd.append("--audio")
+
+        self.logger.info(
+            f"Starting wf-recorder for output '{output_name}' -> {path} {'with audio' if self.record_audio else ''}"
+        )
         try:
-            proc = subprocess.Popen(["wf-recorder", "-f", path, "-o", output_name])
+            proc = subprocess.Popen(cmd)
             self.record_processes.append(proc)
             self.is_recording = True
             self.button.set_icon_name("simplescreenrecorder-recording")
@@ -240,6 +277,60 @@ class RecordingPlugin(BasePlugin):
             self.logger.info(f"Recording started for {output_name}.")
         except Exception as e:
             self.logger.error(f"Failed to start wf-recorder for {output_name}: {e}")
+
+    def on_record_slurp_clicked(self, button):
+        """Handle the 'Record Region (slurp)' button click."""
+        self.popover.popdown()
+        if self.is_recording:
+            self.logger.info("Already recording. Stop first.")
+            return
+
+        self.record_processes = []
+        self.output_files = []
+
+        # Get the region using slurp
+        try:
+            result = subprocess.run(
+                ["slurp"], capture_output=True, text=True, check=True
+            )
+            geometry = result.stdout.strip()
+            if not geometry:
+                self.logger.error("slurp returned empty geometry.")
+                return
+        except subprocess.CalledProcessError as e:
+            self.logger.error(f"Failed to run slurp: {e.stderr}")
+            return
+        except FileNotFoundError:
+            self.logger.error("slurp command not found. Please install slurp.")
+            return
+
+        # Generate unique filename
+        timestamp = GLib.DateTime.new_now_utc().format("%Y%m%d_%H%M%S")
+        path = os.path.join(self.final_dir, f"region_{timestamp}.mp4")
+        self.output_files.append(path)
+
+        cmd = ["wf-recorder", "-f", path, "-g", geometry]
+        # NEW: Add --audio flag if switch is ON
+        if self.record_audio:
+            cmd.append("--audio")
+
+        self.logger.info(
+            f"Starting wf-recorder for region '{geometry}' -> {path} {'with audio' if self.record_audio else ''}"
+        )
+        try:
+            proc = subprocess.Popen(cmd)
+            self.record_processes.append(proc)
+            self.is_recording = True
+            self.button.set_icon_name("simplescreenrecorder-recording")
+            self.button.set_tooltip_text("Stop Recording")
+            self.logger.info(f"Recording started for region {geometry}.")
+        except Exception as e:
+            self.logger.error(f"Failed to start wf-recorder for region: {e}")
+
+    def on_audio_switch_toggled(self, switch, state):
+        """Handle the audio switch toggle."""
+        self.record_audio = state
+        self.logger.info(f"Audio recording {'enabled' if state else 'disabled'}.")
 
     def on_stop_and_join_clicked(self, button):
         """Handle the 'Stop All & Join Videos' button click."""
