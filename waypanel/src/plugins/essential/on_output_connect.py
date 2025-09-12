@@ -7,6 +7,7 @@ from gi.repository import Gtk4LayerShell as LayerShell
 from src.core.create_panel import (
     get_monitor_info,
 )
+import os
 from src.plugins.core._base import BasePlugin
 from src.plugins.core.event_handler_decorator import subscribe_to_event
 
@@ -82,7 +83,7 @@ class PanelOutputMoverPlugin(BasePlugin):
         """Perform the actual update after debounce delay."""
         self._debounce_timeout_id = None
         try:
-            self._set_panel_monitor()
+            self._set_panel_on_output()
         except Exception as e:
             self.logger.error(f"[{self.PLUGIN_NAME}] Error updating panel output: {e}")
         return False  # Run only once
@@ -99,12 +100,61 @@ class PanelOutputMoverPlugin(BasePlugin):
             None,
         )
 
-    def _set_panel_monitor(self):
+    def _set_panel_on_output(self):
         """Update the GTK Layer Shell monitor for the panel window."""
         monitors = get_monitor_info()
         monitor = self.get_target_monitor(monitors)
+        monitor_gdk_obj = monitor["monitor"]  # pyright: ignore[]
+        monitor_name = monitor_gdk_obj.get_connector()
+        output = [i for i in self.ipc.list_outputs() if i["name"] == monitor_name][0]
+        geo = output["geometry"]
+        output_width = geo["width"]
+        user_defined_height_top_panel = (
+            self.config.get("panel", {}).get("top", {}).get("height", 32)
+        )
+
+        user_defined_width_top_panel = (
+            self.config.get("panel", {}).get("top", {}).get("width", output_width)
+        )
+        user_defined_height_left_panel = (
+            self.config.get("panel", {}).get("left", {}).get("height", 32)
+        )
+        user_defined_width_left_panel = (
+            self.config.get("panel", {}).get("left", {}).get("width", 32)
+        )
+        user_defined_height_right_panel = (
+            self.config.get("panel", {}).get("right", {}).get("height", 32)
+        )
+        user_defined_width_right_panel = (
+            self.config.get("panel", {}).get("right", {}).get("width", 32)
+        )
+        user_defined_height_bottom_panel = (
+            self.config.get("panel", {}).get("bottom", {}).get("height", 32)
+        )
+        user_defined_width_bottom_panel = (
+            self.config.get("panel", {}).get("bottom", {}).get("width", output_width)
+        )
+        user_defined_height_bottom_panel = (
+            self.config.get("panel", {}).get("bottom", {}).get("height", 32)
+        )
+        user_defined_width_bottom_panel = (
+            self.config.get("panel", {}).get("bottom", {}).get("width", output_width)
+        )
+
         if monitor:
-            LayerShell.set_monitor(self.top_panel, monitor["monitor"])
-            LayerShell.set_monitor(self.left_panel, monitor["monitor"])
-            LayerShell.set_monitor(self.right_panel, monitor["monitor"])
-            LayerShell.set_monitor(self.bottom_panel, monitor["monitor"])
+            LayerShell.set_monitor(self.top_panel, monitor_gdk_obj)
+            LayerShell.set_monitor(self.left_panel, monitor_gdk_obj)
+            LayerShell.set_monitor(self.right_panel, monitor_gdk_obj)
+            LayerShell.set_monitor(self.bottom_panel, monitor_gdk_obj)
+            self.top_panel.set_default_size(
+                user_defined_width_top_panel, user_defined_height_top_panel
+            )
+            self.left_panel.set_default_size(
+                user_defined_width_left_panel, user_defined_height_left_panel
+            )
+            self.right_panel.set_default_size(
+                user_defined_width_right_panel, user_defined_height_right_panel
+            )
+            self.bottom_panel.set_default_size(
+                user_defined_width_bottom_panel, user_defined_height_bottom_panel
+            )
