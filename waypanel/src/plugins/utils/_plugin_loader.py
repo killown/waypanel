@@ -49,7 +49,7 @@ class PluginLoader:
         self.plugins_dir = self.plugins_base_path()
         self.position_mapping = {}
         self.user_plugins_dir = os.path.join(
-            self.get_real_user_home(), ".config", "waypanel", "plugins"
+            self.get_real_user_home(), ".local", "share", "waypanel", "plugins"
         )
 
     def get_real_user_home(self):
@@ -189,7 +189,7 @@ class PluginLoader:
             for file_name in files:
                 if file_name.endswith(".py") and file_name != "__init__.py":
                     module_name = file_name[:-3]  # Remove the .py extension
-                    root = root.split("config/waypanel/plugins")[-1]
+                    root = root.split(".local/share/waypanel/plugins")[-1]
                     module_path = (
                         os.path.relpath(os.path.join(root, file_name))
                         .replace("/", ".")
