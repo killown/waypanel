@@ -16,7 +16,7 @@ if not os.getenv("WAYFIRE_SOCKET"):
     ENABLE_PLUGIN = False
 
 
-DEPS = ["event_manager", "gestures_setup"]
+DEPS = ["event_manager", "gestures_setup", "on_output_connect"]
 
 
 def get_plugin_placement(panel_instance):
@@ -461,11 +461,11 @@ class TaskbarPlugin(BasePlugin):
             if msg["state"] is True:
                 if msg["plugin"] == "scale":
                     self.is_scale_active[msg["output"]] = True
-                    self.on_scale_activated()
+                    # self.on_scale_activated()
             if msg["state"] is False:
                 if msg["plugin"] == "scale":
                     self.is_scale_active[msg["output"]] = False
-                    self.on_scale_desactivated()
+                    # self.on_scale_desactivated()
         return prevent_infinite_loop_from_event_manager_idle_add
 
     def update_taskbar_button(self, view):
@@ -569,11 +569,11 @@ class TaskbarPlugin(BasePlugin):
     def on_scale_activated(self):
         """Handle scale wayfire plugin activation."""
         # set layer exclusive so the panels becomes clickable
-        output_info = os.getenv("waypanel")
-        layer_set_on_output_name = None
-        if output_info:
-            layer_set_on_output_name = json.loads(output_info).get("output_name")
         focused_output_name = self.ipc.get_focused_output()["name"]
+        on_output = self.plugins["on_output_connect"]
+        layer_set_on_output_name = on_output.current_output_name
+        if not layer_set_on_output_name:
+            layer_set_on_output_name = on_output.primary_output_name
         # only set layer if the focused output is the same as the defined in panel creation
         if (
             layer_set_on_output_name == focused_output_name

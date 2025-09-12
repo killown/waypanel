@@ -275,21 +275,6 @@ class DockbarPlugin(BasePlugin):
 
         return button
 
-    def on_scale_activated(self):
-        """Handle scale wayfire plugin activation."""
-        # set layer exclusive so the panels becomes clickable
-        output_info = os.getenv("waypanel")
-        layer_set_on_output_name = None
-        if output_info:
-            layer_set_on_output_name = json.loads(output_info).get("output_name")
-        focused_output_name = self.ipc.get_focused_output()["name"]
-        # only set layer if the focused output is the same as the defined in panel creation
-        if layer_set_on_output_name == focused_output_name:
-            self.update_widget_safely(
-                set_layer_position_exclusive, self.dockbar_panel, 64
-            )
-            self.layer_state = True
-
     def on_scale_desactivated(self):
         """Handle scale plugin deactivation."""
         # this will set panels on bottom, hidden it from views
@@ -302,8 +287,10 @@ class DockbarPlugin(BasePlugin):
         if msg["event"] == "plugin-activation-state-changed":
             if msg["state"] is True:
                 if msg["plugin"] == "scale":
-                    self.on_scale_activated()
+                    pass
+                    # self.on_scale_activated()
             if msg["state"] is False:
                 if msg["plugin"] == "scale":
-                    self.on_scale_desactivated()
+                    pass
+                    # self.on_scale_desactivated()
         return prevent_infinite_loop_from_event_manager_idle_add
