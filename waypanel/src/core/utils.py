@@ -483,7 +483,29 @@ class Utils(Adw.Application):
 
         return True
 
-    def get_nearest_icon_name(self, app_name: str, size=Gtk.IconSize.LARGE) -> str:
+    def set_widget_icon_name(self, section: str, fallback_icons: list) -> str:
+        """
+        Determine the best icon name for a widget.
+
+        1. Reads the icon from the config TOML for the given section.
+        2. Uses get_nearest_icon_name to pick the closest match from fallback_icons if needed.
+
+        Args:
+            section (str): Section name in the config (e.g., 'appmenu').
+            fallback_icons (list): List of icon names to use as fallback.
+
+        Returns:
+            str: The selected icon name.
+        """
+        # Get icon name from config, default to empty string if not set
+        menu_icon = self.obj.config.get(section, {}).get("icon", "")
+
+        # Return the nearest icon match from fallback list
+        return self.get_nearest_icon_name(menu_icon, fallback_icons)
+
+    def get_nearest_icon_name(
+        self, app_name: str, fallback_icons=["image-missing"], size=Gtk.IconSize.LARGE
+    ) -> str:
         """
         Get the best matching icon name for an application (GTK4 synchronous version).
         Returns immediately with the icon name or fallback.
@@ -519,6 +541,10 @@ class Utils(Adw.Application):
             if icon_theme.has_icon(pattern):
                 return pattern
 
+        for icon in fallback_icons:
+            if icon_theme.has_icon(icon):
+                return icon
+
         # Search for partial matches
         try:
             all_icons = icon_theme.get_icon_names()
@@ -527,15 +553,6 @@ class Utils(Adw.Application):
                 return matches[0]  # Return first match
         except Exception as e:
             self.logger.error(f"Icon search error: {e}")
-
-        # Final fallbacks
-        for fallback in [
-            "application-x-executable",
-            "image-missing",
-            "gtk-missing-image",
-        ]:
-            if icon_theme.has_icon(fallback):
-                return fallback
 
         return "image-missing"
 

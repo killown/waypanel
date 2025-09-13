@@ -111,7 +111,11 @@ class WayfireRealtimePluginsPlugin(BasePlugin):
         self._setup_button()
 
     def _setup_button(self):
-        self.button.set_icon_name("plugins")
+        self.button.set_icon_name(
+            self.utils.set_widget_icon_name(
+                "wayfire_plugins", ["plugins", "xapp-prefs-plugins-symbolic"]
+            )
+        )
         self.utils.add_cursor_effect(self.button)
         self.button.connect("clicked", self.open_popover)
 
