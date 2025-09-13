@@ -302,14 +302,8 @@ class ClipboardClient(BasePlugin):
 
                 row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
                 image_button = Gtk.Button()
-                clipboard_icon_delete = (
-                    self.config.get("panel", {})
-                    .get("top", {})
-                    .get("clipboard_icon_delete", "delete")
-                )
-                image_button.set_icon_name(
-                    self.utils.get_nearest_icon_name(clipboard_icon_delete)
-                )
+                icon_name = self.utils.set_widget_icon_name(None, ["tag-delete"])
+                image_button.set_icon_name(self.utils.get_nearest_icon_name(icon_name))
                 image_button.connect("clicked", self.on_delete_selected)
 
                 spacer = Gtk.Label(label="    ")
@@ -398,7 +392,9 @@ class ClipboardClient(BasePlugin):
             .get("clipboard_icon", "edit-paste")
         )
         self.menubutton_clipboard.set_icon_name(
-            self.utils.get_nearest_icon_name(clipboard_icon)
+            self.utils.set_widget_icon_name(
+                "clipboard", ["edit-paste-symbolic", "edit-paste"]
+            )
         )
 
         self.utils.add_cursor_effect(self.menubutton_clipboard)

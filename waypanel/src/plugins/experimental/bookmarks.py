@@ -59,19 +59,11 @@ class PopoverBookmarks(BasePlugin):
         self.menubutton_bookmarks = Gtk.Button()
         self.menubutton_bookmarks.connect("clicked", self.open_popover_bookmarks)
         self.main_widget = (self.menubutton_bookmarks, "append")
-        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
-        if os.path.exists(waypanel_config_path):
-            with open(waypanel_config_path, "r") as f:
-                config = toml.load(f)
-                bookmarks_icon = (
-                    config.get("panel", {})
-                    .get("top", {})
-                    .get("bookmarks_icon", "internet-web-browser")
-                )
-                self.menubutton_bookmarks.set_icon_name(bookmarks_icon)
-
-        else:
-            self.menubutton_bookmarks.set_icon_name("firefox-developer-edition")
+        icon_name = self.utils.set_widget_icon_name(
+            "bookmarks",
+            ["applications-internet"],
+        )
+        self.menubutton_bookmarks.set_icon_name(icon_name)
         self.menubutton_bookmarks.add_css_class("bookmarks-menu-button")
         self.utils.add_cursor_effect(self.menubutton_bookmarks)
 

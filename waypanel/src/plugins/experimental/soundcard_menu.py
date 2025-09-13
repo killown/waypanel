@@ -139,13 +139,16 @@ class SoundCardDashboard(BasePlugin):
     def create_menu_popover_soundcard(self):
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        s_icon = "audio-volume-high"
-        s_icon = (
-            self.config.get("panel", {})
-            .get("top", {})
-            .get("sound_card_icon", "audio-volume-high")
+        icon_name = self.utils.set_widget_icon_name(
+            "soundcard",
+            [
+                "audio-volume-high-symbolic",
+                "gnome-sound-properties-symbolic",
+                "sound-symbolic",
+                "audio-volume-high",
+            ],
         )
-        self.menubutton_dashboard.set_icon_name(s_icon)
+        self.menubutton_dashboard.set_icon_name(icon_name)
         self.main_widget = (self.menubutton_dashboard, "append")
         self.utils.add_cursor_effect(self.menubutton_dashboard)
         return self.menubutton_dashboard

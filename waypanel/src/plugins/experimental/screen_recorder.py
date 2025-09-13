@@ -79,7 +79,16 @@ class RecordingPlugin(BasePlugin):
     def create_widget(self):
         """Create the main widget for the plugin (the button)."""
         button = Gtk.Button()
-        button.set_icon_name("simplescreenrecorder-panel")
+        button.set_icon_name(
+            self.utils.set_widget_icon_name(
+                "screen_recorder",
+                [
+                    "deepin-screen-recorder-symbolic",
+                    "simplescreenrecorder-panel",
+                    "media-record-symbolic",
+                ],
+            )
+        )
         button.set_tooltip_text("Start/Stop Screen Recording")
         self.utils.add_cursor_effect(button)
         button.connect("clicked", self.open_popover)
@@ -236,7 +245,15 @@ class RecordingPlugin(BasePlugin):
                 self.logger.error(f"Failed to start wf-recorder for {name}: {e}")
 
         self.is_recording = True
-        self.button.set_icon_name("simplescreenrecorder-recording")
+        self.button.set_icon_name(
+            self.utils.set_widget_icon_name(
+                "screen_recorder",
+                [
+                    "simplescreenrecorder-recording",
+                    "media-record",
+                ],
+            )
+        )
         self.button.set_tooltip_text("Stop Recording")
         self.logger.info("All recordings started.")
 
@@ -272,7 +289,12 @@ class RecordingPlugin(BasePlugin):
             proc = subprocess.Popen(cmd)
             self.record_processes.append(proc)
             self.is_recording = True
-            self.button.set_icon_name("simplescreenrecorder-recording")
+            self.button.set_icon_name(
+                self.utils.set_widget_icon_name(
+                    "screen_recorder",
+                    ["simplescreenrecorder-recording", "media-playback-stop-symbolic"],
+                )
+            )
             self.button.set_tooltip_text("Stop Recording")
             self.logger.info(f"Recording started for {output_name}.")
         except Exception as e:
@@ -321,7 +343,12 @@ class RecordingPlugin(BasePlugin):
             proc = subprocess.Popen(cmd)
             self.record_processes.append(proc)
             self.is_recording = True
-            self.button.set_icon_name("simplescreenrecorder-recording")
+            self.button.set_icon_name(
+                self.utils.set_widget_icon_name(
+                    "screen_recorder",
+                    ["simplescreenrecorder-recording", "media-record"],
+                )
+            )
             self.button.set_tooltip_text("Stop Recording")
             self.logger.info(f"Recording started for region {geometry}.")
         except Exception as e:
@@ -378,7 +405,16 @@ class RecordingPlugin(BasePlugin):
 
         self.record_processes.clear()
         self.is_recording = False
-        self.button.set_icon_name("simplescreenrecorder-panel")
+        self.button.set_icon_name(
+            self.utils.set_widget_icon_name(
+                "screen_recorder",
+                [
+                    "deepin-screen-recorder-symbolic",
+                    "simplescreenrecorder-panel",
+                    "media-record-symbolic",
+                ],
+            ),
+        )
         self.button.set_tooltip_text("Start/Stop Screen Recording")
         self.logger.info("All recordings stopped.")
 

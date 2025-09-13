@@ -93,13 +93,16 @@ class SystemDashboard(BasePlugin):
         self.menubutton_dashboard = Gtk.Button()
         self.main_widget = (self.menubutton_dashboard, "append")
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        system_icon = "system-shutdown"
-        system_icon = (
-            self.config.get("panel", {})
-            .get("top", {})
-            .get("system_icon", "system-shutdown")
+        icon_name = self.utils.set_widget_icon_name(
+            "system_dashboard",
+            [
+                "logout_highlight-symbolic",
+                "exit",
+                "gnome-logout-symbolic",
+                "application-exit-symbolic",
+            ],
         )
-        self.menubutton_dashboard.set_icon_name(system_icon)
+        self.menubutton_dashboard.set_icon_name(icon_name)
         self.utils.add_cursor_effect(self.menubutton_dashboard)
         return self.menubutton_dashboard
 
@@ -115,15 +118,55 @@ class SystemDashboard(BasePlugin):
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.stack = Gtk.Stack.new()
 
+        # find the best match for each action **before** creating the dict
+        logout_icon = self.utils.set_widget_icon_name(
+            None,
+            [
+                "system-log-out-symbolic",
+                "gnome-logout-symbolic",
+                "gnome-logout",
+                "xfsm-logout",
+            ],
+        )
+        reboot_icon = self.utils.set_widget_icon_name(
+            None, ["system-reboot-symbolic", "system-reboot"]
+        )
+        shutdown_icon = self.utils.set_widget_icon_name(
+            None,
+            ["gnome-shutdown-symbolic", "system-shutdown-symbolic", "system-shutdown"],
+        )
+        suspend_icon = self.utils.set_widget_icon_name(
+            None, ["system-suspend-symbolic", "system-suspend"]
+        )
+        lock_icon = self.utils.set_widget_icon_name(
+            None, ["system-lock-screen-symbolic", "system-lock-screen"]
+        )
+        exit_icon = self.utils.set_widget_icon_name(
+            None, ["application-exit-symbolic", "application-exit", "exit"]
+        )
+        restart_icon = self.utils.set_widget_icon_name(
+            None, ["system-restart-symbolic", "gnome-panel-separator"]
+        )
+        settings_icon = self.utils.set_widget_icon_name(
+            None,
+            [
+                "settings",
+                "system-settings-symbolic",
+                "preferences-activities-symbolic",
+                "preferences-system",
+            ],
+        )
+
+        # now build the dictionary with the *resolved* icons as the 3rd tuple item
         data_and_categories = {
-            ("Logout", "", "gnome-logout-symbolic"): "",
-            ("Reboot", "", "system-reboot-symbolic"): "",
-            ("Shutdown", "", "gnome-shutdown-symbolic"): "",
-            ("Suspend", "", "system-suspend-symbolic"): "",
-            ("Lock", "", "system-lock-screen-symbolic"): "",
-            ("Exit Waypanel", "", "display-symbolic"): "",
-            ("Restart Waypanel", "", "display-symbolic"): "",
-            ("Settings", "", "preferences-activities-symbolic"): "",
+            ("Logout", "", logout_icon): "",
+            ("Reboot", "", reboot_icon): "",
+            ("Shutdown", "", shutdown_icon): "",
+            ("Suspend", "", suspend_icon): "",
+            ("Lock", "", lock_icon): "",
+            ("Exit Waypanel", "", exit_icon): "",
+            ("Restart Waypanel", "", restart_icon): "",
+            ("Settings", "", settings_icon): "",
         }
         done = []
         for data, category in data_and_categories.items():

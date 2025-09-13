@@ -45,8 +45,11 @@ class PopoverFolders(BasePlugin):
         )
         self.menubutton_folders = Gtk.Button()
         self.menubutton_folders.connect("clicked", self.open_popover_folders)
-        menu_icon = self.config.get("top", {}).get("folder_icon", "folder-home")
-        self.menubutton_folders.set_icon_name(menu_icon)
+        icon_name = self.utils.set_widget_icon_name(
+            "places",
+            ["folder"],
+        )
+        self.menubutton_folders.set_icon_name(icon_name)
         self.menubutton_folders.add_css_class("places-menu-button")
         self.utils.add_cursor_effect(self.menubutton_folders)
 

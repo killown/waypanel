@@ -61,7 +61,10 @@ class MullvadPlugin(BasePlugin):
         """Create a menu button and attach it to the panel."""
         # Create the MenuButton
         self.menubutton_mullvad = Gtk.MenuButton()
-        self.menubutton_mullvad.set_icon_name("mullvad-vpn")
+        self.icon_name = self.utils.set_widget_icon_name(
+            "mullvad", ["mullvad-vpn-symbolic", "mullvad-tray-9"]
+        )
+        self.menubutton_mullvad.set_icon_name(self.icon_name)
         self.menubutton_mullvad.add_css_class("top_right_widgets")
         self.utils.add_cursor_effect(self.menubutton_mullvad)
         self.main_widget = (self.menubutton_mullvad, "append")
@@ -291,7 +294,7 @@ class MullvadPlugin(BasePlugin):
             )
 
         if is_mullvad_active:
-            self.menubutton_mullvad.set_icon_name("mullvad-vpn")
+            self.menubutton_mullvad.set_icon_name(self.icon_name)
         else:
             self.menubutton_mullvad.set_icon_name("stock_disconnect")
 

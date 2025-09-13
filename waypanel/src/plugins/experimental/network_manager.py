@@ -7,7 +7,7 @@ from src.plugins.core._base import BasePlugin
 ENABLE_PLUGIN = True
 DEPS = ["top_panel", "gestures_setup"]
 
-# Icon names - adjust to match your system's icon theme
+
 ICON_CONNECTED = "notification-network-wired"
 ICON_DISCONNECTED = "network-wired-disconnected-symbolic"
 
@@ -32,7 +32,19 @@ class NetworkMonitorPlugin(BasePlugin):
         # UI elements
         self.button = Gtk.MenuButton()
         self.popover = Gtk.Popover()
-        self.icon = ICON_DISCONNECTED
+        self.icon_connected = self.utils.set_widget_icon_name(
+            None,
+            [
+                "gnome-dev-network-symbolic",
+                "org.gnome.Settings-network-symbolic",
+                "network-wired-activated-symbolic",
+                "network-wired-symbolic",
+            ],
+        )
+        self.icon_disconnected = self.utils.set_widget_icon_name(
+            None, ["network-wired-disconnected-symbolic"]
+        )
+        self.icon = self.icon_disconnected
 
         # Set parent before setting child
         self.popover.set_parent(self.button)
@@ -59,7 +71,7 @@ class NetworkMonitorPlugin(BasePlugin):
     def update_icon(self):
         """Update the icon based on current connection status."""
         is_connected = self.is_internet_connected()
-        self.icon = ICON_CONNECTED if is_connected else ICON_DISCONNECTED
+        self.icon = self.icon_connected if is_connected else self.icon_disconnected
         self.button.set_icon_name(self.icon)
 
     def periodic_check(self):
@@ -175,7 +187,12 @@ class NetworkMonitorPlugin(BasePlugin):
         config_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         config_label = Gtk.Label(label="Network Settings")
         config_button = Gtk.Button()
-        config_button.set_icon_name("gnome-control-center-symbolic")
+        config_button.set_icon_name(
+            self.utils.set_widget_icon_name(
+                None,
+                ["gnome-control-center-symbolic", "org.gnome.Settings"],
+            )
+        )
         config_box.append(config_button)
         config_box.append(config_label)
         self.utils.add_cursor_effect(config_button)

@@ -119,7 +119,16 @@ class SystemMonitorPlugin(BasePlugin):
         """Create the system monitor button and popover."""
         # Create the system monitor button
         self.menubutton_system = Gtk.Button()
-        self.menubutton_system.set_icon_name("utilities-system-monitor")  # Default icon
+        icon_name = self.utils.set_widget_icon_name(
+            "system_monitor",
+            [
+                "deepin-system-monitor-symbolic",
+                "com.github.stsdc.monitor-symbolic",
+                "utilities-system-monitor-symbolic",
+                "system-monitor-app-symbolic",
+            ],
+        )
+        self.menubutton_system.set_icon_name(icon_name)
         self.menubutton_system.connect("clicked", self.open_popover_system)
         self.utils.add_cursor_effect(self.menubutton_system)
         self.main_widget = (self.menubutton_system, "append")

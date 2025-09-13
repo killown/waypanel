@@ -142,7 +142,9 @@ class MenuNotes(BasePlugin):
         dynamic_height = min(notes_count * line_height + padding, 600)
         self.scrolled_window.set_min_content_height(dynamic_height)
 
-        button_icon = self.utils.get_nearest_icon_name(self.delete_button_icon())
+        button_icon = self.utils.set_widget_icon_name(
+            None, [self.delete_button_icon(), "edit-delete"]
+        )
         for note_id, content in notes:
             if not content:
                 continue
@@ -204,13 +206,15 @@ class MenuNotes(BasePlugin):
         self.menubutton_notes.connect("clicked", self.open_popover_notes)
         self.utils.add_cursor_effect(self.menubutton_notes)
 
-        notes_icon = (
-            self.config.get("panel", {})
-            .get("top", {})
-            .get("notes_icon", "accessories-notes")
-        )
         self.menubutton_notes.set_icon_name(
-            self.utils.get_nearest_icon_name(notes_icon)
+            self.utils.set_widget_icon_name(
+                "notes",
+                [
+                    "accessories-notes-symbolic",
+                    "xapp-annotations-text-symbolic",
+                    "accessories-notes",
+                ],
+            )
         )
 
     def create_popover_notes(self):
