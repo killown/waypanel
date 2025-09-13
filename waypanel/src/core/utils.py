@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 from src.core.compositor.ipc import IPC
 from typing import Dict, Any, Optional, Tuple, Callable, List, Union, Type, Iterable
-import configparser
+import difflib
 import importlib.util
 
 
@@ -504,11 +504,11 @@ class Utils(Adw.Application):
         return self.get_nearest_icon_name(menu_icon, fallback_icons)
 
     def get_nearest_icon_name(
-        self, app_name: str, fallback_icons=["image-missing"], size=Gtk.IconSize.LARGE
+        self, app_name: str, fallback_icons=None, size=Gtk.IconSize.LARGE
     ) -> str:
         """
-        Get the best matching icon name for an application (GTK4 synchronous version).
-        Returns immediately with the icon name or fallback.
+        Get the best matching icon name for an application (GTK4 synchronous version),
+        using exact matches first, then partial matches, and finally fuzzy matching.
 
         Args:
             app_name: Application name (e.g. 'firefox')
@@ -517,42 +517,62 @@ class Utils(Adw.Application):
         Returns:
             Best matching icon name with fallbacks
         """
+        if fallback_icons is None:
+            fallback_icons = ["image-missing"]
+
         icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
         app_name = app_name.lower().strip()
 
-        # Ordered list of possible icon name patterns
+        # Exact matches and common patterns
         patterns = [
-            # Application-specific
             app_name,
             f"{app_name}-symbolic",
             f"org.{app_name}.Desktop",
             f"{app_name}-desktop",
-            # Generic formats
             f"application-x-{app_name}",
             f"system-{app_name}",
             f"utility-{app_name}",
-            # Vendor prefixes
             f"fedora-{app_name}",
             f"debian-{app_name}",
         ]
 
-        # Check exact matches first
         for pattern in patterns:
             if icon_theme.has_icon(pattern):
                 return pattern
 
+        # Fallback icons
         for icon in fallback_icons:
             if icon_theme.has_icon(icon):
                 return icon
 
-        # Search for partial matches
+        # Partial matches
         try:
             all_icons = icon_theme.get_icon_names()
-            matches = [icon for icon in all_icons if app_name in icon.lower()]
-            if matches:
-                return matches[0]  # Return first match
+            partial_matches = [icon for icon in all_icons if app_name in icon.lower()]
+            if partial_matches:
+                return partial_matches[0]
+
+            # Fuzzy matching
+            if all_icons:
+                # Compute similarity ratios
+                app_name_lower = app_name.lower()
+                best_match = max(
+                    all_icons,
+                    key=lambda icon: difflib.SequenceMatcher(
+                        None, app_name_lower, icon.lower()
+                    ).ratio(),
+                )
+                # Accept only if similarity > threshold (e.g., 0.6)
+                if (
+                    difflib.SequenceMatcher(
+                        None, app_name_lower, best_match.lower()
+                    ).ratio()
+                    > 0.6
+                ):
+                    return best_match
+
         except Exception as e:
-            self.logger.error(f"Icon search error: {e}")
+            self.logger(f"Icon search error: {e}")
 
         return "image-missing"
 
@@ -1270,6 +1290,20 @@ class Utils(Adw.Application):
             )
             return None
 
+    def normalize_name(self, name: str) -> str:
+        """Normalize icon/app names for comparison."""
+        return name.lower().lstrip("qk").replace("org.", "").replace("com.", "").strip()
+
+    def extract_icon_name(self, icon) -> str:
+        """Extract the icon name from a Gio.Icon object."""
+        if hasattr(icon, "get_names") and callable(icon.get_names):
+            names = icon.get_names()
+            if names:
+                return names[0]
+        if hasattr(icon, "get_name") and callable(icon.get_name):
+            return icon.get_name()
+        return ""
+
     def icon_exist(self, argument: str) -> str:
         """
         Check if an icon exists based on the given application identifier.
@@ -1284,38 +1318,43 @@ class Utils(Adw.Application):
             str: The name or path of the matching icon if found, or an empty string if not found.
         """
         try:
-            # Validate input
             if not isinstance(argument, str) or not argument.strip():
                 self.logger.warning(f"Invalid or missing argument: {argument}")
                 return ""
 
-            # Try finding in Gio.AppInfo list
-            matches = [
-                app_info.get_icon()
-                for app_info in getattr(self, "gio_icon_list", [])
-                if argument.lower() in app_info.get_id().lower()
-            ]
+            norm_arg = self.normalize_name(argument)
 
-            if matches:
-                icon = matches[0]
-                # Extract icon name using available methods
-                if hasattr(icon, "get_names") and callable(icon.get_names):
-                    names = icon.get_names()
-                    if names:
-                        return names[0]
-                elif hasattr(icon, "get_name") and callable(icon.get_name):
-                    return icon.get_name()
+            # Check Gio.AppInfo list
+            for app_info in getattr(self, "gio_icon_list", []):
+                if norm_arg in self.normalize_name(app_info.get_id()):
+                    icon = app_info.get_icon()
+                    icon_name = self.extract_icon_name(icon)
+                    if icon_name:
+                        return icon_name
 
-            # Fallback: Search directly in known icon names
-            icon_matches = [
-                name
-                for name in getattr(self, "icon_names", [])
-                if argument.lower() in name.lower()
-            ]
-            if icon_matches:
-                return icon_matches[0]
+            # Check registered icon_names substring matches
+            for name in getattr(self, "icon_names", []):
+                if norm_arg in self.normalize_name(name):
+                    return name
 
-            # No icon found
+            # Fuzzy matching as last resort
+            all_icons = getattr(self, "icon_names", [])
+            if all_icons:
+                best_match = max(
+                    all_icons,
+                    key=lambda n: difflib.SequenceMatcher(
+                        None, norm_arg, self.normalize_name(n)
+                    ).ratio(),
+                )
+                if (
+                    difflib.SequenceMatcher(
+                        None, norm_arg, self.normalize_name(best_match)
+                    ).ratio()
+                    > 0.6
+                ):
+                    return best_match
+
+            # No match found
             self.logger.debug(f"No icon found for argument: {argument}")
             return ""
 
@@ -1360,12 +1399,17 @@ class Utils(Adw.Application):
         Returns:
             Optional[str]: The icon name if found, otherwise None.
         """
-        title = self.filter_utf_for_gtk(title)
-        initial_title = title.split()[0]
+        # Sanitize / filter title text for GTK
+        filtered_title = self.filter_utf_for_gtk(title)
+        first_word = filtered_title.split()[0] if filtered_title else ""
 
+        # Detect terminal emulators and try to match the first word of the window title
         for terminal in self.terminal_emulators:
-            if terminal in wm_class and terminal not in title.lower():
-                title_icon = self.icon_exist(initial_title)
+            if (
+                terminal.lower() in wm_class.lower()
+                and terminal.lower() not in filtered_title.lower()
+            ):
+                title_icon = self.icon_exist(first_word or initial_title)
                 if title_icon:
                     return title_icon
 
@@ -1380,13 +1424,14 @@ class Utils(Adw.Application):
             desk_local = self.search_local_desktop(initial_title)
             self.logger.info(desk_local)
 
-            if desk_local and desk_local.endswith("-Default.desktop"):
-                if desk_local.startswith("msedge-"):
-                    icon_name = desk_local.split(".desktop")[0]
-                    return icon_name
+            if desk_local and desk_local.lower().endswith("-default.desktop"):
+                base_name, _ = os.path.splitext(os.path.basename(desk_local))
+                if base_name.lower().startswith("msedge-"):
+                    return base_name
             else:
                 return self.get_nearest_icon_name("microsoft-edge")
 
+        # Fallback: try icon by wm_class
         found_icon = self.icon_exist(wm_class)
         if found_icon:
             return found_icon
