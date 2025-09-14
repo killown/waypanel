@@ -31,6 +31,8 @@ class AppLauncher(BasePlugin):
         self.all_apps = None
         self.menubutton_launcher = Gtk.Button()
         self.search_get_child = None
+        # we need to store the images to avoid memory leak, no need to re-create them every new flowbox update
+        self.icons = {}
         self.search_row = []
         self.recent_apps_file = os.path.expanduser("~/config/waypanel/.recent-apps")
         # The widget to be set in the panel and the action: append or set_content.
@@ -179,12 +181,9 @@ class AppLauncher(BasePlugin):
         """
         # Fetch all available applications and filter out docked apps
         all_apps = Gio.AppInfo.get_all()
-        dockbar_toml = self.obj.config["dockbar"]
+        dockbar_toml = self.config["dockbar"]
         dockbar_desktop = {dockbar_toml[i]["desktop_file"] for i in dockbar_toml}
         all_apps = [app for app in all_apps if app.get_id() not in dockbar_desktop]
-
-        # Clear the flowbox
-        self.flowbox.remove_all()
 
         # Get the list of recent apps and reverse it
         recent_apps = self.get_recent_apps()
@@ -204,7 +203,6 @@ class AppLauncher(BasePlugin):
             if app_name not in recent_apps:
                 self._add_app_to_flowbox(app, app_name, recent=False)
 
-        # Update the list of all apps
         self.all_apps = all_apps
 
     def _add_app_to_flowbox(self, app, name, recent=False):
@@ -231,45 +229,51 @@ class AppLauncher(BasePlugin):
                 "application-x-executable-symbolic"
             )
 
-        # Create a vertical box to stack the icon and label
-        vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)  # Vertical layout with spacing
-        vbox.set_halign(Gtk.Align.CENTER)  # Center align the widget horizontally
-        vbox.set_valign(Gtk.Align.CENTER)  # Center align the widget vertically
-        vbox.set_margin_top(1)  # Add margin at the top
-        vbox.set_margin_bottom(1)  # Add margin at the bottom
-        vbox.set_margin_start(1)  # Add margin on the left
-        vbox.set_margin_end(1)  # Add margin on the right
-        vbox.add_css_class("app-launcher-vbox")
-
         # Icon
-        image = Gtk.Image.new_from_gicon(icon)
-        # image.set_pixel_size(64)  # Set the size of the icon (adjust as needed)
-        image.set_halign(Gtk.Align.CENTER)  # Center align the icon
-        image.add_css_class(
-            "app-launcher-icon-from-popover"
-        )  # Add CSS class for styling
+        if name not in self.icons:
+            # Create a vertical box to stack the icon and label
+            vbox = Gtk.Box.new(
+                Gtk.Orientation.VERTICAL, 5
+            )  # Vertical layout with spacing
+            vbox.set_halign(Gtk.Align.CENTER)  # Center align the widget horizontally
+            vbox.set_valign(Gtk.Align.CENTER)  # Center align the widget vertically
+            vbox.set_margin_top(1)  # Add margin at the top
+            vbox.set_margin_bottom(1)  # Add margin at the bottom
+            vbox.set_margin_start(1)  # Add margin on the left
+            vbox.set_margin_end(1)  # Add margin on the right
+            vbox.add_css_class("app-launcher-vbox")
+            # Store metadata for later use
+            vbox.MYTEXT = name, cmd, keywords  # pyright: ignore
 
-        self.utils.add_cursor_effect(image)
+            image = Gtk.Image.new_from_gicon(icon)
+            image.set_halign(Gtk.Align.CENTER)  # Center align the icon
+            image.add_css_class(
+                "app-launcher-icon-from-popover"
+            )  # Add CSS class for styling
 
-        # Label
-        label = Gtk.Label.new(name)
-        label.set_max_width_chars(20)  # Limit the width of the label
-        label.set_ellipsize(Pango.EllipsizeMode.END)  # Add ellipsis if text is too long
-        label.set_halign(Gtk.Align.CENTER)  # Center align the label
-        label.add_css_class(
-            "app-launcher-label-from-popover"
-        )  # Add CSS class for styling
+            self.utils.add_cursor_effect(image)
 
-        # Add the icon and label to the vertical box
-        vbox.append(image)
-        vbox.append(label)
+            # Label
+            label = Gtk.Label.new(name)
+            label.set_max_width_chars(20)  # Limit the width of the label
+            label.set_ellipsize(
+                Pango.EllipsizeMode.END
+            )  # Add ellipsis if text is too long
+            label.set_halign(Gtk.Align.CENTER)  # Center align the label
+            label.add_css_class(
+                "app-launcher-label-from-popover"
+            )  # Add CSS class for styling
 
-        # Store metadata for later use
-        vbox.MYTEXT = name, cmd, keywords  # pyright: ignore
+            self.icons[name] = {"icon": image, "label": label, "vbox": vbox}
 
-        # Add the vertical box to the FlowBox
-        self.flowbox.append(vbox)
-        self.flowbox.add_css_class("app-launcher-flowbox")
+            # Add the icon and label to the vertical box
+            vbox = self.icons[name]["vbox"]
+            vbox.append(self.icons[name]["icon"])
+            vbox.append(self.icons[name]["label"])
+
+            # Add the vertical box to the FlowBox
+            self.flowbox.append(vbox)
+            self.flowbox.add_css_class("app-launcher-flowbox")
 
     def add_recent_app(self, app_name):
         """
@@ -328,18 +332,23 @@ class AppLauncher(BasePlugin):
         self.update_flowbox()
 
     def open_popover_launcher(self, *_):
-        """Open or close the popover launcher."""
-        if self.popover_launcher and self.popover_launcher.is_visible():
-            self.popover_launcher.popdown()
-            self.popover_is_closed()
-        elif self.popover_launcher and not self.popover_launcher.is_visible():
-            self.update_flowbox()  # Refresh the flowbox
-            self.flowbox.unselect_all()
-            self.popover_launcher.popup()
-            self.searchbar.set_text("")
-            self.popover_is_open()
+        """Open or close the popover launcher safely without leaking memory."""
+        if self.popover_launcher:
+            if self.popover_launcher.is_visible():
+                self.popover_launcher.popdown()
+                self.popover_is_closed()
+            else:
+                # Popover exists but is hidden; refresh flowbox safely
+                self.update_flowbox()
+                self.flowbox.unselect_all()
+                self.popover_launcher.popup()
+                self.searchbar.set_text("")
+                self.popover_is_open()
         else:
+            # Create the popover safely
             self.popover_launcher = self.create_popover_launcher(self.obj)
+            self.popover_launcher.popup()
+            self.popover_is_open()
 
     def popover_is_open(self, *_):
         """Set the keyboard mode to ON_DEMAND when the popover is opened."""
@@ -394,23 +403,18 @@ class AppLauncher(BasePlugin):
 
     def on_filter_invalidate(self, row):
         """Filter the flowbox rows based on the search entry."""
-        # get the Entry search
-        text_to_search = self.searchbar.get_text().strip()
-        if not isinstance(row, str):
-            # the line searched for, it will return every line that matches the search
-            row = row.get_child().MYTEXT
-            # this is to store all rows that match the search and get the first one
-            # then we can use on_keypress to start the app
-            self.search_row.append(row[1])
-            row = f"{row[0]} {row[1]} {row[2]}"
+        text_to_search = self.searchbar.get_text().strip().lower()
 
-        r = row.lower().strip()
-        # checking if the search is valid
-        if text_to_search.lower() in r:
-            # [-1] is the first item from the search, means first row searched
-            # [1] is the desktop file, example.desktop
-            self.search_get_child = self.search_row[-1]
-            # clean up because we only need the list to get the first row
-            self.search_row = []
-            return True
-        return False
+        if not isinstance(row, str):
+            # Get the metadata stored on the widget
+            name, desktop, keywords = row.get_child().MYTEXT
+            combined_text = f"{name} {desktop} {keywords}".lower()
+
+            if text_to_search in combined_text:
+                # Set the first match for on_keypress
+                self.search_get_child = desktop
+                return True
+            else:
+                return False
+        else:
+            return text_to_search in row.lower().strip()
