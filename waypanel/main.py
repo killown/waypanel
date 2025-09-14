@@ -511,17 +511,17 @@ def get_monitor_name(config, sock):
 
 
 def find_config_path():
-    """Determine the correct path to the waypanel.toml configuration file.
+    """Determine the correct path to the config.toml configuration file.
 
     Checks two potential locations in order of preference:
     1. User-specific config in ~/.config/waypanel/
     2. Default config relative to the script's location
 
     Returns:
-        str: Full path to the waypanel.toml configuration file.
+        str: Full path to the config.toml configuration file.
     """
     home_config_path = os.path.join(
-        os.path.expanduser("~"), ".config/waypanel", "waypanel.toml"
+        os.path.expanduser("~"), ".config/waypanel", "config.toml"
     )
     if os.path.exists(home_config_path):
         print(f"using {home_config_path}")
@@ -529,7 +529,7 @@ def find_config_path():
 
     config_dir = os.path.dirname(os.path.abspath(__file__))
     default_config_path = os.path.join(
-        os.path.dirname(config_dir), "config/waypanel.toml"
+        os.path.dirname(config_dir), "config/config.toml"
     )
     print(f"Using default config path: {default_config_path}")
 

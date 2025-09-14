@@ -31,7 +31,7 @@ fi
 
 # === CONFIG SETUP ===
 CONFIG_DIR="$HOME/.config/$APP_NAME"
-CONFIG_FILE="$CONFIG_DIR/waypanel.toml"
+CONFIG_FILE="$CONFIG_DIR/config.toml"
 SYSTEM_CONFIG="/usr/lib/$APP_NAME/config"      # System install path
 LOCAL_DEV_CONFIG="$SCRIPT_DIR/waypanel/config" # Git clone dev path
 ALT_DEV_CONFIG="$SCRIPT_DIR/config"            # Alternate dev path (flat structure)
