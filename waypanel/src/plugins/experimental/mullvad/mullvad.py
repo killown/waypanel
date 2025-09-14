@@ -49,10 +49,10 @@ class MullvadPlugin(BasePlugin):
             return "Mullvad Version Unavailable"
 
     def get_city_code(self):
-        """Get the city code from the plugin's config section in waypanel.toml."""
+        """Get the city code from the plugin's config section in config.toml."""
         plugin_config = self.config.get("plugins", {}).get("mullvad", {})
         # more infor: https://api.mullvad.net/www/relays/wireguard/
-        # waypanel.toml config example:
+        # config.toml config example:
         # [plugins.mullvad]
         # city_code = "sao"
         return plugin_config.get("city_code", "sao")

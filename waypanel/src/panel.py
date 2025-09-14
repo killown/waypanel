@@ -86,7 +86,7 @@ class Panel(Adw.Application):
         """Set up configuration paths based on the user's home directory."""
         config_paths = self.utils.setup_config_paths()
         self.home = config_paths["home"]
-        self.waypanel_cfg = os.path.join(self.home, ".config/waypanel/waypanel.toml")
+        self.waypanel_cfg = os.path.join(self.home, ".config/waypanel/config.toml")
         self.config_path = config_paths["config_path"]
         self.style_css_config = config_paths["style_css_config"]
         self.cache_folder = config_paths["cache_folder"]
@@ -115,7 +115,7 @@ class Panel(Adw.Application):
 
     def save_config(self):
         """
-        Save the current configuration back to the waypanel.toml file.
+        Save the current configuration back to the config.toml file.
         """
         try:
             with open(self.waypanel_cfg, "w") as f:
@@ -130,7 +130,7 @@ class Panel(Adw.Application):
 
     def reload_config(self):
         """
-        Reload the configuration from the waypanel.toml file and propagate changes to plugins.
+        Reload the configuration from the config.toml file and propagate changes to plugins.
         """
         try:
             # Reload the configuration
@@ -154,7 +154,7 @@ class Panel(Adw.Application):
             self.logger.error(f"Error reloading configuration: {e}")
 
     def load_config(self) -> Dict[str, Any]:
-        """Load and cache the panel configuration from the waypanel.toml file.
+        """Load and cache the panel configuration from the config.toml file.
 
         Returns:
             dict: Parsed TOML configuration data. If already loaded, returns the cached version.

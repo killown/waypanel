@@ -28,13 +28,13 @@ class MenuSetupPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.menu_button = None
-        self.config_path = os.path.expanduser("~/.config/waypanel/waypanel.toml")
+        self.config_path = os.path.expanduser("~/.config/waypanel/config.toml")
         self.logger = self.logger
         self.widgets = []
         self.main_widget = (self.widgets, "append")
 
     def load_menu_config(self):
-        """Load menu configuration from waypanel.toml."""
+        """Load menu configuration from config.toml."""
         if not os.path.exists(self.config_path):
             self.log_error(f"Menu config file not found: {self.config_path}")
             return {}
@@ -80,7 +80,9 @@ class MenuSetupPlugin(BasePlugin):
             if "icon" in menu_data:
                 icon_name = menu_data["icon"]
                 menu_button.set_icon_name(
-                    self.utils.set_widget_icon_name([icon_name, "open-menu-symbolic"])
+                    self.utils.set_widget_icon_name(
+                        "custom_menu", [icon_name, "open-menu-symbolic"]
+                    )
                 )
             else:
                 menu_button.set_label(menu_name)

@@ -22,7 +22,7 @@ DEPS = ["event_manager", "gestures_setup"]
 def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
     position = "left-panel-center"
-    # priority position is from waypanel.toml [dockbar_panel.position] = "left"
+    # priority position is from config.toml [dockbar_panel.position] = "left"
     # the dockbar will be on left ignoring hardcoded position
     dockbar_config = panel_instance.config.get("dockbar_panel", {})
     if dockbar_config:

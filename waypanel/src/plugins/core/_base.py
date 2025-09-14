@@ -96,7 +96,7 @@ class BasePlugin:
         - `self.obj`: Reference to the main Panel instance
         - `self.logger`: Logger object (`self.logger.info(...)`, etc.)
         - `self.ipc`: IPC client for communicating with the compositor
-        - `self.config`: Optional plugin-specific configuration from `waypanel.toml`
+        - `self.config`: Optional plugin-specific configuration from `config.toml`
         - `self.utils`: Utility module with helper functions
         - `self.plugin_loader`: Reference to the plugin loader
         - `self.plugins`: Dictionary of loaded plugins (`self.plugins["event_manager"]`)

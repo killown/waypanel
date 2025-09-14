@@ -18,7 +18,7 @@ class PluginLoader:
     ### Key Responsibilities
     - Discovers all available plugins in `src.plugins` and custom directories.
     - Validates that each plugin implements required functions: `get_plugin_placement`, `initialize_plugin`.
-    - Loads configuration from `waypanel.toml` to determine which plugins are enabled/disabled.
+    - Loads configuration from `config.toml` to determine which plugins are enabled/disabled.
     - Sorts plugins by priority and order for consistent layout and behavior.
     - Initializes plugins after resolving dependencies.
 
@@ -36,7 +36,7 @@ class PluginLoader:
         Args:
             panel_instance: Main Panel object (used for plugin access and event management).
             logger: Logger instance for structured logging.
-            config_path: Path to `waypanel.toml` for plugin enable/disable settings.
+            config_path: Path to `config.toml` for plugin enable/disable settings.
         """
         self.panel_instance = panel_instance
         self.logger = logger
@@ -139,7 +139,7 @@ class PluginLoader:
         Load and initialize all plugins from built-in and custom directories.
 
         ### Workflow:
-        1. Load configuration from `waypanel.toml`
+        1. Load configuration from `config.toml`
         2. Discover `.py` files in `src.plugins` and custom plugin directory
         3. Filter out invalid or disabled modules
         4. Sort plugins by priority and order
@@ -358,7 +358,7 @@ class PluginLoader:
 
     def _load_plugin_configuration(self):
         """
-        Load plugin-specific settings from `waypanel.toml`.
+        Load plugin-specific settings from `config.toml`.
 
         Parses the `[plugins]` section to:
             - Determine which plugins are enabled/disabled
@@ -367,7 +367,7 @@ class PluginLoader:
         Returns:
             Tuple[Dict, List]: (config_dict, disabled_plugins_list)
         """
-        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
+        waypanel_config_path = os.path.join(self.config_path, "config.toml")
         try:
             if not os.path.exists(waypanel_config_path):
                 self.logger.error(
@@ -483,7 +483,7 @@ class PluginLoader:
 
     def _update_plugin_configuration(self, config, valid_plugins, disabled_plugins):
         """Update the [plugins] section in the TOML configuration."""
-        waypanel_config_path = os.path.join(self.config_path, "waypanel.toml")
+        waypanel_config_path = os.path.join(self.config_path, "config.toml")
         config["plugins"]["list"] = " ".join(valid_plugins)
         config["plugins"]["disabled"] = " ".join(disabled_plugins)
 
