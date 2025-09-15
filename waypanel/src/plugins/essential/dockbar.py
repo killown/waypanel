@@ -1,7 +1,5 @@
 from gi.repository import Gtk
-
 import os
-import orjson as json
 import toml
 from core._base import BasePlugin
 from src.core.create_panel import (

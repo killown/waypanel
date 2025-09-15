@@ -22,7 +22,12 @@ class WayfireClientIPC:
         self.source = None
         self.buffer = ""
         self.socket_path = None
-        self.handle_event = handle_event  # Store the custom handle_event function
+        self.handle_event = handle_event
+        GLib.timeout_add_seconds(3, self.is_connected)
+
+    def is_connected(self):
+        if not self.obj.ipc.is_connected():
+            self.wayfire_events_setup(self.socket_path)
 
     def connect_socket(self, socket_path) -> None:
         """Establish a connection to the specified Unix domain socket.

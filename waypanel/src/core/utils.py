@@ -2092,7 +2092,10 @@ class Utils(Adw.Application):
                 Gdk.Cursor.new_from_name("pointer", None)
             ),
         )
-        motion.connect("leave", lambda c, x, y: widget.set_cursor(None))
+        motion.connect(
+            "leave",
+            lambda c: widget.set_cursor(None),  # only the controller is passed
+        )
         widget.add_controller(motion)
 
     def create_button(
@@ -2299,3 +2302,11 @@ class Utils(Adw.Application):
             exec_always=True,
             mode="normal",
         )
+
+    def ping_wayfire_ipc(self):
+        try:
+            self.ipc.ping()
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to ping Wayfire IPC: {e}")
+        return False

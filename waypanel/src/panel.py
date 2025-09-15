@@ -35,6 +35,11 @@ class Panel(Adw.Application):
         self.update_widget = self.utils.update_widget
         self.config = self.load_config()
         self._set_monitor_dimensions()
+        GLib.timeout_add_seconds(3, self.check_ipc_connection)
+
+    def check_ipc_connection(self):
+        if not self.ipc.is_connected():
+            self.ipc = IPC()
 
     def set_panel_instance(self, panel_instance):
         self.panel_instance = panel_instance

@@ -1,4 +1,4 @@
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
 from src.plugins.core.event_handler_decorator import subscribe_to_event
 from src.plugins.core._base import BasePlugin
 
@@ -54,6 +54,11 @@ class WindowTitlePlugin(BasePlugin):
 
         # first update so it will set the default it if no focus yet
         self.update_title("", "focus-windows")
+
+        # Debounce variables
+        self._debounce_pending = False
+        self._debounce_timer_id = None
+        self._debounce_interval = 333  # ~3 updates per second (1000/3 ≈ 333ms)
 
     def disable(self):
         print(self.main_widget)
@@ -219,3 +224,9 @@ class WindowTitlePlugin(BasePlugin):
                 self.window_title_icon.set_from_icon_name("None")
         except Exception as e:
             self.log_error(f"Error updating window title widget: {e}")
+
+    def _perform_debounced_update(self):
+        """Internal method to perform the actual UI update after debounce."""
+        self._debounce_pending = False
+        self._debounce_timer_id = None
+        return False  # Return False to stop the timeout

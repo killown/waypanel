@@ -21,6 +21,8 @@ from src.core.log_setup import setup_logging
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sock = IPC()
+
+
 # Constants
 DEFAULT_CONFIG_PATH = "~/.config/waypanel"
 GTK_LAYER_SHELL_INSTALL_PATH = "~/.local/lib/gtk4-layer-shell"
@@ -282,14 +284,7 @@ def load_panel(ipc_server):
                 append_to_env("output_id", output["id"])
 
         panel.run(None)
-        # sock.watch(["event"])
 
-        if os.getenv("WAYFIRE_SOCKET"):
-            while True:
-                msg = sock.read_message()
-                if "output" in msg and monitor_name == msg["output-data"]["name"]:
-                    if msg["event"] == "output-gain-focus":
-                        panel.run(None)
     except ImportError as e:
         logger.error(f"Failed to load panel: {e}", exc_info=True)
         raise

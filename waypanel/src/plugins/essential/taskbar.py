@@ -48,6 +48,16 @@ class TaskbarPlugin(BasePlugin):
         self.last_toplevel_focused_view = None
         self.taskbar_list = []
         self.buttons_id = {}
+
+        # --- DEBOUNCE VARIABLES ---
+        # Flag to track if a debounced update is scheduled
+        self._debounce_pending = False
+        # Timer ID for the scheduled update
+        self._debounce_timer_id = None
+        # Minimum time interval between updates (in milliseconds)
+        self._debounce_interval = 100
+        # --------------------------
+
         self.allow_move_view_scroll = True
         self.is_scale_active = {}
         self.create_gesture = self.plugins["gestures_setup"].create_gesture
@@ -109,13 +119,9 @@ class TaskbarPlugin(BasePlugin):
         self.scrolled_window.set_child(self.taskbar)
         self.taskbar.add_css_class("taskbar")
 
-        # Present the panel if enabled
-
         # Start the taskbar list for the bottom panel
         self.Taskbar()
         self.logger.info("Bottom panel setup completed.")
-
-        # Unset layer position for other panels
 
     def _subscribe_to_events(self) -> bool:
         """Subscribe to relevant events using the event_manager."""
@@ -155,12 +161,21 @@ class TaskbarPlugin(BasePlugin):
         return False
 
     def create_taskbar_button(self, view):
+        # if ipc is not connected, just skip until it's ready
+        if not self.ipc.ping():
+            return
+
         app_id = view["app-id"]
         title = view["title"]
+        if not title:
+            return
         initial_title = title.split()[0]
         icon_name = self.utils.get_icon(app_id, initial_title, title)
+
         if icon_name is None:
-            return None
+            icon_name = self.utils.get_nearest_icon_name(app_id)
+            if icon_name is None:
+                return None
 
         button = Gtk.Button()
 
@@ -403,25 +418,32 @@ class TaskbarPlugin(BasePlugin):
         Returns:
             dict or None: The view object if valid, otherwise None.
         """
-        self.logger.debug(f"Validating view for taskbar: {view_id}")
-        if not self.view_exist(view_id):
-            self.logger.debug(f"View does not exist: {view_id}")
-            return {}
+        try:
+            self.logger.debug(f"Validating view for taskbar: {view_id}")
+            if not self.view_exist(view_id):
+                self.logger.debug(f"View does not exist: {view_id}")
+                return {}
 
-        if view_id in self.taskbar_list:
-            self.logger.debug(f"View already in taskbar list: {view_id}")
-            return {}
+            if view_id in self.taskbar_list:
+                self.logger.debug(f"View already in taskbar list: {view_id}")
+                return {}
 
-        if view_id not in self.ipc.list_ids():
-            self.logger.debug(f"View ID not in active IDs: {view_id}")
-            return {}
+            if view_id not in self.ipc.list_ids():
+                self.logger.debug(f"View ID not in active IDs: {view_id}")
+                return {}
 
-        view = self.ipc.get_view(view_id)
-        if not view:
-            self.logger.debug(f"Failed to fetch view details for ID: {view_id}")
-            return {}
+            if not self.view_exist(view_id):
+                return {}
 
-        return view
+            view = self.ipc.get_view(view_id)
+            if not view:
+                self.logger.debug(f"Failed to fetch view details for ID: {view_id}")
+                return {}
+
+            return view
+        except Exception as e:
+            self.logger.error(f"Error validating view for taskbar: {e}")
+            return None
 
     def on_view_focused(self, view):
         """Handle when a view gains focus."""
@@ -442,12 +464,20 @@ class TaskbarPlugin(BasePlugin):
 
     def on_view_created(self, view):
         """Handle creation of new views."""
-        self.update_taskbar_list(view)
+        # Regardless of the specific event type (mapped, unmapped, title-changed),
+        # we schedule a single update after a delay.
+        # This ensures we don't process 3+ events per second.
+        if not self._debounce_pending:
+            self._debounce_pending = True
+            # Schedule the update to run after the debounce interval
+            self._debounce_timer_id = GLib.timeout_add(
+                self._debounce_interval, self._perform_debounced_update
+            )
 
     def on_view_destroyed(self, view):
         """Handle destruction of views."""
         self.remove_button(view["id"])
-        self.update_taskbar_list(view)
+        self.update_taskbar_list()
 
     def on_title_changed(self, view):
         """Handle title changes for views."""
@@ -486,7 +516,7 @@ class TaskbarPlugin(BasePlugin):
 
         if button:
             self.remove_button(id)
-            self.update_taskbar_list(view)
+            self.update_taskbar_list()
 
     def set_view_focus(self, view_id):
         """
@@ -564,7 +594,7 @@ class TaskbarPlugin(BasePlugin):
         """Update all taskbar buttons during scale plugin activation."""
         self.logger.debug("Updating taskbar buttons during scale plugin activation.")
         for view in self.ipc.list_views():
-            self.update_taskbar_list(view)
+            self.update_taskbar_list()
 
     def on_scale_activated(self):
         """Handle scale wayfire plugin activation."""
@@ -587,15 +617,14 @@ class TaskbarPlugin(BasePlugin):
             self.set_layer_exclusive(False)
 
     def get_valid_button(self, button_id):
+        """Get the valid button widget for a given ID."""
         try:
             if button_id in self.buttons_id:
                 button = self.buttons_id[button_id][0]
                 if self.utils.widget_exists(button):
                     return button
         except Exception as e:
-            self.log_error(
-                message=f"Invalid or missing button for ID {e}",
-            )
+            self.log_error(message=f"Invalid or missing button for ID {e}")
         return None
 
     def remove_button(self, view_id):
@@ -617,9 +646,7 @@ class TaskbarPlugin(BasePlugin):
         self.remove_gesture(button)
         del self.buttons_id[view_id]
 
-    def update_taskbar_list(self, view):
-        """Update the taskbar list based on the current views."""
-        self.logger.debug(f"Updating taskbar list for view: {view}")
+    def update_taskbar_list(self):
         # Update the taskbar layout
         self.Taskbar()
         # Remove invalid buttons
@@ -661,6 +688,13 @@ class TaskbarPlugin(BasePlugin):
 
     def handle_view_event(self, msg):
         """Handle view-related IPC events."""
+        if not self.ipc.is_connected():
+            self.logger.error(
+                "Taskbar Plugin Handle view event: Wayfire IPC not connected"
+            )
+            self.plugin_loader.reload_plugin("taskbar")
+            return
+
         view = msg.get("view")
 
         # This event match must be here because if not, role != toplevel will make it never match.
@@ -700,4 +734,23 @@ class TaskbarPlugin(BasePlugin):
             self.on_view_created(view)
         if msg["event"] == "view-unmapped":
             self.on_view_destroyed(view)
-        return
+
+    def _perform_debounced_update(self):
+        """
+        This method is called by GLib.timeout_add after the debounce interval has passed.
+        It performs the actual taskbar update.
+        """
+        # Reset the flag
+        self._debounce_pending = False
+        self._debounce_timer_id = None  # Clear the timer ID
+
+        # Perform the update
+        self.logger.debug("Performing debounced taskbar update.")
+
+        try:
+            self.update_taskbar_list()
+        except Exception as e:
+            self.log_error(message=f"Error updating taskbar: {e}")
+
+        # Return False to stop the timeout from repeating (it's a one-shot)
+        return False

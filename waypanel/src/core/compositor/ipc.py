@@ -441,6 +441,12 @@ class IPC:
             mode=mode,
         )
 
+    def ping(self):
+        return self.stipc.ping()
+
+    def connect_client(self, path):
+        return self.sock.connect_client(path)
+
     def get_cursor_position(self):
         return self.sock.get_cursor_position()
 

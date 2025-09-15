@@ -344,8 +344,9 @@ class WayfireRealtimePluginsPlugin(BasePlugin):
         else:
             if not self.popover:
                 self.create_popover()
-            else:
-                self._refresh_popover()
+            # FIXME: memory leak
+            # else:
+            # self._refresh_popover()
             self.popover.set_parent(self.button)
             self.popover.popup()
 

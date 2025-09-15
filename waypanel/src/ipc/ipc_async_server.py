@@ -39,7 +39,9 @@ class EventServer:
     def reconnect_wayfire_socket(self) -> None:
         """Reconnect to Wayfire socket"""
         self.logger.info("reconnecting wayfire ipc")
-        self.ipc.close()
+        self.ipc = IPC()
+        self.ipc.watch()
+        self.ipc.connect_client(self.get_socket_path())
         self.ipc.watch()
 
     def is_socket_active(self) -> bool:
@@ -81,9 +83,12 @@ class EventServer:
                     )
             except Exception as e:
                 self.logger.error(f"Event read failed: {e}")
-                if not self.ipc.is_connected():
-                    time.sleep(1)
-                    continue
+                try:
+                    self.reconnect_wayfire_socket()
+                except Exception as e:
+                    self.logger.error(f"Retrying in 1 second: {e}")
+                time.sleep(1)
+                continue
 
     def add_event_subscriber(self, event_type, callback) -> None:
         """
