@@ -13,6 +13,8 @@ Waypanel  is a lightweight, modular, and highly customizable status panel design
 How to Install `waypanel`
 =========================
 
+***Latest Wayfire from github is required***
+
 ##### if using wayfire: configure wayfire.ini
 Ensure the following plugins are enabled in your ~/.config/wayfire.ini: 
     
