@@ -410,13 +410,21 @@ class IPC:
         """Rotate the cube to the right"""
         return self.sock.cube_rotate_right()  # pyright: ignore
 
-    def scale_toggle_all(self) -> bool:
+    def scale_toggle_all(self, output_id: Optional[int] = None) -> None:
         """Toggle the Scale mode for all workspaces"""
-        return self.sock.scale_toggle_all()  # pyright: ignore
+        if output_id is not None:
+            self.sock.scale_toggle_all(output_id)
+        else:
+            self.sock.scale_toggle_all()
 
-    def scale_toggle(self) -> Any:
+    def scale_toggle(self, output_id: Optional[int] = None) -> None:
         """Toggle the scale plugin"""
-        return self.sock.scale_toggle()  # pyright: ignore
+        if output_id is not None:
+            self.sock.scale_toggle(output_id)
+        else:
+            self.sock.scale_toggle()
+
+        return True
 
     def assign_slot(self, view_id: int, slot: str) -> None:
         """Assign a slot to a view"""
