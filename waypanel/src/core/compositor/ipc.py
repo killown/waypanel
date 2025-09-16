@@ -146,26 +146,31 @@ class IPC:
 
     def setup_compositor_socket(self):
         if os.getenv("WAYFIRE_SOCKET"):
-            from wayfire.core.template import get_msg_template
-            from wayfire import WayfireSocket
-            from wayfire.extra.ipc_utils import WayfireUtils
-            from wayfire.extra.stipc import Stipc
-
-            self.sock = WayfireSocket()
-            self.wf_utils = WayfireUtils(self.sock)
-            self.stipc = Stipc(self.sock)
-            self.is_compositor_socket_set_up = True
-            self.get_msg_template = get_msg_template
+            self.connect_wayfire_ipc()
             return "wayfire"
 
         if os.getenv("SWAYSOCK"):
-            from pysway.ipc import SwayIPC
-            from pysway.extra.utils import SwayUtils
-
-            self.sock = SwayIPC()
-            self.utils = SwayUtils(self.sock)
-
+            self.connect_sway_ipc()
             return "sway"
+
+    def connect_wayfire_ipc(self):
+        from wayfire.core.template import get_msg_template
+        from wayfire import WayfireSocket
+        from wayfire.extra.ipc_utils import WayfireUtils
+        from wayfire.extra.stipc import Stipc
+
+        self.sock = WayfireSocket()
+        self.wf_utils = WayfireUtils(self.sock)
+        self.stipc = Stipc(self.sock)
+        self.is_compositor_socket_set_up = True
+        self.get_msg_template = get_msg_template
+
+    def connect_sway_ipc(self):
+        from pysway.ipc import SwayIPC
+        from pysway.extra.utils import SwayUtils
+
+        self.sock = SwayIPC()
+        self.utils = SwayUtils(self.sock)
 
     def get_view(self, id: int) -> Optional[Dict[str, Any]]:
         """Get the view by the given id"""
