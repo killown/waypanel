@@ -20,7 +20,7 @@ def initialize_plugin(panel_instance):
     """Initialize the weather plugin."""
     if ENABLE_PLUGIN:
         weather_plugin = WeatherPlugin(panel_instance)
-        weather_plugin.setup_weather()
+        GLib.idle_add(weather_plugin.setup_weather)
         return weather_plugin
 
 
@@ -44,6 +44,7 @@ class WeatherPlugin(BasePlugin):
 
         # Attach weather label to the calendar popover
         self.attach_weather_to_calendar(calendar_plugin)
+        return
 
     def attach_weather_to_calendar(self, calendar_plugin):
         """Attach weather functionality to the calendar popover."""
