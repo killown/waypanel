@@ -119,7 +119,7 @@ class UpdateCheckerPlugin(BasePlugin):
             self.menu_button.show()
 
     def _on_button_click(self, button):
-        self.popover.popup()
+        GLib.idle_add(self.popover.popup)
 
     def _launch_terminal(self, button):
         terminal = None
