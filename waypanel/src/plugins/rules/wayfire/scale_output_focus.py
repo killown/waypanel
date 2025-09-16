@@ -46,9 +46,14 @@ class ScaleFocusManagerPlugin(BasePlugin):
                     self.logger.info(
                         f"Scale was active on output {self.last_focused_output_id}, toggling it off"
                     )
-                    print(self.last_focused_output_id)
                     # Toggle scale off on the previous output
                     self.ipc.scale_toggle(self.last_focused_output_id)
+
+                    # the issue is that the last focused output id toggle will make the current view lose focus
+                    # so we toggle twice so fast that will not take any toggle effect and yet fix the current view focus
+                    # NOTE: set_focus() is not working in this case
+                    self.ipc.scale_toggle(current_output_id)
+                    self.ipc.scale_toggle(current_output_id)
                     # Update our tracking
                     self.scale_active_outputs[self.last_focused_output_id] = False
 
