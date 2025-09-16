@@ -1,7 +1,7 @@
 from subprocess import Popen, check_output
 import time
 import gi
-from gi.repository import Adw, Gtk
+from gi.repository import Adw, GLib, Gtk
 
 from src.plugins.core._base import BasePlugin
 
@@ -88,21 +88,27 @@ class BluetoothDashboard(BasePlugin):
             print(e)
 
         for device in devices:
-            bluetooth_button = Adw.ButtonContent()
+            self.bluetooth_button = Adw.ButtonContent()
             device_id = device.split()[0]
             device_name = " ".join(device.split()[1:])
             self.bluetooth_buttons[device_name] = device_id
-            bluetooth_button.set_label(device_name)
+            self.bluetooth_button.set_label(device_name)
             if device_id in connected_devices:
-                bluetooth_button.set_icon_name("blueberry-tray")
+                self.bluetooth_button.set_icon_name("blueberry-tray")
+                self.bluetooth_button.add_css_class(
+                    "bluetooth-dashboard-buttons-connected"
+                )
             else:
-                bluetooth_button.set_icon_name("blueberry-tray-disabled")
+                self.bluetooth_button.set_icon_name("blueberry-tray-disabled")
+                self.bluetooth_button.remove_css_class(
+                    "bluetooth-dashboard-buttons-connected"
+                )
             gesture = Gtk.GestureClick.new()
             gesture.connect("released", self.on_bluetooth_clicked)
             gesture.set_button(1)
-            bluetooth_button.add_controller(gesture)
-            box.append(bluetooth_button)
-            bluetooth_button.add_css_class("bluetooth-dashboard-buttons")
+            self.bluetooth_button.add_controller(gesture)
+            box.append(self.bluetooth_button)
+            self.bluetooth_button.add_css_class("bluetooth-dashboard-buttons")
 
         # Set the box as the child of the popover
         self.popover_dashboard.set_child(box)
@@ -115,13 +121,27 @@ class BluetoothDashboard(BasePlugin):
     def notify(self, title, message):
         Popen(["notify-send", title, message])
 
+    def disconnect_bluetooth_device(self, device_id):
+        cmd = "bluetoothctl disconnect {0}".format(device_id).split()
+        Popen(cmd)
+        self.bluetooth_button.set_icon_name("blueberry-tray-disabled")
+        self.bluetooth_button.remove_css_class("bluetooth-dashboard-buttons-connected")
+        self.obj.load_css_from_file()
+        return False
+
+    def connect_bluetooth_device(self, device_id):
+        cmd = "bluetoothctl connect {0}".format(device_id).split()
+        Popen(cmd)
+        self.bluetooth_button.set_icon_name("blueberry-tray")
+        self.bluetooth_button.add_css_class("bluetooth-dashboard-buttons-connected")
+        self.obj.load_css_from_file()
+        return False
+
     def on_bluetooth_clicked(self, gesture, *_):
         button = gesture.get_widget()
         device_name = button.get_label()
         device_id = self.bluetooth_buttons[device_name]
-        cmd = "bluetoothctl connect {0}".format(device_id).split()
-        Popen(cmd)
-
+        GLib.idle_add(self.connect_bluetooth_device, device_id)
         # this part is for disconnect if the device is already connected
         # so the button will toggle connect/disconnect
         connected_devices = "bluetoothctl info".split()
@@ -135,8 +155,7 @@ class BluetoothDashboard(BasePlugin):
             self.notify(
                 "Bluetooth plugin", f"Disconnecting bluetooth device: {device_name}"
             )
-            cmd = "bluetoothctl disconnect {0}".format(device_id).split()
-            Popen(cmd)
+            GLib.idle_add(self.disconnect_bluetooth_device, device_id)
         else:
             self.notify(
                 "Bluetooth plugin", f"Connecting bluetooth device: {device_name}"
@@ -155,8 +174,3 @@ class BluetoothDashboard(BasePlugin):
 
     def popover_is_closed(self, *_):
         return
-
-    def on_show_searchbar_action_actived(self, action, parameter):
-        self.searchbar.set_search_mode(
-            True
-        )  # Ctrl+F To Active show_searchbar and show searchbar
