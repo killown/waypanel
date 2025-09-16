@@ -161,10 +161,6 @@ class TaskbarPlugin(BasePlugin):
         return False
 
     def create_taskbar_button(self, view):
-        # if ipc is not connected, just skip until it's ready
-        if not self.ipc.ping():
-            return
-
         app_id = view["app-id"]
         title = view["title"]
         if not title:
@@ -688,12 +684,6 @@ class TaskbarPlugin(BasePlugin):
 
     def handle_view_event(self, msg):
         """Handle view-related IPC events."""
-        if not self.ipc.is_connected():
-            self.logger.error(
-                "Taskbar Plugin Handle view event: Wayfire IPC not connected"
-            )
-            self.plugin_loader.reload_plugin("taskbar")
-            return
 
         view = msg.get("view")
 
