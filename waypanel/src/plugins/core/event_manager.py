@@ -46,6 +46,10 @@ class EventManagerPlugin(BasePlugin):
         Args:
             msg (dict): The event message containing details about the event.
         """
+        # skip the event if no connection
+        if not self.ipc.is_connected():
+            return
+
         event_type = msg.get("event")
 
         # Notify subscribers
