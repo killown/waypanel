@@ -14,7 +14,7 @@ MAIN_PY="$SCRIPT_DIR/waypanel/main.py"
 find_system_path() {
     local app_name="$1"
     
-    # First, check if we're running from a Nix result directory or development environment
+    # First, check if we're running from a development environment
     if [ -f "$SCRIPT_DIR/requirements.txt" ] || [ -f "$SCRIPT_DIR/waypanel/main.py" ]; then
         echo "$SCRIPT_DIR"
         return 0
@@ -28,9 +28,9 @@ find_system_path() {
         "/opt/$app_name"
     )
     
-    # Nix store paths (both direct and result symlinks)
+    # Nix store paths
     if [ -d /nix/store ]; then
-        # Check if we're in a nix-shell or nix-developed environment
+        # Check if we're in a nix-shell environment
         if [ -n "$IN_NIX_SHELL" ]; then
             echo "$SCRIPT_DIR"
             return 0
@@ -42,20 +42,6 @@ find_system_path() {
             echo "$nix_path"
             return 0
         fi
-        
-        # Look for result symlinks that might point to the actual package
-        result_paths=$(find . -maxdepth 1 -name "result" -type l 2>/dev/null)
-        for result in $result_paths; do
-            if resolved=$(readlink -f "$result" 2>/dev/null) && [ -d "$resolved" ]; then
-                if [ -d "$resolved/lib/$app_name" ]; then
-                    echo "$resolved/lib/$app_name"
-                    return 0
-                elif [ -d "$resolved" ]; then
-                    echo "$resolved"
-                    return 0
-                fi
-            fi
-        done
     fi
     
     # Fallback for traditional installations
@@ -73,21 +59,13 @@ find_system_path() {
 
 SYSTEM_PATH=$(find_system_path "$APP_NAME")
 
-# Debug info
-echo "[DEBUG] Using system path: $SYSTEM_PATH"
-echo "[DEBUG] Script dir: $SCRIPT_DIR"
-echo "[DEBUG] Requirements file: $REQ_FILE"
-echo "[DEBUG] Main py: $MAIN_PY"
-
 # Fallback paths for dev/system installs
 if [ ! -f "$REQ_FILE" ] && [ -f "$SYSTEM_PATH/requirements.txt" ]; then
     REQ_FILE="$SYSTEM_PATH/requirements.txt"
-    echo "[INFO] Using requirements from: $REQ_FILE"
 fi
 
 if [ ! -f "$MAIN_PY" ] && [ -f "$SYSTEM_PATH/main.py" ]; then
     MAIN_PY="$SYSTEM_PATH/main.py"
-    echo "[INFO] Using main.py from: $MAIN_PY"
 fi
 
 # Final check - if neither local nor system files exist, error out
@@ -219,27 +197,64 @@ if [ ! -f "$VENV_DIR/.requirements_installed" ] || [ "$REQ_FILE" -nt "$VENV_DIR/
     touch "$VENV_DIR/.requirements_installed"
 fi
 
-# ===== Run the app =====
-# For Nix environments, use the environment's settings
-if [ -d /nix/store ]; then
-    # Use existing environment variables if in nix-shell
-    if [ -z "$IN_NIX_SHELL" ]; then
-        # Try to set common Nix environment variables if not already set
+# ===== NixOS Environment Setup =====
+setup_nixos_environment() {
+    # Only set up environment if we're not already in a nix-shell
+    if [ -d /nix/store ] && [ -z "$IN_NIX_SHELL" ]; then
+        echo "[INFO] Setting up NixOS environment..."
+        
+        # Find relevant packages in nix store
+        local gtk_packages=$(find /nix/store -maxdepth 1 -name "*gtk*" -type d | head -n5)
+        local glib_packages=$(find /nix/store -maxdepth 1 -name "*glib*" -type d | head -n5)
+        local gir_packages=$(find /nix/store -maxdepth 1 -name "*gobject-introspection*" -type d | head -n5)
+        
+        # Build library path
+        local lib_paths=""
+        for pkg in $gtk_packages $glib_packages $gir_packages; do
+            if [ -d "$pkg/lib" ]; then
+                lib_paths="$lib_paths:$pkg/lib"
+            fi
+        done
+        
+        if [ -n "$lib_paths" ]; then
+            export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}${lib_paths}"
+        fi
+        
+        # Set GI_TYPELIB_PATH if not set
         if [ -z "$GI_TYPELIB_PATH" ]; then
-            possible_typelib_paths=$(find /nix/store -name "*-typelib" -type d 2>/dev/null | head -n1)
-            if [ -n "$possible_typelib_paths" ]; then
-                export GI_TYPELIB_PATH="$possible_typelib_paths"
+            local typelib_paths=$(find /nix/store -name "*-typelib" -type d 2>/dev/null | head -n3 | tr '\n' ':')
+            if [ -n "$typelib_paths" ]; then
+                export GI_TYPELIB_PATH="$typelib_paths"
             fi
         fi
         
+        # Set GDK_PIXBUF_MODULE_FILE if not set
         if [ -z "$GDK_PIXBUF_MODULE_FILE" ]; then
-            gdk_pixbuf_file=$(find /nix/store -name "loaders.cache" 2>/dev/null | head -n1)
+            local gdk_pixbuf_file=$(find /nix/store -name "loaders.cache" 2>/dev/null | head -n1)
             if [ -n "$gdk_pixbuf_file" ]; then
                 export GDK_PIXBUF_MODULE_FILE="$gdk_pixbuf_file"
             fi
         fi
+        
+        # Set XDG_DATA_DIRS for icons and themes
+        if [ -z "$XDG_DATA_DIRS" ]; then
+            local data_dirs=$(find /nix/store -name "share" -type d | head -n5 | tr '\n' ':')
+            if [ -n "$data_dirs" ]; then
+                export XDG_DATA_DIRS="$data_dirs:/usr/share:/usr/local/share"
+            fi
+        fi
     fi
+}
+
+# Setup environment for all platforms
+if [ -d /nix/store ]; then
+    setup_nixos_environment
 fi
 
-echo "[INFO] Starting waypanel..."
+# ===== Run the app =====
+echo "[INFO] Starting $APP_NAME..."
+echo "[DEBUG] PYTHONPATH: $PYTHONPATH"
+echo "[DEBUG] Main script: $MAIN_PY"
+echo "[DEBUG] Requirements: $REQ_FILE"
+
 exec python "$MAIN_PY" "$@"
