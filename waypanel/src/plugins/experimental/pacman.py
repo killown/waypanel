@@ -98,6 +98,12 @@ class UpdateCheckerPlugin(BasePlugin):
             count = len(lines)
             self.update_count = count
             self._update_ui(count)
+        except subprocess.TimeoutExpired:
+            self.logger.warning("Update check timed out - no internet connection?")
+            self._update_ui(-1)
+        except FileNotFoundError:
+            self.logger.warning("checkupdates command not found")
+            self._update_ui(-1)
         except Exception as e:
             self.logger.error(f"Failed to check updates: {e}")
             self._update_ui(-1)
