@@ -362,26 +362,32 @@ class Utils(Adw.Application):
 
     def run_cmd(self, cmd: str) -> None:
         """
-        Run a shell command using subprocess.Popen in a separate thread to avoid blocking the main GTK thread.
-        Ensures the process is detached from the panel by creating a new session.
+        Execute a shell command without blocking the main GTK thread.
+
+        If the environment variable ``WAYFIRE_SOCKET`` is set, the command is sent
+        through Wayfire’s IPC and detached automatically.
+        If ``SWAYSOCK`` is set, the command is executed via ``subprocess.Popen`` in
+        a new session to detach it from the panel process.
 
         Args:
-            cmd (str): The shell command to execute.
+            cmd (str): Shell command to execute.
         """
         try:
             # Start the subprocess with a new session to detach it from the panel
-            process = subprocess.Popen(
-                cmd,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,  # Ensure output is returned as strings
-                start_new_session=True,  # Detach the process from the parent
-            )
+            if os.getenv("WAYFIRE_SOCKET"):
+                pid = self.ipc.run_cmd(cmd)
+                self.logger.info(f"Command started with PID: {pid['pid']}")
 
-            # Optionally, log the process details or handle errors
-            self.logger.info(f"Command started with PID: {process.pid}")
-
+            if os.getenv("SWAYSOCK"):
+                process = subprocess.Popen(
+                    cmd,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,  # Ensure output is returned as strings
+                    start_new_session=True,  # Detach the process from the parent
+                )
+                self.logger.info(f"Command started with PID: {process.pid}")
         except Exception as e:
             self.logger.error(
                 error=e, message=f"Error running command: {cmd}", level="error"
@@ -2310,3 +2316,29 @@ class Utils(Adw.Application):
         except Exception as e:
             self.logger.error(f"Failed to ping Wayfire IPC: {e}")
         return False
+
+    def has_output_fullscreen_view(self, output_id):
+        """
+        Check if there is any fullscreen view on the specified output.
+
+        This method retrieves the list of views and checks
+        if any view is currently fullscreen on the specified output. It does not
+        consider the workspace of the view; it only checks the fullscreen status
+        and output ID.
+
+        Args:
+            output_id (str): The ID of the output to check for fullscreen views.
+
+        Returns:
+            bool: True if there is at least one fullscreen view on the specified
+                  output, otherwise False.
+        """
+        list_views = self.ipc.list_views()
+        if not list_views:
+            return
+        if any(
+            True
+            for i in list_views
+            if i["fullscreen"] is True and i["output-id"] == output_id
+        ):
+            return True
