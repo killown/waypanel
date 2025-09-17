@@ -16,6 +16,8 @@ from typing import (
 
 from functools import wraps
 
+from gi.repository import GLib
+
 logger = logging.getLogger(__name__)
 
 
@@ -143,6 +145,7 @@ class IPC:
 
     def __init__(self):
         self.compositor_name = self.setup_compositor_socket()
+        GLib.timeout_add(1, self.ensure_wayfire_ipc_connection)
 
     def setup_compositor_socket(self):
         if os.getenv("WAYFIRE_SOCKET"):
@@ -171,6 +174,11 @@ class IPC:
 
         self.sock = SwayIPC()
         self.utils = SwayUtils(self.sock)
+
+    def ensure_wayfire_ipc_connection(self):
+        """Ensure there is an active IPC connection, creating a new IPC instance if needed."""
+        if not self.sock.is_connected():
+            self.connect_wayfire_ipc()
 
     def get_view(self, id: int) -> Optional[Dict[str, Any]]:
         """Get the view by the given id"""
@@ -249,6 +257,10 @@ class IPC:
         if hasattr(self.sock, "configure_view"):
             return self.sock.configure_view(view_id, x, y, w, h, output_id)  # pyright: ignore
 
+    def has_output_fullscreen_view(self, output_id: Optional[int] = None) -> bool:
+        """Check if the specified output has fullscreen views"""
+        return self.wf_utils.has_output_fullscreen_view(output_id)
+
     def go_workspace_set_focus(self, view_id: int) -> None:
         """Set focus to a view and go to its workspace"""
         return self.wf_utils.go_workspace_set_focus(view_id)
@@ -263,6 +275,10 @@ class IPC:
     def move_cursor(self, x: int, y: int) -> None:
         """Move the cursor to the specified coordinates"""
         return self.stipc.move_cursor(x, y)
+
+    def run_cmd(self, cmd: str) -> None:
+        """Run a shell command using subprocess.Popen in a separate thread to avoid blocking the main GTK thread."""
+        return self.stipc.run_cmd(cmd)
 
     def click_button(self, button: str, mode: str) -> None:
         """Simulate mouse button click"""
