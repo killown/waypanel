@@ -9,14 +9,43 @@ VENV_DIR="$HOME/.local/share/$APP_NAME/venv"
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 REQ_FILE="$SCRIPT_DIR/requirements.txt"
 MAIN_PY="$SCRIPT_DIR/waypanel/main.py"
-SYSTEM_PATH="/usr/lib/$APP_NAME"
+
+# ===== Smart system path detection =====
+find_system_path() {
+    local app_name="$1"
+    local paths=(
+        "/usr/lib/$app_name"
+        "/usr/lib64/$app_name"
+        "/usr/local/lib/$app_name"
+        "/opt/$app_name"
+    )
+    
+    # NixOS support
+    if [ -d /nix/store ]; then
+        nix_path=$(find /nix/store -path "*/$app_name" -type d 2>/dev/null | head -n1)
+        [ -n "$nix_path" ] && paths=("$nix_path" "${paths[@]}")
+    fi
+    
+    for path in "${paths[@]}"; do
+        if [ -d "$path" ]; then
+            echo "$path"
+            return 0
+        fi
+    done
+    
+    # Fallback for error messages
+    echo "/usr/lib/$app_name"
+    return 1
+}
+
+SYSTEM_PATH=$(find_system_path "$APP_NAME")
 
 # Fallback paths for dev/system installs
 if [ ! -f "$REQ_FILE" ]; then
-  REQ_FILE="$SYSTEM_PATH/requirements.txt"
+    REQ_FILE="$SYSTEM_PATH/requirements.txt"
 fi
 if [ ! -f "$MAIN_PY" ]; then
-  MAIN_PY="$SYSTEM_PATH/main.py"
+    MAIN_PY="$SYSTEM_PATH/main.py"
 fi
 
 export PYTHONPATH="$SCRIPT_DIR:$SYSTEM_PATH"
