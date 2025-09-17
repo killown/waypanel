@@ -35,10 +35,14 @@ TEMP_DIRS = {
 }
 CONFIG_SUBDIR = "waypanel/config"
 DEFAULT_SYSTEM_CONFIG = Path(
-    os.getenv(
-        "WAYPANEL_SYSTEM_CONFIG", "/run/current-system/sw/share/waypanel/default-config"
-    )
+    os.getenv("WAYPANEL_SYSTEM_CONFIG", "/usr/share/waypanel/default-config")
 )
+
+if os.path.exists("/nix/store") and not DEFAULT_SYSTEM_CONFIG.exists():
+    # Try NixOS system path
+    nix_system_config = Path("/run/current-system/sw/share/waypanel/default-config")
+    if nix_system_config.exists():
+        DEFAULT_SYSTEM_CONFIG = nix_system_config
 
 logger = setup_logging(level=logging.INFO)
 sock = IPC()
@@ -348,12 +352,51 @@ def get_monitor_name(config, sock_obj):
 
 
 def find_config_path():
-    home = DEFAULT_CONFIG_PATH / "config.toml"
-    if home.exists():
-        return str(home)
+    # First check user config directory
+    home_config = DEFAULT_CONFIG_PATH / "config.toml"
+    if home_config.exists():
+        return str(home_config)
+
+    # Check system-wide config locations (for NixOS and traditional distros)
+    system_config_paths = [
+        "/usr/lib/waypanel/waypanel/config/config.toml",
+    ]
+
+    # NixOS-specific paths
+    if os.path.exists("/nix/store"):
+        # Look for config in nix store (common locations)
+        nix_config_paths = [
+            "/run/current-system/sw/share/waypanel/config.toml",
+            "/nix/var/nix/profiles/system/sw/share/waypanel/config.toml",
+        ]
+        system_config_paths.extend(nix_config_paths)
+
+        # Also search in nix store for any waypanel config
+        try:
+            nix_configs = list(Path("/nix/store").glob("*/share/waypanel/config.toml"))
+            if nix_configs:
+                system_config_paths.extend(str(p) for p in nix_configs)
+        except Exception:
+            pass
+
+    # Check system config paths
+    for config_path in system_config_paths:
+        if os.path.exists(config_path):
+            return config_path
+
+    # Fallback: check relative to script (for development)
     script_dir = Path(__file__).resolve().parent
-    default = script_dir.parent / "config" / "config.toml"
-    return str(default)
+    dev_config = script_dir.parent / "config" / "config.toml"
+    if dev_config.exists():
+        return str(dev_config)
+
+    # Final fallback: use environment variable or default
+    env_config = os.getenv("WAYPANEL_CONFIG_PATH")
+    if env_config and os.path.exists(env_config):
+        return env_config
+
+    # If nothing found, return the user config path (will trigger create_first_config)
+    return str(home_config)
 
 
 def main():
