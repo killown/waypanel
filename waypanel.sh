@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 # Kill existing instance
@@ -24,26 +24,37 @@ export PYTHONPATH="$SCRIPT_DIR:$SYSTEM_PATH"
 # ===== GTK4 Layer Shell library detection =====
 GTK_LIB=""
 
-# Common system + local paths
-CANDIDATE_LIBS=(
-  "/usr/lib/libgtk4-layer-shell.so"
-  "/usr/lib/x86_64-linux-gnu/libgtk4-layer-shell.so"
-  "/usr/lib64/libgtk4-layer-shell.so"
-  "$HOME/.local/lib/gtk4-layer-shell/lib/libgtk4-layer-shell.so"
-)
+# Function to find GTK4 Layer Shell library
+find_gtk_layer_shell() {
+  # Common system + local paths
+  local candidate_libs=(
+    "/usr/lib/libgtk4-layer-shell.so"
+    "/usr/lib/x86_64-linux-gnu/libgtk4-layer-shell.so"
+    "/usr/lib64/libgtk4-layer-shell.so"
+    "$HOME/.local/lib/gtk4-layer-shell/lib/libgtk4-layer-shell.so"
+  )
 
-# Check candidate paths
-for lib in "${CANDIDATE_LIBS[@]}"; do
-  if [ -f "$lib" ]; then
-    GTK_LIB="$lib"
-    break
+  # Check candidate paths
+  for lib in "${candidate_libs[@]}"; do
+    if [ -f "$lib" ]; then
+      echo "$lib"
+      return 0
+    fi
+  done
+
+  # NixOS support: search Nix store
+  if [ -d /nix/store ]; then
+    local nix_lib=$(find /nix/store -name "libgtk4-layer-shell.so" 2>/dev/null | head -n1)
+    if [ -n "$nix_lib" ]; then
+      echo "$nix_lib"
+      return 0
+    fi
   fi
-done
 
-# NixOS support: search Nix store
-if [ -z "$GTK_LIB" ] && [ -d /nix/store ]; then
-  GTK_LIB=$(find /nix/store -name libgtk4-layer-shell.so | head -n1)
-fi
+  return 1
+}
+
+GTK_LIB=$(find_gtk_layer_shell) || true
 
 if [ -z "$GTK_LIB" ]; then
   echo "[ERROR] libgtk4-layer-shell.so not found."
@@ -63,6 +74,8 @@ ALT_DEV_CONFIG="$SCRIPT_DIR/config"
 
 if [ ! -f "$CONFIG_FILE" ]; then
   echo "[INFO] Config not found at $CONFIG_FILE. Attempting to copy defaults..."
+  
+  # Try different config sources in order of preference
   if [ -d "$SYSTEM_CONFIG" ]; then
     mkdir -p "$CONFIG_DIR"
     cp -r "$SYSTEM_CONFIG"/* "$CONFIG_DIR/"
@@ -76,8 +89,21 @@ if [ ! -f "$CONFIG_FILE" ]; then
     cp -r "$ALT_DEV_CONFIG"/* "$CONFIG_DIR/"
     echo "[INFO] Default config copied from alt dev path: $ALT_DEV_CONFIG"
   else
-    echo "[ERROR] No default config found." >&2
-    exit 1
+    # For NixOS, try to find config in nix store
+    if [ -d /nix/store ]; then
+      nix_config=$(find /nix/store -path "*/$APP_NAME/config" 2>/dev/null | head -n1)
+      if [ -n "$nix_config" ] && [ -d "$nix_config" ]; then
+        mkdir -p "$CONFIG_DIR"
+        cp -r "$nix_config"/* "$CONFIG_DIR/"
+        echo "[INFO] Default config copied from Nix store: $nix_config"
+      else
+        echo "[ERROR] No default config found." >&2
+        exit 1
+      fi
+    else
+      echo "[ERROR] No default config found." >&2
+      exit 1
+    fi
   fi
 fi
 
@@ -90,11 +116,46 @@ fi
 
 source "$VENV_DIR/bin/activate"
 
-if [ ! -f "$VENV_DIR/.requirements_installed" ]; then
+# Check if we need to install dependencies
+if [ ! -f "$VENV_DIR/.requirements_installed" ] || [ "$REQ_FILE" -nt "$VENV_DIR/.requirements_installed" ]; then
   echo "[INFO] Installing dependencies..."
-  pip install --no-cache-dir -r "$REQ_FILE"
+  
+  # For NixOS, we might need to set up special environment
+  if [ -d /nix/store ]; then
+    # Try to use nix-shell to get build dependencies if available
+    if command -v nix-shell >/dev/null 2>&1; then
+      echo "[INFO] Using nix-shell to ensure build dependencies are available"
+      # Create a temporary nix shell for the build process
+      nix-shell -p python3 gcc pkg-config libffi --run "pip install --no-cache-dir -r \"$REQ_FILE\""
+    else
+      pip install --no-cache-dir -r "$REQ_FILE"
+    fi
+  else
+    pip install --no-cache-dir -r "$REQ_FILE"
+  fi
+  
   touch "$VENV_DIR/.requirements_installed"
 fi
 
 # ===== Run the app =====
-exec python "$MAIN_PY" "$@" >/tmp/waypanel.log 2>&1
+# For NixOS, we might need additional environment variables
+if [ -d /nix/store ]; then
+  # Set GI_TYPELIB_PATH for GObject introspection if not already set
+  if [ -z "$GI_TYPELIB_PATH" ]; then
+    # Try to find common typelib paths in nix store
+    possible_typelib_paths=$(find /nix/store -name "*-typelib" -type d 2>/dev/null | tr '\n' ':')
+    if [ -n "$possible_typelib_paths" ]; then
+      export GI_TYPELIB_PATH="$possible_typelib_paths$GI_TYPELIB_PATH"
+    fi
+  fi
+  
+  # Set GDK_PIXBUF_MODULE_FILE if not already set
+  if [ -z "$GDK_PIXBUF_MODULE_FILE" ]; then
+    gdk_pixbuf_file=$(find /nix/store -name "loaders.cache" 2>/dev/null | head -n1)
+    if [ -n "$gdk_pixbuf_file" ]; then
+      export GDK_PIXBUF_MODULE_FILE="$gdk_pixbuf_file"
+    fi
+  fi
+fi
+
+exec python "$MAIN_PY" "$@"
