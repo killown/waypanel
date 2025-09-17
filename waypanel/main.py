@@ -5,7 +5,6 @@ import asyncio
 import threading
 import shutil
 import subprocess
-from ctypes import CDLL
 import toml
 import orjson as json
 import gi
@@ -226,21 +225,9 @@ def verify_required_wayfire_plugins():
 
 
 def load_panel(ipc_server):
-    # FIXME: need refactor to work well any supported compositor
-    """Load and configure the panel with proper typelib paths."""
-    primary_path = os.path.expanduser(
-        f"{GTK_LAYER_SHELL_INSTALL_PATH}/lib/girepository-1.0"
-    )
-    fallback_path = os.path.expanduser(
-        f"{GTK_LAYER_SHELL_INSTALL_PATH}/lib64/girepository-1.0"
-    )
-
-    set_gi_typelib_path(primary_path, fallback_path)
-
     try:
         # Configure GI requirements
         gi.require_version("Gio", "2.0")
-        CDLL("libgtk4-layer-shell.so")
         gi.require_version("Gtk4LayerShell", "1.0")
         gi.require_version("Gtk", "4.0")
         gi.require_version("Gdk", "4.0")
@@ -288,55 +275,6 @@ def load_panel(ipc_server):
     except ImportError as e:
         logger.error(f"Failed to load panel: {e}", exc_info=True)
         raise
-
-
-def layer_shell_check():
-    """Verify and install gtk4-layer-shell if missing."""
-    install_path = os.path.expanduser(GTK_LAYER_SHELL_INSTALL_PATH)
-    temp_dir = TEMP_DIRS["gtk_layer_shell"]
-    build_dir = "build"
-
-    if os.path.exists(install_path):
-        logger.info("gtk4-layer-shell is already installed")
-        return
-
-    logger.info("gtk4-layer-shell not found. Installing...")
-
-    try:
-        if os.path.exists(temp_dir):
-            logger.debug(f"Cleaning existing temporary directory: {temp_dir}")
-            shutil.rmtree(temp_dir)
-
-        logger.info(f"Cloning repository: {GTK_LAYER_SHELL_REPO}")
-        subprocess.run(["git", "clone", GTK_LAYER_SHELL_REPO, temp_dir], check=True)
-
-        os.chdir(temp_dir)
-        logger.info("Configuring build with Meson...")
-        subprocess.run(
-            [
-                "meson",
-                "setup",
-                f"--prefix={install_path}",
-                "-Dexamples=true",
-                "-Ddocs=true",
-                "-Dtests=true",
-                build_dir,
-            ],
-            check=True,
-        )
-
-        logger.info("Building with Ninja...")
-        subprocess.run(["ninja", "-C", build_dir], check=True)
-
-        logger.info("Installing...")
-        subprocess.run(["ninja", "-C", build_dir, "install"], check=True)
-
-        logger.info("gtk4-layer-shell installation complete")
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Installation failed: {e}", exc_info=True)
-        raise
-    finally:
-        os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
 def create_first_config():
@@ -403,36 +341,6 @@ def check_config_path():
     if not os.path.exists(config_path):
         logger.info("Config directory not found, creating initial configuration")
         create_first_config()
-
-
-def find_typelib_path(base_path):
-    """Search for typelib files in the given directory tree."""
-    logger.debug(f"Searching for typelib files in: {base_path}")
-    for root, _, files in os.walk(base_path):
-        for file in files:
-            if file.endswith(".typelib"):
-                logger.debug(f"Found typelib at: {root}")
-                return root
-    return None
-
-
-def set_gi_typelib_path(primary_path, fallback_path):
-    """Set GI_TYPELIB_PATH environment variable."""
-    primary_typelib_path = find_typelib_path(primary_path)
-    if primary_typelib_path:
-        os.environ["GI_TYPELIB_PATH"] = primary_typelib_path
-        logger.info(f"GI_TYPELIB_PATH set to: {primary_typelib_path}")
-        return
-
-    fallback_typelib_path = find_typelib_path(fallback_path)
-    if fallback_typelib_path:
-        os.environ["GI_TYPELIB_PATH"] = fallback_typelib_path
-        logger.info(f"GI_TYPELIB_PATH set to fallback path: {fallback_typelib_path}")
-        return
-
-    raise FileNotFoundError(
-        f"No .typelib files found in {primary_path} or {fallback_path}"
-    )
 
 
 def append_to_env(app_name, monitor_name, env_var="waypanel"):
@@ -543,13 +451,11 @@ def main():
             config_observer = start_config_watcher()
         if os.getenv("WAYFIRE_SOCKET"):
             verify_required_wayfire_plugins()
-        layer_shell_check()
         check_config_path()
         ipc_server = start_ipc_server(logger)
 
         logger.info("Loading panel...")
         panel = load_panel(ipc_server)
-
         logger.info("Starting panel...")
         panel.run(logger=logger)
     except Exception as e:
