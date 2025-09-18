@@ -1,7 +1,5 @@
 from setuptools import find_packages, setup
 
-# Read the requirements from the requirements.txt file
-
 
 def read_requirements():
     with open("requirements.txt") as f:
@@ -10,7 +8,7 @@ def read_requirements():
 
 setup(
     name="waypanel",
-    version="0.21.0",
+    version="0.9",
     author="killown",
     author_email="systemofdown@gmail.com",
     description="A Wayfire panel that behaves like a shell",
@@ -22,8 +20,8 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.6",
-    install_requires=read_requirements(),  # Reading from requirements.txt
+    python_requires=">=3.12",
+    install_requires=read_requirements(),
     extras_require={
         "dev": [
             "pygobject-stubs[Gtk4,Gdk]",
@@ -35,5 +33,5 @@ setup(
         ],
     },
     packages=find_packages(),
-    include_package_data=True,  # Include files specified in MANIFEST.in
+    include_package_data=True,
 )
