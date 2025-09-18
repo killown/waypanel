@@ -314,17 +314,14 @@ class TaskbarPlugin(BasePlugin):
 
         app_id = view.get("app-id")
         title = view.get("title")
+        initial_title = title.split()[0]
 
         if not title or not view_id:
             return
 
-        initial_title = title.split()[0]
         icon_name = self.utils.get_icon(app_id, initial_title, title)
-
         if icon_name is None:
-            icon_name = self.utils.get_nearest_icon_name(app_id)
-            if icon_name is None:
-                return
+            return
 
         title = self.utils.filter_utf_for_gtk(view.get("title", ""))
         if not title:
