@@ -74,7 +74,7 @@ ALT_DEV_CONFIG="$SCRIPT_DIR/config"
 
 if [ ! -f "$CONFIG_FILE" ]; then
   echo "[INFO] Config not found at $CONFIG_FILE. Attempting to copy defaults..."
-  
+
   # Try different config sources in order of preference
   if [ -d "$SYSTEM_CONFIG" ]; then
     mkdir -p "$CONFIG_DIR"
@@ -124,7 +124,7 @@ if [ ! -d /nix/store ] && { [ ! -f "$VENV_DIR/.requirements_installed" ] || [ "$
 fi
 
 # ===== Run the app =====
- # For NixOS, we might need additional environment variables
+# For NixOS, we might need additional environment variables
 if [ -d /nix/store ]; then
   # Set GI_TYPELIB_PATH for GObject introspection if not already set
   if [ -z "$GI_TYPELIB_PATH" ]; then
@@ -134,7 +134,7 @@ if [ -d /nix/store ]; then
       export GI_TYPELIB_PATH="$possible_typelib_paths$GI_TYPELIB_PATH"
     fi
   fi
-  
+
   # Set GDK_PIXBUF_MODULE_FILE if not already set
   if [ -z "$GDK_PIXBUF_MODULE_FILE" ]; then
     gdk_pixbuf_file=$(find /nix/store -name "loaders.cache" 2>/dev/null | head -n1)
@@ -144,4 +144,5 @@ if [ -d /nix/store ]; then
   fi
 fi
 
-exec python "$MAIN_PY" "$@"
+exec python -m waypanel.main "$@"
+
