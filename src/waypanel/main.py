@@ -105,7 +105,7 @@ def start_config_watcher():
     handler = ConfigReloadHandler(restart_application, wayfire_ini)
     observer = Observer()
     observer.schedule(handler, str(wayfire_ini.parent), recursive=False)
-    # Auto reload the panel on config changes, disabled by default
+    # Auto reload the panel on config saving,
     # observer.start()
     return observer
 

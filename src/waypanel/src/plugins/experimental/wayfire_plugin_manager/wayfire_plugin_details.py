@@ -1,7 +1,6 @@
 import os
 import re
 import toml
-import math
 from gi.repository import Gtk, Pango, GLib, Gio, Gdk
 from xml.etree import ElementTree as ET
 from src.plugins.core._base import BasePlugin
@@ -606,19 +605,23 @@ class PluginDetailsHandler(BasePlugin):
     def on_bool_change(self, switch, _pspec, key):
         val = "true" if switch.get_active() else "false"
         self.ipc.set_option_values({key: val})
+        self._save_value_to_toml(key, self.to_bool(val))  # Add this line
 
     def on_numeric_change(self, spin, key):
         val = str(round(spin.get_value()))
         self.ipc.set_option_values({key: val})
+        self._save_value_to_toml(key, float(val))  # Add this line
 
     def on_string_change(self, entry, key):
         val = entry.get_text()
         self.ipc.set_option_values({key: val})
+        self._save_value_to_toml(key, val)  # Add this line
 
     def on_enum_change(self, combo, key):
         val = combo.get_active_id()
         if val is not None:
             self.ipc.set_option_values({key: val})
+            self._save_value_to_toml(key, val)  # Add this line
 
     def on_edit_list(self, button, key, current_value):
         dialog = Gtk.Dialog(title=f"Edit: {key}")

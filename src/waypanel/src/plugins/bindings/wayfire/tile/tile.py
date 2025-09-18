@@ -1,3 +1,4 @@
+from gi.repository.GLib import E
 from src.plugins.core._base import BasePlugin
 from src.plugins.core.event_handler_decorator import subscribe_to_event
 from wayfire.extra.ipc_utils import WayfireUtils
@@ -13,7 +14,7 @@ ADJUST_LAYOUT = True
 
 KEYBIND = "<alt> KEY_TAB"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-TOGGLE_SCRIPT = os.path.join(SCRIPT_DIR, "toggle_maximize.py")
+TOGGLE_SCRIPT = os.path.join(SCRIPT_DIR, "_toggle_maximize.py")
 
 
 def get_plugin_placement(panel_instance):
@@ -127,7 +128,7 @@ class Tile(BasePlugin):
                 return
 
             if state:
-                self.wf_utils.tile_maximize_all_from_active_workspace(True)
+                self.utils.tile_maximize_all_from_active_workspace(True)
         except Exception as e:
             self.logger.error(f"Error handling scale activation: {e}")
 
@@ -140,10 +141,8 @@ class Tile(BasePlugin):
                 if ADJUST_LAYOUT:
                     self.adjust_tile_layout(view)
                 # this will be faster to maximized focused first than maximizing all
-                self.ipc.tile_show_maximized(view["id"], MAXIMIZE_BY_DEFAULT)
+                self.ipc.set_tiling_maximized(view["id"], MAXIMIZE_BY_DEFAULT)
                 # after the focused is maximized, then we maximize the remaining views
-                self.wf_utils.tile_maximize_all_from_active_workspace(
-                    MAXIMIZE_BY_DEFAULT
-                )
+                self.utils.tile_maximize_all_from_active_workspace(MAXIMIZE_BY_DEFAULT)
         except Exception as e:
             self.logger.error(f"Error handling view mapped: {e}")

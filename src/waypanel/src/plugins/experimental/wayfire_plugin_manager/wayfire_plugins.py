@@ -4,6 +4,7 @@ from gi.repository import Gio, Gtk, Pango
 from src.plugins.core._base import BasePlugin
 import xml.etree.ElementTree as ET
 
+# === CONFIG ===
 WAYFIRE_METADATA_DIR = "/usr/share/wayfire/metadata"
 WAYFIRE_TOML_PATH = os.path.expanduser("~/.config/waypanel/wayfire/wayfire.toml")
 
@@ -12,10 +13,12 @@ DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
+    """Plugins for the Wayfire settings UI do not have a visible panel component."""
     return "top-panel-systray", 4
 
 
 def initialize_plugin(panel_instance):
+    """Entry point for the plugin system."""
     if ENABLE_PLUGIN:
         plugin = WayfireRealtimePluginsPlugin(panel_instance)
         plugin.load_plugins_from_ipc()
@@ -23,12 +26,146 @@ def initialize_plugin(panel_instance):
     return None
 
 
+class PluginListPopover(Gtk.Popover):
+    """
+    A dedicated Gtk.Popover subclass to handle the plugin list UI.
+    Encapsulates all UI building, search filtering, and content management.
+    """
+
+    def __init__(self, main_plugin, plugins_data):
+        super().__init__()
+        self.main_plugin = main_plugin
+        self.plugins_data = plugins_data
+        self.set_has_arrow(True)
+        self.add_css_class("app-launcher-popover")
+
+        self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self.main_box.add_css_class("app-launcher-main-box")
+
+        self.searchbar = Gtk.SearchEntry(placeholder_text="Search plugins...")
+        self.searchbar.connect(
+            "search_changed", lambda _: self.flowbox.invalidate_filter()
+        )
+        self.main_box.append(self.searchbar)
+
+        scrolled = Gtk.ScrolledWindow(min_content_height=500, width_request=720)
+        self.flowbox = Gtk.FlowBox(
+            valign=Gtk.Align.START,
+            halign=Gtk.Align.FILL,
+            max_children_per_line=5,
+            selection_mode=Gtk.SelectionMode.NONE,
+            activate_on_single_click=True,
+        )
+        self.flowbox.add_css_class("app-launcher-flowbox")
+        self.flowbox.set_filter_func(self.filter_func)
+        self.flowbox.connect("child-activated", self.on_plugin_clicked)
+        scrolled.set_child(self.flowbox)
+        self.main_box.append(scrolled)
+
+        self.set_child(self.main_box)
+        self.update_popover_content(self.plugins_data)
+
+    def on_plugin_clicked(self, flowbox, child):
+        plugin_name = child.get_child().MYTEXT
+        self.main_plugin.plugins["wayfire_plugin_details"].open_plugin_config_window(
+            plugin_name
+        )
+        # We don't popdown the popover, allowing multiple windows to be opened.
+
+    def on_toggle(self, switch, _pspec, name):
+        """Pass the toggle event to the main plugin for state management."""
+        active = switch.get_active()
+        self.main_plugin.update_plugin_state(name, enable=active)
+
+    def update_popover_content(self, plugins_data):
+        """Removes existing content and rebuilds the popover with the latest data."""
+        self.flowbox.remove_all()
+        for plugin in plugins_data:
+            self._add_plugin_row(plugin)
+        self.flowbox.invalidate_filter()
+
+    def _add_plugin_row(self, plugin):
+        """Creates and adds a single plugin row (a button with icon, label, and switch) to the flowbox."""
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        vbox.set_halign(Gtk.Align.CENTER)
+        vbox.set_valign(Gtk.Align.CENTER)
+        vbox.set_margin_top(4)
+        vbox.set_margin_bottom(4)
+        vbox.add_css_class("app-launcher-vbox")
+        vbox.MYTEXT = plugin["name"]
+
+        icon_path = f"/usr/share/wcm/icons/plugin-{plugin['name']}.svg"
+        if os.path.exists(icon_path):
+            image = Gtk.Image.new_from_file(icon_path)
+        else:
+            image = Gtk.Image.new_from_icon_name("preferences-plugin-symbolic")
+
+        image.set_pixel_size(48)
+        image.add_css_class("app-launcher-icon-from-popover")
+        self.main_plugin.utils.add_cursor_effect(image)
+
+        label = Gtk.Label(label=plugin["name"])
+        label.set_max_width_chars(12)
+        label.set_ellipsize(Pango.EllipsizeMode.END)
+        label.add_css_class("app-launcher-label-from-popover")
+
+        status = Gtk.Label()
+        status.set_markup(
+            '<span size="small" foreground="green">● Enabled</span>'
+            if plugin["enabled"]
+            else '<span size="small" foreground="gray">● Disabled</span>'
+        )
+        status.set_halign(Gtk.Align.CENTER)
+
+        switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+        switch.set_active(plugin["enabled"])
+        switch.connect("notify::active", self.on_toggle, plugin["name"])
+
+        vbox.append(image)
+        vbox.append(label)
+        vbox.append(status)
+        vbox.append(switch)
+
+        self.flowbox.append(vbox)
+
+    def filter_func(self, child):
+        """Filters the visible options based on the search query."""
+        text = self.searchbar.get_text().lower()
+        if not text:
+            return True
+        plugin_name = child.get_child().MYTEXT
+        return text in plugin_name.lower()
+
+
 class WayfireRealtimePluginsPlugin(BasePlugin):
+    """
+    Manages Wayfire plugins, providing a popover UI to enable/disable
+    plugins and open their configuration windows.
+    """
+
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.popover = None
-        self.flowbox = None
-        self.plugin_icons = {
+        self.wf_plugins = []
+        self.active_plugin_names = set()
+
+        self.button = Gtk.Button()
+        self.main_widget = (self.button, "append")
+        self._setup_button()
+
+    def _setup_button(self):
+        """Configures the main button in the top panel."""
+        self.button.set_icon_name(
+            self.utils.set_widget_icon_name(
+                "wayfire_plugins", ["plugins", "xapp-prefs-plugins-symbolic"]
+            )
+        )
+        self.utils.add_cursor_effect(self.button)
+        self.button.connect("clicked", self.open_popover)
+
+    def parse_icon_name(self, name):
+        """Parses and returns a valid icon name for a plugin."""
+        icon_map = {
             "alpha": "plugin-alpha",
             "core": "plugin-core",
             "focus-steal-prevent": "plugin-wm-actions",
@@ -61,13 +198,6 @@ class WayfireRealtimePluginsPlugin(BasePlugin):
             "show-cursor": "plugin-wm-actions",
             "water": "plugin-water",
             "xdg-activation": "plugin-dbus_interface",
-            "autorotate-iio": "plugin-autorotate-iio",
-            "expo": "plugin-expo",
-            "foreign-toplevel": "plugin-dbus_interface",
-            "ipc-rules": "plugin-dbus_interface",
-            "pixdecor": "plugin-decoration",
-            "showrepaint": "plugin-showrepaint",
-            "wayfire-shell": "plugin-lxqt-shell",
             "zoom": "plugin-zoom",
             "autostart": "plugin-autostart",
             "extra-animations": "plugin-animate",
@@ -101,29 +231,7 @@ class WayfireRealtimePluginsPlugin(BasePlugin):
             "switch-kb-layouts": "plugin-keycolor",
             "wobbly": "plugin-wobbly",
         }
-        self.searchbar = None
-        self.wf_plugins = []  # {name, desc, icon, enabled}
-        self.active_plugin_names = set()
-
-        # Main button
-        self.button = Gtk.Button()
-        self.main_widget = (self.button, "append")
-        self._setup_button()
-
-    def _setup_button(self):
-        self.button.set_icon_name(
-            self.utils.set_widget_icon_name(
-                "wayfire_plugins", ["plugins", "xapp-prefs-plugins-symbolic"]
-            )
-        )
-        self.utils.add_cursor_effect(self.button)
-        self.button.connect("clicked", self.open_popover)
-
-    def parse_icon_name(self, name):
-        if name in self.plugin_icons:
-            return self.plugin_icons[name]
-        else:
-            return "preferences-plugin-symbolic"
+        return icon_map.get(name, "preferences-plugin-symbolic")
 
     def load_plugins_from_ipc(self):
         """Load all plugins and query Wayfire IPC for which are currently active."""
@@ -185,7 +293,7 @@ class WayfireRealtimePluginsPlugin(BasePlugin):
             config["core"] = {}
 
         enabled = [p["name"] for p in self.wf_plugins if p["enabled"]]
-        config["core"]["plugins"] = enabled  # TOML list
+        config["core"]["plugins"] = enabled
 
         try:
             with open(WAYFIRE_TOML_PATH, "w") as f:
@@ -220,138 +328,22 @@ class WayfireRealtimePluginsPlugin(BasePlugin):
             self.save_to_toml()
 
             if self.popover and self.popover.is_visible():
-                self._refresh_popover()
+                self.popover.update_popover_content(self.wf_plugins)
 
         except Exception as e:
             self.logger.error(f"Failed to update plugin '{plugin_name}' via IPC: {e}")
 
-    def create_popover(self):
-        self.popover = Gtk.Popover()
-        self.popover.add_css_class("app-launcher-popover")
-        self.popover.set_has_arrow(True)
-        self.popover.connect("closed", self.on_popover_closed)
-        self.popover.connect("notify::visible", self.on_popover_opened)
-
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        main_box.add_css_class("app-launcher-main-box")
-
-        self.searchbar = Gtk.SearchEntry(placeholder_text="Search plugins...")
-        self.searchbar.connect(
-            "search_changed", lambda _: self.flowbox.invalidate_filter()
-        )
-        main_box.append(self.searchbar)
-
-        scrolled = Gtk.ScrolledWindow(min_content_height=500, width_request=720)
-        self.flowbox = Gtk.FlowBox(
-            valign=Gtk.Align.START,
-            halign=Gtk.Align.FILL,
-            max_children_per_line=5,
-            selection_mode=Gtk.SelectionMode.NONE,
-            activate_on_single_click=True,
-        )
-        self.flowbox.add_css_class("app-launcher-flowbox")
-        self.flowbox.set_filter_func(self.filter_func)
-        self.flowbox.connect("child-activated", self.on_plugin_clicked)
-        scrolled.set_child(self.flowbox)
-        main_box.append(scrolled)
-
-        self.popover.set_child(main_box)
-        self._populate_flowbox()
-        return self.popover
-
-    def _populate_flowbox(self):
-        self.flowbox.remove_all()
-        for plugin in self.wf_plugins:
-            self._add_plugin_row(plugin)
-
-    def _add_plugin_row(self, plugin):
-        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        vbox.set_halign(Gtk.Align.CENTER)
-        vbox.set_valign(Gtk.Align.CENTER)
-        vbox.set_margin_top(4)
-        vbox.set_margin_bottom(4)
-        vbox.add_css_class("app-launcher-vbox")
-        vbox.MYTEXT = plugin["name"]
-
-        # Build icon path
-        icon_name = f"plugin-{plugin['name']}.svg"
-        icon_path = f"/usr/share/wcm/icons/{icon_name}"
-
-        # Create image from file if exists, else fallback to generic icon
-        if os.path.exists(icon_path):
-            image = Gtk.Image.new_from_file(icon_path)
-        else:
-            # Fallback: use a default icon from the system theme
-            image = Gtk.Image.new_from_icon_name("application-x-executable")
-
-        image.set_pixel_size(48)
-        image.add_css_class("app-launcher-icon-from-popover")
-        self.utils.add_cursor_effect(image)
-
-        label = Gtk.Label(label=plugin["name"])
-        label.set_max_width_chars(12)
-        label.set_ellipsize(Pango.EllipsizeMode.END)
-        label.add_css_class("app-launcher-label-from-popover")
-
-        status = Gtk.Label()
-        status.set_markup(
-            '<span size="small" foreground="green">● Enabled</span>'
-            if plugin["enabled"]
-            else '<span size="small" foreground="gray">● Disabled</span>'
-        )
-        status.set_halign(Gtk.Align.CENTER)
-
-        switch = Gtk.Switch(valign=Gtk.Align.CENTER)
-        switch.set_active(plugin["enabled"])
-        switch.connect("notify::active", self.on_toggle, plugin["name"])
-
-        vbox.append(image)
-        vbox.append(label)
-        vbox.append(status)
-        vbox.append(switch)
-
-        self.flowbox.append(vbox)
-
-    def on_plugin_clicked(self, flowbox, child):
-        plugin_name = child.get_child().MYTEXT
-        self.plugins["wayfire_plugin_details"].open_plugin_config_window(plugin_name)
-
-    def on_toggle(self, switch, _pspec, name):
-        active = switch.get_active()
-        self.update_plugin_state(name, enable=active)
-
-    def _refresh_popover(self):
-        self.flowbox.remove_all()
-        for plugin in self.wf_plugins:
-            self._add_plugin_row(plugin)
-        self.flowbox.invalidate_filter()
-
-    def filter_func(self, child):
-        text = self.searchbar.get_text().lower()
-        if not text:
-            return True
-        label = (
-            child.get_child().get_first_child().get_next_sibling()
-        )  # label after image
-        return text in label.get_label().lower()
-
     def open_popover(self, *_):
-        # Always refresh state from IPC when opening
+        """Opens or closes the popover, ensuring it is always up to date."""
         self.load_plugins_from_ipc()
 
         if self.popover and self.popover.is_visible():
             self.popover.popdown()
         else:
             if not self.popover:
-                self.create_popover()
-            # FIXME: memory leak
-            # else:
-            # self._refresh_popover()
+                self.popover = PluginListPopover(self, self.wf_plugins)
+            else:
+                self.popover.update_popover_content(self.wf_plugins)
+
             self.popover.set_parent(self.button)
             self.popover.popup()
-
-    def on_popover_opened(self, *_):
-        pass
-
-    def on_popover_closed(self, *_):
-        pass

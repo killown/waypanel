@@ -17,8 +17,8 @@ orjson
 cffi
 PyGObject
 watchdog
-pyperclip 
-aiosqlite 
+pyperclip
+aiosqlite
 pillow
 structlog
 rich
