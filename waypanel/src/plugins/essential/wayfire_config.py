@@ -1,10 +1,12 @@
 import os
 import time
 import toml
+import asyncio
 from gi.repository import GLib
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from src.plugins.core._base import BasePlugin
+from src.plugins.core._event_loop import global_loop
 
 DEPS = ["dockbar", "taskbar", "event_manager"]
 
@@ -21,6 +23,7 @@ def initialize_plugin(panel_instance):
         panel_instance.logger.info(
             "plugin Wayfire_Config disabled, list_config_options method not found"
         )
+        return None
 
 
 class WayfireConfigWatcherPlugin(BasePlugin):
@@ -30,18 +33,24 @@ class WayfireConfigWatcherPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.panel = panel_instance
-        self.config = self.load_config()
-        GLib.idle_add(self._apply_config_idle)
+        self.config = None
+        global_loop.create_task(self._initial_setup())
         self.observer = self.start_watching()
 
-    def _apply_config_idle(self):
-        """Apply config in a non-blocking way via GLib idle loop."""
-        try:
-            self.apply_config(self.config)
+    async def _initial_setup(self):
+        self.config = await self.load_config_async()
+        if self.config:
+            await self.apply_config_async(self.config)
             self.logger.info("Initial config applied successfully.")
+        else:
+            self.logger.error("Error applying initial config.")
+
+    async def load_config_async(self):
+        try:
+            return await asyncio.to_thread(self.load_config)
         except Exception as e:
-            self.logger.error(f"Error applying initial config: {e}")
-        return False  # Run only once
+            self.panel.logger.error(f"[{self.PLUGIN_NAME}] Failed to load config: {e}")
+            return {}
 
     def load_config(self):
         try:
@@ -51,16 +60,12 @@ class WayfireConfigWatcherPlugin(BasePlugin):
             self.panel.logger.error(f"[{self.PLUGIN_NAME}] Failed to load config: {e}")
             return {}
 
-    def apply_config(self, config):
-        """Apply only values that differ from current runtime.
-
-        Note: returns False at the end so glib.idle_add will not repeat this job.
-        """
+    async def apply_config_async(self, config):
         try:
-            response = self.ipc.sock.list_config_options()
+            response = await asyncio.to_thread(self.ipc.sock.list_config_options)
             if response.get("result") != "ok":
                 self.logger.warning("Failed to fetch runtime config")
-                return False
+                return
 
             runtime = {
                 section: {
@@ -76,7 +81,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
 
         except Exception as e:
             self.logger.error(f"Failed to get runtime config: {e}")
-            return False
+            return
 
         updates = {}
 
@@ -123,8 +128,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
 
         if batch_updates:
             try:
-                # Try to apply the entire batch first (fast path)
-                self.ipc.set_option_values(batch_updates)
+                await asyncio.to_thread(self.ipc.set_option_values, batch_updates)
                 for key in batch_updates:
                     self.logger.info(f"Updated '{key}' → '{batch_updates[key]}'")
             except Exception as batch_e:
@@ -134,34 +138,32 @@ class WayfireConfigWatcherPlugin(BasePlugin):
                 self.logger.warning(
                     "This update method is slower, try removing any invalid options from wayfire.toml"
                 )
-                self.utils.notify_send(
+                await asyncio.to_thread(
+                    self.utils.notify_send,
                     "Wayfire Config Plugin",
                     f"Batch update failed, falling back to individual updates: {batch_e}",
                 )
-                # Fallback: Apply options one by one
                 for key, value in batch_updates.items():
                     try:
-                        self.ipc.set_option_values({key: value})
+                        await asyncio.to_thread(
+                            self.ipc.set_option_values, {key: value}
+                        )
                         self.logger.info(f"Updated (individual) '{key}' → '{value}'")
                     except Exception as single_e:
                         self.logger.error(
                             f"Failed to set option '{key}' even individually: {single_e}"
                         )
-
-        # Always re-apply command and window-rules (can't be read reliably)
         try:
-            self.apply_command_section(config)
+            await self.apply_command_section_async(config)
         except Exception as e:
             self.logger.warning(f"apply_command_section failed: {e}")
 
         try:
-            self.apply_window_rules_section(config)
+            await self.apply_window_rules_section_async(config)
         except Exception as e:
             self.logger.warning(f"apply_window_rules_section failed: {e}")
 
-        return False
-
-    def apply_command_section(self, config):
+    async def apply_command_section_async(self, config):
         command_section = config.get("command", {})
 
         binding_tuples = []
@@ -175,19 +177,18 @@ class WayfireConfigWatcherPlugin(BasePlugin):
         self.logger.info(f"Applying command bindings: {payload}")
 
         try:
-            self.ipc.set_option_values(payload)
+            await asyncio.to_thread(self.ipc.set_option_values, payload)
         except Exception as e:
             self.logger.warning(f"Failed to apply command bindings: {e}")
 
-    def apply_window_rules_section(self, config):
+    async def apply_window_rules_section_async(self, config):
         window_rules_section = config.get("window-rules", {})
-
-        rules = list(window_rules_section.values())  # Simplified
+        rules = list(window_rules_section.values())
 
         if rules:
             payload = {"window-rules": {"rules": rules}}
             try:
-                self.ipc.set_option_values(payload)
+                await asyncio.to_thread(self.ipc.set_option_values, payload)
             except Exception as e:
                 self.logger.warning(f"Failed to apply window rules: {e}")
 
@@ -232,78 +233,36 @@ class ConfigFileHandler(FileSystemEventHandler):
             self.reload_config()
 
     def _restart_observer(self):
-        """Restart observer when the file is deleted."""
         self.plugin.observer.stop()
         self.plugin.observer.join()
         self.plugin.observer = self.plugin.start_watching()
         self.plugin.logger.info(f"[{self.plugin.PLUGIN_NAME}] Restarted observer")
 
     def reload_config(self):
-        """Schedule config reload in the main thread, once, without blocking."""
         now = time.time()
         if now - self._last_reload < self._debounce_sec:
-            return  # Skip if too soon
+            return
         self._last_reload = now
 
         if self._pending_reload:
             return
 
-        try:
-            new_config = self.plugin.load_config()
-
-            def apply_in_main_thread():
-                self._pending_reload = False
-                try:
-                    # Pass new_config to _apply_config_idle
-                    GLib.idle_add(self.plugin._apply_config_idle, new_config)
-                    self.plugin.logger.info("Configuration reloaded and applied.")
-                except Exception as e:
-                    self.plugin.panel.logger.error(
-                        f"[{self.plugin.PLUGIN_NAME}] Failed to apply config: {e}"
-                    )
-                return False  # Run only once
-
+        async def apply_coroutine():
             self._pending_reload = True
-            GLib.idle_add(apply_in_main_thread)
-            print("Scheduled non-blocking config reload...")
+            try:
+                new_config = await self.plugin.load_config_async()
+                if new_config:
+                    await self.plugin.apply_config_async(new_config)
+                    self.plugin.logger.info("Configuration reloaded and applied.")
+            except Exception as e:
+                self.plugin.panel.logger.error(
+                    f"[{self.plugin.PLUGIN_NAME}] Failed to apply config: {e}"
+                )
+            finally:
+                self._pending_reload = False
 
-        except Exception as e:
-            self.plugin.panel.logger.error(
-                f"[{self.plugin.PLUGIN_NAME}] Failed to load config: {e}"
-            )
-            self._pending_reload = False
+        self._pending_reload = True
+        global_loop.create_task(apply_coroutine())
 
     def about(self):
-        """
-        Wayfire Config Watcher Plugin
-        =============================
-
-        Purpose
-        -------
-        Dynamically monitors and applies user Wayfire configuration from
-        '~/.config/waypanel/wayfire/wayfire.toml'.
-        Ensures that runtime settings always reflect the TOML file without
-        requiring a restart of Wayfire or Waypanel.
-
-        Key Features
-        ------------
-        • **Live config reload** – Watches the configuration file and applies changes
-          automatically when modified, created, moved, or restored.
-        • **Non-blocking updates** – Uses GLib idle callbacks and debouncing to avoid
-          blocking the main panel loop.
-        • **Smart application** – Only updates options that differ from the current
-          runtime values, including command bindings and window rules.
-        • **Fallback handling** – Attempts batch updates first, then falls back to
-          individual updates if needed.
-        • **Integration** – Depends on `dockbar`, `taskbar`, and `event_manager`
-          plugins for seamless interaction with Waypanel.
-
-        Why It Matters
-        --------------
-        Without this plugin, users would need to manually reload Wayfire to apply
-        configuration changes.
-        This plugin provides a seamless experience where settings are reflected
-        in real-time, improving workflow efficiency and ensuring consistency
-        across the desktop environment.
-        """
         return self.about.__doc__

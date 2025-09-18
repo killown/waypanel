@@ -1,7 +1,10 @@
-import subprocess
 import shutil
+import asyncio
+import subprocess
+
 from gi.repository import Gtk, GLib
 from src.plugins.core._base import BasePlugin
+from src.plugins.core._event_loop import global_loop
 
 ENABLE_PLUGIN = bool(shutil.which("pacman"))
 DEPS = ["top_panel"]
@@ -44,8 +47,9 @@ class UpdateCheckerPlugin(BasePlugin):
         self._update_ui(0)  # Start hidden
 
         # Initial refresh + hourly checks
-        GLib.idle_add(self._manual_refresh, None)
-        # GLib.timeout_add_seconds(3600, self._check_updates_periodically)
+        self.logger.info("Scheduling initial update check with asyncio.")
+        global_loop.create_task(self._manual_refresh())
+        GLib.timeout_add_seconds(3600, self._check_updates_periodically)
 
     def _setup_popover(self):
         label = Gtk.Label(label="System Updates")
@@ -56,7 +60,9 @@ class UpdateCheckerPlugin(BasePlugin):
         self.popover_box.append(self.count_label)
 
         refresh_btn = Gtk.Button(label="Refresh")
-        refresh_btn.connect("clicked", self._manual_refresh)
+        refresh_btn.connect(
+            "clicked", lambda x: global_loop.create_task(self._manual_refresh())
+        )
         self.utils.add_cursor_effect(refresh_btn)
         self.popover_box.append(refresh_btn)
 
@@ -69,36 +75,46 @@ class UpdateCheckerPlugin(BasePlugin):
 
     def _on_popover_visibility_changed(self, popover, param):
         if popover.get_property("visible"):
-            self._manual_refresh(None)
+            global_loop.create_task(self._manual_refresh())
 
-    def _manual_refresh(self, button=None):
+    async def _manual_refresh(self, button=None):
         if self.is_checking:
             return
 
         self.is_checking = True
         self.count_label.set_label("Checking for updates...")
-        GLib.idle_add(self._check_updates)
-        return False
+
+        # Await the async update check
+        await self._check_updates()
+
+        self.is_checking = False
 
     def _check_updates_periodically(self):
         if not self.is_checking:
-            self._manual_refresh()
-        return True  # Repeat every hour
+            global_loop.create_task(self._manual_refresh())
+        return True
 
-    def _check_updates(self):
+    async def _check_updates(self):
+        """
+        Runs the 'checkupdates' command asynchronously.
+        """
+        proc = None
         try:
-            result = subprocess.run(
-                ["checkupdates"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                text=True,
-                timeout=10,
+            # Use asyncio.create_subprocess_exec for non-blocking I/O
+            proc = await asyncio.create_subprocess_exec(
+                "checkupdates",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
             )
-            lines = result.stdout.strip().splitlines()
+
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=10)
+
+            lines = stdout.decode("utf-8").strip().splitlines()
             count = len(lines)
             self.update_count = count
             self._update_ui(count)
-        except subprocess.TimeoutExpired:
+
+        except asyncio.TimeoutError:
             self.logger.warning("Update check timed out - no internet connection?")
             self._update_ui(-1)
         except FileNotFoundError:
@@ -108,7 +124,8 @@ class UpdateCheckerPlugin(BasePlugin):
             self.logger.error(f"Failed to check updates: {e}")
             self._update_ui(-1)
         finally:
-            self.is_checking = False
+            if proc and proc.returncode is None:
+                proc.kill()
 
     def _update_ui(self, count):
         if count == -1:
@@ -141,6 +158,7 @@ class UpdateCheckerPlugin(BasePlugin):
             return
 
         try:
+            # Popen is acceptable here as the user interaction is synchronous
             proc = subprocess.Popen(
                 [terminal, "-e", "sudo", "pacman", "-Syu"],
                 stdout=subprocess.PIPE,
@@ -169,15 +187,14 @@ class UpdateCheckerPlugin(BasePlugin):
             if proc.returncode != 0:
                 self.logger.info("Terminal process ended. Re-checking for updates.")
                 self.terminal_pid = None
-                self._manual_refresh()
-                return False  # Stop the timer
+                global_loop.create_task(self._manual_refresh())
+                return False
 
-            return True  # Continue monitoring
+            return True
         except Exception as e:
             self.logger.error(f"Error monitoring terminal: {e}")
             self.terminal_pid = None
             return False
 
     def on_stop(self):
-        # Stop background tasks
         self.terminal_pid = None
