@@ -383,6 +383,8 @@ class TaskbarPlugin(BasePlugin):
         button.icon.set_from_icon_name(None)
         button.label.set_label("")
 
+        self.taskbar.remove(button)
+
         # Return to pool
         self.button_pool.append(button)
         self.logger.debug(f"Button for view ID {view_id} returned to pool.")
