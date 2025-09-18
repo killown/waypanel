@@ -1,4 +1,3 @@
-import gi
 from gi.repository import GLib
 from src.plugins.core._base import BasePlugin
 import os

@@ -20,15 +20,16 @@ def main():
     # Add a function to find the system package path
     def find_package_files():
         candidate_patterns = [
-            os.path.expanduser("~/.local/lib/python3*/site-packages"),
-            "/usr/lib/python3*/dist-packages",
-            "/usr/lib/python3*/site-packages",
-            "/usr/local/lib/python3*/dist-packages",
-            "/usr/local/lib/python3*/site-packages",
+            os.path.expanduser("~/.local/lib/python*/site-packages"),
+            "/usr/lib/python*/dist-packages",
+            "/usr/lib/python*/site-packages",
+            "/usr/local/lib/python*/dist-packages",
+            "/usr/local/lib/python*/site-packages",
         ]
         for pattern in candidate_patterns:
             for path in glob.glob(pattern):
-                pkg_path = os.path.join(path, "src")
+                # Look for the 'waypanel' directory, which should contain the source files
+                pkg_path = os.path.join(path, APP_NAME)
                 if os.path.isdir(pkg_path):
                     return pkg_path
         return None
@@ -162,4 +163,8 @@ def main():
 
 
 if __name__ == "__main__":
+    try:
+        subprocess.Popen("pkill -f waypanel/main.py".split())
+    except Exception as e:
+        print(e)
     main()

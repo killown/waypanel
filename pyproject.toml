@@ -23,6 +23,9 @@ dev = ["pygobject-stubs[Gtk4,Gdk]"]
 [project.scripts]
 waypanel = "waypanel.run:main"
 
+[tool.setuptools]
+packages = ["waypanel"]
+package-dir = { "waypanel" = "." }
 
 [tool.setuptools.package-data]
 waypanel = ["requirements.txt", "config/*"]

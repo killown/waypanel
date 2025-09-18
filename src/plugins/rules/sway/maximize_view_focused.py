@@ -1,6 +1,5 @@
-from gi.repository import Gtk
 import os
-from waypanel.src.plugins.core._base import BasePlugin
+from src.plugins.core._base import BasePlugin
 from src.plugins.core.event_handler_decorator import subscribe_to_event
 
 # Set to False or remove the file to disable the plugin

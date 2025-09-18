@@ -8,7 +8,7 @@ from src.core.compositor.ipc import IPC
 from typing import Dict, Any, Optional, Tuple, Callable, List, Union, Type, Iterable
 import difflib
 import importlib.util
-
+from pathlib import Path
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -1413,10 +1413,6 @@ class Utils(Adw.Application):
             Optional[str]: The icon name if found, otherwise None.
         """
 
-        found_icon = self.get_nearest_icon_name(app_id)
-        if found_icon != "image-missing":
-            return found_icon
-
         # Sanitize / filter title text for GTK
         filtered_title = self.filter_utf_for_gtk(title)
         first_word = filtered_title.split()[0] if filtered_title else ""
@@ -1453,8 +1449,9 @@ class Utils(Adw.Application):
         found_icon = self.icon_exist(app_id)
         if found_icon:
             return found_icon
-
-        return None
+        else:
+            found_icon = self.get_nearest_icon_name(app_id)
+            return found_icon
 
     def list_app_ids(self) -> list[str]:
         """
@@ -2275,31 +2272,34 @@ class Utils(Adw.Application):
         [self.ipc.set_tiling_maximized(view_id, should_maxmize) for view_id in view_ids]
 
     def get_wayctl_path(self):
+        """
+        Locate the path to the _wayctl.py script by traversing the directory tree
+        relative to the current file's location.
+        """
         try:
-            # Try to locate the installed 'waypanel' module
-            waypanel_module_spec = importlib.util.find_spec("waypanel")
-            if waypanel_module_spec is None:
-                raise ImportError("The 'waypanel' module could not be found.")
+            # Get the absolute path of the directory containing the current file
+            current_dir = Path(__file__).resolve().parent
 
-            # Get the root path of the module (e.g. site-packages/waypanel or dev dir)
-            waypanel_module_path = waypanel_module_spec.origin  # points to __init__.py
-
-            # Traverse up until we find the "waypanel" folder
-            while os.path.basename(waypanel_module_path) != "waypanel":
-                waypanel_module_path = os.path.dirname(waypanel_module_path)
-
-            # Now construct the path to wayctl.py
-            wayctl_path = os.path.join(
-                waypanel_module_path, "src", "plugins", "utils", "tools", "_wayctl.py"
+            # Construct the path to _wayctl.py by going up two directories
+            # (from `core` to `waypanel`) and then navigating down.
+            wayctl_path = (
+                current_dir
+                / ".."
+                / ".."
+                / "src"
+                / "plugins"
+                / "utils"
+                / "tools"
+                / "_wayctl.py"
             )
 
-            if not os.path.exists(wayctl_path):
+            if not wayctl_path.exists():
                 raise FileNotFoundError(f"wayctl.py not found at {wayctl_path}")
 
-            return wayctl_path
+            return str(wayctl_path)
 
-        except Exception as e:
-            raise RuntimeError(f"Failed to locate wayctl.py: {e}")
+        except (FileNotFoundError, RuntimeError) as e:
+            raise RuntimeError(f"Failed to locate wayctl.py: {e}") from e
 
     def register_wayctl_binding(self, keybind, keybind_fallback, args):
         if self.is_keybind_used(keybind):
