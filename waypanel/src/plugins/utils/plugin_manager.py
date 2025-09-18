@@ -1,29 +1,23 @@
-# Import necessary modules
 import os
 from src.plugins.core._base import BasePlugin
 from gi.repository import Gtk
 
-# Set to True to enable the plugin
-ENABLE_PLUGIN = True
+ENABLE_PLUGIN = False
 DEPS = ["top_panel"]
 
 
-# Define the plugin's placement in the panel
 def get_plugin_placement(panel_instance):
-    position = "top-panel-systray"  # Position: left side of the panel
-    order = 99  # Order: low priority (appears at the end)
+    position = "top-panel-systray"
+    order = 99
     return position, order
 
 
-# Initialize the plugin
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
         instance = PluginManagerPlugin(panel_instance)
-        instance.set_main_widget()
         return instance
 
 
-# Plugin class
 class PluginManagerPlugin(BasePlugin):
     def __init__(self, panel_instance):
         """Initialize the Plugin Manager Plugin.
@@ -40,9 +34,7 @@ class PluginManagerPlugin(BasePlugin):
         super().__init__(panel_instance)
         # Create the main button to open the popover
         self.menubutton_plugin_manager = Gtk.MenuButton()
-        self.menubutton_plugin_manager.set_icon_name(
-            "preferences-plugin-symbolic"
-        )  # Default icon
+        self.menubutton_plugin_manager.set_icon_name("preferences-plugin-symbolic")
         self.stack = Gtk.Stack()  # Create a stack for grouping plugins
         self.stack_switcher = Gtk.StackSwitcher()  # Create a stack switcher
         self.stack_switcher.set_stack(self.stack)
@@ -53,15 +45,14 @@ class PluginManagerPlugin(BasePlugin):
         # Add gesture to handle interactions
         self.add_gesture_to_menu_button()
 
-    def set_main_widget(self):
-        self.main_widget = (self.menubutton_plugin_manager, "append")
-
     def create_popover_plugin_manager(self):
         """Create and configure the popover for managing plugins."""
         # Create the popover
         self.popover_plugin_manager = Gtk.Popover.new()
         self.popover_plugin_manager.set_has_arrow(False)
-
+        self.popover_plugin_manager = Gtk.Popover.new()
+        self.menubutton_plugin_manager.set_popover(self.popover_plugin_manager)
+        self.main_widget = (self.menubutton_plugin_manager, "append")
         # Create a horizontal box to hold the vertical tabs and the stack content
         hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=10)
         hbox.set_margin_top(10)
@@ -120,10 +111,8 @@ class PluginManagerPlugin(BasePlugin):
                     disabled_plugins.append(plugin_name)
 
             # Update the configuration with the modified list
-            self.config["plugins"]["disabled"] = " ".join(
-                disabled_plugins
-            )  # Convert back to string
-            self.obj.save_config()  # Save the updated configuration
+            self.config["plugins"]["disabled"] = " ".join(disabled_plugins)
+            self.obj.save_config()
 
         except Exception as e:
             self.log_error(

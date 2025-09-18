@@ -59,6 +59,7 @@ class WindowTitlePlugin(BasePlugin):
         self._debounce_pending = False
         self._debounce_timer_id = None
         self._debounce_interval = 333  # ~3 updates per second (1000/3 ≈ 333ms)
+        self._last_view_data = None
 
     def disable(self):
         print(self.main_widget)
@@ -73,9 +74,9 @@ class WindowTitlePlugin(BasePlugin):
             event_message (dict): The event message containing view details.
         """
         try:
-            if "view" in event_message:
-                view = event_message.get("view", {})
-                self.update_title_icon(view)
+            view = event_message.get("view")
+            if view:
+                self.update_title_icon_debounced(view)
         except Exception as e:
             self.log_error(f"Error handling 'view-focused' event: {e}")
 
@@ -101,19 +102,28 @@ class WindowTitlePlugin(BasePlugin):
             event_message (dict): The event message containing view details.
         """
         try:
-            if "view" in event_message:
-                view = event_message.get("view", {})
-                self.update_title_icon(view)
+            view = event_message.get("view")
+            if view:
+                self.update_title_icon_debounced(view)
         except Exception as e:
             self.log_error(f"Error handling 'view-title-changed' event: {e}")
 
     def sway_translate_ipc(self, view):
-        v = None
-        if view["type"] == "con" or view["type"] == "floating_con":
-            v = view
-            v["app-id"] = view["app_id"]
-            v["title"] = view["name"]
+        # Create a copy to avoid side-effects
+        v = view.copy()
+        v["app-id"] = view.get("app_id")
+        v["title"] = view.get("name")
         return v
+
+    def update_title_icon_debounced(self, view):
+        """Debounce updates to prevent excessive calls during rapid changes."""
+        self._last_view_data = view
+        if not self._debounce_pending:
+            self._debounce_pending = True
+            self._debounce_timer_id = GLib.timeout_add(
+                self._debounce_interval, self._perform_debounced_update
+            )
+            self.update_title_icon(self._last_view_data)
 
     def update_title_icon(self, view):
         """
@@ -123,36 +133,31 @@ class WindowTitlePlugin(BasePlugin):
             view: The view object containing details like title, app-id, etc.
         """
         try:
+            if not view:
+                return
+
             # check if the view is from sway socket
+            if view.get("app_id") is not None:
+                view = self.sway_translate_ipc(view)
 
-            if view:
-                if "app_id" in view:
-                    view = self.sway_translate_ipc(view)
+            if self.compositor == "wayfire":
+                view = self.utils.is_view_valid(view)
 
-                if self.compositor == "wayfire":
-                    view = self.utils.is_view_valid(view)
-                if not view:
-                    return
-                title = self.filter_title(view.get("title", ""))
-                app_id = None
-                # FIXME: The current approach becomes unwieldy when adding new compositors,
-                # Solution: Standardize data output across compositors via IPC.
-                # Implementation idea:
-                # - Organize plugins by compositor (e.g., `sway/window_title.py`, `wayfire/window_title.py`)
-                # - Auto-detect the active session (Sway/Wayfire/etc.)
-                # - Plugin loader skips irrelevant compositor folders
-                # This keeps things clean while maintaining compositor-specific logic where needed.
-                if "window_properties" in view:
-                    # SWAY
-                    app_id = view["window_properties"].get("class", None)
-                else:
-                    # Wayfire
-                    app_id = view.get("app-id", "").lower()
-                initial_title = title.split()[0].lower() if title else ""
-                icon = self.utils.get_icon(app_id, initial_title, title)
+            if not view:
+                return
 
-                # Update the widget
-                self.update_title(title, icon)
+            title = self.filter_title(view.get("title", ""))
+            app_id = None
+            if view.get("window_properties"):
+                app_id = view.get("window_properties", {}).get("class")
+            else:
+                app_id = view.get("app-id", "").lower()
+
+            initial_title = title.split()[0].lower() if title else ""
+            icon = self.utils.get_icon(app_id, initial_title, title)
+
+            # Update the widget
+            self.update_title(title, icon)
         except Exception as e:
             self.log_error(f"Error updating title/icon: {e}")
 
@@ -229,4 +234,5 @@ class WindowTitlePlugin(BasePlugin):
         """Internal method to perform the actual UI update after debounce."""
         self._debounce_pending = False
         self._debounce_timer_id = None
+        self.update_title_icon(self._last_view_data)
         return False  # Return False to stop the timeout

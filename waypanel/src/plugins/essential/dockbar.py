@@ -292,3 +292,36 @@ class DockbarPlugin(BasePlugin):
                     pass
                     # self.on_scale_desactivated()
         return prevent_infinite_loop_from_event_manager_idle_add
+
+    def about(self):
+        """
+        Dockbar Plugin
+        ================================
+
+        Purpose
+        -------
+        Provides a configurable dockbar for launching applications directly
+        from the panel. Supports multiple panels, gestures, and integration
+        with other plugins like 'scale' and 'event_manager'.
+
+        Key Features
+        ------------
+        • **Dynamic App Buttons** – Generates dockbar buttons based on a TOML
+          configuration file (~/.config/waypanel/waypanel.toml).
+        • **Gestures Support** – Left, middle, and right mouse button gestures
+          for launching apps, switching workspaces, or moving the cursor
+          to other outputs.
+        • **Panel Flexibility** – Can be positioned on left, right, top, or bottom
+          panels with configurable order and priority.
+        • **Integration with Scale Plugin** – Adjusts layer and exclusive zone
+          automatically depending on scale plugin state.
+        • **Event-Driven** – Subscribes to plugin events via 'event_manager' for
+          responsive updates.
+
+        Behavior
+        --------
+        • Left-click: Launches the associated application.
+        • Middle-click: Launches app on an empty workspace if available.
+        • Right-click: Moves cursor to next output and launches app there.
+        """
+        return self.about.__doc__

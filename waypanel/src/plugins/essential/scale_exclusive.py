@@ -130,3 +130,31 @@ class PanelScaleExclusivePlugin(BasePlugin):
                     self.logger.warning(
                         f"Unknown state value for scale plugin: {msg['state']}"
                     )
+
+    def about(self):
+        """
+        Panel Scale-Exclusive Plugin
+        ============================
+
+        Purpose
+        -------
+        This plugin was created to solve a layout conflict that appears when using
+        the Scale effect (the overview of all windows) in a multi-panel setup.
+        During Scale, normal panels can overlap or allow other surfaces to intrude,
+        breaking the visual clarity of the workspace.
+
+        Reason for Creation
+        -------------------
+        By temporarily placing every panel (top, bottom, left and right) in
+        exclusive layer mode only while Scale is active—and only on the monitor
+        where Scale is running—the plugin ensures that panels keep their reserved
+        screen space. This prevents accidental overlaps, keeps the Scale grid clean
+        and consistent, and restores the panels to normal as soon as the effect ends.
+
+        Benefit
+        -------
+        Users experience a smooth and unobstructed Scale animation without panels
+        jumping or being covered, while still regaining the usual flexible panel
+        behavior once Scale deactivates.
+        """
+        return self.about.__doc__

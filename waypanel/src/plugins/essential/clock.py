@@ -92,3 +92,15 @@ class ClockPlugin(BasePlugin):
         if self.update_timeout_id:
             GLib.source_remove(self.update_timeout_id)
             self.update_timeout_id = None
+
+    def about(self):
+        """
+        Clock Plugin for
+
+        • Displays current date and time in the top panel.
+        • Updates automatically every minute.
+        • Center-aligned with optional hover effects.
+        • Requires 'top_panel' plugin to be loaded first.
+        • Can be disabled by setting ENABLE_PLUGIN to False.
+        """
+        return self.about.__doc__

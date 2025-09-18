@@ -272,3 +272,38 @@ class ConfigFileHandler(FileSystemEventHandler):
                 f"[{self.plugin.PLUGIN_NAME}] Failed to load config: {e}"
             )
             self._pending_reload = False
+
+    def about(self):
+        """
+        Wayfire Config Watcher Plugin
+        =============================
+
+        Purpose
+        -------
+        Dynamically monitors and applies user Wayfire configuration from
+        '~/.config/waypanel/wayfire/wayfire.toml'.
+        Ensures that runtime settings always reflect the TOML file without
+        requiring a restart of Wayfire or Waypanel.
+
+        Key Features
+        ------------
+        • **Live config reload** – Watches the configuration file and applies changes
+          automatically when modified, created, moved, or restored.
+        • **Non-blocking updates** – Uses GLib idle callbacks and debouncing to avoid
+          blocking the main panel loop.
+        • **Smart application** – Only updates options that differ from the current
+          runtime values, including command bindings and window rules.
+        • **Fallback handling** – Attempts batch updates first, then falls back to
+          individual updates if needed.
+        • **Integration** – Depends on `dockbar`, `taskbar`, and `event_manager`
+          plugins for seamless interaction with Waypanel.
+
+        Why It Matters
+        --------------
+        Without this plugin, users would need to manually reload Wayfire to apply
+        configuration changes.
+        This plugin provides a seamless experience where settings are reflected
+        in real-time, improving workflow efficiency and ensuring consistency
+        across the desktop environment.
+        """
+        return self.about.__doc__

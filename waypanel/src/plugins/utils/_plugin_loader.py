@@ -9,18 +9,26 @@ import traceback
 
 class PluginLoader:
     """
-    Manages dynamic discovery, loading, validation, and initialization of waypanel plugins.
+    Manages the lifecycle of plugins for Waypanel, from discovery and validation
+    to dynamic loading and initialization.
 
-    The PluginLoader scans both built-in and user-defined plugin directories,
-    loads them dynamically, ensures required interfaces exist, respects dependencies,
-    and initializes plugins in the correct order based on priority and position.
+    This class serves as the core engine for Waypanel's modularity. It systematically
+    scans for plugins, validates their structure, and orchestrates their loading
+    to ensure a stable and consistent panel environment.
 
     ### Key Responsibilities
-    - Discovers all available plugins in `src.plugins` and custom directories.
-    - Validates that each plugin implements required functions: `get_plugin_placement`, `initialize_plugin`.
-    - Loads configuration from `config.toml` to determine which plugins are enabled/disabled.
-    - Sorts plugins by priority and order for consistent layout and behavior.
-    - Initializes plugins after resolving dependencies.
+    - **Plugin Discovery**: Automatically finds all plugin modules in both the main
+      `src` directory and any user-defined paths.
+    - **Configuration Handling**: Reads `config.toml` to determine the status of each
+      plugin (enabled or disabled), allowing for a user-customizable setup.
+    - **Structural Validation**: Verifies that each plugin adheres to the required
+      interface, ensuring the presence of essential functions like
+      `get_plugin_placement` and `initialize_plugin` before loading.
+    - **Dependency Management**: Checks for and validates any specified plugin
+      dependencies to prevent loading issues.
+    - **Initialization**: Initializes valid plugins in a non-blocking manner,
+      collecting critical metadata (position, order, priority) to prepare them
+      for seamless integration into the panel.
 
     ### Usage Example
     ```python
@@ -134,21 +142,66 @@ class PluginLoader:
                 level="error",
             )
 
+    def _find_plugins_in_dir(
+        self, directory_path, disabled_plugins, valid_plugins, plugin_metadata
+    ):
+        """
+        Recursively walks a specified directory to find and process plugin files.
+
+        This method serves as a modular helper for the `load_plugins` method. It searches
+        for Python files (`.py`) within a given `directory_path`, excluding the
+        `__init__.py` and any `examples` folder. For each valid plugin file found, it
+        extracts essential metadata (module name, file path) and delegates the
+        processing to `_process_plugin`.
+
+        Args:
+            directory_path (str): The absolute path of the directory to search for plugins.
+            disabled_plugins (list): A list of plugin names that should be skipped.
+            valid_plugins (list): A list that will be populated with the names of all
+                                  valid plugins found.
+            plugin_metadata (list): A list of tuples that will be populated with plugin
+                                    metadata for later initialization.
+        """
+        sys.path.append(directory_path)
+        for root, dirs, files in os.walk(directory_path):
+            if "examples" in dirs:
+                dirs.remove("examples")
+
+            for file_name in files:
+                if file_name.endswith(".py") and file_name != "__init__.py":
+                    module_name = file_name[:-3]
+                    module_path = (
+                        os.path.relpath(os.path.join(root, file_name), directory_path)
+                        .replace("/", ".")
+                        .replace(".py", "")
+                    )
+                    file_path = os.path.join(root, file_name)
+                    self.plugins_path[module_name] = file_path
+
+                    self._process_plugin(
+                        module_name,
+                        module_path,
+                        disabled_plugins,
+                        valid_plugins,
+                        plugin_metadata,
+                    )
+
     def load_plugins(self):
         """
-        Load and initialize all plugins from built-in and custom directories.
+        Loads and prepares all plugins from built-in and custom directories.
 
-        ### Workflow:
-        1. Load configuration from `config.toml`
-        2. Discover `.py` files in `src.plugins` and custom plugin directory
-        3. Filter out invalid or disabled modules
-        4. Sort plugins by priority and order
-        5. Ensure dependencies are resolved before initializing plugins
-        6. Initialize each plugin and store reference in `self.plugins`
+        This method orchestrates the entire plugin discovery and preparation process. It
+        first loads the application's configuration to identify disabled plugins. It then
+        calls the `_find_plugins_in_dir` helper to search both the core and user-defined
+        plugin directories, collecting metadata for all valid plugins. After discovery,
+        it updates the configuration file with any new plugins found. Finally, it
+        initiates the non-blocking initialization process by calling
+        `_initialize_sorted_plugins`.
 
-        Plugins not implementing `initialize_plugin()` or marked as disabled are skipped.
+        This separation of concerns ensures that the application's startup is not
+        blocked by file system operations or plugin initialization, resulting in a
+        responsive user experience.
         """
-        # Load configuration and initialize plugin lists
         config, disabled_plugins = self._load_plugin_configuration()
         if config is None:
             return
@@ -156,93 +209,52 @@ class PluginLoader:
         valid_plugins = []
         plugin_metadata = []
 
-        # Walk through the plugin directory recursively
-        sys.path.append(self.plugins_dir)
-        for root, dirs, files in os.walk(self.plugins_dir):
-            # Exclude the 'examples' folder
-            if "examples" in dirs:
-                dirs.remove("examples")  # Skip the 'examples' folder
+        # Find and process plugins from the main directory
+        self._find_plugins_in_dir(
+            self.plugins_dir, disabled_plugins, valid_plugins, plugin_metadata
+        )
 
-            for file_name in files:
-                if file_name.endswith(".py") and file_name != "__init__.py":
-                    module_name = file_name[:-3]  # Remove the .py extension
-                    module_path = (
-                        os.path.relpath(os.path.join(root, file_name), self.plugins_dir)
-                        .replace("/", ".")
-                        .replace(".py", "")
-                    )
-                    file_path = os.path.join(root, file_name)
-                    self.plugins_path[module_name] = file_path
-
-                    self._process_plugin(
-                        module_name,
-                        module_path,
-                        disabled_plugins,
-                        valid_plugins,
-                        plugin_metadata,
-                    )
-
-        # Walk through custom path plugin directory recursively
-        # FIXME: create a function to reuse this logic
-        sys.path.append(self.user_plugins_dir)
-        for root, dirs, files in os.walk(self.user_plugins_dir):
-            for file_name in files:
-                if file_name.endswith(".py") and file_name != "__init__.py":
-                    module_name = file_name[:-3]  # Remove the .py extension
-                    root = root.split(".local/share/waypanel/plugins")[-1]
-                    module_path = (
-                        os.path.relpath(os.path.join(root, file_name))
-                        .replace("/", ".")
-                        .replace(".py", "")
-                    )
-                    file_path = os.path.join(root, file_name)
-                    self.plugins_path[module_name] = file_path
-
-                    self._process_plugin(
-                        module_name,
-                        module_path,
-                        disabled_plugins,
-                        valid_plugins,
-                        plugin_metadata,
-                    )
+        # Find and process plugins from the user's custom directory
+        self._find_plugins_in_dir(
+            self.user_plugins_dir, disabled_plugins, valid_plugins, plugin_metadata
+        )
 
         # Update the [plugins] section in the TOML configuration
         self._update_plugin_configuration(config, valid_plugins, disabled_plugins)
 
-        # Initialize sorted plugins
+        # Initialize sorted plugins asynchronously using GLib.idle_add
         self._initialize_sorted_plugins(plugin_metadata)
 
     def plugins_base_path(self):
-        """Determine the base path where plugins are located.
+        """
+        Determines the base path where plugins are located.
 
-        Tries to locate the plugins directory by checking multiple possible paths,
-        starting with the installed package location and falling back to common
-        development directory structures. Logs appropriate warnings/errors when
-        fallbacks are used or when no valid path is found.
+        This function attempts to locate the plugins directory by first checking for an installed
+        'waypanel' module. If that fails, it falls back to a series of common development
+        directory structures. This ensures the application can find plugins whether it's
+        installed system-wide or being run directly from a development repository.
+
+        Workflow:
+            1. **Primary Check**: Tries to find the installed `waypanel` module using `importlib`. If the module's path is found, it returns the `plugins` directory within that path.
+            2. **Development Fallbacks**: If the primary check fails (e.g., `waypanel` is not installed as a package), it iterates through a list of common relative paths that are typical for a Git repository.
+            3. **Logging**: Logs appropriate warnings when a fallback path is used and a final error if no valid path is found.
 
         Returns:
-            str: Absolute path to the plugins directory.
+            str: The absolute path to the plugins directory.
 
         Raises:
-            FileNotFoundError: If no valid plugins directory can be located.
+            FileNotFoundError: If no valid plugins directory can be located after all attempts.
         """
         try:
-            # Try to locate the installed 'waypanel' module
             waypanel_module_spec = importlib.util.find_spec("waypanel")
             if waypanel_module_spec is None:
                 raise ImportError("The 'waypanel' module could not be found.")
 
-            # Get the root path of the module (e.g. site-packages/waypanel or dev dir)
-            waypanel_module_path = waypanel_module_spec.origin  # points to __init__.py
-
-            # Traverse up until we find the "waypanel" folder
+            waypanel_module_path = waypanel_module_spec.origin
             while os.path.basename(waypanel_module_path) != "waypanel":
                 waypanel_module_path = os.path.dirname(waypanel_module_path)
 
-            # At this point, waypanel_module_path points to the base package folder
             plugin_path = os.path.join(waypanel_module_path, "plugins")
-
-            # If it exists in the installed layout, return it
             if os.path.exists(plugin_path):
                 return plugin_path
 
@@ -251,37 +263,22 @@ class PluginLoader:
                 "No installed 'waypanel' module found. Trying dev paths..."
             )
 
-        # Fallback 1: Check if we are running from source root (i.e. /path/to/waypanel/plugins/)
-        dev_plugins_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "plugins")
-        )
-        if os.path.exists(dev_plugins_path):
-            self.logger.warning(f"Falling back to dev plugin path: {dev_plugins_path}")
-            return dev_plugins_path
+        # Fallback paths for a development environment
+        fallback_paths = [
+            os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..", "plugins")
+            ),
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins")),
+            os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..", "..", "plugins")
+            ),
+        ]
 
-        # Fallback 2: Check if we are inside the inner 'waypanel/' directory after git clone
-        # e.g., waypanel/waypanel/plugins
-        inner_plugins_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "plugins")
-        )
-        if os.path.exists(inner_plugins_path):
-            self.logger.warning(
-                f"Falling back to inner plugin path: {inner_plugins_path}"
-            )
-            return inner_plugins_path
+        for path in fallback_paths:
+            if os.path.exists(path):
+                self.logger.warning(f"Falling back to dev plugin path: {path}")
+                return path
 
-        # Fallback 3: Check if we're one level above inner package (for direct execution)
-        # i.e., waypanel/src/.. -> waypanel/plugins
-        alt_plugins_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "..", "plugins")
-        )
-        if os.path.exists(alt_plugins_path):
-            self.logger.warning(
-                f"Falling back to alternate dev plugin path: {alt_plugins_path}"
-            )
-            return alt_plugins_path
-
-        # Final fallback: Warn user about missing plugin path
         self.logger.error("Could not find plugins directory in any known location.")
         raise FileNotFoundError(
             "Plugins directory not found. Please ensure you are running from a valid development or install directory."
@@ -289,17 +286,36 @@ class PluginLoader:
 
     def reload_plugin(self, plugin_name):
         """
-        Reload a single plugin dynamically by its name.
+        Initiates a dynamic, non-disruptive reload of a single plugin, effectively
+        reincarnating it with the latest code and configuration from disk.
 
-        Performs a clean reload by disabling the plugin, removing its instance,
-        reloading the module from disk, and reinitializing it with the latest code
-        and configuration.
+        This method is the heart of Waypanel's hot-reloading capability,
+        performing a surgical removal and a graceful re-initialization of a plugin
+        without requiring a full application restart. It ensures that changes made
+        to a plugin's source code are instantly reflected in the running application,
+        facilitating rapid development and debugging.
+
+        The reload process is a precise, multi-stage ritual:
+
+        1.  **Decommissioning**: The existing plugin instance is meticulously
+            deactivated and purged from the system's active memory to prevent
+            resource leaks or conflicts.
+
+        2.  **Amnesic Reload**: The plugin's module is reloaded from its source file,
+            effectively wiping any lingering state and ensuring the most recent
+            implementation is loaded into Python's module cache.
+
+        3.  **Metabolic Re-processing**: The reloaded plugin is re-validated and its
+            metadata is re-analyzed by `_process_plugin`, confirming its integrity
+            and gathering its essential parameters (position, order, priority).
+
+        4.  **Resurrection**: The plugin is re-initialized, its widgets are
+            re-instantiated, and it is seamlessly reintegrated into the panel's
+            layout, ready to resume its function with its updated logic.
 
         Args:
-            plugin_name (str): The name of the plugin to reload.
+            plugin_name (str): The symbolic name of the plugin to be resurrected.
         """
-        # Ensure the plugin name has a trailing dot for comparison
-        # Check if the plugin exists in the plugins_path dictionary
         if plugin_name not in self.plugins_path:
             self.logger.error(
                 f"Plugin '{plugin_name}' not found in plugins_path. Skipping reload."
@@ -312,49 +328,52 @@ class PluginLoader:
             if plugin_name in self.plugins:
                 del self.plugins[plugin_name]
 
-            # Get the file path from self.plugins_path
-            file_path = self.plugins_path[plugin_name]
-            relative_path = os.path.relpath(file_path, self.plugins_dir).replace(
-                "/", "."
-            )[:-3]  # Remove .py extension
-
-            module_path = self.plugins_import[plugin_name]
+            # Retrieve the correct import path
+            module_path = self.plugins_import.get(plugin_name)
+            if not module_path:
+                self.logger.error(
+                    f"Module path for plugin '{plugin_name}' not found. Cannot reload."
+                )
+                return
 
             # Reload the module
             if module_path in sys.modules:
                 module = sys.modules[module_path]
-                importlib.reload(module)  # Reload the existing module
+                importlib.reload(module)
             else:
-                module = importlib.import_module(module_path)  # Re-import the module
+                module = importlib.import_module(module_path)
 
             # Process the plugin metadata for the reloaded plugin
             valid_plugins = []
             plugin_metadata = []
             self._process_plugin(
-                plugin_name, relative_path, [], valid_plugins, plugin_metadata
+                plugin_name,
+                module_path,
+                self.disabled_plugins,
+                valid_plugins,
+                plugin_metadata,
             )
 
-            # Initialize the plugin using _initialize_sorted_plugins
+            # Initialize the plugin if metadata was successfully processed
             if plugin_metadata:
-                self.enable_plugin(plugin_name, plugin_metadata)
+                for module, position, order, priority in plugin_metadata:
+                    plugin_instance = module.initialize_plugin(self.panel_instance)
+                    self.plugins[plugin_name] = {
+                        "instance": plugin_instance,
+                        "module": module,
+                        "position": position,
+                        "order": order,
+                        "priority": priority,
+                    }
                 self.logger.info(f"Reloaded and initialized plugin: {plugin_name}")
             else:
                 self.logger.error(
                     f"Failed to process metadata for plugin: {plugin_name}"
                 )
 
-        except ModuleNotFoundError as e:
-            self.logger.error(
-                error=e,
-                message=f"Failed to reload plugin '{plugin_name}': {e}",
-                level="error",
-            )
         except Exception as e:
-            self.logger.error(
-                error=e,
-                message=f"Error reloading plugin '{plugin_name}': {e}",
-                level="error",
-            )
+            self.logger.error(f"Error reloading plugin '{plugin_name}': {e}")
+            print(f" {e}:\n{traceback.format_exc()}")
 
     def _load_plugin_configuration(self):
         """
@@ -383,8 +402,8 @@ class PluginLoader:
                 config["plugins"] = {"list": "", "disabled": ""}
 
             # Parse the disabled plugins list
-            disabled_plugins = config["plugins"]["disabled"].split()
-            return config, disabled_plugins
+            self.disabled_plugins = config["plugins"]["disabled"].split()
+            return config, self.disabled_plugins
         except Exception as e:
             self.logger.error(
                 error=e,
@@ -482,11 +501,36 @@ class PluginLoader:
             print(f" {e}:\n{traceback.format_exc()}")
 
     def _update_plugin_configuration(self, config, valid_plugins, disabled_plugins):
-        """Update the [plugins] section in the TOML configuration."""
+        """
+        Persists the plugin configuration to the `config.toml` file.
+
+        This method is responsible for saving the current state of discovered and
+        disabled plugins back to the application's configuration file. It takes the
+        in-memory configuration object, updates the plugin lists, and then
+        atomically writes the changes to disk.
+
+        Args:
+            config (dict): The in-memory TOML configuration object.
+            valid_plugins (list): A list of strings containing the names of
+                                  all plugins that were successfully loaded.
+            disabled_plugins (list): A list of strings containing the names of
+                                     all plugins explicitly disabled in the config.
+
+        Workflow:
+            1. **Path Resolution**: Constructs the absolute path to the `config.toml` file.
+            2. **Data Update**: Updates the `list` and `disabled` keys within the `[plugins]`
+               section of the `config` dictionary. Plugin names are joined into a
+               space-separated string for persistence.
+            3. **File Dump**: Uses the `toml` library to write the entire `config`
+               dictionary to the specified file, overwriting the previous content.
+        """
         waypanel_config_path = os.path.join(self.config_path, "config.toml")
+
+        # Update the in-memory config object
         config["plugins"]["list"] = " ".join(valid_plugins)
         config["plugins"]["disabled"] = " ".join(disabled_plugins)
 
+        # Dump the updated config to the file
         with open(waypanel_config_path, "w") as f:
             toml.dump(config, f)
 
@@ -516,105 +560,79 @@ class PluginLoader:
 
     def handle_set_widget(self, widget_action, widget_to_append, target, module_name):
         """
-        Handle appending or setting content for a plugin's widget.
+        Handles the placement of a plugin's widget on the panel.
+
+        This method orchestrates the visual integration of a plugin's widget into the panel's layout. It supports
+        two primary actions: appending a widget to a container and setting a widget as a container's content.
+        For plugins that return multiple widgets, it ensures they are organized within a dedicated `Gtk.FlowBox`.
+
         Args:
-            widget_action (str): The action to perform ("append" or "set_content").
-            widget_to_append (Gtk.Widget or list): The widget(s) to append or set.
-            target (Gtk.Container): The target container (e.g., self.left_panelpanel, self.right_panel).
-            module_name (str): The name of the plugin (used to create a dedicated FlowBox).
+            widget_action (str): The action to perform. Must be either "append" or "set_content".
+            widget_to_append (Gtk.Widget or list): The widget instance(s) to be placed on the panel.
+                                                    If a list, the widgets will be appended to a dedicated container.
+            target (Gtk.Container): The target panel container (e.g., `self.left_panel`, `self.top_panel`).
+            module_name (str): The name of the plugin module, used to create a unique identifier for its container.
         """
         if widget_action == "append":
-            # Append the widget(s) to the target box
-            if isinstance(widget_to_append, list):
-                for widget in widget_to_append:
-                    # Create a dedicated FlowBox for the plugin if it doesn't exist
-                    if f"{module_name}_box" not in self.plugin_containers:
-                        self.plugin_containers[f"{module_name}_box"] = Gtk.FlowBox()
-                        self.plugin_containers[f"{module_name}_box"].set_valign(
-                            Gtk.Align.START
-                        )
-                        self.plugin_containers[f"{module_name}_box"].set_halign(
-                            Gtk.Align.FILL
-                        )
-                        self.plugin_containers[f"{module_name}_box"].set_selection_mode(
-                            Gtk.SelectionMode.NONE
-                        )
-                        self.plugin_containers[f"{module_name}_box"].add_css_class(
-                            "box-widgets"
-                        )  # Add CSS class
+            # Consolidate widget_to_append into a list for consistent handling
+            widgets = (
+                widget_to_append
+                if isinstance(widget_to_append, list)
+                else [widget_to_append]
+            )
 
-                        # Add the plugin's FlowBox to the target container if not already added
-                        if (
-                            self.plugin_containers[f"{module_name}_box"].get_parent()
-                            is None
-                        ):
-                            GLib.idle_add(
-                                target.append,
-                                self.plugin_containers[f"{module_name}_box"],
-                            )
+            # Ensure a dedicated FlowBox exists for the plugin
+            box_name = f"{module_name}_box"
+            if box_name not in self.plugin_containers:
+                flow_box = Gtk.FlowBox()
+                flow_box.set_valign(Gtk.Align.START)
+                flow_box.set_halign(Gtk.Align.FILL)
+                flow_box.set_selection_mode(Gtk.SelectionMode.NONE)
+                flow_box.add_css_class("box-widgets")
+                self.plugin_containers[box_name] = flow_box
 
-                    # Clean up the FlowBox before appending new widgets
-                    self.plugin_containers[f"{module_name}_box"].remove_all()
-
-                    # Append the widget to the plugin's dedicated FlowBox
-                    GLib.idle_add(
-                        self.plugin_containers[f"{module_name}_box"].append, widget
-                    )
+                # Append the newly created FlowBox to the target container
+                GLib.idle_add(target.append, flow_box)
             else:
-                # Single widget case
-                if f"{module_name}_box" not in self.plugin_containers:
-                    self.plugin_containers[f"{module_name}_box"] = Gtk.FlowBox()
-                    self.plugin_containers[f"{module_name}_box"].set_valign(
-                        Gtk.Align.START
-                    )
-                    self.plugin_containers[f"{module_name}_box"].set_halign(
-                        Gtk.Align.FILL
-                    )
-                    self.plugin_containers[f"{module_name}_box"].set_selection_mode(
-                        Gtk.SelectionMode.NONE
-                    )
+                flow_box = self.plugin_containers[box_name]
 
-                    self.plugin_containers[f"{module_name}_box"].add_css_class(
-                        "box-widgets"
-                    )  # Add CSS class
+            # Clean up the FlowBox before appending new widgets
+            GLib.idle_add(flow_box.remove_all)
 
-                    # Add the plugin's FlowBox to the target container if not already added
-                    if (
-                        self.plugin_containers[f"{module_name}_box"].get_parent()
-                        is None
-                    ):
-                        GLib.idle_add(
-                            target.append, self.plugin_containers[f"{module_name}_box"]
-                        )
-
-                # Clean up the FlowBox before appending new widgets
-                self.plugin_containers[f"{module_name}_box"].remove_all()
-
-                # Append the widget to the plugin's dedicated FlowBox
-                GLib.idle_add(
-                    self.plugin_containers[f"{module_name}_box"].append,
-                    widget_to_append,
-                )
+            # Append the widget(s) to the plugin's dedicated FlowBox
+            for widget in widgets:
+                GLib.idle_add(flow_box.append, widget)
 
         elif widget_action == "set_content":
-            # Set the widget(s) as the content of the target container
-            if isinstance(widget_to_append, list):
-                for widget in widget_to_append:
-                    GLib.idle_add(target.set_content, widget)
-            else:
-                GLib.idle_add(target.set_content, widget_to_append)
+            # Set the widget as the content of the target container
+            widgets = (
+                widget_to_append
+                if isinstance(widget_to_append, list)
+                else [widget_to_append]
+            )
+            for widget in widgets:
+                GLib.idle_add(target.set_content, widget)
 
     def _initialize_sorted_plugins(self, plugin_metadata):
         """
-        Sort plugins by priority (descending), then order (ascending),
-        and initialize them in sequence.
+        Sorts and schedules plugins for non-blocking initialization.
 
-        Ensures:
-            - 'event_manager' is always loaded first
-            - Plugins with dependencies are initialized after their deps
+        This method prepares plugin data for a responsive startup. It sorts plugins based on a defined order
+        and then schedules each for initialization using `GLib.idle_add`. This ensures that long-running
+        tasks do not block the main UI thread.
 
         Args:
-            plugin_metadata: List of tuples containing module info and metadata
+            plugin_metadata (list): A list of tuples, where each tuple contains
+                                    the module, position, order, and priority
+                                    of a discovered plugin.
+
+        Workflow:
+            1. **Sorting**: Sorts plugins by priority (descending) and then by order (ascending).
+            2. **Special Cases**: Handles the special cases of `event_manager` and `event_handler_decorator`,
+               ensuring they are loaded first and last, respectively.
+            3. **Scheduling**: Iterates through the sorted list and queues each plugin's
+               initialization using `GLib.idle_add`, passing the necessary metadata to the
+               `_initialize_plugin_with_deps` method.
         """
         # Sort plugins by priority (descending), then by order (ascending)
         plugin_metadata.sort(key=lambda x: (-x[3], x[2]))
@@ -640,78 +658,108 @@ class PluginLoader:
                 break
 
         # Append event_handler_decorator at the end
-        # This plugin only works for plugins that load earlier
         if event_handler_decorator_metadata:
             plugin_metadata.append(event_handler_decorator_metadata)
 
-        # Initialize plugins
-        def initialize_plugin_with_deps(module, position, order, priority):
-            module_name = module.__name__.split(".")[-1]
-            plugin_name = module.__name__.split(".src.plugins.")[-1]
-
-            # Check for dependencies
-            has_plugin_deps = getattr(module, "DEPS", [])
-
-            if has_plugin_deps:
-                # Delay initialization until all dependencies are ready
-                deps_satisfied = all(dep in self.plugins for dep in has_plugin_deps)
-                if not deps_satisfied:
-                    self.logger.debug(
-                        f"Delaying initialization of {plugin_name} due to missing dependencies."
-                    )
-                    GLib.idle_add(
-                        lambda: initialize_plugin_with_deps(
-                            module, position, order, priority
-                        ),
-                    )
-                    return
-
-            # Initialize the plugin
-            try:
-                plugin_instance = module.initialize_plugin(self.panel_instance)
-
-                # Call the on_start method if it exists
-                if hasattr(plugin_instance, "on_start"):
-                    plugin_instance.on_start()
-
-                self.logger.info(f"Initialized plugin: {plugin_name}")
-                self.plugins[module_name] = plugin_instance
-
-                # Append widget to the panel if applicable
-                target_box = self._get_target_panel_box(position, plugin_name)
-                if target_box is None:
-                    self.logger.error(
-                        f"No target box found for plugin {plugin_name} with position {position}."
-                    )
-                    return
-
-                # Background plugins have no widgets to append
-                if position == "background":
-                    self.logger.info(
-                        f"Plugin [{plugin_name}] initialized as a background plugin."
-                    )
-                    return
-
-                # Check if the plugin has an set_widget method
-                if not hasattr(plugin_instance, "set_widget"):
-                    return
-
-                widget_to_append = plugin_instance.set_widget()[0]
-                widget_action = plugin_instance.set_widget()[1]
-
-                self.handle_set_widget(
-                    widget_action, widget_to_append, target_box, module_name
-                )
-
-            except Exception as e:
-                self.logger.error(f"Failed to initialize plugin '{plugin_name}': {e}")
-                print(traceback.format_exc())
-
-        # Process all plugins
+        # Schedule plugin initialization
         for module, position, order, priority in plugin_metadata:
-            initialize_plugin_with_deps(module, position, order, priority)
+            # The lambda function captures the arguments correctly
+            GLib.idle_add(
+                lambda m=module,
+                p=position,
+                o=order,
+                pr=priority: self._initialize_plugin_with_deps(m, p, o, pr)
+            )
 
-        return False  # stops glib loop
+    def _initialize_plugin_with_deps(self, module, position, order, priority):
+        """
+        Initializes a single plugin and its dependencies as a GLib idle callback.
+
+        This method is designed to be called by `GLib.idle_add` to prevent a single
+        plugin's initialization from blocking the main UI thread. It is a key part of
+        the non-blocking startup process, ensuring the application remains responsive
+        even with many or complex plugins.
+
+        Args:
+            module (module): The imported Python module of the plugin to be initialized.
+            position (str): The panel position where the plugin's widget will be placed.
+            order (int): The order of the plugin within its panel position.
+            priority (int): The priority of the plugin, used for initial sorting.
+
+        Workflow:
+            1. **Dependency Check**: It first checks if the plugin has any dependencies defined
+               in its `DEPS` attribute.
+            2. **Non-Blocking Wait**: If dependencies are missing, the function returns `True`,
+               which tells `GLib.idle_add` to re-queue this function for a later time. This
+               ensures the event loop can continue running without waiting.
+            3. **Initialization**: Once all dependencies are satisfied, it calls the plugin's
+               `initialize_plugin` function to create an instance of the plugin.
+            4. **Lifecycle Method**: If the plugin instance has an `on_start` method, it is
+               called to perform any initial setup.
+            5. **Widget Handling**: The function then retrieves the plugin's widget and its
+               action (e.g., "append", "prepend") and handles adding it to the appropriate
+               panel based on the `position` argument.
+
+        Returns:
+            bool: `True` if the plugin is re-queued for later due to missing dependencies;
+                  `False` if initialization is complete or an error occurred.
+        """
+        module_name = module.__name__.split(".")[-1]
+        plugin_name = module.__name__.split(".src.plugins.")[-1]
+
+        # Check for dependencies
+        has_plugin_deps = getattr(module, "DEPS", [])
+
+        # Re-queue initialization if dependencies are not met
+        if has_plugin_deps and not all(dep in self.plugins for dep in has_plugin_deps):
+            self.logger.debug(
+                f"Delaying initialization of {plugin_name} due to missing dependencies."
+            )
+            # Return True to reschedule this callback
+            return True
+
+        # Initialize the plugin
+        try:
+            plugin_instance = module.initialize_plugin(self.panel_instance)
+
+            # Call the on_start method if it exists
+            if hasattr(plugin_instance, "on_start"):
+                plugin_instance.on_start()
+
+            self.logger.info(f"Initialized plugin: {plugin_name}")
+            self.plugins[module_name] = plugin_instance
+
+            # Append widget to the panel if applicable
+            target_box = self._get_target_panel_box(position, plugin_name)
+            if target_box is None:
+                self.logger.error(
+                    f"No target box found for plugin {plugin_name} with position {position}."
+                )
+                return False  # Stop the callback
+
+            # Background plugins have no widgets to append
+            if position == "background":
+                self.logger.info(
+                    f"Plugin [{plugin_name}] initialized as a background plugin."
+                )
+                return False  # Stop the callback
+
+            # Check if the plugin has an set_widget method
+            if not hasattr(plugin_instance, "set_widget"):
+                return False  # Stop the callback
+
+            widget_to_append = plugin_instance.set_widget()[0]
+            widget_action = plugin_instance.set_widget()[1]
+
+            self.handle_set_widget(
+                widget_action, widget_to_append, target_box, module_name
+            )
+
+        except Exception as e:
+            self.logger.error(f"Failed to initialize plugin '{plugin_name}': {e}")
+            print(traceback.format_exc())
+
+        return False  # Return False to stop the callback after it's done
 
     def _get_target_panel_box(self, position, plugin_name=None):
         """

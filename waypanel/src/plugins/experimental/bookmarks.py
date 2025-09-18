@@ -4,7 +4,6 @@ from PIL import Image
 
 import requests
 import toml
-import wayfire.ipc as wayfire
 from bs4 import BeautifulSoup
 from gi.repository import GdkPixbuf, Gtk
 
@@ -251,11 +250,8 @@ class PopoverBookmarks(BasePlugin):
         ]
         if view:
             self.ipc.set_focus(view[0])
-        cmd = [
-            "firefox-developer-edition",
-            "ext+container:name={0}&url={1}".format(container, url),
-        ]
-        Popen(cmd)
+        cmd = f"firefox-developer-edition 'ext+container:name={container}&url={url}'"
+        self.ipc.run_cmd(cmd)
         self.popover_bookmarks.popdown()
 
     def open_popover_bookmarks(self, *_):

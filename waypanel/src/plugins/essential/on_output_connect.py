@@ -1,13 +1,8 @@
-# NOTE: the following config must to be set.
-# [panel]
-# primary_output = "Output-Name"
-#
 from gi.repository import GLib
 from gi.repository import Gtk4LayerShell as LayerShell
 from src.core.create_panel import (
     get_monitor_info,
 )
-import os
 from src.plugins.core._base import BasePlugin
 from src.plugins.core.event_handler_decorator import subscribe_to_event
 
@@ -34,7 +29,6 @@ class PanelOutputMoverPlugin(BasePlugin):
         self.panel = panel_instance
         self.current_output_name = None
         self._debounce_timeout_id = None
-
         self.primary_output_name = self.config.get("panel", {}).get("primary_output")
         if self.primary_output_name:
             self.logger.info(
@@ -50,7 +44,7 @@ class PanelOutputMoverPlugin(BasePlugin):
     def _apply_initial_output(self):
         """Assign panel to the best available output on startup."""
         try:
-            self._set_panel_monitor()
+            self._set_panel_on_output()
             self.logger.info(
                 f"[{self.PLUGIN_NAME}] Initial output assignment completed."
             )
@@ -67,6 +61,7 @@ class PanelOutputMoverPlugin(BasePlugin):
         output = [i for i in outputs if i["name"] == self.primary_output_name][0]
         default_output_enabled = output["output-id"] != -1
         default_output_enabled = output["source"] != "dpms"
+
         self.current_output_name = self.primary_output_name
 
         if not default_output_enabled:
@@ -77,7 +72,12 @@ class PanelOutputMoverPlugin(BasePlugin):
         if self._debounce_timeout_id:
             GLib.source_remove(self._debounce_timeout_id)
 
-        self._debounce_timeout_id = GLib.timeout_add(100, self._debounced_update)
+        current_output = [i for i in outputs if i["name"] == self.current_output_name][
+            0
+        ]
+        # panel wont move to the current output if the current workspace has any fullscreen view
+        if not self.utils.has_output_fullscreen_view(current_output["output-id"]):
+            self._debounce_timeout_id = GLib.timeout_add(100, self._debounced_update)
 
     def _debounced_update(self):
         """Perform the actual update after debounce delay."""
@@ -158,3 +158,38 @@ class PanelOutputMoverPlugin(BasePlugin):
             self.bottom_panel.set_default_size(
                 user_defined_width_bottom_panel, user_defined_height_bottom_panel
             )
+
+    def about(self):
+        """
+        Panel Output Mover Plugin
+        =========================
+
+        Purpose
+        -------
+        This plugin ensures that the panel (the bar or dock managed by the application)
+        is always visible on an active monitor, even when the user changes the output
+        layout—for example, when a monitor is unplugged, turned off, or goes into DPMS
+        (power-saving) mode. It automatically moves all panel surfaces (top, bottom,
+        left, and right panels) to a valid monitor whenever the currently assigned
+        output is no longer available.
+
+        Key Configuration
+        -----------------
+        In the application configuration file, the following setting is required if you
+        want to force the panel to always prefer a specific monitor:
+
+            [panel]
+            primary_output = "Output-Name"
+
+        If `primary_output` is omitted, the plugin will simply choose the first
+        available monitor as reported by the compositor.
+
+        Why It Matters
+        --------------
+        Without this plugin, if the monitor hosting the panel is turned off, removed,
+        or enters DPMS mode, the panel might remain bound to that inactive output,
+        making it inaccessible. The Panel Output Mover Plugin guarantees that the
+        panel remains visible and usable to the user at all times, improving both
+        usability and resilience in multi-monitor setups.
+        """
+        return self.about.__doc__

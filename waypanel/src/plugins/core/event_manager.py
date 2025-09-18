@@ -1,6 +1,8 @@
+import gi
 from gi.repository import GLib
 from src.plugins.core._base import BasePlugin
 import os
+import collections
 
 # Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
@@ -39,9 +41,17 @@ class EventManagerPlugin(BasePlugin):
         self.ipc_client.wayfire_events_setup(self.get_socket_path())
         self.event_subscribers = {}  # Dictionary to store event subscribers
 
+        # New: Initialize event queue and processing state
+        self.event_queue = collections.deque()
+        self.is_processing_events = False
+
+        # New: Start the periodic event processing loop
+        # The timeout will call _process_queued_events every 50ms
+        GLib.timeout_add(50, self._process_queued_events)
+
     def handle_event(self, msg) -> None:
         """
-        Handle incoming IPC events and notify subscribers.
+        Handle incoming IPC events by adding them to a queue.
 
         Args:
             msg (dict): The event message containing details about the event.
@@ -50,32 +60,57 @@ class EventManagerPlugin(BasePlugin):
         if not self.ipc.is_connected():
             return
 
-        event_type = msg.get("event")
+        # New: Add the incoming message to the event queue instead of processing it directly
+        self.event_queue.append(msg)
+        self.logger.debug(f"Event queued. Current queue size: {len(self.event_queue)}")
 
-        # Notify subscribers
-        if event_type in self.event_subscribers:
-            for callback, plugin_name in self.event_subscribers[event_type]:
-                try:
-                    # Execute the callback function
-                    GLib.idle_add(callback, msg)
-                    if plugin_name:
-                        self.logger.debug(
-                            f"Event '{event_type}' triggered for plugin '{plugin_name}'"
-                        )
-                except Exception as e:
-                    self.logger.error(
-                        f"Error executing callback for event '{event_type}': {e}"
-                    )
+    def _process_queued_events(self):
+        """
+        Periodically processes all events currently in the queue.
 
-        # Handle specific event types
-        if event_type.startswith("view-"):
-            self.handle_view_event(msg)
-        elif event_type.startswith("plugin-"):
-            self.handle_plugin_event(msg)
-        elif event_type.startswith("output-"):
-            self.handle_output_event(msg)
-        elif event_type.startswith("workspace-"):
-            self.handle_workspace_event(msg)
+        This method acts as a throttle, ensuring that events are handled in batches
+        at a controlled rate, preventing the UI from freezing.
+        """
+        if self.is_processing_events:
+            return True  # Prevents re-entry if the function is still running
+
+        self.is_processing_events = True
+
+        while self.event_queue:
+            msg = self.event_queue.popleft()
+            try:
+                event_type = msg.get("event")
+
+                # Notify subscribers
+                if event_type in self.event_subscribers:
+                    for callback, plugin_name in self.event_subscribers[event_type]:
+                        try:
+                            # Use GLib.idle_add to push callback to the main loop
+                            GLib.idle_add(callback, msg)
+                            if plugin_name:
+                                self.logger.debug(
+                                    f"Event '{event_type}' triggered for plugin '{plugin_name}'"
+                                )
+                        except Exception as e:
+                            self.logger.error(
+                                f"Error executing callback for event '{event_type}': {e}"
+                            )
+
+                # Handle specific event types
+                if event_type.startswith("view-"):
+                    self.handle_view_event(msg)
+                elif event_type.startswith("plugin-"):
+                    self.handle_plugin_event(msg)
+                elif event_type.startswith("output-"):
+                    self.handle_output_event(msg)
+                elif event_type.startswith("workspace-"):
+                    self.handle_workspace_event(msg)
+
+            except Exception as e:
+                self.logger.error(f"Error processing queued event: {e}")
+
+        self.is_processing_events = False
+        return True  # Return True to keep the timeout running
 
     def _validate_event(self, msg, required_keys=None) -> bool:
         """
