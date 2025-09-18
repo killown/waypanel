@@ -27,11 +27,7 @@ setup(
             "pygobject-stubs[Gtk4,Gdk]",
         ],
     },
-    entry_points={
-        "console_scripts": [
-            "waypanel=waypanel.main:main",
-        ],
-    },
+    scripts=["scripts/waypanel"],
     packages=find_packages(),
     include_package_data=True,
 )
