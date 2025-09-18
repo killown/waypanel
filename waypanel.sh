@@ -144,5 +144,4 @@ if [ -d /nix/store ]; then
   fi
 fi
 
-exec python -m waypanel.main "$@"
-
+exec python "$MAIN_PY" "$@"
