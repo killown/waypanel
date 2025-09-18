@@ -28,7 +28,7 @@ def main():
         ]
         for pattern in candidate_patterns:
             for path in glob.glob(pattern):
-                pkg_path = os.path.join(path, APP_NAME)
+                pkg_path = os.path.join(path, "src")
                 if os.path.isdir(pkg_path):
                     return pkg_path
         return None
@@ -44,7 +44,7 @@ def main():
     else:
         # Fallback to the original development paths
         REQ_FILE = os.path.join(SCRIPT_DIR, "requirements.txt")
-        MAIN_PY = os.path.join(SCRIPT_DIR, "waypanel", "main.py")
+        MAIN_PY = os.path.join(SCRIPT_DIR, "main.py")
         print(f"[INFO] Using development path: {SCRIPT_DIR}")
         os.environ["PYTHONPATH"] = SCRIPT_DIR
 
