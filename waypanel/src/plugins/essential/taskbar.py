@@ -60,7 +60,7 @@ class TaskbarPlugin(BasePlugin):
         # Timer ID for the scheduled update
         self._debounce_timer_id = None
         # Minimum time interval between updates (in milliseconds)
-        self._debounce_interval = 100
+        self._debounce_interval = 10
         # --------------------------
 
         self.allow_move_view_scroll = True
@@ -347,23 +347,19 @@ class TaskbarPlugin(BasePlugin):
 
         This method is responsible for cleaning up a taskbar button when its
         corresponding window is closed or unmapped. It is a critical part of
-        the button-pooling and resource management strategy.
-
-        The process is as follows:
-        1.  **Safety Check**: It first checks if the `view_id` exists in the `self.in_use_buttons` map.
-        2.  **Removal from Use**: The button is popped from the `in_use_buttons` map, making it
+        the button-pooling and resource management strategy. The process is as follows:
+        1.  Safety Check: It first checks if the `view_id` exists in the `self.in_use_buttons` map.
+        2.  Removal from Use: The button is popped from the `in_use_buttons` map, making it
             available for future use.
-        3.  **Cleanup**: It sets the button to be invisible, removes any special CSS classes
+        3.  Cleanup: It sets the button to be invisible, removes any special CSS classes
             (like "focused"), and disconnects all gesture controllers to prevent
             memory leaks and unexpected behavior.
-        4.  **Reset Widgets**: The custom `button.icon` and `button.label` widgets are cleared
+        4.  Reset Widgets: The custom `button.icon` and `button.label` widgets are cleared
             to ensure they don't display stale information.
-        5.  **Return to Pool**: Finally, the button is appended back to the `self.button_pool`
+        5.  Return to Pool: Finally, the button is appended back to the `self.button_pool`
             list, ready to be reused for a new window.
-
         This entire process ensures that the UI remains efficient and responsive without
         the need to create new buttons from scratch.
-
         Args:
             view_id (int): The unique ID of the view (window) whose button needs to be removed.
         """
@@ -383,49 +379,104 @@ class TaskbarPlugin(BasePlugin):
         button.icon.set_from_icon_name(None)
         button.label.set_label("")
 
-        self.taskbar.remove(button)
-
         # Return to pool
         self.button_pool.append(button)
         self.logger.debug(f"Button for view ID {view_id} returned to pool.")
+
+    def Taskbar(self):
+        """
+        Reconciles the taskbar buttons with the current list of open windows.
+
+        This method is the core reconciliation loop for the taskbar. It synchronizes
+        the buttons with the live state of all toplevel windows on the desktop.
+        The process is optimized to reuse button objects from a pool rather than
+        creating and destroying them, which improves performance and reduces memory
+        churn. The reconciliation process is as follows:
+        1.  **Get Current Views**: It queries the IPC to get a list of all current
+            toplevel windows.
+        2.  **Remove Stale Buttons**: It identifies buttons corresponding to windows
+            that have been closed and returns them to the button pool for reuse.
+        3.  **Clean Layout**: It clears the entire layout of the Gtk.FlowBox to ensure
+            buttons can be re-added in the correct order. This prevents visual fragmentation
+            where buttons are scattered across multiple rows.
+        4.  **Add/Update Buttons**: It iterates through the current views and for each
+            view, it either updates an existing button from the `in_use_buttons`
+            dictionary or adds a new one from the pool.
+        5.  **Rebuild Layout**: Finally, it appends all the active buttons back to the
+            Gtk.FlowBox in a consistent order, ensuring a clean, unbroken layout.
+        This approach guarantees that the taskbar is always synchronized with the
+        desktop, providing a reliable and visually consistent user experience.
+        """
+        self.logger.debug("Reconciling taskbar views.")
+
+        current_views = self.ipc.list_views()
+        current_view_ids = {v.get("id") for v in current_views if self.is_valid_view(v)}
+
+        # 1. Identify and remove buttons for views that no longer exist
+        views_to_remove = list(self.in_use_buttons.keys() - current_view_ids)
+        for view_id in views_to_remove:
+            self.remove_button(view_id)
+
+        # 2. Add or update buttons for existing views, and build a list for layout
+        buttons_for_layout = []
+        for view in current_views:
+            view_id = view.get("id")
+            if view_id in current_view_ids:
+                if view_id in self.in_use_buttons:
+                    button = self.in_use_buttons[view_id]
+                    self.update_button(button, view)
+                else:
+                    button = self.add_button_to_taskbar(view)
+                buttons_for_layout.append(button)
+
+        # 3. Clear and rebuild the flowbox to fix the layout
+        self.taskbar.remove_all()
+        for button in buttons_for_layout:
+            self.taskbar.append(button)
+
+        self.logger.info("Taskbar reconciliation completed.")
+
+    def update_button(self, button, view):
+        """
+        Updates a taskbar button with the information of a specific view.
+        """
+        MAX_TITLE_LENGTH = 25
+        title = view.get("title")
+        if len(title) > MAX_TITLE_LENGTH:
+            truncated_title = title[:MAX_TITLE_LENGTH] + "..."
+        else:
+            truncated_title = title
+        button.view_id = view.get("id")
+        button.set_tooltip_text(title)
+        button.icon.set_from_icon_name(view.get("app-id"))
+        button.label.set_label(truncated_title)
 
     def add_button_to_taskbar(self, view):
         """
         Adds a taskbar button for a new view (window), using the button pool.
 
-        This method is the entry point for creating or reusing a button for a newly
-        mapped or created window. It follows a precise, ordered sequence of operations
-        to ensure efficiency and correct behavior:
-
-        1.  **Check for Duplicates**: It first checks if a button for the given `view_id`
-            already exists in `self.in_use_buttons` to prevent adding duplicates.
-        2.  **Get/Create Button**: It calls `self._get_or_create_button()` to either
-            retrieve a pre-existing button from the pool or create a new one as needed.
-        3.  **Critical Fix**: The retrieved/created button is immediately added to the
-            `self.in_use_buttons` map. This is a crucial step that was a source of
-            crashes in previous versions, as it ensures the `update_taskbar_button`
-            method can find the button and won't throw an `AttributeError`.
-        4.  **Populate and Display**: It calls `self.update_taskbar_button()` to populate the
-            button with the correct icon and title, and then sets the button to visible.
-        5.  **Connect Gestures**: It connects a variety of gesture and event controllers
-            to the button, including clicks for focusing the window, and gestures for
-            closing, moving, and hovering, making the button fully interactive.
+        This method prepares and configures a button for a new toplevel window.
+        It manages the button's internal state and connects all necessary gestures
+        and event controllers for user interaction. The button is not immediately
+        appended to the taskbar here; that is handled by the main `Taskbar()`
+        reconciliation method to ensure correct layout and ordering.
 
         Args:
-            view (dict): A dictionary representing the new view (window) to add to the taskbar.
-                         It is expected to contain a unique 'id' and other properties.
+            view (dict): A dictionary containing the details of the view (window).
+        Returns:
+            Gtk.Button: The prepared and configured Gtk.Button widget for the view.
         """
         view_id = view.get("id")
-        if view_id in self.in_use_buttons:
-            return
 
+        # Get a button from the pool or create a new one
         button = self._get_or_create_button()
 
+        # Store the button in the in-use map
         self.in_use_buttons[view_id] = button
         self.taskbar_list.append(view_id)
 
         # Update button content and make it visible
-        self.update_taskbar_button(view)
+        self.update_button(button, view)
         button.set_visible(True)
 
         # Connect gestures and motion controllers
@@ -447,55 +498,7 @@ class TaskbarPlugin(BasePlugin):
         button.add_controller(motion_controller)
         self.utils.add_cursor_effect(button)
 
-    def Taskbar(self):
-        """
-        Reconciles the taskbar buttons with the current list of open windows.
-
-        This method is the core synchronization logic for the taskbar. It performs a
-        reconciliation process to ensure that every active, valid window has a
-        corresponding button on the taskbar, and that buttons for closed windows are
-        removed and returned to the pool.
-
-        The process is broken down into two main steps for efficiency:
-
-        1.  **Removing Stale Buttons**: It first identifies all `view_id`s that are
-            currently represented in the `self.in_use_buttons` map but no longer
-            exist in the current list of open views. For each of these, it calls
-            `self.remove_button()`, which cleans up and returns the button to the
-            reusable pool.
-
-        2.  **Adding/Updating Buttons**: It then iterates through the current list of
-            valid open views. For each view, it checks if a corresponding button
-            already exists in `self.in_use_buttons`. If it does, it simply updates the
-            button's icon and title via `self.update_taskbar_button()`. If no button
-            exists, it calls `self.add_button_to_taskbar()` to get a new or reused
-            button and configure it.
-
-        This reconciliation strategy ensures the taskbar is always in sync with the
-        system's state in a highly performant and resource-efficient manner.
-        """
-        self.logger.debug("Reconciling taskbar views.")
-
-        current_views = self.ipc.list_views()
-        current_view_ids = {v.get("id") for v in current_views if self.is_valid_view(v)}
-
-        # 1. Hide buttons for views that no longer exist
-        views_to_remove = list(self.in_use_buttons.keys() - current_view_ids)
-        for view_id in views_to_remove:
-            self.remove_button(view_id)
-
-        # 2. Add or update buttons for existing views
-        for view in current_views:
-            view_id = view.get("id")
-            if view_id in current_view_ids:
-                if view_id in self.in_use_buttons:
-                    # Update existing button
-                    self.update_taskbar_button(view)
-                else:
-                    # Add new button for this view
-                    self.add_button_to_taskbar(view)
-
-        self.logger.info("Taskbar reconciliation completed.")
+        return button
 
     def add_scroll_gesture(self, widget, view):
         """
