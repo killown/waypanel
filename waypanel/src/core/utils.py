@@ -551,16 +551,24 @@ class Utils(Adw.Application):
             if icon_theme.has_icon(icon):
                 return icon
 
-        # Partial matches
         try:
             all_icons = icon_theme.get_icon_names()
+
+            # Find the best partial match using similarity ratio
             partial_matches = [icon for icon in all_icons if app_name in icon.lower()]
             if partial_matches:
-                return partial_matches[0]
+                best_match = max(
+                    partial_matches,
+                    key=lambda icon: difflib.SequenceMatcher(
+                        None, app_name, icon.lower()
+                    ).ratio(),
+                )
+                # You can set a threshold if needed, but for substring matches, the
+                # highest ratio should be the most relevant.
+                return best_match
 
-            # Fuzzy matching
+            # Fuzzy matching as a last resort
             if all_icons:
-                # Compute similarity ratios
                 app_name_lower = app_name.lower()
                 best_match = max(
                     all_icons,
@@ -568,7 +576,6 @@ class Utils(Adw.Application):
                         None, app_name_lower, icon.lower()
                     ).ratio(),
                 )
-                # Accept only if similarity > threshold (e.g., 0.6)
                 if (
                     difflib.SequenceMatcher(
                         None, app_name_lower, best_match.lower()
@@ -578,7 +585,7 @@ class Utils(Adw.Application):
                     return best_match
 
         except Exception as e:
-            self.logger(f"Icon search error: {e}")
+            self.logger.error(f"Icon search error: {e}")
 
         return "image-missing"
 
@@ -1252,7 +1259,7 @@ class Utils(Adw.Application):
         whose ID contains the provided `app_id`.
 
         Args:
-            app_id (str): The application ID or WM_CLASS to search for.
+            app_id (str): The application ID or app_id to search for.
 
         Returns:
             Optional[str]: The ID of the first matching desktop file if found, or None if no match is found.
@@ -1393,18 +1400,23 @@ class Utils(Adw.Application):
             self.logger.warning(f"Error reading file '{file_path}': {e}")
             return False
 
-    def get_icon(self, wm_class: str, initial_title: str, title: str) -> Optional[str]:
+    def get_icon(self, app_id: str, initial_title: str, title: str) -> Optional[str]:
         """
         Retrieve an appropriate icon name based on window metadata.
 
         Args:
-            wm_class (str): The window manager class of the application.
+            app_id (str): The window manager class of the application.
             initial_title (str): The original title of the window.
             title (str): The current title of the window.
 
         Returns:
             Optional[str]: The icon name if found, otherwise None.
         """
+
+        found_icon = self.get_nearest_icon_name(app_id)
+        if found_icon != "image-missing":
+            return found_icon
+
         # Sanitize / filter title text for GTK
         filtered_title = self.filter_utf_for_gtk(title)
         first_word = filtered_title.split()[0] if filtered_title else ""
@@ -1412,7 +1424,7 @@ class Utils(Adw.Application):
         # Detect terminal emulators and try to match the first word of the window title
         for terminal in self.terminal_emulators:
             if (
-                terminal.lower() in wm_class.lower()
+                terminal.lower() in app_id.lower()
                 and terminal.lower() not in filtered_title.lower()
             ):
                 title_icon = self.icon_exist(first_word or initial_title)
@@ -1426,7 +1438,7 @@ class Utils(Adw.Application):
             "microsoft-edge-dev",
             "microsoft-edge-beta",
         }
-        if any(app in wm_class.lower() for app in web_apps):
+        if any(app in app_id.lower() for app in web_apps):
             desk_local = self.search_local_desktop(initial_title)
             self.logger.info(desk_local)
 
@@ -1437,8 +1449,8 @@ class Utils(Adw.Application):
             else:
                 return self.get_nearest_icon_name("microsoft-edge")
 
-        # Fallback: try icon by wm_class
-        found_icon = self.icon_exist(wm_class)
+        # Fallback: try icon by app_id
+        found_icon = self.icon_exist(app_id)
         if found_icon:
             return found_icon
 
@@ -1522,7 +1534,6 @@ class Utils(Adw.Application):
 
             # Retrieve the icon path or name
             icon_path = self.get_icon(app_id, title, initial_title)
-            icon_path = self.get_nearest_icon_name(icon_path)
             if not icon_path:
                 self.logger.debug(f"No icon found for view: {app_id}")
                 button.set_icon_name("default-icon-name")
