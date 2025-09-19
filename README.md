@@ -34,7 +34,7 @@ pacman -S gtk4-layer-shell gobject-introspection vala playerctl python-gobject w
 
     git clone https://github.com/killown/waypanel.git
     cd waypanel
-    sh waypanel.sh # This will set up the venv automatically and run the panel
+    python run.py # This will set up the venv automatically and run the panel
 
 ### Theme Compatibility
 
