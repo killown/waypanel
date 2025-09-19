@@ -18,11 +18,7 @@ Ensure the following plugins are enabled in your ~/.config/wayfire.ini:
 
 [core]
 
-plugins = ipc ipc-rules
-
-##### if using sway:
-
-install https://github.com/killown/pysway
+plugins = ipc ipc-rules stipc
 
 ##### Option 1: aur (archlinux)
 
