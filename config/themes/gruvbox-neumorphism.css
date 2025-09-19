@@ -213,6 +213,7 @@
 .window-controls-close-button {
   -gtk-icon-size: 20px;
   background: linear-gradient(145deg, var(--gruv-red), var(--gruv-medium-bg));
+  background-color: var(--gruv-bg-medium);
   box-shadow: var(--shadow-window-controls);
   padding: 2px 8px 2px 8px;
   margin-left: 2px;
@@ -226,6 +227,7 @@
 .window-controls-maximize-button {
   -gtk-icon-size: 20px;
   background: linear-gradient(145deg, var(--gruv-blue), var(--gruv-medium-bg));
+  background-color: var(--gruv-bg-medium);
   box-shadow: var(--shadow-window-controls);
   padding: 2px 8px 2px 8px;
   margin-left: 2px;
@@ -240,6 +242,7 @@
   -gtk-icon-size: 20px;
   background-color: var(--gruv-green);
   background: linear-gradient(145deg, var(--gruv-green), var(--gruv-medium-bg));
+  background-color: var(--gruv-bg-medium);
   box-shadow: var(--shadow-window-controls);
   padding: 2px 8px 2px 8px;
   margin-left: 2px;
