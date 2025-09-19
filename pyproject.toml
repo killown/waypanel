@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "waypanel"
-version = "0.9.7.1"
+version = "0.9.7.2"
 authors = [{ name = "killown", email = "systemofdown@gmail.com" }]
 description = "A Wayfire panel that behaves like a shell"
 readme = "README.md"
