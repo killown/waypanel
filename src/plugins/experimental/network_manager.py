@@ -102,12 +102,14 @@ class NetworkMonitorPlugin(BasePlugin):
 
     def create_scrollable_grid_content(self):
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        main_box.add_css_class("network-manager-container")
         main_box.set_margin_top(10)
         main_box.set_margin_bottom(10)
         main_box.set_margin_start(10)
         main_box.set_margin_end(10)
 
         scrolled_window = Gtk.ScrolledWindow()
+        scrolled_window.add_css_class("network-manager-scrolledwindow")
         scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         scrolled_window.set_min_content_width(600)
 
@@ -131,12 +133,14 @@ class NetworkMonitorPlugin(BasePlugin):
             interface_name = device.get("GENERAL.DEVICE", "Unknown")
 
             header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            header_box.add_css_class("network-manager-device-header")
             header_label = Gtk.Label(label=f"{interface_name}")
             arrow_icon = Gtk.Image.new_from_icon_name("pan-down-symbolic")
             header_box.append(header_label)
             header_box.append(arrow_icon)
 
             toggle_button = Gtk.Button()
+            toggle_button.add_css_class("network-manager-device-toggle-button")
             toggle_button.set_child(header_box)
 
             revealer = Gtk.Revealer()
@@ -146,6 +150,7 @@ class NetworkMonitorPlugin(BasePlugin):
             revealers.append(revealer)
 
             grid = Gtk.Grid()
+            grid.add_css_class("network-manager-device-details-grid")
             grid.set_row_spacing(6)
             grid.set_column_spacing(12)
 
@@ -179,14 +184,19 @@ class NetworkMonitorPlugin(BasePlugin):
             vbox.append(revealer)
 
             if idx < len(devices) - 1:
-                vbox.append(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+                separator = Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
+                separator.add_css_class("network-manager-device-separator")
+                vbox.append(separator)
 
         scrolled_window.set_child(vbox)
         main_box.append(scrolled_window)
 
         config_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        config_box.add_css_class("network-manager-config-box")
         config_label = Gtk.Label(label="Network Settings")
+        config_label.add_css_class("network-manager-config-label")
         config_button = Gtk.Button()
+        config_button.add_css_class("network-manager-config-button")
         config_button.set_icon_name(
             self.utils.set_widget_icon_name(
                 None,
