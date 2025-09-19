@@ -409,24 +409,34 @@ class TaskbarPlugin(BasePlugin):
         current_views = self.ipc.list_views()
         current_view_ids = {v.get("id") for v in current_views if self.is_valid_view(v)}
 
-        # 1. Identify and remove buttons for views that no longer exist
+        # Identify and remove buttons for views that no longer exist
         views_to_remove = list(self.in_use_buttons.keys() - current_view_ids)
         for view_id in views_to_remove:
             self.remove_button(view_id)
 
-        # 2. Add or update buttons for existing views, and build a list for layout
+        # Add or update buttons for existing views, and build a list for layout
         buttons_for_layout = []
+        # Add a temporary set to track processed IDs in this run
+        processed_view_ids = set()
         for view in current_views:
             view_id = view.get("id")
             if view_id in current_view_ids:
+                # Check if this ID has already been processed in this cycle.
+                if view_id in processed_view_ids:
+                    self.logger.warning(
+                        f"Duplicate view ID detected: {view_id}. Skipping this entry."
+                    )
+                    continue
+
                 if view_id in self.in_use_buttons:
                     button = self.in_use_buttons[view_id]
                     self.update_button(button, view)
                 else:
                     button = self.add_button_to_taskbar(view)
                 buttons_for_layout.append(button)
+                processed_view_ids.add(view_id)
 
-        # 3. Clear and rebuild the flowbox to fix the layout
+        # Clear and rebuild the flowbox to fix the layout
         self.taskbar.remove_all()
         for button in buttons_for_layout:
             self.taskbar.append(button)
@@ -1175,28 +1185,19 @@ class TaskbarPlugin(BasePlugin):
 
     def _perform_debounced_update(self):
         """
-        Performs a debounced update of the taskbar.
-
-        This private method is scheduled to run after a brief delay by
-        `on_view_created`. It is the method that actually triggers the `Taskbar()`
-        reconciliation logic. It first resets the internal debounce flag to allow
-        future updates and then calls the main `Taskbar()` method to synchronize the
-        buttons with the current list of views.
+        Performs the main taskbar update after the debounce delay.
+        This function acts as the final step in the debouncing process,
+        calling the main Taskbar reconciliation method.
         """
-        # Reset the flag
-        self._debounce_pending = False
-        self._debounce_timer_id = None  # Clear the timer ID
-
-        # Perform the update
-        self.logger.debug("Performing debounced taskbar update.")
-
         try:
+            # Call the existing Taskbar method to synchronize buttons with views.
             self.Taskbar()
-        except Exception as e:
-            self.log_error(message=f"Error updating taskbar: {e}")
+        finally:
+            # Reset the debounce flag regardless of success or failure.
+            self._debounce_pending = False
 
-        # Return False to stop the timeout from repeating (it's a one-shot)
-        return False
+        # Return GLib.SOURCE_REMOVE as required by GLib.timeout_add for a one-time timeout.
+        return GLib.SOURCE_REMOVE
 
     def about(self):
         """
