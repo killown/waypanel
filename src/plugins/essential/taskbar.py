@@ -360,6 +360,9 @@ class TaskbarPlugin(BasePlugin):
         Args:
             view_id (int): The unique ID of the view (window) whose button needs to be removed.
         """
+        if self.view_exist(view_id):
+            return
+
         if view_id not in self.in_use_buttons:
             return
 
@@ -416,25 +419,17 @@ class TaskbarPlugin(BasePlugin):
 
         # Add or update buttons for existing views, and build a list for layout
         buttons_for_layout = []
-        # Add a temporary set to track processed IDs in this run
-        processed_view_ids = set()
+        # No need for a temporary set anymore, the logic is now self-contained.
         for view in current_views:
             view_id = view.get("id")
-            if view_id in current_view_ids:
-                # Check if this ID has already been processed in this cycle.
-                if view_id in processed_view_ids:
-                    self.logger.warning(
-                        f"Duplicate view ID detected: {view_id}. Skipping this entry."
-                    )
-                    continue
-
+            if self.is_valid_view(view):
+                # Check if the button already exists in our dictionary
                 if view_id in self.in_use_buttons:
                     button = self.in_use_buttons[view_id]
                     self.update_button(button, view)
                 else:
                     button = self.add_button_to_taskbar(view)
                 buttons_for_layout.append(button)
-                processed_view_ids.add(view_id)
 
         # Clear and rebuild the flowbox to fix the layout
         self.taskbar.remove_all()
