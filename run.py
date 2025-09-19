@@ -15,7 +15,6 @@ def main():
     SYSTEM_CONFIG = f"/usr/lib/{APP_NAME}/config"
     LOCAL_DEV_CONFIG = os.path.join(SCRIPT_DIR, "waypanel", "config")
     ALT_DEV_CONFIG = os.path.join(SCRIPT_DIR, "config")
-    LOG_FILE = f"/tmp/{APP_NAME}.log"
 
     # Add a function to find the system package path
     def find_package_files():
@@ -150,21 +149,13 @@ def main():
 
     # ===== RUN THE APP =====
     print("[INFO] Starting application...")
-    try:
-        subprocess.run(
-            [os.path.join(VENV_BIN, "python"), MAIN_PY] + sys.argv[1:], check=True
-        )
-    except FileNotFoundError:
-        print(f"[ERROR] Main script not found at {MAIN_PY}.", file=sys.stderr)
-        sys.exit(1)
-    except subprocess.CalledProcessError:
-        print("[ERROR] Application exited with an error.", file=sys.stderr)
-        sys.exit(1)
+    cmd = [os.path.join(VENV_BIN, "python"), MAIN_PY]
+    subprocess.run(cmd, check=True)
 
 
 if __name__ == "__main__":
     try:
-        subprocess.Popen("pkill -f waypanel/main.py".split())
+        subprocess.run("pkill -f waypanel/main.py".split())
     except Exception as e:
         print(e)
     main()

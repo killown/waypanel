@@ -1,2 +1,11 @@
-recursive-include waypanel/config *
+# Include all files in the config folder
+recursive-include config *
+
+# Include all files in the waypanel package (replace src if needed)
+recursive-include waypanel *
+
+# Include extra files
 include requirements.txt
+include LICENSE
+include README.md
+
