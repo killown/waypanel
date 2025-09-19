@@ -27,18 +27,33 @@
   --opacity-60: 0.6;
 
   /* Reusable Box Shadows */
-  --shadow-panel: rgba(0, 0, 0, var(--opacity-507)) 0 2px 0px, rgba(0, 0, 0, var(--opacity-555)) 0 2px 0px, #00000075 0 -4px 0 inset;
-  --shadow-dockbar-buttons: inset 3px 3px 5px rgba(255, 255, 255, 0.05), inset -3px -3px 5px rgba(0, 0, 0, 0.5), #00000075 0 -4px 0 inset;
-  --shadow-window-controls: rgba(0, 0, 0, var(--opacity-507)) 0 1px 1px, rgba(0, 0, 0, var(--opacity-555)) 0 1px 1px, #00000075 0 -4px 0 inset;
-  --shadow-window-controls-hover: rgba(0, 0, 0, var(--opacity-60)) 0 2px 4px, rgba(0, 0, 0, var(--opacity-50)) 0 2px 4px, #00000075 0 -2px 0 inset;
+  --shadow-panel:
+    rgba(0, 0, 0, var(--opacity-507)) 0 2px 0px,
+    rgba(0, 0, 0, var(--opacity-555)) 0 2px 0px, #00000075 0 -4px 0 inset;
+  --shadow-dockbar-buttons:
+    inset 3px 3px 5px rgba(255, 255, 255, 0.05),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5), #00000075 0 -4px 0 inset;
+  --shadow-window-controls:
+    rgba(0, 0, 0, var(--opacity-507)) 0 1px 1px,
+    rgba(0, 0, 0, var(--opacity-555)) 0 1px 1px, #00000075 0 -4px 0 inset;
+  --shadow-window-controls-hover:
+    rgba(0, 0, 0, var(--opacity-60)) 0 2px 4px,
+    rgba(0, 0, 0, var(--opacity-50)) 0 2px 4px, #00000075 0 -2px 0 inset;
   --shadow-notes-buttons: 0 1px 2px rgba(0, 0, 0, 0.1);
-  --shadow-neumorphic-inset-medium: inset 2px 2px 5px rgba(0, 0, 0, 0.5), inset -2px -2px 5px rgba(255, 255, 255, 0.05);
-  --shadow-neumorphic-outset-large: 4px 4px 8px rgba(0, 0, 0, 0.5), -4px -4px 8px rgba(255, 255, 255, 0.05);
-  --shadow-neumorphic-press: inset 2px 2px 4px rgba(0, 0, 0, 0.6), inset -2px -2px 4px rgba(255, 255, 255, 0.05);
+  --shadow-neumorphic-inset-medium:
+    inset 2px 2px 5px rgba(0, 0, 0, 0.5),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.05);
+  --shadow-neumorphic-outset-large:
+    4px 4px 8px rgba(0, 0, 0, 0.5), -4px -4px 8px rgba(255, 255, 255, 0.05);
+  --shadow-neumorphic-press:
+    inset 2px 2px 4px rgba(0, 0, 0, 0.6),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.05);
 
   /* Fonts */
   --font-family-default: "Roboto", "Helvetica Neue", sans-serif;
-  --font-family-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --font-family-system:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    sans-serif;
 }
 
 /* Global Font Settings */
@@ -105,7 +120,10 @@
 .top-panel-box-widgets-left {
   background: linear-gradient(145deg, #1d2021af, #1d20214f);
   border-radius: 7px;
-  box-shadow: inset 3px 3px 5px rgba(255, 255, 255, 0.05), inset -3px -3px 5px rgba(0, 0, 0, 0.5), 2px 2px 5px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 3px 3px 5px rgba(255, 255, 255, 0.05),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    2px 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .top-panel-box-systray {
@@ -115,7 +133,10 @@
   margin-right: 5px;
   margin-top: 1px;
   margin-bottom: 1px;
-  box-shadow: inset 3px 3px 5px rgba(255, 255, 255, 0.05), inset -3px -3px 5px rgba(0, 0, 0, 0.5), 2px 2px 5px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 3px 3px 5px rgba(255, 255, 255, 0.05),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    2px 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .BottomBar {
@@ -275,12 +296,17 @@
   background: linear-gradient(145deg, #1d202154, #1d2021ce);
   border-radius: 7px;
   padding: 3px;
-  box-shadow: inset 3px 3px 5px rgba(255, 255, 255, 0.05), inset -3px -3px 5px rgba(0, 0, 0, 0.5), 2px 2px 5px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 3px 3px 5px rgba(255, 255, 255, 0.05),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    2px 2px 5px rgba(0, 0, 0, 0.3);
   font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
   font-size: 18px;
   color: var(--gruv-fg);
   text-decoration: none;
-  text-shadow: 0 0 2px rgba(235, 219, 178, 0.1), 0 0 5px rgba(235, 219, 178, 0.1);
+  text-shadow:
+    0 0 2px rgba(235, 219, 178, 0.1),
+    0 0 5px rgba(235, 219, 178, 0.1);
 }
 
 .Clock-box {
@@ -352,7 +378,9 @@
   background-color: var(--gruv-bg);
   border-width: 0px;
   border-radius: 10px;
-  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), -2px -2px 4px rgba(255, 255, 255, 0.05);
+  box-shadow:
+    2px 2px 4px rgba(0, 0, 0, 0.5),
+    -2px -2px 4px rgba(255, 255, 255, 0.05);
   transition: all 0.2s ease-in-out;
 }
 
@@ -411,13 +439,17 @@
   font-weight: 800;
   font-size: 18px;
   padding: 8px 12px;
-  box-shadow: inset 3px 3px 5px rgba(0, 0, 0, 0.5), inset -3px -3px 5px rgba(255, 255, 255, 0.05);
+  box-shadow:
+    inset 3px 3px 5px rgba(0, 0, 0, 0.5),
+    inset -3px -3px 5px rgba(255, 255, 255, 0.05);
 }
 
 .bluetooth-dashboard-buttons:hover {
   background-color: var(--gruv-bg-light);
   transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, 0.2),
+    0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease-in-out;
 }
 
@@ -430,12 +462,16 @@
   font-family: var(--font-family-default);
   font-size: 18px;
   padding: 8px 12px;
-  box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.4), -5px -5px 10px rgba(255, 255, 255, 0.05);
+  box-shadow:
+    5px 5px 10px rgba(0, 0, 0, 0.4),
+    -5px -5px 10px rgba(255, 255, 255, 0.05);
 }
 
 .bluetooth-dashboard-buttons-connected:hover {
   background-color: #b8bb26;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3), 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 6px 12px rgba(0, 0, 0, 0.3),
+    0 2px 5px rgba(0, 0, 0, 0.1);
   transform: translateY(-1px);
   transition: all 0.2s ease-in-out;
 }
@@ -670,3 +706,4 @@
 
 popover.background {
 }
+
