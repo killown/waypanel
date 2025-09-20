@@ -76,7 +76,7 @@ class TaskbarPlugin(BasePlugin):
             self.bottom_panel.set_size_request(10, 10)
 
         self.add_launcher = Gtk.Button()
-        icon = self.utils.get_nearest_icon_name("tab-new")
+        icon = self.utils.icon_exist("tab-new")
         self.add_launcher.set_icon_name(icon)
 
         output = os.getenv("waypanel")

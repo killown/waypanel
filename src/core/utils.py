@@ -493,8 +493,7 @@ class Utils(Adw.Application):
         """
         Determine the best icon name for a widget.
 
-        1. Reads the icon from the config TOML for the given section.
-        2. Uses get_nearest_icon_name to pick the closest match from fallback_icons if needed.
+        Reads the icon from the config TOML for the given section.
 
         Args:
             section (str): Section name in the config (e.g., 'appmenu').
@@ -507,77 +506,7 @@ class Utils(Adw.Application):
         menu_icon = self.obj.config.get(section, {}).get("icon", "")
 
         # Return the nearest icon match from fallback list
-        return self.get_nearest_icon_name(menu_icon, fallback_icons)
-
-    def get_nearest_icon_name(
-        self, app_name: str, fallback_icons=None, size=Gtk.IconSize.LARGE
-    ) -> str:
-        """
-        Get the best matching icon name for an application (GTK4 synchronous version),
-        using exact matches first, then partial matches, and finally fuzzy matching.
-
-        Args:
-            app_name: Application name (e.g. 'firefox')
-            size: Preferred icon size (Gtk.IconSize)
-
-        Returns:
-            Best matching icon name with fallbacks
-        """
-        if fallback_icons is None:
-            fallback_icons = ["image-missing"]
-
-        icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
-        app_name = app_name.lower().strip()
-
-        # Exact matches and common patterns
-        patterns = [
-            app_name,
-            f"{app_name}-symbolic",
-            f"org.{app_name}.Desktop",
-            f"{app_name}-desktop",
-            f"application-x-{app_name}",
-            f"system-{app_name}",
-            f"utility-{app_name}",
-            f"fedora-{app_name}",
-            f"debian-{app_name}",
-        ]
-
-        for pattern in patterns:
-            if icon_theme.has_icon(pattern):
-                return pattern
-
-        # Fallback icons
-        for icon in fallback_icons:
-            if icon_theme.has_icon(icon):
-                return icon
-
-        try:
-            all_icons = icon_theme.get_icon_names()
-
-            # Find the best partial match using rapidfuzz.fuzz.partial_ratio
-            best_partial_match = rapidfuzz.process.extractOne(
-                query=app_name,
-                choices=all_icons,
-                scorer=rapidfuzz.fuzz.partial_ratio,
-                score_cutoff=80,  # A high cutoff for a strong partial match
-            )
-            if best_partial_match:
-                return best_partial_match[0]
-
-            # Fuzzy matching as a last resort
-            best_fuzzy_match = rapidfuzz.process.extractOne(
-                query=app_name,
-                choices=all_icons,
-                scorer=rapidfuzz.fuzz.ratio,
-                score_cutoff=60,
-            )
-            if best_fuzzy_match:
-                return best_fuzzy_match[0]
-
-        except Exception as e:
-            self.logger.error(f"Icon search error: {e}")
-
-        return "image-missing"
+        return self.icon_exist(menu_icon, fallback_icons)
 
     def update_widget(self, function_method: Callable[..., None], *args: Any) -> None:
         """
@@ -1307,17 +1236,34 @@ class Utils(Adw.Application):
             return icon.get_name()
         return ""
 
-    def icon_exist(self, argument: str) -> str:
+    def icon_exist(self, argument: str, fallback_icons=None) -> str:
         """
         Check if an icon exists based on the given application identifier, using a tiered search strategy.
 
         Args:
             argument (str): The application name or identifier to search for.
+            fallback_icons (list, optional): A list of fallback icon names to check.
 
         Returns:
             str: The name of the matching icon if found, or "image-missing" otherwise.
         """
+
+        icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+        norm_arg = self.normalize_name(argument)
+
+        if fallback_icons is None:
+            fallback_icons = [""]
+
+        for icon in fallback_icons:
+            if icon_theme.has_icon(icon):
+                if not hasattr(self, "icon_cache"):
+                    self.icon_cache = {}
+                self.icon_cache[argument] = icon
+                return icon
+
         try:
+            # Initial checks and cache lookup
+            # ------------------------------
             if not isinstance(argument, str) or not argument.strip():
                 self.logger.warning(f"Invalid or missing argument: {argument}")
                 return "image-missing"
@@ -1325,9 +1271,8 @@ class Utils(Adw.Application):
             if hasattr(self, "icon_cache") and argument in self.icon_cache:
                 return self.icon_cache[argument]
 
-            norm_arg = self.normalize_name(argument)
-
             # Tier 1: Look for exact matches against a cleaned app ID
+            # --------------------------------------------------------
             gio_icon_list = getattr(self, "gio_icon_list", [])
             for app_info in gio_icon_list:
                 app_id = app_info.get_id()
@@ -1344,14 +1289,43 @@ class Utils(Adw.Application):
                             self.icon_cache[argument] = icon_name.lower()
                             return icon_name.lower()
 
-            all_icons = getattr(self, "icon_names", [])
-            if all_icons:
-                # Tier 2: First fuzzy match with token_set_ratio
+            # Tier 2: Check common naming patterns
+            # ------------------------------------
+            patterns = [
+                norm_arg,
+                f"{norm_arg}-symbolic",
+                f"org.{norm_arg}.Desktop",
+                f"{norm_arg}-desktop",
+                f"application-x-{norm_arg}",
+                f"system-{norm_arg}",
+                f"utility-{norm_arg}",
+                f"fedora-{norm_arg}",
+                f"debian-{norm_arg}",
+            ]
+
+            for pattern in patterns:
+                if icon_theme.has_icon(pattern):
+                    if not hasattr(self, "icon_cache"):
+                        self.icon_cache = {}
+                    self.icon_cache[argument] = pattern
+                    return pattern
+
+            all_icons = icon_theme.get_icon_names()
+
+            # Tier 3: Fuzzy matching with a tiered scorer strategy
+            # ----------------------------------------------------
+            fuzzy_scorers = [
+                rapidfuzz.fuzz.token_set_ratio,
+                rapidfuzz.fuzz.partial_ratio,
+                rapidfuzz.fuzz.ratio,
+            ]
+
+            for scorer in fuzzy_scorers:
                 best_match = rapidfuzz.process.extractOne(
                     query=norm_arg,
                     choices=all_icons,
-                    scorer=rapidfuzz.fuzz.token_set_ratio,
-                    processor=self.normalize_name,
+                    scorer=scorer,
+                    processor=rapidfuzz.utils.default_process,
                     score_cutoff=85,
                 )
                 if best_match:
@@ -1361,36 +1335,21 @@ class Utils(Adw.Application):
                     self.icon_cache[argument] = result
                     return result
 
-                # Tier 3: Second fuzzy match with rapidfuzz.fuzz.ratio
-                best_match_rapid = rapidfuzz.process.extractOne(
-                    query=norm_arg,
-                    choices=all_icons,
-                    scorer=rapidfuzz.fuzz.ratio,
-                    processor=self.normalize_name,
-                    score_cutoff=80,
-                )
-                if best_match_rapid:
-                    result = best_match_rapid[0]
+            # Tier 4: Last resort - bidirectional substring check
+            # ---------------------------------------------------
+            for icon_name in all_icons:
+                norm_icon = rapidfuzz.utils.default_process(icon_name)
+                if norm_arg in norm_icon or norm_icon in norm_arg:
                     if not hasattr(self, "icon_cache"):
                         self.icon_cache = {}
-                    self.icon_cache[argument] = result
-                    return result
-
-                # Tier 4: The last resort - string in string check
-                for icon_name in all_icons:
-                    norm_icon = self.normalize_name(icon_name)
-                    # Check if user's input is a substring of the icon name, or vice versa
-                    if norm_arg in norm_icon or norm_icon in norm_arg:
-                        if not hasattr(self, "icon_cache"):
-                            self.icon_cache = {}
-                        self.icon_cache[argument] = icon_name
-                        return icon_name
+                    self.icon_cache[argument] = icon_name
+                    return icon_name
 
             self.logger.debug(f"No icon found for argument: {argument}")
             if not hasattr(self, "icon_cache"):
                 self.icon_cache = {}
             self.icon_cache[argument] = "image-missing"
-            return ""
+            return "image-missing"
 
         except Exception as e:
             self.logger.error(
@@ -1400,7 +1359,7 @@ class Utils(Adw.Application):
             if not hasattr(self, "icon_cache"):
                 self.icon_cache = {}
             self.icon_cache[argument] = "image-missing"
-            return ""
+            return "image-missing"
 
     def search_str_inside_file(self, file_path: str, word: str) -> bool:
         """
@@ -1468,14 +1427,11 @@ class Utils(Adw.Application):
                 if base_name.lower().startswith("msedge-"):
                     return base_name
             else:
-                return self.get_nearest_icon_name("microsoft-edge")
+                return self.icon_exist("microsoft-edge")
 
         # Fallback: try icon by app_id
         found_icon = self.icon_exist(app_id)
         if found_icon:
-            return found_icon
-        else:
-            found_icon = self.get_nearest_icon_name(app_id)
             return found_icon
 
     def list_app_ids(self) -> list[str]:

@@ -113,7 +113,7 @@ class DockbarPlugin(BasePlugin):
 
             # Create the button
             button = self.utils.create_button(
-                self.utils.get_nearest_icon_name(config_data[app]["icon"]),
+                self.utils.icon_exist(config_data[app]["icon"]),
                 app_cmd,
                 class_style,
                 use_label,
