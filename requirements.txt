@@ -25,3 +25,4 @@ rich
 cairosvg
 unidecode
 pygments
+rapidfuzz

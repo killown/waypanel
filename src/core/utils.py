@@ -7,7 +7,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 from src.core.compositor.ipc import IPC
 from typing import Dict, Any, Optional, Tuple, Callable, List, Union, Type, Iterable
 import difflib
-import importlib.util
+import rapidfuzz
 from pathlib import Path
 
 gi.require_version("Gtk", "4.0")
@@ -554,35 +554,25 @@ class Utils(Adw.Application):
         try:
             all_icons = icon_theme.get_icon_names()
 
-            # Find the best partial match using similarity ratio
-            partial_matches = [icon for icon in all_icons if app_name in icon.lower()]
-            if partial_matches:
-                best_match = max(
-                    partial_matches,
-                    key=lambda icon: difflib.SequenceMatcher(
-                        None, app_name, icon.lower()
-                    ).ratio(),
-                )
-                # You can set a threshold if needed, but for substring matches, the
-                # highest ratio should be the most relevant.
-                return best_match
+            # Find the best partial match using rapidfuzz.fuzz.partial_ratio
+            best_partial_match = rapidfuzz.process.extractOne(
+                query=app_name,
+                choices=all_icons,
+                scorer=rapidfuzz.fuzz.partial_ratio,
+                score_cutoff=80,  # A high cutoff for a strong partial match
+            )
+            if best_partial_match:
+                return best_partial_match[0]
 
             # Fuzzy matching as a last resort
-            if all_icons:
-                app_name_lower = app_name.lower()
-                best_match = max(
-                    all_icons,
-                    key=lambda icon: difflib.SequenceMatcher(
-                        None, app_name_lower, icon.lower()
-                    ).ratio(),
-                )
-                if (
-                    difflib.SequenceMatcher(
-                        None, app_name_lower, best_match.lower()
-                    ).ratio()
-                    > 0.6
-                ):
-                    return best_match
+            best_fuzzy_match = rapidfuzz.process.extractOne(
+                query=app_name,
+                choices=all_icons,
+                scorer=rapidfuzz.fuzz.ratio,
+                score_cutoff=60,
+            )
+            if best_fuzzy_match:
+                return best_fuzzy_match[0]
 
         except Exception as e:
             self.logger.error(f"Icon search error: {e}")
@@ -1305,7 +1295,7 @@ class Utils(Adw.Application):
 
     def normalize_name(self, name: str) -> str:
         """Normalize icon/app names for comparison."""
-        return name.lower().lstrip("qk").replace("org.", "").replace("com.", "").strip()
+        return name.lower().strip()
 
     def extract_icon_name(self, icon) -> str:
         """Extract the icon name from a Gio.Icon object."""
@@ -1319,63 +1309,97 @@ class Utils(Adw.Application):
 
     def icon_exist(self, argument: str) -> str:
         """
-        Check if an icon exists based on the given application identifier.
-
-        This function attempts to find a matching icon by searching through registered
-        Gio.AppInfo entries and icon names.
+        Check if an icon exists based on the given application identifier, using a tiered search strategy.
 
         Args:
             argument (str): The application name or identifier to search for.
 
         Returns:
-            str: The name or path of the matching icon if found, or an empty string if not found.
+            str: The name of the matching icon if found, or "image-missing" otherwise.
         """
         try:
             if not isinstance(argument, str) or not argument.strip():
                 self.logger.warning(f"Invalid or missing argument: {argument}")
-                return ""
+                return "image-missing"
+
+            if hasattr(self, "icon_cache") and argument in self.icon_cache:
+                return self.icon_cache[argument]
 
             norm_arg = self.normalize_name(argument)
 
-            # Check Gio.AppInfo list
-            for app_info in getattr(self, "gio_icon_list", []):
-                if norm_arg in self.normalize_name(app_info.get_id()):
-                    icon = app_info.get_icon()
-                    icon_name = self.extract_icon_name(icon)
-                    if icon_name:
-                        return icon_name
+            # Tier 1: Look for exact matches against a cleaned app ID
+            gio_icon_list = getattr(self, "gio_icon_list", [])
+            for app_info in gio_icon_list:
+                app_id = app_info.get_id()
+                if app_id:
+                    base_app_name = app_id.split(".")[-1].replace(".desktop", "")
+                    norm_base_name = self.normalize_name(base_app_name)
 
-            # Check registered icon_names substring matches
-            for name in getattr(self, "icon_names", []):
-                if norm_arg in self.normalize_name(name):
-                    return name
+                    if norm_arg == norm_base_name:
+                        icon = app_info.get_icon()
+                        icon_name = self.extract_icon_name(icon)
+                        if icon_name:
+                            if not hasattr(self, "icon_cache"):
+                                self.icon_cache = {}
+                            self.icon_cache[argument] = icon_name.lower()
+                            return icon_name.lower()
 
-            # Fuzzy matching as last resort
             all_icons = getattr(self, "icon_names", [])
             if all_icons:
-                best_match = max(
-                    all_icons,
-                    key=lambda n: difflib.SequenceMatcher(
-                        None, norm_arg, self.normalize_name(n)
-                    ).ratio(),
+                # Tier 2: First fuzzy match with token_set_ratio
+                best_match = rapidfuzz.process.extractOne(
+                    query=norm_arg,
+                    choices=all_icons,
+                    scorer=rapidfuzz.fuzz.token_set_ratio,
+                    processor=self.normalize_name,
+                    score_cutoff=85,
                 )
-                if (
-                    difflib.SequenceMatcher(
-                        None, norm_arg, self.normalize_name(best_match)
-                    ).ratio()
-                    > 0.6
-                ):
-                    return best_match
+                if best_match:
+                    result = best_match[0]
+                    if not hasattr(self, "icon_cache"):
+                        self.icon_cache = {}
+                    self.icon_cache[argument] = result
+                    return result
 
-            # No match found
+                # Tier 3: Second fuzzy match with rapidfuzz.fuzz.ratio
+                best_match_rapid = rapidfuzz.process.extractOne(
+                    query=norm_arg,
+                    choices=all_icons,
+                    scorer=rapidfuzz.fuzz.ratio,
+                    processor=self.normalize_name,
+                    score_cutoff=80,
+                )
+                if best_match_rapid:
+                    result = best_match_rapid[0]
+                    if not hasattr(self, "icon_cache"):
+                        self.icon_cache = {}
+                    self.icon_cache[argument] = result
+                    return result
+
+                # Tier 4: The last resort - string in string check
+                for icon_name in all_icons:
+                    norm_icon = self.normalize_name(icon_name)
+                    # Check if user's input is a substring of the icon name, or vice versa
+                    if norm_arg in norm_icon or norm_icon in norm_arg:
+                        if not hasattr(self, "icon_cache"):
+                            self.icon_cache = {}
+                        self.icon_cache[argument] = icon_name
+                        return icon_name
+
             self.logger.debug(f"No icon found for argument: {argument}")
+            if not hasattr(self, "icon_cache"):
+                self.icon_cache = {}
+            self.icon_cache[argument] = "image-missing"
             return ""
 
         except Exception as e:
             self.logger.error(
-                f"Unexpected error while checking if icon exists for argument: {argument}",
+                f"Unexpected error while checking if icon exists for argument: {e}",
                 exc_info=True,
             )
+            if not hasattr(self, "icon_cache"):
+                self.icon_cache = {}
+            self.icon_cache[argument] = "image-missing"
             return ""
 
     def search_str_inside_file(self, file_path: str, word: str) -> bool:
