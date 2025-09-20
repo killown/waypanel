@@ -133,6 +133,11 @@ class TaskbarPlugin(BasePlugin):
                 plugin_name="taskbar",
             )
             event_manager.subscribe_to_event(
+                "view-app-id-changed",
+                self.handle_view_event,
+                plugin_name="taskbar",
+            )
+            event_manager.subscribe_to_event(
                 "view-title-changed",
                 self.handle_view_event,
                 plugin_name="taskbar",
@@ -425,6 +430,28 @@ class TaskbarPlugin(BasePlugin):
     def on_button_hover_leave(self, view):
         self.utils.view_focus_effect_selected(view, False)
 
+    def match_on_app_id_changed_view(self, unmapped_view):
+        try:
+            app_id = unmapped_view.get("app-id")
+            mapped_view = [
+                i
+                for i in self.ipc.list_views()
+                if app_id == i["app-id"] and i["mapped"] is True
+            ]
+            if mapped_view:
+                mapped_view = mapped_view[0]
+                self.update_taskbar_button(mapped_view)
+            return False
+        except Exception as e:
+            self.log_error(
+                message=f"Error handling 'view-app-id-changed' event: {e}",
+            )
+            return False
+
+    def on_view_app_id_changed(self, view):
+        # wait 500ms for app-id changes
+        GLib.timeout_add(500, self.match_on_app_id_changed_view, view)
+
     def on_view_focused(self, view):
         try:
             if view and view.get("role") == "toplevel":
@@ -601,6 +628,8 @@ class TaskbarPlugin(BasePlugin):
         event = msg.get("event")
         view = msg.get("view")
 
+        if event == "view-app-id-changed":
+            self.on_view_app_id_changed(view)
         if event == "view-wset-changed":
             return
         if event == "view-unmapped":
@@ -626,8 +655,6 @@ class TaskbarPlugin(BasePlugin):
             self.on_title_changed(view)
         if event == "view-tiled" and view:
             pass
-        if event == "app-id-changed":
-            return
         if event == "view-focused":
             self.on_view_focused(view)
             return
