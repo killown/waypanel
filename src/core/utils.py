@@ -2,12 +2,13 @@ import os
 import subprocess
 import gi
 import toml
+import configparser
+import rapidfuzz
+from rapidfuzz.fuzz import token_set_ratio
 from collections.abc import Iterable
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 from src.core.compositor.ipc import IPC
 from typing import Dict, Any, Optional, Tuple, Callable, List, Union, Type, Iterable
-import difflib
-import rapidfuzz
 from pathlib import Path
 
 gi.require_version("Gtk", "4.0")
@@ -1383,6 +1384,103 @@ class Utils(Adw.Application):
             self.logger.warning(f"Error reading file '{file_path}': {e}")
             return False
 
+    def find_steam_icon(self, app_id: str) -> Optional[str]:
+        """
+        Searches for a Steam-related .desktop file that matches the app_id
+        using StartupWMClass and fuzzy matching, returning its icon name.
+
+        Args:
+            app_id (str): The window manager class of the application.
+
+        Returns:
+            Optional[str]: The icon name if found, otherwise None.
+        """
+        if "steam_app_" in app_id:
+            steam_icon = app_id.replace("steam_app_", "steam_icon_")
+            return steam_icon
+
+        desktop_dir = os.path.expanduser("~/.local/share/applications")
+        if not os.path.isdir(desktop_dir):
+            return None
+
+        best_match = None
+        best_score = 0
+
+        app_id_lower = app_id.lower()
+
+        # First, iterate through files to find the best match
+        for filename in os.listdir(desktop_dir):
+            if not filename.endswith(".desktop"):
+                continue
+
+            desktop_file_path = os.path.join(desktop_dir, filename)
+
+            try:
+                parser = configparser.ConfigParser(interpolation=None)
+                parser.read(desktop_file_path)
+
+                if "Desktop Entry" in parser:
+                    desktop_entry = parser["Desktop Entry"]
+
+                    # Check if it's a Steam application
+                    if "Exec" in desktop_entry and desktop_entry[
+                        "Exec"
+                    ].lower().startswith("steam"):
+                        current_score = 0
+
+                        # 1. Primary check: Exact match on StartupWMClass
+                        if (
+                            "StartupWMClass" in desktop_entry
+                            and desktop_entry["StartupWMClass"].lower() == app_id_lower
+                        ):
+                            current_score = 100  # Perfect match
+
+                        # 2. Secondary check: Fuzzy match on Name and filename
+                        else:
+                            desktop_name = desktop_entry.get("Name", "")
+                            filename_without_ext = os.path.splitext(filename)[0]
+
+                            # Use a high score if there's a strong fuzzy match
+                            score_name = token_set_ratio(
+                                app_id_lower, desktop_name.lower()
+                            )
+                            score_filename = token_set_ratio(
+                                app_id_lower, filename_without_ext.lower()
+                            )
+
+                            current_score = max(score_name, score_filename)
+
+                        # Update the best match if the current one is better
+                        if current_score > best_score:
+                            best_score = current_score
+                            best_match = desktop_file_path
+
+            except (configparser.Error, UnicodeDecodeError) as e:
+                self.logger.warning(f"Failed to parse desktop file {filename}: {e}")
+                continue
+
+        # After iterating, process the best-matching file if the score is high enough
+        if (
+            best_match and best_score > 80
+        ):  # A threshold like 80 is a good starting point
+            try:
+                parser = configparser.ConfigParser(interpolation=None)
+                parser.read(best_match)
+
+                if "Desktop Entry" in parser and "Icon" in parser["Desktop Entry"]:
+                    icon_name = parser["Desktop Entry"]["Icon"]
+                    if self.icon_exist(icon_name):
+                        self.logger.info(
+                            f"Using Steam icon '{icon_name}' from best match '{os.path.basename(best_match)}' with score {best_score}"
+                        )
+                        return icon_name
+            except (configparser.Error, UnicodeDecodeError) as e:
+                self.logger.warning(
+                    f"Failed to parse best match file {best_match}: {e}"
+                )
+
+        return None
+
     def get_icon(self, app_id: str, initial_title: str, title: str) -> Optional[str]:
         """
         Retrieve an appropriate icon name based on window metadata.
@@ -1399,6 +1497,11 @@ class Utils(Adw.Application):
         app_id = app_id.lower()
         initial_title = initial_title.lower()
         title = title.lower()
+
+        # Special handling for Steam
+        steam_icon = self.find_steam_icon(app_id)
+        if steam_icon:
+            return steam_icon
 
         # Sanitize / filter title text for GTK
         filtered_title = self.filter_utf_for_gtk(title)
