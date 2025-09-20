@@ -273,3 +273,42 @@ class PopoverBookmarks(BasePlugin):
 
     def popover_is_closed(self, *_):
         return
+
+    def about(self):
+        """
+        A plugin that provides quick access to a user's web bookmarks via a
+        popover menu. It reads bookmarks from a TOML file, downloads and
+        generates thumbnails for website icons, and launches the
+        corresponding URLs in a web browser.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin seamlessly integrates web bookmarks into the panel by
+        combining file I/O, network requests, image processing, and GTK UI
+        components.
+
+        Its core logic is centered on **file-based configuration, dynamic asset
+        management, and UI-driven process execution**:
+
+        1.  **File-Based Configuration**: The plugin begins by checking for a
+            `.bookmarks` file in the user's home directory. This file, in the
+            **TOML format**, serves as the single source of truth for all
+            bookmarks. This approach makes the plugin highly configurable
+            without needing a separate settings window.
+        2.  **Dynamic Asset Management**: For each bookmark, the plugin
+            dynamically downloads and manages favicon images. It first checks
+            if a local image exists; if not, it attempts to scrape the `og:image`
+            Open Graph metadata from the website using `requests` and
+            `BeautifulSoup`. It then processes these images to create optimized
+            thumbnails using the `Pillow` library, ensuring the UI remains
+            performant and responsive.
+        3.  **UI-Driven Process Execution**: The plugin creates a `Gtk.FlowBox`
+            within a `Gtk.Popover` to display bookmarks with their icons and
+            names. When a user clicks a bookmark, the `open_url_from_bookmarks`
+            method is activated. This method uses `subprocess.Popen` to launch
+            the specified URL in a new or existing browser instance, correctly
+            handling Firefox containers for isolated browsing.
+        """
+        return self.code_explanation.__doc__

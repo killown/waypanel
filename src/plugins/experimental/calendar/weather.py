@@ -127,3 +127,38 @@ class WeatherPlugin(BasePlugin):
         """Cleanup method to cancel the periodic task when the plugin is destroyed."""
         if self.update_task and not self.update_task.done():
             self.update_task.cancel()
+
+    def about(self):
+        """
+        This plugin adds a weather display to another plugin's user
+        interface, fetching weather data asynchronously and updating the
+        display periodically.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The core logic of this plugin is to extend the functionality
+        of a host plugin using asynchronous and thread-safe operations.
+        Its design is based on these principles:
+
+        1.  **UI Dependency and Augmentation**: The plugin has no
+            standalone UI. Instead, it acts as a dependent module that
+            searches for and attaches a custom widget (a weather label)
+            to a pre-existing UI element provided by another plugin
+            (the calendar popover).
+
+        2.  **Asynchronous Networking**: It uses Python's `asyncio`
+            to perform non-blocking network requests. Crucially, it
+            leverages `run_in_executor` to safely execute the
+            synchronous `requests.get` call in a background thread,
+            preventing the main application's event loop from stalling.
+
+        3.  **Thread-Safe UI Updates**: All interactions with the GUI
+            are carefully scheduled on the main GTK thread using
+            `GLib.idle_add()`. This is a critical pattern for ensuring
+            that UI updates, such as changing the weather label's text,
+            are performed in a thread-safe manner, avoiding crashes
+            and race conditions.
+        """
+        return self.code_explanation.__doc__

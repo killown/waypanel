@@ -598,3 +598,31 @@ class StatusNotifierItem(BasePlugin):
                     self.logger.error(f"Initialization failed after 3 attempts: {e}")
                     return False
         return False
+
+    def about(self):
+        """
+        This plugin is a D-Bus service that acts as a
+        StatusNotifierHost to manage system tray icons.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This Python code is a D-Bus service that acts as a
+        StatusNotifierHost, a role for managing modern system tray icons.
+        It uses the 'dbus-fast' library for D-Bus communication.
+
+        - **StatusNotifierWatcher**: The central service that listens for
+          applications to register new tray icons. It handles
+          `NameOwnerChanged` signals and the `RegisterStatusNotifierItem`
+          method call to detect when an icon becomes available.
+
+        - **StatusNotifierHost**: This class acts as a registry for all
+          currently active tray icons. It adds or removes `StatusNotifierItem`
+          objects and notifies other components of these changes.
+
+        - **StatusNotifierItem**: A proxy object that represents a single
+          application's tray icon. It connects to the remote D-Bus object
+          to fetch its properties (like icon and tooltip) and signals.
+        """
+        return self.code_explanation.__doc__

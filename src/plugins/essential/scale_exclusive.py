@@ -25,13 +25,6 @@ def initialize_plugin(panel_instance):
 
 
 class PanelScaleExclusivePlugin(BasePlugin):
-    """
-    A background plugin that monitors the 'scale' plugin's activation state.
-    When scale is activated, it enables exclusive layer mode on ALL four panels (top, bottom, left, right)
-    ONLY if the currently focused output matches the output specified by on_output_connect.current_output_name.
-    When scale is deactivated, it removes the exclusive layer mode from all panels.
-    """
-
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.logger.info("PanelScaleExclusivePlugin initialized.")
@@ -132,29 +125,23 @@ class PanelScaleExclusivePlugin(BasePlugin):
                     )
 
     def about(self):
-        """
-        Panel Scale-Exclusive Plugin
-        ============================
-
-        Purpose
-        -------
-        This plugin was created to solve a layout conflict that appears when using
-        the Scale effect (the overview of all windows) in a multi-panel setup.
-        During Scale, normal panels can overlap or allow other surfaces to intrude,
-        breaking the visual clarity of the workspace.
-
-        Reason for Creation
-        -------------------
-        By temporarily placing every panel (top, bottom, left and right) in
-        exclusive layer mode only while Scale is active—and only on the monitor
-        where Scale is running—the plugin ensures that panels keep their reserved
-        screen space. This prevents accidental overlaps, keeps the Scale grid clean
-        and consistent, and restores the panels to normal as soon as the effect ends.
-
-        Benefit
-        -------
-        Users experience a smooth and unobstructed Scale animation without panels
-        jumping or being covered, while still regaining the usual flexible panel
-        behavior once Scale deactivates.
-        """
+        """Monitors the 'scale' plugin to enable or disable exclusive layer mode on panels."""
         return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin coordinates with the 'scale' plugin to manage panel layer behavior.
+
+        Its core logic is centered on **synchronizing panel exclusivity with the scale effect**:
+
+        1.  **Event Subscription**: It listens for activation and deactivation events from the 'scale' plugin.
+        2.  **Conditional Activation**: When 'scale' is activated, the plugin checks if the
+            currently focused monitor is the same as the one the panels are
+            configured for.
+        3.  **Exclusive Mode**: If the monitors match, it sets all four panels (top,
+            bottom, left, right) to exclusive layer mode. This prevents windows from
+            overlapping the panels during the 'scale' effect.
+        4.  **State Reset**: When 'scale' is deactivated, the exclusive layer mode is
+            removed from all panels, returning them to their normal state.
+        """
+        return self.code_explanation.__doc__

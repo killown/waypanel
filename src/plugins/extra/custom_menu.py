@@ -75,7 +75,6 @@ class MenuSetupPlugin(BasePlugin):
             menu = Gio.Menu()
             menu_button = Gtk.MenuButton(label=menu_name)
             self.utils.add_cursor_effect(menu_button)
-
             # Set icon if specified in the configuration
             if "icon" in menu_data:
                 icon_name = menu_data["icon"]
@@ -104,3 +103,30 @@ class MenuSetupPlugin(BasePlugin):
             subprocess.Popen(cmd, shell=True)
         except Exception as e:
             self.log_error(f"Error running command '{cmd}': {e}")
+
+    def about(self):
+        """A plugin that dynamically creates custom menus and submenus based on a TOML configuration file."""
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin creates dynamic, user-configurable menus for the panel.
+        Instead of hardcoding menu items, it reads a structured TOML file to build the
+        menu's hierarchy and functionality.
+
+        Its core logic is centered on **configuration-driven UI generation and command execution**:
+
+        1.  **Configuration Loading**: It reads a `config.toml` file to get the menu
+            structure, including labels, icons, commands, and submenus. This decouples
+            the UI from the code, making the menus highly customizable without
+            requiring code changes.
+        2.  **Recursive Menu Creation**: It uses a recursive approach to handle nested menu structures,
+            allowing for complex, multi-level menus.
+        3.  **Command Execution**: For each menu item, it creates an action that executes
+            a shell command, ensuring that clicking a menu item correctly launches the
+            configured application or runs a script.
+        4.  **Flexible UI**: It dynamically creates menu button widgets based on
+            the top-level menu names found in the configuration, and can use either
+            labels or icons as specified in the TOML file.
+        """
+        return self.code_explanation.__doc__

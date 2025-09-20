@@ -808,3 +808,49 @@ class PluginDetailsHandler(BasePlugin):
 
         _flatten("", data)
         return flat
+
+    def about(self):
+        """
+        This plugin provides a graphical interface for configuring individual
+        Wayfire plugins. It dynamically creates a separate, non-blocking
+        GTK window for each plugin, populating it with a user-friendly UI
+        based on the plugin's metadata. Users can view and modify
+        various settings, including booleans, numbers, strings, and more complex
+        types like colors and keybindings.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin is designed to offer a dynamic, real-time configuration
+        interface by orchestrating **metadata parsing, asynchronous UI
+        building, and persistent state management**.
+
+        Its core functions are as follows:
+
+        1.  **Dynamic UI Generation**: Unlike hardcoded interfaces, this plugin
+            constructs its UI on the fly. When a user requests a plugin's
+            configuration window, it first parses the plugin's metadata from
+            an `.xml` file (if available). It then uses this data, including
+            option types (`bool`, `int`, `string`, `color`), to programmatically
+            create the appropriate GTK widgets—like switches, spin buttons,
+            or color pickers—for each setting.
+
+        2.  **Asynchronous Window Population**: To prevent the main application
+            from freezing, the plugin uses a non-blocking approach. The
+            `GLib.idle_add` function schedules the window's creation and content
+            population to happen during the GTK event loop's idle time. This
+            ensures the UI remains responsive even when loading a large number
+            of configuration options.
+
+        3.  **Unified State Management**: The plugin maintains a single source of
+            truth for a plugin's state by merging data from three sources: the
+            **plugin's XML metadata**, Wayfire's **real-time IPC state**, and the
+            user's local **`wayfire.toml` configuration file**. When the
+            window is opened, it first checks the `wayfire.toml` file to get the
+            last saved value, which is then used to initialize the widget. When a
+            user changes a setting, the plugin immediately updates the value
+            via IPC and then persists the change to the `wayfire.toml` file,
+            ensuring the settings are saved for future sessions.
+        """
+        return self.code_explanation.__doc__

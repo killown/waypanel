@@ -160,36 +160,24 @@ class PanelOutputMoverPlugin(BasePlugin):
             )
 
     def about(self):
-        """
-        Panel Output Mover Plugin
-        =========================
-
-        Purpose
-        -------
-        This plugin ensures that the panel (the bar or dock managed by the application)
-        is always visible on an active monitor, even when the user changes the output
-        layout—for example, when a monitor is unplugged, turned off, or goes into DPMS
-        (power-saving) mode. It automatically moves all panel surfaces (top, bottom,
-        left, and right panels) to a valid monitor whenever the currently assigned
-        output is no longer available.
-
-        Key Configuration
-        -----------------
-        In the application configuration file, the following setting is required if you
-        want to force the panel to always prefer a specific monitor:
-
-            [panel]
-            primary_output = "Output-Name"
-
-        If `primary_output` is omitted, the plugin will simply choose the first
-        available monitor as reported by the compositor.
-
-        Why It Matters
-        --------------
-        Without this plugin, if the monitor hosting the panel is turned off, removed,
-        or enters DPMS mode, the panel might remain bound to that inactive output,
-        making it inaccessible. The Panel Output Mover Plugin guarantees that the
-        panel remains visible and usable to the user at all times, improving both
-        usability and resilience in multi-monitor setups.
-        """
+        """Automatically moves the panel to a valid monitor when the current one is disabled."""
         return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin ensures the panel remains visible by automatically moving it
+        to an active output when the current one is disconnected or disabled.
+
+        The core logic involves:
+        1.  **Initial Assignment:** On startup, the panel is placed on a preferred
+            (if configured) or the first available monitor.
+        2.  **Event Listening:** It subscribes to an "output-layout-changed" event,
+            triggering a re-evaluation of the display setup whenever a monitor's
+            status changes.
+        3.  **Dynamic Relocation:** If the primary or current monitor is no longer
+            active, the plugin finds the first available, non-DPMS output and
+            reassigns the panel to it using LayerShell.
+        4.  **Debouncing:** A brief delay is used to prevent the panel from
+            rapidly flickering during transient display changes.
+        """
+        return self.code_explanation.__doc__

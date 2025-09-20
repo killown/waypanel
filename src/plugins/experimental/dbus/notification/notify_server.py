@@ -187,3 +187,45 @@ class NotificationDaemon(ServiceInterface):
             await asyncio.Future()
         except Exception as e:
             self.logger.error(f"Error starting notification daemon: {e}")
+
+    def about(self):
+        """
+        This plugin is a D-Bus service that acts as a notification
+        daemon, implementing the FreeDesktop.org Notifications
+        Specification. It receives, stores, and displays desktop
+        notifications from other applications.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This code's core logic is to provide a persistent,
+        future-proof desktop notification server. It's built on three
+        main principles:
+
+        1.  **Standardized Communication**: The service uses D-Bus to
+            adhere to the `org.freedesktop.Notifications` standard. This
+            makes it universally compatible with any application that
+            wants to send notifications, decoupling the server's
+            implementation from the clients that use it.
+
+        2.  **Separation of Concerns**: The logic is divided into
+            distinct components:
+            - A **D-Bus communication layer** that listens for requests.
+            - A **database layer** for long-term storage of
+              notifications.
+            - A **UI layer** that is responsible only for displaying
+              the visual pop-ups.
+            This modular design allows each part to be refactored
+            independently without affecting the others.
+
+        3.  **Asynchronous and Concurrent Processing**: The D-Bus
+            server runs in a dedicated background thread using
+            `asyncio`. This ensures that processing incoming
+            notifications does not block or freeze the main UI thread
+            of the panel, providing a smooth and responsive user
+            experience. The `Notify` method handles the full
+            notification lifecycle, from receipt to database storage,
+            UI display, and timed expiration.
+        """
+        return self.code_explanation.__doc__

@@ -117,3 +117,27 @@ class ExampleBroadcastPlugin(BasePlugin):
         Called before the plugin is completely removed.
         """
         self.logger.info("ExampleBroadcastPlugin is cleaning up resources.")
+
+    def about(self):
+        """An example plugin that demonstrates how to create a UI widget and broadcast a message via the IPC server."""
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin is an example demonstrating how to create a simple user
+        interface (UI) element and use the Inter-Process Communication (IPC)
+        system to broadcast a message to other components.
+
+        The core logic is centered on **event-driven UI and IPC broadcasting**:
+
+        1.  **UI Creation**: It creates a Gtk.Button and sets it as the main
+            widget, specifying its placement on the top-right of the panel.
+        2.  **Event Handling**: It connects the button's "clicked" signal to the
+            `on_button_clicked` method, which logs the click.
+        3.  **IPC Broadcasting**: When the button is clicked, it calls the
+            asynchronous `broadcast_message` method.
+        4.  **Message Payload**: The `broadcast_message` method then uses the
+            `ipc_server` to send a predefined message to any other plugin or
+            client that is listening for the "custom_message" event.
+        """
+        return self.code_explanation.__doc__

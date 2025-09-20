@@ -236,3 +236,38 @@ class WindowTitlePlugin(BasePlugin):
         self._debounce_timer_id = None
         self.update_title_icon(self._last_view_data)
         return False  # Return False to stop the timeout
+
+    def about(self):
+        """
+        A plugin that displays the title and icon of the currently
+        focused window on the panel.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin tracks the active window and updates a panel widget
+        to display its title and icon. It uses an event-driven model to
+        remain synchronized with the system.
+
+        Its core logic is centered on **event subscription, state
+        synchronization, and debounced updates**:
+
+        1.  **Event Subscription**: The plugin listens for system events
+            such as "view-focused," "view-closed," and "view-title-changed."
+            This allows it to react instantly to changes in the active
+            window's state.
+        2.  **Debounced Updates**: To prevent the panel from flickering or
+            excessively updating during rapid title changes (e.g., when a
+            web page is loading), it uses a debouncing mechanism. This
+            ensures updates are processed at a controlled rate.
+        3.  **Title and Icon Management**: It extracts the title and
+            application ID from the event data. It filters the title to
+            remove extraneous information and truncates it to a set
+            length. It then uses the application ID to find and display
+            the correct icon.
+        4.  **UI Updates**: The plugin directly manipulates its internal
+            widgets to reflect the current state, displaying the
+            processed title and icon.
+        """
+        return self.code_explanation.__doc__

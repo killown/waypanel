@@ -1,5 +1,3 @@
-import os
-import toml
 from gi.repository import Gtk, Gio
 import re
 
@@ -178,3 +176,28 @@ class ExampleMenuPlugin(BasePlugin):
             self.utils.run_app(app_id)
         except Exception as e:
             self.log_error(f"Error running application {app_id}: {e}")
+
+    def about(self):
+        """A plugin that creates a dynamic application menu from installed applications, grouped by category."""
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin creates a dynamic application menu for the panel.
+        It scans the system for installed applications, organizes them into
+        categories, and displays them in a `Gtk.MenuButton`.
+
+        The core logic is centered on **dynamic UI generation and application launching**:
+
+        1.  **UI Creation**: It creates a `Gtk.MenuButton` and sets a system icon,
+            with the option to use a custom icon from the panel's configuration.
+        2.  **Menu Model**: It uses `Gio.AppInfo.get_all()` to retrieve a list of all
+            installed applications.
+        3.  **Categorization**: Applications are grouped by their primary category
+            (e.g., "Utility", "Network") to create a structured submenu.
+        4.  **Action Handling**: For each application, it creates a `Gio.SimpleAction`
+            that, when activated, calls the `run_application` method.
+        5.  **Placement**: The `get_plugin_placement` function specifies the button's
+            position on the `top-panel-right`.
+        """
+        return self.code_explanation.__doc__

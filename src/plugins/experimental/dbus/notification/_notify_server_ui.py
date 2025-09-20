@@ -155,3 +155,40 @@ class UI(BasePlugin):
 
         # Automatically close the popup after self.timeout seconds
         GLib.timeout_add_seconds(self.timeout, lambda: window.close())
+
+    def about(self):
+        """
+        This module provides the user-facing graphical interface (UI)
+        for the notification server, responsible for rendering ephemeral
+        pop-up notifications on the desktop.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The core logic of this UI module is to act as the presentation
+        layer for a decoupled notification system. Its design is based
+        on principles that make it robust and adaptable to future changes:
+
+        1.  **Separation of UI and Logic**: It is deliberately separated
+            from the D-Bus service (`notify_server.py`). Its only job is
+            to visually display notifications and respect the "Do Not
+            Disturb" setting. The `show_popup` method is the entry point
+            for this display logic.
+
+        2.  **Platform-Specific Presentation**: It utilizes a specialized
+            API, `Gtk4LayerShell`, to create windows that are not managed
+            by the typical window manager. This ensures that notifications
+            appear consistently as non-intrusive overlays on the desktop.
+
+        3.  **Dynamic Configuration**: The module dynamically loads
+            settings (like pop-up size, position, and timeout) from a
+            configuration file. This externalizes user preferences, making
+            the UI highly customizable without requiring code modification.
+
+        4.  **Controlled Lifetime**: Each notification pop-up is given a
+            finite, configurable lifespan using a timer. This prevents the
+            UI from becoming cluttered with stale notifications and ensures
+            they are a transient visual cue rather than a persistent window.
+        """
+        return self.code_explanation.__doc__

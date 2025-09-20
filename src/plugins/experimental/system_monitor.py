@@ -881,3 +881,35 @@ class SystemMonitorPlugin(BasePlugin):
     def popover_is_closed(self, *_):
         """Callback when the popover is closed."""
         self.stop_system_updates()
+
+    def about(self):
+        """
+        A plugin that displays a system monitor popover with real-time
+        information on CPU, RAM, disk, network, and battery usage.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin provides a comprehensive system monitor, integrating
+        with system tools and displaying data in a popover UI.
+
+        Its core logic is centered on **data fetching, UI generation, and
+        external tool integration**:
+
+        1.  **Data Fetching**: It uses the `psutil` library to collect
+            real-time metrics for CPU, memory, disk, and network usage.
+            This data is refreshed periodically by a `GLib.timeout_add_seconds`
+            callback.
+        2.  **Dynamic UI**: The plugin creates a `Gtk.Popover` containing a
+            dynamic `Gtk.ListBox`. It populates this list box with the
+            fetched system data and information about the currently
+            focused window, including its PID.
+        3.  **Tool Integration**: It provides powerful context-aware
+            functionality by launching external applications like `htop`,
+            `iotop`, and `amdgpu_top` to provide more detailed monitoring.
+        4.  **Debugging Capabilities**: It includes gestures and handlers
+            to monitor Wayfire compositor events and view properties,
+            assisting with debugging and development.
+        """
+        return self.code_explanation.__doc__

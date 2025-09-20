@@ -527,3 +527,41 @@ class NotificationPopoverPlugin(BasePlugin):
 
         self.popover.set_parent(self.notification_button)
         self.popover.popup()
+
+    def about(self):
+        """
+        This plugin provides a graphical user interface (GUI) on a panel
+        for viewing and managing recent desktop notifications, acting as
+        a client to the D-Bus notification server plugin.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This code is the client-side component of a two-part notification
+        system. Its core logic revolves around the following principles:
+
+        1.  **UI and Interaction**: The plugin creates a panel button that
+            activates a popover. This popover dynamically populates itself
+            with notification data retrieved from a local SQLite database.
+            It provides user controls like a "Clear All" button and a
+            "Do Not Disturb" toggle.
+
+        2.  **State Management**: It manages the state of the "Do Not
+            Disturb" mode. When the user toggles the switch, the plugin
+            writes the new state to the application's configuration file,
+            which the companion notification server reads to determine if
+            it should display new pop-ups.
+
+        3.  **Data Retrieval**: Notifications are fetched from a database
+            that is populated by the separate notification server daemon.
+            This ensures that the UI can display a history of messages
+            even if it's not active, as the server handles all real-time
+            notification reception.
+
+        4.  **Decoupling**: By separating the UI (this plugin) from the
+            backend logic (the server plugin), the system ensures that
+            notifications can be processed and stored independently of
+            the UI's state. This makes the system robust and modular.
+        """
+        return self.code_explanation.__doc__

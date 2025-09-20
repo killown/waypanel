@@ -9,7 +9,6 @@ from gi.repository import Gtk
 from src.plugins.core._base import BasePlugin
 
 
-# set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 
 
@@ -60,9 +59,9 @@ class SystemDashboard(BasePlugin):
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
             msg = """Error: waypanel-settings is not installed"
-                    Install it with:
-                          git clone https://github.com/killown/waypanel-settings
-                          cd waypanel-settings && pip install -e ."""
+                     Install it with:
+                         git clone https://github.com/killown/waypanel-settings
+                         cd waypanel-settings && pip install -e ."""
             self.message(msg)
             return False
 
@@ -94,7 +93,7 @@ class SystemDashboard(BasePlugin):
         self.main_widget = (self.menubutton_dashboard, "append")
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
         icon_name = self.utils.set_widget_icon_name(
-            "system_dashboard",
+            "system-dashboard",
             [
                 "logout_highlight-symbolic",
                 "exit",
@@ -104,6 +103,7 @@ class SystemDashboard(BasePlugin):
         )
         self.menubutton_dashboard.set_icon_name(icon_name)
         self.utils.add_cursor_effect(self.menubutton_dashboard)
+        self.menubutton_dashboard.add_css_class("system-dashboard-button")
         return self.menubutton_dashboard
 
     def create_popover_system(self, *_):
@@ -291,12 +291,12 @@ class SystemDashboard(BasePlugin):
             # FIXME: allow the user set their own cmd in toml
             Popen(
                 """swaylock --screenshots --clock --indicator
-                    --grace-no-mouse --indicator-radius 99
-                    --indicator-thickness 6 --effect-blur 7x5
-                    --effect-vignette -1.5:0.5  --ring-color ffffff
-                    --key-hl-color 880032 --line-color 00000000
-                    --inside-color 00000087 --separator-color 00000000
-                    --grace 1 --fade-in 4""".split()
+                     --grace-no-mouse --indicator-radius 99
+                     --indicator-thickness 6 --effect-blur 7x5
+                     --effect-vignette -1.5:0.5  --ring-color ffffff
+                     --key-hl-color 880032 --line-color 00000000
+                     --inside-color 00000087 --separator-color 00000000
+                     --grace 1 --fade-in 4""".split()
             )
         if action == "Settings":
             if self.is_settings_installed():
@@ -313,3 +313,21 @@ class SystemDashboard(BasePlugin):
         self.searchbar.set_search_mode(
             True
         )  # Ctrl+F To Active show_searchbar and show searchbar
+
+    def about(self):
+        """A system dashboard providing quick access to common system actions like power management, session control, and settings."""
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin creates a popover-based user interface for managing system-level actions.
+        It provides a single access point for common tasks such as logging out, shutting down, or accessing settings.
+
+        Its core logic is centered on **dynamic UI generation and system command execution**:
+
+        1.  **UI Generation**: It creates a popover that contains a grid of buttons (`Gtk.FlowBox`), where each button represents a system action. It dynamically selects the most suitable icon for each button from a predefined list.
+        2.  **System Command Execution**: For each button, it executes a corresponding system command (e.g., `reboot`, `shutdown`, `swaylock`) using `subprocess.Popen`, which allows the plugin to interact with the underlying operating system.
+        3.  **External Tool Integration**: It includes a check to verify the existence of an external application (`waypanel-settings`) before attempting to launch it, providing graceful error handling if the dependency is not met.
+        4.  **Session Management**: It provides direct commands to manage the user's session, including exiting and restarting the panel itself.
+        """
+        return self.code_explanation.__doc__

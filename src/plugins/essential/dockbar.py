@@ -18,7 +18,6 @@ DEPS = ["event_manager", "gestures_setup"]
 
 
 def get_plugin_placement(panel_instance):
-    """Define the plugin's position and order."""
     position = "left-panel-center"
     # priority position is from config.toml [dockbar_panel.position] = "left"
     # the dockbar will be on left ignoring hardcoded position
@@ -33,7 +32,6 @@ def get_plugin_placement(panel_instance):
 
 
 def initialize_plugin(panel_instance):
-    """Initialize the Dockbar plugin."""
     if ENABLE_PLUGIN:
         dockbar = DockbarPlugin(panel_instance)
         return dockbar
@@ -42,7 +40,6 @@ def initialize_plugin(panel_instance):
 class DockbarPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
-        """Initialize the Dockbar plugin."""
         # Subscribe to events using the event_manager
         self.create_gesture = self.plugins["gestures_setup"].create_gesture
         self._subscribe_to_events()
@@ -55,10 +52,6 @@ class DockbarPlugin(BasePlugin):
         self._setup_dockbar()
 
     def get_panel(self):
-        """
-        Returns the appropriate panel object (e.g., self.obj.left_panel)
-        based on the dockbar configuration.
-        """
         dockbar_config = self.obj.config.get("dockbar_panel", {})
         if not dockbar_config or "panel" not in dockbar_config:
             self.logger.warning(
@@ -150,13 +143,6 @@ class DockbarPlugin(BasePlugin):
         self.ipc.scale_toggle()
 
     def on_right_click(self, cmd):
-        """
-        Handle right-click action: Move the cursor to the next available output
-        and open the app there.
-
-        Args:
-            cmd (str): The command to execute for the app.
-        """
         try:
             # Get the list of outputs and the currently focused output
             outputs = self.ipc.list_outputs()
@@ -204,7 +190,6 @@ class DockbarPlugin(BasePlugin):
             self.utils.run_cmd(cmd)
 
     def _setup_dockbar(self):
-        """Set up the dockbar based on the configuration."""
         dockbar_toml = self.config.get("dockbar", {})
         orientation = dockbar_toml.get("orientation", "v")
         class_style = dockbar_toml.get("class_style", "dockbar-buttons")
@@ -235,7 +220,6 @@ class DockbarPlugin(BasePlugin):
             self.layer_state = True
 
     def _subscribe_to_events(self):
-        """Subscribe to relevant events using the event_manager."""
         if "event_manager" not in self.plugins:
             self.logger.info("dockbar is waiting for event manager")
             return True
@@ -249,7 +233,6 @@ class DockbarPlugin(BasePlugin):
             )
 
     def create_dockbar_button(self, view):
-        """Create a dockbar button for a given view."""
         title = self.utils.filter_utf_for_gtk(view.get("title", ""))
         wm_class = view.get("app-id", "")
         initial_title = title.split(" ")[0].lower()
@@ -295,33 +278,43 @@ class DockbarPlugin(BasePlugin):
 
     def about(self):
         """
-        Dockbar Plugin
-        ================================
+        Dockbar Plugin — Launch apps.
 
-        Purpose
-        -------
-        Provides a configurable dockbar for launching applications directly
-        from the panel. Supports multiple panels, gestures, and integration
-        with other plugins like 'scale' and 'event_manager'.
-
-        Key Features
-        ------------
-        • **Dynamic App Buttons** – Generates dockbar buttons based on a TOML
-          configuration file (~/.config/waypanel/waypanel.toml).
-        • **Gestures Support** – Left, middle, and right mouse button gestures
-          for launching apps, switching workspaces, or moving the cursor
-          to other outputs.
-        • **Panel Flexibility** – Can be positioned on left, right, top, or bottom
-          panels with configurable order and priority.
-        • **Integration with Scale Plugin** – Adjusts layer and exclusive zone
-          automatically depending on scale plugin state.
-        • **Event-Driven** – Subscribes to plugin events via 'event_manager' for
-          responsive updates.
-
-        Behavior
-        --------
-        • Left-click: Launches the associated application.
-        • Middle-click: Launches app on an empty workspace if available.
-        • Right-click: Moves cursor to next output and launches app there.
+        • Configurable via TOML (waypanel.toml).
+        • Supports left/right/top/bottom panels.
+        • Left-click: Launch app + toggle scale.
+        • Middle-click: Launch on empty workspace.
+        • Right-click: Move cursor to next output & launch.
+        • Integrates with gestures and event_manager.
         """
         return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin implements a static application launcher dockbar, dynamically
+        built from a user-defined configuration file.
+
+        Its core logic follows these principles:
+
+        1.  **Configuration-Driven UI**: On startup, it reads a TOML config file
+            to determine which applications to display, their icons, and launch commands.
+            It then generates a row or column of buttons accordingly.
+
+        2.  **Panel-Aware Placement**: It respects the user’s chosen panel position
+            (left, right, top, bottom) by reading the config and attaching itself
+            to the corresponding panel container.
+
+        3.  **Gesture-Enhanced Interaction**: Each button is wired to respond to
+            left, middle, and right mouse clicks, triggering different behaviors:
+            - Left: Launch app and toggle the scale plugin.
+            - Middle: Find an empty workspace, switch to it, then launch.
+            - Right: Move the cursor to the next monitor and launch there.
+
+        4.  **Event-Driven Adaptation**: It listens for system events (like plugin
+            activation/deactivation) to potentially adjust its behavior or layer
+            properties in the future (e.g., hiding/showing when scale is active).
+
+        In essence, it transforms a static config into an interactive, multi-output
+        application launcher dock.
+        """
+        return self.code_explanation.__doc__

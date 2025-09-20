@@ -198,3 +198,40 @@ class UpdateCheckerPlugin(BasePlugin):
 
     def on_stop(self):
         self.terminal_pid = None
+
+    def about(self):
+        """
+        A plugin that checks for available system updates on Arch Linux-based
+        systems using the `checkupdates` command and provides a quick way to
+        refresh the count or launch a terminal to run the update.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin provides a user-friendly interface for managing system
+        updates by integrating with Arch Linux's package management tools.
+
+        Its core logic revolves around **asynchronous process management,
+        UI integration, and dependency handling**:
+
+        1.  **Dependency and UI Initialization**: The plugin checks for the
+            presence of the `pacman` command and disables itself if not found.
+            It sets up a `Gtk.MenuButton` on the panel which opens a
+            `Gtk.Popover`. This popover contains labels and buttons for
+            user interaction. An initial update check is performed, and
+            a timer is set to refresh the check hourly.
+        2.  **Asynchronous Update Check**: The `_check_updates` method uses
+            `asyncio.create_subprocess_exec` to run the `checkupdates`
+            command. This is crucial as it prevents the UI from freezing
+            while waiting for the command to return. The plugin then counts
+            the lines of output to determine the number of available updates
+            and updates the UI accordingly.
+        3.  **Process and State Management**: When the "Update Now" button
+            is clicked, the plugin launches a new terminal process (using
+            `kitty` or `alacritty`) to execute `sudo pacman -Syu`. It then
+            monitors this process's PID asynchronously. Once the terminal
+            process is no longer running, the plugin automatically triggers a
+            new update check to reflect the system's new state.
+        """
+        return self.code_explanation.__doc__

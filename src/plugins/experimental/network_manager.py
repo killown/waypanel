@@ -303,3 +303,40 @@ class NetworkMonitorPlugin(BasePlugin):
         except FileNotFoundError:
             print(f"Interface '{interface}' not found.")
             return False
+
+    def about(self):
+        """
+        A plugin that monitors and displays the status of network connections.
+        It provides a panel icon that indicates connectivity and a popover
+        menu with detailed information about all network devices, sourced from
+        the `nmcli` command.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin provides a comprehensive view of the system's network status
+        by combining low-level checks with a dynamic user interface.
+
+        Its core logic is built on **system-level checks, process execution,
+        and a dynamic GTK UI**:
+
+        1.  **Status Monitoring**: The plugin periodically checks for internet
+            connectivity using a low-level approach. It reads the system's
+            default network interface from `/proc/net/route` and verifies
+            its "carrier" status from `/sys/class/net/{interface}/carrier`.
+            This allows for a quick, reliable status check that is reflected
+            by a changing panel icon.
+        2.  **External Process Execution**: When the user opens the popover,
+            the plugin uses `subprocess` to execute the `nmcli device show`
+            command. The output of this command is then parsed into a structured
+            format, allowing the plugin to retrieve detailed information about
+            all network devices.
+        3.  **Dynamic UI Generation**: The popover is dynamically populated with
+            the parsed `nmcli` data. It uses `Gtk.Revealer` widgets to create
+            expandable sections for each network device, keeping the initial
+            view clean while providing an option to see full details. It also
+            provides a button to launch the `gnome-control-center` for
+            network settings.
+        """
+        return self.code_explanation.__doc__

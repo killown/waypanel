@@ -73,3 +73,37 @@ class CalendarPlugin(BasePlugin):
             self.popover_calendar.popdown()
         else:
             self.popover_calendar.popup()
+
+    def about(self):
+        """
+        This plugin adds a calendar popover to the panel, which is
+        displayed when the user clicks on the clock widget.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The core logic of this plugin is based on an architectural
+        pattern of modular UI composition and event-driven behavior.
+        Its design is based on these principles:
+
+        1.  **Dependent UI Augmentation**: This plugin does not create its
+            own panel button. Instead, it explicitly depends on the `clock`
+            plugin and attaches its `Gtk.Popover` to the clock's button.
+            This approach creates a cohesive user experience where two
+            logically related components are visually and functionally
+            integrated.
+
+        2.  **Modular UI Construction**: The calendar interface is built
+            by composing several standard GTK widgets: a `Gtk.Grid` for
+            layout, a `Gtk.Calendar` widget for the core functionality,
+            and a `Gtk.Popover` to serve as a floating, temporary window
+            for the entire structure.
+
+        3.  **Event-Driven Interaction**: The plugin's primary interaction
+            is handled by connecting the `clicked` signal of the clock
+            button to the `toggle_calendar` method. This simple event
+            handler controls the visibility of the popover, adhering
+            to a standard user interaction model.
+        """
+        return self.code_explanation.__doc__

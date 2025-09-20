@@ -1,12 +1,11 @@
 import gi
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk
 from src.plugins.core.event_handler_decorator import subscribe_to_event
 
 from src.plugins.core._base import BasePlugin
 
 gi.require_version("Gtk", "4.0")
 
-# Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 
@@ -132,3 +131,36 @@ class WindowControlsPlugin(BasePlugin):
     #         GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))
     #         if self.utils.widget_exists(widget):
     #             self.update_widget_safely(self.top_panel_box_center.remove, widget)
+
+    def about(self):
+        """
+        A system dashboard for quick access to system actions,
+        power management, and settings.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin creates a popover-based user interface for managing
+        system-level actions. It provides a single access point for
+        common tasks such as logging out, shutting down, or accessing
+        settings.
+
+        Its core logic is centered on **dynamic UI generation and
+        system command execution**:
+
+        1.  **UI Generation**: It creates a popover with a grid of buttons.
+            Each button represents a system action, and the plugin
+            dynamically selects the most suitable icon for each.
+        2.  **System Command Execution**: For each button, it executes a
+            corresponding system command (e.g., `reboot`, `shutdown`)
+            using `subprocess.Popen`, allowing it to interact with the
+            underlying operating system.
+        3.  **External Tool Integration**: It checks for an external
+            application (`waypanel-settings`) and launches it if available,
+            providing graceful error handling if the dependency is not met.
+        4.  **Session Management**: It includes actions specifically for
+            managing the panel's session, such as exiting and restarting
+            the panel itself.
+        """
+        return self.code_explanation.__doc__

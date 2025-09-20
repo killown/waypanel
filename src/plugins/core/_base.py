@@ -325,3 +325,40 @@ class BasePlugin:
         Use this method for final cleanup tasks.
         """
         pass
+
+    def about(self):
+        """
+        This is a foundational class that serves as the blueprint for all
+        plugins in the waypanel application, providing core resources, a
+        defined lifecycle, and a standardized structure.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The `BasePlugin` class is the foundational component of waypanel's
+        plugin architecture, employing the Template Method Design Pattern
+        to provide a consistent and extensible structure. Its core logic
+        is built around several key principles:
+
+        1.  **Standardized Lifecycle**: The class defines a clear lifecycle
+            for every plugin with methods like `on_start()`, `on_stop()`,
+            and `on_cleanup()`. This template ensures that all plugins
+            handle initialization, runtime, and cleanup in a predictable
+            and safe manner, preventing common issues like resource leaks.
+
+        2.  **Shared Resource Injection**: In its constructor, the class
+            initializes and provides access to critical shared resources
+            from the main panel instance. These resources, such as the
+            `logger`, IPC client (`self.ipc`), and configuration (`self.config`),
+            are readily available to any subclass, promoting code reuse
+            and decoupling plugins from the main application's logic.
+
+        3.  **UI Integration and Validation**: The `set_widget()` method
+            serves as a centralized and robust entry point for plugins
+            to define and add their UI components to the panel. It includes
+            comprehensive checks to validate the widget type and format,
+            ensuring that only valid GTK widgets are added. This
+            prevents common UI-related crashes and errors.
+        """
+        return self.code_explanation.__doc__

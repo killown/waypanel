@@ -106,3 +106,26 @@ class PluginCommunicator(BasePlugin):
                 )
         else:
             self.logger.info("volume scroll plugin is not loaded")
+
+    def about(self):
+        """Demonstrates inter-plugin communication by calling methods of other loaded plugins."""
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin serves as an example of how to access and interact with
+        other loaded plugins within the panel.
+
+        Its core logic is centered on **accessing and using other plugin instances**:
+
+        1.  **UI Elements**: It creates two buttons in the panel's UI.
+        2.  **Plugin Access**: When a button is clicked, its handler checks for the
+            presence of a target plugin (e.g., "clock" or "volume_scroll") in the
+            `self.obj.plugins` dictionary.
+        3.  **Method Invocation**: If the target plugin exists, it directly
+            accesses its methods or attributes (e.g., `clock_plugin.clock_label.get_text()`)
+            to retrieve information.
+        4.  **Logging**: It then logs the retrieved information, demonstrating that
+            the communication was successful.
+        """
+        return self.code_explanation.__doc__

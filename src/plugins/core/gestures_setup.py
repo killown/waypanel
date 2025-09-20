@@ -170,3 +170,40 @@ class GesturePlugin:
 
     def pos_right_right_click(self, *_):
         """Callback for right-click on the right section."""
+
+    def about(self):
+        """
+        A core background plugin that provides a centralized gesture
+        handling system for the panel. It allows other plugins to
+        append their actions to specific mouse click events.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The core logic of this plugin is a robust and extensible
+        system for handling user input on the panel. Its key
+        principles are:
+
+        1.  **Deferred Initialization**: The plugin uses `GLib.idle_add`
+            to continuously check if the panel's UI components are
+            fully loaded and ready. This ensures that gestures are
+            only attached to existing widgets, preventing errors
+            in a potentially asynchronous UI startup environment.
+
+        2.  **Extensible Action Appending**: The plugin implements a
+            unique "append" mechanism. Instead of hardcoding all
+            actions, it allows other plugins to attach their own
+            functions to an existing gesture handler's name via
+            `append_action`. The `execute_callback` method then
+            executes both the primary handler and all appended
+            actions, enabling a modular and flexible design.
+
+        3.  **Centralized Gesture Creation**: The `create_gesture` method
+            acts as a factory, providing a standardized way to
+            attach a `Gtk.GestureClick` to any widget. It centralizes
+            the logic for connecting the gesture's `released` signal
+            to the primary `execute_callback` method, making the code
+            more maintainable and predictable.
+        """
+        return self.code_explanation.__doc__

@@ -101,11 +101,12 @@ class AppLauncher(BasePlugin):
         self.searchbar.grab_focus()
         self.searchbar.connect("search_changed", self.on_search_entry_changed)
         self.searchbar.connect("activate", self.on_keypress)
+        self.searchbar.connect("stop-search", self.on_searchbar_key_release)
         self.searchbar.set_focus_on_click(True)
         self.searchbar.set_placeholder_text(
             "Search apps..."
         )  # Optional: Add placeholder text
-
+        self.searchbar.add_css_class("app-launcher-searchbar")
         self.main_box.append(self.searchbar)
 
         # Flowbox setup
@@ -370,6 +371,17 @@ class AppLauncher(BasePlugin):
         if hasattr(self, "listbox"):
             self.flowbox.invalidate_filter()
 
+    def on_searchbar_key_release(self, widget, event):
+        """
+        Handle key release events on the search bar.
+        """
+        keyval = event.keyval
+        if keyval == Gdk.KEY_Escape:
+            if self.popover_launcher:
+                self.popover_launcher.popdown()
+            return True  # Signal that we've handled the event
+        return False
+
     def on_show_searchbar_action_actived(self, action, parameter):
         """Show the search bar when the show_searchbar action is activated."""
         self.searchbar.set_search_mode(  # pyright: ignore
@@ -418,3 +430,35 @@ class AppLauncher(BasePlugin):
                 return False
         else:
             return text_to_search in row.lower().strip()
+
+    def about(self):
+        """A dynamic application launcher with a search bar and a grid view of installed and recently used applications."""
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin creates a full-featured application launcher integrated into the panel.
+        It provides a visual, searchable interface for launching applications directly.
+
+        Its core logic is centered on **dynamic UI generation, state management, and interaction**:
+
+        1.  **Application Discovery**: It retrieves all installed applications using
+            `Gio.AppInfo.get_all()` and filters out any apps that are already
+            in the dockbar, preventing redundancy.
+        2.  **Recent Apps Persistence**: A key feature is its ability to track
+            recently launched applications by reading from and writing to a
+            hidden file (`~/.config/waypanel/.recent-apps`). This allows the
+            launcher to prioritize frequently used apps, improving user experience.
+        3.  **Dynamic Filtering**: It uses a `Gtk.SearchEntry` connected to a
+            `Gtk.FlowBox` to provide a fast, real-time search experience. The
+            `invalidate_filter` method efficiently hides/shows applications
+            that match the search query.
+        4.  **Popover and UI**: The launcher is displayed in a `Gtk.Popover` that
+            is attached to a main button. The applications themselves are
+            displayed in a grid-like layout using `Gtk.FlowBox`, which dynamically
+            arranges widgets (icons and labels) based on available space.
+        5.  **System Integration**: It interacts with the `Gtk4LayerShell` to
+            manage keyboard focus, ensuring the search bar is active when the
+            launcher is open and relinquishes focus when it's closed.
+        """
+        return self.code_explanation.__doc__

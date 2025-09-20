@@ -81,3 +81,39 @@ class Database:
             return {"__bytes__": base64.b64encode(data).decode("utf-8")}
         else:
             return data
+
+    def about(self):
+        """
+        This module provides the data persistence layer for the
+        notification system, using an SQLite database to store
+        and manage a history of all received notifications.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The core logic of this database module is to reliably store
+        notification data for later retrieval. Its design is based on
+        these key concepts:
+
+        1.  **Dedicated Data Layer**: The module is a self-contained
+            data access object. It is responsible solely for managing
+            the SQLite database file and the `notifications` table,
+            decoupling the storage logic from the D-Bus communication
+            and UI components.
+
+        2.  **Schema Definition**: The `_initialize_db` method defines
+            a robust table schema for notifications, including a primary
+            key, content fields (summary, body), and a JSON field for
+            metadata (hints). This structure ensures consistency for
+            all stored notifications.
+
+        3.  **Cross-Platform Serialization**: The `_save_notification_to_db`
+            method handles the complex task of serializing data. It
+            uses a helper function to recursively convert potentially
+            non-serializable data types (like bytes) into a standard
+            JSON format using Base64 encoding. This guarantees that all
+            notification data, regardless of its original format, can
+            be safely and consistently stored.
+        """
+        return self.code_explanation.__doc__

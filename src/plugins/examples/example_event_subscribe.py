@@ -166,3 +166,28 @@ def on_view_created(event_message):
         print(f"View created: {view_id}")
     except Exception as e:
         print(f"Error handling 'view-created' event: {e}")
+
+    def about(self):
+        """Monitors and logs specific Wayfire IPC events using a decorator-based approach."""
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin is a minimalist example that demonstrates how to use decorators
+        to subscribe to and handle specific events from the Wayfire compositor.
+
+        The core logic is centered on **decorator-based event handling**:
+
+        1.  **Decorator Registration**: The `@subscribe_to_event` decorator is used
+            on functions like `on_view_focused` and `on_view_created`.
+        2.  **Simplified Code**: This declarative approach automatically registers
+            the decorated functions as event handlers, removing the need for a
+            manual subscription loop.
+        3.  **Automatic Handling**: When a `view-focused` or `view-mapped` event
+            occurs, the decorator ensures the corresponding function is called
+            with the event data.
+        4.  **Purpose**: The plugin is a background service with no UI, designed
+            specifically to show the simplicity and efficiency of using
+            decorators for event subscription.
+        """
+        return self.code_explanation.__doc__

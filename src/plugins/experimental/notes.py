@@ -356,3 +356,38 @@ class MenuNotes(BasePlugin):
             row_text = row.get_child().MYTEXT.lower()
             return search_text in row_text
         return False
+
+    def about(self):
+        """
+        A plugin that provides a simple note-taking utility, allowing users
+        to add, delete, and view notes directly from the panel. The notes are
+        stored in an SQLite database.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin serves as a persistent note-taking tool that integrates
+        seamlessly into the `waypanel` application.
+
+        Its core logic is built around **asynchronous database management,
+        dynamic UI manipulation, and user interaction**:
+
+        1.  **Database Management**: The plugin uses `aiosqlite` to handle
+            all database operations asynchronously, ensuring the UI remains
+            responsive. It initializes a SQLite database file at
+            `~/.config/waypanel/notes.db`, creates a `notes` table if it
+            doesn't exist, and provides methods to add, retrieve, and delete
+            notes.
+        2.  **Dynamic UI**: The plugin creates a `Gtk.Popover` containing
+            widgets for adding notes, searching, and displaying the list of
+            existing notes. The list of notes is a `Gtk.ListBox` that is
+            dynamically populated and updated by the `update_notes_list` method,
+            which fetches notes from the database.
+        3.  **User Interaction**: It handles various user actions: adding a
+            new note via an entry field, deleting individual notes with a
+            button, and clearing all notes via a confirmation dialog. It also
+            implements a search function that filters the displayed notes
+            in real-time as the user types, using `Gtk.ListBox.set_filter_func`.
+        """
+        return self.code_explanation.__doc__

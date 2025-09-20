@@ -101,3 +101,39 @@ class fuzzelWatcherPlugin(BasePlugin):
     def _kill_fuzzel(self):
         """Kill the running fuzzel process."""
         subprocess.run("pkill fuzzel".split())
+
+    def about(self):
+        """
+        This is a background plugin that integrates the `fuzzel` application
+        launcher with the `scale` Wayfire plugin. Its primary function is to
+        launch `fuzzel` when `scale` is activated and automatically close it
+        when `scale` is deactivated or when a new application window is opened.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The `fuzzelWatcherPlugin` operates as an **event-driven background service**.
+        It uses the `event_manager` to monitor the state of the Wayfire compositor.
+
+        The core logic is implemented in two main event handlers:
+
+        1.  **`handle_plugin_activation`**: This method listens for changes in
+            the `plugin-activation-state-changed` event. When the
+            `scale` plugin is activated (the state is `True`), it triggers
+            the private method `_start_fuzzel()` to launch the `fuzzel`
+            process. Conversely, if `scale` is deactivated, it calls
+            `_kill_fuzzel()` to terminate `fuzzel`, ensuring it only runs
+            when needed.
+
+        2.  **`handle_view_mapped`**: This handler responds to the
+            `view-mapped` event, which is emitted whenever a new window
+            is created. The plugin checks if the newly mapped view is a
+            `toplevel` window. If it is and the `scale` plugin is currently
+            active, it automatically toggles `scale` off and moves focus
+            to the new window using the `self.ipc.scale_toggle()` and
+            `self.ipc.set_focus()` calls. This creates a seamless workflow
+            where activating `scale` opens `fuzzel` and selecting an
+            application from `fuzzel` closes `scale` and focuses the new app.
+        """
+        return self.code_explanation.__doc__

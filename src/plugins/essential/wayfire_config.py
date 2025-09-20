@@ -265,4 +265,29 @@ class ConfigFileHandler(FileSystemEventHandler):
         global_loop.create_task(apply_coroutine())
 
     def about(self):
+        """
+        Watches wayfire.toml configuration file to automatically apply settings
+        to the Wayfire compositor on the fly.
+        """
         return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin watches a user-defined TOML file to apply Wayfire settings,
+        keybinds, and window rules dynamically without requiring a manual reload.
+
+        Its core logic is centered on **file monitoring and dynamic application**:
+
+        1.  **File Watching**: It uses `watchdog` to monitor the `wayfire.toml`
+            file for changes (modifications, creations, deletions, or moves).
+        2.  **Debouncing**: A debounce mechanism is used to prevent rapid,
+            redundant updates when the file is saved multiple times in quick
+            succession.
+        3.  **Asynchronous Reload**: When a valid, debounced change is detected,
+            the plugin asynchronously loads the new TOML configuration.
+        4.  **State Synchronization**: It fetches the current runtime configuration
+            from Wayfire and compares it with the new file content. It then
+            applies only the changed options, including special handling for
+            `command` and `window-rules` sections.
+        """
+        return self.code_explanation.__doc__

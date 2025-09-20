@@ -1,10 +1,3 @@
-"""
-Auto Fullscreen App Matcher Plugin for waypanel
-
-This plugin listens for 'view-focused' events and automatically sets views
-to fullscreen if their app-id and (optional) title match any defined in the configuration file.
-"""
-
 from gi.repository import GLib
 from core._base import BasePlugin
 from src.plugins.core.event_handler_decorator import subscribe_to_event
@@ -137,3 +130,46 @@ class AutoFullscreenAppPlugin(BasePlugin):
 
         except Exception as e:
             self.logger.error(f"Error fullscreening view: {e}")
+
+    def about(self):
+        """
+        A background plugin that automatically sets specific windows
+        to fullscreen based on their application ID and title, using
+        a user-defined configuration.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The core logic of this plugin is a reactive, rule-based
+        system that interacts with the window manager. Its key
+        principles are:
+
+        1.  **Event-Driven Architecture**: The plugin operates as a
+            background service, reacting to two critical events:
+            `view-focused` (when a window is selected) and
+            `view-title-changed` (for dynamic applications like
+            web browsers). This ensures immediate and accurate
+            application of rules.
+
+        2.  **Configurable Matching Logic**: The plugin reads a list
+            of rules from its configuration. It matches windows by
+            their `app-id` and can be optionally refined with a
+            partial title match. This flexible, layered approach
+            allows for precise control over which windows are
+            auto-fullscreened.
+
+        3.  **State Management**: The plugin uses a dictionary to
+            track which windows it has put into fullscreen mode.
+            This prevents redundant IPC calls to the compositor and
+            lays the groundwork for more complex state management,
+            such as reverting changes if a window's title no longer
+            matches a rule.
+
+        4.  **Inter-Process Communication (IPC)**: The plugin
+            orchestrates window state changes without direct
+            control. It uses IPC calls to query window properties
+            and to send commands to the compositor to set or unset
+            a view's fullscreen state.
+        """
+        return self.code_explanation.__doc__

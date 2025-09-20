@@ -1,12 +1,10 @@
 import shutil
 import os
 import asyncio
-from gi.repository import Gtk, Gio, GLib
+from gi.repository import Gtk, GLib
 from src.plugins.core._base import BasePlugin
 from src.plugins.core._event_loop import global_loop
-from src.core.compositor.ipc import IPC
 
-# Enable or disable the plugin
 ENABLE_PLUGIN = True
 
 
@@ -481,3 +479,39 @@ class RecordingPlugin(BasePlugin):
 
     def popover_is_closed(self, *_):
         pass
+
+    def about(self):
+        """
+        A plugin that provides a simple screen and audio recording utility for Wayland,
+        using wf-recorder, slurp, and ffmpeg.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin acts as a screen and audio recording tool tailored for Wayland
+        compositors, integrating with the system's graphical and command-line
+        utilities.
+
+        Its core logic is built around **directory management, process control,
+        and media file manipulation**:
+
+        1.  **Directory and File Management**: The plugin first sets up a
+            temporary recording directory (`self.video_dir`) and identifies the
+            user's standard Videos folder (`self.final_dir`) using XDG Base
+            Directory Specification. This ensures that the final video output is
+            saved in a logical and user-accessible location.
+        2.  **Process Control**: It uses the `wf-recorder` command-line tool,
+            which is a dedicated screen recorder for Wayland. By executing
+            `wf-recorder` with `asyncio.create_subprocess_exec`, the plugin
+            can start and stop recording processes non-blockingly, allowing the
+            UI to remain responsive. It stores a list of these processes
+            (`self.record_processes`) to manage them during recording.
+        3.  **Media File Manipulation**: When the recording is stopped, the
+            plugin can optionally use `ffmpeg` to join multiple video files
+            (e.g., from different outputs) into a single final video. It
+            dynamically constructs a complex `ffmpeg` command, including filters
+            to scale and stack the videos side-by-side (`hstack`), and to merge
+            multiple audio streams (`amerge`).
+        """
+        return self.code_explanation.__doc__

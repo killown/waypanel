@@ -1413,16 +1413,17 @@ class Utils(Adw.Application):
             Optional[str]: The icon name if found, otherwise None.
         """
 
+        app_id = app_id.lower()
+        initial_title = initial_title.lower()
+        title = title.lower()
+
         # Sanitize / filter title text for GTK
         filtered_title = self.filter_utf_for_gtk(title)
         first_word = filtered_title.split()[0] if filtered_title else ""
 
         # Detect terminal emulators and try to match the first word of the window title
         for terminal in self.terminal_emulators:
-            if (
-                terminal.lower() in app_id.lower()
-                and terminal.lower() not in filtered_title.lower()
-            ):
+            if terminal in app_id and terminal not in filtered_title:
                 title_icon = self.icon_exist(first_word or initial_title)
                 if title_icon:
                     return title_icon
@@ -2056,7 +2057,7 @@ class Utils(Adw.Application):
         try:
             # If the input is already a string, return it directly
             if isinstance(byte_string, str):
-                return byte_string
+                return byte_string.lower()
 
             # If the input is bytes, attempt decoding
             if isinstance(byte_string, bytes):
@@ -2084,7 +2085,7 @@ class Utils(Adw.Application):
                 self.logger.info(
                     "All UTF decoding attempts failed, falling back to 'latin-1'."
                 )
-                return byte_string.decode("latin-1", errors="replace")
+                return byte_string.decode("latin-1", errors="replace").lower()
 
             # Raise an error if the input is neither bytes nor a string
             raise TypeError("Input must be a bytes object or a string.")

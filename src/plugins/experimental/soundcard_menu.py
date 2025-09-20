@@ -1,4 +1,3 @@
-import os
 from subprocess import Popen, check_output
 
 import pulsectl
@@ -7,7 +6,6 @@ from gi.repository import Gtk
 from src.plugins.core._base import BasePlugin
 
 
-# set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 
@@ -272,3 +270,36 @@ class SoundCardDashboard(BasePlugin):
 
     def on_start(self):
         pass
+
+    def about(self):
+        """
+        A plugin that provides a quick dashboard to switch default sound
+        output and input devices (sound cards and microphones).
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin serves as a central hub for managing audio devices
+        via a dashboard popover.
+
+        Its core logic is centered on **device discovery, UI management,
+        and system-level control**:
+
+        1.  **Device Discovery**: It uses external libraries like
+            `soundcard` and `pulsectl` to discover all available audio
+            output devices (speakers) and input devices (microphones)
+            connected to the system. It also identifies active audio
+            applications by their process ID (PID).
+        2.  **Dynamic UI**: It creates a `Gtk.Popover` containing
+            two `Gtk.ComboBoxText` widgets. These widgets are dynamically
+            populated with the names of the discovered sound cards and
+            microphones, providing a user-friendly way to select the
+            desired device.
+        3.  **System-Level Control**: When a user selects a new device from a
+            combobox, the plugin uses `subprocess.Popen` to execute
+            `pactl` commands. These commands directly interact with the
+            PulseAudio server to set the newly selected sound card or
+            microphone as the default system device.
+        """
+        return self.code_explanation.__doc__

@@ -2,8 +2,6 @@ import os
 from subprocess import Popen
 
 import gi
-import toml
-from src.core.utils import Utils
 from gi.repository import Gio, Gtk
 
 from src.plugins.core._base import BasePlugin
@@ -309,8 +307,32 @@ class PopoverFolders(BasePlugin):
 
         except Exception as e:
             self.log_error(
-                error=e,
                 message="Unexpected error occurred in on_filter_invalidate.",
-                level="error",
             )
             return False
+
+    def about(self):
+        """Provides a user interface for managing and controlling system audio devices and volume settings."""
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin creates a popover-based user interface for managing audio devices.
+        It listens for system events to dynamically update its state and UI.
+
+        Its core logic is centered on **state synchronization, event-driven updates, and dynamic UI manipulation**:
+
+        1.  **Event Subscription**: It subscribes to a system-wide event channel to receive
+            notifications about changes in audio output devices and volume levels. This allows
+            the plugin to react in real time to external changes.
+        2.  **State Management**: It maintains an internal state that reflects the current
+            audio configuration, including the active output device, volume level, and mute status.
+            This state is kept synchronized with the system via event notifications.
+        3.  **Dynamic UI**: The plugin dynamically generates and updates UI elements within
+            a popover, such as a volume slider and a list of available audio devices. The UI is
+            rebuilt or modified in real time to match the changes in the system's audio state.
+        4.  **User Interaction**: It provides interactive elements that allow the user to
+            change the volume, mute/unmute audio, and switch between different audio output devices.
+            These user actions trigger updates to both the UI and the underlying system state.
+        """
+        return self.code_explanation.__doc__

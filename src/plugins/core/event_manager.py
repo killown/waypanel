@@ -297,3 +297,38 @@ class EventManagerPlugin(BasePlugin):
         runtime_dir = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
         socket_name = "waypanel.sock"
         return os.path.join(runtime_dir, socket_name)
+
+    def about(self):
+        """
+        This is a core background plugin that acts as a central event
+        bus, receiving events from the compositor and dispatching them
+        to other plugins in a thread-safe manner.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The core logic of this plugin is a resilient event-driven
+        architecture based on the publish-subscribe pattern. Its
+        key principles are:
+
+        1.  **Event Queue and Throttling**: Instead of immediately
+            processing every incoming event from the IPC, the plugin
+            queues them in a `collections.deque`. A periodic timer,
+            set by `GLib.timeout_add`, processes the queue in batches.
+            This throttling mechanism prevents a sudden burst of events
+            from overwhelming the main event loop and freezing the UI.
+
+        2.  **Publish-Subscribe System**: The plugin acts as a central
+            event hub. It provides a `subscribe_to_event` method that
+            allows other plugins to register callbacks for specific
+            event types. It then publishes events by iterating through
+            all registered callbacks and executing them.
+
+        3.  **Thread-Safe Dispatching**: To ensure stability, the
+            plugin uses `GLib.idle_add` to dispatch all callbacks.
+            This guarantees that any plugin-specific logic, especially
+            UI updates, is executed on the main GTK thread, preventing
+            race conditions and application crashes.
+        """
+        return self.code_explanation.__doc__

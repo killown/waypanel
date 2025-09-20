@@ -137,3 +137,28 @@ class ExamplePluginFeatures(BasePlugin):
 
     def popover_is_closed(self, *_):
         print("Example plugin popover closed")
+
+    def about(self):
+        """A plugin that provides a popover menu with quick actions to control the system (e.g., lock, log out, shut down)."""
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin creates a quick actions menu with buttons to control the system.
+        It's designed to be a convenient one-click way for users to lock their screen,
+        log out, restart, or shut down.
+
+        The core logic is centered on **popover menu creation and system command execution**:
+
+        1.  **UI Creation**: It creates a `Gtk.MenuButton` and a `Gtk.Popover` widget.
+            The button acts as the anchor for the popover menu.
+        2.  **Action Buttons**: Inside the popover, it dynamically creates buttons
+            for common actions like "Lock Screen" and "Shut Down."
+        3.  **Command Execution**: Each button is connected to a handler method that
+            executes a corresponding shell command using `os.system()`. For example,
+            the "Shut Down" button runs `systemctl poweroff`.
+        4.  **Placement**: The `get_plugin_placement` function sets the plugin's
+            position on the `top-panel-center`, with a high order to place it
+            to the right of other plugins.
+        """
+        return self.code_explanation.__doc__

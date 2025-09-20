@@ -664,3 +664,44 @@ class ClipboardClient(BasePlugin):
                 message="Unexpected error occurred in on_filter_invalidate.",
             )
             return False
+
+    def about(self):
+        """
+        This plugin serves as the graphical user interface (GUI) for the
+        asynchronous clipboard history server. It allows users to view,
+        search, and manage their clipboard history through a pop-up menu.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This code is the front-end client for a backend clipboard
+        history service. Its core logic is designed around a decoupled
+        architecture and robust content handling:
+
+        1.  **Client-Server Decoupling**: The plugin acts as a client to a
+            separate clipboard server. It does not handle clipboard events
+            directly; instead, it uses a dedicated manager to fetch, delete,
+            and clear data via an API-like interface. This separation keeps
+            the UI responsive and allows the server to run independently.
+
+        2.  **Synchronous-Asynchronous Integration**: The GTK-based UI
+            operates synchronously. The code bridges this with the
+            asynchronous backend using `asyncio.run()`. This allows
+            the UI to request data from the asynchronous clipboard
+            manager without blocking its main thread for extended periods.
+
+        3.  **Universal Content Handling**: The plugin is designed to
+            handle both text and image data. It includes functions to
+            intelligently detect images based on file paths, raw data
+            signatures, or Base64 encoding. It also creates visual
+            thumbnails for images, providing a rich user experience
+            beyond simple text display.
+
+        4.  **Dynamic UI and Filtering**: The interface dynamically
+            populates its list with content from the history. A search
+            function is provided to filter the list in real-time. This
+            dynamic behavior ensures the UI is always up-to-date and
+            user-friendly, even with a large history.
+        """
+        return self.code_explanation.__doc__

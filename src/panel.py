@@ -290,3 +290,42 @@ class Panel(Adw.Application):
             self.right_panel.present()
 
         self.logger.info("Right panel setup completed.")
+
+    def about(self):
+        """
+        The Panel class serves as the central control hub for the entire
+        waypanel application. It manages the application lifecycle,
+        handles configuration, loads plugins, and orchestrates the
+        creation of all UI panels.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The `Panel` class is the application's core orchestrator. Inheriting
+        from `Adw.Application`, it manages the entire startup and
+        runtime process. Its key functions are:
+
+        1.  **Configuration and Lifecycle Management**: The `__init__`
+            method initializes core components like the logger, IPC
+            client, and plugin loader. It also loads the `config.toml`
+            file, which acts as the single source of truth for the
+            application's state and appearance. Methods like
+            `reload_config()` allow for dynamic updates at runtime,
+            notifying individual plugins of changes.
+
+        2.  **Modular Panel Creation**: The `setup_panels()` method
+            is a factory for creating the application's UI. It reads
+            the configuration to determine which panels to create
+            (top, bottom, left, right), their positions, sizes, and
+            exclusivity. This modular, configuration-driven approach
+            allows users to customize the panel layout without
+            modifying the source code.
+
+        3.  **Asynchronous Initialization**: The `on_activate` method
+            begins the application's main loop. It uses `GLib.idle_add`
+            to load plugins asynchronously, ensuring the UI remains
+            responsive and doesn't freeze during startup. This is
+            a crucial design choice for a smooth user experience.
+        """
+        return self.code_explanation.__doc__

@@ -36,7 +36,6 @@ class ClockPlugin(BasePlugin):
         self.update_timeout_id = None
 
     def create_clock_widget(self):
-        """Create and setup the clock widget."""
         # Create clock box container
         self.clock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.main_widget = (self.clock_box, "append")
@@ -60,7 +59,6 @@ class ClockPlugin(BasePlugin):
         self.schedule_updates()
 
     def update_clock(self):
-        """Update the clock display with current time and date."""
         try:
             current_time = datetime.datetime.now().strftime(
                 "%d %b %H:%M"
@@ -71,16 +69,12 @@ class ClockPlugin(BasePlugin):
         return True  # Continue timeout
 
     def schedule_updates(self):
-        """Schedule clock updates every minute."""
-
         def schedule_next_update():
-            """Schedule the next clock update at the start of the next minute."""
             now = datetime.datetime.now()
             seconds_until_next_minute = 60 - now.second
             GLib.timeout_add_seconds(seconds_until_next_minute, update_and_reschedule)
 
         def update_and_reschedule():
-            """Update the clock and schedule the next update."""
             self.update_clock()  # Update the clock immediately
             schedule_next_update()  # Schedule the next update
 
@@ -88,7 +82,6 @@ class ClockPlugin(BasePlugin):
         schedule_next_update()
 
     def stop_updates(self):
-        """Stop clock updates (cleanup)."""
         if self.update_timeout_id:
             GLib.source_remove(self.update_timeout_id)
             self.update_timeout_id = None
@@ -104,3 +97,13 @@ class ClockPlugin(BasePlugin):
         • Can be disabled by setting ENABLE_PLUGIN to False.
         """
         return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The core logic of this plugin is to display a real-time clock. It
+        efficiently schedules UI updates to align with the start of each new
+        minute, which maximizes accuracy while minimizing resource usage. The plugin
+        also includes graceful error handling to prevent any display or formatting
+        errors from crashing the application.
+        """
+        return self.code_explanation.__doc__

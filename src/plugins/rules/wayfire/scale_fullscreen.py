@@ -87,3 +87,37 @@ class WindowRulesPlugin(BasePlugin):
             self.restore_fullscreen_state()
         except Exception as e:
             self.log_error(f"Error handling scale deactivation: {e}")
+
+    def about(self):
+        """
+        A background plugin that manages window states to prevent
+        the Wayland panel from being hidden by fullscreen windows
+        when a window overview feature is activated.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The core logic of this plugin is a reactive, event-driven
+        architecture that temporarily manages window states. Its
+        key principles are:
+
+        1.  **Event-Driven Triggering**: The plugin operates as a
+            background service, listening for changes in the `scale`
+            plugin's activation state via an event subscription.
+            This allows it to react instantly and without polling.
+
+        2.  **Temporary State Management**: When the `scale` view is
+            activated, the plugin identifies if the currently focused
+            window is in fullscreen mode. It then stores this state
+            in a dictionary (`self.fullscreen_views`) before using
+            Inter-Process Communication (IPC) to temporarily take the
+            window out of fullscreen.
+
+        3.  **State Restoration**: When the `scale` view is
+            deactivated, the plugin iterates through its stored state.
+            For each window that was previously in fullscreen, it uses
+            an IPC call to restore its original state, ensuring a
+            seamless user experience once the overview is dismissed.
+        """
+        return self.code_explanation.__doc__

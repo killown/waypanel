@@ -125,3 +125,37 @@ class MullvadStatusDialog(Gtk.Dialog):
             grid.attach(icon, 0, i, 1, 1)
             grid.attach(lbl, 1, i, 1, 1)
             grid.attach(val, 2, i, 1, 1)
+
+    def about(self):
+        """
+        This class is a Gtk.Dialog window that displays detailed Mullvad VPN
+        status. It fetches information from the official Mullvad API to show
+        the user's IP address, server location, and connection status in a
+        formatted pop-up window.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The `MullvadStatusDialog` class is a Gtk window that fetches and
+        displays real-time VPN status. Its key features are:
+
+        1. **Threaded Data Fetching**: To prevent the user interface from
+           freezing, the `get_mullvad_vpn_status` method, which makes a
+           blocking HTTP request using the `requests` library, is executed in
+           a separate thread. The `GLib.Thread.new` function starts this
+           thread, and `GLib.idle_add` is used to safely update the UI with
+           the fetched data once the thread completes.
+
+        2. **Dynamic UI Generation**: The `update_ui` method dynamically
+           constructs the dialog's content. It clears the existing widgets
+           and then populates a `Gtk.Grid` with new labels, icons, and text
+           based on the JSON data received from the Mullvad API.
+
+        3. **Wayfire Integration**: The `configure_view` method uses the
+           `WayfireSocket` to position the dialog window precisely on the
+           screen. It calculates the correct X and Y coordinates to place the
+           pop-up in a consistent location, typically near the top-right
+           corner of the desktop.
+        """
+        return self.code_explanation.__doc__

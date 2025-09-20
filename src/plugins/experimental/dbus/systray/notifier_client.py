@@ -568,3 +568,41 @@ class SystrayClientPlugin(BasePlugin):
         Called before the plugin is completely removed.
         """
         self.logger.info("SystrayClientPlugin is cleaning up resources.")
+
+    def about(self):
+        """
+        This plugin acts as a system tray client for the Wayfire panel.
+        It uses D-Bus to communicate with applications that implement the
+        StatusNotifierItem specification, allowing it to display their icons,
+        tooltips, and context menus.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The `SystrayClientPlugin` operates as a D-Bus client to manage system
+        tray icons. Its core logic involves:
+
+        1.  **Event Subscription**: It subscribes to `tray_icon_name_updated`
+            and `tray_icon_removed` events from a local IPC server,
+            which notifies the plugin when an application registers or
+            removes its tray icon.
+
+        2.  **D-Bus Communication**: It dynamically fetches properties and
+            calls methods on remote D-Bus objects using the `dbus-fast`
+            library. Key methods include:
+            - `fetch_menu_path`: Retrieves the object path for the
+              application's menu.
+            - `set_menu_layout`: Calls `com.canonical.dbusmenu.GetLayout`
+              to get the full, nested menu structure and caches it.
+            - `on_menu_item_clicked`: Triggers the D-Bus `call_event` for the
+              selected menu item, executing the corresponding action in the
+              application.
+
+        3.  **UI Integration**: It creates a `Gtk.MenuButton` for each
+            tray icon. It can handle both icon names and raw pixel data
+            (`icon_pixmap`), dynamically generating a `GdkPixbuf` to render
+            the icon. The fetched D-Bus menu structure is parsed and used
+            to populate the GTK menu, which is then attached to the button.
+        """
+        return self.code_explanation.__doc__

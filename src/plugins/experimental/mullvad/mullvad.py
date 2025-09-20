@@ -8,9 +8,7 @@ from src.plugins.core._base import BasePlugin
 from ._mullvad_info import MullvadStatusDialog
 from src.plugins.core._event_loop import global_loop
 
-# Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
-# load the plugin only after essential plugins is loaded
 DEPS = ["top_panel"]
 
 
@@ -295,3 +293,54 @@ class MullvadPlugin(BasePlugin):
             return "Mullvad not installed"
         except Exception as e:
             return f"Error: {e}"
+
+    def about(self):
+        """
+        This plugin provides a graphical user interface for managing the
+        Mullvad VPN client directly from the Wayfire panel. It leverages
+        asynchronous programming to interact with both the `mullvad`
+        command-line tool and the Mullvad public API, allowing users to
+        connect, disconnect, check status, and change relays without
+        leaving their desktop environment.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The MullvadPlugin is an asynchronous, event-driven background service
+        that integrates with the Wayfire compositor. It uses a GTK widget on
+        the top panel to display the VPN's status and provides a popover
+        menu for user interactions.
+
+        The core logic is implemented through a series of asynchronous methods:
+
+        1. **Asynchronous Command Execution**: The plugin uses
+           `asyncio.create_subprocess_exec` to run `mullvad` commands. This is
+           crucial for non-blocking UI operations, as commands like
+           `mullvad connect` can take time to execute. This ensures the
+           Wayfire panel remains responsive.
+
+        2. **API Interaction**: The `set_mullvad_relay_by_city` and
+           `set_mullvad_relay_random_global` methods use the `aiohttp` library
+           to make an asynchronous call to the Mullvad API. This fetches a
+           list of available relays, and the plugin then randomly selects
+           and sets a new relay using the `mullvad relay set location` command.
+
+        3. **UI and State Management**:
+           - **`_async_init_setup`**: This method is the primary setup
+             function. It asynchronously retrieves the Mullvad version, sets
+             up the main GTK widget, and starts a recurring
+             `GLib.timeout_add` to update the VPN status.
+           - **`update_vpn_status`**: This method is called periodically to
+             check the VPN's connection state. It inspects the `/sys/class/net`
+             directory for VPN-related network interfaces (`wg` or `tun`) and
+             updates the panel icon accordingly (a Mullvad icon for a connected
+             state or a "stock_disconnect" icon for a disconnected state). It
+             also updates the status label with detailed information from the
+             `mullvad status` command.
+           - **`create_menu_model` and `create_popover_content`**: These
+             functions build the user interface, including the menu items
+             and popover buttons, and connect their actions to the
+             asynchronous methods that manage the VPN client.
+        """
+        return self.code_explanation.__doc__

@@ -190,5 +190,39 @@ class VolumeScrollPlugin(BasePlugin):
         """Handle slider value changes."""
         if self.slider:
             volume = self.slider.get_value()
-            self.adjust_volume(f"{int(volume)}%")  # Adjust system volume
-            self.set_volume(volume)  # Update the widget
+            self.adjust_volume(f"{int(volume)}%")
+            self.set_volume(volume)
+
+    def about(self):
+        """
+        A plugin that allows volume control via the scroll wheel and
+        displays a floating on-screen display (OSD).
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin provides a dynamic and temporary visual feedback
+        for volume changes triggered by the scroll wheel.
+
+        Its core logic is centered on **event-driven volume control and
+        dynamic UI display**:
+
+        1.  **Event Handling**: It attaches a scroll event controller to
+            the panel. When a user scrolls, it triggers the volume
+            adjustment logic.
+        2.  **System Volume Control**: It uses command-line tools like
+            `pactl` to increase or decrease the system's volume in
+            response to scroll events. It uses `pulsectl` to retrieve the
+            current volume level.
+        3.  **Dynamic UI**: A temporary, floating `Gtk.Window` is created
+            to serve as an on-screen display (OSD). This widget contains a
+            volume slider, a label with the volume percentage, and an
+            icon that changes to reflect the volume level (e.g., mute,
+            low, high).
+        4.  **Widget Management**: The floating widget automatically
+            appears when the volume is adjusted and disappears after a
+            short timeout period, ensuring it does not permanently clutter
+            the screen.
+        """
+        return self.code_explanation.__doc__

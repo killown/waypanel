@@ -1,6 +1,6 @@
 import os
 import toml
-from gi.repository import Gio, Gtk, Pango
+from gi.repository import Gtk, Pango
 from src.plugins.core._base import BasePlugin
 import xml.etree.ElementTree as ET
 
@@ -347,3 +347,42 @@ class WayfireRealtimePluginsPlugin(BasePlugin):
 
             self.popover.set_parent(self.button)
             self.popover.popup()
+
+    def about(self):
+        """
+        A plugin that provides a graphical user interface for managing Wayfire
+        plugins. It allows users to view all available plugins, see which ones
+        are currently active, and enable or disable them in real-time. It also
+        provides quick access to each plugin's configuration window.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin serves as a central hub for managing Wayfire's modular
+        functionality by leveraging file parsing, IPC, and a dynamic GTK UI.
+
+        Its core logic is built on **metadata parsing, inter-process
+        communication (IPC), and real-time state management**:
+
+        1.  **Metadata Parsing**: The plugin begins by scanning the
+            `/usr/share/wayfire/metadata` directory for XML files. It parses
+            these files to extract essential information about each Wayfire
+            plugin, such as its name, description, and icon. This process
+            enables the plugin to build a comprehensive list of all available
+            plugins without hardcoding their details.
+        2.  **Inter-Process Communication (IPC)**: A critical function of this
+            plugin is its ability to communicate directly with the Wayfire
+            compositor. It uses Wayfire's IPC interface to query the list of
+            currently loaded plugins in real-time. This allows the UI to
+            accurately reflect the current state and provides the mechanism for
+            dynamically enabling or disabling plugins by sending IPC commands.
+        3.  **Real-time State Management**: The UI is dynamically generated
+            using a `Gtk.Popover` and a `Gtk.FlowBox`. Each plugin is
+            represented by a button with a toggle switch that's connected to an
+            `update_plugin_state` method. This method uses the IPC to change the
+            plugin's state and then saves the updated configuration to a
+            `wayfire.toml` file. This ensures that the user's changes are
+            persisted across sessions and are immediately applied.
+        """
+        return self.code_explanation.__doc__

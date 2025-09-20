@@ -181,3 +181,40 @@ class GoNextWorkspaceWithViewsPlugin(BasePlugin):
             f"Switching to workspace: x={next_workspace['x']}, y={next_workspace['y']}"
         )
         self.ipc.set_workspace(next_workspace["x"], next_workspace["y"])
+
+    def about(self):
+        """
+        A plugin that allows a user to cycle through workspaces that have
+        active windows (views) on them, skipping any empty workspaces.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin extends the panel's functionality by providing a smart
+        workspace navigation feature. It dynamically finds and switches
+        between only those workspaces that are in use.
+
+        Its core functionality is built on **cross-plugin integration,
+        compositor IPC, and dynamic workspace detection**:
+
+        1.  **Plugin Dependency Management**: It uses a `GLib.timeout` to
+            periodically check for the availability of the `gestures_setup`
+            plugin. Once found, it registers its workspace-switching logic
+            as a right-click action on the top panel. This ensures that the
+            plugin's functionality is only enabled when its required dependency
+            is loaded.
+        2.  **Compositor Inter-Process Communication**: The plugin relies on
+            the `IPC` (Inter-Process Communication) class to interact with
+            the Wayland compositor. It checks for a `WAYFIRE_SOCKET` to
+            determine which compositor is running and adjusts its logic
+            accordingly.
+        3.  **Dynamic Workspace Detection**: The `get_workspaces_with_views`
+            method queries the compositor for all active views (windows) on
+            the focused output. It then calculates and returns a sorted list of
+            all workspaces that contain at least one visible view, ensuring that
+            empty workspaces are excluded from the navigation cycle. The
+            `go_next_workspace_with_views` method then uses this list to
+            determine and switch to the next available workspace.
+        """
+        return self.code_explanation.__doc__

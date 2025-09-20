@@ -1,4 +1,3 @@
-import os
 import psutil
 import gi
 
@@ -53,3 +52,26 @@ class BackgroundCPUMonitor(BasePlugin):
             GLib.source_remove(self.source_id)
             self.source_id = None
             self.logger.info("Background CPU Monitor stopped.")
+
+    def about(self):
+        """Monitors and logs the current CPU usage in the background."""
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin acts as a background service to periodically monitor and
+        log the system's CPU usage.
+
+        Its core logic is centered on **non-blocking, timed execution**:
+
+        1.  **Initialization**: The `start_cpu_monitor` method schedules a recurring
+            task using `GLib.timeout_add_seconds`. This ensures the monitoring
+            is non-blocking and doesn't freeze the main application.
+        2.  **CPU Data Retrieval**: The `log_cpu_usage` method uses the `psutil`
+            library to get the current CPU percentage.
+        3.  **Logging**: It then logs the retrieved CPU usage to the panel's logger.
+        4.  **Continuous Operation**: The method returns `True`, instructing `GLib`
+            to continue the timed execution, effectively creating a continuous
+            monitoring loop at the specified interval.
+        """
+        return self.code_explanation.__doc__

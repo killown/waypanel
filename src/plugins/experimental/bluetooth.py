@@ -251,3 +251,42 @@ class BluetoothDashboard(BasePlugin):
     def popover_is_closed(self, *_):
         self.popover_dashboard = None
         return
+
+    def about(self):
+        """
+        A plugin that provides a dashboard for managing Bluetooth devices.
+        It displays a list of paired devices, indicates their connection status,
+        and allows the user to connect or disconnect them with a single click.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin acts as a user-friendly interface for the system's
+        Bluetooth functionality, using external commands and asynchronous
+        programming to provide a responsive user experience.
+
+        Its core functionality is built on **asynchronous execution, external
+        process control, and dynamic UI updates**:
+
+        1.  **Asynchronous Execution**: The plugin leverages Python's `asyncio`
+            library to perform system-level operations without freezing the UI.
+            By using `asyncio.to_thread` to run `subprocess.run`, it fetches
+            Bluetooth device information from the `bluetoothctl` command in a
+            separate thread. This ensures that the main GTK event loop remains
+            responsive while the command-line tools are being executed.
+        2.  **External Process Control**: The plugin relies on `bluetoothctl`,
+            the standard command-line utility for managing Bluetooth devices.
+            It executes commands like `bluetoothctl devices` to list paired
+            devices and `bluetoothctl info <mac>` to get their detailed status.
+            The plugin's core logic parses the raw text output from these
+            commands to build a structured representation of the devices.
+        3.  **Dynamic UI Updates**: The user interface is dynamically generated
+            based on the current state of Bluetooth devices. When the popover is
+            opened, a "Loading..." label is shown while the asynchronous task
+            fetches the data. Once the data is available, the UI is updated with
+            a list of buttons, each representing a device. The button's style
+            and behavior are dynamically changed to reflect whether the device is
+            connected or not.
+        """
+        return self.code_explanation.__doc__

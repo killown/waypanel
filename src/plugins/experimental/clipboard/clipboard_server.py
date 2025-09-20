@@ -1,8 +1,6 @@
 import asyncio
-import logging
 import os
 import sqlite3
-import tomllib
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -225,3 +223,40 @@ class AsyncClipboardServer(BasePlugin):
         self.executor.shutdown()
         if LOG_ENABLED:
             self.logger.info("Clipboard monitor stopped.")
+
+    def about(self):
+        """
+        This plugin implements an asynchronous clipboard history server
+        that monitors the system clipboard, stores its contents in a
+        persistent database, and provides methods to manage that history.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        The core logic of this clipboard server is based on an
+        asynchronous, concurrent design for reliable clipboard history
+        management. Its key principles are:
+
+        1.  **Asynchronous Database Operations**: The `AsyncClipboardServer`
+            uses `asyncio` and `aiosqlite` to perform all database
+            interactions. This ensures that reading from and writing to
+            the persistent SQLite database happens without blocking the
+            main application thread, preserving responsiveness.
+
+        2.  **Background Monitoring with Concurrency**: The `monitor`
+            function continuously checks the system clipboard using an
+            external command (`wl-paste`). It offloads this blocking
+            I/O operation to a separate thread using `asyncio.to_thread`
+            to prevent the main event loop from freezing, a vital step
+            for a responsive application.
+
+        3.  **Data Persistence and Integrity**: The server stores a history
+            of copied items in an SQLite database. The `initialize_db`
+            and `verify_db` functions ensure the database and its schema
+            are correctly set up on startup. The `add_item` method
+            enforces data integrity by preventing the storage of empty or
+            duplicate entries and automatically pruning old items to stay
+            within a configurable size limit.
+        """
+        return self.code_explanation.__doc__
