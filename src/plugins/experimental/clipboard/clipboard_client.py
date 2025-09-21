@@ -303,7 +303,7 @@ class ClipboardClient(BasePlugin):
                 row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
                 image_button = Gtk.Button()
                 icon_name = self.utils.set_widget_icon_name(None, ["tag-delete"])
-                image_button.set_icon_name(self.utils.get_nearest_icon_name(icon_name))
+                image_button.set_icon_name(icon_name)
                 image_button.connect("clicked", self.on_delete_selected)
 
                 spacer = Gtk.Label(label="    ")
@@ -341,6 +341,7 @@ class ClipboardClient(BasePlugin):
                         row_hbox.set_size_request(96, 96)
 
                 line = Gtk.Label.new()
+                line.set_tooltip_markup(i[1])
                 escaped_text = GLib.markup_escape_text(item)
                 escaped_text = self.format_color_text(item)  # Don't escape again here
                 line.set_markup(
