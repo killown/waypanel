@@ -140,21 +140,13 @@
 }
 
 .BottomBar {
+  background: #00000000;
   background-color: #00000000;
   margin: 1px 11px 1px 1px;
   padding: 1px 1px 1px 1px;
 }
 
 .taskbar {
-  border-radius: 8px;
-  -gtk-icon-size: 42px;
-  background: transparent;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-  border-style: none;
-  color: var(--gruv-fg);
-  padding: 6px;
-  box-shadow: var(--shadow-panel);
 }
 
 .taskbar-button {
@@ -166,7 +158,7 @@
   border-style: none;
   padding: 5px 5px 5px 5px;
   box-shadow: var(--shadow-panel);
-  -gtk-icon-size: 42px;
+  -gtk-icon-size: 32px;
   font-size: 16px;
 }
 
@@ -478,6 +470,88 @@
 
 /*
  * ----------------------------------------
+ * 🗓️ Calendar Widget
+ * ----------------------------------------
+ * Styles for the Gtk.Calendar to match the Gruvbox-Neumorphism theme.
+ */
+
+/* General styling for the calendar widget container */
+.calendar-widget {
+  background-color: var(--gruv-bg-medium);
+  color: var(--gruv-fg);
+  border-radius: 10px;
+  box-shadow: var(--shadow-neumorphic-outset-large);
+  padding: 10px;
+}
+
+/* Style the calendar's header (month and year display) */
+.calendar-widget .header {
+  background-color: var(--gruv-bg);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  padding: 5px;
+  box-shadow:
+    inset 2px 2px 5px rgba(0, 0, 0, 0.5),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.05);
+}
+
+/* Style the header buttons (for changing month) */
+.calendar-widget .header button {
+  background-color: transparent;
+  border: none;
+  color: var(--gruv-fg);
+  font-weight: bold;
+  -gtk-icon-size: 16px;
+}
+
+.calendar-widget .header button:hover {
+  color: var(--gruv-hover-bg);
+}
+
+/* Style for the day buttons (the numbers) */
+.calendar-widget .day {
+  background-color: transparent;
+  border: none;
+  color: var(--gruv-fg);
+  border-radius: 5px;
+  padding: 5px;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Style the day numbers when hovered */
+.calendar-widget .day:hover {
+  background-color: var(--gruv-bg);
+  box-shadow:
+    inset 2px 2px 4px rgba(0, 0, 0, 0.6),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.05);
+}
+
+/* Style the selected day */
+.calendar-widget .day.selected {
+  background-color: var(--gruv-blue);
+  color: var(--gruv-bg);
+  font-weight: bold;
+  box-shadow: var(--shadow-neumorphic-press);
+}
+
+/* Style days from a different month */
+.calendar-widget .day.other-month {
+  color: #504945; /* A softer, less prominent color */
+}
+
+/* Style days with a note (marked days) */
+.calendar-widget .day.marked {
+  box-shadow: 0 0 0 2px var(--gruv-green) inset;
+  font-weight: bold;
+}
+
+/* Style the week numbers column if they are visible */
+.calendar-widget .week-number {
+  color: var(--gruv-fg-soft);
+}
+
+/*
+ * ----------------------------------------
  * 🌐 Network Manager Plugin
  * ----------------------------------------
  * Styles for network-related widgets.
@@ -665,13 +739,63 @@
   -gtk-icon-size: 29px;
 }
 
+.places-popover {
+}
+
+.places-main-box {
+  padding: 15px;
+}
+
+.places-search-entry {
+  background-color: var(--gruv-bg);
+  border-width: 0px;
+  border-radius: 10px;
+  padding: 5px 10px;
+  color: var(--gruv-fg);
+  font-size: 16px;
+  font-weight: 500;
+  font-family: var(--font-family-default);
+  box-shadow: var(--shadow-neumorphic-inset-medium);
+}
+
+.places-scrolled-window {
+  border: none;
+  background-color: transparent;
+}
+
+.places-listbox {
+  background-color: transparent;
+  padding: 10px;
+}
+
+.places-row-hbox {
+  min-height: 40px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background-color: transparent;
+  transition: all 0.2s ease-in-out;
+}
+
+.places-row-hbox:hover {
+  background-color: var(--gruv-bg-light);
+  box-shadow: var(--shadow-neumorphic-outset-large);
+  transform: translateY(-2px);
+}
+
+.places-row-hbox:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-neumorphic-press);
+}
+
 .places-icon-from-popover {
   -gtk-icon-size: 42px;
+  color: var(--gruv-fg);
 }
 
 .places-label-from-popover {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: bold;
+  color: var(--gruv-fg);
 }
 
 .bookmarks-icon-from-popover {
