@@ -61,7 +61,7 @@ class Utils(Adw.Application):
             for view in self.ipc.list_views()
         }
 
-    def send_view_to_output(self, view_id, direction):
+    def send_view_to_output(self, view_id, direction=None, toggle_scale_off=False):
         """
         Move a view to a different output based on the specified direction.
 
@@ -97,9 +97,26 @@ class Utils(Adw.Application):
         """
         view = self.ipc.get_view(view_id)
         geo = view["geometry"]
-        wset_index_focused = self.ipc.get_focused_output()["wset-index"]
+        focused_output = self.ipc.get_focused_output()
+        wset_index_focused = focused_output.get("wset-index")
         wset_index_view = view["wset-index"]
-        focused_output_id = self.ipc.get_focused_output()["id"]
+        next_output = [
+            i["id"] for i in self.ipc.list_outputs() if i["id"] != focused_output["id"]
+        ]
+
+        if toggle_scale_off:
+            self.ipc.scale_toggle(focused_output.get("id"))
+
+        if direction is None and next_output:
+            self.ipc.configure_view(
+                view_id,
+                geo["x"],
+                geo["y"],
+                geo["width"],
+                geo["height"],
+                next_output[0],
+            )
+
         if wset_index_focused != wset_index_view:
             self.ipc.configure_view(
                 view_id,
@@ -107,18 +124,30 @@ class Utils(Adw.Application):
                 geo["y"],
                 geo["width"],
                 geo["height"],
-                focused_output_id,
+                focused_output["id"],
             )
         else:
-            output_direction = self.get_output_from(direction)
-            self.ipc.configure_view(
-                view_id,
-                geo["x"],
-                geo["y"],
-                geo["width"],
-                geo["height"],
-                output_direction,
-            )
+            if direction:
+                output_direction = self.get_output_from(direction)
+                self.ipc.configure_view(
+                    view_id,
+                    geo["x"],
+                    geo["y"],
+                    geo["width"],
+                    geo["height"],
+                    output_direction,
+                )
+
+        def set_maximized(view_id=view_id):
+            # If the view is currently maximized, maximize it again in the next output.
+            # Some outputs have different resolutions, so a fresh maximization may be needed.
+            tiled_edges = view.get("tiled-edges") == 15
+            if tiled_edges:
+                self.ipc.set_focus(view_id)
+                self.ipc.set_view_maximized(view_id)
+            return
+
+        GLib.timeout_add(100, set_maximized, view_id)
 
     def get_output_from(self, direction: str) -> int:
         """
@@ -1248,7 +1277,6 @@ class Utils(Adw.Application):
         Returns:
             str: The name of the matching icon if found, or "image-missing" otherwise.
         """
-
         icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
         norm_arg = self.normalize_name(argument)
 
@@ -1507,12 +1535,13 @@ class Utils(Adw.Application):
         filtered_title = self.filter_utf_for_gtk(title)
         first_word = filtered_title.split()[0] if filtered_title else ""
 
-        # Detect terminal emulators and try to match the first word of the window title
-        for terminal in self.terminal_emulators:
-            if terminal in app_id and terminal not in filtered_title:
-                title_icon = self.icon_exist(first_word or initial_title)
-                if title_icon:
-                    return title_icon
+        if filtered_title != app_id:
+            # Detect terminal emulators and try to match the first word of the window title
+            for terminal in self.terminal_emulators:
+                if terminal in app_id and terminal not in filtered_title:
+                    title_icon = self.icon_exist(first_word or initial_title)
+                    if title_icon != "image-missing":
+                        return title_icon
 
         # Special handling for Microsoft Edge web apps
         web_apps = {
