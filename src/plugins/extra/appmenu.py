@@ -272,6 +272,12 @@ class AppLauncher(BasePlugin):
             vbox.append(self.icons[name]["icon"])
             vbox.append(self.icons[name]["label"])
 
+            # Add Gtk.GestureClick for right-click handling
+            gesture = Gtk.GestureClick.new()
+            gesture.set_button(Gdk.BUTTON_SECONDARY)
+            gesture.connect("pressed", self.on_right_click_popover, vbox)
+            vbox.add_controller(gesture)
+
             # Add the vertical box to the FlowBox
             self.flowbox.append(vbox)
             self.flowbox.add_css_class("app-launcher-flowbox")
@@ -404,6 +410,79 @@ class AppLauncher(BasePlugin):
         # Iterate over visible children and select the first one
         self.flowbox.selected_foreach(on_child)  # pyright: ignore
         return False  # Stops the GLib.idle_add loop
+
+    def add_to_dockbar(self, button, name, desktop, popover):
+        """
+        Adds the selected app to the dockbar configuration in waypanel.toml.
+        """
+        desktop_file_name = desktop.split(".desktop")[0]
+
+        new_entry = {
+            "cmd": f"gtk-launch {desktop_file_name}.desktop",
+            "icon": name,
+            "wclass": desktop_file_name,
+            "desktop_file": desktop,
+            "name": name,
+            "initial_title": name,
+        }
+
+        self.config["dockbar"][desktop_file_name] = new_entry
+        self.save_config()
+
+        if "dockbar" in self.obj.plugins:
+            self.plugins["dockbar"].reload_plugin()
+
+        # Close the popovers
+        popover.popdown()
+        if self.popover_launcher:
+            self.popover_launcher.popdown()
+
+        # Refresh the app launcher's flowbox to reflect the change
+        self.update_flowbox()
+
+    def on_right_click_popover(self, gesture, n_press, x, y, vbox):
+        """
+        Handle right-click event to show a popover menu.
+        """
+        popover = Gtk.Popover()
+        popover.add_css_class("app-launcher-context-menu")
+
+        menu_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+        menu_box.set_margin_start(10)
+        menu_box.set_margin_end(10)
+        menu_box.set_margin_top(10)
+        menu_box.set_margin_bottom(10)
+
+        name, desktop, keywords = vbox.MYTEXT
+        desktop_filename = desktop.split(".desktop")[0]
+
+        open_button = Gtk.Button.new_with_label(f"Open {name}")
+        open_button.connect(
+            "clicked", self.run_app_from_menu, desktop_filename, popover
+        )
+        menu_box.append(open_button)
+
+        add_button = Gtk.Button.new_with_label(f"Add to dockbar")
+        add_button.connect("clicked", self.add_to_dockbar, name, desktop, popover)
+        menu_box.append(add_button)
+
+        popover.set_child(menu_box)
+        popover.set_parent(vbox)
+        popover.set_has_arrow(False)
+        popover.popup()
+
+        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+
+    def run_app_from_menu(self, button, desktop_file, popover):
+        """
+        Runs the app when the 'Open' button in the context menu is clicked.
+        """
+        cmd = "gtk-launch {}".format(desktop_file)
+        self.utils.run_cmd(cmd)
+        popover.popdown()
+        if self.popover_launcher:
+            self.popover_launcher.popdown()
+        self.update_flowbox()
 
     def on_search_entry_changed(self, searchentry):
         """The filter_func will be called for each row after the call,
