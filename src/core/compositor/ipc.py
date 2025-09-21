@@ -603,6 +603,11 @@ class IPC:
         return self.sock.clear_bindings()  # pyright: ignore
 
     @handle_ipc_error
+    def send_view_to_wset(self, view_id: int, wset_index: int):
+        """Clear all registered bindings."""
+        return self.sock.send_view_to_wset(view_id, wset_index)  # pyright: ignore
+
+    @handle_ipc_error
     def set_tiling_layout(self, wset, wsx, wsy, desired_layout):
         """Set the tiling layout for a specific workspace."""
         return self.sock.set_tiling_layout(wset, wsx, wsy, desired_layout)  # pyright: ignore
