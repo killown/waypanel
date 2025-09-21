@@ -1,4 +1,4 @@
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 import os
 import toml
 from core._base import BasePlugin
@@ -7,10 +7,8 @@ from src.core.create_panel import (
     unset_layer_position_exclusive,
 )
 
-# Enable or disable the plugin
 ENABLE_PLUGIN = True
 
-# disabled for sway compositor
 if not os.getenv("WAYFIRE_SOCKET"):
     ENABLE_PLUGIN = False
 
@@ -19,8 +17,6 @@ DEPS = ["event_manager", "gestures_setup"]
 
 def get_plugin_placement(panel_instance):
     position = "left-panel-center"
-    # priority position is from config.toml [dockbar_panel.position] = "left"
-    # the dockbar will be on left ignoring hardcoded position
     dockbar_config = panel_instance.config.get("dockbar_panel", {})
     if dockbar_config:
         if "panel" in dockbar_config:
@@ -40,7 +36,6 @@ def initialize_plugin(panel_instance):
 class DockbarPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
-        # Subscribe to events using the event_manager
         self.create_gesture = self.plugins["gestures_setup"].create_gesture
         self._subscribe_to_events()
         self.layer_state = False
@@ -48,7 +43,6 @@ class DockbarPlugin(BasePlugin):
         self.dockbar_panel = self.get_panel()
         self.buttons_id = {}
         self.dockbar = None
-        # Load configuration and set up dockbar
         self._setup_dockbar()
 
     def get_panel(self):
@@ -59,7 +53,7 @@ class DockbarPlugin(BasePlugin):
             )
             return self.obj.left_panel
 
-        position = dockbar_config["panel"].lower()  # e.g., 'left-panel'
+        position = dockbar_config["panel"].lower()
         valid_panels = {
             "left": self.obj.left_panel,
             "right": self.obj.right_panel,
@@ -67,7 +61,6 @@ class DockbarPlugin(BasePlugin):
             "bottom": self.obj.bottom_panel,
         }
 
-        # Extract base panel name (e.g., 'left' from 'left-panel')
         panel_key = position.split("-")[0]
 
         if panel_key in valid_panels:
@@ -107,13 +100,12 @@ class DockbarPlugin(BasePlugin):
         with open(config, "r") as f:
             config_data = toml.load(f)["dockbar"]
 
-        for app in config_data:
-            # Retrieve the command for this app
-            app_cmd = config_data[app]["cmd"]
+        for app_name, app_data in config_data.items():
+            app_cmd = app_data["cmd"]
+            icon_name = app_data["icon"]
 
-            # Create the button
             button = self.utils.create_button(
-                self.utils.icon_exist(config_data[app]["icon"]),
+                self.utils.icon_exist(icon_name),
                 app_cmd,
                 class_style,
                 use_label,
@@ -123,20 +115,108 @@ class DockbarPlugin(BasePlugin):
 
             self.utils.add_cursor_effect(button)
 
-            # Add middle-click gesture
+            button.app_name = app_name
+            button.app_config = app_data
+
             self.create_gesture(
                 button, 2, lambda _, cmd=app_cmd: self.on_middle_click(cmd)
             )
 
-            # Add right-click gesture
             self.create_gesture(
                 button, 3, lambda _, cmd=app_cmd: self.on_right_click(cmd)
             )
 
-            # Append the button to the box
+            # Add drag source functionality to each button
+            drag_source = Gtk.DragSource.new()
+            drag_source.set_actions(Gdk.DragAction.MOVE)
+            drag_source.connect("prepare", self.on_drag_prepare)
+            drag_source.connect("drag-begin", self.on_drag_begin)
+            drag_source.connect("drag-end", self.on_drag_end)
+            button.add_controller(drag_source)
+
             self.update_widget_safely(box.append, button)
 
+        # Add drop target functionality to the box
+        drop_target = Gtk.DropTarget.new(Gtk.Button, Gdk.DragAction.MOVE)
+        drop_target.connect("drop", self.on_drop)
+        box.add_controller(drop_target)
+
         return box
+
+    def on_drag_prepare(self, drag_source, x, y):
+        return Gdk.ContentProvider.new_for_value(drag_source.get_widget())
+
+    def on_drag_begin(self, drag_source, drag):
+        dragged_widget = drag_source.get_widget()
+        paintable = Gtk.WidgetPaintable.new(dragged_widget)
+        drag_source.set_icon(paintable, 0, 0)
+        dragged_widget.set_opacity(0.5)
+
+    def on_drag_end(self, drag_source, drag, status):
+        dragged_widget = drag_source.get_widget()
+        dragged_widget.set_opacity(1.0)
+
+    def on_drop(self, drop_target, value, x, y):
+        dragged_button = value
+        parent_box = drop_target.get_widget()
+        new_position_child = None
+        is_vertical = parent_box.get_orientation() == Gtk.Orientation.VERTICAL
+
+        if is_vertical:
+            drop_coordinate = y
+        else:
+            drop_coordinate = x
+
+        child = parent_box.get_first_child()
+        while child:
+            if child is dragged_button:
+                child = child.get_next_sibling()
+                continue
+
+            child_allocation = child.get_allocation()
+            if is_vertical:
+                child_center = child_allocation.y + child_allocation.height / 2
+            else:
+                child_center = child_allocation.x + child_allocation.width / 2
+
+            if drop_coordinate < child_center:
+                new_position_child = child
+                break
+
+            child = child.get_next_sibling()
+
+        # Reorder the button in the Gtk.Box
+        if new_position_child:
+            parent_box.reorder_child_after(dragged_button, new_position_child)
+        else:
+            parent_box.reorder_child_after(dragged_button, parent_box.get_last_child())
+
+        self.save_dockbar_order()
+        return True
+
+    def save_dockbar_order(self):
+        """Saves the current order of dockbar icons to the config file."""
+        config_path = self.obj.waypanel_cfg
+        try:
+            with open(config_path, "r") as f:
+                config_data = toml.load(f)
+
+            new_dockbar_config = {}
+            child = self.dockbar.get_first_child()
+            while child:
+                if hasattr(child, "app_config"):
+                    app_name = child.app_name
+                    new_dockbar_config[app_name] = child.app_config
+                child = child.get_next_sibling()
+
+            config_data["dockbar"] = new_dockbar_config
+
+            with open(config_path, "w") as f:
+                toml.dump(config_data, f)
+
+            self.logger.info("Dockbar order saved to config file.")
+        except Exception as e:
+            self.logger.error(f"Failed to save dockbar order: {e}")
 
     def on_left_click(self, cmd):
         self.utils.run_cmd(cmd)
@@ -144,11 +224,8 @@ class DockbarPlugin(BasePlugin):
 
     def on_right_click(self, cmd):
         try:
-            # Get the list of outputs and the currently focused output
             outputs = self.ipc.list_outputs()
             focused_output = self.ipc.get_focused_output()
-
-            # Find the index of the currently focused output
             current_index = next(
                 (
                     i
@@ -158,27 +235,20 @@ class DockbarPlugin(BasePlugin):
                 -1,
             )
 
-            # Determine the next output (wrap around if necessary)
             next_index = (current_index + 1) % len(outputs)
             next_output = outputs[next_index]
-
-            # Calculate the center of the next output's geometry
             output_geometry = next_output["geometry"]
             cursor_x = output_geometry["x"] + output_geometry["width"] // 2
             cursor_y = output_geometry["y"] + output_geometry["height"] // 2
 
-            # Move the cursor to the center of the next output
             self.ipc.move_cursor(cursor_x, cursor_y)
             self.ipc.click_button("S-BTN_LEFT", "full")
-
-            # Open the app
             self.utils.run_cmd(cmd)
 
         except Exception as e:
             self.log_error(f"Error while handling right-click action: {e}")
 
     def on_middle_click(self, cmd):
-        # Check for empty workspace
         coordinates = self.utils.find_empty_workspace()
         if coordinates:
             ws_x, ws_y = coordinates
@@ -186,7 +256,6 @@ class DockbarPlugin(BasePlugin):
             self.ipc.set_workspace(ws_x, ws_y)
             self.utils.run_cmd(cmd)
         else:
-            # If no empty workspace, just open the app
             self.utils.run_cmd(cmd)
 
     def _setup_dockbar(self):
@@ -198,20 +267,6 @@ class DockbarPlugin(BasePlugin):
             self.obj.waypanel_cfg, orientation, class_style
         )
         self.main_widget = (self.dockbar, "append")
-
-        # FIXME: remove this motion_controller later to use in a example
-        # motion_controller = Gtk.EventControllerMotion()
-        # motion_controller.connect("enter", self.on_mouse_enter)
-        # self.dockbar.add_controller(motion_controller)
-
-        # set exclusive by default if scale plugin is disabled
-        # FIXME: find the right way to set exclusive zone as the top
-        # probably only possible in panel creation, so check if scale is enabled
-        # before the panel creation, if not, then create the panels with exclusive spacing
-        # if not self.is_scale_enabled():
-        #    LayerShell.set_layer(self.dockbar_panel, LayerShell.Layer.TOP)
-        #    LayerShell.set_exclusive_zone(self.dockbar_panel, 64)
-
         self.logger.info("Dockbar setup completed.")
 
     def on_mouse_enter(self, controller, x, y):
@@ -251,29 +306,22 @@ class DockbarPlugin(BasePlugin):
         button.set_child(box)
         button.add_css_class("dockbar-button")
 
-        # Handle button click
         button.connect("clicked", lambda *_: self.utils.focus_view_when_ready(view))
-
         return button
 
     def on_scale_desactivated(self):
-        """Handle scale plugin deactivation."""
-        # this will set panels on bottom, hidden it from views
         self.update_widget_safely(unset_layer_position_exclusive, self.dockbar_panel)
         self.layer_state = False
 
     def handle_plugin_event(self, msg):
-        """Handle plugin-related IPC events."""
         prevent_infinite_loop_from_event_manager_idle_add = False
         if msg["event"] == "plugin-activation-state-changed":
             if msg["state"] is True:
                 if msg["plugin"] == "scale":
                     pass
-                    # self.on_scale_activated()
             if msg["state"] is False:
                 if msg["plugin"] == "scale":
                     pass
-                    # self.on_scale_desactivated()
         return prevent_infinite_loop_from_event_manager_idle_add
 
     def about(self):
@@ -286,6 +334,7 @@ class DockbarPlugin(BasePlugin):
         • Middle-click: Launch on empty workspace.
         • Right-click: Move cursor to next output & launch.
         • Integrates with gestures and event_manager.
+        • Drag-and-drop to reorder icons, saving the new order.
         """
         return self.about.__doc__
 
@@ -309,6 +358,8 @@ class DockbarPlugin(BasePlugin):
             - Left: Launch app and toggle the scale plugin.
             - Middle: Find an empty workspace, switch to it, then launch.
             - Right: Move the cursor to the next monitor and launch there.
+            - Drag-and-drop: Dragging an icon and dropping it changes its position
+              in the dockbar and saves the new order to the config file.
 
         4.  **Event-Driven Adaptation**: It listens for system events (like plugin
             activation/deactivation) to potentially adjust its behavior or layer
