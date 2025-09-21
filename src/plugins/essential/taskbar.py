@@ -61,7 +61,7 @@ class TaskbarPlugin(BasePlugin):
     def set_layer_exclusive(self, exclusive) -> None:
         if exclusive:
             self.update_widget_safely(
-                set_layer_position_exclusive, self.bottom_panel, 48
+                set_layer_position_exclusive, self.bottom_panel, 96
             )
         else:
             self.update_widget_safely(unset_layer_position_exclusive, self.bottom_panel)
@@ -99,10 +99,10 @@ class TaskbarPlugin(BasePlugin):
 
         if geometry:
             monitor_width = geometry["width"]
-            self.scrolled_window.set_size_request(monitor_width / 1.2, 64)
+            self.scrolled_window.set_size_request(monitor_width, 96)
 
         self.taskbar.set_halign(Gtk.Align.CENTER)
-        self.taskbar.set_valign(Gtk.Align.CENTER)
+        self.taskbar.set_valign(Gtk.Align.END)
         self.scrolled_window.set_child(self.taskbar)
         self.taskbar.add_css_class("taskbar")
 
@@ -162,7 +162,6 @@ class TaskbarPlugin(BasePlugin):
             button.set_child(box)
             button.add_css_class("taskbar-button")
             self.taskbar.append(button)
-            # Add this line to hide the button initially
             button.set_visible(False)
             self.button_pool.append({"view_id": "available", "button": button})
 
@@ -207,6 +206,29 @@ class TaskbarPlugin(BasePlugin):
         button.icon.set_from_icon_name(icon_name)
         button.label.set_label(use_this_title)
 
+    def refresh_all_buttons(self):
+        """
+        Forces a complete refresh and re-layout of the taskbar buttons.
+        This method ensures that buttons from lower rows move up to fill empty space.
+        """
+        # Re-add only the buttons that are currently in use.
+        # Sorting ensures a predictable order.
+        used_buttons = [item for item in self.button_pool]
+
+        # First, we refresh the buttons to be re-added to the beginning of the list.
+        for b in used_buttons:
+            if b["view_id"] != "available":
+                button = b["button"]
+                self.taskbar.remove(button)
+                self.taskbar.append(button)
+
+        # The, we re-add the hidden buttons to the end of the list.
+        for b in used_buttons:
+            if b["view_id"] == "available":
+                button = b["button"]
+                self.taskbar.remove(button)
+                self.taskbar.append(button)
+
     def Taskbar(self):
         self.logger.debug("Reconciling taskbar views.")
 
@@ -234,11 +256,6 @@ class TaskbarPlugin(BasePlugin):
             else:
                 self.add_button_to_taskbar(view)
 
-        # Ensure all buttons that are not in use are hidden
-        for item in self.button_pool:
-            if item["view_id"] == "available" and item["button"].get_visible():
-                item["button"].set_visible(False)
-
         self.logger.info("Taskbar reconciliation completed.")
 
     def remove_button(self, view_id):
@@ -246,7 +263,6 @@ class TaskbarPlugin(BasePlugin):
             return
 
         button = self.in_use_buttons.pop(view_id)
-
         button.set_visible(False)
         button.remove_css_class("focused")
         self.remove_gesture(button)
@@ -257,16 +273,22 @@ class TaskbarPlugin(BasePlugin):
                 self.logger.debug(f"Button for view ID {view_id} returned to pool.")
                 break
 
+        self.refresh_all_buttons()
+
     def update_button(self, button, view):
-        MAX_TITLE_LENGTH = 25
+        MAX_TITLE_LENGTH = 35
         title = view.get("title")
+        initial_title = ""
+        if title:
+            initial_title = title[0]
+        app_id = view.get("app-id")
         if len(title) > MAX_TITLE_LENGTH:
             truncated_title = title[:MAX_TITLE_LENGTH] + "..."
         else:
             truncated_title = title
         button.view_id = view.get("id")
         button.set_tooltip_text(title)
-        icon_name = self.utils.get_icon(view.get("app-id"), title.split()[0], title)
+        icon_name = self.utils.get_icon(app_id, initial_title, title)
         button.icon.set_from_icon_name(icon_name)
         button.label.set_label(truncated_title)
 
@@ -295,17 +317,26 @@ class TaskbarPlugin(BasePlugin):
         self.update_button(button, view)
         button.set_visible(True)
 
+        # Focus the view
         button.connect("clicked", lambda *_: self.set_view_focus(view))
         self.create_gesture(button.get_child(), 1, lambda *_: self.set_view_focus(view))
+
+        # Close the view with the middle-click.
         self.create_gesture(
             button.get_child(), 2, lambda *_: self.ipc.close_view(view_id)
         )
+
+        # Send the view to a new output with a right-click.
+        direction = None
+        toggle_scale_off = True
         self.create_gesture(
             button.get_child(),
             3,
-            lambda *_: self.send_view_to_empty_workspace(view_id),
+            lambda *_: self.utils.send_view_to_output(
+                view_id, direction, toggle_scale_off
+            ),
         )
-        self.add_scroll_gesture(button, view)
+        # self.add_scroll_gesture(button, view)
 
         motion_controller = Gtk.EventControllerMotion()
         motion_controller.connect("enter", lambda *_: self.on_button_hover(view))
@@ -433,18 +464,25 @@ class TaskbarPlugin(BasePlugin):
     def match_on_app_id_changed_view(self, unmapped_view):
         try:
             app_id = unmapped_view.get("app-id")
-            mapped_view = [
+            mapped_view_list = [
                 i
                 for i in self.ipc.list_views()
-                if app_id == i["app-id"] and i["mapped"] is True
+                if app_id == i.get("app-id") and i.get("mapped") is True
             ]
-            if mapped_view:
-                mapped_view = mapped_view[0]
+
+            if mapped_view_list:
+                mapped_view = mapped_view_list[0]
                 self.update_taskbar_button(mapped_view)
+
+            return False
+        except IndexError as e:
+            self.log_error(
+                message=f"IndexError handling 'view-app-id-changed' event: {e}",
+            )
             return False
         except Exception as e:
             self.log_error(
-                message=f"Error handling 'view-app-id-changed' event: {e}",
+                message=f"General error handling 'view-app-id-changed' event: {e}",
             )
             return False
 
@@ -483,12 +521,10 @@ class TaskbarPlugin(BasePlugin):
         view_id = view.get("id")
         if view_id:
             self.remove_button(view_id)
-            self._trigger_debounced_update()
 
     def on_title_changed(self, view):
         self.logger.debug(f"Title changed for view: {view}")
         self.update_taskbar_button(view)
-        self._trigger_debounced_update()
 
     def handle_plugin_event(self, msg):
         prevent_infinite_loop_from_event_manager_idle_add = False
@@ -660,8 +696,6 @@ class TaskbarPlugin(BasePlugin):
             return
         if event == "view-mapped":
             self.on_view_created(view)
-        if event == "view-unmapped":
-            self.on_view_destroyed(view)
 
     def about(self):
         """
