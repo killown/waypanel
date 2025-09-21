@@ -7,7 +7,7 @@ from gi.repository import Gtk, GLib
 from src.plugins.core._base import BasePlugin
 
 
-ENABLE_PLUGIN = True
+ENABLE_PLUGIN = False
 DEPS = ["calendar"]  # Only depend on calendar plugin
 
 
@@ -98,12 +98,19 @@ class CalendarNotesPlugin(BasePlugin):
         self.selected_date_label.set_margin_top(10)
         self.grid.attach(self.selected_date_label, 0, 2, 2, 1)  # Row below calendar
 
-        # Create box for notes
+        # Create box for notes and wrap it in a scrolled window
         self.notes_box = Gtk.ListBox()
         self.notes_box.set_margin_top(10)
         self.notes_box.set_margin_start(10)
         self.notes_box.set_margin_end(10)
-        self.grid.attach(self.notes_box, 0, 2, 2, 1)
+
+        # Use a scrolled window to handle vertical overflow
+        scrolled_window = Gtk.ScrolledWindow()
+        scrolled_window.set_vexpand(True)
+        # This is the key change: allow the scrolled window to expand horizontally
+        scrolled_window.set_hexpand(True)
+        scrolled_window.set_child(self.notes_box)
+        self.grid.attach(scrolled_window, 0, 3, 2, 1)
 
         # Load today’s notes by default
         today = datetime.now().strftime("%Y-%m-%d")
@@ -155,8 +162,8 @@ class CalendarNotesPlugin(BasePlugin):
         """Load and display notes for the given date"""
         # Clear previous notes
         if self.notes_box is not None:
-            if hasattr(self.notes_box, "remove_all"):
-                self.notes_box.remove_all()
+            # Use Gtk.ListBox's built-in clearing method
+            self.notes_box.remove_all()
 
         # Fetch notes for this date
         try:
@@ -169,19 +176,27 @@ class CalendarNotesPlugin(BasePlugin):
             no_notes_label = Gtk.Label(label="No notes found for this day.")
             no_notes_label.set_halign(Gtk.Align.START)
             self.notes_box.append(no_notes_label)
+            self.notes_box.show_all()
             return
 
         for note_id, content in notes:
-            content = " ".join(content.split()[1:])  # skip the date
+            # Instead of collapsing all whitespace, find the first space
+            # and take the substring from there, preserving newlines.
+            first_space = content.find(" ")
+            if first_space != -1:
+                content = content[first_space + 1 :]
 
             # Create label for the note
             note_label = Gtk.Label()
-            note_label.set_markup(
-                f'<span font="DejaVu Sans Mono">{GLib.markup_escape_text(content)}</span>'
-            )
+            # Re-add this line. It works in conjunction with the new `set_hexpand`.
+            note_label.set_max_width_chars(79)
             note_label.set_wrap(True)
             note_label.set_halign(Gtk.Align.START)
             note_label.set_margin_bottom(5)
+
+            note_label.set_markup(
+                f'<span font="DejaVu Sans Mono">{GLib.markup_escape_text(content)}</span>'
+            )
 
             # Wrap the label in a ListBoxRow
             row = Gtk.ListBoxRow()
@@ -189,6 +204,8 @@ class CalendarNotesPlugin(BasePlugin):
 
             # Append the row to the listbox
             self.notes_box.append(row)
+
+        self.notes_box.show_all()
 
     def about(self):
         """
