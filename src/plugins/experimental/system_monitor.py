@@ -778,6 +778,17 @@ class SystemMonitorPlugin(BasePlugin):
             self.open_terminal_with_amdgpu_top,
         )
 
+    def open_gnome_system_monitor(self, _):
+        subprocess.Popen(["gnome-system-monitor"])
+
+    def create_gesture_for_cpu_usage(self, hbox):
+        create_gesture = self.plugins["gestures_setup"].create_gesture
+        create_gesture(
+            hbox,
+            1,
+            self.open_gnome_system_monitor,
+        )
+
     def create_gesture_for_focused_view_pid(self, hbox):
         focused_view = self.last_toplevel_focused_view()
         if focused_view is not None:
@@ -850,6 +861,8 @@ class SystemMonitorPlugin(BasePlugin):
             self.create_gesture_for_focused_view_id(hbox)
         if "APP Disk" in name:
             self.create_iotop_gesture_for_focused_view_pid(hbox)
+        if "CPU Usage" in name:
+            self.create_gesture_for_cpu_usage(hbox)
 
         if "GPU" in name:
             self.create_gesture_for_amdgpu_top(hbox)
