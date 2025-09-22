@@ -2,13 +2,13 @@ import gi
 import asyncio
 import subprocess
 import re
-from gi.repository import Adw, GLib, Gtk, Gdk
+from gi.repository import GLib, Gtk
 from src.plugins.core._base import BasePlugin
 from src.plugins.core._event_loop import global_loop
+from src.shared.notify_send import Notifier
 
 gi.require_version("Gtk", "4.0")
 
-# set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 
@@ -33,6 +33,7 @@ class BluetoothDashboard(BasePlugin):
         self.bluetooth_buttons = {}  # Store button references here
         self.menubutton_dashboard = Gtk.Button()
         self.utils.add_cursor_effect(self.menubutton_dashboard)
+        self.notifier = Notifier()
         self.main_widget = (self.menubutton_dashboard, "append")
 
     async def _get_devices(self):
@@ -181,7 +182,6 @@ class BluetoothDashboard(BasePlugin):
                         "bluetooth-dashboard-buttons-connected"
                     )
 
-                # Store the button reference
                 self.bluetooth_buttons[device["mac"]] = bluetooth_button
 
                 popover_box.append(bluetooth_button)
@@ -193,15 +193,20 @@ class BluetoothDashboard(BasePlugin):
             return
 
         device_name = device_info.get("Name", device_id)
+        icon_name = device_info.get("Icon", "bluetooth")
 
         if device_info.get("Connected", "no").lower() == "yes":
-            await self.notify(
-                "Bluetooth plugin", f"Disconnecting bluetooth device: {device_name}"
+            self.notifier.notify_send(
+                "Bluetooth plugin",
+                f"Disconnecting bluetooth device: {device_name}",
+                icon_name,
             )
             await self.disconnect_bluetooth_device(device_id)
         else:
-            await self.notify(
-                "Bluetooth plugin", f"Connecting bluetooth device: {device_name}"
+            self.notifier.notify_send(
+                "Bluetooth plugin",
+                f"Connecting bluetooth device: {device_name}",
+                icon_name,
             )
             await self.connect_bluetooth_device(device_id)
 
