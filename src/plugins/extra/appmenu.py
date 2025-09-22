@@ -1,5 +1,7 @@
 import os
 import random
+import sqlite3
+import time
 from subprocess import Popen
 from gi.repository import Gio, Gtk, Pango, Gdk
 from gi.repository import Gtk4LayerShell as LayerShell
@@ -34,12 +36,33 @@ class AppLauncher(BasePlugin):
         # we need to store the images to avoid memory leak, no need to re-create them every new flowbox update
         self.icons = {}
         self.search_row = []
-        self.recent_apps_file = os.path.expanduser("~/config/waypanel/.recent-apps")
+
+        # Use SQLite for recent apps
+        self.db_path = os.path.expanduser("~/config/waypanel/recent_apps.db")
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        self.conn = sqlite3.connect(self.db_path)
+        self.cursor = self.conn.cursor()
+        self._create_recent_apps_table()
+
         # The widget to be set in the panel and the action: append or set_content.
         # If you want to build a complete right panel (for example), create a plugin called right_panel.py,
         # use set_content to set the entire layout, then in other plugins call the instance
         # self.plugins["right_panel"]. You can then add more widgets through it.
         self.main_widget = (self.menubutton_launcher, "append")
+
+    def _create_recent_apps_table(self):
+        """Creates the SQLite table for recent apps if it doesn't exist."""
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS recent_apps (
+                app_name TEXT PRIMARY KEY,
+                last_opened_at REAL
+            )
+        """)
+        self.conn.commit()
+
+    def close(self):
+        """Closes the database connection."""
+        self.conn.close()
 
     def create_menu_popover_launcher(self):
         """Create the menu button and connect its signal to open the popover launcher."""
@@ -134,9 +157,7 @@ class AppLauncher(BasePlugin):
         """Populate the flowbox with application buttons."""
         all_apps = Gio.AppInfo.get_all()
         random.shuffle(all_apps)
-        dockbar_toml = self.obj.config["dockbar"]
-        dockbar_desktop = [dockbar_toml[i]["desktop_file"] for i in dockbar_toml]
-        self.all_apps = [i for i in all_apps if i.get_id() not in dockbar_desktop]
+        self.all_apps = [i for i in all_apps if i.get_id()]
 
         # Recent apps handling
         recent_apps = self.get_recent_apps()
@@ -180,31 +201,35 @@ class AppLauncher(BasePlugin):
         Updates the flowbox by removing uninstalled apps, adding new apps,
         and prioritizing recently opened apps at the top.
         """
-        # Fetch all available applications and filter out docked apps
+        # Step 1: Clear all existing children from the flowbox
+        while child := self.flowbox.get_child_at_index(0):
+            self.flowbox.remove(child)
+
+        # Step 2: Clear the dictionary of stored icons to avoid re-use issues.
+        # This is the crucial step to ensure the list repopulates correctly.
+        self.icons.clear()
+
+        # Step 3: Fetch all available applications and filter out docked apps
         all_apps = Gio.AppInfo.get_all()
         dockbar_toml = self.config["dockbar"]
         dockbar_desktop = {dockbar_toml[i]["desktop_file"] for i in dockbar_toml}
         all_apps = [app for app in all_apps if app.get_id() not in dockbar_desktop]
+        self.all_apps = all_apps
 
-        # Get the list of recent apps and reverse it
+        # Step 4: Get the list of recent apps and reverse it to display the most recent app first
         recent_apps = self.get_recent_apps()
-        recent_apps = list(
-            reversed(recent_apps)
-        )  # Reverse the list to display the most recent app first
 
-        # Add recent apps to the flowbox first
+        # Step 5: Add recent apps to the flowbox first
         for app_name in recent_apps:
             app = next((a for a in all_apps if a.get_name() == app_name), None)
             if app:
-                self._add_app_to_flowbox(app, app_name, recent=True)
+                self._add_app_to_flowbox(app, app_name)
 
-        # Add non-recent apps to the flowbox
+        # Step 6: Add non-recent apps to the flowbox
         for app in all_apps:
             app_name = app.get_name()
             if app_name not in recent_apps:
-                self._add_app_to_flowbox(app, app_name, recent=False)
-
-        self.all_apps = all_apps
+                self._add_app_to_flowbox(app, app_name)
 
     def _add_app_to_flowbox(self, app, name, recent=False):
         """
@@ -284,41 +309,41 @@ class AppLauncher(BasePlugin):
 
     def add_recent_app(self, app_name):
         """
-        Add or update an app in the recent apps list.
+        Add or update an app in the recent apps table.
         Ensures the app is moved to the end of the list if it already exists.
         """
-        os.makedirs(os.path.dirname(self.recent_apps_file), exist_ok=True)
+        # Insert or update the app with the current timestamp
+        self.cursor.execute(
+            """
+            INSERT OR REPLACE INTO recent_apps (app_name, last_opened_at)
+            VALUES (?, ?)
+        """,
+            (app_name, time.time()),
+        )
+        self.conn.commit()
 
-        # Read the existing list of recent apps
-        if os.path.exists(self.recent_apps_file):
-            with open(self.recent_apps_file, "r") as f:
-                recent_apps = f.read().splitlines()
-        else:
-            recent_apps = []
-
-        # Remove the app if it already exists in the list
-        if app_name in recent_apps:
-            recent_apps.remove(app_name)
-
-        # Add the app to the end of the list
-        recent_apps.append(app_name)
-
-        # Truncate the list to the last 50 entries
-        recent_apps = recent_apps[-50:]
-
-        # Write the updated list back to the file
-        with open(self.recent_apps_file, "w") as f:
-            f.write("\n".join(recent_apps))
-            f.flush()  # Ensure data is written to disk immediately
+        # Keep the table limited to the last 50 entries
+        self.cursor.execute("SELECT COUNT(*) FROM recent_apps")
+        count = self.cursor.fetchone()[0]
+        if count > 50:
+            self.cursor.execute(
+                """
+                DELETE FROM recent_apps
+                WHERE app_name IN (
+                    SELECT app_name FROM recent_apps ORDER BY last_opened_at ASC LIMIT ?
+                )
+            """,
+                (count - 50,),
+            )
+            self.conn.commit()
 
     def get_recent_apps(self):
-        """Get the list of recent apps from the file."""
-        if os.path.exists(self.recent_apps_file):
-            with open(self.recent_apps_file, "r") as f:
-                recent_apps = f.read().splitlines()
-            return recent_apps
-        else:
-            return []
+        """Get the list of recent apps from the SQLite database."""
+        self.cursor.execute(
+            "SELECT app_name FROM recent_apps ORDER BY last_opened_at DESC LIMIT 50"
+        )
+        recent_apps = [row[0] for row in self.cursor.fetchall()]
+        return recent_apps
 
     def run_app_from_launcher(self, x, y):
         """Run the selected app from the launcher."""
@@ -411,26 +436,23 @@ class AppLauncher(BasePlugin):
         self.flowbox.selected_foreach(on_child)  # pyright: ignore
         return False  # Stops the GLib.idle_add loop
 
-    def add_to_dockbar(self, button, name, desktop, popover):
+    def add_to_dockbar(self, button, name, desktop_file, popover):
         """
         Adds the selected app to the dockbar configuration in waypanel.toml.
         """
-        desktop_file_name = desktop.split(".desktop")[0]
+        wclass = desktop_file.split(".desktop")[0]
 
         new_entry = {
-            "cmd": f"gtk-launch {desktop_file_name}.desktop",
+            "cmd": f"gtk-launch {desktop_file}",
             "icon": name,
-            "wclass": desktop_file_name,
-            "desktop_file": desktop,
+            "wclass": wclass,
+            "desktop_file": desktop_file,
             "name": name,
             "initial_title": name,
         }
 
-        self.config["dockbar"][desktop_file_name] = new_entry
+        self.config["dockbar"][desktop_file] = new_entry
         self.save_config()
-
-        if "dockbar" in self.obj.plugins:
-            self.plugins["dockbar"].reload_plugin()
 
         # Close the popovers
         popover.popdown()
@@ -440,38 +462,156 @@ class AppLauncher(BasePlugin):
         # Refresh the app launcher's flowbox to reflect the change
         self.update_flowbox()
 
+    def open_desktop_file(self, button, desktop_file, popover):
+        """
+        Finds and opens the application's .desktop file. Tries a list of
+        fallback editors if xdg-open fails.
+        """
+        # Common locations for .desktop files
+        common_locations = [
+            "/usr/share/applications/",
+            os.path.expanduser("~/.local/share/applications/"),
+        ]
+
+        file_path = None
+        for location in common_locations:
+            path_to_check = os.path.join(location, desktop_file)
+            if os.path.exists(path_to_check):
+                file_path = path_to_check
+                break
+
+        if file_path:
+            # List of fallback GUI editors
+            gui_editors = [
+                "gedit",  # GNOME Text Editor (Gedit)
+                "code",  # vscode
+                "atom",  # Atom (if still installed)
+                "subl",  # Sublime Text
+            ]
+
+            # List of terminal-based editors and their corresponding terminal emulators
+            terminal_editors = ["nvim", "nano"]
+            terminal_emulators = ["kitty", "alacritty", "gnome-terminal"]
+
+            # If xdg-open fails, loop through the list of common GUI editors
+            for editor in gui_editors:
+                try:
+                    cmd = editor + " " + file_path
+                    self.utils.run_cmd(cmd)
+                    popover.popdown()
+                    if self.popover_launcher:
+                        self.popover_launcher.popdown()
+                    return  # Exit the function if an editor is found and started
+                except Exception as e:
+                    print(e)
+                    continue
+
+            # If no GUI editor is found, try to open a terminal editor in a terminal emulator
+            for term in terminal_emulators:
+                for editor in terminal_editors:
+                    try:
+                        # Use the `-e` flag to run a command inside the terminal
+                        cmd = [term, "-e", editor, file_path]
+                        Popen(cmd)
+                        popover.popdown()
+                        if self.popover_launcher:
+                            self.popover_launcher.popdown()
+                        return  # Exit the function if a terminal editor is launched
+                    except FileNotFoundError:
+                        continue  # Try the next terminal editor
+
+        # If no default editor is found, print an error
+        print("Error: Could not find an editor to open the .desktop file.")
+
     def on_right_click_popover(self, gesture, n_press, x, y, vbox):
         """
         Handle right-click event to show a popover menu.
         """
+        # Create a popover for the context menu
         popover = Gtk.Popover()
         popover.add_css_class("app-launcher-context-menu")
 
+        # Create a menu box
         menu_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
         menu_box.set_margin_start(10)
         menu_box.set_margin_end(10)
         menu_box.set_margin_top(10)
         menu_box.set_margin_bottom(10)
 
-        name, desktop, keywords = vbox.MYTEXT
-        desktop_filename = desktop.split(".desktop")[0]
+        # Get the app information from the parent widget
+        name, desktop_file, keywords = vbox.MYTEXT
 
+        # Check if the app is already in the dockbar using the full desktop file name as the key
+        is_in_dockbar = desktop_file in self.config.get("dockbar", {})
+
+        # Always show "Open" and "Open .desktop File"
         open_button = Gtk.Button.new_with_label(f"Open {name}")
-        open_button.connect(
-            "clicked", self.run_app_from_menu, desktop_filename, popover
-        )
+        open_button.connect("clicked", self.run_app_from_menu, desktop_file, popover)
         menu_box.append(open_button)
 
-        add_button = Gtk.Button.new_with_label(f"Add to dockbar")
-        add_button.connect("clicked", self.add_to_dockbar, name, desktop, popover)
-        menu_box.append(add_button)
+        open_desktop_button = Gtk.Button.new_with_label("Open .desktop File")
+        open_desktop_button.connect(
+            "clicked", self.open_desktop_file, desktop_file, popover
+        )
+        menu_box.append(open_desktop_button)
+
+        # New: Add "Search in GNOME Software" button
+        search_button = Gtk.Button.new_with_label("Search in GNOME Software")
+        search_button.connect("clicked", self.search_in_gnome_software, name, popover)
+        menu_box.append(search_button)
+
+        if is_in_dockbar:
+            # If it's in the dockbar, show the "Remove" option
+            remove_button = Gtk.Button.new_with_label("Remove from dockbar")
+            remove_button.connect(
+                "clicked", self.remove_from_dockbar, desktop_file, popover
+            )
+            menu_box.append(remove_button)
+        else:
+            # If it's not, show the "Add" option
+            add_button = Gtk.Button.new_with_label("Add to dockbar")
+            add_button.connect(
+                "clicked", self.add_to_dockbar, name, desktop_file, popover
+            )
+            menu_box.append(add_button)
 
         popover.set_child(menu_box)
         popover.set_parent(vbox)
         popover.set_has_arrow(False)
         popover.popup()
 
+        # Prevent the flowbox from activating a child on right-click
         gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+
+    def remove_from_dockbar(self, button, desktop_file, popover):
+        """
+        Removes the selected app from the dockbar configuration.
+        """
+        if desktop_file in self.config.get("dockbar", {}):
+            del self.config["dockbar"][desktop_file]
+            self.save_config()
+
+        # Close the popovers
+        popover.popdown()
+        if self.popover_launcher:
+            self.popover_launcher.popdown()
+
+        # Refresh the app launcher's flowbox to reflect the change
+        self.update_flowbox()
+
+    def search_in_gnome_software(self, button, name, popover):
+        """
+        Runs gnome-software with the search parameter for the selected application.
+        """
+        cmd = ["gnome-software", f"--search={name}"]
+        try:
+            Popen(cmd)
+        except FileNotFoundError:
+            print("Error: gnome-software command not found.")
+        finally:
+            popover.popdown()
+            if self.popover_launcher:
+                self.popover_launcher.popdown()
 
     def run_app_from_menu(self, button, desktop_file, popover):
         """
