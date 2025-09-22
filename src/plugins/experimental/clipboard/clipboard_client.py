@@ -26,23 +26,14 @@ def get_plugin_placement(panel_instance):
 
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
-        clipboard = ClipboardClient(panel_instance)
-        clipboard.create_popover_menu_clipboard()
-        return clipboard
-
-
-async def show_clipboard_popover():
-    server = AsyncClipboardServer()
-    items = await server.get_items()
-
-
-# Call this when the popover opens
-asyncio.run(show_clipboard_popover())
+        return ClipboardClient(panel_instance)
+    return None
 
 
 class ClipboardManager:
-    def __init__(self):
-        self.server = AsyncClipboardServer()
+    def __init__(self, panel_instance):
+        # Pass the panel_instance to the AsyncClipboardServer
+        self.server = AsyncClipboardServer(panel_instance)
         self.db_path = self._default_db_path()
 
     def _default_db_path(self):
@@ -81,7 +72,7 @@ class ClipboardManager:
             # Copy all content in timestamp order (maintaining history order)
             await db.execute("""
                 INSERT INTO new_clipboard_items (content, timestamp)
-                SELECT content, timestamp FROM clipboard_items 
+                SELECT content, timestamp FROM clipboard_items
                 ORDER BY timestamp DESC
             """)
 
@@ -101,29 +92,74 @@ class ClipboardManager:
         return asyncio.run(self.get_item_by_id(target_id))
 
 
-async def _fetch_items():
-    """Async helper that properly returns values"""
-    manager = ClipboardManager()
-    await manager.initialize()
-    try:
-        history = await manager.get_history()  # Get items
-        return history  # <- Explicit return
-    finally:
-        await manager.server.stop()
-
-
-def get_clipboard_items_sync() -> List[Tuple[int, str]]:
-    """One-line sync access to clipboard history"""
-    return asyncio.run(_fetch_items())
-
-
 class ClipboardClient(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
+        # Initialize the ClipboardManager and pass the panel_instance
+        self.manager = ClipboardManager(panel_instance)
         self.popover_clipboard = None
         self.find_text_using_button = {}
         self.row_content = None
         self.listbox = None
+
+        # Add the default configuration directly inside the __init__ method
+        default_config = {
+            "server": {
+                "log_enabled": False,
+                "max_items": 100,
+                "monitor_interval": 0.5,
+            },
+            "client": {
+                "popover_min_width": 500,
+                "popover_max_height": 600,
+                "thumbnail_size": 128,
+                "preview_text_length": 50,
+                "image_row_height": 60,
+                "text_row_height": 38,
+                "item_spacing": 5,
+            },
+        }
+
+        # Ensure the clipboard_server configuration section exists and has all default values
+        if "clipboard_server" not in self.config:
+            self.config["clipboard_server"] = {}
+
+        config_changed = False
+        for key, value in default_config["server"].items():
+            if key not in self.config["clipboard_server"]:
+                self.config["clipboard_server"][key] = value
+                config_changed = True
+
+        # Ensure the clipboard_client configuration section exists and has all default values
+        if "clipboard_client" not in self.config:
+            self.config["clipboard_client"] = {}
+
+        for key, value in default_config["client"].items():
+            if key not in self.config["clipboard_client"]:
+                self.config["clipboard_client"][key] = value
+                config_changed = True
+
+        # Save the configuration if any changes were made
+        if config_changed:
+            try:
+                self.save_config()
+                self.logger.info(
+                    "Saved default clipboard plugin settings to config.toml"
+                )
+            except Exception as e:
+                self.logger.error(f"Failed to save clipboard plugin config: {e}")
+
+        # New configurable settings from config.toml
+        self.client_config = self.config.get("clipboard_client", {})
+        self.popover_min_width = self.client_config.get("popover_min_width", 500)
+        self.popover_max_height = self.client_config.get("popover_max_height", 600)
+        self.thumbnail_size = self.client_config.get("thumbnail_size", 128)
+        self.preview_text_length = self.client_config.get("preview_text_length", 50)
+        self.image_row_height = self.client_config.get("image_row_height", 60)
+        self.text_row_height = self.client_config.get("text_row_height", 38)
+        self.item_spacing = self.client_config.get("item_spacing", 5)
+
+        self.create_popover_menu_clipboard()
 
     def is_image_content(self, content):
         """
@@ -168,7 +204,7 @@ class ClipboardClient(BasePlugin):
 
     def on_paste_clicked(self, manager: ClipboardManager, item_id: int):
         """Standalone version requiring manager instance"""
-        if item := manager.get_item_by_id_sync(item_id):
+        if item := self.manager.get_item_by_id_sync(item_id):
             _, content = item
             self.copy_to_clipboard(content)
             return True  # Success
@@ -245,10 +281,9 @@ class ClipboardClient(BasePlugin):
                     row = next_row
 
             # Get items from manager
-            manager = ClipboardManager()
-            asyncio.run(manager.initialize())
-            items = asyncio.run(manager.get_history())
-            asyncio.run(manager.server.stop())
+            asyncio.run(self.manager.initialize())
+            items = asyncio.run(self.manager.get_history())
+            asyncio.run(self.manager.server.stop())
 
             # Image extensions to check for
             IMAGE_EXTENSIONS = (
@@ -270,16 +305,18 @@ class ClipboardClient(BasePlugin):
                     for ext in IMAGE_EXTENSIONS
                     if isinstance(item, str)
                 ) or not isinstance(item, bytes):
-                    total_height += 60  # Image height
+                    total_height += self.image_row_height  # Image height
                 else:
-                    total_height += 38  # Text height
+                    total_height += self.text_row_height  # Text height
 
                 # Add spacing between items (optional)
-                total_height += 5
+                total_height += self.item_spacing
 
             # Calculate dynamic height (capped at 600px)
             total_height = max(total_height, 100)  # Minimum height of 100px
-            total_height = min(total_height, 600)  # Maximum height of 600px
+            total_height = min(
+                total_height, self.popover_max_height
+            )  # Maximum height from config
 
             return total_height
 
@@ -294,7 +331,10 @@ class ClipboardClient(BasePlugin):
         Populate the ListBox with clipboard history items.
         """
         try:
-            clipboard_history = get_clipboard_items_sync()
+            # Fix: Use the class's manager instance
+            asyncio.run(self.manager.initialize())
+            clipboard_history = asyncio.run(self.manager.get_history())
+            asyncio.run(self.manager.server.stop())
 
             for i in clipboard_history:
                 if not i:
@@ -312,8 +352,8 @@ class ClipboardClient(BasePlugin):
 
                 item_id = i[0]
                 item = i[1]
-                if len(item) > 50:
-                    item = item[:50]
+                if len(item) > self.preview_text_length:
+                    item = item[: self.preview_text_length]
                 row_hbox.MYTEXT = f"{item_id} {item.strip()}"
 
                 # Append the row to the ListBox
@@ -321,7 +361,7 @@ class ClipboardClient(BasePlugin):
 
                 if self.is_image_content(item):
                     # Create larger thumbnail (128px) with padding
-                    thumb = self.create_thumbnail(item, size=128)
+                    thumb = self.create_thumbnail(item, size=self.thumbnail_size)
                     if thumb:
                         # Create container for image + text
                         image_box = Gtk.Box(
@@ -410,8 +450,8 @@ class ClipboardClient(BasePlugin):
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
         self.obj.add_action(show_searchbar_action)
         self.scrolled_window = Gtk.ScrolledWindow()
-        self.scrolled_window.set_min_content_width(500)
-        self.scrolled_window.set_min_content_height(600)
+        self.scrolled_window.set_min_content_width(self.popover_min_width)
+        self.scrolled_window.set_min_content_height(self.popover_max_height)
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 10)
         self.main_box.set_margin_top(10)
         self.main_box.set_margin_bottom(10)
@@ -453,10 +493,9 @@ class ClipboardClient(BasePlugin):
         if x is None:
             return
         selected_text = x.get_child().MYTEXT
-        manager = ClipboardManager()
-        asyncio.run(manager.initialize())
+        # Use the class's manager instance
         item_id = int(selected_text.split()[0])
-        self.on_paste_clicked(manager, item_id)
+        self.on_paste_clicked(self.manager, item_id)
         if self.popover_clipboard:
             self.popover_clipboard.popdown()
 
@@ -555,8 +594,9 @@ class ClipboardClient(BasePlugin):
         return color_pattern.sub(replace_color, text)
 
     def clear_clipboard(self, *_):
-        asyncio.run(ClipboardManager().clear_history())
-        asyncio.run(ClipboardManager().reset_ids())
+        # Use the class's manager instance
+        asyncio.run(self.manager.clear_history())
+        asyncio.run(self.manager.reset_ids())
         self.update_clipboard_list()
         self.scrolled_window.set_min_content_height(50)
 
@@ -571,8 +611,8 @@ class ClipboardClient(BasePlugin):
         label = self.find_text_using_button[button]
         item_id = label.get_text().split()[0]
         label.set_label("")
-        manager = ClipboardManager()
-        asyncio.run(manager.delete_item(item_id))
+        # Use the class's manager instance
+        asyncio.run(self.manager.delete_item(item_id))
         self.update_clipboard_list()
 
     def run_app_from_launcher(self, x):
@@ -706,3 +746,6 @@ class ClipboardClient(BasePlugin):
             user-friendly, even with a large history.
         """
         return self.code_explanation.__doc__
+
+    def set_widget(self):
+        return self.main_widget
