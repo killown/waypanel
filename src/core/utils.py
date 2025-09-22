@@ -57,7 +57,7 @@ class Utils(Adw.Application):
             "rxvt",
         ]
         self.original_alpha_views_values = {
-            view["id"]: self.ipc.get_view_alpha(view["id"])["alpha"]
+            view.get("id"): self.ipc.get_view_alpha(view.get("id"))["alpha"]
             for view in self.ipc.list_views()
         }
 
@@ -101,7 +101,9 @@ class Utils(Adw.Application):
         wset_index_focused = focused_output.get("wset-index")
         wset_index_view = view["wset-index"]
         next_output = [
-            i["id"] for i in self.ipc.list_outputs() if i["id"] != focused_output["id"]
+            i.get("id")
+            for i in self.ipc.list_outputs()
+            if i.get("id") != focused_output.get("id")
         ]
 
         if toggle_scale_off:
@@ -124,7 +126,7 @@ class Utils(Adw.Application):
                 geo["y"],
                 geo["width"],
                 geo["height"],
-                focused_output["id"],
+                focused_output.get("id"),
             )
         else:
             if direction:
@@ -224,7 +226,7 @@ class Utils(Adw.Application):
 
             # Iterate through all outputs to find the closest one in the specified direction
             for output in outputs:
-                if output["id"] == focused_output["id"]:
+                if output.get("id") == focused_output.get("id"):
                     continue  # Skip the focused output
 
                 output_geometry = output["geometry"]
@@ -236,14 +238,14 @@ class Utils(Adw.Application):
                     if output_x + output_geometry["width"] <= focused_x:
                         distance = focused_x - (output_x + output_geometry["width"])
                         if distance < target_distance:
-                            target_output_id = output["id"]
+                            target_output_id = output.get("id")
                             target_distance = distance
                 elif direction == "right":
                     # Output is to the right if its left edge is to the right of the focused output's right edge
                     if output_x >= focused_x + focused_width:
                         distance = output_x - (focused_x + focused_width)
                         if distance < target_distance:
-                            target_output_id = output["id"]
+                            target_output_id = output.get("id")
                             target_distance = distance
 
             # Return the ID of the closest output in the specified direction
@@ -1587,7 +1589,7 @@ class Utils(Adw.Application):
             bool: True if the view isn't ready and should be retried, False if done.
         """
         if view["role"] == "toplevel" and view["focusable"] is True:
-            self.ipc.set_focus(view["id"])
+            self.ipc.set_focus(view.get("id"))
             return False  # Stop idle processing
         return True  # Continue idle processing
 
@@ -1977,7 +1979,7 @@ class Utils(Adw.Application):
         """
         view_id = None
         try:
-            view_id = view["id"]
+            view_id = view.get("id")
             if not self.is_view_valid(view):
                 self.logger.warning(f"Invalid or non-existent view ID: {view_id}")
                 return

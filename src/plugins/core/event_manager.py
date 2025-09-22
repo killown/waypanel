@@ -283,7 +283,7 @@ class EventManagerPlugin(BasePlugin):
         self.last_toplevel_focused_view = view_id
 
     def on_hidden_view(self, widget, view) -> None:
-        id = view["id"]
+        id = view.get("id")
         if id in self.ipc.list_ids():
             self.ipc.unhide_view(id)
             # ***Warning*** this was freezing the panel
