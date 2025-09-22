@@ -11,7 +11,7 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Gtk, GLib, Adw, Gdk
 
 
-class MyControlCenter(Adw.Application):
+class ControlCenter(Adw.Application):
     """
     A GTK4/Adwaita application for managing Waypanel configuration files.
     """
@@ -563,10 +563,14 @@ class MyControlCenter(Adw.Application):
 
             icon_name = self.get_icon_for_category(category_name)
             icon = Gtk.Image.new_from_icon_name(icon_name)
+            icon.set_pixel_size(48)
             box.append(icon)
 
             display_name = category_name.replace("_", " ").capitalize()
-            label = Gtk.Label(label=display_name, xalign=0)
+            label = Gtk.Label(
+                label=f'<b><span size="12288">{display_name}</span></b>', xalign=0
+            )
+            label.set_use_markup(True)
             box.append(label)
             row.set_child(box)
             listbox.append(row)
