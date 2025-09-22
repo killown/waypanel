@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2023 Thiago <24453+killown@users.noreply.github.com>
+# Copyright (c) 2023 Thiago <systemofdown@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,26 +21,33 @@
 # SOFTWARE.
 import os
 import sqlite3
-import asyncio
 import json
-import threading
 from gi.repository import Gtk
 from ._utils import NotifyUtils
 from src.plugins.core._base import BasePlugin
-from .notify_server import (
-    NotificationDaemon,
-)
 
-# Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 
 DEPS = ["top_panel", "notify_server"]
 
+DEFAULT_CONFIG = {
+    "notify": {
+        "client": {
+            "max_notifications": 5.0,
+            "body_max_width_chars": 80.0,
+            "notification_icon_size": 64.0,
+            "popover_width": 500.0,
+            "popover_height": 600.0,
+        },
+        "server": {"show_messages": True},
+    }
+}
+
 
 def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
-    position = "top-panel-center"  # Position: right side of the panel
-    order = 10  # Order: determines the relative position among other plugins
+    position = "top-panel-center"
+    order = 10
     priority = 99
     return position, order, priority
 
@@ -54,6 +61,28 @@ def initialize_plugin(panel_instance):
 class NotificationPopoverPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
+
+        # Ensure the 'notify.client' section exists and is fully populated
+        if "notify" not in self.config:
+            self.config["notify"] = {}
+        if "client" not in self.config["notify"]:
+            self.config["notify"]["client"] = {}
+        self.config["notify"]["client"] = {
+            **DEFAULT_CONFIG["notify"]["client"],
+            **self.config["notify"]["client"],
+        }
+
+        # Ensure the 'notify.server' section exists
+        if "server" not in self.config["notify"]:
+            self.config["notify"]["server"] = {}
+        self.config["notify"]["server"] = {
+            **DEFAULT_CONFIG["notify"]["server"],
+            **self.config["notify"]["server"],
+        }
+
+        self.save_config()
+        self.reload_config()
+
         self.notify_utils = NotifyUtils(self.obj)
         self.notification_server = self.plugins["notify_server"]
         # Create a vertical box to hold notification details
@@ -231,7 +260,6 @@ class NotificationPopoverPlugin(BasePlugin):
         """Execute the default action specified in hints."""
         try:
             self.logger.info(f"Executing default action: {action}")
-            # Implement your logic here to execute the default action
             if action.startswith("app://"):
                 app_id = action.split("://")[1]
                 self.utils.run_app(app_id)
@@ -258,9 +286,7 @@ class NotificationPopoverPlugin(BasePlugin):
         )
 
         # Create a horizontal box to hold the image and text content
-        hbox = Gtk.Box.new(
-            Gtk.Orientation.HORIZONTAL, 30
-        )  # 10px spacing between columns
+        hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 30)  # spacing between columns
         hbox.add_css_class("notify-client-box")
 
         # Add a close button
@@ -270,7 +296,7 @@ class NotificationPopoverPlugin(BasePlugin):
 
         close_button.set_margin_start(10)  # Add spacing between content and button
         close_button.connect(
-            "clicked", lambda _: self.delete_notification(notification["id"], hbox)
+            "clicked", lambda _: self.delete_notification(notification.get("id"), hbox)
         )
         self.update_widget_safely(hbox.append, close_button)
 
@@ -297,8 +323,8 @@ class NotificationPopoverPlugin(BasePlugin):
 
         # Load the icon/image
         icon = self.notify_utils.load_icon(notification)
-        if icon:
-            icon.set_pixel_size(notification_icon_size)  # Set a fixed size for the icon
+        if icon and icon.get_name():
+            icon.set_pixel_size(notification_icon_size)
             icon.set_halign(Gtk.Align.START)
             icon.add_css_class("notification-icon")
             self.update_widget_safely(left_box.append, icon)
@@ -445,6 +471,11 @@ class NotificationPopoverPlugin(BasePlugin):
                 .get("client", {})
                 .get("popover_width", 500)
             )
+            self.popover_height = (
+                self.config.get("notify", {})
+                .get("client", {})
+                .get("popover_height", 600)
+            )
             # Main vertical box for the popover content
             self.main_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
             self.main_vbox.set_margin_top(10)
@@ -520,7 +551,7 @@ class NotificationPopoverPlugin(BasePlugin):
             self.create_notification_box(notification)
             # FIXME: make this doesn't require panel restart
         print(height)
-        self.main_vbox.set_size_request(self.popover_width, height)
+        self.main_vbox.set_size_request(self.popover_width, self.popover_height)
 
         # Initialize DND state
         self.update_dnd_switch_state()

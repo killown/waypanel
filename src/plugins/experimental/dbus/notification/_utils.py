@@ -209,8 +209,11 @@ class NotifyUtils(BasePlugin):
     def load_icon(self, notification: Dict[str, Any]) -> Optional[Gtk.Image]:
         """Load the appropriate icon/image for a notification based on multiple cases."""
         # Extract necessary fields from the notification
-        app_icon = notification.get("app_icon", "")
-        app_name = notification.get("app_name", "").lower()
+        app_icon = notification.get("app_icon", "").lower()
+        # some app names will be like "firefox developer edition"
+        app_icon_from_name = notification.get("app_name", "").lower().replace(" ", "-")
+        app_icon_from_name = self.utils.get_icon(app_icon_from_name, "", "")
+
         hints = notification.get("hints", {})
 
         try:
@@ -239,42 +242,50 @@ class NotifyUtils(BasePlugin):
                     else:
                         self.logger.error("Invalid image-data format: Incorrect types.")
                 else:
-                    # self.logger.error(f"Malformed image-data: {image_data}")
-                    # too much log spam
+                    self.logger.error(f"Malformed image-data: {image_data}")
                     pass
 
             # Case 2: Use app_icon as a file path or icon name
             if app_icon:
+                app_icon_path = app_icon
+                if "file://" in app_icon:
+                    app_icon_path = app_icon.split("file://")[1]
                 if self.is_valid_path(app_icon):
                     try:
-                        thumbnail_path = self.load_thumbnail(app_icon)
+                        thumbnail_path = self.load_thumbnail(app_icon_path)
                         if thumbnail_path:
                             icon = Gtk.Image.new_from_file(thumbnail_path)
                         else:
-                            icon = Gtk.Image.new_from_file(app_icon)
+                            icon = Gtk.Image.new_from_file(app_icon_path)
                         return icon  # Successfully loaded from file path
                     except Exception as e:
                         self.logger.error(f"Error loading app_icon from file: {e}")
                 else:
                     try:
-                        icon = Gtk.Image.new_from_icon_name(app_icon)
-                        return icon  # Successfully loaded from icon name
+                        if "file://" not in app_icon:
+                            icon = Gtk.Image.new_from_icon_name(app_icon)
+                            return icon  # Successfully loaded from icon name
                     except Exception as e:
                         self.logger.error(f"Error loading app_icon as icon name: {e}")
 
             # Case 3: Use app_name as the icon name
-            if app_name:
+            if app_icon_from_name:
                 try:
-                    if app_name not in CUSTOM_ICON:
-                        icon = Gtk.Image.new_from_icon_name(app_name)
+                    # Check for custom icon mapping
+                    if app_icon_from_name in CUSTOM_ICON:
+                        icon_name_to_use = CUSTOM_ICON[app_icon_from_name]
                     else:
-                        icon = Gtk.Image.new_from_icon_name(CUSTOM_ICON[app_name])
-                    return icon  # Successfully loaded from app_name
+                        icon_name_to_use = app_icon_from_name
+
+                    icon = Gtk.Image.new_from_icon_name(icon_name_to_use)
+                    print(icon_name_to_use, app_icon)
+                    return icon
+
                 except Exception as e:
                     self.logger.error(f"Error loading app_name as icon name: {e}")
 
-            # Case 4: Fallback to a default icon
-            return Gtk.Image.new_from_icon_name("image-missing")  # Final fallback icon
+            # Case 4: Final fallback to a default icon
+            return Gtk.Image.new_from_icon_name("message-new")
 
         except Exception as e:
             self.logger.error(f"Unexpected error while loading icon: {e}")

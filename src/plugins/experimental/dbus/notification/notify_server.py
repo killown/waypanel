@@ -41,20 +41,17 @@ def initialize_plugin(panel_instance):
 
 def run_server_in_background(panel_instance):
     async def _run_server():
-        # Pass the panel_instance to the NotificationDaemon
         server = NotificationDaemon(panel_instance)
         await server.run()
         print("Notification server running in background")
         while True:  # Keep alive
             await asyncio.sleep(1)
 
-    # Run in dedicated thread
     def _start_loop():
         asyncio.run(_run_server())
 
     import threading
 
-    # Start the thread with daemon=True to ensure it exits when the main program exits
     thread = threading.Thread(target=_start_loop, daemon=True)
     thread.start()
     return thread
@@ -63,7 +60,6 @@ def run_server_in_background(panel_instance):
 class NotificationDaemon(ServiceInterface):
     def __init__(self, panel_instance):
         super().__init__("org.freedesktop.Notifications")
-        # Connect to the session bus
         self.last_modified = None
         self.db = Database()
         self.ui = UI(panel_instance)
@@ -113,11 +109,11 @@ class NotificationDaemon(ServiceInterface):
 
         # Save the notification to the database
         self.db._save_notification_to_db(notification, self.db_path)
-        # self.logger.info(f"Received notification {notification_id}:")
-        # self.logger.info(f" App: {app_name}")
-        # self.logger.info(f" Summary: {summary}")
-        # self.logger.info(f" Body: {body}")
-        # self.logger.info(f" Icon: {app_icon}")
+        self.logger.info(f"Received notification {notification_id}:")
+        self.logger.info(f" App: {app_name}")
+        self.logger.info(f" Summary: {summary}")
+        self.logger.info(f" Body: {body}")
+        self.logger.info(f" Icon: {app_icon}")
 
         # Show a popup for the notification
         GLib.idle_add(self.ui.show_popup, notification)
