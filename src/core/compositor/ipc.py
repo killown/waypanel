@@ -437,7 +437,7 @@ class IPC:
         if outputs:
             for output in outputs:
                 if output["name"] == output_name:
-                    return output["id"]
+                    return output.get("id")
         return None
 
     @handle_ipc_error
@@ -477,7 +477,7 @@ class IPC:
         """Get ID of the currently focused output."""
         focused_output = self.sock.get_focused_output()  # pyright: ignore
         if focused_output:
-            return focused_output["id"]
+            return focused_output.get("id")
 
     #  WARNING: wayfire specific functions -------------------
     @handle_ipc_error
