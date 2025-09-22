@@ -33,10 +33,18 @@ class Panel(Adw.Application):
         self.args = sys.argv
         self.css_monitor = None
         self.update_widget = self.utils.update_widget
-        self.config = self.load_config()
-        self._set_monitor_dimensions()
+
+        outputs = self.ipc.list_outputs()
+        if outputs:
+            self.first_output = outputs[0]
+            if "name" in self.first_output:
+                self.first_output_name = self.first_output["name"]
+        else:
+            self.first_output_name = None
+
         self.default_config = {
             "panel": {
+                "primary_output": {"output_name": self.first_output_name},
                 "bottom": {
                     "enabled": 1.0,
                     "position": "BOTTOM",
@@ -74,6 +82,10 @@ class Panel(Adw.Application):
             }
         }
 
+        self.config = self.load_config()
+
+        self._set_monitor_dimensions()
+
     def set_panel_instance(self, panel_instance):
         self.panel_instance = panel_instance
 
@@ -83,27 +95,62 @@ class Panel(Adw.Application):
         """
         self.logger.debug("Setting monitor dimensions...")
 
-        # Retrieve monitor information
-        monitor = next(
-            (output for output in self.ipc.list_outputs() if "-1" in output["name"]),
-            self.ipc.list_outputs()[0],
+        # Default to the first output found
+        outputs = self.ipc.list_outputs()
+        if not outputs:
+            self.logger.error("No monitors found via IPC. Cannot set dimensions.")
+            self.monitor_width, self.monitor_height = 0, 0
+            self.display = None
+            return
+
+        monitor = outputs[0]
+
+        primary_output_name = (
+            self.config.get("panel", {}).get("primary_output", {}).get("output_name")
         )
+
+        if primary_output_name:
+            found_monitor = next(
+                (
+                    output
+                    for output in self.ipc.list_outputs()
+                    if output["name"] == primary_output_name
+                ),
+                None,
+            )
+            if found_monitor:
+                monitor = found_monitor
+            else:
+                self.logger.warning(
+                    f"Configured monitor '{primary_output_name}' not found. Falling back to default."
+                )
+
+        else:
+            found_monitor = next(
+                (
+                    output
+                    for output in self.ipc.list_outputs()
+                    if "-1" in output["name"]
+                ),
+                None,
+            )
+            if found_monitor:
+                monitor = found_monitor
+            else:
+                self.logger.warning(
+                    "No primary monitor configured or found with '-1' in name. Using the first available monitor."
+                )
 
         self.display = monitor
 
-        # Default dimensions from the monitor geometry
-        # FIXME: need a proper way to handle that,
-        # better case is format sway ipc data to have a default data pattern as wayfire
-        if (
-            "current_mode" not in monitor
-        ):  # in case current_mode is in monitor, then it's swayIPC
-            # wayfire socket here
+        if "current_mode" not in monitor:
+            # Wayfire socket
             self.monitor_width, self.monitor_height = (
                 monitor["geometry"]["width"],
                 monitor["geometry"]["height"],
             )
         else:
-            # sway socket here
+            # Sway socket
             self.monitor_width, self.monitor_height = (
                 monitor["current_mode"]["width"],
                 monitor["current_mode"]["height"],
@@ -114,7 +161,7 @@ class Panel(Adw.Application):
             config_monitor = self.config["monitor"]
             self.monitor_width = config_monitor.get("width", self.monitor_width)
             self.monitor_height = config_monitor.get("height", self.monitor_height)
-            self.monitor_name = config_monitor.get("name", self.monitor_name)
+            self.monitor_name = config_monitor.get("name", monitor.get("name"))
 
         self.logger.info(
             f"Monitor dimensions set: {self.monitor_width}x{self.monitor_height}"
@@ -157,7 +204,7 @@ class Panel(Adw.Application):
         """
         try:
             with open(self.waypanel_cfg, "w") as f:
-                toml.dump(self._cached_config, f)
+                toml.dump(self.config, f)
             self.logger.info("Configuration saved successfully.")
         except Exception as e:
             self.logger.error(
@@ -192,26 +239,40 @@ class Panel(Adw.Application):
             self.logger.error(f"Error reloading configuration: {e}")
 
     def load_config(self) -> Dict[str, Any]:
-        """Load and cache the panel configuration from the config.toml file.
+        """Load and cache the panel configuration from the config.toml file,
+        merging with defaults if needed.
 
         Returns:
-            dict: Parsed TOML configuration data. If already loaded, returns the cached version.
+            dict: The combined configuration data.
         """
-        if not hasattr(self, "_cached_config"):
-            try:
-                with open(self.waypanel_cfg, "r") as f:
-                    self._cached_config = toml.load(f)
-            except FileNotFoundError:
-                # If config.toml doesn't exist, create it with default values
-                self.logger.info("config.toml not found, creating with defaults.")
-                self._cached_config = self.default_config
-                # Ensure the directory exists before trying to write the file
-                os.makedirs(os.path.dirname(self.waypanel_cfg), exist_ok=True)
-                with open(self.waypanel_cfg, "w") as f:
-                    toml.dump(self._cached_config, f)
-            except Exception as e:
-                self.logger.error(f"Error loading configuration: {e}")
-                self._cached_config = self.default_config
+        config_from_file = {}
+        try:
+            with open(self.waypanel_cfg, "r") as f:
+                config_from_file = toml.load(f)
+            self.logger.debug("Existing config.toml loaded.")
+        except FileNotFoundError:
+            self.logger.info("config.toml not found. Creating with default settings.")
+        except Exception as e:
+            self.logger.error(f"Error loading configuration: {e}. Using defaults.")
+
+        def deep_merge(a: dict, b: dict, path=None) -> dict:
+            if path is None:
+                path = []
+            for key in b:
+                if key in a and isinstance(a[key], dict) and isinstance(b[key], dict):
+                    deep_merge(a[key], b[key], path + [str(key)])
+                else:
+                    a[key] = b[key]
+            return a
+
+        combined_config = deep_merge(self.default_config.copy(), config_from_file)
+
+        os.makedirs(os.path.dirname(self.waypanel_cfg), exist_ok=True)
+        with open(self.waypanel_cfg, "w") as f:
+            toml.dump(combined_config, f)
+        self.logger.info("Merged configuration saved to config.toml.")
+
+        self._cached_config = combined_config
         return self._cached_config
 
     def do_activate(self):

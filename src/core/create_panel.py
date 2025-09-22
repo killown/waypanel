@@ -22,60 +22,29 @@ gi.require_version("Gtk4LayerShell", "1.0")
 gi.require_version("Gdk", "4.0")
 gi.require_version("Gtk", "4.0")
 
+PRIMARY_OUTPUT_NAME = None
+
 
 def set_layer_position_exclusive(window, size) -> None:
     """
     Sets the layer position exclusively for the given window.
-
-    Note: If you encounter issues with the first execution of this function not working,
-    it may be due to a delay in IPC with sock.watch immediately after the panel starts.
-    Waiting longer before activating the scale for the first time should resolve this.
-    Alternatively, executing the scale twice can also have the desired effect.
-
-    The panel is hidden by default. This function makes it visible.
-    If visibility doesn't take effect, the panel will remain hidden until IPC is ready.
     """
-    # LayerShell.set_exclusive_zone(window, size)
     if window:
         LayerShell.set_layer(window, LayerShell.Layer.TOP)
-        # window.set_visible(True)
 
 
 def unset_layer_position_exclusive(window) -> None:
-    # LayerShell.set_exclusive_zone(window, 0)
-    # print(LayerShell.get_exclusive_zone(window))
     if window:
         LayerShell.set_layer(window, LayerShell.Layer.BOTTOM)
-        # window.set_visible(False)
 
 
 def get_monitor_info() -> Dict[str, Dict[str, Any]]:
     """
     Retrieve information about the connected monitors.
-
-    This function retrieves information about the connected monitors,
-    such as their dimensions and names,
-    and returns the information as a dictionary.
-
-    Returns:
-        Dict[str, Dict[str, Any]]: A dictionary where keys are monitor names
-        and values are dictionaries containing monitor objects, width, and height.
-        Example:
-        {
-            "HDMI-1": {
-                "monitor": Gdk.Monitor,
-                "width": 1920,
-                "height": 1080
-            },
-            ...
-        }
     """
-    # Initialize GTK
     Gtk.init()
-
     screen: Optional[Gdk.Display] = Gdk.Display.get_default()
     monitor_info: Dict[str, Dict[str, Any]] = {}
-
     if screen:
         monitors = screen.get_monitors()
         for monitor in monitors:
@@ -93,26 +62,12 @@ def get_monitor_info() -> Dict[str, Dict[str, Any]]:
 def get_monitor_width(monitor: Union[Gdk.Monitor, Dict[str, Any]]) -> int:
     """
     Get the width of a monitor from either a Gdk.Monitor object or a dictionary.
-
-    Args:
-        monitor: Either a Gdk.Monitor object or a dictionary containing monitor info.
-                Dictionary can be in format:
-                - {"width": 1920, ...}
-                - {"monitor": Gdk.Monitor, ...}
-                - Nested structures (recursively searched)
-
-    Returns:
-        int: The monitor width in pixels
-
-    Raises:
-        ValueError: If no valid width can be determined from the input
     """
     # Case 1: Direct Gdk.Monitor object
     if isinstance(monitor, Gdk.Monitor):
         geom = Gdk.Rectangle()
         if hasattr(monitor, "get_geometry"):
             try:
-                # New GTK: get_geometry() returns Gdk.Rectangle
                 return monitor.get_geometry().width
             except TypeError:
                 return geom.width
@@ -161,17 +116,19 @@ def get_target_monitor(
     # Check command line arguments first
     if len(sys.argv) > 1:
         monitor_name = sys.argv[1]
-        return monitors.get(monitor_name)
+        target = monitors.get(monitor_name)
+        if target:
+            return target
 
     # Then check config file
-    if "monitor" in config:
-        monitor_name = config["monitor"]["name"]
-        return monitors.get(monitor_name)
+    if "primary_output" in config:
+        monitor_name = config["primary_output"].get("output_name")
+        target = monitors.get(monitor_name)
+        if target:
+            return target
 
-    # Default to first monitor ending with "-1"
-    return next(
-        (monitor for name, monitor in monitors.items() if name.endswith("-1")), None
-    )
+    # Default to first monitor found in the system
+    return next(iter(monitors.values()), None)
 
 
 def setup_layer_shell(
@@ -232,8 +189,8 @@ def CreatePanel(
     window.set_focus_on_click(False)
 
     # Get monitor and config information
-    monitors = get_monitor_info()
     config = load_panel_config()
+    monitors = get_monitor_info()
     monitor = get_target_monitor(config, monitors)
 
     # Configure layer shell properties
