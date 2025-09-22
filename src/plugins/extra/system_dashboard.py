@@ -5,7 +5,7 @@ from importlib.util import find_spec
 from subprocess import Popen, check_output
 import psutil
 from gi.repository import Gtk
-
+from src.tools.control_center import ControlCenter
 from src.plugins.core._base import BasePlugin
 
 
@@ -66,6 +66,8 @@ class SystemDashboard(BasePlugin):
             return False
 
     def launch_settings(self):
+        app = ControlCenter()
+        app.run(None)
         try:
             # Try direct execution first
             subprocess.Popen(["waypanel-settings"], start_new_session=True)
