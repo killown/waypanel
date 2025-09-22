@@ -38,8 +38,7 @@ class AppLauncher(BasePlugin):
         self.search_row = []
 
         # Use SQLite for recent apps
-        self.db_path = os.path.expanduser("~/config/waypanel/recent_apps.db")
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        self.db_path = self.utils.get_xdg_data_home("waypanel", "recent_apps.db")
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
         self._create_recent_apps_table()

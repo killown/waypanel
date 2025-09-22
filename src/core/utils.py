@@ -2468,3 +2468,19 @@ class Utils(Adw.Application):
             if i["fullscreen"] is True and i["output-id"] == output_id
         ):
             return True
+
+    def get_xdg_data_home(self, *path_parts):
+        """
+        Return a path inside the user's XDG data directory and
+        create its parent directories if needed.
+        """
+        data_home = os.environ.get(
+            "XDG_DATA_HOME",
+            os.path.join(os.path.expanduser("~"), ".local", "share"),
+        )
+
+        # join the extra path parts under the data_home
+        path = os.path.join(data_home, *path_parts)
+
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        return path
