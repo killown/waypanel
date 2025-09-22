@@ -35,6 +35,44 @@ class Panel(Adw.Application):
         self.update_widget = self.utils.update_widget
         self.config = self.load_config()
         self._set_monitor_dimensions()
+        self.default_config = {
+            "panel": {
+                "bottom": {
+                    "enabled": 1.0,
+                    "position": "BOTTOM",
+                    "Exclusive": 0.0,
+                    "size": 42.0,
+                },
+                "left": {
+                    "enabled": 1.0,
+                    "position": "BOTTOM",
+                    "Exclusive": 0.0,
+                    "size": 64.0,
+                },
+                "right": {
+                    "enabled": 1.0,
+                    "position": "BOTTOM",
+                    "Exclusive": 0.0,
+                    "size": 42.0,
+                },
+                "top": {
+                    "menu_icon": "archlinux-logo",
+                    "folder_icon": "folder",
+                    "bookmarks_icon": "internet-web-browser",
+                    "clipboard_icon": "edit-paste",
+                    "soundcard_icon": "audio-volume-high",
+                    "system_icon": "system-shutdown",
+                    "bluetooth_icon": "bluetooth",
+                    "notes_icon": "stock_notes",
+                    "notes_icon_delete": "delete",
+                    "position": "TOP",
+                    "Exclusive": 1.0,
+                    "height": 32.0,
+                    "size": 12.0,
+                    "max_note_lenght": 100.0,
+                },
+            }
+        }
 
     def set_panel_instance(self, panel_instance):
         self.panel_instance = panel_instance
@@ -160,8 +198,20 @@ class Panel(Adw.Application):
             dict: Parsed TOML configuration data. If already loaded, returns the cached version.
         """
         if not hasattr(self, "_cached_config"):
-            with open(self.waypanel_cfg, "r") as f:
-                self._cached_config = toml.load(f)
+            try:
+                with open(self.waypanel_cfg, "r") as f:
+                    self._cached_config = toml.load(f)
+            except FileNotFoundError:
+                # If config.toml doesn't exist, create it with default values
+                self.logger.info("config.toml not found, creating with defaults.")
+                self._cached_config = self.default_config
+                # Ensure the directory exists before trying to write the file
+                os.makedirs(os.path.dirname(self.waypanel_cfg), exist_ok=True)
+                with open(self.waypanel_cfg, "w") as f:
+                    toml.dump(self._cached_config, f)
+            except Exception as e:
+                self.logger.error(f"Error loading configuration: {e}")
+                self._cached_config = self.default_config
         return self._cached_config
 
     def do_activate(self):
