@@ -3,14 +3,12 @@ import os
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-
 import aiosqlite
 import subprocess
 
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
-LOG_ENABLED = False
 
 
 def get_plugin_placement(panel_instance):
@@ -18,16 +16,41 @@ def get_plugin_placement(panel_instance):
 
 
 def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        verify_db(panel_instance)
-        return run_server_in_background()
+    default_config = {
+        "log_enabled": False,
+        "max_items": 100,
+        "monitor_interval": 0.5,
+    }
+
+    # Ensure the clipboard_server configuration section exists and has all default values
+    if "clipboard_server" not in panel_instance.config:
+        panel_instance.config["clipboard_server"] = {}
+
+    config_changed = False
+    for key, value in default_config.items():
+        if key not in panel_instance.config["clipboard_server"]:
+            panel_instance.config["clipboard_server"][key] = value
+            config_changed = True
+
+    # Save the configuration if any changes were made
+    if config_changed:
+        try:
+            panel_instance.save_config()
+            panel_instance.logger.info(
+                "Saved default clipboard_server settings to config.toml"
+            )
+        except Exception as e:
+            panel_instance.logger.error(f"Failed to save clipboard_server config: {e}")
+
+    verify_db(panel_instance)
+    return run_server_in_background(panel_instance)
 
 
-def run_server_in_background():
+def run_server_in_background(panel_instance):
     """Start the clipboard server without blocking main thread"""
 
     async def _run_server():
-        server = AsyncClipboardServer()
+        server = AsyncClipboardServer(panel_instance)
         await server.start()
         print("🖥️ Clipboard server running in background")
         while True:  # Keep alive
@@ -90,13 +113,19 @@ def verify_db(panel_instance):
 
 
 class AsyncClipboardServer(BasePlugin):
-    def __init__(self, db_path=None):
+    def __init__(self, panel_instance, db_path=None):
+        super().__init__(panel_instance)
         self.db_path = db_path or self._default_db_path()
         self.last_clipboard_content = ""
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.running = False
-        self.max_items = 100
-        # self.max_items = self.config.get("clipboard_server", {}).get("max_items", 100)
+
+        # Set attributes from the final config, which is now guaranteed to exist
+        self.log_enabled = self.config["clipboard_server"].get("log_enabled", False)
+        self.max_items = self.config["clipboard_server"].get("max_items", 100)
+        self.monitor_interval = self.config["clipboard_server"].get(
+            "monitor_interval", 0.5
+        )
 
     def _default_db_path(self):
         return str(Path.home() / ".config" / "waypanel" / "clipboard_server.db")
@@ -112,7 +141,7 @@ class AsyncClipboardServer(BasePlugin):
                 )
             """)
             await db.commit()
-            if LOG_ENABLED:
+            if self.log_enabled:
                 self.logger.info(f"Database initialized at {self.db_path}")
 
     async def add_item(self, content):
@@ -131,7 +160,7 @@ class AsyncClipboardServer(BasePlugin):
             )
             count = (await cursor.fetchone())[0]
             if count > 0:
-                if LOG_ENABLED:
+                if self.log_enabled:
                     self.logger.info(
                         f"Duplicate item found: {content[:50]}... Skipping."
                     )
@@ -157,7 +186,7 @@ class AsyncClipboardServer(BasePlugin):
             # Update the last clipboard content
             self.last_clipboard_content = content
 
-            if LOG_ENABLED:
+            if self.log_enabled:
                 self.logger.info(f"Added new item: {content[:50]}...")
 
     async def get_items(self, limit=100):
@@ -174,7 +203,7 @@ class AsyncClipboardServer(BasePlugin):
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute("DELETE FROM clipboard_items")
             await db.commit()
-            if LOG_ENABLED:
+            if self.log_enabled:
                 self.logger.info("Cleared all items.")
 
     async def delete_item(self, item_id):
@@ -182,7 +211,7 @@ class AsyncClipboardServer(BasePlugin):
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute("DELETE FROM clipboard_items WHERE id = ?", (item_id,))
             await db.commit()
-            if LOG_ENABLED:
+            if self.log_enabled:
                 self.logger.info(f"Deleted item {item_id}")
 
     async def monitor(self):
@@ -208,20 +237,20 @@ class AsyncClipboardServer(BasePlugin):
                     content = "<image>"  # Placeholder for image handling logic
 
             await self.add_item(content)
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(self.monitor_interval)
 
     async def start(self):
         """Start the clipboard monitor."""
         await self._init_db()
         asyncio.create_task(self.monitor())
-        if LOG_ENABLED:
+        if self.log_enabled:
             self.logger.info("Clipboard monitor started.")
 
     async def stop(self):
         """Stop the monitor."""
         self.running = False
         self.executor.shutdown()
-        if LOG_ENABLED:
+        if self.log_enabled:
             self.logger.info("Clipboard monitor stopped.")
 
     def about(self):
