@@ -16,6 +16,19 @@ if not os.getenv("WAYFIRE_SOCKET"):
 
 DEPS = ["event_manager", "gestures_setup", "on_output_connect"]
 
+DEFAULT_CONFIG = {
+    "taskbar": {
+        "icon_size": 32,
+        "spacing": 5,
+        "show_label": True,
+    },
+    "taskbar_panel": {
+        "panel": "bottom-panel",
+        "exclusive_zone": True,
+        "width": 100,
+    },
+}
+
 
 def get_plugin_placement(panel_instance):
     position = "bottom-panel-center"
@@ -53,31 +66,59 @@ class TaskbarPlugin(BasePlugin):
         self.button_pool = []
         self.in_use_buttons = {}
 
+        # Merge config
+        if "taskbar_panel" not in self.config:
+            self.config["taskbar_panel"] = {}
+        self.config["taskbar_panel"] = {
+            **DEFAULT_CONFIG["taskbar_panel"],
+            **self.config["taskbar_panel"],
+        }
+
+        # Corrected config merging for the 'taskbar' section
+        user_taskbar_config = self.config.get("taskbar", {})
+        self.config["taskbar"] = {**DEFAULT_CONFIG["taskbar"], **user_taskbar_config}
+
+        self.save_config()
+        self.reload_config()
+
+        self.icon_size = self.config["taskbar"]["icon_size"]
+        self.spacing = self.config["taskbar"]["spacing"]
+        self.show_label = self.config["taskbar"]["show_label"]
+
         self._setup_taskbar()
         self._initialize_button_pool(10)
 
         self.main_widget = (self.scrolled_window, "append")
 
     def set_layer_exclusive(self, exclusive) -> None:
+        exclusive_zone = self.config["taskbar_panel"]["exclusive_zone"]
+        panel_name_from_config = self.config["taskbar_panel"]["panel"]
+
+        # Map the string from the config to the class attribute
+        panel_attr_name = panel_name_from_config.replace("-", "_")
+        panel_instance = getattr(self, panel_attr_name, None)
+
+        if not panel_instance:
+            self.logger.error(f"Panel '{panel_name_from_config}' not found.")
+            return
+
         if exclusive:
             self.update_widget_safely(
-                set_layer_position_exclusive, self.bottom_panel, 96
+                set_layer_position_exclusive, panel_instance, exclusive_zone
             )
         else:
-            self.update_widget_safely(unset_layer_position_exclusive, self.bottom_panel)
+            self.update_widget_safely(unset_layer_position_exclusive, panel_instance)
 
     def _setup_taskbar(self) -> None:
         self.taskbar = Gtk.FlowBox()
+        self.taskbar.set_column_spacing(self.spacing)
+        self.taskbar.set_row_spacing(self.spacing)
         self.taskbar.set_selection_mode(Gtk.SelectionMode.NONE)
         self.logger.debug("Setting up bottom panel.")
         if self.layer_always_exclusive:
             self.layer_shell.set_layer(self.bottom_panel, self.layer_shell.Layer.TOP)
             self.layer_shell.auto_exclusive_zone_enable(self.bottom_panel)
             self.bottom_panel.set_size_request(10, 10)
-
-        self.add_launcher = Gtk.Button()
-        icon = self.utils.icon_exist("tab-new")
-        self.add_launcher.set_icon_name(icon)
 
         output = os.getenv("waypanel")
         output_name = None
@@ -99,7 +140,9 @@ class TaskbarPlugin(BasePlugin):
 
         if geometry:
             monitor_width = geometry["width"]
-            self.scrolled_window.set_size_request(monitor_width, 96)
+            self.scrolled_window.set_size_request(
+                monitor_width, self.config["taskbar_panel"]["exclusive_zone"]
+            )
 
         self.taskbar.set_halign(Gtk.Align.CENTER)
         self.taskbar.set_valign(Gtk.Align.END)
@@ -152,13 +195,15 @@ class TaskbarPlugin(BasePlugin):
     def _initialize_button_pool(self, count):
         for _ in range(count):
             button = Gtk.Button()
-            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=self.spacing)
 
-            button.icon = Gtk.Image()
+            button.icon = Gtk.Image.new_from_icon_name("")
             button.label = Gtk.Label()
+            button.icon.set_pixel_size(self.icon_size)
 
             box.append(button.icon)
-            box.append(button.label)
+            if self.show_label:
+                box.append(button.label)
             button.set_child(box)
             button.add_css_class("taskbar-button")
             self.taskbar.append(button)
@@ -204,7 +249,9 @@ class TaskbarPlugin(BasePlugin):
         )
 
         button.icon.set_from_icon_name(icon_name)
-        button.label.set_label(use_this_title)
+        button.icon.set_pixel_size(self.icon_size)
+        if self.show_label:
+            button.label.set_label(use_this_title)
 
     def refresh_all_buttons(self):
         """
@@ -228,6 +275,8 @@ class TaskbarPlugin(BasePlugin):
                 button = b["button"]
                 self.taskbar.remove(button)
                 self.taskbar.append(button)
+
+        self.logger.info("Taskbar reconciliation completed.")
 
     def Taskbar(self):
         self.logger.debug("Reconciling taskbar views.")
@@ -290,7 +339,9 @@ class TaskbarPlugin(BasePlugin):
         button.set_tooltip_text(title)
         icon_name = self.utils.get_icon(app_id, initial_title, title)
         button.icon.set_from_icon_name(icon_name)
-        button.label.set_label(truncated_title)
+        button.icon.set_pixel_size(self.icon_size)
+        if self.show_label:
+            button.label.set_label(truncated_title)
 
     def add_button_to_taskbar(self, view):
         view_id = view.get("id")
@@ -299,11 +350,13 @@ class TaskbarPlugin(BasePlugin):
         if not button:
             self.logger.info("Button pool exhausted, creating a new button.")
             button = Gtk.Button()
-            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=self.spacing)
             button.icon = Gtk.Image()
             button.label = Gtk.Label()
+            button.icon.set_pixel_size(self.icon_size)
             box.append(button.icon)
-            box.append(button.label)
+            if self.show_label:
+                box.append(button.label)
             button.set_child(box)
             button.add_css_class("taskbar-button")
             self.taskbar.append(button)
