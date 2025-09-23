@@ -27,24 +27,6 @@ if not os.getenv("WAYFIRE_SOCKET"):
 
 DEPS = ["event_manager", "gestures_setup"]
 
-DEFAULT_CONFIG = {
-    "dockbar_content": {
-        "panel": "left-panel",
-        "orientation": "v",
-        "class_style": "dockbar-buttons",
-    },
-    "dockbar_app": {
-        "terminal": {
-            "cmd": "kitty",
-            "icon": "utilities-terminal-symbolic",
-        },
-        "file_manager": {
-            "cmd": "nautilus",
-            "icon": "system-file-manager-symbolic",
-        },
-    },
-}
-
 
 def get_plugin_placement(panel_instance):
     position = "left-panel-center"
@@ -84,15 +66,6 @@ class DockbarPlugin(BasePlugin):
         super().__init__(panel_instance)
 
         self.dockbar = Gtk.Box(spacing=10, orientation=Gtk.Orientation.VERTICAL)
-        self.config_handler.initialize_config_section(
-            "dockbar_content", DEFAULT_CONFIG["dockbar_content"]
-        )
-        self.config_handler.initialize_config_section(
-            "dockbar_app", DEFAULT_CONFIG["dockbar_app"]
-        )
-        self.config_handler.initialize_config_section("dockbar_content", DEFAULT_CONFIG)
-        self.config_handler.initialize_config_section("dockbar_app", DEFAULT_CONFIG)
-
         self.create_gesture = self.plugins["gestures_setup"].create_gesture
         self._subscribe_to_events()
         self.layer_state = False

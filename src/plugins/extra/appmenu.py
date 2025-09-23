@@ -432,7 +432,8 @@ class AppLauncher(BasePlugin):
         """
         adds the selected app to the dockbar configuration in waypanel.toml.
         """
-        wclass = desktop_file.split(".desktop")[0]
+        wclass = os.path.splitext(desktop_file)[0]
+
         new_entry = {
             "cmd": f"gtk-launch {desktop_file}",
             "icon": wclass,
