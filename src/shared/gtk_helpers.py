@@ -4,9 +4,9 @@ import rapidfuzz
 import subprocess
 import os
 from rapidfuzz.fuzz import token_set_ratio
-from src.shared import path_handler
 from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
+from src.shared.command_runner import CommandRunner
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
@@ -22,7 +22,6 @@ class GtkHelpers:
         self.style_css_config = panel_instance.style_css_config
         self.logger = panel_instance.logger
         self.config_data = panel_instance.config_data
-        self.utils = panel_instance.utils
         self.data_helper = DataHelpers()
         self.terminal_emulators = [
             "kitty",
@@ -40,6 +39,7 @@ class GtkHelpers:
             "rxvt",
         ]
         self.config_handler = ConfigHandler("waypanel", panel_instance)
+        self.command = CommandRunner(panel_instance)
 
     def on_css_file_changed(
         self, monitor, file, other_file, event_type: Gio.FileMonitorEvent
@@ -814,7 +814,7 @@ class GtkHelpers:
                     return None
             else:
                 try:
-                    button.connect("clicked", lambda *_: self.utils.run_cmd(cmd))
+                    button.connect("clicked", lambda *_: self.command.run(cmd))
                 except Exception as e:
                     self.logger.error(
                         f"Failed to connect command '{cmd}' to button: {e}",
@@ -855,11 +855,13 @@ class GtkHelpers:
         Returns:
             Optional[str]: The matched desktop file name if found, otherwise None.
         """
-        for deskfile in os.listdir(self.webapps_applications):
+        for deskfile in os.listdir(self.config_handler.webapps_applications):
             if not deskfile.startswith(("chrome", "msedge", "FFPWA-")):
                 continue
 
-            webapp_path = os.path.join(self.webapps_applications, deskfile)
+            webapp_path = os.path.join(
+                self.config_handler.webapps_applications, deskfile
+            )
             if self.search_str_inside_file(webapp_path, initial_title.lower()):
                 return deskfile
 

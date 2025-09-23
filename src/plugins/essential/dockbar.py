@@ -27,6 +27,24 @@ if not os.getenv("WAYFIRE_SOCKET"):
 
 DEPS = ["event_manager", "gestures_setup"]
 
+DEFAULT_CONFIG = {
+    "dockbar_content": {
+        "panel": "left-panel",
+        "orientation": "v",
+        "class_style": "dockbar-buttons",
+    },
+    "dockbar_app": {
+        "terminal": {
+            "cmd": "kitty",
+            "icon": "utilities-terminal-symbolic",
+        },
+        "file_manager": {
+            "cmd": "nautilus",
+            "icon": "system-file-manager-symbolic",
+        },
+    },
+}
+
 
 def get_plugin_placement(panel_instance):
     position = "left-panel-center"
@@ -66,6 +84,9 @@ class DockbarPlugin(BasePlugin):
         super().__init__(panel_instance)
 
         self.dockbar = Gtk.Box(spacing=10, orientation=Gtk.Orientation.VERTICAL)
+        self.config_handler.initialize_config_section("dockbar_content", DEFAULT_CONFIG)
+        self.config_handler.initialize_config_section("dockbar_app", DEFAULT_CONFIG)
+
         self.create_gesture = self.plugins["gestures_setup"].create_gesture
         self._subscribe_to_events()
         self.layer_state = False
@@ -230,7 +251,7 @@ class DockbarPlugin(BasePlugin):
             self.logger.error(f"Failed to save dockbar order: {e}")
 
     def on_left_click(self, cmd):
-        self.utils.run_cmd(cmd)
+        self.cmd.run(cmd)
         self.ipc.scale_toggle()
 
     def on_right_click(self, cmd):
@@ -254,7 +275,7 @@ class DockbarPlugin(BasePlugin):
 
             self.ipc.move_cursor(cursor_x, cursor_y)
             self.ipc.click_button("S-BTN_LEFT", "full")
-            self.utils.run_cmd(cmd)
+            self.cmd.run(cmd)
 
         except Exception as e:
             self.log_error(f"Error while handling right-click action: {e}")
@@ -265,9 +286,9 @@ class DockbarPlugin(BasePlugin):
             ws_x, ws_y = coordinates
             self.ipc.scale_toggle()
             self.ipc.set_workspace(ws_x, ws_y)
-            self.utils.run_cmd(cmd)
+            self.cmd.run(cmd)
         else:
-            self.utils.run_cmd(cmd)
+            self.cmd.run(cmd)
 
     def _setup_dockbar(self):
         dockbar_data = self.config_handler.config_data.get("dockbar_content", {})

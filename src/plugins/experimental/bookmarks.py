@@ -242,7 +242,7 @@ class PopoverBookmarks(BasePlugin):
         if view:
             self.ipc.set_focus(view[0])
         cmd = f"firefox-developer-edition 'ext+container:name={container}&url={url}'"
-        self.ipc.run_cmd(cmd)
+        self.cmd.run(cmd)
         self.popover_bookmarks.popdown()
 
     def open_popover_bookmarks(self, *_):

@@ -1,11 +1,9 @@
 import os
 import importlib
 import toml
-from src.core.utils import Utils
 from gi.repository import GLib, Gtk
 import sys
 import traceback
-from pathlib import Path
 from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
 
@@ -51,7 +49,6 @@ class PluginLoader:
         """
         self.panel_instance = panel_instance
         self.logger = self.panel_instance.logger
-        self.utils = Utils(panel_instance)
         self.plugins = {}
         self.plugins_path = {}
         self.plugins_import = {}
@@ -278,33 +275,6 @@ class PluginLoader:
         """
         Initiates a dynamic, non-disruptive reload of a single plugin, effectively
         reincarnating it with the latest code and configuration from disk.
-
-        This method is the heart of Waypanel's hot-reloading capability,
-        performing a surgical removal and a graceful re-initialization of a plugin
-        without requiring a full application restart. It ensures that changes made
-        to a plugin's source code are instantly reflected in the running application,
-        facilitating rapid development and debugging.
-
-        The reload process is a precise, multi-stage ritual:
-
-        1.  **Decommissioning**: The existing plugin instance is meticulously
-            deactivated and purged from the system's active memory to prevent
-            resource leaks or conflicts.
-
-        2.  **Amnesic Reload**: The plugin's module is reloaded from its source file,
-            effectively wiping any lingering state and ensuring the most recent
-            implementation is loaded into Python's module cache.
-
-        3.  **Metabolic Re-processing**: The reloaded plugin is re-validated and its
-            metadata is re-analyzed by `_process_plugin`, confirming its integrity
-            and gathering its essential parameters (position, order, priority).
-
-        4.  **Resurrection**: The plugin is re-initialized, its widgets are
-            re-instantiated, and it is seamlessly reintegrated into the panel's
-            layout, ready to resume its function with its updated logic.
-
-        Args:
-            plugin_name (str): The symbolic name of the plugin to be resurrected.
         """
         if plugin_name not in self.plugins_path:
             self.logger.error(
@@ -313,6 +283,24 @@ class PluginLoader:
             return
 
         try:
+            # Get the old plugin instance to remove its widget
+            old_plugin_instance = self.plugins.get(plugin_name)
+            if old_plugin_instance:
+                # Assuming the main widget is a public attribute of the plugin class
+                main_widget = getattr(old_plugin_instance, "main_widget", None)
+                if main_widget:
+                    widget_to_remove = (
+                        main_widget[0]
+                        if isinstance(main_widget, tuple)
+                        else main_widget
+                    )
+                    # Remove the widget from its parent
+                    if widget_to_remove and widget_to_remove.get_parent():
+                        widget_to_remove.get_parent().remove(widget_to_remove)
+                        self.logger.info(
+                            f"Removed old widget for plugin: {plugin_name}"
+                        )
+
             # Disable and remove the existing plugin instance
             self.disable_plugin(plugin_name)
             if plugin_name in self.plugins:

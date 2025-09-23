@@ -34,7 +34,6 @@ def run_server_in_background(panel_instance):
     async def _run_server():
         server = AsyncClipboardServer(panel_instance)
         await server.start()
-        print("🖥️ Clipboard server running in background")
         while True:  # Keep alive
             await asyncio.sleep(1)
 

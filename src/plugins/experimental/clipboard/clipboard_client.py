@@ -583,7 +583,7 @@ class ClipboardClient(BasePlugin):
     def run_app_from_launcher(self, x):
         selected_text, filename = x.get_child().MYTEXT
         cmd = "gtk-launch {}".format(filename)
-        self.utils.run_app(cmd)
+        self.cmd.run(cmd)
         self.popover_launcher.popdown()
 
     def open_popover_clipboard(self, *_):

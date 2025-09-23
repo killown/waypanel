@@ -171,14 +171,16 @@ class MullvadPlugin(BasePlugin):
         """Connect to Mullvad VPN asynchronously."""
         self.logger.info("Connecting to Mullvad VPN...")
         await asyncio.create_subprocess_exec("mullvad", "connect")
-        await asyncio.create_subprocess_exec("notify-send", "The VPN is connected now")
+        self.notifier.notify_send(
+            "Mullvad VPN", "The VPN is connected now", "mullvad-vpn"
+        )
 
     async def disconnect_vpn(self):
         """Disconnect from Mullvad VPN asynchronously."""
         self.logger.info("Disconnecting from Mullvad VPN...")
         await asyncio.create_subprocess_exec("mullvad", "disconnect")
-        await asyncio.create_subprocess_exec(
-            "notify-send", "The VPN is disconnected now"
+        self.notifier.notify_send(
+            "Mullvad VPN", "The VPN is disconnected now", "mullvad-vpn"
         )
 
     def check_status(self, action, parameter=None):
@@ -225,7 +227,7 @@ class MullvadPlugin(BasePlugin):
                 return
             relay_choice = random.choice(available)["hostname"]
             msg = f"Changing Mullvad relay to {relay_choice}"
-            await asyncio.create_subprocess_exec("notify-send", msg)
+            self.notifier.notify_send("Mullvad VPN", msg, "mullvad-vpn")
             await asyncio.create_subprocess_exec(
                 "mullvad", "relay", "set", "location", relay_choice
             )
@@ -252,7 +254,7 @@ class MullvadPlugin(BasePlugin):
                 return
             relay_choice = random.choice(available)["hostname"]
             msg = f"Changing Mullvad relay to {relay_choice}"
-            await asyncio.create_subprocess_exec("notify-send", msg)
+            self.notifier.notify_send("Mullvad VPN", msg, "mullvad-vpn")
             await asyncio.create_subprocess_exec(
                 "mullvad", "relay", "set", "location", relay_choice
             )

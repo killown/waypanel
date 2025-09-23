@@ -30,7 +30,6 @@ class Database:
             """)
             conn.commit()
             conn.close()
-            print(f"Database initialized at {db_path}")
         except Exception as e:
             print(f"Error initializing database: {e}")
             raise

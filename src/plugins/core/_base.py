@@ -7,6 +7,7 @@ from src.shared import wayfire_helpers
 from src.shared import gtk_helpers
 from src.shared import data_helpers
 from src.shared import config_handler
+from src.shared import command_runner
 
 import inspect
 
@@ -137,7 +138,6 @@ class BasePlugin:
         - Plugins that don’t need a UI should return `"background"` from `get_plugin_placement()`.
         """
         self.obj = panel_instance
-        self.utils: Any = panel_instance.utils
         self.path_handler: Any = path_handler.PathHandler("waypanel", panel_instance)
         self.notifier: Any = notify_send.Notifier()
         self.wf_helper: Any = wayfire_helpers.WayfireHelpers(
@@ -148,6 +148,7 @@ class BasePlugin:
         self.config_handler: Any = config_handler.ConfigHandler(
             "waypanel", panel_instance
         )
+        self.cmd: Any = command_runner.CommandRunner(panel_instance)
         self.bottom_panel: Any = self.obj.bottom_panel
         self.top_panel: Any = self.obj.top_panel
         self.left_panel: Any = self.obj.left_panel

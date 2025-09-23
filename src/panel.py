@@ -5,8 +5,7 @@ from src.core.create_panel import (
     CreatePanel,
 )
 from src.shared.gtk_helpers import GtkHelpers
-from src.core.utils import Utils
-from src.plugins.utils._plugin_loader import PluginLoader
+from src.core.plugin_loader import PluginLoader
 from src.shared.config_handler import ConfigHandler
 
 
@@ -23,7 +22,6 @@ class Panel(Adw.Application):
         self.panel_instance = None
         self.style_css_config = None
         self.connect("activate", self.on_activate)
-        self.utils = Utils(self)
         self.config_handler = ConfigHandler("waypanel", self)
         self.config_path = self.config_handler._setup_config_paths()
         self.config_data = self.config_handler.load_config()
@@ -222,7 +220,7 @@ class Panel(Adw.Application):
         size = config.get("size", 32)
 
         self.bottom_panel = CreatePanel(
-            self.panel_instance, "BOTTOM", position, exclusive, 0, size, "BottomBar"
+            self.panel_instance, "BOTTOM", position, exclusive, 0, size, "bottom-panel"
         )
 
         if config.get("enabled", True):

@@ -352,7 +352,7 @@ class AppLauncher(BasePlugin):
 
         self.add_recent_app(name)
 
-        self.utils.run_cmd(cmd)
+        self.cmd.run(cmd)
         if self.popover_launcher:
             self.popover_launcher.popdown()
 
@@ -492,7 +492,7 @@ class AppLauncher(BasePlugin):
             for editor in gui_editors:
                 try:
                     cmd = editor + " " + file_path
-                    self.utils.run_cmd(cmd)
+                    self.cmd.run(cmd)
                     popover.popdown()
                     if self.popover_launcher:
                         self.popover_launcher.popdown()
@@ -603,7 +603,7 @@ class AppLauncher(BasePlugin):
         Runs the app when the 'Open' button in the context menu is clicked.
         """
         cmd = "gtk-launch {}".format(desktop_file)
-        self.utils.run_cmd(cmd)
+        self.cmd.run(cmd)
         popover.popdown()
         if self.popover_launcher:
             self.popover_launcher.popdown()

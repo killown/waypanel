@@ -58,6 +58,16 @@ class NetworkMonitorPlugin(BasePlugin):
         # Track popover visibility
         self.popover.connect("notify::visible", self.on_popover_visibility_changed)
 
+        self.network_disconnected = None
+        self.notify_was_sent = False
+
+    def notify_send_network_disconnected(self):
+        if self.network_disconnected and self.notify_was_sent is False:
+            self.notifier.notify_send(
+                "Network Manager", "Network disconnected", ICON_DISCONNECTED
+            )
+            self.notify_was_sent = True
+
     def init_ui(self):
         """Initialize button and popover UI."""
         self.update_icon()
@@ -97,7 +107,11 @@ class NetworkMonitorPlugin(BasePlugin):
         """
         interface = self.get_default_interface()
         if interface and self.check_interface_carrier(interface):
+            self.notify_was_sent = False
+            self.network_disconnected = False
             return True
+        self.network_disconnected = True
+        self.notify_send_network_disconnected()
         return False
 
     def create_scrollable_grid_content(self):

@@ -171,7 +171,7 @@ class ExampleMenuPlugin(BasePlugin):
         """
         self.logger.info(f"Running application: {app_id}")
         try:
-            self.utils.run_cmd(app_id)
+            self.cmd.run(app_id)
         except Exception as e:
             self.log_error(f"Error running application {app_id}: {e}")
 

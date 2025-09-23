@@ -112,6 +112,12 @@
   text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
 }
 
+/* These warnings is comming from margin, find a better way to handle the margin
+* this also will decrease the top panel height
+*(waypanel:37920): Gtk-WARNING **: 11:35:30.873: GtkFlowBox 0x5576359c7210 (flowbox) reported min width -6, but sizes must be >= 0
+*
+*(waypanel:37920): Gtk-WARNING **: 11:35:30.873: GtkFlowBox 0x5576359c7210 (flowbox) reported min height -6, but sizes must be >= 0
+*/
 .box-widgets {
   margin: -3px;
   padding: 1px;
@@ -139,7 +145,7 @@
     2px 2px 5px rgba(0, 0, 0, 0.3);
 }
 
-.BottomBar {
+.bottom-panel {
   background: #00000000;
   background-color: #00000000;
   margin: 1px 11px 1px 1px;
@@ -220,7 +226,6 @@
   box-shadow: var(--shadow-window-controls-hover);
   transform: scale(1.05);
   transition: all 0.2s ease-in-out;
-  cursor: pointer;
 }
 
 .window-controls-close-button {
@@ -391,7 +396,6 @@
   font-size: 12px;
   font-weight: bold;
   color: var(--gruv-fg);
-  text-align: center;
 }
 
 /* System Dashboard Plugin */

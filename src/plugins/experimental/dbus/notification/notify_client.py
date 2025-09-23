@@ -251,7 +251,7 @@ class NotificationPopoverPlugin(BasePlugin):
                 self.utils.open_url(url)
             elif desktop_entry:
                 # Launch the application if an app ID is provided
-                self.utils.run_cmd(desktop_entry)
+                self.cmd.run(desktop_entry)
                 # self.delete_notification(notification["id"], widget)
                 self.popover.popdown()
                 return True  # ready to delete the notification
@@ -266,7 +266,7 @@ class NotificationPopoverPlugin(BasePlugin):
             self.logger.info(f"Executing default action: {action}")
             if action.startswith("app://"):
                 app_id = action.split("://")[1]
-                self.utils.run_app(app_id)
+                self.cmd.run(app_id)
         except Exception as e:
             self.logger.error(f"Error executing default action '{action}': {e}")
 

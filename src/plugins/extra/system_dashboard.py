@@ -231,7 +231,7 @@ class SystemDashboard(BasePlugin):
     def run_app_from_dashboard(self, x):
         selected_text, filename = x.get_child().MYTEXT
         cmd = "gtk-launch {}".format(filename)
-        self.gtk_helper.run_app(cmd)
+        self.cmd.run(cmd)
         self.popover_dashboard.popdown()
 
     def open_popover_dashboard(self, *_):
