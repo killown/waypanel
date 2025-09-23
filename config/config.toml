@@ -1,118 +1,61 @@
-[cmd]
-
 [plugins]
-list = "taskbar clock dockbar event_manager event_handler_decorator gestures_setup top_panel right_panel bottom_panel left_panel soundcard_menu system_monitor next_workspace_with_views volume_scroll bookmarks notes network_manager pacman bluetooth_manager clipboard_client clipboard_server notifier_client notify_server notify_watcher notify_client weather calendar calendar_notes mullvad scale_search scale_rules menu_setup places window_title app_launcher system_dashboard window_controls ai_prompt cripto"
-disabled = "plugin_manager"
-custom_path = "~/.config/waypanel/plugins"
-
-[taskbar]
-orientation = "h"
-class_style = "taskbar-buttons"
-
-[main_panel]
-type = "top"
-
-[dockbar_panel]
-panel = "left-panel-center"
-
-[window_title]
-title_lenght = 50
+list = "wayfire_config on_output_connect scale_exclusive taskbar clock dockbar color_picker move_view_to_empty_workspace screenshot event_manager event_handler_decorator gestures_setup top_panel right_panel bottom_panel left_panel fix_fullscreen_drag_drop swww system_monitor next_workspace_with_views screen_recorder volume_scroll soundcard_selector bookmarks bluetooth notes network_manager pacman clipboard_client clipboard_server wayfire_plugin_details wayfire_plugins notifier_client notify_server notify_watcher notify_client weather calendar mullvad scale_search scale_output_focus scale_fullscreen places window_title system_dashboard window_controls custom_menu appmenu"
+disabled = ""
 
 [clipboard_server]
+log_enabled = false
 max_items = 100
+monitor_interval = 0.5
 
-[auto_fullscreen_app]
-enabled = true
-[[auto_fullscreen_app.items]]
-app_id = "kitty"
-title = "nvim!!"
+[notes]
+notes_icon = "stock_notes"
+notes_icon_delete = "edit-delete"
 
-[[auto_fullscreen_app.items]]
-app_id = "Microsoft-edge"
-title = "Max"
+[clipboard_client]
+popover_min_width = 500
+popover_max_height = 600
+thumbnail_size = 128
+preview_text_length = 50
+image_row_height = 60
+text_row_height = 38
+item_spacing = 5
 
-[plugins.clock]
-position = "right"
-priority = 1
+[taskbar_panel]
+panel = "bottom-panel"
+exclusive_zone = true
+width = 100
 
-[window_title.change_icon_title]
-firefoxdeveloperedition = "firefox-developer-edition"
-gnome-terminal-server = "gnome-terminal"
-codium-insiders-url-handler = "vscodium"
-wlroots = "wayland"
-com = "{'obsproject': {'Studio': 'com.obsproject.Studio'}}"
+[taskbar]
+icon_size = 32
+spacing = 5
+show_label = true
+max_title_lenght = 25
 
-[dockbar.nautilus]
-cmd = "nautilus --new-window"
-icon = "nautilus"
-wclass = "org.gnome.nautilus"
-initial_title = "org.gnome.nautilus"
-desktop_file = "org.gnome.Nautilus.desktop"
-name = "Nautilus"
+[dockbar_content]
+panel = "left-panel"
+orientation = "v"
+class_style = "dockbar-buttons"
 
-[dockbar.firefox-developer-edition]
-cmd = "firefox-developer-edition"
-icon = "firefox-developer-edition"
-wclass = "firefox-developer-edition"
-desktop_file = "firefox-developer-edition"
-name = "firefox-developer-edition"
-initial_title = "firefox-developer-edition"
-
-[dockbar.steam]
-cmd = "mullvad-exclude gtk-launch steam.desktop"
-icon = "steam"
-wclass = "steam"
-desktop_file = "steam.desktop"
-name = "Steam"
-
-[dockbar.hexchat]
-cmd = "hexchat"
-icon = "io.github.Hexchat"
-wclass = "hexchat"
-desktop_file = "io.github.hexchat.desktop"
-name = "Hexchat"
-initial_title = ""
-
-[dockbar.chromium]
-cmd = "chromium"
-icon = "chromium"
-wclass = "chromium"
-desktop_file = "chromium"
-name = "chromium"
-initial_title = "chromium"
-
-[dockbar.thunderbird]
-cmd = "thunderbird"
-icon = "thunderbird"
-wclass = "thunderbird"
-desktop_file = "thunderbird.desktop"
-name = "Thunderbird"
-
-[dockbar.cinny]
-cmd = "cinny"
-icon = "cinny"
-wclass = "cinny"
-desktop_file = "cinny"
-name = "cinny"
-initial_title = "cinny"
+[panel.primary_output]
+output_name = "DP-1"
 
 [panel.bottom]
-enabled = true
+enabled = 1.0
 position = "BOTTOM"
-Exclusive = false
-size = 42
+Exclusive = 0.0
+size = 42.0
 
 [panel.left]
-enabled = true
+enabled = 1.0
 position = "BOTTOM"
-Exclusive = false
-size = 64
+Exclusive = 0.0
+size = 64.0
 
 [panel.right]
-enabled = true
+enabled = 1.0
 position = "BOTTOM"
-Exclusive = false
-size = 42
+Exclusive = 0.0
+size = 42.0
 
 [panel.top]
 menu_icon = "archlinux-logo"
@@ -125,43 +68,25 @@ bluetooth_icon = "bluetooth"
 notes_icon = "stock_notes"
 notes_icon_delete = "delete"
 position = "TOP"
-Exclusive = true
-size = 12
-max_note_lenght = 100
+Exclusive = 1.0
+height = 32.0
+size = 12.0
+max_note_lenght = 100.0
 
-[folders.Home]
-name = "Home"
-path = "/home/user"
-filemanager = "nautilus"
-icon = "folder-home-symbolic"
-
-[folders.Downloads]
-name = "Downloads"
-path = "Downloads"
-filemanager = "nautilus"
-icon = "folder-downloads-symbolic"
-
-[launcher.separator]
-cmd = "NULL"
-icon = "gnome-panel-separator"
+[notify.client]
+max_notifications = 5.0
+body_max_width_chars = 80.0
+notification_icon_size = 64.0
+popover_width = 500.0
+popover_height = 600.0
 
 [notify.server]
 show_messages = true
-popup_position_x = 0
-popup_position_y = 1
-popup_width = 399
-timeout = 10
 
-[notify.client]
-notification_icon_size = 64
-body_max_width_chars = 80
-popover_width = 500
-popover_height = 600
-max_notifications = 5
+[dockbar_app.terminal]
+cmd = "kitty"
+icon = "utilities-terminal-symbolic"
 
-[custom_keybindings]
-binding_terminal = "<ctrl><alt><super><shift> KEY_ENTER"
-command_terminal = "alacritty"
-
-[window_rules]
-rule1 = 'on created if app_id is "testing_window_rule" then start_on_output "DP-1"'
+[dockbar_app.file_manager]
+cmd = "nautilus"
+icon = "system-file-manager-symbolic"
