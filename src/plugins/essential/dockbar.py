@@ -84,7 +84,12 @@ class DockbarPlugin(BasePlugin):
         super().__init__(panel_instance)
 
         self.dockbar = Gtk.Box(spacing=10, orientation=Gtk.Orientation.VERTICAL)
-        # add default config in config.toml if sections not found
+        self.config_handler.initialize_config_section(
+            "dockbar_content", DEFAULT_CONFIG["dockbar_content"]
+        )
+        self.config_handler.initialize_config_section(
+            "dockbar_app", DEFAULT_CONFIG["dockbar_app"]
+        )
         self.config_handler.initialize_config_section("dockbar_content", DEFAULT_CONFIG)
         self.config_handler.initialize_config_section("dockbar_app", DEFAULT_CONFIG)
 
