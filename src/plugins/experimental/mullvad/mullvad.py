@@ -50,7 +50,9 @@ class MullvadPlugin(BasePlugin):
 
     def get_city_code(self):
         """Get the city code from the plugin's config section in config.toml."""
-        plugin_config = self.config.get("plugins", {}).get("mullvad", {})
+        plugin_config = self.config_handler.config_data.get("plugins", {}).get(
+            "mullvad", {}
+        )
         return plugin_config.get("city_code", "sao")
 
     async def _async_init_setup(self):
@@ -58,12 +60,12 @@ class MullvadPlugin(BasePlugin):
         Asynchronous setup for the plugin.
         """
         self.mullvad_version = await asyncio.to_thread(self.get_mullvad_version)
-        self.icon_name = self.utils.set_widget_icon_name(
+        self.icon_name = self.gtk_helper.set_widget_icon_name(
             "mullvad", ["mullvad-vpn-symbolic", "mullvad-tray-9"]
         )
         self.menubutton_mullvad.set_icon_name(self.icon_name)
         self.menubutton_mullvad.add_css_class("top_right_widgets")
-        self.utils.add_cursor_effect(self.menubutton_mullvad)
+        self.gtk_helper.add_cursor_effect(self.menubutton_mullvad)
 
         self.create_menu_model()
 

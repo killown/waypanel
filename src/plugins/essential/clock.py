@@ -5,17 +5,15 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, GLib
 from src.plugins.core._base import BasePlugin
 
-# Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 
-# Load the plugin only after essential plugins are loaded
 DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
-    position = "top-panel-center"  # Clock is usually in the center
-    order = 5  # Middle priority
+    position = "top-panel-center"
+    order = 5
     return position, order
 
 
@@ -49,7 +47,7 @@ class ClockPlugin(BasePlugin):
         self.clock_label = Gtk.Label()
         self.clock_label.add_css_class("clock-label")
         self.clock_button.set_child(self.clock_label)
-        self.utils.add_cursor_effect(self.clock_button)
+        self.gtk_helper.add_cursor_effect(self.clock_button)
 
         # Append clock button to the clock box
         self.update_widget_safely(self.clock_box.append, self.clock_button)
@@ -60,9 +58,7 @@ class ClockPlugin(BasePlugin):
 
     def update_clock(self):
         try:
-            current_time = datetime.datetime.now().strftime(
-                "%d %b %H:%M"
-            )  # Includes date and time
+            current_time = datetime.datetime.now().strftime("%d %b %H:%M")
             self.clock_label.set_label(current_time)
         except Exception as e:
             self.log_error(f"Error updating clock: {e}")
@@ -75,10 +71,9 @@ class ClockPlugin(BasePlugin):
             GLib.timeout_add_seconds(seconds_until_next_minute, update_and_reschedule)
 
         def update_and_reschedule():
-            self.update_clock()  # Update the clock immediately
-            schedule_next_update()  # Schedule the next update
+            self.update_clock()
+            schedule_next_update()
 
-        # Start the update cycle
         schedule_next_update()
 
     def stop_updates(self):

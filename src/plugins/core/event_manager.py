@@ -197,7 +197,6 @@ class EventManagerPlugin(BasePlugin):
         """Handle workspace-related events."""
         if "event" not in msg:
             return
-        # Add workspace-specific logic here
 
     def subscribe_to_event(self, event_type, callback, plugin_name=None) -> None:
         """

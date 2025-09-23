@@ -32,7 +32,7 @@ class NetworkMonitorPlugin(BasePlugin):
         # UI elements
         self.button = Gtk.MenuButton()
         self.popover = Gtk.Popover()
-        self.icon_connected = self.utils.set_widget_icon_name(
+        self.icon_connected = self.gtk_helper.set_widget_icon_name(
             None,
             [
                 "gnome-dev-network-symbolic",
@@ -41,7 +41,7 @@ class NetworkMonitorPlugin(BasePlugin):
                 "network-wired-symbolic",
             ],
         )
-        self.icon_disconnected = self.utils.set_widget_icon_name(
+        self.icon_disconnected = self.gtk_helper.set_widget_icon_name(
             None, ["network-wired-disconnected-symbolic"]
         )
         self.icon = self.icon_disconnected
@@ -63,7 +63,7 @@ class NetworkMonitorPlugin(BasePlugin):
         self.update_icon()
         self.button.set_icon_name(self.icon)
         self.button.set_popover(self.popover)
-        self.utils.add_cursor_effect(self.button)
+        self.gtk_helper.add_cursor_effect(self.button)
         self.popover.set_parent(self.button)
         self.update_icon()
         self.main_widget = (self.button, "append")
@@ -198,18 +198,18 @@ class NetworkMonitorPlugin(BasePlugin):
         config_button = Gtk.Button()
         config_button.add_css_class("network-manager-config-button")
         config_button.set_icon_name(
-            self.utils.set_widget_icon_name(
+            self.gtk_helper.set_widget_icon_name(
                 None,
                 ["gnome-control-center-symbolic", "org.gnome.Settings"],
             )
         )
         config_box.append(config_button)
         config_box.append(config_label)
-        self.utils.add_cursor_effect(config_button)
+        self.gtk_helper.add_cursor_effect(config_button)
         self.plugins["gestures_setup"].create_gesture(
             config_box, 1, self.on_config_clicked
         )
-        self.utils.add_cursor_effect(config_box)
+        self.gtk_helper.add_cursor_effect(config_box)
         main_box.append(config_box)
 
         # Set initial size based on number of devices

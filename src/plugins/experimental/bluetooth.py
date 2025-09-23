@@ -5,7 +5,6 @@ import re
 from gi.repository import GLib, Gtk
 from src.plugins.core._base import BasePlugin
 from src.plugins.core._event_loop import global_loop
-from src.shared.notify_send import Notifier
 
 gi.require_version("Gtk", "4.0")
 
@@ -32,8 +31,7 @@ class BluetoothDashboard(BasePlugin):
         self.popover_dashboard = None
         self.bluetooth_buttons = {}  # Store button references here
         self.menubutton_dashboard = Gtk.Button()
-        self.utils.add_cursor_effect(self.menubutton_dashboard)
-        self.notifier = Notifier()
+        self.gtk_helper.add_cursor_effect(self.menubutton_dashboard)
         self.main_widget = (self.menubutton_dashboard, "append")
 
     async def _get_devices(self):
@@ -84,7 +82,7 @@ class BluetoothDashboard(BasePlugin):
 
     async def create_menu_popover_bluetooth(self):
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        icon_name = self.utils.set_widget_icon_name(
+        icon_name = self.gtk_helper.set_widget_icon_name(
             "bluetooth", ["org.gnome.Settings-bluetooth-symbolic", "bluetooth"]
         )
         self.menubutton_dashboard.set_icon_name(icon_name)
@@ -146,7 +144,7 @@ class BluetoothDashboard(BasePlugin):
                     orientation=Gtk.Orientation.HORIZONTAL, spacing=6
                 )
 
-                self.utils.add_cursor_effect(bluetooth_button)
+                self.gtk_helper.add_cursor_effect(bluetooth_button)
                 bluetooth_button.add_css_class("bluetooth-dashboard-buttons")
 
                 label = Gtk.Label()

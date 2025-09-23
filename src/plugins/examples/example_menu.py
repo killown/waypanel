@@ -92,13 +92,11 @@ class ExampleMenuPlugin(BasePlugin):
 
         # Load custom icon from config if available
         menu_icon = (
-            self.config.get("panel", {})
+            self.config_handler.config_data("panel", {})
             .get("top", {})
             .get("example_icon", "preferences-system-symbolic")
         )
-        self.menubutton_example.set_icon_name(
-            self.utils.get_nearest_icon_name(menu_icon)
-        )
+        self.menubutton_example.set_icon_name(self.gtk_helper.get_icon(menu_icon))
 
         # use append_widget instead
         # obj.top_panel_box_systray.append(self.menubutton_example)
@@ -173,7 +171,7 @@ class ExampleMenuPlugin(BasePlugin):
         """
         self.logger.info(f"Running application: {app_id}")
         try:
-            self.utils.run_app(app_id)
+            self.utils.run_cmd(app_id)
         except Exception as e:
             self.log_error(f"Error running application {app_id}: {e}")
 

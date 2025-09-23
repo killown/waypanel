@@ -31,14 +31,14 @@ class AppLauncher(BasePlugin):
         self.popover_launcher = None
         self.widgets_dict = {}
         self.all_apps = None
-        self.menubutton_launcher = Gtk.Button()
+        self.appmenu = Gtk.Button()
         self.search_get_child = None
         # we need to store the images to avoid memory leak, no need to re-create them every new flowbox update
         self.icons = {}
         self.search_row = []
 
         # Use SQLite for recent apps
-        self.db_path = self.utils.get_xdg_data_home("waypanel", "recent_apps.db")
+        self.db_path = self.path_handler.get_data_path("waypanel", "recent_apps.db")
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
         self._create_recent_apps_table()
@@ -47,7 +47,7 @@ class AppLauncher(BasePlugin):
         # If you want to build a complete right panel (for example), create a plugin called right_panel.py,
         # use set_content to set the entire layout, then in other plugins call the instance
         # self.plugins["right_panel"]. You can then add more widgets through it.
-        self.main_widget = (self.menubutton_launcher, "append")
+        self.main_widget = (self.appmenu, "append")
 
     def _create_recent_apps_table(self):
         """Creates the SQLite table for recent apps if it doesn't exist."""
@@ -65,16 +65,16 @@ class AppLauncher(BasePlugin):
 
     def create_menu_popover_launcher(self):
         """Create the menu button and connect its signal to open the popover launcher."""
-        self.menubutton_launcher.connect("clicked", self.open_popover_launcher)
-        self.menubutton_launcher.add_css_class("app-launcher-menu-button")
+        self.appmenu.connect("clicked", self.open_popover_launcher)
+        self.appmenu.add_css_class("app-launcher-menu-button")
 
-        icon_name = self.utils.set_widget_icon_name(
+        icon_name = self.gtk_helper.set_widget_icon_name(
             "appmenu",
             ["archlinux-logo"],
         )
-        self.menubutton_launcher.set_icon_name(icon_name)
-        self.menubutton_launcher.add_css_class("app-launcher-menu-icon")
-        self.utils.add_cursor_effect(self.menubutton_launcher)
+        self.appmenu.set_icon_name(icon_name)
+        self.appmenu.add_css_class("app-launcher-menu-icon")
+        self.gtk_helper.add_cursor_effect(self.appmenu)
 
     def create_popover_launcher(self, *_):
         """Create and configure the popover launcher."""
@@ -184,7 +184,7 @@ class AppLauncher(BasePlugin):
         self.scrolled_window.set_min_content_width(width)
         self.scrolled_window.set_min_content_height(500)
         if self.popover_launcher:
-            self.popover_launcher.set_parent(self.menubutton_launcher)
+            self.popover_launcher.set_parent(self.appmenu)
             self.popover_launcher.popup()
             self.popover_launcher.add_css_class("app-launcher-popover")
 
@@ -210,10 +210,6 @@ class AppLauncher(BasePlugin):
 
         # Step 3: Fetch all available applications and filter out docked apps
         all_apps = Gio.AppInfo.get_all()
-        dockbar_toml = self.config["dockbar"]
-        dockbar_desktop = {dockbar_toml[i]["desktop_file"] for i in dockbar_toml}
-        all_apps = [app for app in all_apps if app.get_id() not in dockbar_desktop]
-        self.all_apps = all_apps
 
         # Step 4: Get the list of recent apps and reverse it to display the most recent app first
         recent_apps = self.get_recent_apps()
@@ -239,7 +235,10 @@ class AppLauncher(BasePlugin):
             name: The name of the app.
             recent: Whether the app is being added as a recent app.
         """
-        keywords = " ".join(app.get_keywords())
+        if hasattr(app, "get_keywords"):
+            keywords = " ".join(app.get_keywords())
+        else:
+            keywords = ""
         if not name:
             name = app.get_name()
         if name.count(" ") > 2:
@@ -276,7 +275,7 @@ class AppLauncher(BasePlugin):
                 "app-launcher-icon-from-popover"
             )  # Add CSS class for styling
 
-            self.utils.add_cursor_effect(image)
+            self.gtk_helper.add_cursor_effect(image)
 
             # Label
             label = Gtk.Label.new(name)
@@ -351,15 +350,12 @@ class AppLauncher(BasePlugin):
         desktop = desktop.split(".desktop")[0]
         cmd = "gtk-launch {}".format(desktop)
 
-        # Add the app to the recent apps list
         self.add_recent_app(name)
 
-        # Launch the app
         self.utils.run_cmd(cmd)
         if self.popover_launcher:
             self.popover_launcher.popdown()
 
-        # Refresh the flowbox to reflect the updated recent apps list
         self.update_flowbox()
 
     def open_popover_launcher(self, *_):
@@ -369,14 +365,12 @@ class AppLauncher(BasePlugin):
                 self.popover_launcher.popdown()
                 self.popover_is_closed()
             else:
-                # Popover exists but is hidden; refresh flowbox safely
                 self.update_flowbox()
                 self.flowbox.unselect_all()
                 self.popover_launcher.popup()
                 self.searchbar.set_text("")
                 self.popover_is_open()
         else:
-            # Create the popover safely
             self.popover_launcher = self.create_popover_launcher(self.obj)
             self.popover_launcher.popup()
             self.popover_is_open()
@@ -428,37 +422,39 @@ class AppLauncher(BasePlugin):
         def on_child(child):
             if child.is_visible():
                 self.flowbox.select_child(child)
-                return True  # Stop iteration after selecting the first visible child
-            return False  # Continue iteration
+                return True
+            return False
 
-        # Iterate over visible children and select the first one
         self.flowbox.selected_foreach(on_child)  # pyright: ignore
         return False  # Stops the GLib.idle_add loop
 
     def add_to_dockbar(self, button, name, desktop_file, popover):
         """
-        Adds the selected app to the dockbar configuration in waypanel.toml.
+        adds the selected app to the dockbar configuration in waypanel.toml.
         """
         wclass = desktop_file.split(".desktop")[0]
-
         new_entry = {
             "cmd": f"gtk-launch {desktop_file}",
-            "icon": name,
+            "icon": wclass,
             "wclass": wclass,
             "desktop_file": desktop_file,
             "name": name,
             "initial_title": name,
         }
 
-        self.config["dockbar"][desktop_file] = new_entry
-        self.save_config()
+        dockbar_config = self.config_handler.config_data.get("dockbar_app", {})
 
-        # Close the popovers
+        dockbar_config[wclass] = new_entry
+
+        self.config_handler.config_data["dockbar_app"] = dockbar_config
+
+        self.config_handler.save_config()
+        self.config_handler.reload_config()
+
         popover.popdown()
         if self.popover_launcher:
             self.popover_launcher.popdown()
 
-        # Refresh the app launcher's flowbox to reflect the change
         self.update_flowbox()
 
     def open_desktop_file(self, button, desktop_file, popover):
@@ -466,7 +462,6 @@ class AppLauncher(BasePlugin):
         Finds and opens the application's .desktop file. Tries a list of
         fallback editors if xdg-open fails.
         """
-        # Common locations for .desktop files
         common_locations = [
             "/usr/share/applications/",
             os.path.expanduser("~/.local/share/applications/"),
@@ -509,7 +504,6 @@ class AppLauncher(BasePlugin):
             for term in terminal_emulators:
                 for editor in terminal_editors:
                     try:
-                        # Use the `-e` flag to run a command inside the terminal
                         cmd = [term, "-e", editor, file_path]
                         Popen(cmd)
                         popover.popdown()
@@ -519,31 +513,27 @@ class AppLauncher(BasePlugin):
                     except FileNotFoundError:
                         continue  # Try the next terminal editor
 
-        # If no default editor is found, print an error
         print("Error: Could not find an editor to open the .desktop file.")
 
     def on_right_click_popover(self, gesture, n_press, x, y, vbox):
         """
         Handle right-click event to show a popover menu.
         """
-        # Create a popover for the context menu
         popover = Gtk.Popover()
         popover.add_css_class("app-launcher-context-menu")
 
-        # Create a menu box
         menu_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
         menu_box.set_margin_start(10)
         menu_box.set_margin_end(10)
         menu_box.set_margin_top(10)
         menu_box.set_margin_bottom(10)
 
-        # Get the app information from the parent widget
         name, desktop_file, keywords = vbox.MYTEXT
 
-        # Check if the app is already in the dockbar using the full desktop file name as the key
-        is_in_dockbar = desktop_file in self.config.get("dockbar", {})
+        is_in_dockbar = desktop_file in self.config_handler.config_data.get(
+            "dockbar", {}
+        )
 
-        # Always show "Open" and "Open .desktop File"
         open_button = Gtk.Button.new_with_label(f"Open {name}")
         open_button.connect("clicked", self.run_app_from_menu, desktop_file, popover)
         menu_box.append(open_button)
@@ -554,20 +544,17 @@ class AppLauncher(BasePlugin):
         )
         menu_box.append(open_desktop_button)
 
-        # New: Add "Search in GNOME Software" button
         search_button = Gtk.Button.new_with_label("Search in GNOME Software")
         search_button.connect("clicked", self.search_in_gnome_software, name, popover)
         menu_box.append(search_button)
 
         if is_in_dockbar:
-            # If it's in the dockbar, show the "Remove" option
             remove_button = Gtk.Button.new_with_label("Remove from dockbar")
             remove_button.connect(
                 "clicked", self.remove_from_dockbar, desktop_file, popover
             )
             menu_box.append(remove_button)
         else:
-            # If it's not, show the "Add" option
             add_button = Gtk.Button.new_with_label("Add to dockbar")
             add_button.connect(
                 "clicked", self.add_to_dockbar, name, desktop_file, popover
@@ -586,16 +573,14 @@ class AppLauncher(BasePlugin):
         """
         Removes the selected app from the dockbar configuration.
         """
-        if desktop_file in self.config.get("dockbar", {}):
-            del self.config["dockbar"][desktop_file]
-            self.save_config()
+        if desktop_file in self.config_handler.config_data.get("dockbar", {}):
+            del self.config_handler.config_data["dockbar"][desktop_file]
+            self.config_handler.save_config()
 
-        # Close the popovers
         popover.popdown()
         if self.popover_launcher:
             self.popover_launcher.popdown()
 
-        # Refresh the app launcher's flowbox to reflect the change
         self.update_flowbox()
 
     def search_in_gnome_software(self, button, name, popover):
@@ -636,7 +621,6 @@ class AppLauncher(BasePlugin):
         text_to_search = self.searchbar.get_text().strip().lower()
 
         if not isinstance(row, str):
-            # Get the metadata stored on the widget
             name, desktop, keywords = row.get_child().MYTEXT
             combined_text = f"{name} {desktop} {keywords}".lower()
 

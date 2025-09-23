@@ -8,7 +8,6 @@ from gi.repository import Gio, Gtk, GLib, Pango
 from src.plugins.core._base import BasePlugin
 
 
-# set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 
@@ -22,7 +21,6 @@ def get_plugin_placement(panel_instance):
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
         notes = MenuNotes(panel_instance)
-        notes.create_popover_menu_notes()
         return notes
 
 
@@ -91,13 +89,44 @@ class MenuNotes(BasePlugin):
         self.row_content = None
         self.listbox = None
 
-    def delete_button_icon(self):
-        return (
-            self.config.get("panel", {})
-            .get("top", {})
-            .get("notes_icon_delete", "edit-delete")
+        # Define a default configuration specifically for the notes plugin
+        self.notes_default_config = {
+            "notes": {
+                "notes_icon": "stock_notes",
+                "notes_icon_delete": "edit-delete",
+            }
+        }
+
+        # Ensure the required configuration section exists with default values
+        self.config_handler.initialize_config_section(
+            "notes", self.notes_default_config
         )
-        return
+
+        # Create the notes button in the panel
+        self.layer_shell.set_keyboard_mode(
+            self.obj.top_panel, self.layer_shell.KeyboardMode.ON_DEMAND
+        )
+        self.menubutton_notes = Gtk.Button.new()
+        self.main_widget = (self.menubutton_notes, "append")
+        self.menubutton_notes.connect("clicked", self.open_popover_notes)
+        self.gtk_helper.add_cursor_effect(self.menubutton_notes)
+
+        self.menubutton_notes.set_icon_name(
+            self.gtk_helper.set_widget_icon_name(
+                "notes",
+                [
+                    "accessories-notes-symbolic",
+                    "xapp-annotations-text-symbolic",
+                    "accessories-notes",
+                ],
+            )
+        )
+
+    def delete_button_icon(self):
+        # Now, retrieve the icon from the dedicated notes section
+        return self.config_handler.config_data.get("notes", {}).get(
+            "notes_icon_delete", "edit-delete"
+        )
 
     def clear_notes(self, *_):
         """Handle clearing all notes with a GTK4 confirmation dialog"""
@@ -142,7 +171,7 @@ class MenuNotes(BasePlugin):
         dynamic_height = min(notes_count * line_height + padding, 600)
         self.scrolled_window.set_min_content_height(dynamic_height)
 
-        button_icon = self.utils.set_widget_icon_name(
+        button_icon = self.gtk_helper.set_widget_icon_name(
             None, [self.delete_button_icon(), "edit-delete"]
         )
         for note_id, content in notes:
@@ -155,7 +184,7 @@ class MenuNotes(BasePlugin):
             delete_button = Gtk.Button()
             delete_button.add_css_class("notes_button_delete")
             delete_button.set_icon_name(button_icon)
-            self.utils.add_cursor_effect(delete_button)
+            self.gtk_helper.add_cursor_effect(delete_button)
 
             delete_button.connect("clicked", self.on_delete_note)
 
@@ -196,27 +225,6 @@ class MenuNotes(BasePlugin):
             self.listbox.append(row_hbox)  # pyright: ignore
             self.find_text_using_button[delete_button] = row_hbox
 
-    def create_popover_menu_notes(self):
-        """Create the notes button in the panel"""
-        self.layer_shell.set_keyboard_mode(
-            self.obj.top_panel, self.layer_shell.KeyboardMode.ON_DEMAND
-        )
-        self.menubutton_notes = Gtk.Button.new()
-        self.main_widget = (self.menubutton_notes, "append")
-        self.menubutton_notes.connect("clicked", self.open_popover_notes)
-        self.utils.add_cursor_effect(self.menubutton_notes)
-
-        self.menubutton_notes.set_icon_name(
-            self.utils.set_widget_icon_name(
-                "notes",
-                [
-                    "accessories-notes-symbolic",
-                    "xapp-annotations-text-symbolic",
-                    "accessories-notes",
-                ],
-            )
-        )
-
     def create_popover_notes(self):
         """Create the notes popover content"""
         self.popover_notes = Gtk.Popover.new()
@@ -256,13 +264,13 @@ class MenuNotes(BasePlugin):
         self.button_add = Gtk.Button.new_with_label("Add")
         self.button_add.add_css_class("notes_button_add")
         self.button_add.connect("clicked", self.on_add_note)
-        self.utils.add_cursor_effect(self.button_add)
+        self.gtk_helper.add_cursor_effect(self.button_add)
         buttons_box.append(self.button_add)
 
         self.button_clear = Gtk.Button.new_with_label("Clear All")
         self.button_clear.add_css_class("notes_button_clear")
         self.button_clear.connect("clicked", self.clear_notes)
-        self.utils.add_cursor_effect(self.button_clear)
+        self.gtk_helper.add_cursor_effect(self.button_clear)
         buttons_box.append(self.button_clear)
 
         self.main_box.append(buttons_box)
@@ -311,7 +319,7 @@ class MenuNotes(BasePlugin):
             return
 
         row = self.find_text_using_button[button]
-        note_id = row.note_id  # Get the ID stored on the row
+        note_id = row.note_id
 
         if note_id:
             asyncio.run(self.async_delete_note(note_id))
@@ -352,7 +360,7 @@ class MenuNotes(BasePlugin):
 
     def on_filter_invalidate(self, row):
         search_text = self.searchbar.get_text().strip().lower()
-        if not self.utils.validate_string(row, "row from on_filter_invalidate"):
+        if not self.data_helper.validate_string(row, "row from on_filter_invalidate"):
             row_text = row.get_child().MYTEXT.lower()
             return search_text in row_text
         return False

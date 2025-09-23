@@ -59,7 +59,7 @@ class RecordingPlugin(BasePlugin):
     def create_widget(self):
         button = Gtk.Button()
         button.set_icon_name(
-            self.utils.set_widget_icon_name(
+            self.gtk_helper.set_widget_icon_name(
                 "screen_recorder",
                 [
                     "deepin-screen-recorder-symbolic",
@@ -69,7 +69,7 @@ class RecordingPlugin(BasePlugin):
             )
         )
         button.set_tooltip_text("Start/Stop Screen Recording")
-        self.utils.add_cursor_effect(button)
+        self.gtk_helper.add_cursor_effect(button)
         button.connect("clicked", self.open_popover)
         return button
 
@@ -111,7 +111,7 @@ class RecordingPlugin(BasePlugin):
             "clicked", lambda x: global_loop.create_task(self.on_record_all_clicked())
         )
         record_all_btn.add_css_class("record-all-button")
-        self.utils.add_cursor_effect(record_all_btn)
+        self.gtk_helper.add_cursor_effect(record_all_btn)
         main_box.append(record_all_btn)
 
         separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
@@ -126,7 +126,7 @@ class RecordingPlugin(BasePlugin):
                 ),
             )
             btn.add_css_class("record-output-button")
-            self.utils.add_cursor_effect(btn)
+            self.gtk_helper.add_cursor_effect(btn)
             main_box.append(btn)
 
         separator2 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
@@ -137,7 +137,7 @@ class RecordingPlugin(BasePlugin):
             "clicked", lambda x: global_loop.create_task(self.on_record_slurp_clicked())
         )
         slurp_btn.add_css_class("record-slurp-button")
-        self.utils.add_cursor_effect(slurp_btn)
+        self.gtk_helper.add_cursor_effect(slurp_btn)
         main_box.append(slurp_btn)
 
         audio_switch_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
@@ -160,7 +160,7 @@ class RecordingPlugin(BasePlugin):
             lambda x: global_loop.create_task(self.on_stop_and_join_clicked()),
         )
         stop_join_btn.add_css_class("stop-join-button")
-        self.utils.add_cursor_effect(stop_join_btn)
+        self.gtk_helper.add_cursor_effect(stop_join_btn)
         main_box.append(stop_join_btn)
 
         self.popover.set_child(main_box)
@@ -206,7 +206,7 @@ class RecordingPlugin(BasePlugin):
 
         self.is_recording = True
         self.button.set_icon_name(
-            self.utils.set_widget_icon_name(
+            self.gtk_helper.set_widget_icon_name(
                 "screen_recorder",
                 [
                     "simplescreenrecorder-recording",
@@ -247,7 +247,7 @@ class RecordingPlugin(BasePlugin):
             self.record_processes.append(proc)
             self.is_recording = True
             self.button.set_icon_name(
-                self.utils.set_widget_icon_name(
+                self.gtk_helper.set_widget_icon_name(
                     "screen_recorder",
                     ["simplescreenrecorder-recording", "media-playback-stop-symbolic"],
                 )
@@ -305,7 +305,7 @@ class RecordingPlugin(BasePlugin):
             self.record_processes.append(proc)
             self.is_recording = True
             self.button.set_icon_name(
-                self.utils.set_widget_icon_name(
+                self.gtk_helper.set_widget_icon_name(
                     "screen_recorder",
                     ["simplescreenrecorder-recording", "media-record"],
                 )
@@ -363,7 +363,7 @@ class RecordingPlugin(BasePlugin):
         self.record_processes.clear()
         self.is_recording = False
         self.button.set_icon_name(
-            self.utils.set_widget_icon_name(
+            self.gtk_helper.set_widget_icon_name(
                 "screen_recorder",
                 [
                     "deepin-screen-recorder-symbolic",
@@ -460,22 +460,24 @@ class RecordingPlugin(BasePlugin):
 
             if proc.returncode == 0:
                 self.logger.info(f"ffmpeg finished successfully: {out_path}")
-                self.utils.notify_send(
-                    "Recording Complete", f"Videos joined: {out_path}"
+                self.notifier.notify_send(
+                    "Recording Complete", f"Videos joined: {out_path}", "recording"
                 )
             else:
                 self.logger.error(
                     f"ffmpeg failed with return code {proc.returncode}: {stderr}"
                 )
-                self.utils.notify_send(
-                    "Join Failed", f"ffmpeg error: {stderr[:100]}..."
+                self.notifier.notify_send(
+                    "Join Failed", f"ffmpeg error: {stderr[:100]}...", "recording"
                 )
         except FileNotFoundError:
             self.logger.error("ffmpeg not found. Please install ffmpeg.")
-            self.utils.notify_send("Join Failed", "ffmpeg not installed.")
+            self.notifier.notify_send(
+                "Join Failed", "ffmpeg not installed.", "recording"
+            )
         except Exception as e:
             self.logger.error(f"Unexpected error during ffmpeg: {e}")
-            self.utils.notify_send("Join Failed", f"Error: {str(e)}")
+            self.notifier.notify_send("Join Failed", f"Error: {str(e)}", "recording")
 
     def popover_is_closed(self, *_):
         pass

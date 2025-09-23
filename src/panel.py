@@ -1,14 +1,13 @@
-import os
 import sys
-import toml
 from gi.repository import Adw, Gio, GLib
 from src.core.compositor.ipc import IPC
-from typing import Dict, Any
 from src.core.create_panel import (
     CreatePanel,
 )
+from src.shared.gtk_helpers import GtkHelpers
 from src.core.utils import Utils
 from src.plugins.utils._plugin_loader import PluginLoader
+from src.shared.config_handler import ConfigHandler
 
 
 class Panel(Adw.Application):
@@ -22,69 +21,24 @@ class Panel(Adw.Application):
         """
         self.logger = logger
         self.panel_instance = None
+        self.style_css_config = None
         self.connect("activate", self.on_activate)
         self.utils = Utils(self)
-        self._setup_config_paths()
-        self.plugin_loader = PluginLoader(self, logger, self.config_path)
+        self.config_handler = ConfigHandler("waypanel", self)
+        self.config_path = self.config_handler._setup_config_paths()
+        self.config_data = self.config_handler.load_config()
+        self.plugin_loader = PluginLoader(self)
         self.plugins = self.plugin_loader.plugins
         self.ipc = IPC()
         self.ipc_server = ipc_server
         self.display = None
         self.args = sys.argv
-        self.css_monitor = None
-        self.update_widget = self.utils.update_widget
-
-        outputs = self.ipc.list_outputs()
-        if outputs:
-            self.first_output = outputs[0]
-            if "name" in self.first_output:
-                self.first_output_name = self.first_output["name"]
-        else:
-            self.first_output_name = None
-
-        self.default_config = {
-            "panel": {
-                "primary_output": {"output_name": self.first_output_name},
-                "bottom": {
-                    "enabled": 1.0,
-                    "position": "BOTTOM",
-                    "Exclusive": 0.0,
-                    "size": 42.0,
-                },
-                "left": {
-                    "enabled": 1.0,
-                    "position": "BOTTOM",
-                    "Exclusive": 0.0,
-                    "size": 64.0,
-                },
-                "right": {
-                    "enabled": 1.0,
-                    "position": "BOTTOM",
-                    "Exclusive": 0.0,
-                    "size": 42.0,
-                },
-                "top": {
-                    "menu_icon": "archlinux-logo",
-                    "folder_icon": "folder",
-                    "bookmarks_icon": "internet-web-browser",
-                    "clipboard_icon": "edit-paste",
-                    "soundcard_icon": "audio-volume-high",
-                    "system_icon": "system-shutdown",
-                    "bluetooth_icon": "bluetooth",
-                    "notes_icon": "stock_notes",
-                    "notes_icon_delete": "delete",
-                    "position": "TOP",
-                    "Exclusive": 1.0,
-                    "height": 32.0,
-                    "size": 12.0,
-                    "max_note_lenght": 100.0,
-                },
-            }
-        }
-
-        self.config = self.load_config()
-
+        self.gtk_helpers = GtkHelpers(self)
+        self.update_widget = self.gtk_helpers.update_widget
         self._set_monitor_dimensions()
+
+        # the config watcher will be started in _start_watcher
+        self.config_handler._start_watcher()
 
     def set_panel_instance(self, panel_instance):
         self.panel_instance = panel_instance
@@ -106,7 +60,9 @@ class Panel(Adw.Application):
         monitor = outputs[0]
 
         primary_output_name = (
-            self.config.get("panel", {}).get("primary_output", {}).get("output_name")
+            self.config_data.get("panel", {})
+            .get("primary_output", {})
+            .get("output_name")
         )
 
         if primary_output_name:
@@ -157,8 +113,8 @@ class Panel(Adw.Application):
             )
 
         # Override dimensions if specified in the configuration
-        if "monitor" in self.config:
-            config_monitor = self.config["monitor"]
+        if "monitor" in self.config_data:
+            config_monitor = self.config_data["monitor"]
             self.monitor_width = config_monitor.get("width", self.monitor_width)
             self.monitor_height = config_monitor.get("height", self.monitor_height)
             self.monitor_name = config_monitor.get("name", monitor.get("name"))
@@ -166,15 +122,6 @@ class Panel(Adw.Application):
         self.logger.info(
             f"Monitor dimensions set: {self.monitor_width}x{self.monitor_height}"
         )
-
-    def _setup_config_paths(self):
-        """Set up configuration paths based on the user's home directory."""
-        config_paths = self.utils.setup_config_paths()
-        self.home = config_paths["home"]
-        self.waypanel_cfg = os.path.join(self.home, ".config/waypanel/config.toml")
-        self.config_path = config_paths["config_path"]
-        self.style_css_config = config_paths["style_css_config"]
-        self.cache_folder = config_paths["cache_folder"]
 
     def on_activate(self, *__):
         """
@@ -198,89 +145,12 @@ class Panel(Adw.Application):
         GLib.idle_add(self.plugin_loader.load_plugins)
         self.logger.info("Plugins loading initiated.")
 
-    def save_config(self):
-        """
-        Save the current configuration back to the config.toml file.
-        """
-        try:
-            with open(self.waypanel_cfg, "w") as f:
-                toml.dump(self.config, f)
-            self.logger.info("Configuration saved successfully.")
-        except Exception as e:
-            self.logger.error(
-                error=e,
-                message="Failed to save configuration to file.",
-                level="error",
-            )
-
-    def reload_config(self):
-        """
-        Reload the configuration from the config.toml file and propagate changes to plugins.
-        """
-        try:
-            # Reload the configuration
-            new_config = self.load_config()
-
-            # Update the current configuration
-            self.config.update(new_config)
-
-            # Notify all plugins about the configuration change
-            for plugin_name, plugin_instance in self.plugins.items():
-                if hasattr(plugin_instance, "on_config_reloaded"):
-                    try:
-                        plugin_instance.on_config_reloaded(new_config)
-                    except Exception as e:
-                        self.logger.error(
-                            f"Error notifying plugin '{plugin_name}' of config reload: {e}"
-                        )
-
-            self.logger.info("Configuration reloaded successfully.")
-        except Exception as e:
-            self.logger.error(f"Error reloading configuration: {e}")
-
-    def load_config(self) -> Dict[str, Any]:
-        """Load and cache the panel configuration from the config.toml file,
-        merging with defaults if needed.
-
-        Returns:
-            dict: The combined configuration data.
-        """
-        config_from_file = {}
-        try:
-            with open(self.waypanel_cfg, "r") as f:
-                config_from_file = toml.load(f)
-            self.logger.debug("Existing config.toml loaded.")
-        except FileNotFoundError:
-            self.logger.info("config.toml not found. Creating with default settings.")
-        except Exception as e:
-            self.logger.error(f"Error loading configuration: {e}. Using defaults.")
-
-        def deep_merge(a: dict, b: dict, path=None) -> dict:
-            if path is None:
-                path = []
-            for key in b:
-                if key in a and isinstance(a[key], dict) and isinstance(b[key], dict):
-                    deep_merge(a[key], b[key], path + [str(key)])
-                else:
-                    a[key] = b[key]
-            return a
-
-        combined_config = deep_merge(self.default_config.copy(), config_from_file)
-
-        os.makedirs(os.path.dirname(self.waypanel_cfg), exist_ok=True)
-        with open(self.waypanel_cfg, "w") as f:
-            toml.dump(combined_config, f)
-        self.logger.info("Merged configuration saved to config.toml.")
-
-        self._cached_config = combined_config
-        return self._cached_config
-
     def do_activate(self):
-        self.utils.load_css_from_file()
-        self.css_monitor = Gio.File.new_for_path(self.style_css_config).monitor(
-            Gio.FileMonitorFlags.NONE, None
-        )
-        self.css_monitor.connect("changed", self.utils.on_css_file_changed)
+        self.gtk_helpers.load_css_from_file()
+        self.css_monitor = Gio.File.new_for_path(
+            self.config_handler.style_css_config
+        ).monitor(Gio.FileMonitorFlags.NONE, None)
+        self.css_monitor.connect("changed", self.gtk_helpers.on_css_file_changed)
         self.setup_panels()
 
     def setup_panels(self):
@@ -291,7 +161,7 @@ class Panel(Adw.Application):
         self.logger.info("Setting up panels...")
 
         # Load panel configuration from the TOML file
-        panel_toml = self.config.get("panel", {})
+        panel_toml = self.config_data.get("panel", {})
 
         # Iterate through each panel type and configure it
         for panel_type, config in panel_toml.items():

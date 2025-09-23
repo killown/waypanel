@@ -63,13 +63,17 @@ class NotificationDaemon(ServiceInterface):
         self.last_modified = None
         self.db = Database()
         self.ui = UI(panel_instance)
-        self.config = self.ui.config
         self.logger = self.ui.logger
+        self.config_handler = panel_instance.config_handler
         self.timeout = (
-            self.config.get("notify", {}).get("server", {}).get("timeout", 10)
+            self.config_handler.config_data.get("notify", {})
+            .get("server", {})
+            .get("timeout", 10)
         )
         self.show_messages = (
-            self.config.get("notify", {}).get("server", {}).get("show_messages", True)
+            self.config_handler.config_data.get("notify", {})
+            .get("server", {})
+            .get("show_messages", True)
         )
 
         # Initialize the database

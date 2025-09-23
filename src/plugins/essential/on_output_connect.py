@@ -29,7 +29,12 @@ class PanelOutputMoverPlugin(BasePlugin):
         self.panel = panel_instance
         self.current_output_name = None
         self._debounce_timeout_id = None
-        self.primary_output_name = self.config.get("panel", {}).get("primary_output")
+        self.current_output_name = None
+        self.primary_output_name = (
+            self.config_handler.config_data.get("panel", {})
+            .get("primary_output")
+            .get("output_name")
+        )
         if self.primary_output_name:
             self.logger.info(
                 f"Primary output preference set to: {self.primary_output_name}"
@@ -65,9 +70,9 @@ class PanelOutputMoverPlugin(BasePlugin):
         self.current_output_name = self.primary_output_name
 
         if not default_output_enabled:
-            self.current_output_name = [i for i in outputs if i["source"] != "dpms"][0][
-                "name"
-            ]
+            self.current_output = [i for i in outputs if i["source"] != "dpms"][0]
+            if self.current_output:
+                self.current_output_name = self.current_output["name"]
 
         if self._debounce_timeout_id:
             GLib.source_remove(self._debounce_timeout_id)
@@ -76,7 +81,7 @@ class PanelOutputMoverPlugin(BasePlugin):
             0
         ]
         # panel wont move to the current output if the current workspace has any fullscreen view
-        if not self.utils.has_output_fullscreen_view(current_output["output-id"]):
+        if not self.wf_helper.has_output_fullscreen_view(current_output["output-id"]):
             self._debounce_timeout_id = GLib.timeout_add(100, self._debounced_update)
 
     def _debounced_update(self):
@@ -110,35 +115,55 @@ class PanelOutputMoverPlugin(BasePlugin):
         geo = output["geometry"]
         output_width = geo["width"]
         user_defined_height_top_panel = (
-            self.config.get("panel", {}).get("top", {}).get("height", 32)
+            self.config_handler.config_data("panel", {})
+            .get("top", {})
+            .get("height", 32)
         )
 
         user_defined_width_top_panel = (
-            self.config.get("panel", {}).get("top", {}).get("width", output_width)
+            self.config_handler.config_data("panel", {})
+            .get("top", {})
+            .get("width", output_width)
         )
         user_defined_height_left_panel = (
-            self.config.get("panel", {}).get("left", {}).get("height", 32)
+            self.config_handler.config_data("panel", {})
+            .get("left", {})
+            .get("height", 32)
         )
         user_defined_width_left_panel = (
-            self.config.get("panel", {}).get("left", {}).get("width", 32)
+            self.config_handler.config_data("panel", {})
+            .get("left", {})
+            .get("width", 32)
         )
         user_defined_height_right_panel = (
-            self.config.get("panel", {}).get("right", {}).get("height", 32)
+            self.config_handler.config_data("panel", {})
+            .get("right", {})
+            .get("height", 32)
         )
         user_defined_width_right_panel = (
-            self.config.get("panel", {}).get("right", {}).get("width", 32)
+            self.config_handler.config_data("panel", {})
+            .get("right", {})
+            .get("width", 32)
         )
         user_defined_height_bottom_panel = (
-            self.config.get("panel", {}).get("bottom", {}).get("height", 32)
+            self.config_handler.config_data("panel", {})
+            .get("bottom", {})
+            .get("height", 32)
         )
         user_defined_width_bottom_panel = (
-            self.config.get("panel", {}).get("bottom", {}).get("width", output_width)
+            self.config_handler.config_data("panel", {})
+            .get("bottom", {})
+            .get("width", output_width)
         )
         user_defined_height_bottom_panel = (
-            self.config.get("panel", {}).get("bottom", {}).get("height", 32)
+            self.config_handler.config_data("panel", {})
+            .get("bottom", {})
+            .get("height", 32)
         )
         user_defined_width_bottom_panel = (
-            self.config.get("panel", {}).get("bottom", {}).get("width", output_width)
+            self.config_handler.config_data("panel", {})
+            .get("bottom", {})
+            .get("width", output_width)
         )
 
         if monitor:

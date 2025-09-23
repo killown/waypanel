@@ -5,6 +5,9 @@ from src.core.utils import Utils
 from gi.repository import GLib, Gtk
 import sys
 import traceback
+from pathlib import Path
+from src.shared.data_helpers import DataHelpers
+from src.shared.config_handler import ConfigHandler
 
 
 class PluginLoader:
@@ -37,7 +40,7 @@ class PluginLoader:
     ```
     """
 
-    def __init__(self, panel_instance, logger, config_path):
+    def __init__(self, panel_instance):
         """
         Initialize the PluginLoader with core components.
 
@@ -47,8 +50,7 @@ class PluginLoader:
             config_path: Path to `config.toml` for plugin enable/disable settings.
         """
         self.panel_instance = panel_instance
-        self.logger = logger
-        self.config_path = config_path
+        self.logger = self.panel_instance.logger
         self.utils = Utils(panel_instance)
         self.plugins = {}
         self.plugins_path = {}
@@ -56,6 +58,9 @@ class PluginLoader:
         self.plugin_containers = {}
         self.plugins_dir = self.plugins_base_path()
         self.position_mapping = {}
+        self.data_helper = DataHelpers()
+        self.config_handler = ConfigHandler("waypanel", panel_instance)
+        self.config_path = self.config_handler.config_path
         self.user_plugins_dir = os.path.join(
             self.get_real_user_home(), ".local", "share", "waypanel", "plugins"
         )
@@ -228,35 +233,20 @@ class PluginLoader:
     def plugins_base_path(self):
         """
         Determines the base path where plugins are located.
-
-        This function attempts to locate the plugins directory by first checking for an installed
-        'waypanel' module. If that fails, it falls back to a series of common development
-        directory structures. This ensures the application can find plugins whether it's
-        installed system-wide or being run directly from a development repository.
-
-        Workflow:
-            1. **Primary Check**: Tries to find the installed `waypanel` module using `importlib`. If the module's path is found, it returns the `plugins` directory within that path.
-            2. **Development Fallbacks**: If the primary check fails (e.g., `waypanel` is not installed as a package), it iterates through a list of common relative paths that are typical for a Git repository.
-            3. **Logging**: Logs appropriate warnings when a fallback path is used and a final error if no valid path is found.
-
-        Returns:
-            str: The absolute path to the plugins directory.
-
-        Raises:
-            FileNotFoundError: If no valid plugins directory can be located after all attempts.
         """
         try:
             waypanel_module_spec = importlib.util.find_spec("waypanel")
-            if waypanel_module_spec is None:
-                raise ImportError("The 'waypanel' module could not be found.")
 
-            waypanel_module_path = waypanel_module_spec.origin
-            while os.path.basename(waypanel_module_path) != "waypanel":
-                waypanel_module_path = os.path.dirname(waypanel_module_path)
+            # CRITICAL FIX: Check if the origin is None before proceeding.
+            # If a module is not from a file (e.g., built-in), its origin will be None.
+            if waypanel_module_spec and waypanel_module_spec.origin:
+                waypanel_module_path = waypanel_module_spec.origin
+                while os.path.basename(waypanel_module_path) != "waypanel":
+                    waypanel_module_path = os.path.dirname(waypanel_module_path)
 
-            plugin_path = os.path.join(waypanel_module_path, "plugins")
-            if os.path.exists(plugin_path):
-                return plugin_path
+                plugin_path = os.path.join(waypanel_module_path, "plugins")
+                if os.path.exists(plugin_path):
+                    return plugin_path
 
         except ImportError:
             self.logger.debug(
@@ -386,15 +376,14 @@ class PluginLoader:
         Returns:
             Tuple[Dict, List]: (config_dict, disabled_plugins_list)
         """
-        waypanel_config_path = os.path.join(self.config_path, "config.toml")
         try:
-            if not os.path.exists(waypanel_config_path):
+            if not os.path.exists(self.config_handler.config_path):
                 self.logger.error(
-                    f"Configuration file not found at '{waypanel_config_path}'."
+                    f"Configuration file not found at '{self.config_handler.config_path}'."
                 )
                 return None, None
 
-            with open(waypanel_config_path, "r") as f:
+            with open(self.config_handler.config_file, "r") as f:
                 config = toml.load(f)
 
             # Ensure the [plugins] section exists
@@ -479,7 +468,7 @@ class PluginLoader:
             order = 0
             if position_result != "background":
                 if position_result:
-                    if self.utils.validate_tuple(
+                    if self.data_helper.validate_tuple(
                         position_result, name="position_result"
                     ):
                         if len(position_result) == 3:
@@ -524,7 +513,9 @@ class PluginLoader:
             3. **File Dump**: Uses the `toml` library to write the entire `config`
                dictionary to the specified file, overwriting the previous content.
         """
-        waypanel_config_path = os.path.join(self.config_path, "config.toml")
+        waypanel_config_path = os.path.join(
+            self.config_handler.config_path, "config.toml"
+        )
 
         # Update the in-memory config object
         config["plugins"]["list"] = " ".join(valid_plugins)
@@ -545,15 +536,15 @@ class PluginLoader:
         Returns:
             bool: True if the list is valid, False otherwise.
         """
-        if not self.utils.validate_list(deps_list, "deps_list"):
+        if not self.data_helper.validate_list(deps_list, "deps_list"):
             return False
 
         for index, dep in enumerate(deps_list):
-            if not self.utils.validate_string(
+            if not self.data_helper.validate_string(
                 dep, "[dep] item from enumerate(deps_list)"
             ):
                 return False
-            if not self.utils.validate_string(dep):
+            if not self.data_helper.validate_string(dep):
                 return False
 
         return True

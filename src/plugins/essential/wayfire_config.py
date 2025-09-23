@@ -139,9 +139,10 @@ class WayfireConfigWatcherPlugin(BasePlugin):
                     "This update method is slower, try removing any invalid options from wayfire.toml"
                 )
                 await asyncio.to_thread(
-                    self.utils.notify_send,
+                    self.notifier.notify_send,
                     "Wayfire Config Plugin",
                     f"Batch update failed, falling back to individual updates: {batch_e}",
+                    "config",
                 )
                 for key, value in batch_updates.items():
                     try:

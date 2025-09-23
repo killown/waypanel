@@ -62,7 +62,9 @@ class SoundCardDashboard(BasePlugin):
         return sc.all_microphones()
 
     def get_soundcard_list_names(self):
-        blacklist = self.config.get("soundcard", {}).get("blacklist", [])
+        blacklist = self.config_handler.config_data.get("soundcard", {}).get(
+            "blacklist", []
+        )
         soundcard_list = []
 
         # Add default soundcard if it's not blacklisted
@@ -80,7 +82,9 @@ class SoundCardDashboard(BasePlugin):
 
     def get_mic_list_names(self):
         mic_list = []
-        blacklist = self.config.get("microphone", {}).get("blacklist", [])
+        blacklist = self.config_handler.config_data.get("microphone", {}).get(
+            "blacklist", []
+        )
 
         default_mic = self.get_default_mic_name()
         mic_list_names = [mic.name for mic in self.get_mic_list()]
@@ -137,7 +141,7 @@ class SoundCardDashboard(BasePlugin):
     def create_menu_popover_soundcard(self):
         self.menubutton_dashboard = Gtk.Button()
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        icon_name = self.utils.set_widget_icon_name(
+        icon_name = self.gtk_helper.set_widget_icon_name(
             "soundcard",
             [
                 "audio-volume-high-symbolic",
@@ -148,7 +152,7 @@ class SoundCardDashboard(BasePlugin):
         )
         self.menubutton_dashboard.set_icon_name(icon_name)
         self.main_widget = (self.menubutton_dashboard, "append")
-        self.utils.add_cursor_effect(self.menubutton_dashboard)
+        self.gtk_helper.add_cursor_effect(self.menubutton_dashboard)
         return self.menubutton_dashboard
 
     def create_popover_soundcard(self, *_):

@@ -26,6 +26,6 @@ class ColorPickerPlugin(BasePlugin):
         self.register_keybinding()
 
     def register_keybinding(self):
-        self.utils.register_wayctl_binding(
+        self.wf_helper.register_wayctl_binding(
             KEYBIND_PRIMARY, KEYBIND_FALLBACK, "--colorpicker"
         )

@@ -1,6 +1,13 @@
 from src.core import create_panel
 from gi.repository import Gtk
 from typing import Any
+from src.shared import path_handler
+from src.shared import notify_send
+from src.shared import wayfire_helpers
+from src.shared import gtk_helpers
+from src.shared import data_helpers
+from src.shared import config_handler
+
 import inspect
 
 
@@ -131,20 +138,27 @@ class BasePlugin:
         """
         self.obj = panel_instance
         self.utils: Any = panel_instance.utils
+        self.path_handler: Any = path_handler.PathHandler("waypanel", panel_instance)
+        self.notifier: Any = notify_send.Notifier()
+        self.wf_helper: Any = wayfire_helpers.WayfireHelpers(
+            panel_instance.ipc, panel_instance.logger
+        )
+        self.gtk_helper: Any = gtk_helpers.GtkHelpers(panel_instance)
+        self.data_helper: Any = data_helpers.DataHelpers()
+        self.config_handler: Any = config_handler.ConfigHandler(
+            "waypanel", panel_instance
+        )
         self.bottom_panel: Any = self.obj.bottom_panel
         self.top_panel: Any = self.obj.top_panel
         self.left_panel: Any = self.obj.left_panel
         self.right_panel: Any = self.obj.right_panel
         self.main_widget = None
         self.plugin_file = None
-        self.update_widget_safely: Any = self.utils.update_widget_safely
+        self.update_widget_safely: Any = self.gtk_helper.update_widget_safely
         self.logger: Any = panel_instance.logger
         self.plugins: Any = panel_instance.plugin_loader.plugins
         self.plugin_loader: Any = panel_instance.plugin_loader
-        self.update_widget: Any = self.utils.update_widget
-        self.config: Any = panel_instance.config
-        self.save_config: Any = panel_instance.save_config
-        self.reload_config: Any = panel_instance.reload_config
+        self.update_widget: Any = self.gtk_helper.update_widget
         self.ipc: Any = panel_instance.ipc
         self.ipc_client = None
         self.ipc_server = panel_instance.ipc_server
@@ -202,7 +216,7 @@ class BasePlugin:
         try:
             # Remove the widget from the panel
             if self.main_widget:
-                self.utils.remove_widget(
+                self.gtk_helper.remove_widget(
                     self.main_widget[0]
                 )  # Extract the widget from the tuple
                 self.logger.info("Widget removed successfully.")
@@ -278,7 +292,7 @@ class BasePlugin:
 
         # Validate the action
         action = self.main_widget[1]
-        if not self.utils.validate_string(
+        if not self.data_helper.validate_string(
             action, name=f"{action} from action in BasePlugin"
         ):
             self.log_error(

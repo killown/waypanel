@@ -57,7 +57,7 @@ class RightPanelPlugin(BasePlugin):
             self.obj.right_panel_box_bottom,
             self.obj.right_panel_box_full,
         ]
-        if all(self.utils.is_widget_ready(box) for box in boxes):
+        if all(self.gtk_helper.is_widget_ready(box) for box in boxes):
             self.update_widget_safely(
                 self.obj.right_panel_box_top.add_css_class, "right-panel-box-top"
             )

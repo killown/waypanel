@@ -63,25 +63,25 @@ class NotificationPopoverPlugin(BasePlugin):
         super().__init__(panel_instance)
 
         # Ensure the 'notify.client' section exists and is fully populated
-        if "notify" not in self.config:
-            self.config["notify"] = {}
-        if "client" not in self.config["notify"]:
-            self.config["notify"]["client"] = {}
-        self.config["notify"]["client"] = {
+        if "notify" not in self.config_handler.config_data:
+            self.config_handler.config_data["notify"] = {}
+        if "client" not in self.config_handler.config_data.get("notify"):
+            self.config_handler.config_data["notify"]["client"] = {}
+        self.config_handler.config_data["notify"]["client"] = {
             **DEFAULT_CONFIG["notify"]["client"],
-            **self.config["notify"]["client"],
+            **self.config_handler.config_data["notify"]["client"],
         }
 
         # Ensure the 'notify.server' section exists
-        if "server" not in self.config["notify"]:
-            self.config["notify"]["server"] = {}
-        self.config["notify"]["server"] = {
+        if "server" not in self.config_handler.config_data["notify"]:
+            self.config_handler.config_data["notify"]["server"] = {}
+        self.config_handler.config_data["notify"]["server"] = {
             **DEFAULT_CONFIG["notify"]["server"],
-            **self.config["notify"]["server"],
+            **self.config_handler.config_data["notify"]["server"],
         }
 
-        self.save_config()
-        self.reload_config()
+        self.config_handler.save_config()
+        self.config_handler.reload_config()
 
         self.notify_utils = NotifyUtils(self.obj)
         self.notification_server = self.plugins["notify_server"]
@@ -92,13 +92,15 @@ class NotificationPopoverPlugin(BasePlugin):
         self.vbox.set_margin_start(10)
         self.show_messages = None
         self.max_notifications = (
-            self.config.get("notify", {}).get("client", {}).get("max_notifications", 5)
+            self.config_handler.config_data.get("notify", {})
+            .get("client", {})
+            .get("max_notifications", 5)
         )
 
         self.vbox.set_margin_end(10)
         self.notification_on_popover = {}
         self.notification_button = Gtk.Button.new_from_icon_name(
-            self.utils.set_widget_icon_name(
+            self.gtk_helper.set_widget_icon_name(
                 "notify",
                 ["liteupdatesnotify", "org.gnome.Settings-notifications-symbolic"],
             )
@@ -106,7 +108,7 @@ class NotificationPopoverPlugin(BasePlugin):
         self.notification_button.add_css_class("notification-panel-button")
         self.notification_button.set_tooltip_text("View Recent Notifications")
         self.notification_button.connect("clicked", self.open_popover_notifications)
-        self.utils.add_cursor_effect(self.notification_button)
+        self.gtk_helper.add_cursor_effect(self.notification_button)
         # Initialize the Do Not Disturb switch
         self.dnd_switch = Gtk.Switch()
         self.dnd_switch.set_active(False)
@@ -122,7 +124,7 @@ class NotificationPopoverPlugin(BasePlugin):
         """Update the Do Not Disturb switch state based on the server setting."""
         try:
             show_messages = (
-                self.config.get("notify", {})
+                self.config_handler.config_data("notify", {})
                 .get("server", {})
                 .get("show_messages", True)
             )
@@ -140,18 +142,20 @@ class NotificationPopoverPlugin(BasePlugin):
 
         try:
             # Update the configuration
-            if "notify" not in self.config:
-                self.config["notify"] = {}
-            if "server" not in self.config["notify"]:
-                self.config["notify"]["server"] = {}
+            if "notify" not in self.config_handler.config_data:
+                self.config_handler.config_data["notify"] = {}
+            if "server" not in self.config_handler.config_data["notify"]:
+                self.config_handler.config_data["notify"]["server"] = {}
 
-            self.config["notify"]["server"]["show_messages"] = new_show_messages
+            self.config_handler.config_data["notify"]["server"]["show_messages"] = (
+                new_show_messages
+            )
 
             # Save the updated configuration
-            self.save_config()
+            self.config_handler.save_config()
 
             # Reload the configuration in the panel instance
-            self.reload_config()
+            self.config_handler.reload_config()
 
             self.logger.info(
                 f"Do Not Disturb mode {'enabled' if state else 'disabled'}"
@@ -274,13 +278,13 @@ class NotificationPopoverPlugin(BasePlugin):
         :return: Gtk.Box containing the notification content.
         """
         body_max_width_chars = (
-            self.config.get("notify", {})
+            self.config_handler.config_data.get("notify", {})
             .get("client", {})
             .get("body_max_width_chars", 50)
         )
 
         notification_icon_size = (
-            self.config.get("notify", {})
+            self.config_handler.config_data.get("notify", {})
             .get("client", {})
             .get("notification_icon_size", 64)
         )
@@ -292,7 +296,7 @@ class NotificationPopoverPlugin(BasePlugin):
         # Add a close button
         close_button = Gtk.Button.new_from_icon_name("window-close-symbolic")
         close_button.set_tooltip_text("Close Notification")
-        self.utils.add_cursor_effect(close_button)
+        self.gtk_helper.add_cursor_effect(close_button)
 
         close_button.set_margin_start(10)  # Add spacing between content and button
         close_button.connect(
@@ -467,12 +471,12 @@ class NotificationPopoverPlugin(BasePlugin):
         if not hasattr(self, "popover") or not self.popover:
             self.popover = Gtk.Popover.new()
             self.popover_width = (
-                self.config.get("notify", {})
+                self.config_handler.config_data.get("notify", {})
                 .get("client", {})
                 .get("popover_width", 500)
             )
             self.popover_height = (
-                self.config.get("notify", {})
+                self.config_handler.config_data.get("notify", {})
                 .get("client", {})
                 .get("popover_height", 600)
             )
@@ -487,7 +491,7 @@ class NotificationPopoverPlugin(BasePlugin):
             clear_button.connect("clicked", lambda _: self.clear_all_notifications())
             clear_button.set_tooltip_text("Clear All Notifications")
             clear_button.set_margin_start(10)
-            self.utils.add_cursor_effect(clear_button)
+            self.gtk_helper.add_cursor_effect(clear_button)
             self.update_widget_safely(self.main_vbox.append, clear_button)
 
             # Notification content area (scrollable)
@@ -507,7 +511,7 @@ class NotificationPopoverPlugin(BasePlugin):
             self.dnd_switch = Gtk.Switch()
             self.dnd_switch.set_active(False)
             self.dnd_switch.connect("state-set", self.on_dnd_toggled)
-            self.utils.add_cursor_effect(self.dnd_switch)
+            self.gtk_helper.add_cursor_effect(self.dnd_switch)
 
             dnd_label = Gtk.Label(label="Do Not Disturb")
             dnd_label.set_halign(Gtk.Align.START)

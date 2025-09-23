@@ -28,12 +28,12 @@ if not os.getenv("WAYFIRE_SOCKET"):
 DEPS = ["event_manager", "gestures_setup"]
 
 DEFAULT_CONFIG = {
-    "dockbar_panel": {
+    "dockbar_content": {
         "panel": "left-panel",
         "orientation": "v",
         "class_style": "dockbar-buttons",
     },
-    "dockbar": {
+    "dockbar_app": {
         "terminal": {
             "cmd": "kitty",
             "icon": "utilities-terminal-symbolic",
@@ -48,11 +48,6 @@ DEFAULT_CONFIG = {
 
 def get_plugin_placement(panel_instance):
     position = "left-panel-center"
-    dockbar_config = panel_instance.config.get("dockbar_panel", {})
-    if dockbar_config:
-        if "panel" in dockbar_config:
-            position = dockbar_config["panel"]
-            position = f"{position}"
     order = 5
     priority = 1
     return position, order, priority
@@ -88,41 +83,22 @@ class DockbarPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
 
-        # Ensure the 'dockbar_panel' section exists and is populated.
-        # This section should always be merged to ensure all settings are present.
-        if "dockbar_panel" not in self.config:
-            self.config["dockbar_panel"] = {}
-        self.config["dockbar_panel"] = {
-            **DEFAULT_CONFIG["dockbar_panel"],
-            **self.config["dockbar_panel"],
-        }
-
-        # Check if the 'dockbar' section is empty or does not exist.
-        # Only apply the default icons if the user has not defined their own.
-        if not self.config.get("dockbar"):
-            self.config["dockbar"] = {}
-            self.config["dockbar"] = {
-                **DEFAULT_CONFIG["dockbar"],
-                **self.config["dockbar"],
-            }
-
-        self.save_config()
-        self.reload_config()
+        self.dockbar = Gtk.Box(spacing=10, orientation=Gtk.Orientation.VERTICAL)
+        # add default config in config.toml if sections not found
+        self.config_handler.initialize_config_section("dockbar_content", DEFAULT_CONFIG)
+        self.config_handler.initialize_config_section("dockbar_app", DEFAULT_CONFIG)
 
         self.create_gesture = self.plugins["gestures_setup"].create_gesture
         self._subscribe_to_events()
         self.layer_state = False
-        self.taskbar_list = []
-        self.dockbar_panel = self.get_panel()
-        self.buttons_id = {}
-        self.dockbar = Gtk.Box(spacing=10, orientation=Gtk.Orientation.VERTICAL)
+        self.dockbar_content = self.get_panel()
         self._setup_dockbar()
         self._config_observer = None
         self._setup_file_watcher()
 
     def get_panel(self):
-        dockbar_config = self.obj.config.get("dockbar_panel", {})
-        if not dockbar_config or "panel" not in dockbar_config:
+        dockbar_config = self.config_handler.config_data.get("dockbar_content", {})
+        if not dockbar_config:
             self.logger.warning(
                 "Dockbar panel config is missing or invalid. Using default: left-panel."
             )
@@ -150,25 +126,13 @@ class DockbarPlugin(BasePlugin):
         plugins = self.ipc.get_option_value("core/plugins")["value"].split()
         return "scale" in plugins
 
-    def get_dockbar_position(self, panel):
-        if panel == "left-panel":
-            return self.obj.left_panel
-        if panel == "right-panel":
-            return self.obj.right_panel
-        elif panel == "bottom-panel":
-            return self.obj.bottom_panel
-        elif panel == "top-panel":
-            return self.obj.top_panel
-        else:
-            self.log_error(f"Invalid panel value: {panel}")
-
     def _create_dockbar_button(self, app_name, app_data, class_style, use_label=False):
         """Creates and returns a Gtk.Button for a given app."""
         app_cmd = app_data["cmd"]
         icon_name = app_data["icon"]
 
-        button = self.utils.create_button(
-            self.utils.icon_exist(icon_name),
+        button = self.gtk_helper.create_button(
+            self.gtk_helper.icon_exist(icon_name),
             app_cmd,
             class_style,
             use_label,
@@ -176,7 +140,7 @@ class DockbarPlugin(BasePlugin):
             app_cmd,
         )
 
-        self.utils.add_cursor_effect(button)
+        self.gtk_helper.add_cursor_effect(button)
 
         button.app_name = app_name
         button.app_config = app_data
@@ -194,9 +158,7 @@ class DockbarPlugin(BasePlugin):
 
         return button
 
-    def _load_and_populate_dockbar(
-        self, config_path, orientation, class_style, use_label=False
-    ):
+    def _load_and_populate_dockbar(self, orientation, class_style, use_label=False):
         """Loads app list from config and populates the dockbar."""
         if orientation == "h":
             orientation = Gtk.Orientation.HORIZONTAL
@@ -205,27 +167,17 @@ class DockbarPlugin(BasePlugin):
 
         self.dockbar.set_orientation(orientation)
 
-        # Clear existing children to rebuild the dockbar safely
         child = self.dockbar.get_first_child()
         while child:
             self.dockbar.remove(child)
             child = self.dockbar.get_first_child()
 
-        try:
-            with open(config_path, "r") as f:
-                config_data = toml.load(f).get("dockbar", {})
-        except FileNotFoundError:
-            self.logger.error(f"Configuration file not found at: {config_path}")
-            return
-        except Exception as e:
-            self.logger.error(f"Error loading TOML config: {e}")
-            return
-
+        config_data = self.config_handler.config_data["dockbar_app"]
         for app_name, app_data in config_data.items():
             button = self._create_dockbar_button(
                 app_name, app_data, class_style, use_label
             )
-            self.update_widget_safely(self.dockbar.append, button)
+            self.gtk_helper.update_widget_safely(self.dockbar.append, button)
 
         # Add drop target functionality to the box
         drop_target = Gtk.DropTarget.new(Gtk.Button, Gdk.DragAction.MOVE)
@@ -283,11 +235,7 @@ class DockbarPlugin(BasePlugin):
         return True
 
     def save_dockbar_order(self):
-        config_path = self.obj.waypanel_cfg
         try:
-            with open(config_path, "r") as f:
-                config_data = toml.load(f)
-
             new_dockbar_config = {}
             child = self.dockbar.get_first_child()
             while child:
@@ -296,11 +244,9 @@ class DockbarPlugin(BasePlugin):
                     new_dockbar_config[app_name] = child.app_config
                 child = child.get_next_sibling()
 
-            config_data["dockbar"] = new_dockbar_config
-
-            with open(config_path, "w") as f:
-                toml.dump(config_data, f)
-
+            # Correctly update the 'dockbar_app' section in the main configuration
+            self.config_handler.config_data["dockbar_app"] = new_dockbar_config
+            self.config_handler.save_config()
             self.logger.info("Dockbar order saved to config file.")
         except Exception as e:
             self.logger.error(f"Failed to save dockbar order: {e}")
@@ -336,7 +282,7 @@ class DockbarPlugin(BasePlugin):
             self.log_error(f"Error while handling right-click action: {e}")
 
     def on_middle_click(self, cmd):
-        coordinates = self.utils.find_empty_workspace()
+        coordinates = self.wf_helper.find_empty_workspace()
         if coordinates:
             ws_x, ws_y = coordinates
             self.ipc.scale_toggle()
@@ -346,28 +292,28 @@ class DockbarPlugin(BasePlugin):
             self.utils.run_cmd(cmd)
 
     def _setup_dockbar(self):
-        dockbar_toml = self.config.get("dockbar_panel", {})
-        orientation = dockbar_toml.get("orientation", "v")
-        class_style = dockbar_toml.get("class_style", "dockbar-buttons")
+        dockbar_data = self.config_handler.config_data.get("dockbar_content", {})
+        orientation = dockbar_data.get("orientation", "v")
+        class_style = dockbar_data.get("class_style", "dockbar-buttons")
 
-        self._load_and_populate_dockbar(self.obj.waypanel_cfg, orientation, class_style)
+        self._load_and_populate_dockbar(orientation, class_style)
         self.main_widget = (self.dockbar, "append")
         self.logger.info("Dockbar setup completed.")
 
     def _setup_file_watcher(self):
         """Sets up a file monitor to watch for changes in the waypanel.toml config file using watchdog."""
-        config_path = self.obj.waypanel_cfg
+        config_file = self.config_handler.config_file
         try:
             event_handler = self._ConfigReloadHandler(
-                self._on_config_changed, config_path
+                self._on_config_changed, config_file
             )
             self._config_observer = Observer()
             self._config_observer.schedule(
-                event_handler, str(Path(config_path).parent), recursive=False
+                event_handler, str(Path(config_file).parent), recursive=False
             )
             self._config_observer.start()
             self.logger.info(
-                f"Started monitoring config file with watchdog: {config_path}"
+                f"Started monitoring config file with watchdog: {config_file}"
             )
         except Exception as e:
             self.logger.error(f"Failed to set up watchdog file watcher: {e}")
@@ -379,12 +325,12 @@ class DockbarPlugin(BasePlugin):
         # Note: self.obj.load_config() is not a publicly exposed method
         # The simplest way to handle this without inventing methods is to just
         # rebuild the UI, which re-reads the file implicitly.
-        self.reload_config()
+        self.config_handler.reload_config()
         self._setup_dockbar()
 
     def on_mouse_enter(self, controller, x, y):
         if self.layer_state is False:
-            set_layer_position_exclusive(self.dockbar_panel, 64)
+            set_layer_position_exclusive(self.dockbar_content, 64)
             self.layer_state = True
 
     def _subscribe_to_events(self):
@@ -401,29 +347,31 @@ class DockbarPlugin(BasePlugin):
             )
 
     def create_dockbar_button(self, view):
-        title = self.utils.filter_utf_for_gtk(view.get("title", ""))
+        title = self.gtk_helper.filter_utf_for_gtk(view.get("title", ""))
         wm_class = view.get("app-id", "")
         initial_title = title.split(" ")[0].lower()
-        icon_name = self.utils.get_icon(wm_class, initial_title, title)
+        icon_name = self.gtk_helper.get_icon(wm_class, initial_title, title)
 
         button = Gtk.Button()
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
 
         if icon_name:
             icon = Gtk.Image.new_from_icon_name(icon_name)
-            self.update_widget_safely(box.append, icon)
+            self.gtk_helper.update_widget_safely(box.append, icon)
 
         label = Gtk.Label(label=title[:30])
-        self.update_widget_safely(box.append, label)
+        self.gtk_helper.update_widget_safely(box.append, label)
 
         button.set_child(box)
         button.add_css_class("dockbar-button")
 
-        button.connect("clicked", lambda *_: self.utils.focus_view_when_ready(view))
+        button.connect("clicked", lambda *_: self.wf_helper.focus_view_when_ready(view))
         return button
 
     def on_scale_desactivated(self):
-        self.update_widget_safely(unset_layer_position_exclusive, self.dockbar_panel)
+        self.gtk_helper.update_widget_safely(
+            unset_layer_position_exclusive, self.dockbar_content
+        )
         self.layer_state = False
 
     def handle_plugin_event(self, msg):

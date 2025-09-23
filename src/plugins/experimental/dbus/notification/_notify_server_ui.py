@@ -1,8 +1,6 @@
 from gi.repository import Gtk, GLib, Pango
 from gi.repository import Gtk, Gtk4LayerShell as LayerShell
 from src.plugins.core._base import BasePlugin
-import os
-import toml
 from ._utils import NotifyUtils
 
 
@@ -22,20 +20,16 @@ class UI(BasePlugin):
         pass
 
     def notify_reload_config(self):
-        self.config = self.load_config()
         self.show_messages = (
-            self.config.get("notify", {}).get("server", {}).get("show_messages", True)
+            self.config_handler.config_data.get("notify", {})
+            .get("server", {})
+            .get("show_messages", True)
         )
         self.timeout = (
-            self.config.get("notify", {}).get("server", {}).get("timeout", 10)
+            self.config_handler.config_data.get("notify", {})
+            .get("server", {})
+            .get("timeout", 10)
         )
-
-    def load_config(self):
-        config_path = os.path.expanduser("~/.config/waypanel/config.toml")
-        if os.path.exists(config_path):
-            with open(config_path, "r") as f:
-                return toml.load(f)
-        return {}
 
     def show_popup(self, notification):
         """
@@ -49,10 +43,14 @@ class UI(BasePlugin):
 
         # FIXME: make this data work with the config
         popup_width = (
-            self.config.get("notify", {}).get("server", {}).get("popup_width", 399)
+            self.config_handler.config_data.get("notify", {})
+            .get("server", {})
+            .get("popup_width", 399)
         )
         popup_height = (
-            self.config.get("notify", {}).get("server", {}).get("popup_height", 150)
+            self.config_handler.config_data.get("notify", {})
+            .get("server", {})
+            .get("popup_height", 150)
         )
 
         focused_output = self.ipc.get_focused_output()
@@ -66,12 +64,12 @@ class UI(BasePlugin):
         center_popup_position = (output_w - popup_width) // 2
         top_popup_position = 32
         new_width_position = (
-            self.config.get("notify", {})
+            self.config_handler.config_data.get("notify", {})
             .get("server", {})
             .get("popup_position_x", False)
         )
         new_height_position = (
-            self.config.get("notify", {})
+            self.config_handler.config_data.get("notify", {})
             .get("server", {})
             .get("popup_position_y", False)
         )
@@ -99,8 +97,6 @@ class UI(BasePlugin):
         self.layer_shell.set_margin(
             window, self.layer_shell.Edge.RIGHT, center_popup_position
         )  # Add margin from the right
-
-        # Center the popup horizontally by anchoring to both left and right edges
 
         # Create the content of the popup
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)

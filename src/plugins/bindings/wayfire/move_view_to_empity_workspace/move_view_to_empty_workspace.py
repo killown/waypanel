@@ -21,6 +21,6 @@ def initialize_plugin(panel_instance):
 class MoveViewToEmptyWorkspacePlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
-        self.utils.register_wayctl_binding(
+        self.wf_helper.register_wayctl_binding(
             KEYBIND_PRIMARY, KEYBIND_FALLBACK, "--move-view-to-empty-workspace"
         )

@@ -36,26 +36,23 @@ class WindowTitlePlugin(BasePlugin):
         """
         Initialize the Window Title plugin.
         """
-        # Create window title widget components
         self.window_title_content = Gtk.Box()
         self.main_widget = (self.window_title_content, "append")
         self.window_title_label = Gtk.Label()
         self.window_title_icon = Gtk.Image.new_from_icon_name("None")
         self.window_title_icon.add_css_class("window-title-icon")
-        self.title_length = self.config.get("window_title", {}).get("title_length", 50)
+        self.title_length = self.config_handler.config_data.get("window_title", {}).get(
+            "title_length", 50
+        )
 
-        # Assemble the widget
         self.window_title_content.append(self.window_title_icon)
         self.window_title_content.append(self.window_title_label)
         self.window_title_content.add_css_class("window-title-content")
 
-        # Add CSS classes for styling
         self.window_title_label.add_css_class("window-title-label")
 
-        # first update so it will set the default it if no focus yet
         self.update_title("", "focus-windows")
 
-        # Debounce variables
         self._debounce_pending = False
         self._debounce_timer_id = None
         self._debounce_interval = 333  # ~3 updates per second (1000/3 ≈ 333ms)
@@ -63,7 +60,7 @@ class WindowTitlePlugin(BasePlugin):
 
     def disable(self):
         print(self.main_widget)
-        self.utils.remove_widget(self.window_title_content)
+        self.gtk_helper.remove_widget(self.window_title_content)
 
     @subscribe_to_event("view-focused")
     def on_view_focused(self, event_message):
@@ -136,12 +133,11 @@ class WindowTitlePlugin(BasePlugin):
             if not view:
                 return
 
-            # check if the view is from sway socket
             if view.get("app_id") is not None:
                 view = self.sway_translate_ipc(view)
 
             if self.compositor == "wayfire":
-                view = self.utils.is_view_valid(view)
+                view = self.wf_helper.is_view_valid(view)
 
             if not view:
                 return
@@ -154,9 +150,8 @@ class WindowTitlePlugin(BasePlugin):
                 app_id = view.get("app-id", "").lower()
 
             initial_title = title.split()[0].lower() if title else ""
-            icon = self.utils.get_icon(app_id, initial_title, title)
+            icon = self.gtk_helper.get_icon(app_id, initial_title, title)
 
-            # Update the widget
             self.update_title(title, icon)
         except Exception as e:
             self.log_error(f"Error updating title/icon: {e}")
@@ -180,19 +175,14 @@ class WindowTitlePlugin(BasePlugin):
         if not title:
             return ""
 
-        # Remove UTF-8 issues
-        title = self.utils.filter_utf_for_gtk(title)
+        title = self.gtk_helper.filter_utf_for_gtk(title)
 
-        # Maximum length for any single word (e.g., truncate after 50 chars)
         MAX_WORD_LENGTH = 50
-        # Overall title length limit
         MAX_TITLE_LENGTH = self.title_length
 
-        # Handle separator: take part before " — "
         if " — " in title:
             title = title.split(" — ")[0]
 
-        # Split into words and limit each word's length
         words = title.split()
         shortened_words = []
         for word in words:
@@ -200,12 +190,9 @@ class WindowTitlePlugin(BasePlugin):
                 word = word[:MAX_WORD_LENGTH] + "…"  # Add ellipsis for truncated words
             shortened_words.append(word)
 
-        # Rebuild title
         title = " ".join(shortened_words)
 
-        # Final truncation to respect overall title length
         if len(title) > MAX_TITLE_LENGTH:
-            # Preserve space for ellipsis
             title = title[: MAX_TITLE_LENGTH - 1] + "…"
 
         return title
@@ -219,10 +206,7 @@ class WindowTitlePlugin(BasePlugin):
             icon_name: The new icon name to display.
         """
         try:
-            # Update the label
             self.window_title_label.set_label(title)
-
-            # Update the icon
             if icon_name:
                 self.window_title_icon.set_from_icon_name(icon_name)
             else:
@@ -235,7 +219,7 @@ class WindowTitlePlugin(BasePlugin):
         self._debounce_pending = False
         self._debounce_timer_id = None
         self.update_title_icon(self._last_view_data)
-        return False  # Return False to stop the timeout
+        return False
 
     def about(self):
         """

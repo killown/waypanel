@@ -119,7 +119,7 @@ class SystemMonitorPlugin(BasePlugin):
         """Create the system monitor button and popover."""
         # Create the system monitor button
         self.menubutton_system = Gtk.Button()
-        icon_name = self.utils.set_widget_icon_name(
+        icon_name = self.gtk_helper.set_widget_icon_name(
             "system_monitor",
             [
                 "deepin-system-monitor-symbolic",
@@ -130,7 +130,7 @@ class SystemMonitorPlugin(BasePlugin):
         )
         self.menubutton_system.set_icon_name(icon_name)
         self.menubutton_system.connect("clicked", self.open_popover_system)
-        self.utils.add_cursor_effect(self.menubutton_system)
+        self.gtk_helper.add_cursor_effect(self.menubutton_system)
         self.main_widget = (self.menubutton_system, "append")
 
     def start_system_updates(self):
@@ -208,10 +208,8 @@ class SystemMonitorPlugin(BasePlugin):
             self.list_box.remove(child)
             child = next_child
 
-        # Add new rows to the list box
         self.add_list_box_row("CPU Usage", f"{cpu_usage}%")
         self.add_list_box_row("RAM Usage", f"{memory_usage}")
-        # AMD GPU Monitoring - Only if available
         GLib.idle_add(self.add_gpu)
 
         for usage in disk_usages:
@@ -474,9 +472,10 @@ class SystemMonitorPlugin(BasePlugin):
 
         # Construct the command to run htop with the given PID
         htop_command = ["sudo", "iotop", "-p", str(pid)]
-        self.utils.notify_send(
+        self.notifier.notify_send(
             "iotop command",
             f"iotop requires permissions to monitor disk usage from the given PID:{pid}",
+            "iotop",
         )
         # Combine the terminal command with iotop command
         full_command = terminal_command + ["-e"] + htop_command
@@ -503,27 +502,20 @@ class SystemMonitorPlugin(BasePlugin):
             self.logger.error("Neither ipython nor python is available.")
             return
 
-        # Build the script content
-
-        # Write to temp file
         try:
             fd, temp_path = tempfile.mkstemp(suffix=".py", text=True)
             os.write(fd, SELECT_EVENT_WATCH_SCRIPT.encode("utf-8"))
             os.close(fd)
 
-            # Choose runner: prefer ipython if available
             if is_installed("ipython"):
                 cmd = ["ipython", temp_path]
             else:
                 cmd = ["python", temp_path]
 
-            # Launch kitty with the command, then drop into shell on exit
             full_bash_cmd = f"{' '.join(map(shlex.quote, cmd))}; exec bash"
 
             subprocess.Popen(["kitty", "bash", "-c", full_bash_cmd])
 
-            # Optional: clean up later? Or let OS handle it.
-            # You could spawn a delayed cleanup, but risky if still in use.
         except Exception as e:
             self.logger.error(f"Failed to create or run script: {e}")
 
@@ -559,7 +551,6 @@ class SystemMonitorPlugin(BasePlugin):
             "[(pprint(sock.read_next_event()), print()) for _ in itertools.repeat(None)]"
         )
 
-        # Monta o comando ipython -c "python_cmd" como string única
         full_cmd = f"ipython -c {shlex.quote(python_cmd)}"
 
         if terminal == "kitty":
@@ -603,27 +594,21 @@ class SystemMonitorPlugin(BasePlugin):
 
     def open_view_info_window(self, id):
         try:
-            # Fetch the view details using the provided ID
             view = self.ipc.get_view(id)
             if not view:
                 raise ValueError(f"No view found with ID: {id}")
 
-            # Create a new window
             window = Gtk.Window(title=f"View Information (ID: {id})")
             window.set_default_size(600, 400)
             window.set_resizable(True)
 
-            # Create a scrollable window
             scrolled_window = Gtk.ScrolledWindow()
             scrolled_window.set_vexpand(True)
             scrolled_window.set_hexpand(True)
 
-            # Create ListStore with two string columns: key and value
             list_store = Gtk.ListStore(str, str)
 
-            # Populate the ListStore
             for key, value in view.items():
-                # Format the value appropriately
                 if isinstance(value, dict):
                     formatted_value = "\n".join(f"{k}: {v}" for k, v in value.items())
                 elif isinstance(value, list):
@@ -633,10 +618,8 @@ class SystemMonitorPlugin(BasePlugin):
 
                 list_store.append([key, formatted_value])
 
-            # Create TreeView
             tree_view = Gtk.TreeView(model=list_store)
 
-            # Create Key column
             key_renderer = Gtk.CellRendererText()
             key_column = Gtk.TreeViewColumn("Key", key_renderer, text=0)
             key_column.set_resizable(True)
@@ -644,7 +627,6 @@ class SystemMonitorPlugin(BasePlugin):
             key_column.set_sort_column_id(0)
             tree_view.append_column(key_column)
 
-            # Create Value column
             value_renderer = Gtk.CellRendererText()
             value_renderer.props.wrap_mode = Pango.WrapMode.WORD_CHAR
             value_renderer.props.wrap_width = 400  # Wrap after 400 pixels
@@ -654,7 +636,6 @@ class SystemMonitorPlugin(BasePlugin):
             value_column.set_sort_column_id(1)
             tree_view.append_column(value_column)
 
-            # Enable text selection
             tree_view.set_activate_on_single_click(True)
 
             scrolled_window.set_child(tree_view)
@@ -662,7 +643,6 @@ class SystemMonitorPlugin(BasePlugin):
             window.present()
 
         except Exception as e:
-            # Handle errors gracefully
             error_dialog = Adw.MessageDialog(
                 transient_for=self.obj.main_window,
                 heading="Error Retrieving View Information",
@@ -684,10 +664,8 @@ class SystemMonitorPlugin(BasePlugin):
             str: The absolute path to the process executable, or None if the process doesn't exist or access is denied.
         """
         try:
-            # Create a Process object for the given PID
             process = psutil.Process(pid)
 
-            # Retrieve the executable path
             executable_path = process.exe()
 
             return executable_path
@@ -742,7 +720,6 @@ class SystemMonitorPlugin(BasePlugin):
 
     def create_popover_system(self):
         """Create the system monitor popover and populate it with a ListBox."""
-        # Create the popover
         self.popover_system = Gtk.Popover.new()
 
         # Create a vertical box to hold the ListBox
@@ -753,19 +730,15 @@ class SystemMonitorPlugin(BasePlugin):
         vbox.set_margin_end(10)
         vbox.set_size_request(250, -1)
 
-        # Create a ListBox to display system information
         self.list_box = Gtk.ListBox()
         self.list_box.set_selection_mode(Gtk.SelectionMode.NONE)  # Disable selection
         vbox.append(self.list_box)
 
-        # Set the box as the child of the popover
         self.popover_system.set_child(vbox)
 
-        # Set the parent widget of the popover and display it
         self.popover_system.set_parent(self.menubutton_system)
 
     def last_toplevel_focused_view(self):
-        # requires taskbar plugin to get the last focused view
         taskbar = self.plugins["taskbar"]
         return taskbar.last_toplevel_focused_view
 

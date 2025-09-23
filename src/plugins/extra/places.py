@@ -7,12 +7,11 @@ from gi.repository import Gio, Gtk
 from src.plugins.core._base import BasePlugin
 
 
-# set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+
 DEPS = ["top_panel"]
 
 
-# set the plugin location, order, position
 def get_plugin_placement(panel_instance):
     position = "top-panel-box-widgets-left"
     order = 3
@@ -43,13 +42,13 @@ class PopoverFolders(BasePlugin):
         )
         self.menubutton_folders = Gtk.Button()
         self.menubutton_folders.connect("clicked", self.open_popover_folders)
-        icon_name = self.utils.set_widget_icon_name(
+        icon_name = self.gtk_helper.set_widget_icon_name(
             "places",
             ["folder"],
         )
         self.menubutton_folders.set_icon_name(icon_name)
         self.menubutton_folders.add_css_class("places-menu-button")
-        self.utils.add_cursor_effect(self.menubutton_folders)
+        self.gtk_helper.add_cursor_effect(self.menubutton_folders)
 
     def create_popover_folders(self):
         """
@@ -60,7 +59,6 @@ class PopoverFolders(BasePlugin):
         self.popover_folders.set_autohide(True)
         self.popover_folders.connect("closed", self.popover_is_closed)
         self.popover_folders.connect("notify::visible", self.popover_is_open)
-        # Add CSS class to the popover
         self.popover_folders.add_css_class("places-popover")
 
         show_searchbar_action = Gio.SimpleAction.new("show_searchbar")
@@ -70,11 +68,9 @@ class PopoverFolders(BasePlugin):
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_min_content_width(400)
         self.scrolled_window.set_min_content_height(600)
-        # Add CSS class to the scrolled window
         self.scrolled_window.add_css_class("places-scrolled-window")
 
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        # Add CSS class to the main box
         self.main_box.add_css_class("places-main-box")
 
         self.searchbar = Gtk.SearchEntry.new()
@@ -83,7 +79,6 @@ class PopoverFolders(BasePlugin):
         self.searchbar.set_focus_on_click(True)
         self.searchbar.props.hexpand = True
         self.searchbar.props.vexpand = True
-        # Add CSS class to the search bar
         self.searchbar.add_css_class("places-search-entry")
 
         self.main_box.append(self.searchbar)
@@ -95,7 +90,6 @@ class PopoverFolders(BasePlugin):
         self.listbox.props.vexpand = True
         self.listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.listbox.set_show_separators(True)
-        # Add CSS class to the listbox
         self.listbox.add_css_class("places-listbox")
 
         self.main_box.append(self.scrolled_window)
@@ -103,44 +97,44 @@ class PopoverFolders(BasePlugin):
 
         self.popover_folders.set_child(self.main_box)
 
-        all_folders = self.config["folders"]
-        for folder in all_folders.items():
-            name = folder[1]["name"]
-            folders_path = folder[1]["path"]
-            filemanager = folder[1]["filemanager"]
-            icon = folder[1]["icon"]
-            row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-            # Add CSS class to the row box
-            row_hbox.add_css_class("places-row-hbox")
-            row_hbox.MYTEXT = folders_path, filemanager
+        all_folders = self.config_handler.config_data.get("folders")
+        if all_folders:
+            for folder in all_folders.items():
+                name = folder[1]["name"]
+                folders_path = folder[1]["path"]
+                filemanager = folder[1]["filemanager"]
+                icon = folder[1]["icon"]
+                row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+                # Add CSS class to the row box
+                row_hbox.add_css_class("places-row-hbox")
+                row_hbox.MYTEXT = folders_path, filemanager
 
-            self.listbox.append(row_hbox)
+                self.listbox.append(row_hbox)
 
-            line = Gtk.Label.new()
-            line.set_label(name)
-            line.props.margin_start = 5
-            line.props.hexpand = True
-            line.set_halign(Gtk.Align.START)
-            line.add_css_class("places-label-from-popover")
+                line = Gtk.Label.new()
+                line.set_label(name)
+                line.props.margin_start = 5
+                line.props.hexpand = True
+                line.set_halign(Gtk.Align.START)
+                line.add_css_class("places-label-from-popover")
 
-            image = Gtk.Image.new_from_icon_name(icon)
-            image.set_icon_size(Gtk.IconSize.INHERIT)
-            image.props.margin_end = 5
-            image.set_halign(Gtk.Align.END)
-            image.add_css_class("places-icon-from-popover")
+                image = Gtk.Image.new_from_icon_name(icon)
+                image.set_icon_size(Gtk.IconSize.INHERIT)
+                image.props.margin_end = 5
+                image.set_halign(Gtk.Align.END)
+                image.add_css_class("places-icon-from-popover")
 
-            row_hbox.append(image)
-            row_hbox.append(line)
-            self.create_row_right_click(row_hbox, folders_path)
-            self.create_row_middle_click(row_hbox, folders_path)
-            self.utils.add_cursor_effect(line)
+                row_hbox.append(image)
+                row_hbox.append(line)
+                self.create_row_right_click(row_hbox, folders_path)
+                self.create_row_middle_click(row_hbox, folders_path)
+                self.gtk_helper.add_cursor_effect(line)
 
         for folder in self.home_folders:
             folders_path = os.path.join(self.home, folder)
             icon = "nautilus"
 
             row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-            # Add CSS class to the row box
             row_hbox.add_css_class("places-row-hbox")
             row_hbox.MYTEXT = folders_path, "nautilus"
 
@@ -164,7 +158,7 @@ class PopoverFolders(BasePlugin):
             self.create_row_right_click(row_hbox, folders_path)
             self.create_row_middle_click(row_hbox, folders_path)
 
-            self.utils.add_cursor_effect(line)
+            self.gtk_helper.add_cursor_effect(line)
 
         self.listbox.set_filter_func(self.on_filter_invalidate)
         self.popover_folders.set_parent(self.menubutton_folders)

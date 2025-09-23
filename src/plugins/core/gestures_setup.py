@@ -2,10 +2,10 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, GLib
-from src.core.utils import Utils
+from src.shared.data_helpers import DataHelpers
 
-# Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
+
 DEPS = ["top_panel"]
 
 
@@ -38,7 +38,7 @@ class GesturePlugin:
         """
         self.obj = panel_instance
         self.logger = panel_instance.logger
-        self.utils = Utils(panel_instance)
+        self.data_helper = DataHelpers()
         self.gestures = {}  # Store gesture references
         self.appended_actions = {}  # Store additional actions for each gesture
 
@@ -50,12 +50,11 @@ class GesturePlugin:
     def check_panel_boxes_ready(self) -> bool:
         """Check if the required panel boxes are ready.
         If ready, proceed with gesture setup; otherwise, retry."""
-        # Validate that the required panel box exists and is ready
         if (
-            self.utils.validate_method(self.obj, "top_panel_box_left")
-            and self.utils.validate_method(self.obj, "top_panel_box_center")
-            and self.utils.validate_method(self.obj, "top_panel_box_full")
-            and self.utils.validate_method(self.obj, "top_panel_box_right")
+            self.data_helper.validate_method(self.obj, "top_panel_box_left")
+            and self.data_helper.validate_method(self.obj, "top_panel_box_center")
+            and self.data_helper.validate_method(self.obj, "top_panel_box_full")
+            and self.data_helper.validate_method(self.obj, "top_panel_box_right")
         ):
             self.logger.info("Panel boxes are ready. Setting up gestures...")
             self._setup_panel_gestures()

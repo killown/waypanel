@@ -39,7 +39,6 @@ class PluginManagerPlugin(BasePlugin):
         self.stack_switcher = Gtk.StackSwitcher()  # Create a stack switcher
         self.stack_switcher.set_stack(self.stack)
 
-        # Create the popover content
         self.create_popover_plugin_manager()
 
         # Add gesture to handle interactions
@@ -47,13 +46,11 @@ class PluginManagerPlugin(BasePlugin):
 
     def create_popover_plugin_manager(self):
         """Create and configure the popover for managing plugins."""
-        # Create the popover
         self.popover_plugin_manager = Gtk.Popover.new()
         self.popover_plugin_manager.set_has_arrow(False)
         self.popover_plugin_manager = Gtk.Popover.new()
         self.menubutton_plugin_manager.set_popover(self.popover_plugin_manager)
         self.main_widget = (self.menubutton_plugin_manager, "append")
-        # Create a horizontal box to hold the vertical tabs and the stack content
         hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=10)
         hbox.set_margin_top(10)
         hbox.set_margin_bottom(10)
@@ -61,7 +58,6 @@ class PluginManagerPlugin(BasePlugin):
         hbox.set_margin_end(10)
         hbox.set_size_request(350, 200)
 
-        # Create a vertical stack switcher (tabs on the left)
         self.stack_switcher = Gtk.StackSwitcher()
         self.stack_switcher.set_stack(self.stack)
         self.stack_switcher.set_orientation(
@@ -93,7 +89,9 @@ class PluginManagerPlugin(BasePlugin):
         try:
             # Load the disabled plugins as a list (split by spaces)
             disabled_plugins = (
-                self.config.get("plugins", {}).get("disabled", "").split()
+                self.config_handler.config_data.get("plugins", {})
+                .get("disabled", "")
+                .split()
             )
 
             if state:

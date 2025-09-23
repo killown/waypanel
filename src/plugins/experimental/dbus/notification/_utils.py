@@ -212,7 +212,7 @@ class NotifyUtils(BasePlugin):
         app_icon = notification.get("app_icon", "").lower()
         # some app names will be like "firefox developer edition"
         app_icon_from_name = notification.get("app_name", "").lower().replace(" ", "-")
-        app_icon_from_name = self.utils.get_icon(app_icon_from_name, "", "")
+        app_icon_from_name = self.gtk_helper.get_icon(app_icon_from_name, "", "")
 
         hints = notification.get("hints", {})
 

@@ -29,7 +29,6 @@ def initialize_plugin(panel_instance):
         obj: The object where the popover will be added.
         app: The application instance.
     """
-    # Expand the user's home directory directly in the function
     bookmarks_file = os.path.join(os.path.expanduser("~"), ".bookmarks")
 
     if os.path.exists(bookmarks_file):
@@ -58,30 +57,22 @@ class PopoverBookmarks(BasePlugin):
         self.menubutton_bookmarks = Gtk.Button()
         self.menubutton_bookmarks.connect("clicked", self.open_popover_bookmarks)
         self.main_widget = (self.menubutton_bookmarks, "append")
-        icon_name = self.utils.set_widget_icon_name(
+        icon_name = self.gtk_helper.set_widget_icon_name(
             "bookmarks",
             ["applications-internet"],
         )
         self.menubutton_bookmarks.set_icon_name(icon_name)
         self.menubutton_bookmarks.add_css_class("bookmarks-menu-button")
-        self.utils.add_cursor_effect(self.menubutton_bookmarks)
+        self.gtk_helper.add_cursor_effect(self.menubutton_bookmarks)
 
     def create_popover_bookmarks(self, *_):
         """
         Create and configure a popover for bookmarks with optimized thumbnails.
         """
-        # Initialize the popover
         self._initialize_popover()
-
-        # Set up the layout (scrolled window, main box, and flowbox)
         self._setup_layout()
-
-        # Load and process bookmarks
         self._load_and_process_bookmarks()
-
-        # Finalize popover setup
         self._finalize_popover_setup()
-
         return self.popover_bookmarks
 
     def _initialize_popover(self):
@@ -182,7 +173,7 @@ class PopoverBookmarks(BasePlugin):
             # Add label and image to the bookmark box
             row_hbox.append(image)
             row_hbox.append(line)
-            self.utils.add_cursor_effect(line)
+            self.gtk_helper.add_cursor_effect(line)
             self.flowbox.append(row_hbox)
             line.add_css_class("bookmarks-label-from-popover")
             image.add_css_class("bookmarks-icon-from-popover")

@@ -65,7 +65,7 @@ class BottomPanelPlugin(BasePlugin):
     def add_css_class(self):
         """Add CSS classes once widgets are ready."""
         if all(
-            self.utils.is_widget_ready(box)
+            self.gtk_helper.is_widget_ready(box)
             for box in [
                 self.obj.bottom_panel_box_left,
                 self.obj.bottom_panel_box_center,

@@ -28,15 +28,13 @@ class VolumeScrollPlugin(BasePlugin):
         """Initialize the plugin."""
         self.widget = None
         self.hide_timeout_id = None
-        self.slider = None  # Initialize slider as None
-        self.icon = None  # Initialize icon as None
-        self.label = None  # Initialize label as None
-        self.max_volume = 150  # Default max volume (will be updated dynamically)
+        self.slider = None
+        self.icon = None
+        self.label = None
+        self.max_volume = 150
 
-        # Fetch the actual maximum volume from PulseAudio
         self.update_max_volume()
 
-        # Set up the scroll event listener
         self.setup_scroll_event()
 
     def update_max_volume(self):
@@ -55,7 +53,7 @@ class VolumeScrollPlugin(BasePlugin):
                         break
         except Exception as e:
             self.log_error(f"Error fetching maximum volume: {e}")
-            self.max_volume = 150  # Fallback to default max volume
+            self.max_volume = 150
 
     def setup_scroll_event(self):
         """Set up the scroll event listener."""
@@ -76,14 +74,11 @@ class VolumeScrollPlugin(BasePlugin):
     def adjust_volume(self, adjustment):
         """Adjust the volume using the `pactl` command."""
         try:
-            # Adjust the volume using `pactl`
             cmd = f"pactl -- set-sink-volume @DEFAULT_SINK@ {adjustment}"
             run(cmd.split(), check=True)
 
-            # Get the current volume level
             current_volume = self.get_current_volume()
 
-            # Update the floating volume widget
             self.set_volume(current_volume)
             self.show_widget()
         except Exception as e:
@@ -95,10 +90,9 @@ class VolumeScrollPlugin(BasePlugin):
             with pulsectl.Pulse("volume-increaser") as pulse:
                 for sink in pulse.sink_list():
                     if "RUNNING" in str(sink.state).upper():
-                        # Calculate the volume percentage and round it to the nearest whole number
                         volume = round(sink.volume.values[0] * 100)
-                        return min(volume, self.max_volume)  # Clamp to max volume
-            return 0  # Default to 0 if no active sink is found
+                        return min(volume, self.max_volume)
+            return 0
         except Exception as e:
             self.log_error(f"Error fetching current volume: {e}")
             return 0

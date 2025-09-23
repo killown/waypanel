@@ -159,15 +159,10 @@ class PluginDetailsHandler(BasePlugin):
 
         opt = plugin_data["options"][index]
         full_key = prefix + opt["name"]
-
-        # Get value from TOML, fallback to default
         current_value = toml_config.get(full_key, opt["default"])
-
-        # Create row with current value
         row = self._create_option_row_with_toml(prefix, opt, current_value)
         if row:
             container.append(row)
-            # Store for filtering
             window.all_rows.append((row, full_key, opt["short"], str(opt["default"])))
 
         # Schedule next

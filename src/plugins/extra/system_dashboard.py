@@ -31,7 +31,6 @@ class SystemDashboard(BasePlugin):
         self.popover_dashboard = None
 
     def message(self, msg):
-        # Create a message dialog
         dialog = Gtk.MessageDialog(
             transient_for=None,
             message_type=Gtk.MessageType.INFO,
@@ -39,7 +38,6 @@ class SystemDashboard(BasePlugin):
             text=msg,
         )
 
-        # Add a custom close button
         close_btn = Gtk.Button(label="_Close", use_underline=True)
         close_btn.connect("clicked", lambda *_: dialog.close())
         dialog.get_message_area().append(close_btn)
@@ -69,10 +67,8 @@ class SystemDashboard(BasePlugin):
         app = ControlCenter()
         app.run(None)
         try:
-            # Try direct execution first
             subprocess.Popen(["waypanel-settings"], start_new_session=True)
         except FileNotFoundError:
-            # Fallback to absolute path lookup
             for path in [
                 "/usr/local/bin/waypanel-settings",
                 "/usr/bin/waypanel-settings",
@@ -94,7 +90,7 @@ class SystemDashboard(BasePlugin):
         self.menubutton_dashboard = Gtk.Button()
         self.main_widget = (self.menubutton_dashboard, "append")
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        icon_name = self.utils.set_widget_icon_name(
+        icon_name = self.gtk_helper.set_widget_icon_name(
             "system-dashboard",
             [
                 "logout_highlight-symbolic",
@@ -104,24 +100,21 @@ class SystemDashboard(BasePlugin):
             ],
         )
         self.menubutton_dashboard.set_icon_name(icon_name)
-        self.utils.add_cursor_effect(self.menubutton_dashboard)
+        self.gtk_helper.add_cursor_effect(self.menubutton_dashboard)
         self.menubutton_dashboard.add_css_class("system-dashboard-button")
         return self.menubutton_dashboard
 
     def create_popover_system(self, *_):
-        # Create a popover
         self.popover_dashboard = Gtk.Popover.new()
         self.popover_dashboard.set_has_arrow(True)
         self.popover_dashboard.connect("closed", self.popover_is_closed)
         self.popover_dashboard.connect("notify::visible", self.popover_is_open)
-        # Set width and height of the popover dashboard
         self.popover_dashboard.set_vexpand(True)
         self.popover_dashboard.set_hexpand(True)
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.stack = Gtk.Stack.new()
 
-        # find the best match for each action **before** creating the dict
-        logout_icon = self.utils.set_widget_icon_name(
+        logout_icon = self.gtk_helper.set_widget_icon_name(
             None,
             [
                 "system-log-out-symbolic",
@@ -130,26 +123,26 @@ class SystemDashboard(BasePlugin):
                 "xfsm-logout",
             ],
         )
-        reboot_icon = self.utils.set_widget_icon_name(
+        reboot_icon = self.gtk_helper.set_widget_icon_name(
             None, ["system-reboot-symbolic", "system-reboot"]
         )
-        shutdown_icon = self.utils.set_widget_icon_name(
+        shutdown_icon = self.gtk_helper.set_widget_icon_name(
             None,
             ["gnome-shutdown-symbolic", "system-shutdown-symbolic", "system-shutdown"],
         )
-        suspend_icon = self.utils.set_widget_icon_name(
+        suspend_icon = self.gtk_helper.set_widget_icon_name(
             None, ["system-suspend-symbolic", "system-suspend"]
         )
-        lock_icon = self.utils.set_widget_icon_name(
+        lock_icon = self.gtk_helper.set_widget_icon_name(
             None, ["system-lock-screen-symbolic", "system-lock-screen"]
         )
-        exit_icon = self.utils.set_widget_icon_name(
+        exit_icon = self.gtk_helper.set_widget_icon_name(
             None, ["application-exit-symbolic", "application-exit", "exit"]
         )
-        restart_icon = self.utils.set_widget_icon_name(
+        restart_icon = self.gtk_helper.set_widget_icon_name(
             None, ["system-restart-symbolic", "gnome-panel-separator"]
         )
-        settings_icon = self.utils.set_widget_icon_name(
+        settings_icon = self.gtk_helper.set_widget_icon_name(
             None,
             [
                 "settings",
@@ -159,7 +152,6 @@ class SystemDashboard(BasePlugin):
             ],
         )
 
-        # now build the dictionary with the *resolved* icons as the 3rd tuple item
         data_and_categories = {
             ("Logout", "", logout_icon): "",
             ("Reboot", "", reboot_icon): "",
@@ -211,14 +203,10 @@ class SystemDashboard(BasePlugin):
             button.connect("clicked", self.on_action, data[0])
             name_label.add_css_class("system_dash_label")
             summary_label.add_css_class("system_dash_summary")
-            self.utils.add_cursor_effect(button)
+            self.gtk_helper.add_cursor_effect(button)
 
         self.main_box.append(self.stack)
-
-        # Set the box as the child of the popover
         self.popover_dashboard.set_child(self.main_box)
-
-        # Set the parent widget of the popover and display it
         self.popover_dashboard.set_parent(self.menubutton_dashboard)
         self.popover_dashboard.popup()
         self.stack.add_css_class("system_dashboard_stack")
@@ -229,8 +217,6 @@ class SystemDashboard(BasePlugin):
         cmd = "systemctl connect {0}".format(device_id).split()
         Popen(cmd)
 
-        # this part is for disconnect if the device is already connected
-        # so the button will toggle connect/disconnect
         connected_devices = "systemctl info".split()
         try:
             connected_devices = check_output(connected_devices).decode()
@@ -245,7 +231,7 @@ class SystemDashboard(BasePlugin):
     def run_app_from_dashboard(self, x):
         selected_text, filename = x.get_child().MYTEXT
         cmd = "gtk-launch {}".format(filename)
-        self.utils.run_app(cmd)
+        self.gtk_helper.run_app(cmd)
         self.popover_dashboard.popdown()
 
     def open_popover_dashboard(self, *_):
@@ -257,10 +243,8 @@ class SystemDashboard(BasePlugin):
             self.popover_dashboard = self.create_popover_system()
 
     def kill_process_by_name(self, name):
-        # Iterate over all running processes
         for proc in psutil.process_iter(["pid", "name"]):
             try:
-                # Check if the process name matches
                 if name in proc.info["name"]:
                     proc.kill()
                     self.logger.info(
@@ -270,7 +254,6 @@ class SystemDashboard(BasePlugin):
                 pass
 
     def run_later(self, command, delay):
-        # Schedule the command to run after `delay` seconds
         Popen(["bash", "-c", f"sleep {delay} && {command}"])
 
     def on_action(self, button, action):

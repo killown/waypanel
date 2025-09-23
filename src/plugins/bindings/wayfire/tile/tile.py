@@ -1,10 +1,9 @@
-from gi.repository.GLib import E
 from src.plugins.core._base import BasePlugin
 from src.plugins.core.event_handler_decorator import subscribe_to_event
 from wayfire.extra.ipc_utils import WayfireUtils
 import os
 
-ENABLE_PLUGIN = True
+ENABLE_PLUGIN = False
 
 DEPS = ["event_manager"]
 
@@ -23,8 +22,6 @@ def get_plugin_placement(panel_instance):
 
 
 def initialize_plugin(panel_instance):
-    """Initialize the plugin if enabled."""
-    ENABLE_PLUGIN = panel_instance.utils.is_plugin_enabled("simple-tile")
     if ENABLE_PLUGIN:
         return Tile(panel_instance)
     return None
@@ -41,7 +38,7 @@ class Tile(BasePlugin):
 
     def register_binding_toggle_maximize(self):
         print(f"Registering binding: {self.keybind}")
-        if self.utils.is_keybind_used(self.keybind):
+        if self.wf_helper.is_keybind_used(self.keybind):
             self.keybind = "<super> KEY_SPACE"
         self.ipc.register_binding(
             binding=self.keybind,
@@ -128,7 +125,7 @@ class Tile(BasePlugin):
                 return
 
             if state:
-                self.utils.tile_maximize_all_from_active_workspace(True)
+                self.wf_helper.tile_maximize_all_from_active_workspace(True)
         except Exception as e:
             self.logger.error(f"Error handling scale activation: {e}")
 
@@ -143,6 +140,8 @@ class Tile(BasePlugin):
                 # this will be faster to maximized focused first than maximizing all
                 self.ipc.set_tiling_maximized(view["id"], MAXIMIZE_BY_DEFAULT)
                 # after the focused is maximized, then we maximize the remaining views
-                self.utils.tile_maximize_all_from_active_workspace(MAXIMIZE_BY_DEFAULT)
+                self.wf_helper.tile_maximize_all_from_active_workspace(
+                    MAXIMIZE_BY_DEFAULT
+                )
         except Exception as e:
             self.logger.error(f"Error handling view mapped: {e}")

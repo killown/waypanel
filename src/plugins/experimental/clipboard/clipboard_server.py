@@ -10,38 +10,20 @@ from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
 
+DEFAULT_CONFIG = {
+    "clipboard_server": {
+        "log_enabled": False,
+        "max_items": 100,
+        "monitor_interval": 0.5,
+    }
+}
+
 
 def get_plugin_placement(panel_instance):
     return
 
 
 def initialize_plugin(panel_instance):
-    default_config = {
-        "log_enabled": False,
-        "max_items": 100,
-        "monitor_interval": 0.5,
-    }
-
-    # Ensure the clipboard_server configuration section exists and has all default values
-    if "clipboard_server" not in panel_instance.config:
-        panel_instance.config["clipboard_server"] = {}
-
-    config_changed = False
-    for key, value in default_config.items():
-        if key not in panel_instance.config["clipboard_server"]:
-            panel_instance.config["clipboard_server"][key] = value
-            config_changed = True
-
-    # Save the configuration if any changes were made
-    if config_changed:
-        try:
-            panel_instance.save_config()
-            panel_instance.logger.info(
-                "Saved default clipboard_server settings to config.toml"
-            )
-        except Exception as e:
-            panel_instance.logger.error(f"Failed to save clipboard_server config: {e}")
-
     verify_db(panel_instance)
     return run_server_in_background(panel_instance)
 
@@ -120,10 +102,19 @@ class AsyncClipboardServer(BasePlugin):
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.running = False
 
+        # add default config in config.toml if sections not found
+        self.config_handler.initialize_config_section(
+            "clipboard_server", DEFAULT_CONFIG
+        )
+
         # Set attributes from the final config, which is now guaranteed to exist
-        self.log_enabled = self.config["clipboard_server"].get("log_enabled", False)
-        self.max_items = self.config["clipboard_server"].get("max_items", 100)
-        self.monitor_interval = self.config["clipboard_server"].get(
+        self.log_enabled = self.config_handler.config_data["clipboard_server"].get(
+            "log_enabled", False
+        )
+        self.max_items = self.config_handler.config_data["clipboard_server"].get(
+            "max_items", 100
+        )
+        self.monitor_interval = self.config_handler.config_data["clipboard_server"].get(
             "monitor_interval", 0.5
         )
 

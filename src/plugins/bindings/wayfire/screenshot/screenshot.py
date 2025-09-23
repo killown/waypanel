@@ -26,16 +26,16 @@ class ScreenshotPlugin(BasePlugin):
         self.register_keybindings()
 
     def register_keybindings(self):
-        self.utils.register_wayctl_binding(
+        self.wf_helper.register_wayctl_binding(
             BINDING_SCREENSHOT_FOCUSED_VIEW, None, "--screenshot focused view"
         )
-        self.utils.register_wayctl_binding(
+        self.wf_helper.register_wayctl_binding(
             BINDING_SCREENSHOT_FOCUSED_OUTPUT, None, "--screenshot focused output"
         )
-        self.utils.register_wayctl_binding(
+        self.wf_helper.register_wayctl_binding(
             BINDING_SCREENSHOT_SLURP, None, "--screenshot slurp"
         )
-        self.utils.register_wayctl_binding(
+        self.wf_helper.register_wayctl_binding(
             BINDING_SCREENSHOT_SLURP_FOCUSED_VIEW,
             None,
             "--screenshot slurp focused view",

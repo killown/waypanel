@@ -102,7 +102,7 @@ class PluginListPopover(Gtk.Popover):
 
         image.set_pixel_size(48)
         image.add_css_class("app-launcher-icon-from-popover")
-        self.main_plugin.utils.add_cursor_effect(image)
+        self.main_plugin.gtk_helper.add_cursor_effect(image)
 
         label = Gtk.Label(label=plugin["name"])
         label.set_max_width_chars(12)
@@ -156,11 +156,11 @@ class WayfireRealtimePluginsPlugin(BasePlugin):
     def _setup_button(self):
         """Configures the main button in the top panel."""
         self.button.set_icon_name(
-            self.utils.set_widget_icon_name(
+            self.gtk_helper.set_widget_icon_name(
                 "wayfire_plugins", ["plugins", "xapp-prefs-plugins-symbolic"]
             )
         )
-        self.utils.add_cursor_effect(self.button)
+        self.gtk_helper.add_cursor_effect(self.button)
         self.button.connect("clicked", self.open_popover)
 
     def parse_icon_name(self, name):

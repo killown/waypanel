@@ -9,6 +9,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("Gdk", "4.0")
 from gi.repository import Gtk, GLib, Adw, Gdk
+from src.shared.notify_send import Notifier
 
 
 class ControlCenter(Adw.Application):
@@ -24,6 +25,7 @@ class ControlCenter(Adw.Application):
         self.config = {}
         self.config_path = os.path.expanduser("~/.config/waypanel/config.toml")
         self.widget_map = {}
+        self.notifier = Notifier()
 
     def code_explanation(self):
         """
@@ -523,8 +525,10 @@ class ControlCenter(Adw.Application):
             with open(self.config_path, "wb") as f:
                 tomli_w.dump(self.config, f)
 
-            GLib.spawn_command_line_async(
-                f'notify-send "Waypanel Config" "The {category_name.replace("_", " ").capitalize()} settings have been saved successfully!"'
+            self.notifier.notify_send(
+                "Waypanel Config",
+                f"The {category_name.replace('_', ' ').capitalize()} settings have been saved successfully!",
+                "configure-symbolic",
             )
 
         except Exception as e:

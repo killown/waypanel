@@ -21,6 +21,7 @@ DEFAULT_CONFIG = {
         "icon_size": 32,
         "spacing": 5,
         "show_label": True,
+        "max_title_lenght": 25,
     },
     "taskbar_panel": {
         "panel": "bottom-panel",
@@ -67,32 +68,42 @@ class TaskbarPlugin(BasePlugin):
         self.in_use_buttons = {}
 
         # Merge config
-        if "taskbar_panel" not in self.config:
-            self.config["taskbar_panel"] = {}
-        self.config["taskbar_panel"] = {
-            **DEFAULT_CONFIG["taskbar_panel"],
-            **self.config["taskbar_panel"],
-        }
+        if "taskbar_panel" not in self.config_handler.config_data:
+            self.config_handler.config_data["taskbar_panel"] = {}
+            self.config_handler.config_data["taskbar_panel"] = {
+                **DEFAULT_CONFIG["taskbar_panel"],
+                **self.config_handler.config_data["taskbar_panel"],
+            }
 
-        # Corrected config merging for the 'taskbar' section
-        user_taskbar_config = self.config.get("taskbar", {})
-        self.config["taskbar"] = {**DEFAULT_CONFIG["taskbar"], **user_taskbar_config}
+        if "taskbar" not in self.config_handler.config_data:
+            self.config_handler.config_data["taskbar"] = {}
+            self.config_handler.config_data["taskbar"] = {
+                **DEFAULT_CONFIG["taskbar"],
+                **self.config_handler.config_data["taskbar"],
+            }
 
-        self.save_config()
-        self.reload_config()
-
-        self.icon_size = self.config["taskbar"]["icon_size"]
-        self.spacing = self.config["taskbar"]["spacing"]
-        self.show_label = self.config["taskbar"]["show_label"]
-
+        self.icon_size = self.config_handler.config_data.get("taskbar").get("icon_size")
+        self.spacing = self.config_handler.config_data.get("taskbar").get("spacing")
+        self.show_label = self.config_handler.config_data.get("taskbar").get(
+            "show_label"
+        )
+        self.max_title_lenght = self.config_handler.config_data.get("taskbar").get(
+            "max_title_lenght"
+        )
+        self.config_handler.save_config()
+        self.config_handler.reload_config()
         self._setup_taskbar()
         self._initialize_button_pool(10)
 
         self.main_widget = (self.scrolled_window, "append")
 
     def set_layer_exclusive(self, exclusive) -> None:
-        exclusive_zone = self.config["taskbar_panel"]["exclusive_zone"]
-        panel_name_from_config = self.config["taskbar_panel"]["panel"]
+        exclusive_zone = self.config_handler.config_data["taskbar_panel"][
+            "exclusive_zone"
+        ]
+        panel_name_from_config = self.config_handler.config_data["taskbar_panel"][
+            "panel"
+        ]
 
         # Map the string from the config to the class attribute
         panel_attr_name = panel_name_from_config.replace("-", "_")
@@ -141,7 +152,8 @@ class TaskbarPlugin(BasePlugin):
         if geometry:
             monitor_width = geometry["width"]
             self.scrolled_window.set_size_request(
-                monitor_width, self.config["taskbar_panel"]["exclusive_zone"]
+                monitor_width,
+                self.config_handler.config_data["taskbar_panel"]["exclusive_zone"],
             )
 
         self.taskbar.set_halign(Gtk.Align.CENTER)
@@ -233,11 +245,11 @@ class TaskbarPlugin(BasePlugin):
         if not title or not view_id:
             return
 
-        icon_name = self.utils.get_icon(app_id, initial_title, title)
+        icon_name = self.gtk_helper.get_icon(app_id, initial_title, title)
         if icon_name is None:
             return
 
-        title = self.utils.filter_utf_for_gtk(view.get("title", ""))
+        title = self.gtk_helper.filter_utf_for_gtk(view.get("title", ""))
         if not title:
             return
 
@@ -325,19 +337,18 @@ class TaskbarPlugin(BasePlugin):
         self.refresh_all_buttons()
 
     def update_button(self, button, view):
-        MAX_TITLE_LENGTH = 35
         title = view.get("title")
         initial_title = ""
         if title:
             initial_title = title[0]
         app_id = view.get("app-id")
-        if len(title) > MAX_TITLE_LENGTH:
-            truncated_title = title[:MAX_TITLE_LENGTH] + "..."
+        if len(title) > self.max_title_lenght:
+            truncated_title = title[: self.max_title_lenght] + "..."
         else:
             truncated_title = title
         button.view_id = view.get("id")
         button.set_tooltip_text(title)
-        icon_name = self.utils.get_icon(app_id, initial_title, title)
+        icon_name = self.gtk_helper.get_icon(app_id, initial_title, title)
         button.icon.set_from_icon_name(icon_name)
         button.icon.set_pixel_size(self.icon_size)
         if self.show_label:
@@ -385,7 +396,7 @@ class TaskbarPlugin(BasePlugin):
         self.create_gesture(
             button.get_child(),
             3,
-            lambda *_: self.utils.send_view_to_output(
+            lambda *_: self.wf_helper.send_view_to_output(
                 view_id, direction, toggle_scale_off
             ),
         )
@@ -395,7 +406,7 @@ class TaskbarPlugin(BasePlugin):
         motion_controller.connect("enter", lambda *_: self.on_button_hover(view))
         motion_controller.connect("leave", lambda *_: self.on_button_hover_leave(view))
         button.add_controller(motion_controller)
-        self.utils.add_cursor_effect(button)
+        self.gtk_helper.add_cursor_effect(button)
 
         return button
 
@@ -450,15 +461,15 @@ class TaskbarPlugin(BasePlugin):
                 self.allow_move_view_scroll = False
                 if dy > 0:
                     GLib.timeout_add(300, self.set_allow_move_view_scroll)
-                    output_from_right = self.utils.get_output_from("right")
+                    output_from_right = self.wf_helper.get_output_from("right")
                     if view_output_id != output_from_right:
-                        self.utils.send_view_to_output(view_id, "right")
+                        self.wf_helper.send_view_to_output(view_id, "right")
                         GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
                 elif dy < 0:
                     GLib.timeout_add(300, self.set_allow_move_view_scroll)
-                    output_from_left = self.utils.get_output_from("left")
+                    output_from_left = self.wf_helper.get_output_from("left")
                     if view_output_id != output_from_left:
-                        self.utils.send_view_to_output(view_id, "left")
+                        self.wf_helper.send_view_to_output(view_id, "left")
                         GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
 
         except Exception as e:
@@ -475,7 +486,7 @@ class TaskbarPlugin(BasePlugin):
             )
             return
 
-        empty_workspace = self.utils.find_empty_workspace()
+        empty_workspace = self.wf_helper.find_empty_workspace()
         geo = view.get("geometry")
         wset_index_focused = self.ipc.get_focused_output().get("wset-index")
         wset_index_view = view.get("wset-index")
@@ -509,10 +520,10 @@ class TaskbarPlugin(BasePlugin):
                 self.ipc.set_workspace(x, y, view_id)
 
     def on_button_hover(self, view):
-        self.utils.view_focus_effect_selected(view, 0.80, True)
+        self.wf_helper.view_focus_effect_selected(view, 0.80, True)
 
     def on_button_hover_leave(self, view):
-        self.utils.view_focus_effect_selected(view, False)
+        self.wf_helper.view_focus_effect_selected(view, False)
 
     def match_on_app_id_changed_view(self, unmapped_view):
         try:
@@ -600,7 +611,7 @@ class TaskbarPlugin(BasePlugin):
                 self.logger.debug("Invalid view object: missing 'id'.")
                 return
 
-            view = self.utils.is_view_valid(view_id)
+            view = self.wf_helper.is_view_valid(view_id)
             if not view:
                 self.logger.debug(f"Invalid or non-existent view ID: {view_id}")
                 return
@@ -638,7 +649,7 @@ class TaskbarPlugin(BasePlugin):
                 self.ipc.scale_toggle()
                 self._focus_and_center_cursor(view_id)
 
-            self.utils.view_focus_indicator_effect(view)
+            self.wf_helper.view_focus_indicator_effect(view)
 
         except Exception as e:
             self.log_error(

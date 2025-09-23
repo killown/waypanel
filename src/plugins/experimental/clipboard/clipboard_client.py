@@ -3,7 +3,6 @@ import io
 import mimetypes
 import subprocess
 from pathlib import Path
-from typing import List, Tuple
 import aiosqlite
 import pyperclip
 from gi.repository import GdkPixbuf, Gio, Gtk, GLib
@@ -15,7 +14,6 @@ from src.plugins.core._base import BasePlugin
 
 from .clipboard_server import AsyncClipboardServer
 
-# set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 DEPS = ["top_panel", "clipboard_server"]
 
@@ -32,7 +30,6 @@ def initialize_plugin(panel_instance):
 
 class ClipboardManager:
     def __init__(self, panel_instance):
-        # Pass the panel_instance to the AsyncClipboardServer
         self.server = AsyncClipboardServer(panel_instance)
         self.db_path = self._default_db_path()
 
@@ -52,7 +49,7 @@ class ClipboardManager:
         for item_id, content in items:
             if item_id == target_id:
                 return (item_id, content)
-        return None  # If ID not found
+        return None
 
     async def clear_history(self):
         await self.server.clear_all()
@@ -95,21 +92,19 @@ class ClipboardManager:
 class ClipboardClient(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
-        # Initialize the ClipboardManager and pass the panel_instance
         self.manager = ClipboardManager(panel_instance)
         self.popover_clipboard = None
         self.find_text_using_button = {}
         self.row_content = None
         self.listbox = None
 
-        # Add the default configuration directly inside the __init__ method
         default_config = {
-            "server": {
+            "clipboard_server": {
                 "log_enabled": False,
                 "max_items": 100,
                 "monitor_interval": 0.5,
             },
-            "client": {
+            "clipboard_client": {
                 "popover_min_width": 500,
                 "popover_max_height": 600,
                 "thumbnail_size": 128,
@@ -120,37 +115,14 @@ class ClipboardClient(BasePlugin):
             },
         }
 
-        # Ensure the clipboard_server configuration section exists and has all default values
-        if "clipboard_server" not in self.config:
-            self.config["clipboard_server"] = {}
-
-        config_changed = False
-        for key, value in default_config["server"].items():
-            if key not in self.config["clipboard_server"]:
-                self.config["clipboard_server"][key] = value
-                config_changed = True
-
-        # Ensure the clipboard_client configuration section exists and has all default values
-        if "clipboard_client" not in self.config:
-            self.config["clipboard_client"] = {}
-
-        for key, value in default_config["client"].items():
-            if key not in self.config["clipboard_client"]:
-                self.config["clipboard_client"][key] = value
-                config_changed = True
-
-        # Save the configuration if any changes were made
-        if config_changed:
-            try:
-                self.save_config()
-                self.logger.info(
-                    "Saved default clipboard plugin settings to config.toml"
-                )
-            except Exception as e:
-                self.logger.error(f"Failed to save clipboard plugin config: {e}")
-
+        self.config_handler.initialize_config_section(
+            "clipboard_server", default_config
+        )
+        self.config_handler.initialize_config_section(
+            "clipboard_client", default_config
+        )
         # New configurable settings from config.toml
-        self.client_config = self.config.get("clipboard_client", {})
+        self.client_config = self.config_handler.config_data.get("clipboard_client", {})
         self.popover_min_width = self.client_config.get("popover_min_width", 500)
         self.popover_max_height = self.client_config.get("popover_max_height", 600)
         self.thumbnail_size = self.client_config.get("thumbnail_size", 128)
@@ -170,7 +142,7 @@ class ClipboardClient(BasePlugin):
             bool: True if the content represents an image, False otherwise.
         """
         # Case 1: It's a file path that exists (and is reasonably short)
-        if isinstance(content, str) and self.utils.validate_string(
+        if isinstance(content, str) and self.data_helper.validate_string(
             content, "content from is_image_content"
         ):
             if len(content) < 256 and Path(content).exists():
@@ -178,7 +150,7 @@ class ClipboardClient(BasePlugin):
                 return mime and mime.startswith("image/")
 
         # Case 2: It's raw image data (from wl-copy)
-        elif isinstance(content, bytes) and self.utils.validate_bytes(
+        elif isinstance(content, bytes) and self.data_helper.validate_bytes(
             content, name="bytes from is_image_content"
         ):
             # Check magic numbers for common image formats
@@ -193,7 +165,7 @@ class ClipboardClient(BasePlugin):
             return any(content.startswith(magic) for magic in magic_numbers.keys())
 
         # Case 3: It's a base64 encoded image (common in clipboard)
-        elif isinstance(content, str) and self.utils.validate_string(
+        elif isinstance(content, str) and self.data_helper.validate_string(
             content, "content from is_image_content"
         ):
             if content.startswith(("data:image/png", "data:image/jpeg")):
@@ -244,7 +216,7 @@ class ClipboardClient(BasePlugin):
                     )
                 except subprocess.CalledProcessError:
                     self.log_error(f"Failed to copy image: {content}")
-            elif self.utils.validate_bytes(
+            elif self.data_helper.validate_bytes(
                 content, name="bytes from copy_to_clipboard"
             ):
                 # Handle raw image data
@@ -331,7 +303,6 @@ class ClipboardClient(BasePlugin):
         Populate the ListBox with clipboard history items.
         """
         try:
-            # Fix: Use the class's manager instance
             asyncio.run(self.manager.initialize())
             clipboard_history = asyncio.run(self.manager.get_history())
             asyncio.run(self.manager.server.stop())
@@ -342,7 +313,7 @@ class ClipboardClient(BasePlugin):
 
                 row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
                 image_button = Gtk.Button()
-                icon_name = self.utils.set_widget_icon_name(None, ["tag-delete"])
+                icon_name = self.gtk_helper.set_widget_icon_name(None, ["tag-delete"])
                 image_button.set_icon_name(icon_name)
                 image_button.connect("clicked", self.on_delete_selected)
 
@@ -428,20 +399,19 @@ class ClipboardClient(BasePlugin):
         self.main_widget = (self.menubutton_clipboard, "append")
         self.menubutton_clipboard.connect("clicked", self.open_popover_clipboard)
         clipboard_icon = (
-            self.config.get("panel", {})
+            self.config_handler.config_data.get("panel", {})
             .get("top", {})
             .get("clipboard_icon", "edit-paste")
         )
         self.menubutton_clipboard.set_icon_name(
-            self.utils.set_widget_icon_name(
+            self.gtk_helper.set_widget_icon_name(
                 "clipboard", ["edit-paste-symbolic", "edit-paste"]
             )
         )
 
-        self.utils.add_cursor_effect(self.menubutton_clipboard)
+        self.gtk_helper.add_cursor_effect(self.menubutton_clipboard)
 
     def create_popover_clipboard(self, *_):
-        # Create a popover
         self.popover_clipboard = Gtk.Popover.new()  # Create a new popover menu
         self.popover_clipboard.set_has_arrow(False)
         self.popover_clipboard.connect("closed", self.popover_is_closed)
@@ -493,7 +463,6 @@ class ClipboardClient(BasePlugin):
         if x is None:
             return
         selected_text = x.get_child().MYTEXT
-        # Use the class's manager instance
         item_id = int(selected_text.split()[0])
         self.on_paste_clicked(self.manager, item_id)
         if self.popover_clipboard:
@@ -509,13 +478,13 @@ class ClipboardClient(BasePlugin):
         """
 
         # Check for HEX color (3 or 6 digits, optional #)
-        if self.utils.validate_string(text, "text from is_color_code") and re.fullmatch(
-            r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", text
-        ):
+        if self.data_helper.validate_string(
+            text, "text from is_color_code"
+        ) and re.fullmatch(r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", text):
             return True
 
         # Check for RGB/RGBA color (strict format)
-        if self.utils.validate_string(text, "text from is_color_code"):
+        if self.data_helper.validate_string(text, "text from is_color_code"):
             # RGB: "rgb(255, 0, 0)"
             if re.fullmatch(
                 r"^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$", text
@@ -540,7 +509,7 @@ class ClipboardClient(BasePlugin):
         - RGB tuples (e.g., (255, 0, 0))
         """
         # If input is a hex string
-        if self.utils.validate_string(color, "color from get_contrast_color"):
+        if self.data_helper.validate_string(color, "color from get_contrast_color"):
             # Remove '#' if present and normalize to 6-digit hex
             hex_color = color.lstrip("#")
 
@@ -553,7 +522,7 @@ class ClipboardClient(BasePlugin):
 
         # If input is an RGB tuple
         elif (
-            self.utils.validate_list(color, element_type=(tuple, list))
+            self.data_helper.validate_list(color, element_type=(tuple, list))
             and len(color) == 3
         ):
             rgb = tuple(color)  # Ensure it's a tuple
@@ -580,21 +549,17 @@ class ClipboardClient(BasePlugin):
 
         def replace_color(match):
             color = match.group(1)
-            # Ensure color has # prefix
             if not color.startswith("#"):
                 color = f"#{color}"
 
-            # Get contrasting text color
             fg_color = self.get_contrast_color(color)
 
-            # Return formatted span
             return f'<span background="{color}" foreground="{fg_color}">{match.group(1)}</span>'
 
         # Replace all color matches in the text
         return color_pattern.sub(replace_color, text)
 
     def clear_clipboard(self, *_):
-        # Use the class's manager instance
         asyncio.run(self.manager.clear_history())
         asyncio.run(self.manager.reset_ids())
         self.update_clipboard_list()

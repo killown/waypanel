@@ -28,14 +28,9 @@ class WindowControlsPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
 
-        # Store the last focused toplevel view as an instance variable
         self.last_toplevel_focused_view = None
-
-        # Initialize buttons container
         self.cf_box = Gtk.Box()
         self.main_widget = (self.cf_box, "append")
-
-        # Create buttons
         self.maximize_button = self.create_control_button(
             "window-maximize-symbolic",
             "window-controls-maximize-button",
@@ -54,17 +49,15 @@ class WindowControlsPlugin(BasePlugin):
             self.minimize_view,
         )
 
-        # Add buttons to container
         self.cf_box.append(self.minimize_button)
         self.cf_box.append(self.maximize_button)
         self.cf_box.append(self.close_button)
-        self.utils.add_cursor_effect(self.cf_box)
+        self.gtk_helper.add_cursor_effect(self.cf_box)
 
-        # Add CSS class
         self.cf_box.add_css_class("window-controls-box")
 
     def create_control_button(self, icon_name, css_class, callback):
-        button = self.utils.create_button(
+        button = self.gtk_helper.create_button(
             icon_name, None, css_class, None, use_function=callback
         )
         return button

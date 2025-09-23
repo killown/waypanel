@@ -74,12 +74,11 @@ class MenuSetupPlugin(BasePlugin):
         for menu_name, menu_data in menu_config.items():
             menu = Gio.Menu()
             menu_button = Gtk.MenuButton(label=menu_name)
-            self.utils.add_cursor_effect(menu_button)
-            # Set icon if specified in the configuration
+            self.gtk_helper.add_cursor_effect(menu_button)
             if "icon" in menu_data:
                 icon_name = menu_data["icon"]
                 menu_button.set_icon_name(
-                    self.utils.set_widget_icon_name(
+                    self.gtk_helper.set_widget_icon_name(
                         "custom_menu", [icon_name, "open-menu-symbolic"]
                     )
                 )
@@ -90,7 +89,6 @@ class MenuSetupPlugin(BasePlugin):
             menu_buttons[menu_name] = menu_button
             self.widgets.append(menu_button)
 
-            # Add menu items or submenus
             for item in menu_data.get("items", []):
                 if "submenu" in item:
                     self.create_submenu(menu, item["submenu"], item["items"])
