@@ -1,7 +1,6 @@
 import os
 import subprocess
 import sys
-from importlib.util import find_spec
 from subprocess import Popen, check_output
 import psutil
 from gi.repository import Gtk
@@ -34,34 +33,14 @@ class SystemDashboard(BasePlugin):
         dialog = Gtk.MessageDialog(
             transient_for=None,
             message_type=Gtk.MessageType.INFO,
-            buttons=Gtk.ButtonsType.NONE,  # We'll add our own button
+            buttons=Gtk.ButtonsType.NONE,
             text=msg,
         )
 
         close_btn = Gtk.Button(label="_Close", use_underline=True)
         close_btn.connect("clicked", lambda *_: dialog.close())
-        dialog.get_message_area().append(close_btn)
+        dialog.get_message_area().append(close_btn)  # pyright: ignore
         dialog.show()
-
-    def is_settings_installed(self):
-        """Check if waypanel-settings is installed"""
-        if find_spec("waypanel_settings") is not None:
-            return True
-        try:
-            subprocess.run(
-                ["waypanel-settings", "--version"],
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            return True
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            msg = """Error: waypanel-settings is not installed"
-                     Install it with:
-                         git clone https://github.com/killown/waypanel-settings
-                         cd waypanel-settings && pip install -e ."""
-            self.message(msg)
-            return False
 
     def launch_settings(self):
         app = ControlCenter()
@@ -79,7 +58,8 @@ class SystemDashboard(BasePlugin):
                     break
             else:
                 self.logger.info(
-                    "Error: waypanel-settings not found in PATH", file=sys.stderr
+                    "Error: waypanel-sett # pyright: ignoreings not found in PATH",
+                    file=sys.stderr,
                 )
 
     def get_system_list(self):
@@ -91,9 +71,8 @@ class SystemDashboard(BasePlugin):
         self.main_widget = (self.menubutton_dashboard, "append")
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
         icon_name = self.gtk_helper.set_widget_icon_name(
-            "system-dashboard",
+            "exit-symbolic",
             [
-                "logout_highlight-symbolic",
                 "exit",
                 "gnome-logout-symbolic",
                 "application-exit-symbolic",
@@ -145,6 +124,8 @@ class SystemDashboard(BasePlugin):
         settings_icon = self.gtk_helper.set_widget_icon_name(
             None,
             [
+                "settings-configure-symbolic",
+                "systemsettings-symbolic",
                 "settings",
                 "system-settings-symbolic",
                 "preferences-activities-symbolic",
@@ -164,10 +145,10 @@ class SystemDashboard(BasePlugin):
         }
         done = []
         for data, category in data_and_categories.items():
-            if category not in done:  # if flowbox not exist in stack
+            if category not in done:
                 flowbox = Gtk.FlowBox.new()
                 flowbox.props.homogeneous = True
-                flowbox.set_valign(Gtk.Align.START)  # top to bottom
+                flowbox.set_valign(Gtk.Align.START)
                 flowbox.props.margin_start = 15
                 flowbox.props.margin_end = 15
                 flowbox.props.margin_top = 15
@@ -199,7 +180,7 @@ class SystemDashboard(BasePlugin):
                 button.set_child(icon_vbox)
             else:
                 self.logger.info("Error: Invalid icon_vbox provided")
-            flowbox.append(button)
+            flowbox.append(button)  # pyright: ignore
             button.connect("clicked", self.on_action, data[0])
             name_label.add_css_class("system_dash_label")
             summary_label.add_css_class("system_dash_summary")
@@ -232,7 +213,7 @@ class SystemDashboard(BasePlugin):
         selected_text, filename = x.get_child().MYTEXT
         cmd = "gtk-launch {}".format(filename)
         self.cmd.run(cmd)
-        self.popover_dashboard.popdown()
+        self.popover_dashboard.popdown()  # pyright: ignore
 
     def open_popover_dashboard(self, *_):
         if self.popover_dashboard and self.popover_dashboard.is_visible():
@@ -284,9 +265,8 @@ class SystemDashboard(BasePlugin):
                      --grace 1 --fade-in 4""".split()
             )
         if action == "Settings":
-            if self.is_settings_installed():
-                self.launch_settings()
-                self.popover_dashboard.popdown()
+            self.launch_settings()
+            self.popover_dashboard.popdown()  # pyright: ignore
 
     def popover_is_open(self, *_):
         return
@@ -295,7 +275,7 @@ class SystemDashboard(BasePlugin):
         return
 
     def on_show_searchbar_action_actived(self, action, parameter):
-        self.searchbar.set_search_mode(
+        self.searchbar.set_search_mode(  # pyright: ignore
             True
         )  # Ctrl+F To Active show_searchbar and show searchbar
 

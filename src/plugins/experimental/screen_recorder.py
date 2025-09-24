@@ -59,7 +59,7 @@ class RecordingPlugin(BasePlugin):
     def create_widget(self):
         button = Gtk.Button()
         button.set_icon_name(
-            self.gtk_helper.set_widget_icon_name(
+            self.gtk_helper.icon_exist(
                 "screen_recorder",
                 [
                     "deepin-screen-recorder-symbolic",
@@ -206,7 +206,7 @@ class RecordingPlugin(BasePlugin):
 
         self.is_recording = True
         self.button.set_icon_name(
-            self.gtk_helper.set_widget_icon_name(
+            self.gtk_helper.icon_exist(
                 "screen_recorder",
                 [
                     "simplescreenrecorder-recording",
@@ -247,7 +247,7 @@ class RecordingPlugin(BasePlugin):
             self.record_processes.append(proc)
             self.is_recording = True
             self.button.set_icon_name(
-                self.gtk_helper.set_widget_icon_name(
+                self.gtk_helper.icon_exist(
                     "screen_recorder",
                     ["simplescreenrecorder-recording", "media-playback-stop-symbolic"],
                 )
@@ -305,7 +305,7 @@ class RecordingPlugin(BasePlugin):
             self.record_processes.append(proc)
             self.is_recording = True
             self.button.set_icon_name(
-                self.gtk_helper.set_widget_icon_name(
+                self.gtk_helper.icon_exist(
                     "screen_recorder",
                     ["simplescreenrecorder-recording", "media-record"],
                 )
@@ -363,7 +363,7 @@ class RecordingPlugin(BasePlugin):
         self.record_processes.clear()
         self.is_recording = False
         self.button.set_icon_name(
-            self.gtk_helper.set_widget_icon_name(
+            self.gtk_helper.icon_exist(
                 "screen_recorder",
                 [
                     "deepin-screen-recorder-symbolic",

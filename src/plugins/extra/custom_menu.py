@@ -75,15 +75,15 @@ class MenuSetupPlugin(BasePlugin):
             menu = Gio.Menu()
             menu_button = Gtk.MenuButton(label=menu_name)
             self.gtk_helper.add_cursor_effect(menu_button)
-            if "icon" in menu_data:
-                icon_name = menu_data["icon"]
-                menu_button.set_icon_name(
-                    self.gtk_helper.set_widget_icon_name(
-                        "custom_menu", [icon_name, "open-menu-symbolic"]
-                    )
+            menu_button.set_icon_name(
+                self.gtk_helper.icon_exist(
+                    "custom_menu",
+                    [
+                        "utilities-terminal-symbolic",
+                        "open-menu-symbolic",
+                    ],
                 )
-            else:
-                menu_button.set_label(menu_name)
+            )
 
             menu_button.set_menu_model(menu)
             menu_buttons[menu_name] = menu_button

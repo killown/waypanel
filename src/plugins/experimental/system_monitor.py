@@ -6,11 +6,10 @@ import shlex
 import tempfile
 import os
 from src.plugins.core._base import BasePlugin
+from gi.repository import Gtk, GLib, Adw, Pango  # pyright: ignore
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, GLib, Adw, Pango
 
-# set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 
@@ -119,10 +118,10 @@ class SystemMonitorPlugin(BasePlugin):
         """Create the system monitor button and popover."""
         # Create the system monitor button
         self.menubutton_system = Gtk.Button()
-        icon_name = self.gtk_helper.set_widget_icon_name(
-            "system_monitor",
+        icon_name = self.gtk_helper.icon_exist(
+            "system-monitor-app-symbolic",
             [
-                "deepin-system-monitor-symbolic",
+                "utilities-system-monitor-symbolic",
                 "com.github.stsdc.monitor-symbolic",
                 "utilities-system-monitor-symbolic",
                 "system-monitor-app-symbolic",

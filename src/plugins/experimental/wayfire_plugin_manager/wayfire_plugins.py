@@ -156,8 +156,8 @@ class WayfireRealtimePluginsPlugin(BasePlugin):
     def _setup_button(self):
         """Configures the main button in the top panel."""
         self.button.set_icon_name(
-            self.gtk_helper.set_widget_icon_name(
-                "wayfire_plugins", ["plugins", "xapp-prefs-plugins-symbolic"]
+            self.gtk_helper.icon_exist(
+                "wayfire_plugins", ["xapp-prefs-plugins-symbolic", "plugins"]
             )
         )
         self.gtk_helper.add_cursor_effect(self.button)

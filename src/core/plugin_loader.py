@@ -1,7 +1,7 @@
 import os
 import importlib
 import toml
-from gi.repository import GLib, Gtk
+from gi.repository import GLib, Gtk  # pyright: ignore
 import sys
 import traceback
 from src.shared.data_helpers import DataHelpers
@@ -232,7 +232,7 @@ class PluginLoader:
         Determines the base path where plugins are located.
         """
         try:
-            waypanel_module_spec = importlib.util.find_spec("waypanel")
+            waypanel_module_spec = importlib.util.find_spec("waypanel")  # pyright: ignore
 
             # CRITICAL FIX: Check if the origin is None before proceeding.
             # If a module is not from a file (e.g., built-in), its origin will be None.
@@ -643,6 +643,7 @@ class PluginLoader:
         # Schedule plugin initialization
         for module, position, order, priority in plugin_metadata:
             # The lambda function captures the arguments correctly
+            print(module, position, order, priority)
             GLib.idle_add(
                 lambda m=module,
                 p=position,

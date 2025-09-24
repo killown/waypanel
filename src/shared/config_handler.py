@@ -34,6 +34,7 @@ class ConfigHandler:
                     "name": "DP-1",
                 },
                 "soundcard": {"blacklist": "Navi"},
+                "microphone": {"blacklist": "Navi"},
             },
             "taskbar": {
                 "panel": {

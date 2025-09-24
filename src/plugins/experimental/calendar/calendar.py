@@ -1,13 +1,11 @@
 import gi
-
-gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk
+from gi.repository import Gtk  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
-# Set to False or remove the plugin file to disable it
+gi.require_version("Gtk", "4.0")
+
 ENABLE_PLUGIN = True
 
-# Load the plugin only after essential plugins are loaded
 DEPS = ["clock"]
 
 
@@ -72,7 +70,7 @@ class CalendarPlugin(BasePlugin):
         if self.popover_calendar and self.popover_calendar.is_visible():
             self.popover_calendar.popdown()
         else:
-            self.popover_calendar.popup()
+            self.popover_calendar.popup()  # pyright: ignore
 
     def about(self):
         """

@@ -32,7 +32,7 @@ class Notifier:
                 None,
             )
 
-            app_name = "MyApp"
+            app_name = "Notify"
             replaces_id = 0
             hints = {}
             expire_timeout = 5000
