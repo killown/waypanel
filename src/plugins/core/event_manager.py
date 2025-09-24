@@ -3,7 +3,6 @@ from src.plugins.core._base import BasePlugin
 import os
 import collections
 
-# Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 
 

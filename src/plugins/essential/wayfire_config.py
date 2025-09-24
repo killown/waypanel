@@ -2,7 +2,7 @@ import os
 import time
 import toml
 import asyncio
-from gi.repository import GLib
+from gi.repository import GLib  # pyright: ignore
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from src.plugins.core._base import BasePlugin

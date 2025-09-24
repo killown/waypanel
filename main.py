@@ -314,9 +314,6 @@ def load_config(config_path):
     try:
         with p.open("r") as f:
             cfg = toml.load(f)
-            if not cfg:
-                logger.critical("Configuration file is empty: %s", config_path)
-                sys.exit(1)
             return cfg
     except toml.TomlDecodeError as e:
         logger.critical("Failed to parse TOML: %s", e)

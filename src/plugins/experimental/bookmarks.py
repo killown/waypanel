@@ -1,15 +1,12 @@
 import os
-from subprocess import Popen
 from PIL import Image
-
 import requests
 import toml
 from bs4 import BeautifulSoup
-from gi.repository import GdkPixbuf, Gtk
+from gi.repository import GdkPixbuf, Gtk  # pyright: ignore
 
 from src.plugins.core._base import BasePlugin
 
-# set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 
@@ -121,7 +118,7 @@ class PopoverBookmarks(BasePlugin):
             url = bookmark_data.get("url", "")
             container = bookmark_data.get("container", "")
             row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-            row_hbox.MYTEXT = (url, container)
+            row_hbox.MYTEXT = (url, container)  # pyright: ignore
 
             # Configure bookmark icon
             icon = url
@@ -180,8 +177,8 @@ class PopoverBookmarks(BasePlugin):
 
     def _finalize_popover_setup(self):
         """Finalize the popover setup, including dimensions and parent."""
-        height = self.flowbox.get_preferred_size().natural_size.height
-        width = self.flowbox.get_preferred_size().natural_size.width
+        height = self.flowbox.get_preferred_size().natural_size.height  # pyright: ignore
+        width = self.flowbox.get_preferred_size().natural_size.width  # pyright: ignore
         self.scrolled_window.set_min_content_width(width)
         self.scrolled_window.set_min_content_height(height)
 
@@ -219,9 +216,9 @@ class PopoverBookmarks(BasePlugin):
         og_image_meta = soup.find("meta", property="og:image")
 
         if og_image_meta:
-            image_url = og_image_meta.get("content")
+            image_url = og_image_meta.get("content")  # pyright: ignore
             if image_url:
-                image_response = requests.get(image_url, headers=headers)
+                image_response = requests.get(image_url, headers=headers)  # pyright: ignore
                 if image_response.status_code == 200:
                     if not os.path.exists(save_path):
                         os.makedirs(save_path)
@@ -243,7 +240,7 @@ class PopoverBookmarks(BasePlugin):
             self.ipc.set_focus(view[0])
         cmd = f"firefox-developer-edition 'ext+container:name={container}&url={url}'"
         self.cmd.run(cmd)
-        self.popover_bookmarks.popdown()
+        self.popover_bookmarks.popdown()  # pyright: ignore
 
     def open_popover_bookmarks(self, *_):
         if self.popover_bookmarks is None:

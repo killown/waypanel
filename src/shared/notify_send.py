@@ -1,5 +1,4 @@
-# notifier.py
-from gi.repository import Gio, GLib
+from gi.repository import Gio, GLib  # pyright: ignore
 import threading
 
 

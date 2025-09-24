@@ -1,13 +1,10 @@
 import gi
 import os
-
-gi.require_version("Gtk", "4.0")
-from gi.repository import GLib
-from src.core.compositor.ipc import IPC
+from gi.repository import GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
+gi.require_version("Gtk", "4.0")
 
-# Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 

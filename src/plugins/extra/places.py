@@ -107,7 +107,7 @@ class PopoverFolders(BasePlugin):
                 row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
                 # Add CSS class to the row box
                 row_hbox.add_css_class("places-row-hbox")
-                row_hbox.MYTEXT = folders_path, filemanager
+                row_hbox.MYTEXT = folders_path, filemanager  # pyright: ignore
 
                 self.listbox.append(row_hbox)
 
@@ -135,6 +135,7 @@ class PopoverFolders(BasePlugin):
             icon = "nautilus"
 
             row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+            # Add CSS class to the row box
             row_hbox.add_css_class("places-row-hbox")
             row_hbox.MYTEXT = folders_path, "nautilus"
 
@@ -171,15 +172,58 @@ class PopoverFolders(BasePlugin):
         create_gesture(
             row_hbox,
             3,
-            lambda _, folder_path=folder_path: self.open_baobab(folder_path),
+            lambda _,
+            row_hbox=row_hbox,
+            folder_path=folder_path: self.create_right_click_menu(
+                row_hbox, folder_path
+            ),
         )
+
+    def create_right_click_menu(self, row_hbox, folder_path):
+        popover = Gtk.Popover()
+        popover.set_parent(row_hbox)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        button = Gtk.Button.new_with_label("Pin to the top")
+        button.connect("clicked", lambda _, path=folder_path: self.pin_to_top(path))
+        box.append(button)
+        popover.set_child(box)
+        popover.popup()
+
+    def pin_to_top(self, folder_path):
+        folder_name = os.path.basename(folder_path)
+
+        # Ensure the config has a 'folders' key
+        if "folders" not in self.config_handler.config_data:
+            self.config_handler.config_data["folders"] = {}
+
+        # Check if the folder is already pinned
+        all_folders = self.config_handler.config_data.get("folders")
+        for key, value in all_folders.items():
+            if value.get("path") == folder_path:
+                self.logger.info(f"{folder_path} is already pinned.")
+                return
+
+        # Create a new entry for the config file
+        new_folder_entry = {
+            "name": folder_name,
+            "path": folder_path,
+            "filemanager": "nautilus",  # Assuming 'nautilus' as a default
+            "icon": "folder-symbolic",  # Assuming 'folder-symbolic' as a default
+        }
+
+        # Append the new entry and save the config
+        # Use a unique key for the folder, like "folder_name"
+        self.config_handler.config_data["folders"][folder_name] = new_folder_entry
+        self.config_handler.save_config()
+        self.config_handler.reload_config()
+        self.logger.info(f"Pinned folder: {folder_name} to config.toml")
 
     def create_row_middle_click(self, row_hbox, folder_path):
         create_gesture = self.plugins["gestures_setup"].create_gesture
         create_gesture(
             row_hbox,
             2,
-            lambda _, folder_path=folder_path: self.open_kitty(folder_path),
+            lambda _, folder_path=folder_path: self.open_baobab(folder_path),
         )
 
     def open_kitty(self, folder_path):

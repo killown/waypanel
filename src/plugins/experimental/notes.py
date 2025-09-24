@@ -3,8 +3,7 @@ import datetime
 import asyncio
 from pathlib import Path
 from typing import List, Tuple
-from gi.repository import Gio, Gtk, GLib, Pango
-
+from gi.repository import Gio, Gtk, GLib, Pango  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 
@@ -49,7 +48,7 @@ class NotesManager:
             cursor = await db.execute(
                 "SELECT id, content FROM notes ORDER BY timestamp DESC"
             )
-            return await cursor.fetchall()
+            return await cursor.fetchall()  # pyright: ignore
 
     async def add_note(self, content: str):
         """Add a new note"""
@@ -353,10 +352,10 @@ class MenuNotes(BasePlugin):
         )
 
     def on_show_searchbar_action_actived(self, action, parameter):
-        self.searchbar.set_search_mode(True)
+        self.searchbar.set_search_mode(True)  # pyright: ignore
 
     def on_search_entry_changed(self, searchentry):
-        self.listbox.invalidate_filter()
+        self.listbox.invalidate_filter()  # pyright: ignore
 
     def on_filter_invalidate(self, row):
         search_text = self.searchbar.get_text().strip().lower()

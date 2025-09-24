@@ -98,31 +98,10 @@ class ClipboardClient(BasePlugin):
         self.row_content = None
         self.listbox = None
 
-        default_config = {
-            "clipboard_server": {
-                "log_enabled": False,
-                "max_items": 100,
-                "monitor_interval": 0.5,
-            },
-            "clipboard_client": {
-                "popover_min_width": 500,
-                "popover_max_height": 600,
-                "thumbnail_size": 128,
-                "preview_text_length": 50,
-                "image_row_height": 60,
-                "text_row_height": 38,
-                "item_spacing": 5,
-            },
-        }
-
-        self.config_handler.initialize_config_section(
-            "clipboard_server", default_config
-        )
-        self.config_handler.initialize_config_section(
-            "clipboard_client", default_config
-        )
         # New configurable settings from config.toml
-        self.client_config = self.config_handler.config_data.get("clipboard_client", {})
+        self.client_config = self.config_handler.config_data.get("clipboard").get(
+            "client"
+        )
         self.popover_min_width = self.client_config.get("popover_min_width", 500)
         self.popover_max_height = self.client_config.get("popover_max_height", 600)
         self.thumbnail_size = self.client_config.get("thumbnail_size", 128)

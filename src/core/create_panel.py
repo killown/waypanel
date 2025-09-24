@@ -3,8 +3,8 @@ import sys
 from typing import Dict, Any, Optional, Union
 import gi
 import toml
-from gi.repository import Adw, Gdk, Gtk
-from gi.repository import Gtk4LayerShell as LayerShell
+from gi.repository import Adw, Gdk, Gtk  # pyright: ignore
+from gi.repository import Gtk4LayerShell as LayerShell  # pyright: ignore
 from wayfire import WayfireSocket
 
 sock = None
@@ -103,10 +103,10 @@ def get_config_path() -> str:
     return panel_config
 
 
-def load_panel_config() -> Dict[str, Any]:
-    """Load and return the panel configuration."""
+def load_full_config() -> Dict[str, Any]:
+    """Load and return the entire application configuration."""
     with open(get_config_path()) as config_file:
-        return toml.load(config_file)["panel"]
+        return toml.load(config_file)
 
 
 def get_target_monitor(
@@ -121,8 +121,8 @@ def get_target_monitor(
             return target
 
     # Then check config file
-    if "primary_output" in config:
-        monitor_name = config["primary_output"].get("output_name")
+    if "hardware" in config and "primary_output" in config["hardware"]:
+        monitor_name = config["hardware"]["primary_output"].get("name")
         target = monitors.get(monitor_name)
         if target:
             return target
@@ -189,7 +189,7 @@ def CreatePanel(
     window.set_focus_on_click(False)
 
     # Get monitor and config information
-    config = load_panel_config()
+    config = load_full_config()
     monitors = get_monitor_info()
     monitor = get_target_monitor(config, monitors)
 

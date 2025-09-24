@@ -1,9 +1,10 @@
 import datetime
 import gi
 
-gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, GLib
 from src.plugins.core._base import BasePlugin
+
+gi.require_version("Gtk", "4.0")
 
 ENABLE_PLUGIN = True
 
@@ -59,7 +60,7 @@ class ClockPlugin(BasePlugin):
     def update_clock(self):
         try:
             current_time = datetime.datetime.now().strftime("%d %b %H:%M")
-            self.clock_label.set_label(current_time)
+            self.clock_label.set_label(current_time)  # pyright: ignore
         except Exception as e:
             self.log_error(f"Error updating clock: {e}")
         return True  # Continue timeout

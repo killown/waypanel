@@ -1,5 +1,5 @@
 import os
-from gi.repository import Gtk, Gio
+from gi.repository import Gtk, Gio  # pyright: ignore
 
 import toml
 import subprocess

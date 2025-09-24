@@ -10,14 +10,6 @@ from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
 
-DEFAULT_CONFIG = {
-    "clipboard_server": {
-        "log_enabled": False,
-        "max_items": 100,
-        "monitor_interval": 0.5,
-    }
-}
-
 
 def get_plugin_placement(panel_instance):
     return
@@ -101,21 +93,12 @@ class AsyncClipboardServer(BasePlugin):
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.running = False
 
-        # add default config in config.toml if sections not found
-        self.config_handler.initialize_config_section(
-            "clipboard_server", DEFAULT_CONFIG
+        self.config_data_server = self.config_handler.config_data.get("clipboard").get(
+            "server"
         )
-
-        # Set attributes from the final config, which is now guaranteed to exist
-        self.log_enabled = self.config_handler.config_data["clipboard_server"].get(
-            "log_enabled", False
-        )
-        self.max_items = self.config_handler.config_data["clipboard_server"].get(
-            "max_items", 100
-        )
-        self.monitor_interval = self.config_handler.config_data["clipboard_server"].get(
-            "monitor_interval", 0.5
-        )
+        self.log_enabled = self.config_data_server.get("log_enabled", False)
+        self.max_items = self.config_data_server.get("max_items", 100)
+        self.monitor_interval = self.config_data_server.get("monitor_interval", 0.5)
 
     def _default_db_path(self):
         return str(Path.home() / ".config" / "waypanel" / "clipboard_server.db")

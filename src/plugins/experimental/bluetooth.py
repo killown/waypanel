@@ -2,7 +2,7 @@ import gi
 import asyncio
 import subprocess
 import re
-from gi.repository import GLib, Gtk
+from gi.repository import GLib, Gtk  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 from src.plugins.core._event_loop import global_loop
 
@@ -130,14 +130,14 @@ class BluetoothDashboard(BasePlugin):
             return False
 
         popover_box = self.popover_dashboard.get_child()
-        for child in popover_box:
-            popover_box.remove(child)
+        for child in popover_box:  # pyright: ignore
+            popover_box.remove(child)  # pyright: ignore
 
         self.bluetooth_buttons.clear()
 
         if not device_details:
             no_devices_label = Gtk.Label(label="No Bluetooth devices found.")
-            popover_box.append(no_devices_label)
+            popover_box.append(no_devices_label)  # pyright: ignore
         else:
             for device in device_details:
                 bluetooth_button = Gtk.Box.new(
@@ -182,7 +182,7 @@ class BluetoothDashboard(BasePlugin):
 
                 self.bluetooth_buttons[device["mac"]] = bluetooth_button
 
-                popover_box.append(bluetooth_button)
+                popover_box.append(bluetooth_button)  # pyright: ignore
         return False
 
     async def _handle_bluetooth_click(self, device_id):

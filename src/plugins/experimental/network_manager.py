@@ -1,4 +1,4 @@
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib  # pyright: ignore
 import subprocess
 from typing import Optional
 from src.plugins.core._base import BasePlugin

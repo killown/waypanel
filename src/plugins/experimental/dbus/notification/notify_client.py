@@ -22,7 +22,7 @@
 import os
 import sqlite3
 import json
-from gi.repository import Gtk
+from gi.repository import Gtk  # pyright: ignore
 from ._utils import NotifyUtils
 from src.plugins.core._base import BasePlugin
 
@@ -247,14 +247,11 @@ class NotificationPopoverPlugin(BasePlugin):
             print(desktop_entry)
 
             if url:
-                # Open the URL if provided
-                self.utils.open_url(url)
+                self.cmd.open_url(url)
             elif desktop_entry:
-                # Launch the application if an app ID is provided
                 self.cmd.run(desktop_entry)
-                # self.delete_notification(notification["id"], widget)
                 self.popover.popdown()
-                return True  # ready to delete the notification
+                return True
             else:
                 self.logger.info("No default action defined in hints.")
         except Exception as e:
@@ -553,8 +550,7 @@ class NotificationPopoverPlugin(BasePlugin):
         for notification in notifications:
             height += box_size
             self.create_notification_box(notification)
-            # FIXME: make this doesn't require panel restart
-        print(height)
+
         self.main_vbox.set_size_request(self.popover_width, self.popover_height)
 
         # Initialize DND state

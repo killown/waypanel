@@ -14,7 +14,7 @@ gi.require_version("GLib", "2.0")
 gi.require_version("Gio", "2.0")
 
 from gi.repository import Gtk, Gdk, GLib, Gio
-from typing import Dict, Any, Optional, Tuple, Callable, List, Union, Type, Iterable
+from typing import Any, Optional, Callable, Union
 
 
 class GtkHelpers:
@@ -38,7 +38,7 @@ class GtkHelpers:
             "st",
             "rxvt",
         ]
-        self.config_handler = ConfigHandler("waypanel", panel_instance)
+        self.config_handler = ConfigHandler(panel_instance)
         self.command = CommandRunner(panel_instance)
 
     def on_css_file_changed(
@@ -116,7 +116,7 @@ class GtkHelpers:
         Returns:
             str: The name of the matching icon if found, or "image-missing" otherwise.
         """
-        icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+        icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())  # pyright: ignore
         norm_arg = self.normalize_name(argument)
 
         if fallback_icons is None:
@@ -322,9 +322,9 @@ class GtkHelpers:
 
             # Filter desktop files based on app_id
             desktop_files = [
-                app.get_id().lower()
+                app.get_id().lower()  # pyright: ignore
                 for app in all_apps
-                if app.get_id() and app_id.lower() in app.get_id().lower()
+                if app.get_id() and app_id.lower() in app.get_id().lower()  # pyright: ignore
             ]
 
             # Return the first match if any
@@ -353,9 +353,9 @@ class GtkHelpers:
         if hasattr(icon, "get_names") and callable(icon.get_names):
             names = icon.get_names()
             if names:
-                return names[0]
+                return names[0]  # pyright: ignore
         if hasattr(icon, "get_name") and callable(icon.get_name):
-            return icon.get_name()
+            return icon.get_name()  # pyright: ignore
         return ""
 
     def search_str_inside_file(self, file_path: str, word: str) -> bool:
@@ -621,7 +621,7 @@ class GtkHelpers:
             # Search for a matching application
             for app in app_list:
                 try:
-                    app_info_id = app.get_id().lower()
+                    app_info_id = app.get_id().lower()  # pyright: ignore
                     if not app_info_id:
                         continue
 

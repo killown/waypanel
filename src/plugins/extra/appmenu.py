@@ -430,7 +430,7 @@ class AppLauncher(BasePlugin):
 
     def add_to_dockbar(self, button, name, desktop_file, popover):
         """
-        adds the selected app to the dockbar configuration in waypanel.toml.
+        Adds the selected app to the dockbar configuration in waypanel.toml.
         """
         wclass = os.path.splitext(desktop_file)[0]
 
@@ -443,11 +443,20 @@ class AppLauncher(BasePlugin):
             "initial_title": name,
         }
 
-        dockbar_config = self.config_handler.config_data.get("dockbar_app", {})
+        # Get the current dockbar configuration, or an empty dictionary if it doesn't exist
+        dockbar_config = self.config_handler.config_data.get("dockbar", {})
 
-        dockbar_config[wclass] = new_entry
+        # Get the 'app' sub-table, or create a new one if it doesn't exist
+        app_config = dockbar_config.get("app", {})
 
-        self.config_handler.config_data["dockbar_app"] = dockbar_config
+        # Add the new entry to the 'app' sub-table using the application's name as the key
+        app_config[name] = new_entry
+
+        # Update the dockbar config with the modified app sub-table
+        dockbar_config["app"] = app_config
+
+        # Update the main configuration data
+        self.config_handler.config_data["dockbar"] = dockbar_config
 
         self.config_handler.save_config()
         self.config_handler.reload_config()
@@ -514,7 +523,7 @@ class AppLauncher(BasePlugin):
                     except FileNotFoundError:
                         continue  # Try the next terminal editor
 
-        print("Error: Could not find an editor to open the .desktop file.")
+            print("Error: Could not find an editor to open the .desktop file.")
 
     def on_right_click_popover(self, gesture, n_press, x, y, vbox):
         """

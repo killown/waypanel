@@ -1,24 +1,21 @@
 import gi
+import os
+import time
+from pathlib import Path
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+from gi.repository import Gtk, Gdk, GLib  # pyright: ignore
+from core._base import BasePlugin
+from src.core.create_panel import (
+    set_layer_position_exclusive,
+    unset_layer_position_exclusive,
+)
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 gi.require_version("GLib", "2.0")
 gi.require_version("Gio", "2.0")
 
-from gi.repository import Gtk, Gdk, GLib, Gio
-
-import os
-import toml
-import time
-from pathlib import Path
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-
-from core._base import BasePlugin
-from src.core.create_panel import (
-    set_layer_position_exclusive,
-    unset_layer_position_exclusive,
-)
 
 ENABLE_PLUGIN = True
 
@@ -26,24 +23,6 @@ if not os.getenv("WAYFIRE_SOCKET"):
     ENABLE_PLUGIN = False
 
 DEPS = ["event_manager", "gestures_setup"]
-
-DEFAULT_CONFIG = {
-    "dockbar_content": {
-        "panel": "left-panel",
-        "orientation": "v",
-        "class_style": "dockbar-buttons",
-    },
-    "dockbar_app": {
-        "terminal": {
-            "cmd": "kitty",
-            "icon": "utilities-terminal-symbolic",
-        },
-        "file_manager": {
-            "cmd": "nautilus",
-            "icon": "system-file-manager-symbolic",
-        },
-    },
-}
 
 
 def get_plugin_placement(panel_instance):
@@ -84,8 +63,6 @@ class DockbarPlugin(BasePlugin):
         super().__init__(panel_instance)
 
         self.dockbar = Gtk.Box(spacing=10, orientation=Gtk.Orientation.VERTICAL)
-        self.config_handler.initialize_config_section("dockbar_content", DEFAULT_CONFIG)
-        self.config_handler.initialize_config_section("dockbar_app", DEFAULT_CONFIG)
 
         self.create_gesture = self.plugins["gestures_setup"].create_gesture
         self._subscribe_to_events()
@@ -96,14 +73,14 @@ class DockbarPlugin(BasePlugin):
         self._setup_file_watcher()
 
     def get_panel(self):
-        dockbar_config = self.config_handler.config_data.get("dockbar_content", {})
+        dockbar_config = self.config_handler.config_data.get("dockbar", {}).get("panel")
         if not dockbar_config:
             self.logger.warning(
                 "Dockbar panel config is missing or invalid. Using default: left-panel."
             )
             return self.obj.left_panel
 
-        position = dockbar_config["panel"].lower()
+        position = dockbar_config.get("name").lower()
         valid_panels = {
             "left": self.obj.left_panel,
             "right": self.obj.right_panel,
@@ -171,7 +148,7 @@ class DockbarPlugin(BasePlugin):
             self.dockbar.remove(child)
             child = self.dockbar.get_first_child()
 
-        config_data = self.config_handler.config_data["dockbar_app"]
+        config_data = self.config_handler.config_data.get("dockbar", {}).get("app", {})
         for app_name, app_data in config_data.items():
             button = self._create_dockbar_button(
                 app_name, app_data, class_style, use_label
@@ -239,12 +216,14 @@ class DockbarPlugin(BasePlugin):
             child = self.dockbar.get_first_child()
             while child:
                 if hasattr(child, "app_config"):
-                    app_name = child.app_name
-                    new_dockbar_config[app_name] = child.app_config
+                    app_name = child.app_name  # pyright: ignore
+                    new_dockbar_config[app_name] = child.app_config  # pyright: ignore
                 child = child.get_next_sibling()
 
-            # Correctly update the 'dockbar_app' section in the main configuration
-            self.config_handler.config_data["dockbar_app"] = new_dockbar_config
+            # Correctly update the 'dockbar' section in the main configuration
+            self.config_handler.config_data.get("dockbar", {})["app"] = (
+                new_dockbar_config
+            )
             self.config_handler.save_config()
             self.logger.info("Dockbar order saved to config file.")
         except Exception as e:
@@ -291,7 +270,9 @@ class DockbarPlugin(BasePlugin):
             self.cmd.run(cmd)
 
     def _setup_dockbar(self):
-        dockbar_data = self.config_handler.config_data.get("dockbar_content", {})
+        dockbar_data = self.config_handler.config_data.get("dockbar", {}).get(
+            "panel", {}
+        )
         orientation = dockbar_data.get("orientation", "v")
         class_style = dockbar_data.get("class_style", "dockbar-buttons")
 

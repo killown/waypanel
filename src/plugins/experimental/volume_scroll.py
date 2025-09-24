@@ -1,13 +1,11 @@
 import gi
-
 from src.plugins.core._base import BasePlugin
-
-gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib  # pyright: ignore
 from subprocess import run
 import pulsectl
 
-# Set to False or remove the plugin file to disable it
+gi.require_version("Gtk", "4.0")
+
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 
@@ -142,9 +140,10 @@ class VolumeScrollPlugin(BasePlugin):
     def show_widget(self):
         """Show the floating widget."""
         if not self.widget:
-            self.create_floating_widget()  # Ensure the widget is created
-        self.widget.present()
-        self.widget.set_opacity(1.0)
+            self.create_floating_widget()
+        if self.widget:
+            self.widget.present()
+            self.widget.set_opacity(1.0)
 
         # Cancel any existing hide timeout
         if self.hide_timeout_id:
@@ -156,7 +155,6 @@ class VolumeScrollPlugin(BasePlugin):
     def hide_widget(self):
         """Hide the floating widget."""
         if self.widget:
-            self.widget.set_opacity(0.0)
             self.widget.hide()
         self.hide_timeout_id = None
         return False  # Stop the timeout

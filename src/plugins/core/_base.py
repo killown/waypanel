@@ -16,126 +16,83 @@ class BasePlugin:
     """
     Base class for all waypanel plugins.
 
-    Plugins are the primary mechanism for extending functionality in waypanel.
-    Each plugin can optionally provide a UI widget and register event handlers,
-    timers, or background services.
+    This class provides a standardized structure and core resources for creating
+    plugins that extend waypanel's functionality. Each plugin can have a UI widget
+    and manage events, timers, or run as a background service.
 
     ## Plugin Lifecycle
 
-    A plugin follows this lifecycle:
+    1.  **Initialization**: `__init__(self, panel_instance)` is called to create the plugin instance.
+    2.  **Start**: `on_start()` is called after initialization. Use this for setup.
+    3.  **Runtime**: The plugin listens for events and updates its state.
+    4.  **Stop/Disable**: `on_stop()` is called when the plugin is disabled or reloaded.
+    5.  **Cleanup**: `on_cleanup()` is called before full removal.
 
-    1. **Initialization**: `initialize_plugin(panel_instance)` returns an instance of the plugin.
-    2. **Startup**: If defined, `on_start()` is called after initialization.
-    3. **Runtime**: The plugin listens for events, updates its state, and may update the UI.
-    4. **Stop/Disable**: If defined, `on_stop()` is called when the plugin is disabled or reloaded.
-    5. **Cleanup**: If defined, `on_cleanup()` is called before full removal.
+    ## Placement & Dependencies
 
-    ## Placement Behavior
+    Plugins define their placement and order within the panel by implementing the
+    `get_plugin_placement` function.
 
-    Plugins define their placement by implementing:
+    **Function Signature:**
+        `def get_plugin_placement(panel_instance):`
+            `return position, order, priority`
 
-        def get_plugin_placement(panel_instance):
-            return position, order, priority
+    * `position`: `"top-panel-left"`, `"bottom-panel-right"`, etc.
+    * `order`: The rendering order within the same panel section.
+    * `priority`: The initialization order (lower numbers load first).
 
-    Where:
-        - `position`: where to place the plugin (e.g., `"top-panel-left"`, `"bottom-panel-right"`)
-        - `order`: render order within the same panel section
-        - `priority`: initialization order (lower numbers first)
+    **Background Services**: Return `"background"` or `None` to mark a plugin as a background service with no UI.
 
-    ### Special Return Values
+    **Dependencies**: Plugins can declare a list of dependencies (`DEPS`). The `PluginLoader` ensures
+    dependent plugins are loaded first.
 
-    - Returning `"background"` or `None` marks the plugin as a **background service** with no UI.
-      These plugins run silently and do not appear in the panel layout.
-
-    Example:
-        ```python
-        def get_plugin_placement(panel_instance):
-            return "background"
-        ```
-
-    ## Dependencies
-
-    Plugins can declare dependencies using the `DEPS` list. The PluginLoader ensures dependent plugins
-    are loaded before the current one.
-
-    Example:
-        ```python
-        DEPS = ["event_manager", "calendar"]
-        ```
+    Example: `DEPS = ["event_manager", "calendar"]`
 
     ## Creating a Plugin
 
-    To create a new plugin:
+    To create a new plugin, inherit from `BasePlugin` and implement the required methods.
 
-    1. Inherit from `BasePlugin`
-    2. Implement `initialize_plugin(panel_instance)`
-    3. Optionally override lifecycle methods: `on_start()`, `on_stop()`, `on_reload()`, `on_cleanup()`
-    4. Define placement via `get_plugin_placement(panel_instance)`
+    1.  Inherit from `BasePlugin`.
+    2.  Call `super().__init__(panel_instance)` in your constructor.
+    3.  Implement `get_plugin_placement` to define its position.
+    4.  Optionally override lifecycle methods (`on_start`, `on_stop`, etc.).
+    5.  Set `self.main_widget` to a `(widget, append_method)` tuple for UI integration.
 
-    ## Event Handling
-
-    Plugins typically interact with the system through the IPC interface (`self.ipc`) and event manager.
-    Use `GLib.idle_add()` for non-blocking operations to avoid freezing the panel.
-
-    ## UI Integration
-
-    If your plugin provides a UI element:
-    - Set `self.main_widget` to a tuple containing the widget and the append method
-    - Supported append methods: `"append"`, `"set_content"`
-
-    Example:
-        ```python
-        self.main_widget = (self.button, "append")
-        ```
+    Example: `self.main_widget = (self.button, "append")`
     """
 
     def __init__(self, panel_instance):
         """
-        Base class for all waypanel plugins.
+        Initializes the BasePlugin and injects core resources.
 
-        This class provides core access to shared components used by all plugins.
-        Subclasses must always call `super().__init__(panel_instance)` in their constructor
-        to ensure proper initialization.
+        This method provides access to shared components from the main panel instance.
+        Subclasses must call `super().__init__(panel_instance)` to ensure proper setup.
 
-        ### Available Attributes (Do NOT reassign)
+        ### 📋 Available Attributes (Do not reassign)
 
-        These are initialized directly from `panel_instance` and ready to use:
+        * `self.obj`: Reference to the main Panel instance.
+        * `self.logger`: Logger object for logging messages.
+        * `self.ipc`: IPC client for Wayfire communication.
+        * `self.config`: Plugin-specific configuration from `config.toml`.
+        * `self.plugins`: Dictionary of all loaded plugins.
+        * `self.plugin_loader`: Reference to the plugin loader.
+        * `self.save_config`: Function to save updated config.
+        * `self.reload_config`: Function to reload the config at runtime.
+        * `self.update_widget_safely`: Safe method to update UI widgets.
+        * `self.dependencies`: List of required plugin names.
+        * `self.layer_shell`: Reference to LayerShell for setting panel layers.
 
-        - `self.obj`: Reference to the main Panel instance
-        - `self.logger`: Logger object (`self.logger.info(...)`, etc.)
-        - `self.ipc`: IPC client for communicating with the compositor
-        - `self.config`: Optional plugin-specific configuration from `config.toml`
-        - `self.utils`: Utility module with helper functions
-        - `self.plugin_loader`: Reference to the plugin loader
-        - `self.plugins`: Dictionary of loaded plugins (`self.plugins["event_manager"]`)
-        - `self.save_config`: Function to save updated config to disk
-        - `self.reload_config`: Function to reload config at runtime
-        - `self.update_widget_safely`: Safe method to update UI widgets
-        - `self.update_widget`: Low-level widget updater
-        - `self.ipc_server`: Optional IPC server instance
-        - `self.dependencies`: List of required plugin names (`DEPS`)
-        - `self.layer_shell`: Reference to LayerShell for setting panel layers
-        - `self.set_layer_pos_exclusive`: Helper to set exclusive layer position
-        - `self.unset_layer_pos_exclusive`: Helper to unset exclusive layer position
-
-        ### Usage Example
+        **Example Usage:**
 
         ```python
         class MyPlugin(BasePlugin):
             def __init__(self, panel_instance):
                 super().__init__(panel_instance)  # Required!
                 self.logger.info("MyPlugin initialized")
-
                 if "event_manager" in self.plugins:
                     event_manager = self.plugins["event_manager"]
                     event_manager.subscribe_to_event("view-focused", self.on_view_focused)
         ```
-
-        ### Notes
-
-        - Never reassign any of these attributes — they are already initialized.
-        - Always call `super().__init__(panel_instance)` first in subclass `__init__`.
-        - Plugins that don’t need a UI should return `"background"` from `get_plugin_placement()`.
         """
         self.obj = panel_instance
         self.path_handler: Any = path_handler.PathHandler("waypanel", panel_instance)
@@ -145,9 +102,7 @@ class BasePlugin:
         )
         self.gtk_helper: Any = gtk_helpers.GtkHelpers(panel_instance)
         self.data_helper: Any = data_helpers.DataHelpers()
-        self.config_handler: Any = config_handler.ConfigHandler(
-            "waypanel", panel_instance
-        )
+        self.config_handler: Any = config_handler.ConfigHandler(panel_instance)
         self.cmd: Any = command_runner.CommandRunner(panel_instance)
         self.bottom_panel: Any = self.obj.bottom_panel
         self.top_panel: Any = self.obj.top_panel
@@ -242,9 +197,15 @@ class BasePlugin:
 
     def set_widget(self):
         """
-        Define the widget to be added to the panel.
+        Defines and validates the widget to be added to the panel.
+
+        This method validates `self.main_widget`, ensuring it's a properly formatted
+        tuple containing a valid `Gtk.Widget` and an accepted action string (`"append"` or
+        `"set_content"`). It logs errors and warnings for improper configuration,
+        preventing common UI-related crashes.
+
         Returns:
-            tuple: (widget, action) where action is "append" or "set_content".
+            tuple: The `(widget, action)` tuple if valid, or `None` if invalid.
         """
         # Log the status of self.main_widget for debugging purposes
         if self.main_widget is None:
@@ -270,10 +231,10 @@ class BasePlugin:
         # Validate the widget
         widget = self.main_widget[0]
         if isinstance(widget, list):
-            for w in widget:
+            for w in widget:  # pyright: ignore
                 if w is None or not isinstance(w, Gtk.Widget):
                     self.log_error(
-                        f"Invalid widget in self.main_widget: {w}."
+                        f"Invalid widget in self.main_widget: {w}. "
                         "The widget must be a valid Gtk.Widget instance. Plugin: {self.__class__.__name__}"
                     )
                     return None
@@ -315,29 +276,37 @@ class BasePlugin:
 
     def on_start(self):
         """
-        Called when the plugin is initialized.
-        Use this method to set up resources, register callbacks, or initialize UI components.
+        Hook called when the plugin is initialized.
+
+        Use this method to set up resources, register callbacks, or initialize
+        UI components after the plugin is loaded.
         """
         pass
 
     def on_stop(self):
         """
-        Called when the plugin is stopped or unloaded.
-        Use this method to clean up resources, unregister callbacks, or save state.
+        Hook called when the plugin is stopped or unloaded.
+
+        Use this method to clean up resources, unregister callbacks, or save
+        state before the plugin is removed.
         """
         pass
 
     def on_reload(self):
         """
-        Called when the plugin is reloaded dynamically.
-        Use this method to refresh data or reset internal state.
+        Hook called when the plugin is reloaded dynamically.
+
+        Use this method to refresh data or reset the internal state without
+        fully stopping and restarting the plugin.
         """
         pass
 
     def on_cleanup(self):
         """
-        Called before the plugin is completely removed.
-        Use this method for final cleanup tasks.
+        Hook called before the plugin is completely removed.
+
+        Use this method for final cleanup tasks that may not be handled by
+        `on_stop()`.
         """
         pass
 

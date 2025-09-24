@@ -56,7 +56,7 @@ class PluginLoader:
         self.plugins_dir = self.plugins_base_path()
         self.position_mapping = {}
         self.data_helper = DataHelpers()
-        self.config_handler = ConfigHandler("waypanel", panel_instance)
+        self.config_handler = ConfigHandler(panel_instance)
         self.config_path = self.config_handler.config_path
         self.user_plugins_dir = os.path.join(
             self.get_real_user_home(), ".local", "share", "waypanel", "plugins"

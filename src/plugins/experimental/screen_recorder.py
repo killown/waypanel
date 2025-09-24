@@ -214,11 +214,11 @@ class RecordingPlugin(BasePlugin):
                 ],
             )
         )
-        self.button.set_tooltip_text("Stop Recording")
+        self.button.set_tooltip_text("Stop Recording")  # pyright: ignore
         self.logger.info("All recordings started.")
 
     async def on_record_output_clicked(self, output_name):
-        self.popover.popdown()
+        self.popover.popdown()  # pyright: ignore
         if self.is_recording:
             self.logger.info("Already recording. Stop first.")
             return

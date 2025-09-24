@@ -1,8 +1,7 @@
 from subprocess import Popen, check_output
-
 import pulsectl
 import soundcard as sc
-from gi.repository import Gtk
+from gi.repository import Gtk  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 
@@ -215,28 +214,28 @@ class SoundCardDashboard(BasePlugin):
         self.update_mic_list()
 
         # Set the parent widget of the popover and display it
-        self.popover_dashboard.set_parent(self.menubutton_dashboard)
+        self.popover_dashboard.set_parent(self.menubutton_dashboard)  # pyright: ignore
         self.popover_dashboard.popup()
 
         return self.popover_dashboard
 
     def update_soundcard_list(self):
         """Update the soundcard list in the combobox."""
-        self.soundcard_combobox.remove_all()
+        self.soundcard_combobox.remove_all()  # pyright: ignore
 
         soundcards = self.get_soundcard_list_names()
         for soundcard in soundcards:
-            self.soundcard_combobox.append_text(soundcard)
+            self.soundcard_combobox.append_text(soundcard)  # pyright: ignore
 
         if soundcards:
-            self.soundcard_combobox.set_active(0)  # select first item if available
+            self.soundcard_combobox.set_active(0)  # pyright: ignore
 
     def update_mic_list(self):
         """Update the microphone list in the combobox."""
-        self.mic_combobox.remove_all()
+        self.mic_combobox.remove_all()  # pyright: ignore
         for mic in self.get_mic_list_names():
-            self.mic_combobox.append_text(mic)
-        self.mic_combobox.set_active(0)
+            self.mic_combobox.append_text(mic)  # pyright: ignore
+        self.mic_combobox.set_active(0)  # pyright: ignore
 
     def on_soundcard_changed(self, combobox):
         selected_option = combobox.get_active_text()

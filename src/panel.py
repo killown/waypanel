@@ -22,7 +22,7 @@ class Panel(Adw.Application):
         self.panel_instance = None
         self.style_css_config = None
         self.connect("activate", self.on_activate)
-        self.config_handler = ConfigHandler("waypanel", self)
+        self.config_handler = ConfigHandler(self)
         self.config_path = self.config_handler._setup_config_paths()
         self.config_data = self.config_handler.load_config()
         self.plugin_loader = PluginLoader(self)
@@ -193,7 +193,7 @@ class Panel(Adw.Application):
         size = config.get("size", 32)
 
         self.top_panel = CreatePanel(
-            self.panel_instance,
+            self.panel_instance,  # pyright: ignore
             "TOP",
             position,
             exclusive,
@@ -220,7 +220,13 @@ class Panel(Adw.Application):
         size = config.get("size", 32)
 
         self.bottom_panel = CreatePanel(
-            self.panel_instance, "BOTTOM", position, exclusive, 0, size, "bottom-panel"
+            self.panel_instance,  # pyright: ignore
+            "BOTTOM",
+            position,
+            exclusive,
+            0,
+            size,
+            "bottom-panel",  # pyright: ignore
         )
 
         if config.get("enabled", True):
@@ -241,7 +247,13 @@ class Panel(Adw.Application):
         size = config.get("size", 64)
 
         self.left_panel = CreatePanel(
-            self.panel_instance, "LEFT", position, exclusive, 0, size, "left-panel"
+            self.panel_instance,  # pyright: ignore
+            "LEFT",
+            position,
+            exclusive,
+            0,
+            size,
+            "left-panel",
         )
 
         if config.get("enabled", True):
@@ -262,7 +274,13 @@ class Panel(Adw.Application):
         size = config.get("size", 64)
 
         self.right_panel = CreatePanel(
-            self.panel_instance, "RIGHT", position, exclusive, size, 0, "right-panel"
+            self.panel_instance,  # pyright: ignore
+            "RIGHT",
+            position,
+            exclusive,
+            size,
+            0,
+            "right-panel",
         )
 
         if config.get("enabled", True):
