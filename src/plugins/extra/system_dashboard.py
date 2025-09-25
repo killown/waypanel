@@ -3,10 +3,9 @@ import subprocess
 import sys
 from subprocess import Popen, check_output
 import psutil
-from gi.repository import Gtk
+from gi.repository import Gtk  # pyright: ignore
 from src.tools.control_center import ControlCenter
 from src.plugins.core._base import BasePlugin
-
 
 ENABLE_PLUGIN = True
 
@@ -28,6 +27,7 @@ class SystemDashboard(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.popover_dashboard = None
+        self.panel_instance = panel_instance
 
     def message(self, msg):
         dialog = Gtk.MessageDialog(
@@ -36,14 +36,13 @@ class SystemDashboard(BasePlugin):
             buttons=Gtk.ButtonsType.NONE,
             text=msg,
         )
-
         close_btn = Gtk.Button(label="_Close", use_underline=True)
         close_btn.connect("clicked", lambda *_: dialog.close())
         dialog.get_message_area().append(close_btn)  # pyright: ignore
         dialog.show()
 
     def launch_settings(self):
-        app = ControlCenter()
+        app = ControlCenter(self.panel_instance)
         app.run(None)
         try:
             subprocess.Popen(["waypanel-settings"], start_new_session=True)
@@ -92,7 +91,6 @@ class SystemDashboard(BasePlugin):
         self.popover_dashboard.set_hexpand(True)
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.stack = Gtk.Stack.new()
-
         logout_icon = self.gtk_helper.set_widget_icon_name(
             None,
             [
@@ -132,7 +130,6 @@ class SystemDashboard(BasePlugin):
                 "preferences-system",
             ],
         )
-
         data_and_categories = {
             ("Logout", "", logout_icon): "",
             ("Reboot", "", reboot_icon): "",
@@ -161,19 +158,14 @@ class SystemDashboard(BasePlugin):
                 done.append(category)
             else:
                 flowbox = self.stack.get_child_by_name(category)
-
             icon_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-
             icon = Gtk.Image.new_from_icon_name(data[2])
             icon.set_icon_size(Gtk.IconSize.LARGE)
             icon_vbox.append(icon)
-
             name_label = Gtk.Label.new(data[0])
             icon_vbox.append(name_label)
-
             summary_label = Gtk.Label.new(data[1])
             icon_vbox.append(summary_label)
-
             button = Gtk.Button.new()
             button.set_has_frame(False)
             if icon_vbox is not None and isinstance(icon_vbox, Gtk.Widget):
@@ -185,7 +177,6 @@ class SystemDashboard(BasePlugin):
             name_label.add_css_class("system_dash_label")
             summary_label.add_css_class("system_dash_summary")
             self.gtk_helper.add_cursor_effect(button)
-
         self.main_box.append(self.stack)
         self.popover_dashboard.set_child(self.main_box)
         self.popover_dashboard.set_parent(self.menubutton_dashboard)
@@ -197,14 +188,12 @@ class SystemDashboard(BasePlugin):
         device_id = device.split()[0]
         cmd = "systemctl connect {0}".format(device_id).split()
         Popen(cmd)
-
         connected_devices = "systemctl info".split()
         try:
             connected_devices = check_output(connected_devices).decode()
         except Exception as e:
             self.log_error(e)
             return
-
         if device_id in connected_devices:
             cmd = "systemctl disconnect {0}".format(device_id).split()
             Popen(cmd)
@@ -239,12 +228,9 @@ class SystemDashboard(BasePlugin):
 
     def on_action(self, button, action):
         if action == "Exit Waypanel":
-            # FIXME: need a better way to exit the panel
             Popen("pkill -f waypanel/main.py".split())
         if action == "Restart Waypanel":
-            # FIXME: need a better way to exit the panel
             self.run_later("waypanel &", 0.1)
-
         if action == "Logout":
             Popen("wayland-logout".split())
         if action == "Shutdown":
@@ -254,7 +240,6 @@ class SystemDashboard(BasePlugin):
         if action == "Reboot":
             Popen("reboot".split())
         if action == "Lock":
-            # FIXME: allow the user set their own cmd in toml
             Popen(
                 """swaylock --screenshots --clock --indicator
                      --grace-no-mouse --indicator-radius 99
@@ -277,7 +262,7 @@ class SystemDashboard(BasePlugin):
     def on_show_searchbar_action_actived(self, action, parameter):
         self.searchbar.set_search_mode(  # pyright: ignore
             True
-        )  # Ctrl+F To Active show_searchbar and show searchbar
+        )
 
     def about(self):
         """A system dashboard providing quick access to common system actions like power management, session control, and settings."""
@@ -287,9 +272,7 @@ class SystemDashboard(BasePlugin):
         """
         This plugin creates a popover-based user interface for managing system-level actions.
         It provides a single access point for common tasks such as logging out, shutting down, or accessing settings.
-
         Its core logic is centered on **dynamic UI generation and system command execution**:
-
         1.  **UI Generation**: It creates a popover that contains a grid of buttons (`Gtk.FlowBox`), where each button represents a system action. It dynamically selects the most suitable icon for each button from a predefined list.
         2.  **System Command Execution**: For each button, it executes a corresponding system command (e.g., `reboot`, `shutdown`, `swaylock`) using `subprocess.Popen`, which allows the plugin to interact with the underlying operating system.
         3.  **External Tool Integration**: It includes a check to verify the existence of an external application (`waypanel-settings`) before attempting to launch it, providing graceful error handling if the dependency is not met.

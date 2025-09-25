@@ -63,6 +63,184 @@
 
 /*
  * ----------------------------------------
+ * ⚙️ Control Center GUI Styles (Neumorphism & Gruvbox)
+ * ----------------------------------------
+ * Styles for the Gtk4/Adwaita ControlCenter components.
+ */
+
+/* Target the application window itself */
+AdwApplicationWindow {
+  background-color: var(--gruv-bg);
+}
+
+/* 1. Header Bar and Save Button */
+.app-header {
+  background-color: var(--gruv-bg-medium);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.5);
+  padding: 5px;
+}
+
+.save-button {
+  /* Suggested action is already set in python, enhance it */
+  color: var(--gruv-fg);
+  background-color: var(--gruv-green);
+  border-radius: 6px;
+  box-shadow: var(--shadow-neumorphic-outset-large);
+  transition: all 0.2s ease;
+}
+
+.save-button:hover {
+  background-color: #a9b665; /* Lighter green */
+  box-shadow:
+    6px 6px 12px rgba(0, 0, 0, 0.6),
+    -6px -6px 12px rgba(255, 255, 255, 0.08);
+}
+
+.save-button:active {
+  box-shadow: var(--shadow-neumorphic-press);
+  transform: translateY(1px);
+}
+
+/* 2. Left Navigation Panel */
+
+.category-list {
+  background-color: var(--gruv-bg-light);
+  /* Remove default listbox borders */
+  border: none;
+  padding: 10px 0;
+}
+
+.category-item {
+  padding: 10px 15px;
+  margin: 5px 10px;
+  border-radius: 8px;
+  background-color: var(--gruv-bg-light);
+  box-shadow: var(--shadow-neumorphic-outset-large);
+  transition: all 0.2s ease;
+}
+
+.category-item:hover {
+  background-color: var(--gruv-bg-medium);
+  box-shadow:
+    4px 4px 8px rgba(0, 0, 0, 0.6),
+    -4px -4px 8px rgba(255, 255, 255, 0.08);
+}
+
+.category-item:active,
+.category-item:checked {
+  /* :checked is for selected row in ListBox */
+  background-color: var(--gruv-bg-medium);
+  box-shadow: var(--shadow-neumorphic-press);
+  transform: translateY(1px);
+}
+
+.category-item label {
+  color: var(--gruv-fg);
+}
+
+/* 3. Right Content Area (Settings) */
+
+.content-area {
+  background-color: var(--gruv-bg);
+  padding: 0;
+}
+
+.config-group {
+  /* Gruvbox-Neumorphism look for the group container */
+  background-color: var(--gruv-bg-light);
+  padding: 10px;
+  border-radius: 12px;
+  margin: 10px 0;
+  box-shadow: var(--shadow-neumorphic-inset-medium);
+}
+
+.config-group AdwPreferencesGroup {
+  /* Ensure the internal group container is transparent */
+  background-color: transparent;
+}
+
+.setting-row {
+  color: var(--gruv-fg);
+  /* Remove default Adwaita separators, let the group handle the structure */
+  border-bottom: none;
+  margin: 2px 0;
+  padding: 10px 0;
+  background-color: transparent;
+}
+
+.setting-row:hover {
+  background-color: var(--gruv-bg-medium);
+  border-radius: 6px;
+}
+
+.config-expander {
+  /* Style the expander button/label */
+  padding: 10px 0;
+  margin: 2px 0;
+  color: var(--gruv-blue); /* Give it a distinct color */
+}
+
+.config-expander:hover {
+  background-color: var(--gruv-bg-medium);
+  border-radius: 6px;
+}
+
+.nested-group-box {
+  background-color: var(--gruv-bg); /* Darker background for nested content */
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 10px;
+  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.list-editor .config-group {
+  /* Style the list editor to stand out less */
+  background-color: var(--gruv-bg);
+  box-shadow: none;
+  border: 1px solid var(--gruv-bg-light);
+}
+
+.list-item-row {
+  padding-left: 10px;
+}
+
+/* 4. Input Widgets (The actual interactive elements) */
+
+.text-input,
+.numeric-input {
+  background-color: var(--gruv-bg);
+  color: var(--gruv-fg);
+  border-radius: 5px;
+  padding: 5px 8px;
+  /* Inset shadow is the default for input fields */
+  box-shadow: var(--shadow-neumorphic-inset-medium);
+  border: 1px solid var(--gruv-bg-medium);
+  min-height: 28px;
+}
+
+.text-input:focus,
+.numeric-input:focus {
+  /* Highlight with Gruvbox-blue when focused */
+  box-shadow:
+    0 0 0 2px var(--gruv-blue),
+    var(--shadow-neumorphic-inset-medium);
+  border-color: var(--gruv-blue);
+  background-color: var(--gruv-bg-light);
+}
+
+.toggle-switch {
+  /* Use Adwaita's base switch style, but ensure correct colors */
+}
+
+/* Ensure Gtk.Label fallback is visible */
+.value-display {
+  color: var(--gruv-fg-soft);
+  font-style: italic;
+}
+
+/*
+ * ----------------------------------------
  * 🚀 Panel & Bar Styles
  * ----------------------------------------
  * Styles for the main panels, taskbar, and their button containers.
@@ -113,11 +291,11 @@
 }
 
 /* These warnings is comming from margin, find a better way to handle the margin
-* this also will decrease the top panel height
-*(waypanel:37920): Gtk-WARNING **: 11:35:30.873: GtkFlowBox 0x5576359c7210 (flowbox) reported min width -6, but sizes must be >= 0
-*
-*(waypanel:37920): Gtk-WARNING **: 11:35:30.873: GtkFlowBox 0x5576359c7210 (flowbox) reported min height -6, but sizes must be >= 0
-*/
+ * this also will decrease the top panel height
+ *(waypanel:37920): Gtk-WARNING **: 11:35:30.873: GtkFlowBox 0x5576359c7210 (flowbox) reported min width -6, but sizes must be >= 0
+ *
+ *(waypanel:37920): Gtk-WARNING **: 11:35:30.873: GtkFlowBox 0x5576359c7210 (flowbox) reported min height -6, but sizes must be >= 0
+ */
 .box-widgets {
   margin: -3px;
   padding: 1px;
