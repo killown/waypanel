@@ -14,8 +14,12 @@ class CommandRunner:
         """
         try:
             if os.getenv("WAYFIRE_SOCKET"):
-                pid = self.ipc.run_cmd(cmd)
-                self.logger.info(f"Command started with PID: {pid['pid']}")
+
+                def run():
+                    self.ipc.run_cmd(cmd)
+                    return False
+
+                GLib.idle_add(run)
 
             if os.getenv("SWAYSOCK"):
                 GLib.idle_add(

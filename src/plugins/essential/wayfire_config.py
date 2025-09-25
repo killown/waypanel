@@ -206,7 +206,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
                 await asyncio.to_thread(
                     self.notifier.notify_send,
                     "Wayfire Config Plugin",
-                    f"Batch update failed, falling back to individual updates: {e}",
+                    "Batch update failed, falling back to individual updates",
                     "config",
                 )
                 for key, value in batch_updates.items():

@@ -162,10 +162,12 @@ class BluetoothDashboard(BasePlugin):
                 bluetooth_button.append(icon)
 
                 gesture = Gtk.GestureClick.new()
+                # FIX: Capture the device_mac value correctly using a default argument
+                device_mac = device["mac"]
                 gesture.connect(
                     "released",
-                    lambda _, *args: global_loop.create_task(
-                        self._handle_bluetooth_click(device["mac"])
+                    lambda _, *args, mac=device_mac: global_loop.create_task(
+                        self._handle_bluetooth_click(mac)
                     ),
                 )
                 gesture.set_button(1)

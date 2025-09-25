@@ -450,6 +450,39 @@ class WayfireHelpers:
 
         return cursor_x, cursor_y
 
+    def move_cursor_middle_output(self, output_id: int) -> None:
+        """
+        Move the cursor to the center of the specified output (monitor).
+
+        Args:
+            output_id (int): The unique identifier of the output.
+        """
+        try:
+            output = self.ipc.get_output(output_id)
+            if not output:
+                self.logger.warning(f"Output with ID '{output_id}' not found.")
+                return
+
+            output_geometry = output.get("geometry")
+            if not output_geometry:
+                self.logger.warning(f"Output with ID '{output_id}' has no geometry.")
+                return
+
+            cursor_x = output_geometry["x"] + output_geometry["width"] // 2
+            cursor_y = output_geometry["y"] + output_geometry["height"] // 2
+
+            self.ipc.move_cursor(cursor_x, cursor_y)
+            self.logger.info(
+                f"Cursor moved to the center of output {output_id} at ({cursor_x}, {cursor_y})."
+            )
+
+        except Exception as e:
+            self.logger.error(
+                "Error while moving cursor to output center.",
+                error=e,
+                context={"output_id": output_id},
+            )
+
     def move_cursor_middle(self, view_id: str) -> None:
         """
         Move the cursor to the center of the specified view on its output (monitor).

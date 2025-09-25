@@ -33,8 +33,8 @@ class ConfigHandler:
                 "primary_output": {
                     "name": "DP-1",
                 },
-                "soundcard": {"blacklist": "Navi"},
-                "microphone": {"blacklist": "Navi"},
+                "soundcard": {"blacklist": "Navi", "max_name_lenght": 35},
+                "microphone": {"blacklist": "Navi", "max_name_lenght": 35},
             },
             "taskbar": {
                 "panel": {

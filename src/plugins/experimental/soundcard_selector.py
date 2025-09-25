@@ -7,7 +7,6 @@ import logging
 
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
-
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 
@@ -42,9 +41,15 @@ class SoundCardDashboard(BasePlugin):
         """
         super().__init__(panel_instance)
         self.popover_dashboard = None
-        self.soundcard_combobox = None
-        self.mic_combobox = None
+        self.soundcard_dropdown = None
+        self.mic_dropdown = None
         self.menubutton_dashboard = None
+        self.max_card_chars = self.config_handler.check_and_get_config(
+            ["hardware", "soundcard", "max_name_lenght"], 35
+        )
+        self.max_mic_chars = self.config_handler.check_and_get_config(
+            ["hardware", "microphone", "max_name_lenght"], 35
+        )
 
     def get_view_id_by_pid(self, pid):
         """
@@ -102,21 +107,17 @@ class SoundCardDashboard(BasePlugin):
         )
         if isinstance(blacklist, str):
             blacklist = [blacklist]
-
         soundcard_list = []
-
         try:
             default_name = self.get_default_soundcard_name()
             if not any(b in default_name for b in blacklist):
                 soundcard_list.append(default_name)
         except Exception as e:
             logger.warning(f"Could not get default speaker: {e}")
-
         for soundcard in self.get_soundcard_list():
             name = soundcard.name
             if name not in soundcard_list and not any(b in name for b in blacklist):
                 soundcard_list.append(name)
-
         return soundcard_list
 
     def get_mic_list_names(self):
@@ -131,7 +132,6 @@ class SoundCardDashboard(BasePlugin):
         )
         if isinstance(blacklist, str):
             blacklist = [blacklist]
-
         try:
             default_mic = self.get_default_mic_name()
             mic_list_names = [mic.name for mic in self.get_mic_list()]
@@ -143,7 +143,6 @@ class SoundCardDashboard(BasePlugin):
                 mic_list.append(default_mic)
         except Exception as e:
             logger.warning(f"Could not get default microphone: {e}")
-
         for mic in self.get_mic_list():
             if mic.name not in mic_list and not any(b in mic.name for b in blacklist):
                 mic_list.append(mic.name)
@@ -195,53 +194,35 @@ class SoundCardDashboard(BasePlugin):
 
     def set_default_soundcard(self, id):
         """
-        Sets the default sound card using wpctl or pactl.
+        Sets the default sound card using pactl.
         """
         if not id:
             logger.warning("No soundcard ID provided.")
             return
-
         try:
-            cmd = ["wpctl", "set-default-sink", id]
+            cmd = ["pactl", "set-default-sink", id]
             logger.info(f"Attempting to set default sink with: {' '.join(cmd)}")
             Popen(cmd, stdout=DEVNULL, stderr=DEVNULL)
         except FileNotFoundError:
-            logger.warning("wpctl not found, falling back to pactl.")
-            try:
-                cmd = ["pactl", "set-default-sink", id]
-                logger.info(f"Attempting to set default sink with: {' '.join(cmd)}")
-                Popen(cmd, stdout=DEVNULL, stderr=DEVNULL)
-            except FileNotFoundError:
-                logger.error("pactl not found. Cannot set default soundcard.")
-            except Exception as e:
-                logger.error(f"Failed to set default soundcard with pactl: {e}")
+            logger.error("pactl not found. Cannot set default soundcard.")
         except Exception as e:
-            logger.error(f"Failed to set default soundcard with wpctl: {e}")
+            logger.error(f"Failed to set default soundcard with pactl: {e}")
 
     def set_default_mic(self, id):
         """
-        Sets the default microphone using wpctl or pactl.
+        Sets the default microphone using pactl.
         """
         if not id:
             logger.warning("No microphone ID provided.")
             return
-
         try:
-            cmd = ["wpctl", "set-default-source", id]
+            cmd = ["pactl", "set-default-source", id]
             logger.info(f"Attempting to set default source with: {' '.join(cmd)}")
             Popen(cmd, stdout=DEVNULL, stderr=DEVNULL)
         except FileNotFoundError:
-            logger.warning("wpctl not found, falling back to pactl.")
-            try:
-                cmd = ["pactl", "set-default-source", id]
-                logger.info(f"Attempting to set default source with: {' '.join(cmd)}")
-                Popen(cmd, stdout=DEVNULL, stderr=DEVNULL)
-            except FileNotFoundError:
-                logger.error("pactl not found. Cannot set default microphone.")
-            except Exception as e:
-                logger.error(f"Failed to set default microphone with pactl: {e}")
+            logger.error("pactl not found. Cannot set default microphone.")
         except Exception as e:
-            logger.error(f"Failed to set default microphone with wpctl: {e}")
+            logger.error(f"Failed to set default microphone with pactl: {e}")
 
     def create_menu_popover_soundcard(self):
         """
@@ -271,96 +252,110 @@ class SoundCardDashboard(BasePlugin):
             self.popover_dashboard = Gtk.Popover.new()
             self.popover_dashboard.connect("closed", self.popover_is_closed)
             self.popover_dashboard.connect("notify::visible", self.popover_is_open)
-
             box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL, spacing=6)
             box.set_margin_start(12)
             box.set_margin_end(12)
             box.set_margin_top(12)
             box.set_margin_bottom(12)
-
+            self.soundcard_model = Gtk.StringList.new([])
+            self.soundcard_dropdown = Gtk.DropDown.new(self.soundcard_model, None)
+            self.mic_model = Gtk.StringList.new([])
+            self.mic_dropdown = Gtk.DropDown.new(self.mic_model, None)
+            self.soundcard_dropdown.connect(
+                "notify::selected-item", self.on_soundcard_changed
+            )
+            self.mic_dropdown.connect("notify::selected-item", self.on_mic_changed)
+            self.soundcard_dropdown.set_size_request(200, -1)
+            self.mic_dropdown.set_size_request(200, -1)
             sc_hbox = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
             sound_card_icon = Gtk.Image.new_from_icon_name("audio-card-symbolic")
-            self.soundcard_combobox = Gtk.ComboBoxText()
-            self.soundcard_combobox.connect("changed", self.on_soundcard_changed)
-            sc_hbox.append(self.soundcard_combobox)
             sc_hbox.append(sound_card_icon)
-
+            sc_hbox.append(self.soundcard_dropdown)
             mic_hbox = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
             mic_icon = Gtk.Image.new_from_icon_name("audio-input-microphone-symbolic")
-            self.mic_combobox = Gtk.ComboBoxText()
-            self.mic_combobox.connect("changed", self.on_mic_changed)
-            mic_hbox.append(self.mic_combobox)
             mic_hbox.append(mic_icon)
-
+            mic_hbox.append(self.mic_dropdown)
             box.append(sc_hbox)
             box.append(mic_hbox)
             self.popover_dashboard.set_child(box)
-
         self.update_soundcard_list()
         self.update_mic_list()
-
         self.popover_dashboard.set_parent(self.menubutton_dashboard)  # pyright: ignore
         self.popover_dashboard.popup()
         return self.popover_dashboard
 
     def update_soundcard_list(self):
         """
-        Updates the list of sound cards in the combobox.
+        Updates the list of sound cards in the dropdown, truncating names as needed.
         """
-        self.soundcard_combobox.remove_all()  # pyright: ignore
         soundcards = self.get_soundcard_list_names()
-        for soundcard in soundcards:
-            self.soundcard_combobox.append_text(soundcard)  # pyright: ignore
+        self.soundcard_model.splice(0, self.soundcard_model.get_n_items(), [])
+        for name in soundcards:
+            display_name = (
+                (name[: self.max_card_chars] + "...")
+                if len(name) > self.max_card_chars
+                else name
+            )
+            self.soundcard_model.append(display_name)
         if soundcards:
             try:
                 default_name = self.get_default_soundcard_name()
                 if default_name in soundcards:
                     index = soundcards.index(default_name)
-                    self.soundcard_combobox.set_active(index)  # pyright: ignore
+                    self.soundcard_dropdown.set_selected(index)  # pyright: ignore
                 else:
-                    self.soundcard_combobox.set_active(0)  # pyright: ignore
+                    self.soundcard_dropdown.set_selected(0)  # pyright: ignore
             except (ValueError, Exception) as e:
                 logger.warning(f"Failed to set default soundcard active: {e}")
-                self.soundcard_combobox.set_active(0)  # pyright: ignore
+                self.soundcard_dropdown.set_selected(0)  # pyright: ignore
 
     def update_mic_list(self):
         """
-        Updates the microphone list in the combobox.
+        Updates the microphone list in the dropdown, truncating names as needed.
         """
-        self.mic_combobox.remove_all()  # pyright: ignore
         mics = self.get_mic_list_names()
-        for mic in mics:
-            self.mic_combobox.append_text(mic)  # pyright: ignore
+        self.mic_model.splice(0, self.mic_model.get_n_items(), [])
+        for name in mics:
+            display_name = (
+                (name[: self.max_mic_chars] + "...")
+                if len(name) > self.max_mic_chars
+                else name
+            )
+            self.mic_model.append(display_name)
         if mics:
             try:
                 default_name = self.get_default_mic_name()
                 if default_name in mics:
                     index = mics.index(default_name)
-                    self.mic_combobox.set_active(index)  # pyright: ignore
+                    self.mic_dropdown.set_selected(index)  # pyright: ignore
                 else:
-                    self.mic_combobox.set_active(0)  # pyright: ignore
+                    self.mic_dropdown.set_selected(0)  # pyright: ignore
             except (ValueError, Exception) as e:
                 logger.warning(f"Failed to set default microphone active: {e}")
-                self.mic_combobox.set_active(0)  # pyright: ignore
+                self.mic_dropdown.set_selected(0)  # pyright: ignore
 
-    def on_soundcard_changed(self, combobox):
+    def on_soundcard_changed(self, dropdown, param):
         """
         Handles the event when the soundcard selection is changed.
         """
-        selected_option = combobox.get_active_text()
-        if not selected_option:
+        selected_item = dropdown.get_selected_item()
+        if selected_item is None:
             return
-        id = self.find_soundcard_id_by_name(selected_option)
+        selected_index = dropdown.get_selected()
+        full_name = self.get_soundcard_list_names()[selected_index]
+        id = self.find_soundcard_id_by_name(full_name)
         self.set_default_soundcard(id)
 
-    def on_mic_changed(self, combobox):
+    def on_mic_changed(self, dropdown, param):
         """
         Handles the event when the microphone selection is changed.
         """
-        selected_option = combobox.get_active_text()
-        if not selected_option:
+        selected_item = dropdown.get_selected_item()
+        if selected_item is None:
             return
-        id = self.find_mic_id_by_name(selected_option)
+        selected_index = dropdown.get_selected()
+        full_name = self.get_mic_list_names()[selected_index]
+        id = self.find_mic_id_by_name(full_name)
         self.set_default_mic(id)
 
     def playerctl_list(self):
@@ -431,12 +426,12 @@ class SoundCardDashboard(BasePlugin):
             connected to the system. It also identifies active audio
             applications by their process ID (PID).
         2.  **Dynamic UI**: It creates a `Gtk.Popover` containing
-            two `Gtk.ComboBoxText` widgets. These widgets are dynamically
-            populated with the names of the discovered sound cards and
-            microphones, providing a user-friendly way to select the
-            desired device.
+            two `Gtk.DropDown` widgets. These widgets are dynamically
+            populated using a `Gtk.StringList` model with the names of the
+            discovered sound cards and microphones, providing a user-friendly
+            way to select the desired device.
         3.  **System-Level Control**: When a user selects a new device from a
-            combobox, the plugin uses `subprocess.Popen` to execute
+            dropdown, the plugin uses `subprocess.Popen` to execute
             `pactl` commands. These commands directly interact with the
             PulseAudio server to set the newly selected sound card or
             microphone as the default system device.

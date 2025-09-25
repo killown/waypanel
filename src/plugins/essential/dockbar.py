@@ -253,11 +253,8 @@ class DockbarPlugin(BasePlugin):
             )
             next_index = (current_index + 1) % len(outputs)
             next_output = outputs[next_index]
-            output_geometry = next_output["geometry"]
-            cursor_x = output_geometry["x"] + output_geometry["width"]
-            cursor_y = output_geometry["y"] + output_geometry["height"]
-            self.ipc.move_cursor(cursor_x, cursor_y)
-            self.ipc.click_button("S-BTN_LEFT", "full")
+            self.wf_helper.move_cursor_middle_output(next_output["id"])
+            self.ipc.click_button("BTN_LEFT", "full")
             self.cmd.run(cmd)
         except Exception as e:
             self.log_error(f"Error while handling right-click action: {e}")
