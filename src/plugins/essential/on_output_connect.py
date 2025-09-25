@@ -37,15 +37,12 @@ class PanelOutputMoverPlugin(BasePlugin):
             )
         else:
             self.logger.info("No primary output set. Will use first available output.")
-            # This line assumes there is at least one output. Add a check to prevent index errors.
             outputs = self.ipc.list_outputs()
             if outputs:
                 self.primary_output_name = outputs[0]["name"]
             else:
                 self.logger.critical("No outputs found. Cannot set a primary output.")
                 self.primary_output_name = None
-
-        # Schedule initial output assignment
         GLib.idle_add(self._apply_initial_output)
 
     def _apply_initial_output(self):
@@ -68,16 +65,13 @@ class PanelOutputMoverPlugin(BasePlugin):
         if not outputs:
             self.logger.warning("No outputs detected after layout change.")
             return
-
         current_output = next(
             (i for i in outputs if i["name"] == self.primary_output_name), None
         )
-
         if not current_output:
             self.logger.warning(
                 f"Primary output '{self.primary_output_name}' not found. Falling back to first available output."
             )
-            # Find the first available output that is not disabled by DPMS.
             first_available = next(
                 (i for i in outputs if i.get("source") != "dpms"), None
             )
@@ -87,7 +81,6 @@ class PanelOutputMoverPlugin(BasePlugin):
                 self.logger.error("No available outputs to move the panel to.")
                 return
         else:
-            # Check if the primary output is disabled.
             is_enabled = (
                 current_output.get("output-id", -1) != -1
                 and current_output.get("source") != "dpms"
@@ -108,11 +101,8 @@ class PanelOutputMoverPlugin(BasePlugin):
                     return
             else:
                 self.current_output_name = self.primary_output_name
-
         if self._debounce_timeout_id:
             GLib.source_remove(self._debounce_timeout_id)
-
-        # Check if a fullscreen view is on the target output before moving the panel
         target_output = next(
             (i for i in outputs if i["name"] == self.current_output_name), None
         )
@@ -130,36 +120,30 @@ class PanelOutputMoverPlugin(BasePlugin):
             self._set_panel_on_output()
         except Exception as e:
             self.logger.error(f"[{self.PLUGIN_NAME}] Error updating panel output: {e}")
-        return False  # Run only once
+        return False
 
     def _set_panel_on_output(self):
         """Update the GTK Layer Shell monitor for the panel window."""
         monitors = get_monitor_info()
         monitor = get_target_monitor(self.config_handler.config_data, monitors)
-
         if not monitor:
             self.logger.error("Target monitor not found. Cannot set panel output.")
             return
-
         monitor_gdk_obj = monitor.get("monitor")
         if not monitor_gdk_obj:
             self.logger.warning("on_output_connect could not get the output")
-
-        monitor_name = monitor_gdk_obj.get_connector()
-
+        monitor_name = monitor_gdk_obj.get_connector()  # pyright: ignore
         output = next(
             (i for i in self.ipc.list_outputs() if i["name"] == monitor_name), None
         )
         if not output:
             self.logger.error(f"IPC output for monitor '{monitor_name}' not found.")
             return
-
         geo = output.get("geometry")
         if not geo:
             self.logger.error(f"Geometry for output '{monitor_name}' not found.")
             return
         output_width = geo.get("width")
-
         user_defined_height_top_panel = self.config_handler.check_and_get_config(
             key_path=["panel", "top", "height"], default_value=32
         )
@@ -184,7 +168,6 @@ class PanelOutputMoverPlugin(BasePlugin):
         user_defined_width_bottom_panel = self.config_handler.check_and_get_config(
             key_path=["panel", "bottom", "width"], default_value=output_width
         )
-
         LayerShell.set_monitor(self.top_panel, monitor_gdk_obj)
         LayerShell.set_monitor(self.left_panel, monitor_gdk_obj)
         LayerShell.set_monitor(self.right_panel, monitor_gdk_obj)
@@ -210,7 +193,6 @@ class PanelOutputMoverPlugin(BasePlugin):
         """
         This plugin ensures the panel remains visible by automatically moving it
         to an active output when the current one is disconnected or disabled.
-
         The core logic involves:
         1.  **Initial Assignment:** On startup, the panel is placed on a preferred
             (if configured) or the first available monitor.

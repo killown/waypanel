@@ -1,25 +1,20 @@
 import datetime
 import gi
-
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 gi.require_version("Gtk", "4.0")
-
 ENABLE_PLUGIN = True
-
 DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
-    """Define the plugin's position and order."""
     position = "top-panel-center"
     order = 5
     return position, order
 
 
 def initialize_plugin(panel_instance):
-    """Initialize the clock plugin."""
     if ENABLE_PLUGIN:
         clock_plugin = ClockPlugin(panel_instance)
         clock_plugin.create_clock_widget()
@@ -35,37 +30,43 @@ class ClockPlugin(BasePlugin):
         self.update_timeout_id = None
 
     def create_clock_widget(self):
-        # Create clock box container
+        """
+        Creates and configures the GTK widgets for the clock.
+        """
         self.clock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.main_widget = (self.clock_box, "append")
         self.clock_box.set_halign(Gtk.Align.CENTER)
         self.clock_box.set_baseline_position(Gtk.BaselinePosition.CENTER)
         self.clock_box.add_css_class("clock-box")
-
-        # Create clock button (instead of just label)
         self.clock_button = Gtk.Button()
         self.clock_button.add_css_class("clock-button")
         self.clock_label = Gtk.Label()
         self.clock_label.add_css_class("clock-label")
         self.clock_button.set_child(self.clock_label)
         self.gtk_helper.add_cursor_effect(self.clock_button)
-
-        # Append clock button to the clock box
         self.update_widget_safely(self.clock_box.append, self.clock_button)
-
-        # Start updating the clock
         self.update_clock()
         self.schedule_updates()
 
     def update_clock(self):
+        """
+        Updates the clock label with the current time.
+
+        Returns:
+            bool: Always returns True to continue the GLib timeout.
+        """
         try:
             current_time = datetime.datetime.now().strftime("%d %b %H:%M")
             self.clock_label.set_label(current_time)  # pyright: ignore
         except Exception as e:
             self.log_error(f"Error updating clock: {e}")
-        return True  # Continue timeout
+        return True
 
     def schedule_updates(self):
+        """
+        Schedules a GLib timeout to update the clock at the start of the next minute.
+        """
+
         def schedule_next_update():
             now = datetime.datetime.now()
             seconds_until_next_minute = 60 - now.second
@@ -78,6 +79,9 @@ class ClockPlugin(BasePlugin):
         schedule_next_update()
 
     def stop_updates(self):
+        """
+        Stops the scheduled clock updates by removing the GLib timeout source.
+        """
         if self.update_timeout_id:
             GLib.source_remove(self.update_timeout_id)
             self.update_timeout_id = None
@@ -85,7 +89,6 @@ class ClockPlugin(BasePlugin):
     def about(self):
         """
         Clock Plugin for
-
         • Displays current date and time in the top panel.
         • Updates automatically every minute.
         • Center-aligned with optional hover effects.

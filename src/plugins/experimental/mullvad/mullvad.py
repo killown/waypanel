@@ -3,7 +3,7 @@ import random
 import asyncio
 import aiohttp
 import json
-from gi.repository import Gtk, Gio, GLib
+from gi.repository import Gtk, Gio, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 from ._mullvad_info import MullvadStatusDialog
 from src.plugins.core._event_loop import global_loop
@@ -60,15 +60,13 @@ class MullvadPlugin(BasePlugin):
         Asynchronous setup for the plugin.
         """
         self.mullvad_version = await asyncio.to_thread(self.get_mullvad_version)
-        self.icon_name = self.gtk_helper.set_widget_icon_name(
-            "mullvad", ["mullvad-vpn-symbolic", "mullvaddg"]
+        self.icon_name = self.gtk_helper.icon_exist(
+            "mullvad-tray-9", ["mullvad-vpn-symbolic", "mullvaddg"]
         )
         self.menubutton_mullvad.set_icon_name(self.icon_name)
         self.menubutton_mullvad.add_css_class("top_right_widgets")
         self.gtk_helper.add_cursor_effect(self.menubutton_mullvad)
-
         self.create_menu_model()
-
         if os.path.exists("/usr/bin/mullvad"):
             GLib.timeout_add(10000, self.update_vpn_status_async)
 
@@ -90,14 +88,12 @@ class MullvadPlugin(BasePlugin):
         menu.append_item(random_item_city)
         menu.append_item(random_item_global)
         self.menubutton_mullvad.set_menu_model(menu)
-
         action_group = Gio.SimpleActionGroup()
         connect_action = Gio.SimpleAction.new("connect", None)
         disconnect_action = Gio.SimpleAction.new("disconnect", None)
         status_action = Gio.SimpleAction.new("status", None)
         random_action_city = Gio.SimpleAction.new("random_city", None)
         random_action_global = Gio.SimpleAction.new("random_global", None)
-
         connect_action.connect(
             "activate", lambda *args: self.loop.create_task(self.connect_vpn())
         )
@@ -119,7 +115,6 @@ class MullvadPlugin(BasePlugin):
         action_group.add_action(random_action_city)
         action_group.add_action(random_action_global)
         self.menubutton_mullvad.insert_action_group("app", action_group)
-
         self.popover_mullvad = Gtk.Popover()
         self.popover_mullvad.set_parent(self.menubutton_mullvad)
         self.popover_mullvad.set_has_arrow(False)
@@ -127,7 +122,7 @@ class MullvadPlugin(BasePlugin):
 
     def create_popover_content(self):
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        version_label = Gtk.Label(label=self.mullvad_version)
+        version_label = Gtk.Label(label=self.mullvad_version)  # pyright: ignore
         version_label.add_css_class("mullvad-header-label")
         vbox.append(version_label)
         self.status_label = Gtk.Label(label="Checking status...")
@@ -278,7 +273,6 @@ class MullvadPlugin(BasePlugin):
                 self.menubutton_mullvad.set_icon_name("stock_disconnect")
             status = await self.get_mullvad_status_string()
             self.status_label.set_text(status)
-
         except Exception as e:
             self.logger.error(f"Error updating VPN status: {e}")
 
@@ -315,21 +309,17 @@ class MullvadPlugin(BasePlugin):
         that integrates with the Wayfire compositor. It uses a GTK widget on
         the top panel to display the VPN's status and provides a popover
         menu for user interactions.
-
         The core logic is implemented through a series of asynchronous methods:
-
         1. **Asynchronous Command Execution**: The plugin uses
            `asyncio.create_subprocess_exec` to run `mullvad` commands. This is
            crucial for non-blocking UI operations, as commands like
            `mullvad connect` can take time to execute. This ensures the
            Wayfire panel remains responsive.
-
         2. **API Interaction**: The `set_mullvad_relay_by_city` and
            `set_mullvad_relay_random_global` methods use the `aiohttp` library
            to make an asynchronous call to the Mullvad API. This fetches a
            list of available relays, and the plugin then randomly selects
            and sets a new relay using the `mullvad relay set location` command.
-
         3. **UI and State Management**:
            - **`_async_init_setup`**: This method is the primary setup
              function. It asynchronously retrieves the Mullvad version, sets

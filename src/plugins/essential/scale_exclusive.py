@@ -2,7 +2,6 @@ from src.plugins.core._base import BasePlugin
 from src.plugins.core.event_handler_decorator import subscribe_to_event
 
 ENABLE_PLUGIN = True
-
 DEPS = [
     "event_manager",
     "on_output_connect",
@@ -28,7 +27,6 @@ class PanelScaleExclusivePlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.logger.info("PanelScaleExclusivePlugin initialized.")
-        # Track current state of exclusive zones to avoid redundant calls
         self.exclusive_state = {
             "top": False,
             "bottom": False,
@@ -65,14 +63,11 @@ class PanelScaleExclusivePlugin(BasePlugin):
                 else self.unset_layer_pos_exclusive,
             ),
         ]
-
         for panel, action in actions:
             if exclusive:
                 self.update_widget_safely(action, panel, size)
             else:
                 self.update_widget_safely(action, panel)
-
-        # Update internal state
         state_value = True if exclusive else False
         self.exclusive_state.update(
             {
@@ -85,15 +80,10 @@ class PanelScaleExclusivePlugin(BasePlugin):
 
     def on_scale_activated(self):
         """Handle scale activation: enable exclusive zones only if focused output matches on_output_connect's target."""
-        # 1. Get the output name that the panels are bound to (REQUIRED SOURCE OF TRUTH)
         target_output_name = self.on_output_plugin.current_output_name
         if not target_output_name:
             target_output_name = self.on_output_plugin.primary_output_name
-
-        # 2. Get the currently focused output
         focused_output_name = self.ipc.get_focused_output()["name"]
-
-        # 3. Only enable exclusive mode if they match
         if target_output_name and focused_output_name == target_output_name:
             self.logger.info(
                 f"Scale activated on target output '{target_output_name}'. Enabling exclusive zones."
@@ -131,9 +121,7 @@ class PanelScaleExclusivePlugin(BasePlugin):
     def code_explanation(self):
         """
         This plugin coordinates with the 'scale' plugin to manage panel layer behavior.
-
         Its core logic is centered on **synchronizing panel exclusivity with the scale effect**:
-
         1.  **Event Subscription**: It listens for activation and deactivation events from the 'scale' plugin.
         2.  **Conditional Activation**: When 'scale' is activated, the plugin checks if the
             currently focused monitor is the same as the one the panels are

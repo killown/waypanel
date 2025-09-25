@@ -643,7 +643,6 @@ class PluginLoader:
         # Schedule plugin initialization
         for module, position, order, priority in plugin_metadata:
             # The lambda function captures the arguments correctly
-            print(module, position, order, priority)
             GLib.idle_add(
                 lambda m=module,
                 p=position,
