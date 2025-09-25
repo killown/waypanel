@@ -22,6 +22,7 @@ def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
         bt = BluetoothDashboard(panel_instance)
         global_loop.create_task(bt.create_menu_popover_bluetooth())
+        global_loop.create_task(bt._auto_connect_devices())
         return bt
 
 
@@ -33,6 +34,64 @@ class BluetoothDashboard(BasePlugin):
         self.menubutton_dashboard = Gtk.Button()
         self.gtk_helper.add_cursor_effect(self.menubutton_dashboard)
         self.main_widget = (self.menubutton_dashboard, "append")
+
+    def _extract_mac_from_string(self, entry_string):
+        """
+        Extracts a MAC address (e.g., B4:B7:42:F7:9B:AD) from a string.
+        Handles PA sink names (B4_B7_42_F7_9B_AD) and standard MAC format.
+        """
+        mac_pattern = r"([0-9A-F]{2}[_:]?){5}[0-9A-F]{2}"
+        match = re.search(mac_pattern, entry_string, re.IGNORECASE)
+        if match:
+            mac = match.group(0).replace("_", ":").upper()
+            if mac.count(":") == 5:
+                return mac
+        return None
+
+    async def _auto_connect_devices(self):
+        """Reads config and attempts to connect specified Bluetooth devices."""
+        connect_devices = self.config_handler.check_and_get_config(
+            ["hardware", "bluetooth", "connect_devices"], []
+        )
+        if not connect_devices:
+            self.logger.info("No devices configured for auto-connect.")
+            return
+        self.logger.info(
+            f"Attempting Bluetooth auto-connect for configured devices: {connect_devices}"
+        )
+        known_devices = await self._get_devices()
+        macs_to_connect = set()
+        for entry in connect_devices:
+            mac = self._extract_mac_from_string(entry)
+            if mac:
+                macs_to_connect.add(mac)
+                continue
+            for device in known_devices:
+                if device.get("name") == entry:
+                    macs_to_connect.add(device["mac"])
+                    break
+        if not macs_to_connect:
+            self.logger.warning(
+                f"Could not find MAC addresses for any configured auto-connect device based on input: {connect_devices}"
+            )
+            return
+        for mac in macs_to_connect:
+            device_info = await self._get_device_info(mac)
+            if not device_info:
+                self.logger.warning(
+                    f"Device info not found for MAC: {mac}. Skipping auto-connect."
+                )
+                continue
+            device_name = device_info.get("Name", mac)
+            is_connected = device_info.get("Connected", "no").lower() == "yes"
+            if is_connected:
+                self.logger.info(
+                    f"Device '{device_name}' is already connected. Skipping auto-connect."
+                )
+                continue
+            self.logger.info(f"Auto-connecting to device: {device_name} ({mac})")
+            await self._connect_device_and_set_sink(mac, device_info)
+        self.logger.info("Bluetooth auto-connect routine complete.")
 
     async def _get_devices(self):
         try:
@@ -215,6 +274,37 @@ class BluetoothDashboard(BasePlugin):
                 popover_box.append(bluetooth_button)  # pyright: ignore
         return False
 
+    async def _connect_device_and_set_sink(self, device_id, device_info):
+        """Helper to handle connection, sink setup, and notification (used by click and auto-connect)."""
+        device_name = device_info.get("Name", device_id)
+        icon_name = device_info.get("Icon", "bluetooth")
+        is_audio_device = any(
+            s in icon_name.lower() for s in ["audio", "headset", "speaker", "card"]
+        )
+        await self.connect_bluetooth_device(device_id)
+        if is_audio_device:
+            self.logger.info(
+                f"Attempting to set connected Bluetooth audio device ({device_name}) as default sink."
+            )
+            pa_sink_info = None
+            MAX_RETRIES = 10
+            WAIT_TIME = 0.5
+            for i in range(MAX_RETRIES):
+                self.logger.debug(
+                    f"Attempt {i + 1}/{MAX_RETRIES}: Searching for PA sink..."
+                )
+                pa_sink_info = await self._get_pa_sink_for_device(device_id)
+                if pa_sink_info:
+                    self.logger.info(f"Successfully found PA sink on attempt {i + 1}.")
+                    break
+                await asyncio.sleep(WAIT_TIME)
+            if pa_sink_info:
+                await self._set_default_sink(pa_sink_info, device_name)
+            else:
+                self.logger.warning(
+                    f"Could not find PulseAudio sink for connected device {device_name} ({device_id}) after {MAX_RETRIES * WAIT_TIME} seconds."
+                )
+
     async def _handle_bluetooth_click(self, device_id):
         device_info = await self._get_device_info(device_id)
         if not device_info:
@@ -222,9 +312,6 @@ class BluetoothDashboard(BasePlugin):
         device_name = device_info.get("Name", device_id)
         icon_name = device_info.get("Icon", "bluetooth")
         is_connected = device_info.get("Connected", "no").lower() == "yes"
-        is_audio_device = any(
-            s in icon_name.lower() for s in ["audio", "headset", "speaker", "card"]
-        )
         if is_connected:
             self.notifier.notify_send(
                 "Bluetooth plugin",
@@ -238,31 +325,7 @@ class BluetoothDashboard(BasePlugin):
                 f"Connecting bluetooth device: {device_name}",
                 icon_name,
             )
-            await self.connect_bluetooth_device(device_id)
-            if is_audio_device:
-                self.logger.info(
-                    f"Attempting to set connected Bluetooth audio device ({device_name}) as default sink."
-                )
-                pa_sink_info = None
-                MAX_RETRIES = 10
-                WAIT_TIME = 0.5
-                for i in range(MAX_RETRIES):
-                    self.logger.debug(
-                        f"Attempt {i + 1}/{MAX_RETRIES}: Searching for PA sink..."
-                    )
-                    pa_sink_info = await self._get_pa_sink_for_device(device_id)
-                    if pa_sink_info:
-                        self.logger.info(
-                            f"Successfully found PA sink on attempt {i + 1}."
-                        )
-                        break
-                    await asyncio.sleep(WAIT_TIME)
-                if pa_sink_info:
-                    await self._set_default_sink(pa_sink_info, device_name)
-                else:
-                    self.logger.warning(
-                        f"Could not find PulseAudio sink for connected device {device_name} ({device_id}) after {MAX_RETRIES * WAIT_TIME} seconds."
-                    )
+            await self._connect_device_and_set_sink(device_id, device_info)
         await self._update_single_button_state(device_id)
 
     async def _update_single_button_state(self, device_id):
@@ -275,15 +338,6 @@ class BluetoothDashboard(BasePlugin):
                 button.add_css_class("bluetooth-dashboard-buttons-connected")
             else:
                 button.remove_css_class("bluetooth-dashboard-buttons-connected")
-
-    async def notify(self, title, message):
-        await asyncio.to_thread(
-            subprocess.run,
-            ["notify-send", title, message],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
 
     async def disconnect_bluetooth_device(self, device_id):
         await asyncio.to_thread(
@@ -312,6 +366,8 @@ class BluetoothDashboard(BasePlugin):
         A plugin that provides a dashboard for managing Bluetooth devices.
         It displays a list of paired devices, indicates their connection status,
         and allows the user to connect or disconnect them with a single click.
+        It also automatically connects devices listed in the `[hardware.bluetooth]`
+        section of the configuration upon startup.
         When an audio device is connected, it is automatically set as the
         system's default sound output device using the robust 'pulsectl' library
         with a retry mechanism to handle PulseAudio sink creation delays.
@@ -321,27 +377,25 @@ class BluetoothDashboard(BasePlugin):
     def code_explanation(self):
         """
         This plugin acts as a user-friendly interface for the system's
-        Bluetooth functionality, using external commands and asynchronous
-        programming to provide a responsive user experience.
-        Its core functionality is built on **asynchronous execution, external
-        process control, and robust audio management**:
-        1.  **Asynchronous Execution**: The plugin leverages Python's `asyncio`
-            library to perform system-level operations without freezing the UI.
-            Tasks that involve I/O, such as running `bluetoothctl` or
-            communicating with PulseAudio via `pulsectl`, are executed in a
-            separate thread using `asyncio.to_thread`.
-        2.  **Robust Audio Control (pulsectl with Retry)**: The plugin uses the
-            **`pulsectl`** library for direct and stable interaction with the
-            PulseAudio server. After a successful Bluetooth audio device
-            connection, a **retry loop** is introduced. It checks for the new
-            audio sink (using the device's MAC address) up to 10 times over a
-            period of 5 seconds. The corrected logic for searching the sink now
-            checks for the necessary `bluez_` prefix (instead of the too-specific
-            `bluez_sink`) and the MAC address, ensuring compatibility with modern
-            PipeWire environments that use `bluez_output`.
-        3.  **Dynamic UI Updates**: The user interface is dynamically generated
-            based on the current state of Bluetooth devices. When a user clicks
-            a device, the connection/disconnection is handled, and the button's
-            style is updated without having to reload the entire popover.
+        Bluetooth functionality.
+        **New Feature: Auto-Connect from Config**
+        1. **Initialization:** The `initialize_plugin` function now
+           schedules the `_auto_connect_devices` method to run
+           asynchronously at startup.
+        2. **Configuration Reading:** `_auto_connect_devices` reads the
+           `connect_devices` list from the `[hardware.bluetooth]`
+           config section.
+        3. **MAC Resolution:** The new `_extract_mac_from_string` utility
+           function reliably pulls the MAC address from configuration
+           entries, whether they are raw MACs, Bluetooth device names,
+           or PulseAudio sink names (like
+           `bluez_output.B4_B7_42_F7_9B_AD.1`). If a name is provided,
+           it attempts to match it against known devices.
+        4. **Connection Logic:** A new helper method,
+           `_connect_device_and_set_sink`, encapsulates the entire
+           connection process: calling `bluetoothctl connect`, finding
+           the PulseAudio sink (with the retry loop), and setting it
+           as default. This is now used by both auto-connect and the
+           user's click action for consistent behavior.
         """
         return self.code_explanation.__doc__
