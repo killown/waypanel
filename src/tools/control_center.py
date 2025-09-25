@@ -68,7 +68,7 @@ class ControlCenter(Adw.Application):
         scrolled_window = Gtk.ScrolledWindow()
         scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        main_box.add_css_class("content-area")
+        main_box.add_css_class("control-center-content-area")
         main_box.set_margin_top(20)
         main_box.set_margin_bottom(20)
         main_box.set_margin_start(20)
@@ -78,7 +78,7 @@ class ControlCenter(Adw.Application):
             title=f"{category_name.replace('_', ' ').capitalize()} Settings",
             description=group_desc,
         )
-        preferences_group.add_css_class("config-group")
+        preferences_group.add_css_class("control-center-config-group")
         main_box.append(preferences_group)
         self.widget_map[category_name] = {}
         for key, value in data.items():
@@ -90,7 +90,7 @@ class ControlCenter(Adw.Application):
                     f"<b>{key.replace('_', ' ').capitalize()}</b>"
                 )
                 expander.set_use_markup(True)
-                expander.add_css_class("config-expander")
+                expander.add_css_class("control-center-config-expander")
                 self.widget_map[category_name][key] = {}
                 expander_content = self.create_nested_widgets(
                     self.widget_map[category_name][key], value, current_path
@@ -104,7 +104,7 @@ class ControlCenter(Adw.Application):
                     f"<b>{key.replace('_', ' ').capitalize()}</b>"
                 )
                 expander.set_use_markup(True)
-                expander.add_css_class("config-expander")
+                expander.add_css_class("control-center-config-expander")
                 self.widget_map[category_name][key] = []
                 list_content_box = self.create_list_widgets(
                     self.widget_map[category_name][key], value, current_path
@@ -121,7 +121,7 @@ class ControlCenter(Adw.Application):
                 action_row = Adw.ActionRow(
                     title=key.replace("_", " ").capitalize(),
                 )
-                action_row.add_css_class("setting-row")
+                action_row.add_css_class("control-center-setting-row")
                 if isinstance(widget, (Gtk.Switch, Gtk.Entry, Gtk.SpinButton)):
                     action_row.add_suffix(widget)
                     action_row.set_activatable_widget(widget)
@@ -134,13 +134,13 @@ class ControlCenter(Adw.Application):
 
     def create_list_widgets(self, widget_list, data_list, current_path: List[str]):
         list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        list_box.add_css_class("list-editor")
+        list_box.add_css_class("control-center-list-editor")
         group_title = current_path[-1].replace("_", " ").capitalize()
         group_desc = self._get_hint_for_path(*current_path)
         preferences_group = Adw.PreferencesGroup(
             title=group_title, description=group_desc
         )
-        preferences_group.add_css_class("config-group")
+        preferences_group.add_css_class("control-center-config-group")
         for i, item_dict in enumerate(data_list):
             item_key = list(item_dict.keys())[0] if item_dict else f"Item_{i + 1}"
             item_name = item_dict.get("name", item_key.replace("_", " ").capitalize())
@@ -151,21 +151,21 @@ class ControlCenter(Adw.Application):
             name_row = Adw.ActionRow(
                 title=f"{item_name} - Name",
             )
-            name_row.add_css_class("setting-row")
-            name_row.add_css_class("list-item-row")
+            name_row.add_css_class("control-center-setting-row")
+            name_row.add_css_class("control-center-list-item-row")
             cmd_row = Adw.ActionRow(
                 title=f"{item_name} - Command",
             )
-            cmd_row.add_css_class("setting-row")
-            cmd_row.add_css_class("list-item-row")
+            cmd_row.add_css_class("control-center-setting-row")
+            cmd_row.add_css_class("control-center-list-item-row")
             cmd_entry = Gtk.Entry()
             cmd_entry.set_text(item_dict.get("cmd", ""))
             cmd_entry.set_tooltip_text(cmd_hint)
-            cmd_entry.add_css_class("text-input")
+            cmd_entry.add_css_class("control-center-text-input")
             name_entry = Gtk.Entry()
             name_entry.set_text(item_dict.get("name", ""))
             name_entry.set_tooltip_text(name_hint)
-            name_entry.add_css_class("text-input")
+            name_entry.add_css_class("control-center-text-input")
             name_row.add_suffix(name_entry)
             name_row.set_activatable_widget(name_entry)
             cmd_row.add_suffix(cmd_entry)
@@ -178,13 +178,13 @@ class ControlCenter(Adw.Application):
 
     def create_nested_widgets(self, widget_dict, subdict, current_path: List[str]):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        box.add_css_class("nested-group-box")
+        box.add_css_class("control-center-nested-group-box")
         group_title = current_path[-1].replace("_", " ").capitalize()
         group_desc = self._get_hint_for_path(*current_path)
         preferences_group = Adw.PreferencesGroup(
             title=group_title, description=group_desc
         )
-        preferences_group.add_css_class("config-group")
+        preferences_group.add_css_class("control-center-config-group")
         for key, value in subdict.items():
             new_path = current_path + [key]
             if key.endswith(("_hint", "_section_hint", "_items_hint")):
@@ -194,7 +194,7 @@ class ControlCenter(Adw.Application):
                     f"<b>{key.replace('_', ' ').capitalize()}</b>"
                 )
                 expander.set_use_markup(True)
-                expander.add_css_class("config-expander")
+                expander.add_css_class("control-center-config-expander")
                 widget_dict[key] = {}
                 nested_box = self.create_nested_widgets(
                     widget_dict[key], value, new_path
@@ -208,7 +208,7 @@ class ControlCenter(Adw.Application):
                     f"<b>{key.replace('_', ' ').capitalize()}</b>"
                 )
                 expander.set_use_markup(True)
-                expander.add_css_class("config-expander")
+                expander.add_css_class("control-center-config-expander")
                 widget_dict[key] = []
                 list_content_box = self.create_list_widgets(
                     widget_dict[key], value, new_path
@@ -225,7 +225,7 @@ class ControlCenter(Adw.Application):
                 action_row = Adw.ActionRow(
                     title=key.replace("_", " ").capitalize(),
                 )
-                action_row.add_css_class("setting-row")
+                action_row.add_css_class("control-center-setting-row")
                 if isinstance(widget, (Gtk.Switch, Gtk.Entry, Gtk.SpinButton)):
                     action_row.add_suffix(widget)
                     action_row.set_activatable_widget(widget)
@@ -239,14 +239,14 @@ class ControlCenter(Adw.Application):
     def create_widget_for_value(self, value: Any):
         if isinstance(value, str):
             entry = Gtk.Entry()
-            entry.add_css_class("text-input")
+            entry.add_css_class("control-center-text-input")
             entry.set_text(value)
             entry.set_width_chars(30)
             entry.set_max_width_chars(50)
             return entry
         elif isinstance(value, int) or isinstance(value, float):
             entry = Gtk.SpinButton()
-            entry.add_css_class("numeric-input")
+            entry.add_css_class("control-center-numeric-input")
             adjustment = Gtk.Adjustment(
                 value=float(value),
                 lower=-10000.0,
@@ -261,12 +261,12 @@ class ControlCenter(Adw.Application):
             return entry
         elif isinstance(value, bool):
             switch = Gtk.Switch()
-            switch.add_css_class("toggle-switch")
+            switch.add_css_class("control-center-toggle-switch")
             switch.set_active(value)
             return switch
         elif isinstance(value, list):
             entry = Gtk.Entry()
-            entry.add_css_class("text-input")
+            entry.add_css_class("control-center-text-input")
             entry.set_text(", ".join(map(str, value)))
             entry.set_sensitive(True)
             entry.set_width_chars(30)
@@ -284,7 +284,7 @@ class ControlCenter(Adw.Application):
             return entry
         else:
             value_label = Gtk.Label(label=str(value), xalign=0)
-            value_label.add_css_class("value-display")
+            value_label.add_css_class("control-center-value-display")
             return value_label
 
     def do_activate(self):
@@ -296,11 +296,11 @@ class ControlCenter(Adw.Application):
             vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
             self.win.set_content(vbox)
             header_bar = Adw.HeaderBar()
-            header_bar.add_css_class("app-header")
+            header_bar.add_css_class("control-center-header")
             vbox.append(header_bar)
             self.save_button = Gtk.Button(label="Save")
             self.save_button.add_css_class("suggested-action")
-            self.save_button.add_css_class("save-button")
+            self.save_button.add_css_class("control-center-save-button")
             self.save_button.connect("clicked", self.on_save_clicked)
             self.save_button_stack = Gtk.Stack()
             self.save_button_stack.set_vexpand(False)
@@ -316,7 +316,7 @@ class ControlCenter(Adw.Application):
             left_panel_box.set_size_request(300, -1)
             left_panel_box.set_hexpand(False)
             left_listbox = Gtk.ListBox()
-            left_listbox.add_css_class("category-list")
+            left_listbox.add_css_class("control-center-category-list")
             left_listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
             scrolled_window = Gtk.ScrolledWindow()
             scrolled_window.set_child(left_listbox)
@@ -506,7 +506,7 @@ class ControlCenter(Adw.Application):
         for category_name in sorted_category_names:
             category_data = self.config[category_name]
             row = Gtk.ListBoxRow()
-            row.add_css_class("category-item")
+            row.add_css_class("control-center-category-item")
             box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
             box.set_margin_start(10)
             box.set_margin_end(10)
