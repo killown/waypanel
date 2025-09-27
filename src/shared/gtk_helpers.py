@@ -38,7 +38,9 @@ class GtkHelpers:
             "rxvt",
         ]
         self.config_handler = ConfigHandler(panel_instance)
-        self.command = CommandRunner(panel_instance)
+
+        if hasattr(panel_instance, "ipc"):
+            self.command = CommandRunner(panel_instance)
 
     def on_css_file_changed(
         self, monitor, file, other_file, event_type: Gio.FileMonitorEvent

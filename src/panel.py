@@ -35,6 +35,18 @@ class Panel(Adw.Application):
         self._set_monitor_dimensions()
         self.config_handler._start_watcher()
 
+    def get_config(self, key_path, default=None):
+        """Safely retrieves a configuration value using a list of keys."""
+        data = self.config_data
+        for key in key_path:
+            if isinstance(data, dict):
+                data = data.get(key)
+            else:
+                return default
+            if data is None:
+                return default
+        return data
+
     def set_panel_instance(self, panel_instance):
         self.panel_instance = panel_instance
 
@@ -50,11 +62,7 @@ class Panel(Adw.Application):
             self.display = None
             return
         monitor = outputs[0]
-        primary_output_name = (
-            self.config_data.get("panel", {})
-            .get("primary_output", {})
-            .get("output_name")
-        )
+        primary_output_name = self.get_config(["hardware", "primary_output", "name"])
         if primary_output_name:
             found_monitor = next(
                 (
@@ -163,23 +171,19 @@ class Panel(Adw.Application):
             config (dict): Configuration for the top panel.
         """
         self.logger.debug("Setting up top panel...")
-        exclusive = config.get("Exclusive")
+        exclusive = bool(config.get("Exclusive", 1.0))
         anchor_edge = "TOP"
         css_class = "top-panel"
-        layer_position = config.get("layer_position", anchor_edge)
-        width = self.config_handler.check_and_get_config(["panel", "top", "width"])
-        if width is None:
-            width = self.monitor_width
-        height = self.config_handler.check_and_get_config(["panel", "top", "height"])
-        if height is None:
-            height = 32
+        layer_position = config.get("layer_position", "TOP")
+        width = self.get_config(["panel", "top", "width"], self.monitor_width)
+        height = self.get_config(["panel", "top", "height"], 32.0)
         self.top_panel = CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
             layer_position,
             exclusive,
-            width,
-            height,
+            width,  # pyright: ignore
+            height,  # pyright: ignore
             css_class,
         )
         if config.get("enabled", True):
@@ -193,23 +197,19 @@ class Panel(Adw.Application):
             config (dict): Configuration for the bottom panel.
         """
         self.logger.debug("Setting up bottom panel...")
-        exclusive = config.get("Exclusive", "True") == "True"
+        exclusive = bool(config.get("Exclusive", 1.0))
         anchor_edge = "BOTTOM"
-        css_class = "bottom-panel"  # pyright: ignore
+        css_class = "bottom-panel"
         layer_position = config.get("layer_position", "BACKGROUND")
-        width = self.config_handler.check_and_get_config(["panel", "bottom", "width"])
-        if width is None:
-            width = 0
-        height = self.config_handler.check_and_get_config(["panel", "bottom", "height"])
-        if height is None:
-            height = 32
+        width = self.get_config(["panel", "bottom", "width"], self.monitor_width)
+        height = self.get_config(["panel", "bottom", "height"], 32.0)
         self.bottom_panel = CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
             layer_position,
             exclusive,
-            width,
-            height,
+            width,  # pyright: ignore
+            height,  # pyright: ignore
             css_class,
         )
         if config.get("enabled", True):
@@ -223,23 +223,19 @@ class Panel(Adw.Application):
             config (dict): Configuration for the left panel.
         """
         self.logger.debug("Setting up left panel...")
-        exclusive = config.get("Exclusive", "True") == "True"
+        exclusive = bool(config.get("Exclusive", 1.0))
         anchor_edge = "LEFT"
         css_class = "left-panel"
-        layer_position = config.get("layer_position", anchor_edge)
-        width = self.config_handler.check_and_get_config(["panel", "left", "width"])
-        if width is None:
-            width = 0
-        height = self.config_handler.check_and_get_config(["panel", "left", "height"])
-        if height is None:
-            height = 64
+        layer_position = config.get("layer_position", "BACKGROUND")
+        width = self.get_config(["panel", "left", "width"], 32.0)
+        height = self.get_config(["panel", "left", "height"], 0.0)
         self.left_panel = CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
             layer_position,
             exclusive,
-            width,
-            height,
+            width,  # pyright: ignore
+            height,  # pyright: ignore
             css_class,
         )
         if config.get("enabled", True):
@@ -253,19 +249,19 @@ class Panel(Adw.Application):
             config (dict): Configuration for the right panel.
         """
         self.logger.debug("Setting up right panel...")
-        exclusive = config.get("Exclusive", "True") == "True"
+        exclusive = bool(config.get("Exclusive", 1.0))
         anchor_edge = "RIGHT"
         css_class = "right-panel"
-        layer_position = config.get("layer_position", "RIGHT")
-        width = self.config_handler.check_and_get_config(["panel", "right", "width"])
-        height = self.config_handler.check_and_get_config(["panel", "right", "height"])
+        layer_position = config.get("layer_position", "BACKGROUND")
+        width = self.get_config(["panel", "right", "width"], 32.0)
+        height = self.get_config(["panel", "right", "height"], 0.0)
         self.right_panel = CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
             layer_position,
             exclusive,
-            width,
-            height,
+            width,  # pyright: ignore
+            height,  # pyright: ignore
             css_class,
         )
         if config.get("enabled", True):
@@ -290,9 +286,12 @@ class Panel(Adw.Application):
             method initializes core components like the logger, IPC
             client, and plugin loader. It also loads the `config.toml`
             file, which acts as the single source of truth for the
-            application's state and appearance. Methods like
-            `reload_config()` allow for dynamic updates at runtime,
-            notifying individual plugins of changes.
+            application's state and appearance. The new `get_config`
+            method provides a safe and standardized way to retrieve
+            nested configuration values. Methods like
+            `reload_config()` (implicitly via a file watcher) allow
+            for dynamic updates at runtime, notifying individual
+            plugins of changes.
         2.  **Modular Panel Creation**: The `setup_panels()` method
             is a factory for creating the application's UI. It reads
             the configuration to determine which panels to create

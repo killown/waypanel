@@ -1,24 +1,30 @@
 import asyncio
 import requests
-from gi.repository import Gtk, GLib  # pyright: ignore
+from gi.repository import Gtk  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
 DEPS = ["calendar"]
-COORDINATES = ("-23.5505", "-46.6333")
 
 
 def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
-    return
+    return "background", 99, 99
 
 
 def initialize_plugin(panel_instance):
     """Initialize the weather plugin."""
     if ENABLE_PLUGIN:
         weather_plugin = WeatherPlugin(panel_instance)
-        weather_plugin.run_in_async_task(weather_plugin.setup_weather_async())
+        if weather_plugin.coordinates:
+            weather_plugin.run_in_async_task(weather_plugin.setup_weather_async())
+        else:
+            panel_instance.logger.error(
+                "Weather coordinates are missing or invalid in config. Plugin functionally disabled."
+            )
+            return None
         return weather_plugin
+    return None
 
 
 class WeatherPlugin(BasePlugin):
@@ -26,6 +32,15 @@ class WeatherPlugin(BasePlugin):
         super().__init__(panel_instance)
         self.weather_label = None
         self.update_task = None
+        config_coords = self.get_config(["calendar", "weather", "coordinates"])
+        if isinstance(config_coords, tuple) and len(config_coords) == 2:
+            self.coordinates = config_coords
+            self.logger.info(f"Using coordinates from config: {self.coordinates}")
+        else:
+            self.coordinates = ("-23.5505", "-46.6333")
+            self.logger.warning(
+                f"Weather coordinates not configured or invalid. Defaulting to {self.coordinates}."
+            )
 
     async def setup_weather_async(self):
         """Asynchronously set up the weather functionality."""
@@ -36,7 +51,10 @@ class WeatherPlugin(BasePlugin):
             )
             return
         calendar_plugin = self.plugins["calendar"]
-        if not calendar_plugin.popover_calendar:
+        if (
+            not hasattr(calendar_plugin, "popover_calendar")
+            or not calendar_plugin.popover_calendar
+        ):
             self.logger.error("Calendar popover not found. Cannot attach weather.")
             return
         await self.attach_weather_to_calendar_async(calendar_plugin)
@@ -51,15 +69,16 @@ class WeatherPlugin(BasePlugin):
             grid = calendar_plugin.popover_calendar.get_child()
             if grid:
                 grid.attach(self.weather_label, 0, 1, 1, 1)
+                self.weather_label.show()  # pyright: ignore
                 grid.show()
 
         self.schedule_in_gtk_thread(update_ui)
-        self.update_task = self.global_loop.create_task(self.periodic_weather_update())
         self.run_in_async_task(self.fetch_and_update_weather_async())
+        self.update_task = self.global_loop.create_task(self.periodic_weather_update())
 
     async def fetch_weather_data_async(self):
         """Asynchronously fetch weather data from the API."""
-        lat, lon = COORDINATES
+        lat, lon = self.coordinates
         url = f"https://api.met.no/weatherapi/locationforecast/2.0/compact?lat={lat}&lon={lon}"
         headers = {"User-Agent": "MyWeatherApp/1.0 youremail@example.com"}
         try:
@@ -86,6 +105,7 @@ class WeatherPlugin(BasePlugin):
         def update_label():
             if self.weather_label:
                 if temperature is not None:
+                    # pyright: ignore is used because 'temperature' type is dynamic based on API response
                     self.weather_label.set_label(f"Weather: {temperature}°C")  # pyright: ignore
                 else:
                     self.weather_label.set_label("Weather: Error")  # pyright: ignore
@@ -104,10 +124,11 @@ class WeatherPlugin(BasePlugin):
             except Exception as e:
                 self.logger.error(f"Error in periodic weather update: {e}")
 
-    def __del__(self):
-        """Cleanup method to cancel the periodic task when the plugin is destroyed."""
+    def on_stop(self):
+        """Cleanup method to cancel the periodic task when the plugin is stopped."""
         if self.update_task and not self.update_task.done():
             self.update_task.cancel()
+            self.logger.info("Cancelled weather periodic update task.")
 
     def about(self):
         """
@@ -122,11 +143,15 @@ class WeatherPlugin(BasePlugin):
         The core logic of this plugin is to extend the functionality
         of a host plugin using asynchronous and thread-safe operations, now
         refactored to use BasePlugin helpers:
-        1.  **Concurrency Management**: Direct imports of global loop variables
+        1.  **Configuration**: The coordinates (`self.coordinates`) are now
+            retrieved from `self.get_config(["calendar", "weather", "coordinates"])`
+            in `__init__`, falling back to a default if the configuration is
+            missing or invalid.
+        2.  **Concurrency Management**: Direct imports of global loop variables
             are replaced by `BasePlugin`'s helpers:
             -   `self.run_in_async_task()` is used for fire-and-forget coroutines (initial setup and periodic updates).
-            -   `self.global_loop.create_task()` is used specifically for the `self.periodic_weather_update` coroutine so the resulting `Task` object can be captured and later cancelled in `__del__`.
-        2.  **Asynchronous Networking**: The blocking `requests.get` call is safely wrapped using the modern, high-level `await asyncio.to_thread(...)`, which automatically runs the synchronous function in a thread pool executor without blocking the main event loop.
-        3.  **Thread-Safe UI Updates**: All interactions with the GUI, previously handled by `GLib.idle_add()`, are now consistently scheduled on the main GTK thread using the `self.schedule_in_gtk_thread()` helper, ensuring stability and adherence to GTK's thread safety rules.
+            -   `self.global_loop.create_task()` is used specifically for the `self.periodic_weather_update` coroutine so the resulting `Task` object can be captured and later cancelled in `on_stop`.
+        3.  **Asynchronous Networking**: The blocking `requests.get` call is safely wrapped using the modern, high-level `await asyncio.to_thread(...)`, which automatically runs the synchronous function in a thread pool executor without blocking the main event loop.
+        4.  **Thread-Safe UI Updates**: All interactions with the GUI, previously handled by `GLib.idle_add()`, are now consistently scheduled on the main GTK thread using the `self.schedule_in_gtk_thread()` helper, ensuring stability and adherence to GTK's thread safety rules.
         """
         return self.code_explanation.__doc__

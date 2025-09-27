@@ -312,6 +312,23 @@ default_config = {
             },
         },
     },
+    "calendar": {
+        "_section_hint": (
+            "Configuration for the Calendar plugin, which displays the date/time "
+            "and serves as a host for other widgets (like weather) within its popover."
+        ),
+        "weather": {
+            "_section_hint": (
+                "Settings for the Weather sub-plugin, which attaches to the Calendar popover. "
+                "This section fixes the original structure."
+            ),
+            "coordinates": ("-23.5505", "-46.6333"),
+            "coordinates_hint": (
+                "The geographical coordinates for weather lookups (latitude, longitude) "
+                "as a tuple of strings (e.g., '34.0522', '-118.2437')."
+            ),
+        },
+    },
     "clipboard": {
         "_section_hint": (
             "Settings for the Clipboard Manager plugin, which tracks "
@@ -440,7 +457,7 @@ default_config = {
                 "The **stacking order layer** this panel will be placed on. "
                 "Use 'BACKGROUND' (behind windows) or 'TOP' (above windows)."
             ),
-            "Exclusive": 1.0,
+            "Exclusive": 0,
             "Exclusive_hint": (
                 "Set to **1.0 (exclusive)** if the panel should permanently "
                 "reserve screen space, preventing maximized windows "
@@ -465,7 +482,7 @@ default_config = {
                 "The **stacking order layer** this panel will be placed on. "
                 "Use 'BACKGROUND' (behind windows) or 'TOP' (above windows)."
             ),
-            "Exclusive": 1.0,
+            "Exclusive": 0,
             "Exclusive_hint": (
                 "Set to **1.0 (exclusive)** if the panel should permanently "
                 "reserve screen space."
@@ -489,7 +506,7 @@ default_config = {
                 "The **stacking order layer** this panel will be placed on. "
                 "Use 'BACKGROUND' (behind windows) or 'TOP' (above windows)."
             ),
-            "Exclusive": 1.0,
+            "Exclusive": 0,
             "Exclusive_hint": (
                 "Set to **1.0 (exclusive)** if the panel should permanently "
                 "reserve screen space."

@@ -24,7 +24,7 @@ DEPS = ["event_manager", "gestures_setup"]
 def get_plugin_placement(panel_instance):
     position = "left-panel-center"
     order = 5
-    priority = 1
+    priority = 99
     return position, order, priority
 
 

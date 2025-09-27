@@ -61,7 +61,7 @@ class NotificationDaemon(ServiceInterface):
     def __init__(self, panel_instance):
         super().__init__("org.freedesktop.Notifications")
         self.last_modified = None
-        self.db = Database()
+        self.db = Database(panel_instance)
         self.ui = UI(panel_instance)
         self.logger = self.ui.logger
         self.config_handler = panel_instance.config_handler

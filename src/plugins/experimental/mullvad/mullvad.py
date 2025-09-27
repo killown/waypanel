@@ -6,10 +6,9 @@ import json
 from gi.repository import Gtk, Gio, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 from ._mullvad_info import MullvadStatusDialog
-# REMOVED: from src.plugins.core._event_loop import global_loop (Replaced by self.global_loop)
 
 ENABLE_PLUGIN = True
-DEPS = ["top_panel"]
+DEPS = ["top_panel", "network_manager"]
 
 
 def get_plugin_placement(panel_instance):
@@ -23,8 +22,6 @@ def initialize_plugin(panel_instance):
     """Initialize the Mullvad plugin."""
     if ENABLE_PLUGIN:
         mullvad_plugin = MullvadPlugin(panel_instance)
-        # REMOVED: global_loop.create_task(mullvad_plugin._async_init_setup())
-        # The initial async setup is now handled in mullvad_plugin.on_start()
         return mullvad_plugin
 
 
@@ -32,7 +29,6 @@ class MullvadPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.mullvad_version = None
-        # REMOVED: self.loop = global_loop (Now accessed via self.global_loop)
         self.city_code = self.get_city_code()
         self.menubutton_mullvad = Gtk.MenuButton()
         self.status_label = None
@@ -40,14 +36,11 @@ class MullvadPlugin(BasePlugin):
 
     def on_start(self):
         """Hook called when the plugin is initialized. Starts the async setup."""
-        # Use the new helper method to run the initial setup coroutine
         self.run_in_async_task(self._async_init_setup())
 
     def get_mullvad_version(self):
         """Retrieve the Mullvad version using the `mullvad --version` command."""
         try:
-            # os.popen is blocking, but this is executed in a background thread
-            # via asyncio.to_thread in _async_init_setup, so it's safe.
             version = os.popen("mullvad --version").read().strip()
             return version
         except Exception as e:
@@ -69,17 +62,11 @@ class MullvadPlugin(BasePlugin):
         self.icon_name = self.gtk_helper.icon_exist(
             "mullvad-tray-9", ["mullvad-vpn-symbolic", "mullvaddg"]
         )
-        # UI updates must be scheduled on the GTK thread, but since this
-        # is the setup, we assume it's safe for now, or could wrap in
-        # self.schedule_in_gtk_thread if needed later.
         self.menubutton_mullvad.set_icon_name(self.icon_name)
         self.menubutton_mullvad.add_css_class("top_right_widgets")
         self.gtk_helper.add_cursor_effect(self.menubutton_mullvad)
         self.create_menu_model()
-
         if os.path.exists("/usr/bin/mullvad"):
-            # GLib timer is needed for recurring updates
-            # GLib calls the wrapper, which uses run_in_async_task
             GLib.timeout_add(10000, self.update_vpn_status_async)
 
     def create_menu_model(self):
@@ -106,8 +93,6 @@ class MullvadPlugin(BasePlugin):
         status_action = Gio.SimpleAction.new("status", None)
         random_action_city = Gio.SimpleAction.new("random_city", None)
         random_action_global = Gio.SimpleAction.new("random_global", None)
-
-        # FIXED: Replacing self.loop.create_task with self.run_in_async_task
         connect_action.connect(
             "activate", lambda *args: self.run_in_async_task(self.connect_vpn())
         )
@@ -125,7 +110,6 @@ class MullvadPlugin(BasePlugin):
                 self.set_mullvad_relay_random_global()
             ),
         )
-
         action_group.add_action(connect_action)
         action_group.add_action(disconnect_action)
         action_group.add_action(status_action)
@@ -145,26 +129,19 @@ class MullvadPlugin(BasePlugin):
         self.status_label = Gtk.Label(label="Checking status...")
         vbox.append(self.status_label)
         vbox.append(Gtk.Separator())
-
-        # FIXED: Replacing self.loop.create_task with self.run_in_async_task
         connect_button = Gtk.Button(label="Connect")
         connect_button.connect(
             "clicked", lambda *args: self.run_in_async_task(self.connect_vpn())
         )
         vbox.append(connect_button)
-
-        # FIXED: Replacing self.loop.create_task with self.run_in_async_task
         disconnect_button = Gtk.Button(label="Disconnect")
         disconnect_button.connect(
             "clicked", lambda *args: self.run_in_async_task(self.disconnect_vpn())
         )
         vbox.append(disconnect_button)
-
         status_button = Gtk.Button(label="Check Status")
         status_button.connect("clicked", self.check_status)
         vbox.append(status_button)
-
-        # FIXED: Replacing self.loop.create_task with self.run_in_async_task
         random_button_city = Gtk.Button(
             label=f"Random {self.city_code.capitalize()} Relay"
         )
@@ -173,8 +150,6 @@ class MullvadPlugin(BasePlugin):
             lambda *args: self.run_in_async_task(self.set_mullvad_relay_by_city()),
         )
         vbox.append(random_button_city)
-
-        # FIXED: Replacing self.loop.create_task with self.run_in_async_task
         random_button_global = Gtk.Button(label="Random Global Relay")
         random_button_global.connect(
             "clicked",
@@ -183,20 +158,12 @@ class MullvadPlugin(BasePlugin):
             ),
         )
         vbox.append(random_button_global)
-
         self.popover_mullvad.set_child(vbox)
 
     def update_vpn_status_async(self):
         """Wrapper to call the async status update from GLib."""
-        # FIXED: Replacing self.loop.create_task with self.run_in_async_task
-        # We pass self.update_vpn_status, which is an async method (coroutine)
         self.run_in_async_task(self.update_vpn_status())
         return True
-
-    # The rest of the async methods (connect_vpn, disconnect_vpn, get_current_relay_hostname,
-    # set_mullvad_relay_by_city, set_mullvad_relay_random_global, update_vpn_status,
-    # get_mullvad_status_string) remain unchanged as they are already coroutines.
-    # The error handling within BasePlugin.run_in_async_task now provides better debugging.
 
     async def connect_vpn(self):
         """Connect to Mullvad VPN asynchronously."""
@@ -303,15 +270,8 @@ class MullvadPlugin(BasePlugin):
                 is_mullvad_active = any(
                     file.startswith("tun") and "-mullvad" in file for file in net_files
                 )
-            # The following UI updates should ideally be wrapped in self.schedule_in_gtk_thread
-            # if this coroutine were called from outside the GLib timer loop.
-            # Since it is called from a GLib timer via the async loop, the GTK objects
-            # might already be safe to access, but for maximum safety in a large application:
-
             status = await self.get_mullvad_status_string()
 
-            # Since the UI updates happen after long-running async/thread operations,
-            # they should be scheduled back onto the GTK thread.
             def _update_ui():
                 if is_mullvad_active:
                     self.menubutton_mullvad.set_icon_name(self.icon_name)
@@ -321,7 +281,6 @@ class MullvadPlugin(BasePlugin):
                     self.status_label.set_text(status)
 
             self.schedule_in_gtk_thread(_update_ui)
-
         except Exception as e:
             self.logger.error(f"Error updating VPN status: {e}")
 

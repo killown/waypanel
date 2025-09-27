@@ -17,7 +17,7 @@ from typing import (
 
 from functools import wraps
 
-from gi.repository import GLib
+from gi.repository import GLib  # pyright: ignore
 
 logger = logging.getLogger(__name__)
 

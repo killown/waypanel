@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 
 class PathHandler:
@@ -10,34 +11,49 @@ class PathHandler:
     def __init__(self, panel_instance):
         """
         Initializes the PathHandler with a specific application name.
-
         Args:
-            app_name (str): The name of the application.
+            panel_instance: The panel instance, used for accessing the logger.
         """
         self.app_name = "waypanel"
-        self._home = os.path.expanduser("~")
+        self._home = Path.home()
         self.logger = panel_instance.logger
 
-    def get_data_path(self, *path_parts):
+    def _get_xdg_base_dir(self, env_var: str, default_path: Path) -> Path:
+        """Helper to get XDG base directory with fallback."""
+        path_str = os.getenv(env_var)
+        if path_str:
+            return Path(path_str)
+        return default_path
+
+    def get_config_dir(self) -> Path:
+        """
+        Returns the path to the application's configuration directory:
+        $XDG_CONFIG_HOME/waypanel or ~/.config/waypanel.
+        Creates the directory if it does not exist.
+        """
+        config_home = self._get_xdg_base_dir("XDG_CONFIG_HOME", self._home / ".config")
+        config_dir = config_home / self.app_name
+        config_dir.mkdir(parents=True, exist_ok=True)
+        return config_dir
+
+    def get_data_path(self, *path_parts) -> str:
         """
         Returns a path inside the user's XDG data directory and creates its
         parent directories if they do not exist.
         """
-        data_home = os.environ.get(
-            "XDG_DATA_HOME", os.path.join(self._home, ".local", "share")
+        data_home = self._get_xdg_base_dir(
+            "XDG_DATA_HOME", self._home / ".local" / "share"
         )
-        path = os.path.join(data_home, self.app_name, *path_parts)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        return path
+        path = data_home / self.app_name / Path(*path_parts)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return str(path)
 
-    def get_cache_path(self, *path_parts):
+    def get_cache_path(self, *path_parts) -> str:
         """
         Returns a path inside the user's XDG cache directory and creates its
         parent directories if they do not exist.
         """
-        cache_home = os.environ.get(
-            "XDG_CACHE_HOME", os.path.join(self._home, ".cache")
-        )
-        path = os.path.join(cache_home, self.app_name, *path_parts)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        return path
+        cache_home = self._get_xdg_base_dir("XDG_CACHE_HOME", self._home / ".cache")
+        path = cache_home / self.app_name / Path(*path_parts)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return str(path)

@@ -21,7 +21,7 @@ def get_plugin_placement(panel_instance):
     Returns:
         str: The placement of the plugin, "background".
     """
-    return "background"
+    return "background", 99, 99
 
 
 def initialize_plugin(panel_instance):

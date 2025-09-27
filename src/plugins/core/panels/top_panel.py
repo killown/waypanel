@@ -99,12 +99,12 @@ class TopPanelPlugin(BasePlugin):
 
     def add_css_class(self):
         if (
-            self.gtk_helper.is_widget_ready(self.obj.top_panel_box_left)
-            and self.gtk_helper.is_widget_ready(self.obj.top_panel_box_widgets_left)
-            and self.gtk_helper.is_widget_ready(self.obj.top_panel_box_right)
-            and self.gtk_helper.is_widget_ready(self.obj.top_panel_box_systray)
-            and self.gtk_helper.is_widget_ready(self.obj.top_panel_box_center)
-            and self.gtk_helper.is_widget_ready(self.obj.top_panel_box_full)
+            self.is_widget_ready(self.obj.top_panel_box_left)
+            and self.is_widget_ready(self.obj.top_panel_box_widgets_left)
+            and self.is_widget_ready(self.obj.top_panel_box_right)
+            and self.is_widget_ready(self.obj.top_panel_box_systray)
+            and self.is_widget_ready(self.obj.top_panel_box_center)
+            and self.is_widget_ready(self.obj.top_panel_box_full)
         ):
             # Apply CSS classes
             self.update_widget_safely(

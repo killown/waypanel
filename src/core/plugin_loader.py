@@ -6,6 +6,7 @@ import sys
 import traceback
 from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
+from src.shared.gtk_helpers import GtkHelpers
 
 
 class PluginLoader:
@@ -58,6 +59,8 @@ class PluginLoader:
         self.data_helper = DataHelpers()
         self.config_handler = ConfigHandler(panel_instance)
         self.config_path = self.config_handler.config_path
+        self.gtk_helpers = GtkHelpers(panel_instance)
+        self.update_widget_safely = self.gtk_helpers.update_widget_safely
         self.user_plugins_dir = os.path.join(
             self.get_real_user_home(), ".local", "share", "waypanel", "plugins"
         )
@@ -482,36 +485,12 @@ class PluginLoader:
         Persists the plugin configuration to the `config.toml` file.
 
         This method is responsible for saving the current state of discovered and
-        disabled plugins back to the application's configuration file. It takes the
-        in-memory configuration object, updates the plugin lists, and then
-        atomically writes the changes to disk.
-
-        Args:
-            config (dict): The in-memory TOML configuration object.
-            valid_plugins (list): A list of strings containing the names of
-                                  all plugins that were successfully loaded.
-            disabled_plugins (list): A list of strings containing the names of
-                                     all plugins explicitly disabled in the config.
-
-        Workflow:
-            1. **Path Resolution**: Constructs the absolute path to the `config.toml` file.
-            2. **Data Update**: Updates the `list` and `disabled` keys within the `[plugins]`
-               section of the `config` dictionary. Plugin names are joined into a
-               space-separated string for persistence.
-            3. **File Dump**: Uses the `toml` library to write the entire `config`
-               dictionary to the specified file, overwriting the previous content.
+        disabled plugins back to the application's configuration file.
         """
-        waypanel_config_path = os.path.join(
-            self.config_handler.config_path, "config.toml"
+        self.config_handler.update_config(["plugins", "list"], " ".join(valid_plugins))
+        self.config_handler.update_config(
+            ["plugins", "disabled"], " ".join(disabled_plugins)
         )
-
-        # Update the in-memory config object
-        config["plugins"]["list"] = " ".join(valid_plugins)
-        config["plugins"]["disabled"] = " ".join(disabled_plugins)
-
-        # Dump the updated config to the file
-        with open(waypanel_config_path, "w") as f:
-            toml.dump(config, f)
 
     def validate_deps_list(self, deps_list, module_name):
         """
@@ -571,16 +550,16 @@ class PluginLoader:
                 self.plugin_containers[box_name] = flow_box
 
                 # Append the newly created FlowBox to the target container
-                GLib.idle_add(target.append, flow_box)
+                self.update_widget_safely(target.append, flow_box)
             else:
                 flow_box = self.plugin_containers[box_name]
 
             # Clean up the FlowBox before appending new widgets
-            GLib.idle_add(flow_box.remove_all)
+            self.update_widget_safely(flow_box.remove_all)
 
             # Append the widget(s) to the plugin's dedicated FlowBox
             for widget in widgets:
-                GLib.idle_add(flow_box.append, widget)
+                self.update_widget_safely(flow_box.append, widget)
 
         elif widget_action == "set_content":
             # Set the widget as the content of the target container
@@ -590,7 +569,7 @@ class PluginLoader:
                 else [widget_to_append]
             )
             for widget in widgets:
-                GLib.idle_add(target.set_content, widget)
+                self.update_widget_safely(target.set_content, widget)
 
     def _initialize_sorted_plugins(self, plugin_metadata):
         """

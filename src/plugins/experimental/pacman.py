@@ -9,7 +9,7 @@ DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
-    return "top-panel-center", 99
+    return "top-panel-center", 99, 99
 
 
 def initialize_plugin(panel_instance):

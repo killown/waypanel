@@ -41,29 +41,23 @@ class TaskbarPlugin(BasePlugin):
         self.scrolled_window = Gtk.ScrolledWindow()
         self.button_pool = []
         self.in_use_buttons = {}
-        self.icon_size = self.config_handler.check_and_get_config(
-            key_path=["taskbar", "layout", "icon_size"],
-            default_value=24,
+        self.icon_size = self.get_config(
+            ["taskbar", "layout", "icon_size"],
         )
-        self.spacing = self.config_handler.check_and_get_config(
-            key_path=["taskbar", "layout", "spacing"],
-            default_value=4,
+        self.spacing = self.get_config(
+            ["taskbar", "layout", "spacing"],
         )
-        self.show_label = self.config_handler.check_and_get_config(
-            key_path=["taskbar", "layout", "show_label"],
-            default_value=False,
+        self.show_label = self.get_config(
+            ["taskbar", "layout", "show_label"],
         )
-        self.max_title_lenght = self.config_handler.check_and_get_config(
-            key_path=["taskbar", "layout", "max_title_lenght"],
-            default_value=30,
+        self.max_title_lenght = self.get_config(
+            ["taskbar", "layout", "max_title_lenght"],
         )
-        self.exclusive_zone = self.config_handler.check_and_get_config(
-            key_path=["taskbar", "panel", "exclusive_zone"],
-            default_value=True,
+        self.exclusive_zone = self.get_config(
+            ["taskbar", "panel", "exclusive_zone"],
         )
         self.panel_name = self.config_handler.check_and_get_config(
-            key_path=["taskbar", "panel", "name"],
-            default_value="bottom-panel",
+            ["taskbar", "panel", "name"],
         )
         self._setup_taskbar()
         self._initialize_button_pool(10)
@@ -110,10 +104,7 @@ class TaskbarPlugin(BasePlugin):
         if geometry:
             monitor_width = geometry["width"]
             self.scrolled_window.set_size_request(
-                monitor_width,
-                self.config_handler.config_data.get("taskbar")
-                .get("panel")
-                .get("exclusive_zone"),
+                monitor_width, self.get_config(["taskbar", "panel", "exclusive_zone"])
             )
         self.taskbar.set_halign(Gtk.Align.CENTER)
         self.taskbar.set_valign(Gtk.Align.END)

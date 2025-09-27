@@ -30,8 +30,6 @@ class ConfigHandler:
         self._cached_config = self.config_data
 
     def _strip_hints(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        if not isinstance(data, dict):
-            return data
         stripped_data = {}
         for key, value in data.items():
             if key.endswith(("_hint", "_section_hint", "_items_hint")):
@@ -67,7 +65,7 @@ class ConfigHandler:
     def reload_config(self):
         try:
             new_config = self.load_config(force_reload=True)
-            self.config_data.update(new_config)
+            self.config_data.update(new_config)  # pyright: ignore
             self.logger.info("Configuration reloaded successfully.")
         except Exception as e:
             self.logger.error(f"Error reloading configuration: {e}")
@@ -75,36 +73,75 @@ class ConfigHandler:
     def load_config(self, force_reload: bool = False) -> Dict[str, Any]:
         if self._cached_config and not force_reload:
             return self._cached_config
+
         config_from_file = {}
         file_path = Path(self.config_file)
+
+        needs_write_back = (
+            False  # <--- NEW FLAG to track if the file needs fixing/creation
+        )
+
         if not file_path.exists():
-            self.logger.info("Config file not found. Returning default config.")
-            return self.default_config_stripped.copy()
-        max_retries = 3
-        retry_delay_seconds = 0.1
-        for attempt in range(max_retries):
-            try:
-                if file_path.stat().st_size == 0:
-                    self.logger.info(
-                        f"Config file is empty. Retrying... (Attempt {attempt + 1}/{max_retries})"
+            self.logger.info(
+                "Config file not found. Applying defaults and preparing to create."
+            )
+            config_from_file = {}  # Start with empty dict for full merge
+            needs_write_back = True
+
+        else:  # File exists. Attempt to load (with retries for corruption/race condition)
+            max_retries = 3
+            retry_delay_seconds = 0.1
+
+            for attempt in range(max_retries):
+                try:
+                    if file_path.stat().st_size == 0:
+                        # FIX 1: Stop pointless retries for an empty file immediately.
+                        self.logger.info(
+                            "Existing config file is empty. Will apply defaults and overwrite."
+                        )
+                        config_from_file = {}
+                        needs_write_back = True
+                        break
+
+                    with open(file_path, "r") as f:
+                        config_from_file = toml.load(f)
+                    self.logger.debug("Existing config.toml loaded successfully.")
+                    break
+                except Exception as e:
+                    self.logger.error(
+                        f"Error loading config file on attempt {attempt + 1}: {e}"
                     )
                     time.sleep(retry_delay_seconds)
-                    continue
-                with open(file_path, "r") as f:
-                    config_from_file = toml.load(f)
-                self.logger.debug("Existing config.toml loaded successfully.")
-                break
-            except Exception as e:
-                self.logger.error(
-                    f"Error loading config file on attempt {attempt + 1}: {e}"
-                )
-                time.sleep(retry_delay_seconds)
+                    needs_write_back = (
+                        True  # If loading fails, treat as corruption/missing data
+                    )
+
+        # --- Merge logic (keeps original) ---
         default_config_for_merge = self.default_config_stripped
+
+        # Merge defaults. This part handles both missing keys and the initial empty/non-existent file case.
         for key, default_section in default_config_for_merge.items():
             if key not in config_from_file:
                 config_from_file[key] = default_section
+                needs_write_back = True  # If we merged anything, we need to save it.
+
         self._cached_config = config_from_file
         self.logger.debug("Configuration loaded and merged with defaults.")
+
+        # --- FIX 2: Save if the file was missing, empty, or needed defaults merged ---
+        if needs_write_back:
+            self.logger.info(
+                "Saving merged defaults to config file for initial setup or repair."
+            )
+
+            # Since save_config uses self.config_data, we must temporarily set it
+            # to the newly generated configuration before calling save.
+            original_config_data = getattr(self, "config_data", None)
+            self.config_data = config_from_file
+            self.save_config()
+            self.config_data = original_config_data  # Restore original ref (will be overwritten by return value in __init__)
+        # --- END FIX ---
+
         return config_from_file
 
     def _setup_config_paths(self) -> None:

@@ -1,5 +1,5 @@
 import requests
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib  # pyright: ignore
 from wayfire import WayfireSocket
 
 sock = WayfireSocket()
@@ -65,7 +65,7 @@ class MullvadStatusDialog(Gtk.Dialog):
             return None
 
     def update_ui(self, data):
-        for child in list(self.box):
+        for child in list(self.box):  # pyright: ignore
             self.box.remove(child)
         if not data:
             error_label = Gtk.Label(label="Failed to fetch VPN data")

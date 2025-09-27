@@ -1,19 +1,20 @@
-import os
 import sqlite3
 import orjson as json
 import base64
+from src.shared.path_handler import PathHandler
 
 
 class Database:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, panel_instance) -> None:
+        self.path_handler = PathHandler(panel_instance)
+        config_dir = self.path_handler.get_config_dir()
+        self.db_path = str(config_dir / "notifications.db")
+        self._initialize_db()
 
     def _initialize_db(self):
         """Initialize the SQLite database to store notifications."""
-        db_path = os.path.expanduser("~/.config/waypanel/notifications.db")
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
         try:
-            conn = sqlite3.connect(db_path)
+            conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS notifications (
@@ -33,19 +34,17 @@ class Database:
         except Exception as e:
             print(f"Error initializing database: {e}")
             raise
-        return db_path
 
-    def _save_notification_to_db(self, notification, db_path):
+    def _save_notification_to_db(self, notification, db_path_ignored=None):
         """Save a notification to the database.
         Args:
             notification: Dictionary containing notification details.
+            db_path_ignored: Redundant argument passed by calling code, now accepted and ignored.
         """
         try:
-            # Ensure hints are JSON serializable
             hints = notification.get("hints", {})
             hints = self._make_serializable(hints)
-
-            conn = sqlite3.connect(db_path)
+            conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             cursor.execute(
                 """
@@ -76,7 +75,6 @@ class Database:
         elif isinstance(data, list):
             return [self._make_serializable(item) for item in data]
         elif isinstance(data, bytes):
-            # Convert bytes to Base64-encoded string
             return {"__bytes__": base64.b64encode(data).decode("utf-8")}
         else:
             return data
@@ -94,19 +92,18 @@ class Database:
         The core logic of this database module is to reliably store
         notification data for later retrieval. Its design is based on
         these key concepts:
-
         1.  **Dedicated Data Layer**: The module is a self-contained
             data access object. It is responsible solely for managing
             the SQLite database file and the `notifications` table,
             decoupling the storage logic from the D-Bus communication
-            and UI components.
-
+            and UI components. The database file path is now dynamically
+            resolved using `PathHandler.get_config_dir()`, adhering to
+            XDG standards.
         2.  **Schema Definition**: The `_initialize_db` method defines
             a robust table schema for notifications, including a primary
             key, content fields (summary, body), and a JSON field for
             metadata (hints). This structure ensures consistency for
             all stored notifications.
-
         3.  **Cross-Platform Serialization**: The `_save_notification_to_db`
             method handles the complex task of serializing data. It
             uses a helper function to recursively convert potentially

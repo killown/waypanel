@@ -2,17 +2,15 @@ import asyncio
 import aiosqlite
 import os
 from datetime import datetime
-
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
-
 ENABLE_PLUGIN = False
-DEPS = ["calendar"]  # Only depend on calendar plugin
+DEPS = ["calendar"]
 
 
 def get_plugin_placement(panel_instance):
-    return "background", 0, 0  # No UI of its own; modifies calendar UI
+    return "background", 0, 0
 
 
 def initialize_plugin(panel_instance):
@@ -32,10 +30,7 @@ class CalendarNotesPlugin(BasePlugin):
         self.calendar.popover_calendar.connect(
             "notify::visible", self.on_calendar_visibility_changed
         )
-
         self.note_dates = set()
-
-        # Schedule attaching to calendar after it's initialized
         GLib.timeout_add_seconds(1, self.attach_notes_to_calendar)
 
     async def load_note_dates(self):
@@ -46,30 +41,23 @@ class CalendarNotesPlugin(BasePlugin):
     def on_calendar_visibility_changed(self, popover, param):
         """Callback when the calendar popover visibility changes."""
         if popover.get_visible():
-            # Get current date and reload notes
             date_time = self.calendar.calendar.get_date()
             year = date_time.get_year()
-            month = date_time.get_month()  # 1-based
+            month = date_time.get_month()
             day = date_time.get_day_of_month()
-
             selected_date = f"{year}-{month:02d}-{day:02d}"
             self.load_and_display_notes(selected_date)
-            self.mark_days_with_notes()  # Optional: re-mark days with notes
+            self.mark_days_with_notes()
 
     def mark_days_with_notes(self):
         calendar = self.plugins["calendar"].calendar
-
-        # Unmark all days first
-        for day in range(1, 32):  # Days 1–31
+        for day in range(1, 32):
             calendar.unmark_day(day)
-
-        # Only mark current month/year's matching days
         for date_str in self.note_dates:
             try:
                 year, month, day = map(int, date_str.split("-"))
-                # Only mark if the date matches the currently displayed month/year
                 cal_year = calendar.get_date().get_year()
-                cal_month = calendar.get_date().get_month()  # 1-based
+                cal_month = calendar.get_date().get_month()
                 if year == cal_year and month == cal_month:
                     calendar.mark_day(day)
             except Exception as e:
@@ -79,44 +67,31 @@ class CalendarNotesPlugin(BasePlugin):
         """Attach notes display to the calendar popover"""
         if "calendar" not in self.plugins:
             self.logger.warning("Calendar plugin not loaded yet. Retrying...")
-            return True  # Keep retrying
+            return True
         asyncio.run(self.load_note_dates())
-
         if (
             not hasattr(self.calendar, "popover_calendar")
             or not self.calendar.popover_calendar
         ):
             self.logger.warning("Calendar popover not initialized yet.")
-            return True  # Retry
-
-        # Get calendar widget from the plugin
+            return True
         self.grid = self.plugins["calendar"].grid
-
-        # Add label to show selected date
         self.selected_date_label = Gtk.Label()
         self.selected_date_label.set_halign(Gtk.Align.START)
         self.selected_date_label.set_margin_top(10)
-        self.grid.attach(self.selected_date_label, 0, 2, 2, 1)  # Row below calendar
-
-        # Create box for notes and wrap it in a scrolled window
+        self.grid.attach(self.selected_date_label, 0, 2, 2, 1)
         self.notes_box = Gtk.ListBox()
         self.notes_box.set_margin_top(10)
         self.notes_box.set_margin_start(10)
         self.notes_box.set_margin_end(10)
-
-        # Use a scrolled window to handle vertical overflow
         scrolled_window = Gtk.ScrolledWindow()
         scrolled_window.set_vexpand(True)
-        # This is the key change: allow the scrolled window to expand horizontally
         scrolled_window.set_hexpand(True)
         scrolled_window.set_child(self.notes_box)
         self.grid.attach(scrolled_window, 0, 3, 2, 1)
-
-        # Load today’s notes by default
         today = datetime.now().strftime("%Y-%m-%d")
         self.load_and_display_notes(today)
-
-        return False  # Stop repeating
+        return False
 
     def on_day_selected(self, calendar):
         """Handle day selection in calendar and display notes."""
@@ -125,7 +100,6 @@ class CalendarNotesPlugin(BasePlugin):
         month = date_time.get_month()
         day = date_time.get_day_of_month()
         selected_date = f"{year}-{month:02d}-{day:02d}"
-
         self.load_and_display_notes(selected_date)
 
     async def get_all_note_dates(self):
@@ -160,51 +134,34 @@ class CalendarNotesPlugin(BasePlugin):
 
     def load_and_display_notes(self, date_str):
         """Load and display notes for the given date"""
-        # Clear previous notes
         if self.notes_box is not None:
-            # Use Gtk.ListBox's built-in clearing method
             self.notes_box.remove_all()
-
-        # Fetch notes for this date
         try:
             notes = asyncio.run(self.fetch_notes_by_date(date_str))
         except Exception as e:
             self.logger.error(f"Error fetching notes: {e}")
             return
-
         if not notes:
             no_notes_label = Gtk.Label(label="No notes found for this day.")
             no_notes_label.set_halign(Gtk.Align.START)
             self.notes_box.append(no_notes_label)
             self.notes_box.show_all()
             return
-
         for note_id, content in notes:
-            # Instead of collapsing all whitespace, find the first space
-            # and take the substring from there, preserving newlines.
             first_space = content.find(" ")
             if first_space != -1:
                 content = content[first_space + 1 :]
-
-            # Create label for the note
             note_label = Gtk.Label()
-            # Re-add this line. It works in conjunction with the new `set_hexpand`.
             note_label.set_max_width_chars(79)
             note_label.set_wrap(True)
             note_label.set_halign(Gtk.Align.START)
             note_label.set_margin_bottom(5)
-
             note_label.set_markup(
                 f'<span font="DejaVu Sans Mono">{GLib.markup_escape_text(content)}</span>'
             )
-
-            # Wrap the label in a ListBoxRow
             row = Gtk.ListBoxRow()
             row.set_child(note_label)
-
-            # Append the row to the listbox
             self.notes_box.append(row)
-
         self.notes_box.show_all()
 
     def about(self):
@@ -220,25 +177,21 @@ class CalendarNotesPlugin(BasePlugin):
         The core logic of this plugin is based on an architectural
         pattern of dependency injection and asynchronous data
         handling. Its key principles are:
-
         1.  **UI Augmentation**: This plugin operates as a dependent
             component. It does not create its own top-level window or
             button but instead dynamically attaches a notes display
             (`Gtk.ListBox`) to the existing calendar popover, enhancing
             its functionality.
-
         2.  **Asynchronous Data Persistence**: All note data is stored
             in a local SQLite database managed by the `aiosqlite`
             library. This allows for non-blocking database operations,
             which is essential for keeping the application responsive
             while fetching or saving notes.
-
         3.  **Cross-Event Loop Communication**: The plugin connects
             synchronous GTK UI events, such as a day being selected, to
             its asynchronous data fetching routines by using `asyncio.run`.
             This is a crucial pattern for bridging the gap between GTK's
             main loop and `asyncio`'s event loop.
-
         4.  **Dynamic UI and Data Mapping**: The plugin provides a visual
             cue to the user by marking days on the calendar that have
             associated notes. It dynamically loads and displays the notes

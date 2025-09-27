@@ -6,7 +6,6 @@ from typing import List, Tuple
 from gi.repository import Gio, Gtk, GLib, Pango  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
-
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 
@@ -24,14 +23,17 @@ def initialize_plugin(panel_instance):
 
 
 class NotesManager:
-    def __init__(self):
+    def __init__(self, path_handler):
+        self.path_handler = path_handler
         self.db_path = self._default_db_path()
 
     def _default_db_path(self):
-        return str(Path.home() / ".config" / "waypanel" / "notes.db")
+        config_dir = self.path_handler.get_config_dir()
+        return str(config_dir / "notes.db")
 
     async def initialize_db(self):
         """Create notes table if it doesn't exist"""
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS notes (
@@ -69,11 +71,11 @@ class NotesManager:
             await db.commit()
 
 
-def get_notes_sync() -> List[Tuple[int, str]]:
+def get_notes_sync(path_handler) -> List[Tuple[int, str]]:
     """Sync wrapper for getting notes"""
 
     async def _fetch_notes():
-        manager = NotesManager()
+        manager = NotesManager(path_handler)
         await manager.initialize_db()
         return await manager.get_notes()
 
@@ -83,33 +85,15 @@ def get_notes_sync() -> List[Tuple[int, str]]:
 class MenuNotes(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
+        self.notes_manager = NotesManager(self.path_handler)
         self.popover_notes = None
         self.find_text_using_button = {}
         self.row_content = None
         self.listbox = None
-
-        # Define a default configuration specifically for the notes plugin
-        self.notes_default_config = {
-            "notes": {
-                "notes_icon": "stock_notes",
-                "notes_icon_delete": "edit-delete",
-            }
-        }
-
-        # Ensure the required configuration section exists with default values
-        self.config_handler.initialize_config_section(
-            "notes", self.notes_default_config
-        )
-
-        # Create the notes button in the panel
-        self.layer_shell.set_keyboard_mode(
-            self.obj.top_panel, self.layer_shell.KeyboardMode.ON_DEMAND
-        )
         self.menubutton_notes = Gtk.Button.new()
         self.main_widget = (self.menubutton_notes, "append")
         self.menubutton_notes.connect("clicked", self.open_popover_notes)
         self.gtk_helper.add_cursor_effect(self.menubutton_notes)
-
         self.menubutton_notes.set_icon_name(
             self.gtk_helper.set_widget_icon_name(
                 "notes",
@@ -122,24 +106,17 @@ class MenuNotes(BasePlugin):
         )
 
     def delete_button_icon(self):
-        # Now, retrieve the icon from the dedicated notes section
-        return self.config_handler.config_data.get("notes", {}).get(
-            "notes_icon_delete", "edit-delete"
-        )
+        return self.get_config(["notes", "notes_icon_delete"], "edit-delete")
 
     def clear_notes(self, *_):
         """Handle clearing all notes with a GTK4 confirmation dialog"""
         dialog = Gtk.AlertDialog(
             message="Clear all notes?",
             detail="This will permanently delete all your notes. Are you sure?",
-            buttons=["_Cancel", "_Clear All"],  # GTK4 uses underscores for mnemonics
+            buttons=["_Cancel", "_Clear All"],
         )
-
-        # Set the default destructive action (makes "Clear All" stand out in some DEs)
-        dialog.set_default_button(1)  # Index 1 = "Clear All"
-        dialog.set_cancel_button(0)  # Index 0 = "Cancel"
-
-        # Show the dialog and handle response asynchronously
+        dialog.set_default_button(1)
+        dialog.set_cancel_button(0)
         dialog.choose(
             callback=self.on_clear_confirmation_response,
         )
@@ -160,67 +137,51 @@ class MenuNotes(BasePlugin):
         """Update the list of notes in the popover"""
         if self.listbox is not None:
             self.listbox.remove_all()
-
-        notes = get_notes_sync()
-
-        # Calculate dynamic height
+        notes = get_notes_sync(self.path_handler)
         line_height = 40
         padding = 20
         notes_count = len(notes)
         dynamic_height = min(notes_count * line_height + padding, 600)
         self.scrolled_window.set_min_content_height(dynamic_height)
-
         button_icon = self.gtk_helper.set_widget_icon_name(
             None, [self.delete_button_icon(), "edit-delete"]
         )
         for note_id, content in notes:
             if not content:
                 continue
-
             row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-
-            # Add delete button
             delete_button = Gtk.Button()
             delete_button.add_css_class("notes_button_delete")
             delete_button.set_icon_name(button_icon)
             self.gtk_helper.add_cursor_effect(delete_button)
-
             delete_button.connect("clicked", self.on_delete_note)
-
             spacer = Gtk.Label(label="    ")
             row_hbox.append(spacer)
-
-            # Store note ID in the row's data
             row_hbox.MYTEXT = f"{note_id} {content.strip()}"  # pyright: ignore
             row_hbox.note_id = note_id  # pyright: ignore
-
-            # Add note content
             note_label = Gtk.Label.new()
             note_label.set_wrap(True)
-            timestamp = content[:16]  # Extract "YYYY-MM-DD HH:MM"
-            message = content[19:]  # Skip " — "
-
+            timestamp = content[:16]
+            message = content[19:]
             if timestamp and message:
                 markup = f"{timestamp} — {message}"
             else:
                 markup = content
-
             note_label.set_markup(f'<span font="DejaVu Sans Mono">{markup}</span>')
             note_label.props.margin_end = 10
             note_label.props.hexpand = True
             note_label.set_wrap(True)
-            note_label.set_ellipsize(Pango.EllipsizeMode.NONE)  # Prevent truncation
-            note_label.set_halign(Gtk.Align.FILL)  # Fill horizontal space
-            note_label.set_hexpand(True)  # Expand horizontally
-            note_label.set_valign(Gtk.Align.CENTER)  # Vertically center text
-            note_label.set_vexpand(False)  # Don't expand vertically
-            note_label.set_xalign(0)  # Left-aligned text
+            note_label.set_ellipsize(Pango.EllipsizeMode.NONE)
+            note_label.set_halign(Gtk.Align.FILL)
+            note_label.set_hexpand(True)
+            note_label.set_valign(Gtk.Align.CENTER)
+            note_label.set_vexpand(False)
+            note_label.set_xalign(0)
             note_label.set_yalign(0.5)
             note_label.set_margin_end(5)
             note_label.set_halign(Gtk.Align.START)
             row_hbox.append(note_label)
             row_hbox.append(delete_button)
-
             self.listbox.append(row_hbox)  # pyright: ignore
             self.find_text_using_button[delete_button] = row_hbox
 
@@ -230,70 +191,52 @@ class MenuNotes(BasePlugin):
         self.popover_notes.set_has_arrow(False)
         self.popover_notes.connect("closed", self.popover_is_closed)
         self.popover_notes.connect("notify::visible", self.popover_is_open)
-
         show_searchbar_action = Gio.SimpleAction.new("show_searchbar")
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
         self.obj.add_action(show_searchbar_action)
-
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_min_content_width(600)
         self.scrolled_window.set_min_content_height(600)
-
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 10)
         self.main_box.set_margin_top(10)
         self.main_box.set_margin_bottom(10)
         self.main_box.set_margin_start(10)
         self.main_box.set_margin_end(10)
-
-        # Search bar
         self.searchbar = Gtk.SearchEntry.new()
         self.searchbar.set_placeholder_text("Search notes...")
         self.searchbar.connect("search_changed", self.on_search_entry_changed)
         self.main_box.append(self.searchbar)
-
-        # Add note entry
         self.entry_add_note = Gtk.Entry.new()
         self.entry_add_note.set_placeholder_text("Add new note...")
         self.entry_add_note.connect("activate", self.on_add_note)
         self.main_box.append(self.entry_add_note)
-
-        # Buttons box
         buttons_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 5)
-
         self.button_add = Gtk.Button.new_with_label("Add")
         self.button_add.add_css_class("notes_button_add")
         self.button_add.connect("clicked", self.on_add_note)
         self.gtk_helper.add_cursor_effect(self.button_add)
         buttons_box.append(self.button_add)
-
         self.button_clear = Gtk.Button.new_with_label("Clear All")
         self.button_clear.add_css_class("notes_button_clear")
         self.button_clear.connect("clicked", self.clear_notes)
         self.gtk_helper.add_cursor_effect(self.button_clear)
         buttons_box.append(self.button_clear)
-
         self.main_box.append(buttons_box)
-
-        # Notes list
         self.listbox = Gtk.ListBox.new()
         self.listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.listbox.set_show_separators(True)
         self.listbox.set_filter_func(self.on_filter_invalidate)
-
         self.scrolled_window.set_child(self.listbox)
         self.main_box.append(self.scrolled_window)
-
         self.popover_notes.set_child(self.main_box)
         self.update_notes_list()
         self.popover_notes.set_parent(self.menubutton_notes)
-
         return self.popover_notes
 
     async def async_add_note(self, content):
         """Async helper to add a note"""
-        manager = NotesManager()
-        await manager.initialize_db()
-        await manager.add_note(content)
+        await self.notes_manager.initialize_db()
+        await self.notes_manager.add_note(content)
 
     def on_add_note(self, *_):
         """Handle adding a new note with timestamp"""
@@ -307,28 +250,24 @@ class MenuNotes(BasePlugin):
 
     async def async_delete_note(self, note_id):
         """Async helper to delete a note"""
-        manager = NotesManager()
-        await manager.initialize_db()
-        await manager.delete_note(note_id)
+        await self.notes_manager.initialize_db()
+        await self.notes_manager.delete_note(note_id)
 
     def on_delete_note(self, button):
         """Handle deleting a note"""
         if button not in self.find_text_using_button:
             self.logger.info("Note delete button not found")
             return
-
         row = self.find_text_using_button[button]
         note_id = row.note_id
-
         if note_id:
             asyncio.run(self.async_delete_note(note_id))
             self.update_notes_list()
 
     async def async_clear_notes(self):
         """Async helper to clear all notes"""
-        manager = NotesManager()
-        await manager.initialize_db()
-        await manager.clear_notes()
+        await self.notes_manager.initialize_db()
+        await self.notes_manager.clear_notes()
 
     def open_popover_notes(self, *_):
         """Handle opening the notes popover"""
@@ -376,10 +315,8 @@ class MenuNotes(BasePlugin):
         """
         This plugin serves as a persistent note-taking tool that integrates
         seamlessly into the `waypanel` application.
-
         Its core logic is built around **asynchronous database management,
         dynamic UI manipulation, and user interaction**:
-
         1.  **Database Management**: The plugin uses `aiosqlite` to handle
             all database operations asynchronously, ensuring the UI remains
             responsive. It initializes a SQLite database file at
