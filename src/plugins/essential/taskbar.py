@@ -102,7 +102,7 @@ class TaskbarPlugin(BasePlugin):
                 output_name = output_data.get("output_name")
                 output_id = output_data.get("output_id")
             except (json.JSONDecodeError, TypeError):
-                self.log_error("Could not parse waypanel environment variable.")
+                self.logger.error("Could not parse waypanel environment variable.")
         if output_name:
             output_id = self.ipc.get_output_id_by_name(output_name)
             if output_id:
@@ -354,7 +354,7 @@ class TaskbarPlugin(BasePlugin):
             self.ipc.set_view_fullscreen(view_id, True)
             self.set_view_focus(view_id)
         except Exception as e:
-            self.log_error(f"Error setting fullscreen after move: {e}")
+            self.logger.error(f"Error setting fullscreen after move: {e}")
 
     def choose_fullscreen_state(self, view_id):
         if self.is_view_in_focused_output(view_id):
@@ -391,14 +391,14 @@ class TaskbarPlugin(BasePlugin):
                         GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
         except Exception as e:
             GLib.timeout_add(300, self.set_allow_move_view_scroll)
-            self.log_error(
+            self.logger.error(
                 message=f"Error handling scroll event {e}",
             )
 
     def send_view_to_empty_workspace(self, view_id):
         view = self.ipc.get_view(view_id)
         if not view:
-            self.log_error(
+            self.logger.error(
                 f"Cannot send view {view_id} to empty workspace: view not found."
             )
             return
@@ -408,7 +408,7 @@ class TaskbarPlugin(BasePlugin):
         wset_index_view = view.get("wset-index")
         output_id = self.ipc.get_focused_output().get("id")
         if wset_index_focused is None or wset_index_view is None or output_id is None:
-            self.log_error(
+            self.logger.error(
                 f"Cannot send view {view_id} to empty workspace: IPC data is incomplete."
             )
             return
@@ -424,7 +424,7 @@ class TaskbarPlugin(BasePlugin):
                 )
                 self.set_view_focus(view)
             else:
-                self.log_error(
+                self.logger.error(
                     f"Cannot send view {view_id} to empty workspace: geometry data is missing."
                 )
         else:
@@ -452,12 +452,12 @@ class TaskbarPlugin(BasePlugin):
                 self.update_taskbar_button(mapped_view)
             return False
         except IndexError as e:
-            self.log_error(
+            self.logger.error(
                 message=f"IndexError handling 'view-app-id-changed' event: {e}",
             )
             return False
         except Exception as e:
-            self.log_error(
+            self.logger.error(
                 message=f"General error handling 'view-app-id-changed' event: {e}",
             )
             return False
@@ -540,7 +540,7 @@ class TaskbarPlugin(BasePlugin):
                     )
                     self.logger.debug(f"Resized view ID {view_id} to 400x400.")
             except Exception as e:
-                self.log_error(
+                self.logger.error(
                     message=f"Failed to retrieve or resize geometry for view ID: {view_id} {e}",
                 )
             if output_id in self.is_scale_active and self.is_scale_active[output_id]:
@@ -548,7 +548,7 @@ class TaskbarPlugin(BasePlugin):
                     self.ipc.scale_toggle()
                     self.logger.debug("Scale toggled off.")
                 except Exception as e:
-                    self.log_error(message=f"Failed to toggle scale. {e}")
+                    self.logger.error(message=f"Failed to toggle scale. {e}")
                 finally:
                     self._focus_and_center_cursor(view_id)
             else:
@@ -556,7 +556,7 @@ class TaskbarPlugin(BasePlugin):
                 self._focus_and_center_cursor(view_id)
             self.wf_helper.view_focus_indicator_effect(view)
         except Exception as e:
-            self.log_error(
+            self.logger.error(
                 message=f"Unexpected error while setting focus for view ID: {view['id']} {e}",
             )
             return True
@@ -566,7 +566,7 @@ class TaskbarPlugin(BasePlugin):
             self.ipc.go_workspace_set_focus(view_id)
             self.ipc.center_cursor_on_view(view_id)
         except Exception as e:
-            self.log_error(
+            self.logger.error(
                 message=f"Failed to focus workspace or center cursor for view ID: {view_id} {e}",
             )
 
@@ -610,7 +610,7 @@ class TaskbarPlugin(BasePlugin):
                 return False
             return True
         except Exception as e:
-            self.log_error(
+            self.logger.error(
                 message=f"Error checking view existence {e}",
             )
             return False

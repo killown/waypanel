@@ -1,5 +1,6 @@
 from src.core import create_panel
 from gi.repository import Gtk
+import os
 from typing import Any
 from src.shared import path_handler
 from src.shared import notify_send
@@ -8,68 +9,119 @@ from src.shared import gtk_helpers
 from src.shared import data_helpers
 from src.shared import config_handler
 from src.shared import command_runner
-
 import inspect
+
+
+class PluginLogAdapter:
+    """
+    A wrapper around the structlog logger that automatically injects the caller's
+    file, package, function name, AND line number into the log event's 'extra' dictionary.
+    This is achieved by walking the inspection stack until a frame outside of
+    BasePlugin's module is found, reliably identifying the true source.
+    """
+
+    def __init__(self, logger):
+        self._logger = logger
+        try:
+            self._base_plugin_filename = os.path.basename(inspect.getfile(BasePlugin))
+        except (TypeError, ImportError):
+            self._base_plugin_filename = os.path.basename(__file__)
+
+    def _get_caller_context(self):
+        frame = inspect.currentframe()
+        if not frame:
+            return {}
+        f = frame.f_back
+        while f:
+            caller_file = os.path.basename(f.f_code.co_filename)
+            if caller_file != self._base_plugin_filename:
+                try:
+                    caller_package = f.f_globals.get("__package__", "unknown")
+                    caller_func = f.f_code.co_name
+                    caller_line = f.f_lineno
+                    del f
+                    del frame
+                    return {
+                        "file": caller_file,
+                        "package": caller_package,
+                        "func": caller_func,
+                        "line": caller_line,
+                    }
+                except Exception:
+                    break
+            f = f.f_back
+        del frame
+        return {}
+
+    def _log_with_context(self, level: str, message: str, **kwargs):
+        context = self._get_caller_context()
+        if context:
+            if "extra" in kwargs and isinstance(kwargs["extra"], dict):
+                kwargs["extra"].update(context)
+            else:
+                kwargs["extra"] = context
+        log_method = getattr(self._logger, level)
+        log_method(message, **kwargs)
+
+    def info(self, message: str, **kwargs):
+        self._log_with_context("info", message, **kwargs)
+
+    def warning(self, message: str, **kwargs):
+        self._log_with_context("warning", message, **kwargs)
+
+    def error(self, message: str, **kwargs):
+        self._log_with_context("error", message, **kwargs)
+
+    def debug(self, message: str, **kwargs):
+        self._log_with_context("debug", message, **kwargs)
+
+    def exception(self, message: str, **kwargs):
+        self._log_with_context("exception", message, **kwargs)
+
+    def critical(self, message: str, **kwargs):
+        self._log_with_context("critical", message, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._logger, name)
 
 
 class BasePlugin:
     """
     Base class for all waypanel plugins.
-
     This class provides a standardized structure and core resources for creating
     plugins that extend waypanel's functionality. Each plugin can have a UI widget
     and manage events, timers, or run as a background service.
-
-    ## Plugin Lifecycle
-
     1.  **Initialization**: `__init__(self, panel_instance)` is called to create the plugin instance.
     2.  **Start**: `on_start()` is called after initialization. Use this for setup.
     3.  **Runtime**: The plugin listens for events and updates its state.
     4.  **Stop/Disable**: `on_stop()` is called when the plugin is disabled or reloaded.
     5.  **Cleanup**: `on_cleanup()` is called before full removal.
-
-    ## Placement & Dependencies
-
     Plugins define their placement and order within the panel by implementing the
     `get_plugin_placement` function.
-
     **Function Signature:**
         `def get_plugin_placement(panel_instance):`
             `return position, order, priority`
-
     * `position`: `"top-panel-left"`, `"bottom-panel-right"`, etc.
     * `order`: The rendering order within the same panel section.
     * `priority`: The initialization order (lower numbers load first).
-
     **Background Services**: Return `"background"` or `None` to mark a plugin as a background service with no UI.
-
     **Dependencies**: Plugins can declare a list of dependencies (`DEPS`). The `PluginLoader` ensures
     dependent plugins are loaded first.
-
     Example: `DEPS = ["event_manager", "calendar"]`
-
-    ## Creating a Plugin
-
     To create a new plugin, inherit from `BasePlugin` and implement the required methods.
-
     1.  Inherit from `BasePlugin`.
     2.  Call `super().__init__(panel_instance)` in your constructor.
     3.  Implement `get_plugin_placement` to define its position.
     4.  Optionally override lifecycle methods (`on_start`, `on_stop`, etc.).
     5.  Set `self.main_widget` to a `(widget, append_method)` tuple for UI integration.
-
     Example: `self.main_widget = (self.button, "append")`
     """
 
     def __init__(self, panel_instance):
         """
         Initializes the BasePlugin and injects core resources.
-
         This method provides access to shared components from the main panel instance.
         Subclasses must call `super().__init__(panel_instance)` to ensure proper setup.
-
-        ### 📋 Available Attributes (Do not reassign)
-
         * `self.obj`: Reference to the main Panel instance.
         * `self.logger`: Logger object for logging messages.
         * `self.ipc`: IPC client for Wayfire communication.
@@ -81,13 +133,11 @@ class BasePlugin:
         * `self.update_widget_safely`: Safe method to update UI widgets.
         * `self.dependencies`: List of required plugin names.
         * `self.layer_shell`: Reference to LayerShell for setting panel layers.
-
         **Example Usage:**
-
         ```python
         class MyPlugin(BasePlugin):
             def __init__(self, panel_instance):
-                super().__init__(panel_instance)  # Required!
+                super().__init__(panel_instance)
                 self.logger.info("MyPlugin initialized")
                 if "event_manager" in self.plugins:
                     event_manager = self.plugins["event_manager"]
@@ -111,7 +161,7 @@ class BasePlugin:
         self.main_widget = None
         self.plugin_file = None
         self.update_widget_safely: Any = self.gtk_helper.update_widget_safely
-        self.logger: Any = panel_instance.logger
+        self.logger: Any = PluginLogAdapter(panel_instance.logger)
         self.plugins: Any = panel_instance.plugin_loader.plugins
         self.plugin_loader: Any = panel_instance.plugin_loader
         self.update_widget: Any = self.gtk_helper.update_widget
@@ -126,37 +176,6 @@ class BasePlugin:
             create_panel.unset_layer_position_exclusive
         )
 
-    def log_error(self, message) -> None:
-        """Log an error message with contextual information about the caller.
-
-        Captures the caller's filename, package, and function name to provide
-        detailed context in the log entry. Ensures proper cleanup of internal
-        frame references to prevent memory leaks.
-
-        Args:
-            message (str): The error message to be logged.
-        """
-        # Get the caller's frame (two levels up: one for this function, one for the caller)
-        frame = inspect.currentframe().f_back  # type: ignore
-        try:
-            # Extract caller's filename, package, and function name
-            caller_file = frame.f_code.co_filename.split("/")[-1]  # type: ignore
-            caller_package = frame.f_globals.get("__package__", "unknown")  # type: ignore
-            caller_func = frame.f_code.co_name  # type: ignore
-
-            # Log the error with the caller's context
-            self.logger.error(
-                message,
-                extra={
-                    "file": caller_file,
-                    "package": caller_package,
-                    "func": caller_func,
-                },
-            )
-        finally:
-            # Ensure the frame is cleared to avoid memory leaks
-            del frame
-
     def check_dependencies(self) -> bool:
         """Check if all dependencies are loaded"""
         return all(dep in self.obj.plugin_loader.plugins for dep in self.dependencies)
@@ -170,20 +189,14 @@ class BasePlugin:
         Disable the plugin and remove its widget.
         """
         try:
-            # Remove the widget from the panel
             if self.main_widget:
-                self.gtk_helper.remove_widget(
-                    self.main_widget[0]
-                )  # Extract the widget from the tuple
+                self.gtk_helper.remove_widget(self.main_widget[0])
                 self.logger.info("Widget removed successfully.")
             else:
                 self.logger.warning("No widget to remove.")
-
-            # Call the on_disable hook if defined
             self.on_disable()
-
         except Exception as e:
-            self.log_error(
+            self.logger.error(
                 message=f"Error disabling plugin: {e}",
             )
 
@@ -198,18 +211,15 @@ class BasePlugin:
     def set_widget(self):
         """
         Defines and validates the widget to be added to the panel.
-
         This method validates `self.main_widget`, ensuring it's a properly formatted
         tuple containing a valid `Gtk.Widget` and an accepted action string (`"append"` or
         `"set_content"`). It logs errors and warnings for improper configuration,
         preventing common UI-related crashes.
-
         Returns:
             tuple: The `(widget, action)` tuple if valid, or `None` if invalid.
         """
-        # Log the status of self.main_widget for debugging purposes
         if self.main_widget is None:
-            self.log_error(
+            self.logger.error(
                 "Critical Error: self.main_widget is still None. "
                 "This indicates that the main widget was not properly initialized before calling set_widget()."
             )
@@ -219,56 +229,46 @@ class BasePlugin:
                 "2. self.main_widget was not assigned after creating the widget container.\n"
                 "3. The plugin's initialization logic is incomplete or missing."
             )
-            return None  # Return None to indicate failure
-
-        # Ensure self.main_widget is a tuple with two elements
+            return None
         if not isinstance(self.main_widget, tuple) or len(self.main_widget) != 2:
-            self.log_error(
+            self.logger.error(
                 "Invalid format for self.main_widget. Expected a tuple with two elements."
             )
             return None
-
-        # Validate the widget
         widget = self.main_widget[0]
         if isinstance(widget, list):
             for w in widget:  # pyright: ignore
                 if w is None or not isinstance(w, Gtk.Widget):
-                    self.log_error(
+                    self.logger.error(
                         f"Invalid widget in self.main_widget: {w}. "
                         "The widget must be a valid Gtk.Widget instance. Plugin: {self.__class__.__name__}"
                     )
                     return None
         else:
             if widget is None or not isinstance(widget, Gtk.Widget):
-                self.log_error(
+                self.logger.error(
                     f"Invalid widget in self.main_widget: {widget}. "
                     "The widget must be a valid Gtk.Widget instance. Plugin: {self.__class__.__name__}"
                 )
                 return None
-
-            # Validate widget parentage
             if widget.get_parent() is not None:
                 self.logger.warning(
                     f"Widget {widget} already has a parent. It may not be appended correctly."
                 )
-
-        # Validate the action
         action = self.main_widget[1]
         if not self.data_helper.validate_string(
             action, name=f"{action} from action in BasePlugin"
         ):
-            self.log_error(
+            self.logger.error(
                 f"Invalid action in self.main_widget: {action}. Must be a string."
             )
             return None
         if action not in ("append", "set_content"):
-            self.log_error(
+            self.logger.error(
                 f"Invalid action in self.main_widget: {action}. "
                 "The action must be either 'append' or 'set_content'."
             )
             return None
-
-        # Log success if self.main_widget is valid
         self.logger.debug(
             f"Main widget successfully defined: {widget} with action '{action}'. Plugin: {self.__class__.__name__}"
         )
@@ -277,7 +277,6 @@ class BasePlugin:
     def on_start(self):
         """
         Hook called when the plugin is initialized.
-
         Use this method to set up resources, register callbacks, or initialize
         UI components after the plugin is loaded.
         """
@@ -286,7 +285,6 @@ class BasePlugin:
     def on_stop(self):
         """
         Hook called when the plugin is stopped or unloaded.
-
         Use this method to clean up resources, unregister callbacks, or save
         state before the plugin is removed.
         """
@@ -295,7 +293,6 @@ class BasePlugin:
     def on_reload(self):
         """
         Hook called when the plugin is reloaded dynamically.
-
         Use this method to refresh data or reset the internal state without
         fully stopping and restarting the plugin.
         """
@@ -304,7 +301,6 @@ class BasePlugin:
     def on_cleanup(self):
         """
         Hook called before the plugin is completely removed.
-
         Use this method for final cleanup tasks that may not be handled by
         `on_stop()`.
         """
@@ -324,20 +320,17 @@ class BasePlugin:
         plugin architecture, employing the Template Method Design Pattern
         to provide a consistent and extensible structure. Its core logic
         is built around several key principles:
-
         1.  **Standardized Lifecycle**: The class defines a clear lifecycle
             for every plugin with methods like `on_start()`, `on_stop()`,
             and `on_cleanup()`. This template ensures that all plugins
             handle initialization, runtime, and cleanup in a predictable
             and safe manner, preventing common issues like resource leaks.
-
         2.  **Shared Resource Injection**: In its constructor, the class
             initializes and provides access to critical shared resources
             from the main panel instance. These resources, such as the
             `logger`, IPC client (`self.ipc`), and configuration (`self.config`),
             are readily available to any subclass, promoting code reuse
             and decoupling plugins from the main application's logic.
-
         3.  **UI Integration and Validation**: The `set_widget()` method
             serves as a centralized and robust entry point for plugins
             to define and add their UI components to the panel. It includes

@@ -159,7 +159,7 @@ class PopoverBookmarks(BasePlugin):
                 )
                 image = Gtk.Image.new_from_pixbuf(thumbnail_pixbuf)
             except Exception as e:
-                self.log_error(f"Error processing image for {url}: {e}")
+                self.logger.error(f"Error processing image for {url}: {e}")
                 # Fallback to symbolic icon
                 image = Gtk.Image.new_from_icon_name("web-browser-symbolic")
                 image.set_pixel_size(THUMBNAIL_SIZE[0])

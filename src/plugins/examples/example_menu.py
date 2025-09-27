@@ -173,7 +173,7 @@ class ExampleMenuPlugin(BasePlugin):
         try:
             self.cmd.run(app_id)
         except Exception as e:
-            self.log_error(f"Error running application {app_id}: {e}")
+            self.logger.error(f"Error running application {app_id}: {e}")
 
     def about(self):
         """A plugin that creates a dynamic application menu from installed applications, grouped by category."""

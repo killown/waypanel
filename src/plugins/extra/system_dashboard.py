@@ -192,7 +192,7 @@ class SystemDashboard(BasePlugin):
         try:
             connected_devices = check_output(connected_devices).decode()
         except Exception as e:
-            self.log_error(e)
+            self.logger.error(e)
             return
         if device_id in connected_devices:
             cmd = "systemctl disconnect {0}".format(device_id).split()

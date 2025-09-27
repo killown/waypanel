@@ -23,7 +23,7 @@ import asyncio
 from dbus_next.aio.message_bus import MessageBus
 from dbus_next.service import ServiceInterface, method, signal
 from dbus_next.constants import BusType, NameFlag, RequestNameReply
-from gi.repository import GLib
+from gi.repository import GLib  # pyright: ignore
 from ._notify_server_db import Database
 from ._notify_server_ui import UI
 
@@ -43,7 +43,7 @@ def run_server_in_background(panel_instance):
     async def _run_server():
         server = NotificationDaemon(panel_instance)
         await server.run()
-        print("Notification server running in background")
+        panel_instance.logger.info("Notification server running in background")
         while True:  # Keep alive
             await asyncio.sleep(1)
 

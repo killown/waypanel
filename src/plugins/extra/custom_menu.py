@@ -1,19 +1,16 @@
 import os
 from gi.repository import Gtk, Gio  # pyright: ignore
-
 import toml
 import subprocess
-
 from src.plugins.core._base import BasePlugin
 
-# Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
-    return "top-panel-systray", 5  # Position: right, Order: 5
+    return "top-panel-systray", 5
 
 
 def initialize_plugin(panel_instance):
@@ -36,11 +33,10 @@ class MenuSetupPlugin(BasePlugin):
     def load_menu_config(self):
         """Load menu configuration from config.toml."""
         if not os.path.exists(self.config_path):
-            self.log_error(f"Menu config file not found: {self.config_path}")
+            self.logger.error(f"Menu config file not found: {self.config_path}")
             return {}
-
         with open(self.config_path, "r") as f:
-            config = toml.load(f)  # Use tomllib for TOML parsing (Python 3.11+)
+            config = toml.load(f)
             return config.get("menu", {})
 
     def create_menu_item(self, menu, name, cmd):
@@ -49,7 +45,6 @@ class MenuSetupPlugin(BasePlugin):
         action = Gio.SimpleAction.new(action_name, None)
         action.connect("activate", self.menu_run_action, cmd)
         self.obj.add_action(action)
-
         menu_item = Gio.MenuItem.new(name, f"app.{action_name}")
         menu.append_item(menu_item)
 
@@ -69,7 +64,6 @@ class MenuSetupPlugin(BasePlugin):
         if not menu_config:
             self.logger.warning("No menu configuration found.")
             return
-
         menu_buttons = {}
         for menu_name, menu_data in menu_config.items():
             menu = Gio.Menu()
@@ -84,11 +78,9 @@ class MenuSetupPlugin(BasePlugin):
                     ],
                 )
             )
-
             menu_button.set_menu_model(menu)
             menu_buttons[menu_name] = menu_button
             self.widgets.append(menu_button)
-
             for item in menu_data.get("items", []):
                 if "submenu" in item:
                     self.create_submenu(menu, item["submenu"], item["items"])
@@ -100,7 +92,7 @@ class MenuSetupPlugin(BasePlugin):
         try:
             subprocess.Popen(cmd, shell=True)
         except Exception as e:
-            self.log_error(f"Error running command '{cmd}': {e}")
+            self.logger.error(f"Error running command '{cmd}': {e}")
 
     def about(self):
         """A plugin that dynamically creates custom menus and submenus based on a TOML configuration file."""
@@ -111,9 +103,7 @@ class MenuSetupPlugin(BasePlugin):
         This plugin creates dynamic, user-configurable menus for the panel.
         Instead of hardcoding menu items, it reads a structured TOML file to build the
         menu's hierarchy and functionality.
-
         Its core logic is centered on **configuration-driven UI generation and command execution**:
-
         1.  **Configuration Loading**: It reads a `config.toml` file to get the menu
             structure, including labels, icons, commands, and submenus. This decouples
             the UI from the code, making the menus highly customizable without

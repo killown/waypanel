@@ -3,10 +3,9 @@ import random
 import sqlite3
 import time
 from subprocess import Popen
-from gi.repository import Gio, Gtk, Pango, Gdk
-from gi.repository import Gtk4LayerShell as LayerShell
+from gi.repository import Gio, Gtk, Pango, Gdk  # pyright: ignore
+from gi.repository import Gtk4LayerShell as LayerShell  # pyright: ignore
 from src.plugins.core._base import BasePlugin
-
 
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
@@ -33,20 +32,12 @@ class AppLauncher(BasePlugin):
         self.all_apps = None
         self.appmenu = Gtk.Button()
         self.search_get_child = None
-        # we need to store the images to avoid memory leak, no need to re-create them every new flowbox update
         self.icons = {}
         self.search_row = []
-
-        # Use SQLite for recent apps
         self.db_path = self.path_handler.get_data_path("waypanel", "recent_apps.db")
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
         self._create_recent_apps_table()
-
-        # The widget to be set in the panel and the action: append or set_content.
-        # If you want to build a complete right panel (for example), create a plugin called right_panel.py,
-        # use set_content to set the entire layout, then in other plugins call the instance
-        # self.plugins["right_panel"]. You can then add more widgets through it.
         self.main_widget = (self.appmenu, "append")
 
     def _create_recent_apps_table(self):
@@ -67,7 +58,6 @@ class AppLauncher(BasePlugin):
         """Create the menu button and connect its signal to open the popover launcher."""
         self.appmenu.connect("clicked", self.open_popover_launcher)
         self.appmenu.add_css_class("app-launcher-menu-button")
-
         icon_name = self.gtk_helper.set_widget_icon_name(
             "appmenu",
             ["archlinux-logo"],
@@ -78,18 +68,10 @@ class AppLauncher(BasePlugin):
 
     def create_popover_launcher(self, *_):
         """Create and configure the popover launcher."""
-        # Step 1: Create and configure the popover
         self.popover_launcher = self._create_and_configure_popover()
-
-        # Step 2: Set up the scrolled window, search bar, and flowbox
         self._setup_scrolled_window_and_flowbox()
-
-        # Step 3: Populate the flowbox with application buttons
         self._populate_flowbox_with_apps()
-
-        # Step 4: Finalize the popover setup
         self._finalize_popover_setup()
-
         return self.popover_launcher
 
     def _create_and_configure_popover(self):
@@ -99,24 +81,18 @@ class AppLauncher(BasePlugin):
         popover.set_has_arrow(True)
         popover.connect("closed", self.popover_is_closed)
         popover.connect("notify::visible", self.popover_is_open)
-
-        # Add show_searchbar action
         show_searchbar_action = Gio.SimpleAction.new("show_searchbar")
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
         self.obj.add_action(show_searchbar_action)
-
         return popover
 
     def _setup_scrolled_window_and_flowbox(self):
         """Set up the scrolled window, search bar, and flowbox."""
-        # Scrolled window setup
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_policy(
             Gtk.PolicyType.NEVER,
-            Gtk.PolicyType.AUTOMATIC,  # Horizontal, Vertical scroll policy
+            Gtk.PolicyType.AUTOMATIC,
         )
-
-        # Main box and search bar setup
         self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.main_box.add_css_class("app-launcher-main-box")
         self.searchbar = Gtk.SearchEntry.new()
@@ -125,31 +101,21 @@ class AppLauncher(BasePlugin):
         self.searchbar.connect("activate", self.on_keypress)
         self.searchbar.connect("stop-search", self.on_searchbar_key_release)
         self.searchbar.set_focus_on_click(True)
-        self.searchbar.set_placeholder_text(
-            "Search apps..."
-        )  # Optional: Add placeholder text
+        self.searchbar.set_placeholder_text("Search apps...")
         self.searchbar.add_css_class("app-launcher-searchbar")
         self.main_box.append(self.searchbar)
-
-        # Flowbox setup
         self.flowbox = Gtk.FlowBox()
-        self.flowbox.set_valign(Gtk.Align.START)  # Align content to the top
-        self.flowbox.set_halign(Gtk.Align.FILL)  # Fill the horizontal space
+        self.flowbox.set_valign(Gtk.Align.START)
+        self.flowbox.set_halign(Gtk.Align.FILL)
         self.flowbox.props.max_children_per_line = 30
-        self.flowbox.set_max_children_per_line(5)  # Number of icons per row
-        self.flowbox.set_homogeneous(False)  # Uniform size for all children
+        self.flowbox.set_max_children_per_line(5)
+        self.flowbox.set_homogeneous(False)
         self.flowbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.flowbox.set_activate_on_single_click(True)
         self.flowbox.connect("child-activated", self.run_app_from_launcher)
-
-        # Add CSS class for styling
         self.flowbox.add_css_class("app-launcher-flowbox")
-
-        # Append the FlowBox to the main box via the scrolled window
         self.main_box.append(self.scrolled_window)
         self.scrolled_window.set_child(self.flowbox)
-
-        # Set the main box as the child of the popover
         self.popover_launcher.set_child(self.main_box)  # pyright: ignore
 
     def _populate_flowbox_with_apps(self):
@@ -157,22 +123,17 @@ class AppLauncher(BasePlugin):
         all_apps = Gio.AppInfo.get_all()
         random.shuffle(all_apps)
         self.all_apps = [i for i in all_apps if i.get_id()]
-
-        # Recent apps handling
         recent_apps = self.get_recent_apps()
         for i in self.all_apps:
             name = i.get_name()
             if name not in recent_apps:
                 continue
-            self._add_app_to_flowbox(i, name, recent_apps)
-
-        # Non-recent apps handling
+            self._add_app_to_flowbox(i, name, recent_apps)  # pyright: ignore
         for i in self.all_apps:
             name = i.get_name()
             if name in recent_apps:
                 continue
-            self._add_app_to_flowbox(i, name, recent_apps)
-
+            self._add_app_to_flowbox(i, name, recent_apps)  # pyright: ignore
         self.flowbox.set_filter_func(self.on_filter_invalidate)
 
     def _finalize_popover_setup(self):
@@ -200,27 +161,15 @@ class AppLauncher(BasePlugin):
         Updates the flowbox by removing uninstalled apps, adding new apps,
         and prioritizing recently opened apps at the top.
         """
-        # Step 1: Clear all existing children from the flowbox
         while child := self.flowbox.get_child_at_index(0):
             self.flowbox.remove(child)
-
-        # Step 2: Clear the dictionary of stored icons to avoid re-use issues.
-        # This is the crucial step to ensure the list repopulates correctly.
         self.icons.clear()
-
-        # Step 3: Fetch all available applications and filter out docked apps
         all_apps = Gio.AppInfo.get_all()
-
-        # Step 4: Get the list of recent apps and reverse it to display the most recent app first
         recent_apps = self.get_recent_apps()
-
-        # Step 5: Add recent apps to the flowbox first
         for app_name in recent_apps:
             app = next((a for a in all_apps if a.get_name() == app_name), None)
             if app:
                 self._add_app_to_flowbox(app, app_name)
-
-        # Step 6: Add non-recent apps to the flowbox
         for app in all_apps:
             app_name = app.get_name()
             if app_name not in recent_apps:
@@ -229,7 +178,6 @@ class AppLauncher(BasePlugin):
     def _add_app_to_flowbox(self, app, name, recent=False):
         """
         Adds an application to the flowbox.
-
         Args:
             app: The Gio.AppInfo object representing the app.
             name: The name of the app.
@@ -243,65 +191,39 @@ class AppLauncher(BasePlugin):
             name = app.get_name()
         if name.count(" ") > 2:
             name = " ".join(name.split()[:3])
-
         icon = app.get_icon()
         cmd = app.get_id()
-
-        # Use a fallback icon if the app does not have an icon
         if icon is None:
             icon = Gio.ThemedIcon.new_with_default_fallbacks(
                 "application-x-executable-symbolic"
             )
-
-        # Icon
         if name not in self.icons:
-            # Create a vertical box to stack the icon and label
-            vbox = Gtk.Box.new(
-                Gtk.Orientation.VERTICAL, 5
-            )  # Vertical layout with spacing
-            vbox.set_halign(Gtk.Align.CENTER)  # Center align the widget horizontally
-            vbox.set_valign(Gtk.Align.CENTER)  # Center align the widget vertically
-            vbox.set_margin_top(1)  # Add margin at the top
-            vbox.set_margin_bottom(1)  # Add margin at the bottom
-            vbox.set_margin_start(1)  # Add margin on the left
-            vbox.set_margin_end(1)  # Add margin on the right
+            vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+            vbox.set_halign(Gtk.Align.CENTER)
+            vbox.set_valign(Gtk.Align.CENTER)
+            vbox.set_margin_top(1)
+            vbox.set_margin_bottom(1)
+            vbox.set_margin_start(1)
+            vbox.set_margin_end(1)
             vbox.add_css_class("app-launcher-vbox")
-            # Store metadata for later use
             vbox.MYTEXT = name, cmd, keywords  # pyright: ignore
-
             image = Gtk.Image.new_from_gicon(icon)
-            image.set_halign(Gtk.Align.CENTER)  # Center align the icon
-            image.add_css_class(
-                "app-launcher-icon-from-popover"
-            )  # Add CSS class for styling
-
+            image.set_halign(Gtk.Align.CENTER)
+            image.add_css_class("app-launcher-icon-from-popover")
             self.gtk_helper.add_cursor_effect(image)
-
-            # Label
             label = Gtk.Label.new(name)
-            label.set_max_width_chars(20)  # Limit the width of the label
-            label.set_ellipsize(
-                Pango.EllipsizeMode.END
-            )  # Add ellipsis if text is too long
-            label.set_halign(Gtk.Align.CENTER)  # Center align the label
-            label.add_css_class(
-                "app-launcher-label-from-popover"
-            )  # Add CSS class for styling
-
+            label.set_max_width_chars(20)
+            label.set_ellipsize(Pango.EllipsizeMode.END)
+            label.set_halign(Gtk.Align.CENTER)
+            label.add_css_class("app-launcher-label-from-popover")
             self.icons[name] = {"icon": image, "label": label, "vbox": vbox}
-
-            # Add the icon and label to the vertical box
             vbox = self.icons[name]["vbox"]
             vbox.append(self.icons[name]["icon"])
             vbox.append(self.icons[name]["label"])
-
-            # Add Gtk.GestureClick for right-click handling
             gesture = Gtk.GestureClick.new()
             gesture.set_button(Gdk.BUTTON_SECONDARY)
             gesture.connect("pressed", self.on_right_click_popover, vbox)
             vbox.add_controller(gesture)
-
-            # Add the vertical box to the FlowBox
             self.flowbox.append(vbox)
             self.flowbox.add_css_class("app-launcher-flowbox")
 
@@ -310,7 +232,6 @@ class AppLauncher(BasePlugin):
         Add or update an app in the recent apps table.
         Ensures the app is moved to the end of the list if it already exists.
         """
-        # Insert or update the app with the current timestamp
         self.cursor.execute(
             """
             INSERT OR REPLACE INTO recent_apps (app_name, last_opened_at)
@@ -319,8 +240,6 @@ class AppLauncher(BasePlugin):
             (app_name, time.time()),
         )
         self.conn.commit()
-
-        # Keep the table limited to the last 50 entries
         self.cursor.execute("SELECT COUNT(*) FROM recent_apps")
         count = self.cursor.fetchone()[0]
         if count > 50:
@@ -349,13 +268,10 @@ class AppLauncher(BasePlugin):
         name, desktop, keywords = mytext
         desktop = desktop.split(".desktop")[0]
         cmd = "gtk-launch {}".format(desktop)
-
         self.add_recent_app(name)
-
         self.cmd.run(cmd)
         if self.popover_launcher:
             self.popover_launcher.popdown()
-
         self.update_flowbox()
 
     def open_popover_launcher(self, *_):
@@ -380,7 +296,6 @@ class AppLauncher(BasePlugin):
         LayerShell.set_keyboard_mode(
             self.obj.top_panel, LayerShell.KeyboardMode.ON_DEMAND
         )
-        # reset scrollbar position after launch an app
         vadjustment = self.scrolled_window.get_vadjustment()
         vadjustment.set_value(0)
         return
@@ -403,14 +318,14 @@ class AppLauncher(BasePlugin):
         if keyval == Gdk.KEY_Escape:
             if self.popover_launcher:
                 self.popover_launcher.popdown()
-            return True  # Signal that we've handled the event
+            return True
         return False
 
     def on_show_searchbar_action_actived(self, action, parameter):
         """Show the search bar when the show_searchbar action is activated."""
         self.searchbar.set_search_mode(  # pyright: ignore
             True
-        )  # Ctrl+F To Active show_searchbar and show searchbar
+        )
 
     def search_entry_grab_focus(self):
         """Grab focus to the search entry."""
@@ -426,14 +341,13 @@ class AppLauncher(BasePlugin):
             return False
 
         self.flowbox.selected_foreach(on_child)  # pyright: ignore
-        return False  # Stops the GLib.idle_add loop
+        return False
 
     def add_to_dockbar(self, button, name, desktop_file, popover):
         """
         Adds the selected app to the dockbar configuration in waypanel.toml.
         """
         wclass = os.path.splitext(desktop_file)[0]
-
         new_entry = {
             "cmd": f"gtk-launch {desktop_file}",
             "icon": wclass,
@@ -442,29 +356,16 @@ class AppLauncher(BasePlugin):
             "name": name,
             "initial_title": name,
         }
-
-        # Get the current dockbar configuration, or an empty dictionary if it doesn't exist
         dockbar_config = self.config_handler.config_data.get("dockbar", {})
-
-        # Get the 'app' sub-table, or create a new one if it doesn't exist
         app_config = dockbar_config.get("app", {})
-
-        # Add the new entry to the 'app' sub-table using the application's name as the key
         app_config[name] = new_entry
-
-        # Update the dockbar config with the modified app sub-table
         dockbar_config["app"] = app_config
-
-        # Update the main configuration data
         self.config_handler.config_data["dockbar"] = dockbar_config
-
         self.config_handler.save_config()
         self.config_handler.reload_config()
-
         popover.popdown()
         if self.popover_launcher:
             self.popover_launcher.popdown()
-
         self.update_flowbox()
 
     def open_desktop_file(self, button, desktop_file, popover):
@@ -476,28 +377,21 @@ class AppLauncher(BasePlugin):
             "/usr/share/applications/",
             os.path.expanduser("~/.local/share/applications/"),
         ]
-
         file_path = None
         for location in common_locations:
             path_to_check = os.path.join(location, desktop_file)
             if os.path.exists(path_to_check):
                 file_path = path_to_check
                 break
-
         if file_path:
-            # List of fallback GUI editors
             gui_editors = [
-                "gedit",  # GNOME Text Editor (Gedit)
-                "code",  # vscode
-                "atom",  # Atom (if still installed)
-                "subl",  # Sublime Text
+                "gedit",
+                "code",
+                "atom",
+                "subl",
             ]
-
-            # List of terminal-based editors and their corresponding terminal emulators
             terminal_editors = ["nvim", "nano"]
             terminal_emulators = ["kitty", "alacritty", "gnome-terminal"]
-
-            # If xdg-open fails, loop through the list of common GUI editors
             for editor in gui_editors:
                 try:
                     cmd = editor + " " + file_path
@@ -505,12 +399,10 @@ class AppLauncher(BasePlugin):
                     popover.popdown()
                     if self.popover_launcher:
                         self.popover_launcher.popdown()
-                    return  # Exit the function if an editor is found and started
+                    return
                 except Exception as e:
-                    print(e)
+                    self.logger.error(f"Appmenu: No text editor found: {e}")
                     continue
-
-            # If no GUI editor is found, try to open a terminal editor in a terminal emulator
             for term in terminal_emulators:
                 for editor in terminal_editors:
                     try:
@@ -519,11 +411,12 @@ class AppLauncher(BasePlugin):
                         popover.popdown()
                         if self.popover_launcher:
                             self.popover_launcher.popdown()
-                        return  # Exit the function if a terminal editor is launched
+                        return
                     except FileNotFoundError:
-                        continue  # Try the next terminal editor
-
-            print("Error: Could not find an editor to open the .desktop file.")
+                        continue
+            self.logger.error(
+                "Error: Could not find an editor to open the .desktop file."
+            )
 
     def on_right_click_popover(self, gesture, n_press, x, y, vbox):
         """
@@ -531,33 +424,26 @@ class AppLauncher(BasePlugin):
         """
         popover = Gtk.Popover()
         popover.add_css_class("app-launcher-context-menu")
-
         menu_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
         menu_box.set_margin_start(10)
         menu_box.set_margin_end(10)
         menu_box.set_margin_top(10)
         menu_box.set_margin_bottom(10)
-
         name, desktop_file, keywords = vbox.MYTEXT
-
         is_in_dockbar = desktop_file in self.config_handler.config_data.get(
             "dockbar", {}
         )
-
         open_button = Gtk.Button.new_with_label(f"Open {name}")
         open_button.connect("clicked", self.run_app_from_menu, desktop_file, popover)
         menu_box.append(open_button)
-
         open_desktop_button = Gtk.Button.new_with_label("Open .desktop File")
         open_desktop_button.connect(
             "clicked", self.open_desktop_file, desktop_file, popover
         )
         menu_box.append(open_desktop_button)
-
         search_button = Gtk.Button.new_with_label("Search in GNOME Software")
         search_button.connect("clicked", self.search_in_gnome_software, name, popover)
         menu_box.append(search_button)
-
         if is_in_dockbar:
             remove_button = Gtk.Button.new_with_label("Remove from dockbar")
             remove_button.connect(
@@ -570,13 +456,10 @@ class AppLauncher(BasePlugin):
                 "clicked", self.add_to_dockbar, name, desktop_file, popover
             )
             menu_box.append(add_button)
-
         popover.set_child(menu_box)
         popover.set_parent(vbox)
         popover.set_has_arrow(False)
         popover.popup()
-
-        # Prevent the flowbox from activating a child on right-click
         gesture.set_state(Gtk.EventSequenceState.CLAIMED)
 
     def remove_from_dockbar(self, button, desktop_file, popover):
@@ -586,11 +469,9 @@ class AppLauncher(BasePlugin):
         if desktop_file in self.config_handler.config_data.get("dockbar", {}):
             del self.config_handler.config_data["dockbar"][desktop_file]
             self.config_handler.save_config()
-
         popover.popdown()
         if self.popover_launcher:
             self.popover_launcher.popdown()
-
         self.update_flowbox()
 
     def search_in_gnome_software(self, button, name, popover):
@@ -601,7 +482,7 @@ class AppLauncher(BasePlugin):
         try:
             Popen(cmd)
         except FileNotFoundError:
-            print("Error: gnome-software command not found.")
+            self.logger.error("Error: gnome-software command not found.")
         finally:
             popover.popdown()
             if self.popover_launcher:
@@ -623,19 +504,15 @@ class AppLauncher(BasePlugin):
         and it will continue to be called each time a row changes (via [method`Gtk`.ListBoxRow.changed])
         or when [method`Gtk`.ListBox.invalidate_filter] is called."""
         searchentry.grab_focus()
-        # run filter (run self.on_filter_invalidate look at self.listbox.set_filter_func(self.on_filter_invalidate) )
         self.flowbox.invalidate_filter()
 
     def on_filter_invalidate(self, row):
         """Filter the flowbox rows based on the search entry."""
         text_to_search = self.searchbar.get_text().strip().lower()
-
         if not isinstance(row, str):
             name, desktop, keywords = row.get_child().MYTEXT
             combined_text = f"{name} {desktop} {keywords}".lower()
-
             if text_to_search in combined_text:
-                # Set the first match for on_keypress
                 self.search_get_child = desktop
                 return True
             else:
@@ -651,9 +528,7 @@ class AppLauncher(BasePlugin):
         """
         This plugin creates a full-featured application launcher integrated into the panel.
         It provides a visual, searchable interface for launching applications directly.
-
         Its core logic is centered on **dynamic UI generation, state management, and interaction**:
-
         1.  **Application Discovery**: It retrieves all installed applications using
             `Gio.AppInfo.get_all()` and filters out any apps that are already
             in the dockbar, preventing redundancy.

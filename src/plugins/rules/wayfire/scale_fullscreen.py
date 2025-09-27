@@ -37,7 +37,7 @@ class WindowRulesPlugin(BasePlugin):
                 self.on_scale_deactivated()
 
         except Exception as e:
-            self.log_error(f"Error handling scale event: {e}")
+            self.logger.error(f"Error handling scale event: {e}")
 
     def set_focused_view_fullscreen_false(self):
         # the panels will disappear if the focused view is fullscreen
@@ -80,13 +80,13 @@ class WindowRulesPlugin(BasePlugin):
         try:
             self.set_focused_view_fullscreen_false()
         except Exception as e:
-            self.log_error(f"Error handling scale activation: {e}")
+            self.logger.error(f"Error handling scale activation: {e}")
 
     def on_scale_deactivated(self):
         try:
             self.restore_fullscreen_state()
         except Exception as e:
-            self.log_error(f"Error handling scale deactivation: {e}")
+            self.logger.error(f"Error handling scale deactivation: {e}")
 
     def about(self):
         """

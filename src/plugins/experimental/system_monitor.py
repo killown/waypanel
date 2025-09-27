@@ -9,7 +9,6 @@ from src.plugins.core._base import BasePlugin
 from gi.repository import Gtk, GLib, Adw, Pango  # pyright: ignore
 
 gi.require_version("Gtk", "4.0")
-
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 
@@ -23,7 +22,6 @@ def get_plugin_placement(panel_instance):
 
 def initialize_plugin(panel_instance):
     """Initialize the system monitor plugin.
-
     Args:
         obj: The main panel object (Panel instance).
         app: The main application instance.
@@ -53,23 +51,19 @@ ALL_EVENTS = [
     "plugin-activation-state-changed",
     "output-gain-focus",
 ]
-
 SELECT_EVENT_WATCH_SCRIPT = f"""
 import sys
 try:
     from wayfire import WayfireSocket
-    from rich.pretty import pprint
-    from rich import print
+    from rich.pretty import pself.logger.error
+    from rich import self.logger.error
 except ImportError as e:
-    print(f"Missing dependency: {{e}}", file=sys.stderr)
+    self.logger.error(f"Missing dependency: {{e}}", file=sys.stderr)
     sys.exit(1)
-
 ALL_EVENTS = {ALL_EVENTS!r}
-
-print("Select an event to watch:")
+self.logger.error("Select an event to watch:")
 for i, event in enumerate(ALL_EVENTS, 1):
-    print(f"{{i}}: {{event}}")
-
+    self.logger.error(f"{{i}}: {{event}}")
 selected = None
 while selected is None:
     try:
@@ -79,27 +73,25 @@ while selected is None:
             if 0 <= idx < len(ALL_EVENTS):
                 selected = ALL_EVENTS[idx]
             else:
-                print(f"Invalid number. Please enter 1 to {{len(ALL_EVENTS)}}.")
+                self.logger.error(f"Invalid number. Please enter 1 to {{len(ALL_EVENTS)}}.")
         else:
-            print("Please enter a valid number.")
+            self.logger.error("Please enter a valid number.")
     except (EOFError, KeyboardInterrupt):
-        print("\\nCancelled.")
+        self.logger.error("\\nCancelled.")
         sys.exit(0)
-
 try:
     sock = WayfireSocket()
     sock.watch([selected])
-    print(f"[bold]Watching event:[/bold] {{selected}} (press Ctrl+C to exit)")
-    print("=" * 50)
-
+    self.logger.error(f"[bold]Watching event:[/bold] {{selected}} (press Ctrl+C to exit)")
+    self.logger.error("=" * 50)
     while True:
         event = sock.read_next_event()
-        pprint(event)
-        print()
+        pself.logger.error(event)
+        self.logger.error()
 except KeyboardInterrupt:
-    print("\\n\\nExiting...")
+    self.logger.error("\\n\\nExiting...")
 except Exception as e:
-    print(f"Error: {{e}}", file=sys.stderr)
+    self.logger.error(f"Error: {{e}}", file=sys.stderr)
     sys.exit(1)
 """
 
@@ -110,13 +102,12 @@ class SystemMonitorPlugin(BasePlugin):
         self.obj = panel_instance
         self.popover_system = None
         self.update_timeout_id = None
-        self.update_interval = 2  # Update interval in seconds
+        self.update_interval = 2
         self.prev_net_io = psutil.net_io_counters()
         self.create_menu_popover_system()
 
     def create_menu_popover_system(self):
         """Create the system monitor button and popover."""
-        # Create the system monitor button
         self.menubutton_system = Gtk.Button()
         icon_name = self.gtk_helper.icon_exist(
             "system-monitor-app-symbolic",
@@ -134,10 +125,7 @@ class SystemMonitorPlugin(BasePlugin):
 
     def start_system_updates(self):
         """Start periodic updates for system data."""
-        # Fetch data immediately for the first time
         self.fetch_and_update_system_data()
-
-        # Schedule periodic updates
         self.update_timeout_id = GLib.timeout_add_seconds(
             self.update_interval, self.fetch_and_update_system_data
         )
@@ -153,7 +141,6 @@ class SystemMonitorPlugin(BasePlugin):
         total_gb = mem.total / (1024**3)
         used_gb = mem.used / (1024**3)
         percent = mem.percent
-
         return f"({percent}%) {used_gb:.1f} / {total_gb:.0f}GB"
 
     def add_gpu(self):
@@ -163,14 +150,11 @@ class SystemMonitorPlugin(BasePlugin):
 
             if pyamdgpuinfo.detect_gpus():
                 gpu = pyamdgpuinfo.get_gpu(0)
-                total_vram_gb = gpu.memory_info["vram_size"] / (
-                    1024**3
-                )  # Convert to GB
+                total_vram_gb = gpu.memory_info["vram_size"] / (1024**3)
                 used_vram_bytes = gpu.query_vram_usage()
-                used_vram_gb = used_vram_bytes / (1024**3)  # Convert to GB
+                used_vram_gb = used_vram_bytes / (1024**3)
                 usage_percent = (used_vram_bytes / gpu.memory_info["vram_size"]) * 100
                 gpu_load = gpu.query_load()
-
                 self.add_list_box_row("GPU", gpu.name)
                 self.add_list_box_row(
                     "VRAM",
@@ -178,9 +162,9 @@ class SystemMonitorPlugin(BasePlugin):
                 )
                 self.add_list_box_row("GPU Load", f"{gpu_load:.1f}%")
         except ImportError:
-            pass  # pyamdgpuinfo not installed — skip silently
+            pass
         except Exception as e:
-            print(f"Error getting GPU info: {e}")
+            self.logger.error(f"Error getting GPU info: {e}")
         return False
 
     def fetch_and_update_system_data(self):
@@ -193,34 +177,25 @@ class SystemMonitorPlugin(BasePlugin):
         focused_view = self.last_toplevel_focused_view()
         process_usage = None
         process_disk_usage = None
-
         if focused_view:
             process_usage = self.get_process_usage(focused_view["pid"])
             process_disk_usage = self.get_process_disk_usage(focused_view["pid"])
-
-        # Clear existing rows
         child = self.list_box.get_first_child()
         while child:
-            next_child = (
-                child.get_next_sibling()
-            )  # Get the next sibling before removing
+            next_child = child.get_next_sibling()
             self.list_box.remove(child)
             child = next_child
-
         self.add_list_box_row("CPU Usage", f"{cpu_usage}%")
         self.add_list_box_row("RAM Usage", f"{memory_usage}")
         GLib.idle_add(self.add_gpu)
-
         for usage in disk_usages:
             mountpoint = usage["mountpoint"]
             used = usage["used"]
             total = usage["total"]
-
             self.add_list_box_row(f"Disk ({mountpoint})", f"{used:.1f} / {total:.0f}GB")
         self.add_list_box_row("Network", network_usage)
         if battery_status is not None:
             self.add_list_box_row("Battery", battery_status)
-
         if focused_view:
             self.add_list_box_row(
                 "Exec", self.get_process_executable(focused_view["pid"])
@@ -243,10 +218,7 @@ class SystemMonitorPlugin(BasePlugin):
                 self.add_list_box_row(
                     "APP Disk Write Count", str(process_disk_usage["write_count"])
                 )
-
         self.add_list_box_row("Watch events", "all")
-
-        # Return True to keep the timeout active
         return self.popover_system and self.popover_system.is_visible()
 
     def get_cpu_usage(self):
@@ -261,22 +233,16 @@ class SystemMonitorPlugin(BasePlugin):
     def get_disk_usages(self):
         """Get disk usage for all mounted partitions with values in GB."""
         disk_usages = []
-        for part in psutil.disk_partitions(all=False):  # Exclude special devices
+        for part in psutil.disk_partitions(all=False):
             try:
                 usage = psutil.disk_usage(part.mountpoint)
                 disk_usages.append(
                     {
                         "mountpoint": part.mountpoint,
-                        "total": round(
-                            usage.total / (1024**3), 1
-                        ),  # Convert to GB with 1 decimal
-                        "used": round(
-                            usage.used / (1024**3), 1
-                        ),  # Convert to GB with 1 decimal
-                        "free": round(
-                            usage.free / (1024**3), 1
-                        ),  # Convert to GB with 1 decimal
-                        "percent": round(usage.percent, 1),  # Percentage with 1 decimal
+                        "total": round(usage.total / (1024**3), 1),
+                        "used": round(usage.used / (1024**3), 1),
+                        "free": round(usage.free / (1024**3), 1),
+                        "percent": round(usage.percent, 1),
                     }
                 )
             except (PermissionError, psutil.AccessDenied):
@@ -307,186 +273,139 @@ class SystemMonitorPlugin(BasePlugin):
     def get_process_disk_usage(self, pid):
         """
         Get the disk I/O usage for a given process PID using psutil.
-
         Args:
             pid (int): The process ID to monitor.
-
         Returns:
             dict: A dictionary containing 'read_bytes', 'write_bytes',
                   'read_count', and 'write_count' for the given PID,
                   or None if the PID is invalid or inaccessible.
         """
         try:
-            # Check if the PID exists
             if not psutil.pid_exists(pid):
-                print(f"No process found with PID: {pid}")
+                self.logger.error(f"No process found with PID: {pid}")
                 return None
-
-            # Get the process object
             process = psutil.Process(pid)
-
-            # Retrieve I/O counters for the process
             io_counters = process.io_counters()
-
-            # Extract disk I/O statistics
             disk_usage = {
                 "read_bytes": self.format_bytes(io_counters.read_bytes),
                 "write_bytes": self.format_bytes(io_counters.write_bytes),
                 "read_count": io_counters.read_count,
                 "write_count": io_counters.write_count,
             }
-
             return disk_usage
-
         except psutil.NoSuchProcess:
-            print(f"Process with PID {pid} no longer exists.")
+            self.logger.error(f"Process with PID {pid} no longer exists.")
             return None
         except psutil.AccessDenied:
-            print(f"Access denied for process with PID: {pid}")
+            self.logger.error(f"Access denied for process with PID: {pid}")
             return None
         except Exception as e:
-            print(f"Error retrieving disk usage for PID {pid}: {e}")
+            self.logger.error(f"Error retrieving disk usage for PID {pid}: {e}")
             return None
 
     def get_process_usage(self, pid):
         """
         Get the CPU and memory usage for a given process PID using psutil.
-
         Args:
             pid (int): The process ID to monitor.
-
         Returns:
             dict: A dictionary containing 'cpu_usage' and 'memory_usage' for the given PID,
                   or None if the PID is invalid or inaccessible.
         """
         try:
-            # Check if the PID is valid and the process exists
             if not psutil.pid_exists(pid):
-                print(f"No process found with PID: {pid}")
+                self.logger.error(f"No process found with PID: {pid}")
                 return None
-            # Get the process object
             process = psutil.Process(pid)
             memory_info = process.memory_info()
-            memory_usage = memory_info.rss / (1024 * 1024)  # Convert bytes to MB
-
+            memory_usage = memory_info.rss / (1024 * 1024)
             return {
                 "memory_usage": f"{memory_usage:.2f} MB",
             }
         except psutil.NoSuchProcess:
-            print(f"Process with PID {pid} no longer exists.")
+            self.logger.error(f"Process with PID {pid} no longer exists.")
             return None
         except Exception as e:
-            print(f"Error retrieving process usage for PID {pid}: {e}")
+            self.logger.error(f"Error retrieving process usage for PID {pid}: {e}")
             return None
 
     def open_system_monitor(self):
         subprocess.Popen(["gnome-system-monitor"])
 
-    # FIXME: make it work for other gpu tools too
     def open_terminal_with_amdgpu_top(self, *__):
         """
         Open a terminal (kitty or alacritty) with amdgpu_top for GPU monitoring.
-
         Returns:
             bool: True if the terminal was successfully opened, False otherwise.
         """
-        # Check if kitty is installed
         if shutil.which("kitty"):
             terminal_command = ["kitty"]
-        # Fallback to alacritty if kitty is not available
         elif shutil.which("alacritty"):
             terminal_command = ["alacritty"]
         else:
-            print("Error: Neither kitty nor alacritty is installed.")
+            self.logger.error("Error: Neither kitty nor alacritty is installed.")
             return False
-
-        # Check if amdgpu_top is installed
         if not shutil.which("amdgpu_top"):
-            print("Error: amdgpu_top is not installed.")
+            self.logger.error("Error: amdgpu_top is not installed.")
             return False
-
         try:
-            # Launch the terminal with amdgpu_top
             subprocess.Popen(terminal_command + ["-e", "amdgpu_top"])
-            print(f"Launched {terminal_command[0]} with amdgpu_top.")
             return True
         except Exception as e:
-            print(f"Error launching terminal: {e}")
+            self.logger.error(f"Error launching terminal: {e}")
             return False
 
     def open_terminal_with_htop(self, pid):
         """
         Open a terminal (kitty or alacritty) with htop monitoring the specified PID.
-
         Args:
             pid (int): The process ID to monitor with htop.
-
         Returns:
             bool: True if the terminal was successfully opened, False otherwise.
         """
-        # Check if kitty is installed
         if shutil.which("kitty"):
             terminal_command = ["kitty"]
-        # Fallback to alacritty if kitty is not available
         elif shutil.which("alacritty"):
             terminal_command = ["alacritty"]
         else:
-            print("Error: Neither kitty nor alacritty is installed.")
+            self.logger.error("Error: Neither kitty nor alacritty is installed.")
             return False
-
-        # Construct the command to run htop with the given PID
         htop_command = ["htop", "-p", str(pid)]
-
-        # Combine the terminal command with htop command
         full_command = terminal_command + ["-e"] + htop_command
-
         try:
-            # Launch the terminal with htop
             subprocess.Popen(full_command)
-            print(f"Launched {terminal_command[0]} with htop monitoring PID {pid}.")
             return True
         except Exception as e:
-            print(f"Error launching terminal: {e}")
+            self.logger.error(f"Error launching terminal: {e}")
             return False
 
     def open_terminal_with_iotop(self, pid):
         """
         Open a terminal (kitty or alacritty) with iotop monitoring the specified PID.
-
         Args:
             pid (int): The process ID to monitor with iotop.
-
         Returns:
             bool: True if the terminal was successfully opened, False otherwise.
         """
-        # Check if kitty is installed
         if shutil.which("kitty"):
             terminal_command = ["kitty"]
-        # Fallback to alacritty if kitty is not available
         elif shutil.which("alacritty"):
             terminal_command = ["alacritty"]
         else:
-            print("Error: Neither kitty nor alacritty is installed.")
+            self.logger.error("Error: Neither kitty nor alacritty is installed.")
             return False
-
-        # Construct the command to run htop with the given PID
         htop_command = ["sudo", "iotop", "-p", str(pid)]
         self.notifier.notify_send(
             "iotop command",
             f"iotop requires permissions to monitor disk usage from the given PID:{pid}",
             "iotop",
         )
-        # Combine the terminal command with iotop command
         full_command = terminal_command + ["-e"] + htop_command
-
         try:
-            # Launch the terminal with iotop
-
             subprocess.Popen(full_command)
-            print(f"Launched {terminal_command[0]} with iotop monitoring PID {pid}.")
             return True
         except Exception as e:
-            print(f"Error launching terminal: {e}")
+            self.logger.error(f"Error launching terminal: {e}")
             return False
 
     def open_kitty_with_prompt_and_watch_selected_event(self, *__):
@@ -496,25 +415,19 @@ class SystemMonitorPlugin(BasePlugin):
         if not is_installed("kitty"):
             self.logger.info("kitty terminal is not installed.")
             return
-
         if not is_installed("ipython") and not is_installed("python"):
             self.logger.error("Neither ipython nor python is available.")
             return
-
         try:
             fd, temp_path = tempfile.mkstemp(suffix=".py", text=True)
             os.write(fd, SELECT_EVENT_WATCH_SCRIPT.encode("utf-8"))
             os.close(fd)
-
             if is_installed("ipython"):
                 cmd = ["ipython", temp_path]
             else:
                 cmd = ["python", temp_path]
-
             full_bash_cmd = f"{' '.join(map(shlex.quote, cmd))}; exec bash"
-
             subprocess.Popen(["kitty", "bash", "-c", full_bash_cmd])
-
         except Exception as e:
             self.logger.error(f"Failed to create or run script: {e}")
 
@@ -525,7 +438,6 @@ class SystemMonitorPlugin(BasePlugin):
         if not is_installed("python3"):
             self.logger.info("python3 is not installed.")
             return
-
         terminal = None
         if is_installed("kitty"):
             terminal = "kitty"
@@ -536,25 +448,21 @@ class SystemMonitorPlugin(BasePlugin):
                 "Neither kitty nor alacritty terminal emulators are installed."
             )
             return
-
-        # Comando Python em string para passar ao ipython -c
         python_cmd = (
             "from wayfire import WayfireSocket; "
-            "from rich.pretty import pprint; "
-            "from rich import print; "
+            "from rich.pretty import pself.logger.error; "
+            "from rich import self.logger.error; "
             "sock=WayfireSocket(); "
             "sock.watch(); "
-            "print('[bold]Wayfire Events Monitor[/bold] (press Ctrl+C to exit)'); "
-            "print('='*40); "
+            "self.logger.error('[bold]Wayfire Events Monitor[/bold] (press Ctrl+C to exit)'); "
+            "self.logger.error('='*40); "
             "import itertools; "
-            "[(pprint(sock.read_next_event()), print()) for _ in itertools.repeat(None)]"
+            "[(pself.logger.error(sock.read_next_event()), print()) for _ in itertools.repeat(None)]"
         )
-
         full_cmd = f"ipython -c {shlex.quote(python_cmd)}"
-
         if terminal == "kitty":
             subprocess.Popen([terminal, "bash", "-c", f"{full_cmd}; exec bash"])
-        else:  # alacritty
+        else:
             subprocess.Popen([terminal, "-e", "bash", "-c", f"{full_cmd}; exec bash"])
 
     def open_kitty_with_ipython_view(self, view):
@@ -564,7 +472,6 @@ class SystemMonitorPlugin(BasePlugin):
         if not is_installed("ipython"):
             self.logger.info("ipython is not installed.")
             return
-
         terminal = None
         if is_installed("kitty"):
             terminal = "kitty"
@@ -575,7 +482,6 @@ class SystemMonitorPlugin(BasePlugin):
                 "Neither kitty nor alacritty terminal emulators are installed."
             )
             return
-
         view_id = view["id"]
         code = (
             "from wayfire import WayfireSocket; "
@@ -585,10 +491,9 @@ class SystemMonitorPlugin(BasePlugin):
             "view;"
         )
         cmd = f'ipython -i -c "{code}"'
-
         if terminal == "kitty":
             subprocess.Popen([terminal, "bash", "-c", f"{cmd} ; exec bash"])
-        else:  # alacritty
+        else:
             subprocess.Popen([terminal, "-e", "bash", "-c", f"{cmd} ; exec bash"])
 
     def open_view_info_window(self, id):
@@ -596,17 +501,13 @@ class SystemMonitorPlugin(BasePlugin):
             view = self.ipc.get_view(id)
             if not view:
                 raise ValueError(f"No view found with ID: {id}")
-
             window = Gtk.Window(title=f"View Information (ID: {id})")
             window.set_default_size(600, 400)
             window.set_resizable(True)
-
             scrolled_window = Gtk.ScrolledWindow()
             scrolled_window.set_vexpand(True)
             scrolled_window.set_hexpand(True)
-
-            list_store = Gtk.ListStore(str, str)
-
+            list_store = Gtk.ListStore(str, str)  # pyright: ignore
             for key, value in view.items():
                 if isinstance(value, dict):
                     formatted_value = "\n".join(f"{k}: {v}" for k, v in value.items())
@@ -614,33 +515,26 @@ class SystemMonitorPlugin(BasePlugin):
                     formatted_value = "\n".join(str(item) for item in value)
                 else:
                     formatted_value = str(value)
-
                 list_store.append([key, formatted_value])
-
             tree_view = Gtk.TreeView(model=list_store)
-
             key_renderer = Gtk.CellRendererText()
-            key_column = Gtk.TreeViewColumn("Key", key_renderer, text=0)
+            key_column = Gtk.TreeViewColumn("Key", key_renderer, text=0)  # pyright: ignore
             key_column.set_resizable(True)
             key_column.set_min_width(150)
             key_column.set_sort_column_id(0)
             tree_view.append_column(key_column)
-
             value_renderer = Gtk.CellRendererText()
             value_renderer.props.wrap_mode = Pango.WrapMode.WORD_CHAR
-            value_renderer.props.wrap_width = 400  # Wrap after 400 pixels
-            value_column = Gtk.TreeViewColumn("Value", value_renderer, text=1)
+            value_renderer.props.wrap_width = 400
+            value_column = Gtk.TreeViewColumn("Value", value_renderer, text=1)  # pyright: ignore
             value_column.set_resizable(True)
             value_column.set_expand(True)
             value_column.set_sort_column_id(1)
             tree_view.append_column(value_column)
-
             tree_view.set_activate_on_single_click(True)
-
             scrolled_window.set_child(tree_view)
             window.set_child(scrolled_window)
             window.present()
-
         except Exception as e:
             error_dialog = Adw.MessageDialog(
                 transient_for=self.obj.main_window,
@@ -655,36 +549,30 @@ class SystemMonitorPlugin(BasePlugin):
     def get_process_executable(self, pid):
         """
         Get the executable path of a process by its PID.
-
         Args:
             pid (int): The process ID.
-
         Returns:
             str: The absolute path to the process executable, or None if the process doesn't exist or access is denied.
         """
         try:
             process = psutil.Process(pid)
-
             executable_path = process.exe()
-
             return executable_path
         except psutil.NoSuchProcess:
-            print(f"No process found with PID: {pid}")
+            self.logger.error(f"No process found with PID: {pid}")
             return None
         except psutil.AccessDenied:
-            print(f"Access denied for process with PID: {pid}")
+            self.logger.error(f"Access denied for process with PID: {pid}")
             return None
         except Exception as e:
-            print(f"Error retrieving executable path for PID {pid}: {e}")
+            self.logger.error(f"Error retrieving executable path for PID {pid}: {e}")
             return None
 
     def format_value(self, value):
         """
         Format nested dictionaries and other complex values for display.
-
         Args:
             value: The value to format.
-
         Returns:
             str: A formatted string representation of the value.
         """
@@ -714,27 +602,22 @@ class SystemMonitorPlugin(BasePlugin):
             self.start_system_updates()
         else:
             self.create_popover_system()
-            self.popover_system.popup()
+            self.popover_system.popup()  # pyright: ignore
             self.start_system_updates()
 
     def create_popover_system(self):
         """Create the system monitor popover and populate it with a ListBox."""
         self.popover_system = Gtk.Popover.new()
-
-        # Create a vertical box to hold the ListBox
         vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, spacing=10)
         vbox.set_margin_top(10)
         vbox.set_margin_bottom(10)
         vbox.set_margin_start(10)
         vbox.set_margin_end(10)
         vbox.set_size_request(250, -1)
-
         self.list_box = Gtk.ListBox()
-        self.list_box.set_selection_mode(Gtk.SelectionMode.NONE)  # Disable selection
+        self.list_box.set_selection_mode(Gtk.SelectionMode.NONE)
         vbox.append(self.list_box)
-
         self.popover_system.set_child(vbox)
-
         self.popover_system.set_parent(self.menubutton_system)
 
     def last_toplevel_focused_view(self):
@@ -835,27 +718,20 @@ class SystemMonitorPlugin(BasePlugin):
             self.create_iotop_gesture_for_focused_view_pid(hbox)
         if "CPU Usage" in name:
             self.create_gesture_for_cpu_usage(hbox)
-
         if "GPU" in name:
             self.create_gesture_for_amdgpu_top(hbox)
         if "Watch events" in name:
             self.create_watch_events_gesture(hbox)
-
         hbox.set_halign(Gtk.Align.FILL)
         hbox.set_margin_top(5)
         hbox.set_margin_bottom(5)
-
-        # Add name label
         name_label = Gtk.Label(label=name)
         name_label.set_halign(Gtk.Align.START)
         name_label.set_hexpand(True)
         hbox.append(name_label)
-
-        # Add value label
         value_label = Gtk.Label(label=value)
         value_label.set_halign(Gtk.Align.END)
         hbox.append(value_label)
-
         row.set_child(hbox)
         self.list_box.append(row)
         return hbox
@@ -878,10 +754,8 @@ class SystemMonitorPlugin(BasePlugin):
         """
         This plugin provides a comprehensive system monitor, integrating
         with system tools and displaying data in a popover UI.
-
         Its core logic is centered on **data fetching, UI generation, and
         external tool integration**:
-
         1.  **Data Fetching**: It uses the `psutil` library to collect
             real-time metrics for CPU, memory, disk, and network usage.
             This data is refreshed periodically by a `GLib.timeout_add_seconds`

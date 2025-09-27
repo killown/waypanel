@@ -71,8 +71,6 @@ class ScaleFocusManagerPlugin(BasePlugin):
             if output_id is not None:
                 # Track scale state for this output
                 self.scale_active_outputs[output_id] = state
-                state_str = "activated" if state else "deactivated"
-                self.logger.info(f"Scale plugin {state_str} on output {output_id}")
 
         except Exception as e:
             self.logger.error(

@@ -154,7 +154,7 @@ class MenuNotes(BasePlugin):
                 self.update_notes_list()
                 self.scrolled_window.set_min_content_height(50)
         except Exception as e:
-            self.log_error(f"Dialog error: {e}")
+            self.logger.error(f"Dialog error: {e}")
 
     def update_notes_list(self):
         """Update the list of notes in the popover"""

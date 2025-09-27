@@ -257,7 +257,7 @@ class DockbarPlugin(BasePlugin):
             self.ipc.click_button("S-BTN_LEFT", "full")
             self.cmd.run(cmd)
         except Exception as e:
-            self.log_error(f"Error while handling right-click action: {e}")
+            self.logger.error(f"Error while handling right-click action: {e}")
 
     def on_middle_click(self, cmd):
         """

@@ -59,7 +59,6 @@ class WindowTitlePlugin(BasePlugin):
         self._last_view_data = None
 
     def disable(self):
-        print(self.main_widget)
         self.gtk_helper.remove_widget(self.window_title_content)
 
     @subscribe_to_event("view-focused")
@@ -75,7 +74,7 @@ class WindowTitlePlugin(BasePlugin):
             if view:
                 self.update_title_icon_debounced(view)
         except Exception as e:
-            self.log_error(f"Error handling 'view-focused' event: {e}")
+            self.logger.error(f"Error handling 'view-focused' event: {e}")
 
     @subscribe_to_event("view-closed")
     def on_view_closed(self, event_message):
@@ -88,7 +87,7 @@ class WindowTitlePlugin(BasePlugin):
         try:
             self.clear_widget()
         except Exception as e:
-            self.log_error(f"Error handling 'view-closed' event: {e}")
+            self.logger.error(f"Error handling 'view-closed' event: {e}")
 
     @subscribe_to_event("view-title-changed")
     def on_view_title_changed(self, event_message):
@@ -103,7 +102,7 @@ class WindowTitlePlugin(BasePlugin):
             if view:
                 self.update_title_icon_debounced(view)
         except Exception as e:
-            self.log_error(f"Error handling 'view-title-changed' event: {e}")
+            self.logger.error(f"Error handling 'view-title-changed' event: {e}")
 
     def sway_translate_ipc(self, view):
         # Create a copy to avoid side-effects
@@ -154,7 +153,7 @@ class WindowTitlePlugin(BasePlugin):
 
             self.update_title(title, icon)
         except Exception as e:
-            self.log_error(f"Error updating title/icon: {e}")
+            self.logger.error(f"Error updating title/icon: {e}")
 
     def clear_widget(self):
         """
@@ -212,7 +211,7 @@ class WindowTitlePlugin(BasePlugin):
             else:
                 self.window_title_icon.set_from_icon_name("None")
         except Exception as e:
-            self.log_error(f"Error updating window title widget: {e}")
+            self.logger.error(f"Error updating window title widget: {e}")
 
     def _perform_debounced_update(self):
         """Internal method to perform the actual UI update after debounce."""

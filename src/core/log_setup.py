@@ -3,84 +3,108 @@ import logging
 from logging.handlers import RotatingFileHandler
 import structlog
 from structlog.stdlib import ProcessorFormatter, BoundLogger, add_logger_name
-from structlog.processors import JSONRenderer, TimeStamper, add_log_level
+from structlog.processors import (
+    JSONRenderer,
+    TimeStamper,
+    add_log_level,
+    StackInfoRenderer,
+    format_exc_info,
+)
 from rich.logging import RichHandler
+from structlog.dev import ConsoleRenderer
 
-# Define log file path
 LOG_FILE_PATH = os.path.expanduser("~/.config/waypanel/waypanel.log")
-
-# Ensure the log directory exists
+LOGGER_NAME = None
 os.makedirs(os.path.dirname(LOG_FILE_PATH), exist_ok=True)
 
 
-def setup_logging(level=logging.DEBUG) -> BoundLogger:
-    """Configure logging with both file and console handlers.
-    Ensures no duplicate handlers are added.
+class SpamFilter(logging.Filter):
+    """Filters out repetitive log messages and works before structlog processing."""
 
-    Returns:
-        BoundLogger: The configured logger instance.
+    _config_reload_count = 0
+
+    def filter(self, record):
+        message = record.getMessage()
+        if (
+            record.levelno == logging.WARNING
+            and "not found in in_use_buttons" in message
+        ):
+            return False
+        if message == "Configuration reloaded successfully.":
+            SpamFilter._config_reload_count += 1
+            if SpamFilter._config_reload_count > 1:
+                return False
+        elif message == "Configuration file modified. Reloading...":
+            if SpamFilter._config_reload_count >= 1:
+                return False
+        else:
+            SpamFilter._config_reload_count = 0
+        return True
+
+
+def setup_logging(level: int = logging.DEBUG) -> BoundLogger:
     """
-    print("Setting up logging...")  # Debug statement
-
-    # Remove existing handlers to prevent duplicates
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
-
-    # Create a logger
-    logger = logging.getLogger("WaypanelLogger")
-    if not logger.handlers:  # Only add handlers if none exist
-        logger.setLevel(level)
-
-        # File Handler with Rotation
-        file_handler = RotatingFileHandler(
-            LOG_FILE_PATH,
-            maxBytes=1024 * 1024,  # 1 MB per log file
-            backupCount=2,
-        )
-        file_handler.setLevel(level)
-
-        # File formatter
-        file_formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        file_handler.setFormatter(file_formatter)
-        logger.addHandler(file_handler)
-
-        # Add RichHandler for console output
-        console_handler = RichHandler(
-            rich_tracebacks=True,  # Enable rich tracebacks
-            markup=True,  # Enable Rich-style markup
-            show_path=False,  # Hide log source file/line (optional)
-        )
-
-        # Console formatter
-        console_handler.setFormatter(logging.Formatter("%(message)s"))
-        console_handler.setLevel(level)
-        logger.addHandler(console_handler)
-
-        logger.propagate = False  # Disable propagation to the root logger
-
-    # Configure structlog processors
+    Configures logging using structlog with separate handlers:
+    - Console (RichHandler, no logger name)
+    - File (JSON, with logger name)
+    """
+    new_time_format = "%Y-%m-%d %H:%M:%S"
+    json_processors = [
+        add_log_level,
+        add_logger_name,
+        TimeStamper(fmt=new_time_format),
+        StackInfoRenderer(),
+        format_exc_info,
+    ]
+    console_pre_chain = [
+        add_log_level,
+        TimeStamper(fmt=new_time_format),
+        StackInfoRenderer(),
+        format_exc_info,
+    ]
     structlog.configure(
-        processors=[
-            add_log_level,
-            add_logger_name,
-            TimeStamper(fmt="iso"),
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.format_exc_info,
-            structlog.dev.ConsoleRenderer()
-            if level <= logging.DEBUG
-            else ProcessorFormatter.wrap_for_formatter,
+        processors=console_pre_chain
+        + [
+            ProcessorFormatter.wrap_for_formatter,
         ],
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
-
-    return structlog.get_logger("WaypanelLogger")
-
-
-if __name__ == "__main__":
-    logger = setup_logging(level=logging.DEBUG)
+    std_logger = logging.getLogger(LOGGER_NAME)
+    std_logger.setLevel(level)
+    std_logger.propagate = False
+    for handler in std_logger.handlers[:]:
+        std_logger.removeHandler(handler)
+    spam_filter = SpamFilter()
+    file_handler = RotatingFileHandler(
+        LOG_FILE_PATH,
+        maxBytes=1024 * 1024,
+        backupCount=2,
+        encoding="utf-8",
+    )
+    file_handler.setLevel(level)
+    file_handler.addFilter(spam_filter)
+    json_formatter = ProcessorFormatter(
+        foreign_pre_chain=json_processors,
+        processor=JSONRenderer(),
+    )
+    file_handler.setFormatter(json_formatter)
+    std_logger.addHandler(file_handler)
+    console_handler = RichHandler(
+        rich_tracebacks=True,
+        markup=True,
+        show_path=False,
+        show_time=False,
+    )
+    console_handler.setLevel(level)
+    console_handler.addFilter(spam_filter)
+    console_formatter_final = ProcessorFormatter(
+        foreign_pre_chain=console_pre_chain,
+        processor=ConsoleRenderer(colors=False),
+        fmt="%(message)s",
+    )
+    console_handler.setFormatter(console_formatter_final)
+    std_logger.addHandler(console_handler)
+    return structlog.get_logger(LOGGER_NAME)

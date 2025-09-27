@@ -5,10 +5,7 @@ from watchdog.events import FileSystemEventHandler
 from src.plugins.core._base import BasePlugin
 import logging
 
-# Set to False or remove the plugin file to disable it
 ENABLE_PLUGIN = True
-
-# Dependencies: Ensure the notify_client plugin is loaded first
 DEPS = ["notify_client"]
 
 
@@ -33,47 +30,37 @@ class NotifyWatcherPlugin(BasePlugin):
         self.db_path = os.path.expanduser("~/.config/waypanel/notifications.db")
         self.logger = logging.getLogger(__name__)
         self.observer = None
-        self.last_db_state = None  # Tracks the last known state of the database
+        self.last_db_state = None
 
     def start_watching(self):
         """Start watching for notifications by monitoring the database file."""
         try:
-            # Get the notify_client instance
             self.notify_client = self.obj.plugins.get("notify_client")
             if not self.notify_client:
-                self.log_error("Notify client plugin is not loaded.")
+                self.logger.error("Notify client plugin is not loaded.")
                 return
-
-            # Get the notification button from notify_client
             self.notification_button = getattr(
                 self.notify_client, "notification_button", None
             )
             if not self.notification_button:
-                self.log_error("Notification button not found in notify_client.")
+                self.logger.error("Notification button not found in notify_client.")
                 return
-
-            # Start monitoring the database file for changes
             self.monitor_database()
-
         except Exception as e:
-            self.log_error(f"Error initializing Notify Watcher Plugin: {e}")
+            self.logger.error(f"Error initializing Notify Watcher Plugin: {e}")
 
     def monitor_database(self):
         """Monitor the database file for changes using watchdog."""
         try:
-            # Check the current state of the database
             self.check_notifications()
-
-            # Set up a file watcher for the database
             event_handler = DatabaseChangeHandler(self)
             self.observer = Observer()
             self.observer.schedule(
                 event_handler, path=os.path.dirname(self.db_path), recursive=False
             )
             self.observer.start()
-
         except Exception as e:
-            self.log_error(f"Error setting up database monitoring: {e}")
+            self.logger.error(f"Error setting up database monitoring: {e}")
 
     def check_notifications(self):
         """Check if there are any notifications in the database."""
@@ -87,14 +74,11 @@ class NotifyWatcherPlugin(BasePlugin):
                 count = cursor.fetchone()[0]
                 conn.close()
                 has_notifications = count > 0
-
-            # Update the button visibility if the state has changed
             if has_notifications != self.last_db_state:
                 self.last_db_state = has_notifications
                 self.update_button_visibility(has_notifications)
-
         except Exception as e:
-            self.log_error(f"Error checking database for notifications: {e}")
+            self.logger.error(f"Error checking database for notifications: {e}")
 
     def update_button_visibility(self, visible):
         """Update the visibility of the notification button."""
@@ -106,9 +90,8 @@ class NotifyWatcherPlugin(BasePlugin):
                 else:
                     self.notification_button.set_visible(False)
                     self.logger.info("Notification button is now hidden.")
-
         except Exception as e:
-            self.log_error(f"Error updating button visibility: {e}")
+            self.logger.error(f"Error updating button visibility: {e}")
 
     def log_error(self, message):
         """Log an error message."""
@@ -142,20 +125,17 @@ class DatabaseChangeHandler(FileSystemEventHandler):
         The core logic of this plugin is to create a dynamic visual
         indicator by linking a background process to a UI component
         from a separate plugin. It operates on three key principles:
-
         1.  **File System Monitoring**: The plugin uses the `watchdog`
             library to set up a listener on the notification database
             file. Instead of periodically polling the database, it
             reacts in real-time to file modification events, ensuring
             the UI is updated instantly when new data is written.
-
         2.  **State-Driven UI Updates**: It maintains an internal state
             variable (`self.last_db_state`) that represents whether
             notifications are present. When the database is modified,
             the plugin checks the current state and only updates the
             button's visibility if the state has genuinely changed.
             This prevents redundant UI operations.
-
         3.  **Cross-Plugin Interaction**: This plugin is "headless"
             in that it doesn't create its own UI element on the
             panel. Instead, it acts as a controller, retrieving a

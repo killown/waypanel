@@ -71,7 +71,11 @@ class NetworkMonitorPlugin(BasePlugin):
         self.last_scan_time: float = 0.0
         self.scan_status_label = None
         self.wifi_list_revealer = None
+        self.ssids_to_auto_connect = self.config_handler.check_and_get_config(
+            ["hardware", "network", "auto_connect_ssids"]
+        )
         global_loop.create_task(self.start_periodic_wifi_scan_async())
+        global_loop.create_task(self._apply_config_autoconnect_settings_async())
 
     async def start_periodic_wifi_scan_async(self):
         """Starts a periodic background scan for Wi-Fi networks using asyncio."""
@@ -166,7 +170,7 @@ class NetworkMonitorPlugin(BasePlugin):
                                 return 0
             return 0
         except Exception as e:
-            print(f"Error getting signal strength: {e}")
+            self.logger.error(f"Error getting signal strength: {e}")
             return 0
 
     async def periodic_check_async(self):
@@ -360,7 +364,7 @@ class NetworkMonitorPlugin(BasePlugin):
                         return connection
             return None
         except Exception:
-            print("Error: nmcli command failed.")
+            self.logger.error("Error: nmcli command failed.")
             return None
 
     def get_connected_wifi_ssid_sync(self) -> Optional[str]:
@@ -391,7 +395,7 @@ class NetworkMonitorPlugin(BasePlugin):
                         return connection
             return None
         except subprocess.CalledProcessError:
-            print("Error: nmcli command failed.")
+            self.logger.error("Error: nmcli command failed.")
             return None
 
     async def populate_wifi_list_async(self):
@@ -536,7 +540,7 @@ class NetworkMonitorPlugin(BasePlugin):
                     if parts[1] == "00000000":
                         return parts[0]
         except Exception as e:
-            print("Error reading default route:", e)
+            self.logger.error("Error reading default route:", e)
         return None
 
     async def get_default_interface_async(self) -> Optional[str]:
@@ -554,7 +558,7 @@ class NetworkMonitorPlugin(BasePlugin):
             with open(f"/sys/class/net/{interface}/carrier", "r") as f:
                 return f.read().strip() == "1"
         except FileNotFoundError:
-            print(f"Interface '{interface}' not found.")
+            self.logger.error(f"Interface '{interface}' not found.")
             return False
 
     async def check_interface_carrier_async(self, interface: str) -> bool:
@@ -572,7 +576,7 @@ class NetworkMonitorPlugin(BasePlugin):
         """
         if self.scanning_in_progress:
             return
-        print("Starting async nmcli scan...")
+        self.logger.error("Starting async nmcli scan...")
         self.scanning_in_progress = True
         if self.scan_status_label:
             GLib.idle_add(self.scan_status_label.set_label, "Scanning...")
@@ -600,14 +604,14 @@ class NetworkMonitorPlugin(BasePlugin):
             raw_output = stdout.decode("utf-8")
             return_code = list_process.returncode
         except Exception as e:
-            print(f"Error executing nmcli: {e}")
+            self.logger.error(f"Error executing nmcli: {e}")
             return_code = 1
             raw_output = ""
         self.scanning_in_progress = False
         self.last_scan_time = time.time()
         self.cached_wifi_networks = []
         if return_code != 0:
-            print(f"Error executing nmcli: {return_code}")
+            self.logger.error(f"Error executing nmcli: {return_code}")
             if self.scan_status_label:
                 GLib.idle_add(
                     self.scan_status_label.set_label,
@@ -633,7 +637,7 @@ class NetworkMonitorPlugin(BasePlugin):
                 try:
                     ssid, signal, bssid = line.rsplit(":", 2)
                 except ValueError:
-                    print(f"Skipping malformed nmcli output line: {line}")
+                    self.logger.error(f"Skipping malformed nmcli output line: {line}")
                     continue
             self.cached_wifi_networks.append(
                 {
@@ -645,11 +649,92 @@ class NetworkMonitorPlugin(BasePlugin):
         if self.popover.get_property("visible"):
             global_loop.create_task(self.update_popover_async())
 
+    async def _apply_config_autoconnect_settings_async(self):
+        """
+        Enforces a whitelist for auto-connect: sets connection.autoconnect=yes for
+        networks in the config list, and connection.autoconnect=no for all others.
+        The multiple subprocess calls are necessary because NetworkManager
+        stores the SSID (what is in the config list) separate from the Connection
+        Name (what is needed to modify the profile).
+        """
+        ssids_to_autoconnect: List[str] = self.ssids_to_auto_connect
+        try:
+            list_proc = await asyncio.create_subprocess_exec(
+                "nmcli",
+                "-t",
+                "-f",
+                "NAME,TYPE",
+                "connection",
+                "show",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, _ = await list_proc.communicate()
+            all_wifi_connections: List[str] = []
+            for line in stdout.decode().strip().split("\n"):
+                if ":802-11-wireless" in line:
+                    connection_name = line.split(":")[0].strip()
+                    if connection_name:
+                        all_wifi_connections.append(connection_name)
+            self.logger.info(
+                f"Checking {len(all_wifi_connections)} Wi-Fi connection profiles."
+            )
+        except Exception as e:
+            self.logger.error(f"Error listing all connections: {e}")
+            return
+        for conn_name in all_wifi_connections:
+            profile_ssid = conn_name
+            try:
+                ssid_proc = await asyncio.create_subprocess_exec(
+                    "nmcli",
+                    "-g",
+                    "802-11-wireless.ssid",
+                    "connection",
+                    "show",
+                    conn_name,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                ssid_out, _ = await ssid_proc.communicate()
+                profile_ssid = ssid_out.decode().strip() or conn_name
+            except Exception as e:
+                self.logger.error(
+                    f"Network Manager: Failed to retrieve SSID for {conn_name}: {e}"
+                )
+                pass
+            if not ssids_to_autoconnect:
+                return
+            autoconnect_state = "yes" if profile_ssid in ssids_to_autoconnect else "no"
+            try:
+                modify_proc = await asyncio.create_subprocess_exec(
+                    "nmcli",
+                    "connection",
+                    "modify",
+                    conn_name,
+                    "connection.autoconnect",
+                    autoconnect_state,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                await modify_proc.wait()
+                if modify_proc.returncode == 0:
+                    self.logger.info(
+                        f"Successfully set autoconnect={autoconnect_state} for profile '{conn_name}' (SSID: {profile_ssid})."
+                    )
+                else:
+                    self.logger.warning(
+                        f"Warning: Failed to set autoconnect={autoconnect_state} for profile '{conn_name}' (SSID: {profile_ssid})."
+                    )
+            except Exception as e:
+                self.logger.error(
+                    f"Error applying autoconnect modification for {conn_name}: {e}"
+                )
+
     async def _connect_to_network_async(self, ssid):
         """
         Async implementation of connecting to a network.
         """
-        print(f"Attempting to connect to network: {ssid}")
+        self.logger.error(f"Attempting to connect to network: {ssid}")
         GLib.idle_add(self.popover.popdown)
         try:
             profile_list_output = await asyncio.create_subprocess_exec(
@@ -662,15 +747,8 @@ class NetworkMonitorPlugin(BasePlugin):
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout, _ = await profile_list_output.communicate()
-            profile_list = stdout.decode().strip().split("\n")
-        except Exception:
-            profile_list = []
-        if ssid in profile_list:
-            try:
-                await asyncio.create_subprocess_exec("nmcli", "connection", "up", ssid)
-                await self.update_popover_async()
-            except Exception as e:
-                print(f"Failed to connect to known network: {e}")
+        except Exception as e:
+            self.logger.error(f"Network Manager: {e}")
 
     def about(self):
         """

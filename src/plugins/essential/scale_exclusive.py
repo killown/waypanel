@@ -85,9 +85,6 @@ class PanelScaleExclusivePlugin(BasePlugin):
             target_output_name = self.on_output_plugin.primary_output_name
         focused_output_name = self.ipc.get_focused_output()["name"]
         if target_output_name and focused_output_name == target_output_name:
-            self.logger.info(
-                f"Scale activated on target output '{target_output_name}'. Enabling exclusive zones."
-            )
             self.set_panels_exclusive(exclusive=True, size=49)
         else:
             self.logger.debug(
@@ -97,7 +94,6 @@ class PanelScaleExclusivePlugin(BasePlugin):
 
     def on_scale_deactivated(self):
         """Handle scale deactivation: remove exclusive zones from all panels."""
-        self.logger.info("Scale deactivated. Disabling exclusive zones on all panels.")
         self.set_panels_exclusive(exclusive=False)
 
     @subscribe_to_event("plugin-activation-state-changed")

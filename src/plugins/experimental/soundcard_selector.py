@@ -44,6 +44,8 @@ class SoundCardDashboard(BasePlugin):
         self.soundcard_dropdown = None
         self.mic_dropdown = None
         self.menubutton_dashboard = None
+        self.soundcard_handler_id = None
+        self.mic_handler_id = None
         self.max_card_chars = self.config_handler.check_and_get_config(
             ["hardware", "soundcard", "max_name_lenght"], 35
         )
@@ -113,7 +115,7 @@ class SoundCardDashboard(BasePlugin):
             if not any(b in default_name for b in blacklist):
                 soundcard_list.append(default_name)
         except Exception as e:
-            logger.warning(f"Could not get default speaker: {e}")
+            logger.warning(f"Could Could not get default speaker: {e}")
         for soundcard in self.get_soundcard_list():
             name = soundcard.name
             if name not in soundcard_list and not any(b in name for b in blacklist):
@@ -247,6 +249,27 @@ class SoundCardDashboard(BasePlugin):
     def create_popover_soundcard(self, *_):
         """
         Creates and displays the dashboard popover with sound card and microphone controls.
+        This method is structured in four phases to prevent unwanted signal emissions:
+        1.  **Initialization (`if self.popover_dashboard is None`):**
+            The UI widgets (Popover, Boxes, Dropdowns) are created only once.
+            Crucially, the 'notify::selected-item' signal handlers are connected here,
+            and their IDs (`soundcard_handler_id`, `mic_handler_id`) are stored.
+            The `self.popover_dashboard.set_parent()` call is also here, as reparenting
+            a GTK widget multiple times causes a critical error.
+        2.  **Signal Blocking (Before Update):**
+            The stored handler IDs are used with `handler_block()` to temporarily disable
+            the `on_soundcard_changed` and `on_mic_changed` methods. This is essential
+            because the next step, updating the lists, will call `set_selected()`, which
+            emits the 'notify::selected-item' signal. Blocking prevents these automatic
+            emissions from triggering the `pactl` commands unnecessarily.
+        3.  **UI Update (List Population):**
+            `self.update_soundcard_list()` and `self.update_mic_list()` are called.
+            These methods populate the dropdowns and set the default active item using
+            `set_selected()`. Because the handlers are blocked, no signals are processed.
+        4.  **Signal Unblocking (After Update):**
+            The stored handler IDs are used with `handler_unblock()` to re-enable the
+            change detection. The dropdowns are now ready to respond to actual user clicks.
+        Finally, `self.popover_dashboard.popup()` is called to display the dashboard.
         """
         if self.popover_dashboard is None:
             self.popover_dashboard = Gtk.Popover.new()
@@ -261,10 +284,12 @@ class SoundCardDashboard(BasePlugin):
             self.soundcard_dropdown = Gtk.DropDown.new(self.soundcard_model, None)
             self.mic_model = Gtk.StringList.new([])
             self.mic_dropdown = Gtk.DropDown.new(self.mic_model, None)
-            self.soundcard_dropdown.connect(
+            self.soundcard_handler_id = self.soundcard_dropdown.connect(
                 "notify::selected-item", self.on_soundcard_changed
             )
-            self.mic_dropdown.connect("notify::selected-item", self.on_mic_changed)
+            self.mic_handler_id = self.mic_dropdown.connect(
+                "notify::selected-item", self.on_mic_changed
+            )
             self.soundcard_dropdown.set_size_request(200, -1)
             self.mic_dropdown.set_size_request(200, -1)
             sc_hbox = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
@@ -278,9 +303,17 @@ class SoundCardDashboard(BasePlugin):
             box.append(sc_hbox)
             box.append(mic_hbox)
             self.popover_dashboard.set_child(box)
+            self.popover_dashboard.set_parent(self.menubutton_dashboard)  # pyright: ignore
+        if self.soundcard_handler_id:
+            self.soundcard_dropdown.handler_block(self.soundcard_handler_id)  # pyright: ignore
+        if self.mic_handler_id:
+            self.mic_dropdown.handler_block(self.mic_handler_id)  # pyright: ignore
         self.update_soundcard_list()
         self.update_mic_list()
-        self.popover_dashboard.set_parent(self.menubutton_dashboard)  # pyright: ignore
+        if self.soundcard_handler_id:
+            self.soundcard_dropdown.handler_unblock(self.soundcard_handler_id)  # pyright: ignore
+        if self.mic_handler_id:
+            self.mic_dropdown.handler_unblock(self.mic_handler_id)  # pyright: ignore
         self.popover_dashboard.popup()
         return self.popover_dashboard
 
@@ -337,6 +370,7 @@ class SoundCardDashboard(BasePlugin):
     def on_soundcard_changed(self, dropdown, param):
         """
         Handles the event when the soundcard selection is changed.
+        This method should only fire on user interaction.
         """
         selected_item = dropdown.get_selected_item()
         if selected_item is None:
@@ -349,6 +383,7 @@ class SoundCardDashboard(BasePlugin):
     def on_mic_changed(self, dropdown, param):
         """
         Handles the event when the microphone selection is changed.
+        This method should only fire on user interaction.
         """
         selected_item = dropdown.get_selected_item()
         if selected_item is None:

@@ -59,7 +59,7 @@ class ClockPlugin(BasePlugin):
             current_time = datetime.datetime.now().strftime("%d %b %H:%M")
             self.clock_label.set_label(current_time)  # pyright: ignore
         except Exception as e:
-            self.log_error(f"Error updating clock: {e}")
+            self.logger.error(f"Error updating clock: {e}")
         return True
 
     def schedule_updates(self):

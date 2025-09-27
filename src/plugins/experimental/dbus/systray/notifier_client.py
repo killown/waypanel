@@ -1,4 +1,4 @@
-import gi  # pyright: ignore
+import gi
 import re
 from unidecode import unidecode
 from dbus_fast import Variant
@@ -157,7 +157,7 @@ class SystrayClientPlugin(BasePlugin):
                 menu_path = menu_variant
             return menu_path
         except Exception as e:
-            self.log_error(
+            self.logger.error(
                 f"Failed to fetch Menu property for service: {service_name} and path {object_path}: {e}"
             )
             return None
@@ -223,7 +223,7 @@ class SystrayClientPlugin(BasePlugin):
                 self.tray_button[service_name] = button
                 self.logger.info(f"Created button for {service_name}")
         except Exception as e:
-            self.log_error(f"Error handling icon name update {e}")
+            self.logger.error(f"Error handling icon name update {e}")
 
     def _on_menu_item_clicked_wrapper(self, *args):
         """
@@ -247,7 +247,7 @@ class SystrayClientPlugin(BasePlugin):
             try:
                 self.introspection = await bus.introspect(service_name, self.menu_path)
             except Exception as e:
-                self.log_error(
+                self.logger.error(
                     f"Introspection failed for {service_name}{self.menu_path}: {e}"
                 )
                 return None
@@ -258,7 +258,7 @@ class SystrayClientPlugin(BasePlugin):
                 f"Proxy object initialized for {service_name}{self.menu_path}"
             )
         except Exception as e:
-            self.log_error(f"Failed to initialize proxy object: {e}")
+            self.logger.error(f"Failed to initialize proxy object: {e}")
             raise
 
     async def set_menu_layout(self, service_name):
@@ -282,12 +282,12 @@ class SystrayClientPlugin(BasePlugin):
                     start_id, recursion_depth, property_names
                 )
             except Exception as e:
-                self.log_error(
+                self.logger.error(
                     f"Trying fallback for dbusmenu.call_get_layout: {layout} {e}"
                 )
                 revision, layout = await dbusmenu.call_get_layout(0, -1, [])
             if not layout:
-                self.log_error(
+                self.logger.error(
                     f"no menu layout was created for the new tray icon {service_name}"
                 )
             self.logger.info(f"Menu Revision: {revision}")
@@ -301,7 +301,7 @@ class SystrayClientPlugin(BasePlugin):
                 "dbusmenu": dbusmenu,
             }
         except Exception as e:
-            self.log_error(f"Failed to debug menu structure: {e}")
+            self.logger.error(f"Failed to debug menu structure: {e}")
 
     async def on_menu_item_clicked(self, *args):
         """
@@ -310,8 +310,8 @@ class SystrayClientPlugin(BasePlugin):
             *args: Variable-length arguments passed by the signal handler.
         """
         try:
-            action, parameter, self.label_index, self.service_name = args  # pyright: ignore
-            object_path = self.messages[self.service_name]["object_path"]  # pyright: ignore
+            action, parameter, self.label_index, self.service_name = args
+            object_path = self.messages[self.service_name]["object_path"]
             event_id = "clicked"
             timestamp = Gdk.CURRENT_TIME
             await self.set_menu_layout(self.service_name)
@@ -382,7 +382,7 @@ class SystrayClientPlugin(BasePlugin):
                 )
                 index += 1
             except Exception as e:
-                self.log_error(f"Error processing menu item: {item}. Error: {e}")
+                self.logger.error(f"Error processing menu item: {item}. Error: {e}")
 
     def get_best_icon_entry(self, pixmap_data, target_size=24):
         """

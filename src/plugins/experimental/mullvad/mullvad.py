@@ -197,7 +197,7 @@ class MullvadPlugin(BasePlugin):
                 data = json.loads(stdout.decode())
                 return data.get("relay", {}).get("hostname")
         except Exception as e:
-            print(f"Failed to get current relay: {e}")
+            self.logger.error(f"Failed to get current relay: {e}")
         return ""
 
     async def set_mullvad_relay_by_city(self, *_):
@@ -216,7 +216,7 @@ class MullvadPlugin(BasePlugin):
             current = await self.get_current_relay_hostname()
             available = [r for r in city_relays if r["hostname"] != current]
             if not available:
-                print(
+                self.logger.error(
                     f"No new relays available in '{self.city_code}' different from current: {current}"
                 )
                 return
@@ -227,7 +227,7 @@ class MullvadPlugin(BasePlugin):
                 "mullvad", "relay", "set", "location", relay_choice
             )
         except Exception as e:
-            print(f"Error: {e}")
+            self.logger.error(f"Error: {e}")
 
     async def set_mullvad_relay_random_global(self, *_):
         """
@@ -245,7 +245,7 @@ class MullvadPlugin(BasePlugin):
             current = await self.get_current_relay_hostname()
             available = [r for r in relays if r["hostname"] != current]
             if not available:
-                print("No new relays available different from current.")
+                self.logger.error("No new relays available different from current.")
                 return
             relay_choice = random.choice(available)["hostname"]
             msg = f"Changing Mullvad relay to {relay_choice}"
@@ -272,7 +272,7 @@ class MullvadPlugin(BasePlugin):
             else:
                 self.menubutton_mullvad.set_icon_name("stock_disconnect")
             status = await self.get_mullvad_status_string()
-            self.status_label.set_text(status)
+            self.status_label.set_text(status)  # pyright: ignore
         except Exception as e:
             self.logger.error(f"Error updating VPN status: {e}")
 
