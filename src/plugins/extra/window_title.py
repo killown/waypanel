@@ -1,27 +1,22 @@
 from gi.repository import Gtk, GLib
 from src.plugins.core.event_handler_decorator import subscribe_to_event
 from src.plugins.core._base import BasePlugin
+from typing import Any, Dict, Optional
 
 ENABLE_PLUGIN = True
-
 DEPS = ["top_panel"]
 
 
-def initialize_plugin(panel_instance):
+def initialize_plugin(panel_instance) -> "WindowTitlePlugin":
     """
     Initialize the plugin.
-
-    Args:
-        obj: The main panel object from panel.py
-        app: The main application instance
     """
     return WindowTitlePlugin(panel_instance)
 
 
-def get_plugin_placement(panel_instance):
+def get_plugin_placement(panel_instance) -> tuple[str, int]:
     """
     Define the plugin's position and order.
-
     Returns:
         tuple: (position, order)
     """
@@ -31,43 +26,49 @@ def get_plugin_placement(panel_instance):
 
 
 class WindowTitlePlugin(BasePlugin):
+    DEPS = DEPS
+
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         """
         Initialize the Window Title plugin.
         """
+        self._load_config()
         self.window_title_content = Gtk.Box()
         self.main_widget = (self.window_title_content, "append")
         self.window_title_label = Gtk.Label()
         self.window_title_icon = Gtk.Image.new_from_icon_name("None")
         self.window_title_icon.add_css_class("window-title-icon")
-        self.title_length = self.config_handler.config_data.get("window_title", {}).get(
-            "title_length", 50
-        )
-
         self.window_title_content.append(self.window_title_icon)
         self.window_title_content.append(self.window_title_label)
         self.window_title_content.add_css_class("window-title-content")
-
         self.window_title_label.add_css_class("window-title-label")
-
+        self._debounce_timer_id: Optional[int] = None
+        self._debounce_interval: int = 50
+        self._last_view_data: Optional[Dict[str, Any]] = None
         self.update_title("", "focus-windows")
 
-        self._debounce_pending = False
-        self._debounce_timer_id = None
-        self._debounce_interval = 333  # ~3 updates per second (1000/3 ≈ 333ms)
-        self._last_view_data = None
+    def _load_config(self) -> None:
+        """Loads configuration from config_handler with defaults."""
+        config_data = self.config_handler.config_data.get("window_title", {})
+        self.title_length: int = config_data.get("title_length", 50)
+        self.logger.debug(f"Loaded title_length: {self.title_length}")
 
-    def disable(self):
-        self.gtk_helper.remove_widget(self.window_title_content)
+    def on_disable(self) -> None:
+        """
+        Hook for when plugin is disabled. Cleans up GLib timer.
+        BasePlugin.disable() will handle self.main_widget removal.
+        """
+        if self._debounce_timer_id is not None:
+            GLib.source_remove(self._debounce_timer_id)
+            self._debounce_timer_id = None
+            self.logger.debug("Debounce timer stopped.")
+        self.clear_widget()
 
     @subscribe_to_event("view-focused")
-    def on_view_focused(self, event_message):
+    def on_view_focused(self, event_message: Dict[str, Any]) -> None:
         """
         Handle when a view gains focus.
-
-        Args:
-            event_message (dict): The event message containing view details.
         """
         try:
             view = event_message.get("view")
@@ -77,25 +78,22 @@ class WindowTitlePlugin(BasePlugin):
             self.logger.error(f"Error handling 'view-focused' event: {e}")
 
     @subscribe_to_event("view-closed")
-    def on_view_closed(self, event_message):
+    def on_view_closed(self, event_message: Dict[str, Any]) -> None:
         """
         Handle when a view is closed.
-
-        Args:
-            event_message (dict): The event message containing view details.
         """
         try:
-            self.clear_widget()
+            if self._last_view_data and event_message.get("view", {}).get(
+                "id"
+            ) == self._last_view_data.get("id"):
+                self.clear_widget()
         except Exception as e:
             self.logger.error(f"Error handling 'view-closed' event: {e}")
 
     @subscribe_to_event("view-title-changed")
-    def on_view_title_changed(self, event_message):
+    def on_view_title_changed(self, event_message: Dict[str, Any]) -> None:
         """
         Handle when a view's title changes.
-
-        Args:
-            event_message (dict): The event message containing view details.
         """
         try:
             view = event_message.get("view")
@@ -104,120 +102,93 @@ class WindowTitlePlugin(BasePlugin):
         except Exception as e:
             self.logger.error(f"Error handling 'view-title-changed' event: {e}")
 
-    def sway_translate_ipc(self, view):
-        # Create a copy to avoid side-effects
+    def sway_translate_ipc(self, view: Dict[str, Any]) -> Dict[str, Any]:
+        """Translates Wayland-specific keys to Sway/legacy keys for compatibility."""
         v = view.copy()
         v["app-id"] = view.get("app_id")
         v["title"] = view.get("name")
         return v
 
-    def update_title_icon_debounced(self, view):
+    def update_title_icon_debounced(self, view: Dict[str, Any]) -> None:
         """Debounce updates to prevent excessive calls during rapid changes."""
         self._last_view_data = view
-        if not self._debounce_pending:
-            self._debounce_pending = True
-            self._debounce_timer_id = GLib.timeout_add(
-                self._debounce_interval, self._perform_debounced_update
-            )
-            self.update_title_icon(self._last_view_data)
+        if self._debounce_timer_id is not None:
+            GLib.source_remove(self._debounce_timer_id)
+        self._debounce_timer_id = GLib.timeout_add(
+            self._debounce_interval, self._perform_debounced_update
+        )
+        pass
 
-    def update_title_icon(self, view):
+    def update_title_icon(self, view: Optional[Dict[str, Any]]) -> None:
         """
         Update the title and icon based on the focused view.
-
-        Args:
-            view: The view object containing details like title, app-id, etc.
         """
         try:
             if not view:
                 return
-
             if view.get("app_id") is not None:
                 view = self.sway_translate_ipc(view)
-
             if self.compositor == "wayfire":
-                view = self.wf_helper.is_view_valid(view)
-
+                view = self.is_view_valid(view)
             if not view:
                 return
-
-            title = self.filter_title(view.get("title", ""))
-            app_id = None
+            title: str = self.filter_title(view.get("title", ""))
+            app_id: Optional[str] = None
             if view.get("window_properties"):
                 app_id = view.get("window_properties", {}).get("class")
             else:
                 app_id = view.get("app-id", "").lower()
-
-            initial_title = title.split()[0].lower() if title else ""
-            icon = self.gtk_helper.get_icon(app_id, initial_title, title)
-
-            self.update_title(title, icon)
+            if app_id:
+                icon: str = self.gtk_helper.icon_exist(app_id)
+                self.update_title(title, icon)
         except Exception as e:
             self.logger.error(f"Error updating title/icon: {e}")
+            self.clear_widget()
 
-    def clear_widget(self):
+    def clear_widget(self) -> None:
         """
         Clear the widget when no view is focused.
         """
         self.update_title("", "")
 
-    def filter_title(self, title):
+    def filter_title(self, title: str) -> str:
         """
-        Filter and shorten the title based on certain rules, including limiting long words.
-
-        Args:
-            title: The raw title string.
-
-        Returns:
-            str: The filtered title.
+        Filter and shorten the title.
         """
         if not title:
             return ""
-
         title = self.gtk_helper.filter_utf_for_gtk(title)
-
         MAX_WORD_LENGTH = 50
         MAX_TITLE_LENGTH = self.title_length
-
         if " — " in title:
-            title = title.split(" — ")[0]
-
+            title = title.split(" — ")[0].strip()
         words = title.split()
         shortened_words = []
         for word in words:
             if len(word) > MAX_WORD_LENGTH:
-                word = word[:MAX_WORD_LENGTH] + "…"  # Add ellipsis for truncated words
+                word = word[:MAX_WORD_LENGTH] + "…"
             shortened_words.append(word)
-
         title = " ".join(shortened_words)
-
         if len(title) > MAX_TITLE_LENGTH:
             title = title[: MAX_TITLE_LENGTH - 1] + "…"
-
         return title
 
-    def update_title(self, title, icon_name):
+    def update_title(self, title: str, icon_name: str) -> None:
         """
         Update the window title widget with new title and icon.
-
-        Args:
-            title: The new title to display.
-            icon_name: The new icon name to display.
         """
         try:
             self.window_title_label.set_label(title)
-            if icon_name:
-                self.window_title_icon.set_from_icon_name(icon_name)
-            else:
-                self.window_title_icon.set_from_icon_name("None")
+            icon_to_set = icon_name if icon_name else "None"
+            self.window_title_icon.set_from_icon_name(icon_to_set)
         except Exception as e:
             self.logger.error(f"Error updating window title widget: {e}")
 
-    def _perform_debounced_update(self):
+    def _perform_debounced_update(self) -> bool:
         """Internal method to perform the actual UI update after debounce."""
-        self._debounce_pending = False
         self._debounce_timer_id = None
-        self.update_title_icon(self._last_view_data)
+        if self._last_view_data:
+            self.update_title_icon(self._last_view_data)
         return False
 
     def about(self):
@@ -232,10 +203,8 @@ class WindowTitlePlugin(BasePlugin):
         This plugin tracks the active window and updates a panel widget
         to display its title and icon. It uses an event-driven model to
         remain synchronized with the system.
-
         Its core logic is centered on **event subscription, state
         synchronization, and debounced updates**:
-
         1.  **Event Subscription**: The plugin listens for system events
             such as "view-focused," "view-closed," and "view-title-changed."
             This allows it to react instantly to changes in the active
@@ -243,7 +212,8 @@ class WindowTitlePlugin(BasePlugin):
         2.  **Debounced Updates**: To prevent the panel from flickering or
             excessively updating during rapid title changes (e.g., when a
             web page is loading), it uses a debouncing mechanism. This
-            ensures updates are processed at a controlled rate.
+            ensures updates are processed at a controlled rate by cancelling
+            and resetting the GLib timer on every incoming event.
         3.  **Title and Icon Management**: It extracts the title and
             application ID from the event data. It filters the title to
             remove extraneous information and truncates it to a set
@@ -251,6 +221,7 @@ class WindowTitlePlugin(BasePlugin):
             the correct icon.
         4.  **UI Updates**: The plugin directly manipulates its internal
             widgets to reflect the current state, displaying the
-            processed title and icon.
+            processed title and icon. The cleanup is handled in the
+            `on_disable` hook, ensuring the GLib timer is correctly stopped.
         """
         return self.code_explanation.__doc__

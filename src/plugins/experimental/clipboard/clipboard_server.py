@@ -93,9 +93,7 @@ class AsyncClipboardServer(BasePlugin):
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.running = False
 
-        self.config_data_server = self.config_handler.config_data.get("clipboard").get(
-            "server"
-        )
+        self.config_data_server = self.config_data.get("clipboard").get("server")
         self.log_enabled = self.config_data_server.get("log_enabled", False)
         self.max_items = self.config_data_server.get("max_items", 100)
         self.monitor_interval = self.config_data_server.get("monitor_interval", 0.5)

@@ -195,3 +195,60 @@ class ConfigHandler:
                 )
                 return default_value
         return current_data
+
+    def update_config(self, key_path: List[str], new_value: Any) -> bool:
+        """
+        Updates a configuration value by traversing nested keys, then saves and reloads the config.
+
+        This method is designed to safely replace the following three lines of code
+        used in plugins with a single call:
+            self.config_handler.config_data["notify"]["server"]["show_messages"] = new_value
+            self.config_handler.save_config()
+            self.config_handler.reload_config()
+
+        Args:
+            key_path: A list of strings representing the path to the config value
+                      (e.g., ["section", "subsection", "key"]).
+            new_value: The new value to set.
+
+        Returns:
+            True if the configuration was successfully updated and saved, False otherwise.
+        """
+        if not key_path:
+            self.logger.error("Configuration key path cannot be empty.")
+            return False
+
+        current_data = self.config_data
+
+        # Traverse to the parent dictionary of the key to be updated
+        for i, key in enumerate(key_path[:-1]):
+            if (
+                isinstance(current_data, dict)
+                and key in current_data
+                and isinstance(current_data[key], dict)
+            ):
+                current_data = current_data[key]
+            else:
+                # Path segment is missing or not a dictionary
+                self.logger.error(
+                    f"Cannot update config: Missing or invalid path segment '{key}' at level {i}. Path: {' -> '.join(key_path)}"
+                )
+                return False
+
+        # Update the final key in the parent dictionary
+        final_key = key_path[-1]
+        if isinstance(current_data, dict):
+            current_data[final_key] = new_value
+            self.logger.info(
+                f"Updated config key {' -> '.join(key_path)} to {new_value}."
+            )
+
+            # Save and reload the configuration
+            self.save_config()
+            self.reload_config()
+            return True
+        else:
+            self.logger.error(
+                f"Cannot set config key '{final_key}'. The parent element is not a dictionary."
+            )
+            return False

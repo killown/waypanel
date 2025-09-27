@@ -75,13 +75,7 @@ class DockbarPlugin(BasePlugin):
         """
         Retrieves the GTK panel object based on the configuration.
         """
-        dockbar_config = self.config_handler.config_data.get("dockbar", {}).get("panel")
-        if not dockbar_config:
-            self.logger.warning(
-                "Dockbar panel config is missing or invalid. Using default: left-panel."
-            )
-            return self.obj.left_panel
-        position = dockbar_config.get("name").lower()
+        position = self.get_config(["dockbar", "panel", "name"], "left-panel").lower()
         valid_panels = {
             "left": self.obj.left_panel,
             "right": self.obj.right_panel,
@@ -119,8 +113,8 @@ class DockbarPlugin(BasePlugin):
             app_cmd,
         )
         self.gtk_helper.add_cursor_effect(button)
-        button.app_name = app_name
-        button.app_config = app_data
+        button.app_name = app_name  # pyright: ignore
+        button.app_config = app_data  # pyright: ignore
         self.create_gesture(button, 2, lambda _, cmd=app_cmd: self.on_middle_click(cmd))
         self.create_gesture(button, 3, lambda _, cmd=app_cmd: self.on_right_click(cmd))
         drag_source = Gtk.DragSource.new()
@@ -128,7 +122,7 @@ class DockbarPlugin(BasePlugin):
         drag_source.connect("prepare", self.on_drag_prepare)
         drag_source.connect("drag-begin", self.on_drag_begin)
         drag_source.connect("drag-end", self.on_drag_end)
-        button.add_controller(drag_source)
+        button.add_controller(drag_source)  # pyright: ignore
         return button
 
     def _load_and_populate_dockbar(self, orientation, class_style, use_label=False):
@@ -144,7 +138,7 @@ class DockbarPlugin(BasePlugin):
         while child:
             self.dockbar.remove(child)
             child = self.dockbar.get_first_child()
-        config_data = self.config_handler.config_data.get("dockbar", {}).get("app", {})
+        config_data = self.get_config(["dockbar", "app"], {})
         for app_name, app_data in config_data.items():
             button = self._create_dockbar_button(
                 app_name, app_data, class_style, use_label
@@ -221,9 +215,9 @@ class DockbarPlugin(BasePlugin):
                     app_name = child.app_name  # pyright: ignore
                     new_dockbar_config[app_name] = child.app_config  # pyright: ignore
                 child = child.get_next_sibling()
-            self.config_handler.config_data.get("dockbar", {})["app"] = (
-                new_dockbar_config
-            )
+            if "dockbar" not in self.config_handler.config_data:
+                self.config_handler.config_data["dockbar"] = {}
+            self.config_handler.config_data["dockbar"]["app"] = new_dockbar_config
             self.config_handler.save_config()
             self.logger.info("Dockbar order saved to config file.")
         except Exception as e:
@@ -276,11 +270,10 @@ class DockbarPlugin(BasePlugin):
         """
         Configures the dockbar based on the loaded settings.
         """
-        dockbar_data = self.config_handler.config_data.get("dockbar", {}).get(
-            "panel", {}
+        orientation = self.get_config(["dockbar", "panel", "orientation"], "v")
+        class_style = self.get_config(
+            ["dockbar", "panel", "class_style"], "dockbar-buttons"
         )
-        orientation = dockbar_data.get("orientation", "v")
-        class_style = dockbar_data.get("class_style", "dockbar-buttons")
         self._load_and_populate_dockbar(orientation, class_style)
         self.main_widget = (self.dockbar, "append")
         self.logger.info("Dockbar setup completed.")
@@ -397,6 +390,12 @@ class DockbarPlugin(BasePlugin):
         """
         This plugin implements a static application launcher dockbar, dynamically
         built from a user-defined configuration file.
+        **Refactoring Notes:**
+        1.  **Configuration:** All configuration reading methods (like determining panel,
+            orientation, and app list) have been updated to use the correct `BasePlugin`
+            accessor: `self.get_config(["nested", "key", "path"], default_value)`.
+            Configuration writing (saving dockbar order) remains a direct operation on
+            `self.config_handler.config_data` as `self.get_config()` is for reading.
         Its core logic follows these principles:
         1.  **Configuration-Driven UI**: On startup, it reads a TOML config file
             to determine which applications to display, their icons, and launch commands.

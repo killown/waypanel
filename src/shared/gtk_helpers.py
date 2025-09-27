@@ -415,7 +415,6 @@ class GtkHelpers:
         }
         if any(app in app_id.lower() for app in web_apps):
             desk_local = self.search_local_desktop(initial_title)
-            self.logger.info(desk_local)
             if desk_local and desk_local.lower().endswith("-default.desktop"):
                 base_name, _ = os.path.splitext(os.path.basename(desk_local))
                 if base_name.lower().startswith("msedge-"):
@@ -557,7 +556,6 @@ class GtkHelpers:
                     "All UTF decoding attempts failed, falling back to 'latin-1'."
                 )
                 return byte_string.decode("latin-1", errors="replace").lower()
-            raise TypeError("Input must be a bytes object or a string.")
         except Exception as e:
             self.logger.error(
                 f"Unexpected error while filtering UTF for GTK: {byte_string} and {e}",
@@ -608,12 +606,8 @@ class GtkHelpers:
                     exc_info=True,
                 )
                 return None
-            if not isinstance(class_style, str):
-                self.logger.error(
-                    f"Invalid class_style type: {type(class_style).__name__}",
-                    exc_info=True,
-                )
-                return None
+
+            icon_name = self.icon_exist(icon_name)
             button = Gtk.Button()
             assert button is not None, "Button creation failed"
             box = Gtk.Box()

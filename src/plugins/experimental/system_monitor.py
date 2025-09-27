@@ -99,7 +99,6 @@ except Exception as e:
 class SystemMonitorPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
-        self.obj = panel_instance
         self.popover_system = None
         self.update_timeout_id = None
         self.update_interval = 2

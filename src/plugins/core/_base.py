@@ -1,23 +1,26 @@
 from src.core import create_panel
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib  # pyright: ignore
 import os
-from typing import Any
-from src.shared import path_handler
-from src.shared import notify_send
-from src.shared import wayfire_helpers
-from src.shared import gtk_helpers
-from src.shared import data_helpers
-from src.shared import config_handler
-from src.shared import command_runner
 import inspect
+import asyncio
+from asyncio import Task
+from concurrent.futures import ThreadPoolExecutor, Future
+from typing import Any, List, ClassVar, Callable, Awaitable, Optional, Union
+from src.plugins.core._event_loop import get_global_executor, get_global_loop
+
+from src.shared.path_handler import PathHandler
+from src.shared.notify_send import Notifier
+from src.shared.wayfire_helpers import WayfireHelpers
+from src.shared.gtk_helpers import GtkHelpers
+from src.shared.data_helpers import DataHelpers
+from src.shared.config_handler import ConfigHandler
+from src.shared.command_runner import CommandRunner
 
 
 class PluginLogAdapter:
     """
     A wrapper around the structlog logger that automatically injects the caller's
     file, package, function name, AND line number into the log event's 'extra' dictionary.
-    This is achieved by walking the inspection stack until a frame outside of
-    BasePlugin's module is found, reliably identifying the true source.
     """
 
     def __init__(self, logger):
@@ -85,96 +88,408 @@ class PluginLogAdapter:
         return getattr(self._logger, name)
 
 
+# ====================================================================
+# BASE PLUGIN
+# ====================================================================
+
+
 class BasePlugin:
     """
-    Base class for all waypanel plugins.
-    This class provides a standardized structure and core resources for creating
-    plugins that extend waypanel's functionality. Each plugin can have a UI widget
-    and manage events, timers, or run as a background service.
-    1.  **Initialization**: `__init__(self, panel_instance)` is called to create the plugin instance.
-    2.  **Start**: `on_start()` is called after initialization. Use this for setup.
-    3.  **Runtime**: The plugin listens for events and updates its state.
-    4.  **Stop/Disable**: `on_stop()` is called when the plugin is disabled or reloaded.
-    5.  **Cleanup**: `on_cleanup()` is called before full removal.
-    Plugins define their placement and order within the panel by implementing the
-    `get_plugin_placement` function.
-    **Function Signature:**
-        `def get_plugin_placement(panel_instance):`
-            `return position, order, priority`
-    * `position`: `"top-panel-left"`, `"bottom-panel-right"`, etc.
-    * `order`: The rendering order within the same panel section.
-    * `priority`: The initialization order (lower numbers load first).
-    **Background Services**: Return `"background"` or `None` to mark a plugin as a background service with no UI.
-    **Dependencies**: Plugins can declare a list of dependencies (`DEPS`). The `PluginLoader` ensures
-    dependent plugins are loaded first.
-    Example: `DEPS = ["event_manager", "calendar"]`
-    To create a new plugin, inherit from `BasePlugin` and implement the required methods.
-    1.  Inherit from `BasePlugin`.
-    2.  Call `super().__init__(panel_instance)` in your constructor.
-    3.  Implement `get_plugin_placement` to define its position.
-    4.  Optionally override lifecycle methods (`on_start`, `on_stop`, etc.).
-    5.  Set `self.main_widget` to a `(widget, append_method)` tuple for UI integration.
-    Example: `self.main_widget = (self.button, "append")`
+    Base class for all waypanel plugins, now including integrated
+    asynchronous and threading utilities.
     """
 
-    def __init__(self, panel_instance):
+    # --- Class Variables ---
+    DEPS: ClassVar[List[str]] = []
+
+    # Internal storage attributes for core properties
+    _panel_instance: Any
+    _plugin_loader: Any
+    _ipc: Any
+    _ipc_server: Any
+    _logger_adapter: PluginLogAdapter
+
+    # Internal storage attributes for helper instances
+    _path_handler: PathHandler
+    _notifier: Notifier
+    _wf_helper: WayfireHelpers
+    _gtk_helper: GtkHelpers
+    _data_helper: DataHelpers
+    _config_handler: ConfigHandler
+    _cmd: CommandRunner
+
+    # --- New Async/Threading Attributes ---
+    global_loop: asyncio.AbstractEventLoop
+    global_executor: ThreadPoolExecutor
+
+    def __init__(self, panel_instance: Any):
         """
-        Initializes the BasePlugin and injects core resources.
-        This method provides access to shared components from the main panel instance.
-        Subclasses must call `super().__init__(panel_instance)` to ensure proper setup.
-        * `self.obj`: Reference to the main Panel instance.
-        * `self.logger`: Logger object for logging messages.
-        * `self.ipc`: IPC client for Wayfire communication.
-        * `self.config`: Plugin-specific configuration from `config.toml`.
-        * `self.plugins`: Dictionary of all loaded plugins.
-        * `self.plugin_loader`: Reference to the plugin loader.
-        * `self.save_config`: Function to save updated config.
-        * `self.reload_config`: Function to reload the config at runtime.
-        * `self.update_widget_safely`: Safe method to update UI widgets.
-        * `self.dependencies`: List of required plugin names.
-        * `self.layer_shell`: Reference to LayerShell for setting panel layers.
-        **Example Usage:**
-        ```python
-        class MyPlugin(BasePlugin):
-            def __init__(self, panel_instance):
-                super().__init__(panel_instance)
-                self.logger.info("MyPlugin initialized")
-                if "event_manager" in self.plugins:
-                    event_manager = self.plugins["event_manager"]
-                    event_manager.subscribe_to_event("view-focused", self.on_view_focused)
-        ```
+        Initializes the BasePlugin and injects core resources, including the
+        global ThreadPoolExecutor and asyncio event loop.
         """
-        self.obj = panel_instance
-        self.path_handler: Any = path_handler.PathHandler("waypanel", panel_instance)
-        self.notifier: Any = notify_send.Notifier()
-        self.wf_helper: Any = wayfire_helpers.WayfireHelpers(
-            panel_instance.ipc, panel_instance.logger
-        )
-        self.gtk_helper: Any = gtk_helpers.GtkHelpers(panel_instance)
-        self.data_helper: Any = data_helpers.DataHelpers()
-        self.config_handler: Any = config_handler.ConfigHandler(panel_instance)
-        self.cmd: Any = command_runner.CommandRunner(panel_instance)
-        self.bottom_panel: Any = self.obj.bottom_panel
-        self.top_panel: Any = self.obj.top_panel
-        self.left_panel: Any = self.obj.left_panel
-        self.right_panel: Any = self.obj.right_panel
-        self.main_widget = None
+        # Store core references internally
+        self._panel_instance = panel_instance
+        self._plugin_loader = panel_instance.plugin_loader
+        self._ipc = panel_instance.ipc
+        self._ipc_server = panel_instance.ipc_server
+        self._logger_adapter = PluginLogAdapter(panel_instance.logger)
+
+        # Helper instances
+        self._path_handler = PathHandler(panel_instance)
+        self._notifier = Notifier()
+        self._wf_helper = WayfireHelpers(panel_instance)
+        self._gtk_helper = GtkHelpers(panel_instance)
+        self._data_helper = DataHelpers()
+        self._config_handler = ConfigHandler(panel_instance)
+        self._cmd = CommandRunner(panel_instance)
+
+        # --- Asynchronous & Threading Integration ---
+        # Inject the global, shared resources onto the instance
+        self.global_loop = get_global_loop()
+        self.global_executor = get_global_executor()
+
+        # State attributes
+        self.main_widget: Optional[Union[tuple, list]] = None
         self.plugin_file = None
-        self.update_widget_safely: Any = self.gtk_helper.update_widget_safely
-        self.logger: Any = PluginLogAdapter(panel_instance.logger)
-        self.plugins: Any = panel_instance.plugin_loader.plugins
-        self.plugin_loader: Any = panel_instance.plugin_loader
-        self.update_widget: Any = self.gtk_helper.update_widget
-        self.ipc: Any = panel_instance.ipc
         self.ipc_client = None
-        self.ipc_server = panel_instance.ipc_server
-        self.compositor = panel_instance.ipc_server.compositor
-        self.dependencies: Any = getattr(self, "DEPS", [])
-        self.layer_shell: Any = create_panel.LayerShell
-        self.set_layer_pos_exclusive: Any = create_panel.set_layer_position_exclusive
-        self.unset_layer_pos_exclusive: Any = (
+
+        self.dependencies: List[str] = list(getattr(self, "DEPS", []))
+
+        # Core utility references
+        self._layer_shell: Any = create_panel.LayerShell
+        self._set_layer_pos_exclusive: Any = create_panel.set_layer_position_exclusive
+        self._unset_layer_pos_exclusive: Any = (
             create_panel.unset_layer_position_exclusive
         )
+
+    def get_config(self, keys: List[str], default: Any = None):
+        """
+        Retrieves a configuration value by traversing nested keys.
+
+        Args:
+            keys: A list of strings representing the path to the config value (e.g., ["section", "subsection", "key"]).
+            default: The value to return if the configuration path is not found.
+
+        Returns:
+            The config value or the specified default value.
+        """
+        return self.config_handler.check_and_get_config(keys, default)
+
+    def update_config(self, key_path: List[str], new_value: Any) -> bool:
+        """
+        Updates a configuration value by path, saves the config file, and reloads the configuration.
+
+        This method delegates the operation to the main ConfigHandler.
+
+        Args:
+            key_path: A list of strings representing the path to the config value
+                      (e.g., ["section", "subsection", "key"]).
+            new_value: The new value to set.
+
+        Returns:
+            True if the configuration was successfully updated and saved, False otherwise.
+        """
+        try:
+            return self.config_handler.update_config(key_path, new_value)
+        except AttributeError as e:
+            self.logger.error(f"Failed to call update_config on config_handler: {e}")
+            return False
+
+    # ====================================================================
+    # ASYNC / THREADING UTILITY METHODS
+    # ====================================================================
+
+    def run_in_thread(self, func: Callable, *args, **kwargs) -> Future:
+        """
+        Executes a blocking function in a background thread via the shared executor.
+
+        Args:
+            func (Callable): The function to execute.
+            *args, **kwargs: Arguments passed to the function.
+
+        Returns:
+            Future: A Future object representing the result of the function call.
+        """
+        self.logger.debug(f"Scheduling function {func.__name__} in background thread.")
+        return self.global_executor.submit(func, *args, **kwargs)
+
+    def schedule_in_gtk_thread(self, func: Callable, *args, **kwargs) -> None:
+        """
+        Schedules a function to be executed in the main GTK (GLib) thread.
+        Crucial for any UI updates.
+
+        Args:
+            func (Callable): The function to execute.
+            *args, **kwargs: Arguments passed to the function.
+        """
+
+        def wrapper():
+            try:
+                func(*args, **kwargs)
+            except Exception as e:
+                self.logger.error(
+                    f"Error executing function {func.__name__} in GTK thread: {e}",
+                    exc_info=True,
+                )
+            return False  # Run once
+
+        GLib.idle_add(wrapper)
+        self.logger.debug(f"Scheduled function {func.__name__} in GTK main thread.")
+
+    def run_in_async_task(
+        self, coro: Awaitable[Any], on_finish: Optional[Callable[[Any], None]] = None
+    ) -> None:
+        """
+        Schedules an awaitable (async def function) to run as a task in the
+        background asyncio loop.
+
+        Args:
+            coro (Awaitable): The coroutine to run.
+            on_finish (Optional[Callable]): A callback function to run in the
+                                            GTK thread when the task is done.
+        """
+        coro_name = getattr(coro, "__name__", repr(coro).split(" object")[0])
+
+        def done_callback(task: Task[Any]):
+            if task.cancelled():
+                self.logger.debug(f"Async task {coro_name} cancelled.")
+                return
+
+            exception = task.exception()
+            if exception:
+                self.logger.error(
+                    f"Async task {coro_name} raised exception: {exception}",
+                    exc_info=True,
+                )
+            elif on_finish:
+                self.schedule_in_gtk_thread(on_finish, task.result())
+
+        task = self.global_loop.create_task(coro)  # pyright: ignore
+        task.add_done_callback(done_callback)
+        self.logger.debug(f"Scheduled async task {coro_name} in global loop.")
+
+    # ====================================================================
+    # READ-ONLY CORE PROPERTIES (@property)
+    # ====================================================================
+
+    @property
+    def obj(self) -> Any:
+        """Reference to the main Panel instance."""
+        return self._panel_instance
+
+    @property
+    def logger(self) -> PluginLogAdapter:
+        """Logger object for logging messages (now read-only)."""
+        return self._logger_adapter
+
+    @property
+    def ipc(self) -> Any:
+        """IPC client for Wayfire communication."""
+        return self._ipc
+
+    @property
+    def ipc_server(self) -> Any:
+        """Reference to the main IPC Server."""
+        return self._ipc_server
+
+    @property
+    def compositor(self) -> Any:
+        """Reference to the compositor interface via the IPC server."""
+        return self.ipc_server.compositor
+
+    @property
+    def plugins(self) -> dict:
+        """Dictionary of all loaded plugins."""
+        return self._plugin_loader.plugins
+
+    @property
+    def plugin_loader(self) -> Any:
+        """Reference to the plugin loader."""
+        return self._plugin_loader
+
+    @property
+    def config_data(self) -> dict:
+        """All configuration data from config.toml."""
+        return self._config_handler.config_data
+
+    @property
+    def bottom_panel(self) -> Any:
+        return self.obj.bottom_panel
+
+    @property
+    def top_panel(self) -> Any:
+        return self.obj.top_panel
+
+    @property
+    def left_panel(self) -> Any:
+        return self.obj.left_panel
+
+    @property
+    def right_panel(self) -> Any:
+        return self.obj.right_panel
+
+    # ====================================================================
+    # HELPER INSTANCE PROPERTIES
+    # ====================================================================
+
+    @property
+    def path_handler(self) -> PathHandler:
+        """Read-only access to the PathHandler instance."""
+        return self._path_handler
+
+    @property
+    def notifier(self) -> Notifier:
+        """Read-only access to the Notifier instance."""
+        return self._notifier
+
+    @property
+    def wf_helper(self) -> WayfireHelpers:
+        """Read-only access to the WayfireHelpers instance."""
+        return self._wf_helper
+
+    @property
+    def gtk_helper(self) -> GtkHelpers:
+        """Read-only access to the GtkHelpers instance."""
+        return self._gtk_helper
+
+    @property
+    def data_helper(self) -> DataHelpers:
+        """Read-only access to the DataHelpers instance."""
+        return self._data_helper
+
+    @property
+    def config_handler(self) -> ConfigHandler:
+        """Read-only access to the ConfigHandler instance."""
+        return self._config_handler
+
+    @property
+    def cmd(self) -> CommandRunner:
+        """Read-only access to the CommandRunner instance."""
+        return self._cmd
+
+    # ====================================================================
+    # CORE UTILITY PROPERTIES
+    # ====================================================================
+
+    @property
+    def layer_shell(self) -> Any:
+        """Read-only reference to create_panel.LayerShell."""
+        return self._layer_shell
+
+    @property
+    def set_layer_pos_exclusive(self) -> Any:
+        """Read-only reference to create_panel.set_layer_position_exclusive."""
+        return self._set_layer_pos_exclusive
+
+    @property
+    def unset_layer_pos_exclusive(self) -> Any:
+        """Read-only reference to create_panel.unset_layer_position_exclusive."""
+        return self._unset_layer_pos_exclusive
+
+    # ====================================================================
+    # HELPER METHOD PROPERTIES
+    # ====================================================================
+
+    @property
+    def get_data_path(self):
+        """Read-only alias for self._path_handler.get_data_path."""
+        return self._path_handler.get_data_path
+
+    @property
+    def get_cache_path(self):
+        """Read-only alias for self._path_handler.get_cache_path."""
+        return self._path_handler.get_cache_path
+
+    @property
+    def notify_send(self):
+        """Read-only alias for self._notifier.notify_send."""
+        return self._notifier.notify_send
+
+    @property
+    def get_icon(self):
+        """Read-only alias for self._gtk_helper.get_icon."""
+        return self._gtk_helper.get_icon
+
+    @property
+    def add_cursor_effect(self):
+        """Read-only alias for self._gtk_helper.add_cursor_effect."""
+        return self._gtk_helper.add_cursor_effect
+
+    @property
+    def remove_widget(self):
+        """Read-only alias for self._gtk_helper.remove_widget."""
+        return self._gtk_helper.remove_widget
+
+    # Data Validation Helpers
+    @property
+    def validate_iterable(self):
+        """Read-only alias for self._data_helper.validate_iterable."""
+        return self._data_helper.validate_iterable
+
+    @property
+    def validate_method(self):
+        """Read-only alias for self._data_helper.validate_method."""
+        return self._data_helper.validate_method
+
+    @property
+    def validate_widget(self):
+        """Read-only alias for self._data_helper.validate_widget."""
+        return self._data_helper.validate_widget
+
+    @property
+    def validate_string(self):
+        """Read-only alias for self._data_helper.validate_string."""
+        return self._data_helper.validate_string
+
+    @property
+    def validate_integer(self):
+        """Read-only alias for self._data_helper.validate_integer."""
+        return self._data_helper.validate_integer
+
+    @property
+    def validate_tuple(self):
+        """Read-only alias for self._data_helper.validate_tuple."""
+        return self._data_helper.validate_tuple
+
+    @property
+    def validate_bytes(self):
+        """Read-only alias for self._data_helper.validate_bytes."""
+        return self._data_helper.validate_bytes
+
+    @property
+    def validate_list(self):
+        """Read-only alias for self._data_helper.validate_list."""
+        return self._data_helper.validate_list
+
+    # Safe GTK Update Helpers
+    @property
+    def update_widget_safely(self):
+        """Read-only alias for self._gtk_helper.update_widget_safely."""
+        return self._gtk_helper.update_widget_safely
+
+    @property
+    def update_widget(self):
+        """Read-only alias for self._gtk_helper.update_widget."""
+        return self._gtk_helper.update_widget
+
+    @property
+    def is_widget_ready(self):
+        """Read-only alias for self._gtk_helper.is_widget_ready."""
+        return self._gtk_helper.is_widget_ready
+
+    @property
+    def widget_exists(self):
+        """Read-only alias for self._gtk_helper.widget_exists."""
+        return self._gtk_helper.widget_exists
+
+    @property
+    def is_view_valid(self):
+        """Read-only alias for self._wf_helper.is_view_valid"""
+        return self.wf_helper.is_view_valid
+
+    # ====================================================================
+    # METHODS
+    # ====================================================================
 
     def check_dependencies(self) -> bool:
         """Check if all dependencies are loaded"""
@@ -190,7 +505,7 @@ class BasePlugin:
         """
         try:
             if self.main_widget:
-                self.gtk_helper.remove_widget(self.main_widget[0])
+                self.remove_widget(self.main_widget[0])
                 self.logger.info("Widget removed successfully.")
             else:
                 self.logger.warning("No widget to remove.")
@@ -211,12 +526,6 @@ class BasePlugin:
     def set_widget(self):
         """
         Defines and validates the widget to be added to the panel.
-        This method validates `self.main_widget`, ensuring it's a properly formatted
-        tuple containing a valid `Gtk.Widget` and an accepted action string (`"append"` or
-        `"set_content"`). It logs errors and warnings for improper configuration,
-        preventing common UI-related crashes.
-        Returns:
-            tuple: The `(widget, action)` tuple if valid, or `None` if invalid.
         """
         if self.main_widget is None:
             self.logger.error(
@@ -256,9 +565,7 @@ class BasePlugin:
                     f"Widget {widget} already has a parent. It may not be appended correctly."
                 )
         action = self.main_widget[1]
-        if not self.data_helper.validate_string(
-            action, name=f"{action} from action in BasePlugin"
-        ):
+        if not self.validate_string(action, name=f"{action} from action in BasePlugin"):
             self.logger.error(
                 f"Invalid action in self.main_widget: {action}. Must be a string."
             )
@@ -277,32 +584,24 @@ class BasePlugin:
     def on_start(self):
         """
         Hook called when the plugin is initialized.
-        Use this method to set up resources, register callbacks, or initialize
-        UI components after the plugin is loaded.
         """
         pass
 
     def on_stop(self):
         """
         Hook called when the plugin is stopped or unloaded.
-        Use this method to clean up resources, unregister callbacks, or save
-        state before the plugin is removed.
         """
         pass
 
     def on_reload(self):
         """
         Hook called when the plugin is reloaded dynamically.
-        Use this method to refresh data or reset the internal state without
-        fully stopping and restarting the plugin.
         """
         pass
 
     def on_cleanup(self):
         """
         Hook called before the plugin is completely removed.
-        Use this method for final cleanup tasks that may not be handled by
-        `on_stop()`.
         """
         pass
 
@@ -310,32 +609,30 @@ class BasePlugin:
         """
         This is a foundational class that serves as the blueprint for all
         plugins in the waypanel application, providing core resources, a
-        defined lifecycle, and a standardized structure.
+        defined lifecycle, and standardized utilities for GTK, IPC, and now,
+        non-blocking asynchronous and concurrent operations.
         """
         return self.about.__doc__
 
     def code_explanation(self):
         """
         The `BasePlugin` class is the foundational component of waypanel's
-        plugin architecture, employing the Template Method Design Pattern
-        to provide a consistent and extensible structure. Its core logic
-        is built around several key principles:
-        1.  **Standardized Lifecycle**: The class defines a clear lifecycle
-            for every plugin with methods like `on_start()`, `on_stop()`,
-            and `on_cleanup()`. This template ensures that all plugins
-            handle initialization, runtime, and cleanup in a predictable
-            and safe manner, preventing common issues like resource leaks.
-        2.  **Shared Resource Injection**: In its constructor, the class
-            initializes and provides access to critical shared resources
-            from the main panel instance. These resources, such as the
-            `logger`, IPC client (`self.ipc`), and configuration (`self.config`),
-            are readily available to any subclass, promoting code reuse
-            and decoupling plugins from the main application's logic.
-        3.  **UI Integration and Validation**: The `set_widget()` method
-            serves as a centralized and robust entry point for plugins
-            to define and add their UI components to the panel. It includes
-            comprehensive checks to validate the widget type and format,
-            ensuring that only valid GTK widgets are added. This
-            prevents common UI-related crashes and errors.
+        plugin architecture. Key logic includes:
+        1.  **Concurrency Integration**: The constructor injects the global
+            `asyncio` event loop and `ThreadPoolExecutor`, providing access
+            via `self.global_loop` and `self.global_executor`. Helper methods
+            (`run_in_thread`, `run_in_async_task`) simplify safe, non-blocking
+            operations.
+        2.  **GTK Synchronization**: The critical `schedule_in_gtk_thread` method
+            uses `GLib.idle_add` to ensure any UI updates originating from a
+            background thread or async task are safely executed on the main
+            GTK thread, preventing crashes.
+        3.  **Standardized Lifecycle**: Defines essential methods like `on_start()`,
+            `on_stop()`, and `on_cleanup()`, forming a Template Method Pattern for
+            resource management.
+        4.  **Resource Injection & Safety**: Provides core resources (logger, IPC,
+            config) and helper instances (`cmd`, `gtk_helper`) via read-only
+            `@property` access, ensuring type safety and preventing accidental
+            modification of shared components.
         """
         return self.code_explanation.__doc__

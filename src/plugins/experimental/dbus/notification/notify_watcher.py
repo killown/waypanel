@@ -3,7 +3,6 @@ import sqlite3
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from src.plugins.core._base import BasePlugin
-import logging
 
 ENABLE_PLUGIN = True
 DEPS = ["notify_client"]
@@ -28,7 +27,6 @@ class NotifyWatcherPlugin(BasePlugin):
         self.notify_client = None
         self.notification_button = None
         self.db_path = os.path.expanduser("~/.config/waypanel/notifications.db")
-        self.logger = logging.getLogger(__name__)
         self.observer = None
         self.last_db_state = None
 

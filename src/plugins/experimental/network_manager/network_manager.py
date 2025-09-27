@@ -1,12 +1,11 @@
 from gi.repository import Gtk, GLib  # pyright: ignore
-import subprocess
 import asyncio
-from typing import Optional, Dict, Any, List
+from typing import Dict, Any, List
 import time
 from src.plugins.core._base import BasePlugin
 from src.plugins.core._event_loop import global_loop
-import functools
 import os
+from ._network_cli_backend import NetworkCLI
 
 ENABLE_PLUGIN = True
 DEPS = ["top_panel", "gestures_setup"]
@@ -29,26 +28,26 @@ def get_plugin_placement(panel_instance):
 def initialize_plugin(panel_instance):
     """Initialize the Network Status plugin."""
     if ENABLE_PLUGIN:
-        return NetworkMonitorPlugin(panel_instance)
+        return NetworkManager(panel_instance)
     return None
 
 
-class NetworkMonitorPlugin(BasePlugin):
+class NetworkManager(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
+        self.cli_backend = NetworkCLI(self.logger)
         self.button = Gtk.MenuButton()
         self.popover = Gtk.Popover()
-        self.icon_wired_connected = self.gtk_helper.set_widget_icon_name(
-            None,
+        self.icon_wired_connected = self.gtk_helper.icon_exist(
+            "gnome-dev-network-symbolic",
             [
-                "gnome-dev-network-symbolic",
                 "org.gnome.Settings-network-symbolic",
                 "network-wired-activated-symbolic",
                 "network-wired-symbolic",
             ],
         )
-        self.icon_wired_disconnected = self.gtk_helper.set_widget_icon_name(
-            None, ["network-wired-disconnected-symbolic"]
+        self.icon_wired_disconnected = self.gtk_helper.icon_exist(
+            "network-wired-disconnected-symbolic"
         )
         self.icon_wifi_connected = self.gtk_helper.icon_exist(
             ICON_WIFI_CONNECTED, ["network-wireless-connected-symbolic"]
@@ -79,14 +78,14 @@ class NetworkMonitorPlugin(BasePlugin):
 
     async def start_periodic_wifi_scan_async(self):
         """Starts a periodic background scan for Wi-Fi networks using asyncio."""
-        await self.scan_networks_async()
+        await self.scan_networks_and_update_cache()
         while True:
             await asyncio.sleep(WIFI_SCAN_INTERVAL)
-            await self.scan_networks_async()
+            await self.scan_networks_and_update_cache()
 
     def notify_send_network_disconnected(self):
         if self.network_disconnected and self.notify_was_sent is False:
-            default_interface = self.get_default_interface_sync()
+            default_interface = self.cli_backend.get_default_interface_sync()
             if default_interface and self._is_wireless_interface(default_interface):
                 icon_name = self.icon_wifi_disconnected
             else:
@@ -112,13 +111,15 @@ class NetworkMonitorPlugin(BasePlugin):
 
     async def update_icon_async(self):
         """Update the icon based on current connection status and type."""
-        is_connected = await self.is_internet_connected_async()
-        default_interface = await self.get_default_interface_async()
+        is_connected = await self.cli_backend.is_internet_connected_async()
+        default_interface = await self.cli_backend.get_default_interface_async()
         if default_interface and self._is_wireless_interface(default_interface):
             if is_connected:
-                connected_ssid = await self.get_connected_wifi_ssid_async()
+                connected_ssid = await self.cli_backend.get_connected_wifi_ssid_async()
                 if connected_ssid:
-                    signal = await self._get_wifi_signal_strength_async(connected_ssid)
+                    signal = await self.cli_backend._get_wifi_signal_strength_async(
+                        connected_ssid
+                    )
                     if signal > 80:
                         self.icon = ICON_WIFI_EXCELLENT
                     elif signal > 60:
@@ -139,40 +140,6 @@ class NetworkMonitorPlugin(BasePlugin):
             )
         GLib.idle_add(self.button.set_icon_name, self.icon)
 
-    async def _get_wifi_signal_strength_async(self, ssid: str) -> int:
-        """
-        Gets the signal strength of a given SSID using nmcli.
-        Returns 0 if not found.
-        """
-        try:
-            process = await asyncio.create_subprocess_exec(
-                "nmcli",
-                "-g",
-                "SSID,SIGNAL",
-                "device",
-                "wifi",
-                "list",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, _ = await process.communicate()
-            output_lines = stdout.decode("utf-8").strip().split("\n")
-            for line in output_lines:
-                if ":" in line:
-                    parts = line.split(":")
-                    if len(parts) >= 2:
-                        current_ssid = ":".join(parts[:-1]).replace("\\", "")
-                        signal = parts[-1]
-                        if current_ssid == ssid:
-                            try:
-                                return int(signal)
-                            except (ValueError, TypeError):
-                                return 0
-            return 0
-        except Exception as e:
-            self.logger.error(f"Error getting signal strength: {e}")
-            return 0
-
     async def periodic_check_async(self):
         """Periodically check network status using asyncio."""
         while True:
@@ -189,14 +156,12 @@ class NetworkMonitorPlugin(BasePlugin):
         content = await self.create_scrollable_grid_content_async()
         GLib.idle_add(self.popover.set_child, content)
 
-    async def is_internet_connected_async(self):
+    async def is_internet_connected_async(self) -> bool:
         """
-        Check if internet is available.
-        Returns:
-            bool: True if connected, False otherwise
+        Check if internet is available. UI wrapper to update disconnection state.
         """
-        interface = await self.get_default_interface_async()
-        if interface and await self.check_interface_carrier_async(interface):
+        is_connected = await self.cli_backend.is_internet_connected_async()
+        if is_connected:
             self.notify_was_sent = False
             self.network_disconnected = False
             return True
@@ -205,7 +170,6 @@ class NetworkMonitorPlugin(BasePlugin):
         return False
 
     async def create_scrollable_grid_content_async(self):
-        revealers = []
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         main_box.add_css_class("network-manager-container")
         main_box.set_margin_top(10)
@@ -253,8 +217,8 @@ class NetworkMonitorPlugin(BasePlugin):
         scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         scrolled_window.set_min_content_width(600)
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        output = await self.run_nmcli_device_show_async()
-        devices = self.parse_nmcli_output(output)
+        output = await self.cli_backend.run_nmcli_device_show_async()
+        devices = self.cli_backend.parse_nmcli_output(output)
         revealers = []
 
         def update_scrolled_window_height(*_):
@@ -262,7 +226,8 @@ class NetworkMonitorPlugin(BasePlugin):
             if any(r.get_reveal_child() for r in revealers):
                 scrolled_window.set_min_content_height(500)
             else:
-                scrolled_window.set_min_content_height(60 * len(devices))
+                max_devices_height = 60 * len(devices)
+                scrolled_window.set_min_content_height(min(500, max_devices_height))
 
         for idx, device in enumerate(devices):
             interface_name = device.get("GENERAL.DEVICE", "Unknown")
@@ -321,9 +286,9 @@ class NetworkMonitorPlugin(BasePlugin):
         config_button = Gtk.Button()
         config_button.add_css_class("network-manager-config-button")
         config_button.set_icon_name(
-            self.gtk_helper.set_widget_icon_name(
-                None,
-                ["gnome-control-center-symbolic", "org.gnome.Settings"],
+            self.gtk_helper.icon_exist(
+                "gnome-control-center-symbolic",
+                ["org.gnome.Settings"],
             )
         )
         config_box.append(config_button)
@@ -339,70 +304,11 @@ class NetworkMonitorPlugin(BasePlugin):
         update_scrolled_window_height()
         return main_box
 
-    async def get_connected_wifi_ssid_async(self) -> Optional[str]:
-        """
-        Gets the SSID of the currently connected Wi-Fi network using nmcli.
-        Returns None if not connected to Wi-Fi.
-        """
-        try:
-            process = await asyncio.create_subprocess_exec(
-                "nmcli",
-                "-t",
-                "-f",
-                "DEVICE,TYPE,STATE,CONNECTION",
-                "device",
-                "status",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, _ = await process.communicate()
-            for line in stdout.decode().strip().split("\n"):
-                parts = line.strip().split(":")
-                if len(parts) >= 4:
-                    device, type_, state, connection = parts
-                    if type_ == "wifi" and state.lower() == "connected":
-                        return connection
-            return None
-        except Exception:
-            self.logger.error("Error: nmcli command failed.")
-            return None
-
-    def get_connected_wifi_ssid_sync(self) -> Optional[str]:
-        """
-        Gets the SSID of the currently connected Wi-Fi network using nmcli.
-        This is a synchronous helper for cases where async is not possible.
-        """
-        try:
-            result = subprocess.run(
-                [
-                    "nmcli",
-                    "-t",
-                    "-f",
-                    "DEVICE,TYPE,STATE,CONNECTION",
-                    "device",
-                    "status",
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=True,
-            )
-            for line in result.stdout.strip().split("\n"):
-                parts = line.strip().split(":")
-                if len(parts) >= 4:
-                    device, type_, state, connection = parts
-                    if type_ == "wifi" and state.lower() == "connected":
-                        return connection
-            return None
-        except subprocess.CalledProcessError:
-            self.logger.error("Error: nmcli command failed.")
-            return None
-
     async def populate_wifi_list_async(self):
         """Populates the Wi-Fi list box with cached data or a status message."""
         while child := self.wifi_list_box.get_first_child():  # pyright: ignore
             GLib.idle_add(self.wifi_list_box.remove, child)  # pyright: ignore
-        connected_ssid = await self.get_connected_wifi_ssid_async()
+        connected_ssid = await self.cli_backend.get_connected_wifi_ssid_async()
         if connected_ssid and self.scan_status_label:
             GLib.idle_add(
                 self.scan_status_label.set_label, f"Connected to: {connected_ssid}"
@@ -462,6 +368,7 @@ class NetworkMonitorPlugin(BasePlugin):
             GLib.idle_add(self.scan_status_label.set_label, "No Wi-Fi networks found.")
 
     async def update_popover_async(self):
+        """Update popover content after a scan, without updating the whole UI."""
         await self.populate_wifi_list_async()
 
     async def update_icon_and_popover(self):
@@ -471,15 +378,11 @@ class NetworkMonitorPlugin(BasePlugin):
         GLib.idle_add(self.popover.set_child, content)
 
     def on_connect_button_clicked(self, button, ssid):
-        """
-        Connect to a specified Wi-Fi network using nmcli.
-        """
+        """UI event handler to connect to a specified Wi-Fi network."""
         global_loop.create_task(self._connect_to_network_async(ssid))
 
     async def on_config_clicked_async(self, widget=None):
-        """
-        Launches the Control Center to configure the network settings.
-        """
+        """Launches the Control Center to configure the network settings."""
         try:
             self.logger.info("Opening configuration window for network plugin.")
             env = os.environ.copy()
@@ -492,121 +395,16 @@ class NetworkMonitorPlugin(BasePlugin):
         except Exception as e:
             self.logger.error(f"Failed to launch config tool: {e}")
 
-    async def run_nmcli_device_show_async(self):
-        """Run 'nmcli device show' and return its output."""
-        try:
-            process = await asyncio.create_subprocess_exec(
-                "nmcli",
-                "device",
-                "show",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await process.communicate()
-            if process.returncode == 0:
-                return stdout.decode()
-            else:
-                return f"Error running nmcli device show:\n{stderr.decode()}"
-        except Exception as e:
-            return f"Exception while running nmcli:\n{str(e)}"
-
-    def parse_nmcli_output(self, raw_output):
-        """Parse raw nmcli device show output into list of device sections."""
-        devices = []
-        current_device = {}
-        lines = raw_output.strip().splitlines()
-        for line in lines:
-            line = line.strip()
-            if not line:
-                if current_device:
-                    if current_device.get("GENERAL.DEVICE") != "lo":
-                        devices.append(current_device)
-                    current_device = {}
-                continue
-            if ":" in line:
-                key, value = line.split(":", 1)
-                current_device[key.strip()] = value.strip()
-        if current_device:
-            if current_device.get("GENERAL.DEVICE") != "lo":
-                devices.append(current_device)
-        return devices
-
-    def get_default_interface_sync(self) -> Optional[str]:
-        """Synchronous version for a quick check."""
-        try:
-            with open("/proc/net/route") as f:
-                for line in f.readlines():
-                    parts = line.strip().split()
-                    if parts[1] == "00000000":
-                        return parts[0]
-        except Exception as e:
-            self.logger.error("Error reading default route:", e)
-        return None
-
-    async def get_default_interface_async(self) -> Optional[str]:
+    async def scan_networks_and_update_cache(self):
         """
-        Get the name of the default network interface asynchronously.
-        """
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self.get_default_interface_sync)
-
-    def check_interface_carrier_sync(self, interface: str) -> bool:
-        """
-        Check if a network interface is physically connected (carrier is up) synchronously.
-        """
-        try:
-            with open(f"/sys/class/net/{interface}/carrier", "r") as f:
-                return f.read().strip() == "1"
-        except FileNotFoundError:
-            self.logger.error(f"Interface '{interface}' not found.")
-            return False
-
-    async def check_interface_carrier_async(self, interface: str) -> bool:
-        """
-        Check if a network interface is physically connected (carrier is up) asynchronously.
-        """
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None, functools.partial(self.check_interface_carrier_sync, interface)
-        )
-
-    async def scan_networks_async(self):
-        """
-        Asynchronously run nmcli to scan for networks and update the UI.
+        Runs the CLI scan, updates the UI's cache, and refreshes the popover if visible.
         """
         if self.scanning_in_progress:
             return
-        self.logger.error("Starting async nmcli scan...")
         self.scanning_in_progress = True
-        if self.scan_status_label:
+        if self.popover.get_property("visible") and self.scan_status_label:
             GLib.idle_add(self.scan_status_label.set_label, "Scanning...")
-        try:
-            rescan_process = await asyncio.create_subprocess_exec(
-                "nmcli",
-                "device",
-                "wifi",
-                "rescan",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            await rescan_process.wait()
-            list_process = await asyncio.create_subprocess_exec(
-                "nmcli",
-                "-g",
-                "SSID,SIGNAL,BSSID",
-                "device",
-                "wifi",
-                "list",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await list_process.communicate()
-            raw_output = stdout.decode("utf-8")
-            return_code = list_process.returncode
-        except Exception as e:
-            self.logger.error(f"Error executing nmcli: {e}")
-            return_code = 1
-            raw_output = ""
+        return_code, raw_output = await self.cli_backend.scan_networks_async()
         self.scanning_in_progress = False
         self.last_scan_time = time.time()
         self.cached_wifi_networks = []
@@ -650,144 +448,15 @@ class NetworkMonitorPlugin(BasePlugin):
             global_loop.create_task(self.update_popover_async())
 
     async def _apply_config_autoconnect_settings_async(self):
-        """
-        Enforces a whitelist for auto-connect: sets connection.autoconnect=yes for
-        networks in the config list, and connection.autoconnect=no for all others.
-        The multiple subprocess calls are necessary because NetworkManager
-        stores the SSID (what is in the config list) separate from the Connection
-        Name (what is needed to modify the profile).
-        """
+        """Applies autoconnect settings from config via the CLI backend."""
         ssids_to_autoconnect: List[str] = self.ssids_to_auto_connect
-        try:
-            list_proc = await asyncio.create_subprocess_exec(
-                "nmcli",
-                "-t",
-                "-f",
-                "NAME,TYPE",
-                "connection",
-                "show",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, _ = await list_proc.communicate()
-            all_wifi_connections: List[str] = []
-            for line in stdout.decode().strip().split("\n"):
-                if ":802-11-wireless" in line:
-                    connection_name = line.split(":")[0].strip()
-                    if connection_name:
-                        all_wifi_connections.append(connection_name)
-            self.logger.info(
-                f"Checking {len(all_wifi_connections)} Wi-Fi connection profiles."
-            )
-        except Exception as e:
-            self.logger.error(f"Error listing all connections: {e}")
-            return
-        for conn_name in all_wifi_connections:
-            profile_ssid = conn_name
-            try:
-                ssid_proc = await asyncio.create_subprocess_exec(
-                    "nmcli",
-                    "-g",
-                    "802-11-wireless.ssid",
-                    "connection",
-                    "show",
-                    conn_name,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                ssid_out, _ = await ssid_proc.communicate()
-                profile_ssid = ssid_out.decode().strip() or conn_name
-            except Exception as e:
-                self.logger.error(
-                    f"Network Manager: Failed to retrieve SSID for {conn_name}: {e}"
-                )
-                pass
-            if not ssids_to_autoconnect:
-                return
-            autoconnect_state = "yes" if profile_ssid in ssids_to_autoconnect else "no"
-            try:
-                modify_proc = await asyncio.create_subprocess_exec(
-                    "nmcli",
-                    "connection",
-                    "modify",
-                    conn_name,
-                    "connection.autoconnect",
-                    autoconnect_state,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                await modify_proc.wait()
-                if modify_proc.returncode == 0:
-                    self.logger.info(
-                        f"Successfully set autoconnect={autoconnect_state} for profile '{conn_name}' (SSID: {profile_ssid})."
-                    )
-                else:
-                    self.logger.warning(
-                        f"Warning: Failed to set autoconnect={autoconnect_state} for profile '{conn_name}' (SSID: {profile_ssid})."
-                    )
-            except Exception as e:
-                self.logger.error(
-                    f"Error applying autoconnect modification for {conn_name}: {e}"
-                )
+        await self.cli_backend._apply_config_autoconnect_settings_async(
+            ssids_to_autoconnect
+        )
 
-    async def _connect_to_network_async(self, ssid):
-        """
-        Async implementation of connecting to a network.
-        """
-        self.logger.error(f"Attempting to connect to network: {ssid}")
+    async def _connect_to_network_async(self, ssid: str):
+        """UI-side wrapper for the connection attempt."""
+        self.logger.info(f"UI: Attempting connection to {ssid}")
         GLib.idle_add(self.popover.popdown)
-        try:
-            profile_list_output = await asyncio.create_subprocess_exec(
-                "nmcli",
-                "-g",
-                "NAME",
-                "connection",
-                "show",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, _ = await profile_list_output.communicate()
-        except Exception as e:
-            self.logger.error(f"Network Manager: {e}")
-
-    def about(self):
-        """
-        A plugin that monitors and displays the status of network connections.
-        It provides a panel icon that indicates connectivity and a popover
-        menu with detailed information about all network devices, sourced from
-        the `nmcli` command.
-        """
-        return self.about.__doc__
-
-    def code_explanation(self):
-        """
-        This plugin provides a comprehensive view of the system's network status
-        by combining low-level checks with a dynamic user interface.
-        Its core logic is built on **system-level checks, process execution,
-        and a dynamic GTK UI**:
-        1.  **Status Monitoring**: The plugin periodically checks for internet
-            connectivity using a low-level approach. It reads the system's
-            default network interface from `/proc/net/route` and verifies
-            its "carrier" status from `/sys/class/net/{interface}/carrier`.
-            This allows for a quick, reliable status check that is reflected
-            by a changing panel icon.
-        2.  **External Process Execution**: When the user opens the popover,
-            the plugin uses `subprocess` to execute the `nmcli device show`
-            command. The output of this command is then parsed into a structured
-            format, allowing the plugin to retrieve detailed information about
-            all network devices.
-        3.  **Dynamic UI Generation**: The popover is dynamically populated with
-            the parsed `nmcli` data. It uses `Gtk.Revealer` widgets to create
-            expandable sections for each network device, keeping the initial
-            view clean while providing an option to see full details. It also
-            proves a button to launch the `gnome-control-center` for
-            network settings.
-        4.  **Asynchronous Wi-Fi Scanning**: The network monitor actively scans
-            for available Wi-Fi networks in the background. It uses
-            `asyncio.create_subprocess_exec` to run `nmcli device wifi rescan`
-            and then `nmcli device wifi list`. This ensures the UI remains
-            responsive and the network list is up-to-date with a minimal
-            impact on performance. The results are cached and used to populate
-            the Wi-Fi section of the popover dynamically.
-        """
-        return self.code_explanation.__doc__
+        await self.cli_backend._connect_to_network_async(ssid)
+        await self.update_icon_and_popover()

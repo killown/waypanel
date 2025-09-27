@@ -26,7 +26,6 @@ class MenuSetupPlugin(BasePlugin):
         super().__init__(panel_instance)
         self.menu_button = None
         self.config_path = os.path.expanduser("~/.config/waypanel/config.toml")
-        self.logger = self.logger
         self.widgets = []
         self.main_widget = (self.widgets, "append")
 

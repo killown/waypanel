@@ -5,7 +5,6 @@ import re
 import pulsectl
 from gi.repository import GLib, Gtk  # pyright: ignore
 from src.plugins.core._base import BasePlugin
-from src.plugins.core._event_loop import global_loop
 
 gi.require_version("Gtk", "4.0")
 ENABLE_PLUGIN = True
@@ -20,13 +19,13 @@ def get_plugin_placement(panel_instance):
 
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
-        bt = BluetoothDashboard(panel_instance)
-        global_loop.create_task(bt.create_menu_popover_bluetooth())
-        global_loop.create_task(bt._auto_connect_devices())
+        bt = BluetoothPlugin(panel_instance)
+        bt.global_loop.create_task(bt.create_menu_popover_bluetooth())
+        bt.global_loop.create_task(bt._auto_connect_devices())
         return bt
 
 
-class BluetoothDashboard(BasePlugin):
+class BluetoothPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.popover_dashboard = None
@@ -50,7 +49,7 @@ class BluetoothDashboard(BasePlugin):
 
     async def _auto_connect_devices(self):
         """Reads config and attempts to connect specified Bluetooth devices."""
-        connect_devices = self.config_handler.check_and_get_config(
+        connect_devices = self.get_config(
             ["hardware", "bluetooth", "connect_devices"], []
         )
         if not connect_devices:
@@ -109,7 +108,7 @@ class BluetoothDashboard(BasePlugin):
                     device_list.append({"mac": match.group(1), "name": match.group(2)})
             return device_list
         except Exception as e:
-            self.logger.error(f"Error getting bluetooth devices: {e}")
+            self.logger.exception(f"Error getting bluetooth devices: {e}")
             return []
 
     async def _get_device_info(self, mac_address):
@@ -135,7 +134,7 @@ class BluetoothDashboard(BasePlugin):
                     info[key] = value.strip()
             return info
         except Exception as e:
-            self.logger.error(f"Error getting device info for {mac_address}: {e}")
+            self.logger.exception(f"Error getting device info for {mac_address}: {e}")
             return None
 
     async def _get_pa_sink_for_device(self, mac_address):
@@ -157,7 +156,7 @@ class BluetoothDashboard(BasePlugin):
             sink_info = await asyncio.to_thread(_sync_get_sink)
             return sink_info
         except Exception as e:
-            self.logger.error(
+            self.logger.exception(
                 f"Error listing PulseAudio sinks (pulsectl) for mac {mac_address}: {e}"
             )
             return None
@@ -182,7 +181,7 @@ class BluetoothDashboard(BasePlugin):
                 "audio-volume-high-symbolic",
             )
         except Exception as e:
-            self.logger.error(f"Failed to set default sink with pulsectl: {e}")
+            self.logger.exception(f"Failed to set default sink with pulsectl: {e}")
 
     async def create_menu_popover_bluetooth(self):
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
@@ -212,7 +211,7 @@ class BluetoothDashboard(BasePlugin):
         box.append(loading_label)
         self.popover_dashboard.set_child(box)
         self.popover_dashboard.popup()
-        global_loop.create_task(self._fetch_and_update_bluetooth_info())
+        self.global_loop.create_task(self._fetch_and_update_bluetooth_info())
 
     async def _fetch_and_update_bluetooth_info(self):
         devices_list = await self._get_devices()
@@ -256,7 +255,7 @@ class BluetoothDashboard(BasePlugin):
                 device_mac = device["mac"]
                 gesture.connect(
                     "released",
-                    lambda _, *args, mac=device_mac: global_loop.create_task(
+                    lambda _, *args, mac=device_mac: self.global_loop.create_task(
                         self._handle_bluetooth_click(mac)
                     ),
                 )
@@ -378,24 +377,18 @@ class BluetoothDashboard(BasePlugin):
         """
         This plugin acts as a user-friendly interface for the system's
         Bluetooth functionality.
-        **New Feature: Auto-Connect from Config**
-        1. **Initialization:** The `initialize_plugin` function now
-           schedules the `_auto_connect_devices` method to run
-           asynchronously at startup.
-        2. **Configuration Reading:** `_auto_connect_devices` reads the
-           `connect_devices` list from the `[hardware.bluetooth]`
-           config section.
-        3. **MAC Resolution:** The new `_extract_mac_from_string` utility
-           function reliably pulls the MAC address from configuration
-           entries, whether they are raw MACs, Bluetooth device names,
-           or PulseAudio sink names (like
-           `bluez_output.B4_B7_42_F7_9B_AD.1`). If a name is provided,
-           it attempts to match it against known devices.
-        4. **Connection Logic:** A new helper method,
-           `_connect_device_and_set_sink`, encapsulates the entire
-           connection process: calling `bluetoothctl connect`, finding
-           the PulseAudio sink (with the retry loop), and setting it
-           as default. This is now used by both auto-connect and the
-           user's click action for consistent behavior.
+        **Concurrency Fix:**
+        The explicit import of `global_loop` was removed. All asynchronous task
+        scheduling is now correctly handled using the inherited instance attribute
+        `self.global_loop` (or `bt.global_loop` in the factory function), which
+        is injected by `BasePlugin.__init__`.
+        1. **Initialization:** The `initialize_plugin` function now correctly uses
+           `bt.global_loop.create_task()` to schedule startup tasks.
+        2. **Popover Logic:** `create_popover_with_loading_state` uses
+           `self.global_loop.create_task()`.
+        3. **Click Handling:** The `GestureClick` connection uses
+           `self.global_loop.create_task()`.
+        This refactoring ensures a consistent and robust approach to concurrency,
+        using the resources provided by the base class.
         """
         return self.code_explanation.__doc__

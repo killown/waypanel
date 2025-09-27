@@ -165,7 +165,7 @@ class PopoverFolders(BasePlugin):
         if "folders" not in self.config_handler.config_data:
             self.config_handler.config_data["folders"] = {}
         all_folders = self.config_handler.config_data.get("folders")
-        for key, value in all_folders.items():
+        for key, value in all_folders.items():  # pyright: ignore
             if value.get("path") == folder_path:
                 self.logger.info(f"{folder_path} is already pinned.")
                 return

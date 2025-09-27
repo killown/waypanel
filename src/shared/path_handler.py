@@ -7,14 +7,14 @@ class PathHandler:
     Specification and provide convenient methods for path management.
     """
 
-    def __init__(self, app_name, panel_instance):
+    def __init__(self, panel_instance):
         """
         Initializes the PathHandler with a specific application name.
 
         Args:
             app_name (str): The name of the application.
         """
-        self.app_name = app_name
+        self.app_name = "waypanel"
         self._home = os.path.expanduser("~")
         self.logger = panel_instance.logger
 

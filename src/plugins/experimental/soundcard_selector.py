@@ -3,10 +3,7 @@ import pulsectl
 import soundcard as sc
 from gi.repository import Gtk  # pyright: ignore
 from src.plugins.core._base import BasePlugin
-import logging
 
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
-logger = logging.getLogger(__name__)
 ENABLE_PLUGIN = True
 DEPS = ["top_panel"]
 
@@ -46,10 +43,10 @@ class SoundCardDashboard(BasePlugin):
         self.menubutton_dashboard = None
         self.soundcard_handler_id = None
         self.mic_handler_id = None
-        self.max_card_chars = self.config_handler.check_and_get_config(
+        self.max_card_chars = self.get_config(
             ["hardware", "soundcard", "max_name_lenght"], 35
         )
-        self.max_mic_chars = self.config_handler.check_and_get_config(
+        self.max_mic_chars = self.get_config(
             ["hardware", "microphone", "max_name_lenght"], 35
         )
 
@@ -83,7 +80,7 @@ class SoundCardDashboard(BasePlugin):
                             "view_id": self.get_view_id_by_pid(pid),
                         }
         except pulsectl.PulseOperationFailed as e:
-            logger.error(f"Failed to connect to PulseAudio: {e}")
+            self.logger.exception(f"Failed to connect to PulseAudio: {e}")
         return audio_apps
 
     def get_soundcard_list(self):
@@ -102,11 +99,7 @@ class SoundCardDashboard(BasePlugin):
         """
         Retrieves a list of sound card names, excluding blacklisted ones.
         """
-        blacklist = (
-            self.config_handler.config_data.get("hardware", {})
-            .get("soundcard", {})
-            .get("blacklist", [])
-        )
+        blacklist = self.get_config(["hardware", "soundcard", "blacklist"], [])
         if isinstance(blacklist, str):
             blacklist = [blacklist]
         soundcard_list = []
@@ -115,7 +108,7 @@ class SoundCardDashboard(BasePlugin):
             if not any(b in default_name for b in blacklist):
                 soundcard_list.append(default_name)
         except Exception as e:
-            logger.warning(f"Could Could not get default speaker: {e}")
+            self.logger.exception(f"Could not get default speaker: {e}")
         for soundcard in self.get_soundcard_list():
             name = soundcard.name
             if name not in soundcard_list and not any(b in name for b in blacklist):
@@ -127,11 +120,7 @@ class SoundCardDashboard(BasePlugin):
         Retrieves a list of microphone names, excluding blacklisted ones.
         """
         mic_list = []
-        blacklist = (
-            self.config_handler.config_data.get("hardware", {})
-            .get("microphone", {})
-            .get("blacklist", [])
-        )
+        blacklist = self.get_config(["hardware", "microphone", "blacklist"], [])
         if isinstance(blacklist, str):
             blacklist = [blacklist]
         try:
@@ -144,7 +133,7 @@ class SoundCardDashboard(BasePlugin):
             ):
                 mic_list.append(default_mic)
         except Exception as e:
-            logger.warning(f"Could not get default microphone: {e}")
+            self.logger.exception(f"Could not get default microphone: {e}")
         for mic in self.get_mic_list():
             if mic.name not in mic_list and not any(b in mic.name for b in blacklist):
                 mic_list.append(mic.name)
@@ -199,32 +188,32 @@ class SoundCardDashboard(BasePlugin):
         Sets the default sound card using pactl.
         """
         if not id:
-            logger.warning("No soundcard ID provided.")
+            self.logger.warning("No soundcard ID provided.")
             return
         try:
             cmd = ["pactl", "set-default-sink", id]
-            logger.info(f"Attempting to set default sink with: {' '.join(cmd)}")
+            self.logger.info(f"Attempting to set default sink with: {' '.join(cmd)}")
             Popen(cmd, stdout=DEVNULL, stderr=DEVNULL)
         except FileNotFoundError:
-            logger.error("pactl not found. Cannot set default soundcard.")
+            self.logger.error("pactl not found. Cannot set default soundcard.")
         except Exception as e:
-            logger.error(f"Failed to set default soundcard with pactl: {e}")
+            self.logger.exception(f"Failed to set default soundcard with pactl: {e}")
 
     def set_default_mic(self, id):
         """
         Sets the default microphone using pactl.
         """
         if not id:
-            logger.warning("No microphone ID provided.")
+            self.logger.warning("No microphone ID provided.")
             return
         try:
             cmd = ["pactl", "set-default-source", id]
-            logger.info(f"Attempting to set default source with: {' '.join(cmd)}")
+            self.logger.info(f"Attempting to set default source with: {' '.join(cmd)}")
             Popen(cmd, stdout=DEVNULL, stderr=DEVNULL)
         except FileNotFoundError:
-            logger.error("pactl not found. Cannot set default microphone.")
+            self.logger.error("pactl not found. Cannot set default microphone.")
         except Exception as e:
-            logger.error(f"Failed to set default microphone with pactl: {e}")
+            self.logger.exception(f"Failed to set default microphone with pactl: {e}")
 
     def create_menu_popover_soundcard(self):
         """
@@ -339,7 +328,7 @@ class SoundCardDashboard(BasePlugin):
                 else:
                     self.soundcard_dropdown.set_selected(0)  # pyright: ignore
             except (ValueError, Exception) as e:
-                logger.warning(f"Failed to set default soundcard active: {e}")
+                self.logger.exception(f"Failed to set default soundcard active: {e}")
                 self.soundcard_dropdown.set_selected(0)  # pyright: ignore
 
     def update_mic_list(self):
@@ -364,7 +353,7 @@ class SoundCardDashboard(BasePlugin):
                 else:
                     self.mic_dropdown.set_selected(0)  # pyright: ignore
             except (ValueError, Exception) as e:
-                logger.warning(f"Failed to set default microphone active: {e}")
+                self.logger.exception(f"Failed to set default microphone active: {e}")
                 self.mic_dropdown.set_selected(0)  # pyright: ignore
 
     def on_soundcard_changed(self, dropdown, param):
@@ -453,6 +442,13 @@ class SoundCardDashboard(BasePlugin):
         """
         This plugin serves as a central hub for managing audio devices
         via a dashboard popover.
+        **Refactoring Notes:**
+        1. **Configuration:** All configuration access was updated to the *exact* format requested:
+           `self.get_config(["hardware", "soundcard", "max_name_lenght"], default_value)`, where the key path is a list of nested strings.
+        2. **Logging:** Global `logging` setup was removed. All local `logger` calls
+           were replaced with `self.logger` (inherited from `BasePlugin`). Generic
+           exception handlers (`except Exception as e:`) correctly use
+           `self.logger.exception()` to include the full traceback.
         Its core logic is centered on **device discovery, UI management,
         and system-level control**:
         1.  **Device Discovery**: It uses external libraries like

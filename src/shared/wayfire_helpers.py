@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union, Any
 from gi.repository import GLib  # pyright: ignore
 from pathlib import Path
 
@@ -9,15 +9,15 @@ class WayfireHelpers:
     A class containing helper methods for interacting with the Wayfire IPC.
     """
 
-    def __init__(self, ipc, logger):
+    def __init__(self, panel_instance):
         """
         Initializes the WayfireHelpers instance with an IPC object.
         Args:
             ipc: An object representing the Wayfire IPC connection, which
                  is expected to have a `list_views()` method.
         """
-        self.ipc = ipc
-        self.logger = logger
+        self.ipc = panel_instance.ipc
+        self.logger = panel_instance.logger
 
     def has_output_fullscreen_view(self, output_id: str) -> bool:
         """
@@ -461,76 +461,55 @@ class WayfireHelpers:
             x, y = ws.values()
             self.ipc.set_workspace(x, y, view_id)
 
-    def is_view_valid(self, view: Union[int, dict]) -> Union[dict, bool]:
+    def is_view_valid(
+        self, view: Union[int, Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
         """
         Validate if a view is valid based on its ID or dictionary.
+        If the view is valid and exists in the compositor, returns its details (dict).
+        Otherwise, returns None.
         Args:
             view (Union[int, dict]): The ID of the view or a dictionary containing view details.
         Returns:
-            Union[dict, bool]: The view object if valid, otherwise False.
+            Optional[dict]: The view object if valid, otherwise None.
         """
-        view_id = None
+        view_id: Optional[int] = None
+        if isinstance(view, dict):
+            view_id = view.get("id")
+        elif isinstance(view, int):
+            view_id = view
+        if not isinstance(view_id, int) or view_id is None:
+            self.logger.warning(
+                "Input is not a valid view ID (int) or dictionary with an 'id'."
+            )
+            return None
+        fetched_view: Optional[Dict[str, Any]] = None
         try:
-            if isinstance(view, dict):
-                view_id = view.get("id")
-                if view_id is None:
-                    self.logger.warning(
-                        "Invalid dictionary provided: Missing 'id' key."
-                    )
-                    return False
-            elif isinstance(view, int):
-                view_id = view
-            if not isinstance(view_id, int):
-                self.logger.warning(
-                    f"Invalid view ID type: {type(view_id).__name__}. Expected int."
-                )
-                return False
-            try:
-                view_ids = [i["id"] for i in self.ipc.list_views()]
-            except Exception as e:
-                self.logger.error(
-                    f"Failed to retrieve active view IDs: {e}", exc_info=True
-                )
-                return False
-            if view_id not in view_ids:
+            fetched_view = self.ipc.get_view(view_id)
+            if not fetched_view:
                 self.logger.debug(
-                    f"View ID {view_id} is not in the list of active views."
+                    f"View details not found via IPC for ID: {view_id}. View is likely closed."
                 )
-                return False
-            try:
-                fetched_view = self.ipc.get_view(view_id)
-            except Exception as e:
-                self.logger.error(
-                    f"Failed to fetch view details for ID: {view_id} and {e}",
-                    exc_info=True,
-                )
-                return False
-            if "role" in fetched_view and "app-id" in fetched_view:
-                if not fetched_view:
-                    self.logger.debug(f"No view details found for ID: {view_id}")
-                    return False
-                if fetched_view.get("role") != "toplevel":
-                    self.logger.debug(
-                        f"View ID {view_id} has an invalid role: {fetched_view.get('role')}"
-                    )
-                    return False
-                if fetched_view.get("pid") == -1:
-                    self.logger.debug(
-                        f"View ID {view_id} has an invalid PID: {fetched_view.get('pid')}"
-                    )
-                    return False
-                if fetched_view.get("app-id") in ["", "nil"]:
-                    self.logger.debug(
-                        f"View ID {view_id} has an invalid app-id: {fetched_view.get('app-id')}"
-                    )
-                    return False
-            return fetched_view
+                return None
         except Exception as e:
             self.logger.error(
-                f"Unexpected error while validating view ID: {view_id} and {e}",
-                exc_info=True,
+                f"Failed to fetch view details for ID {view_id}: {e}", exc_info=True
             )
-            return False
+            return None
+        role = fetched_view.get("role")
+        app_id = fetched_view.get("app-id")
+        pid = fetched_view.get("pid")
+        if role and app_id:
+            if role != "toplevel":
+                self.logger.debug(f"View ID {view_id} has an invalid role: {role}")
+                return None
+            if pid == -1:
+                self.logger.debug(f"View ID {view_id} has an invalid PID: {pid}")
+                return None
+            if app_id in ["", "nil"]:
+                self.logger.debug(f"View ID {view_id} has an invalid app-id: {app_id}")
+                return None
+        return fetched_view
 
     def tile_maximize_all_from_active_workspace(self, should_maxmize):
         view_ids = self.ipc.get_views_from_active_workspace()

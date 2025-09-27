@@ -2,7 +2,6 @@ import asyncio
 import requests
 from gi.repository import Gtk, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
-from src.plugins.core._event_loop import global_loop
 
 ENABLE_PLUGIN = True
 DEPS = ["calendar"]
@@ -18,7 +17,7 @@ def initialize_plugin(panel_instance):
     """Initialize the weather plugin."""
     if ENABLE_PLUGIN:
         weather_plugin = WeatherPlugin(panel_instance)
-        global_loop.create_task(weather_plugin.setup_weather_async())
+        weather_plugin.run_in_async_task(weather_plugin.setup_weather_async())
         return weather_plugin
 
 
@@ -54,9 +53,9 @@ class WeatherPlugin(BasePlugin):
                 grid.attach(self.weather_label, 0, 1, 1, 1)
                 grid.show()
 
-        GLib.idle_add(update_ui)
-        self.update_task = global_loop.create_task(self.periodic_weather_update())
-        await self.fetch_and_update_weather_async()
+        self.schedule_in_gtk_thread(update_ui)
+        self.update_task = self.global_loop.create_task(self.periodic_weather_update())
+        self.run_in_async_task(self.fetch_and_update_weather_async())
 
     async def fetch_weather_data_async(self):
         """Asynchronously fetch weather data from the API."""
@@ -64,8 +63,8 @@ class WeatherPlugin(BasePlugin):
         url = f"https://api.met.no/weatherapi/locationforecast/2.0/compact?lat={lat}&lon={lon}"
         headers = {"User-Agent": "MyWeatherApp/1.0 youremail@example.com"}
         try:
-            response = await global_loop.run_in_executor(
-                None, lambda: requests.get(url, headers=headers, timeout=10)
+            response = await asyncio.to_thread(
+                requests.get, url, headers=headers, timeout=10
             )
             response.raise_for_status()
             data = response.json()
@@ -85,19 +84,20 @@ class WeatherPlugin(BasePlugin):
         temperature = await self.fetch_weather_data_async()
 
         def update_label():
-            if temperature is not None:
-                self.weather_label.set_label(f"Weather: {temperature}°C")  # pyright: ignore
-            else:
-                self.weather_label.set_label("Weather: Error")  # pyright: ignore
+            if self.weather_label:
+                if temperature is not None:
+                    self.weather_label.set_label(f"Weather: {temperature}°C")  # pyright: ignore
+                else:
+                    self.weather_label.set_label("Weather: Error")  # pyright: ignore
 
-        GLib.idle_add(update_label)
+        self.schedule_in_gtk_thread(update_label)
 
     async def periodic_weather_update(self):
         """Periodically fetch and update weather data."""
         while True:
             try:
                 await asyncio.sleep(1800)
-                await self.fetch_and_update_weather_async()
+                self.run_in_async_task(self.fetch_and_update_weather_async())
             except asyncio.CancelledError:
                 self.logger.info("Periodic weather update task was cancelled.")
                 break
@@ -120,23 +120,13 @@ class WeatherPlugin(BasePlugin):
     def code_explanation(self):
         """
         The core logic of this plugin is to extend the functionality
-        of a host plugin using asynchronous and thread-safe operations.
-        Its design is based on these principles:
-        1.  **UI Dependency and Augmentation**: The plugin has no
-            standalone UI. Instead, it acts as a dependent module that
-            searches for and attaches a custom widget (a weather label)
-            to a pre-existing UI element provided by another plugin
-            (the calendar popover).
-        2.  **Asynchronous Networking**: It uses Python's `asyncio`
-            to perform non-blocking network requests. Crucially, it
-            leverages `run_in_executor` to safely execute the
-            synchronous `requests.get` call in a background thread,
-            preventing the main application's event loop from stalling.
-        3.  **Thread-Safe UI Updates**: All interactions with the GUI
-            are carefully scheduled on the main GTK thread using
-            `GLib.idle_add()`. This is a critical pattern for ensuring
-            that UI updates, such as changing the weather label's text,
-            are performed in a thread-safe manner, avoiding crashes
-            and race conditions.
+        of a host plugin using asynchronous and thread-safe operations, now
+        refactored to use BasePlugin helpers:
+        1.  **Concurrency Management**: Direct imports of global loop variables
+            are replaced by `BasePlugin`'s helpers:
+            -   `self.run_in_async_task()` is used for fire-and-forget coroutines (initial setup and periodic updates).
+            -   `self.global_loop.create_task()` is used specifically for the `self.periodic_weather_update` coroutine so the resulting `Task` object can be captured and later cancelled in `__del__`.
+        2.  **Asynchronous Networking**: The blocking `requests.get` call is safely wrapped using the modern, high-level `await asyncio.to_thread(...)`, which automatically runs the synchronous function in a thread pool executor without blocking the main event loop.
+        3.  **Thread-Safe UI Updates**: All interactions with the GUI, previously handled by `GLib.idle_add()`, are now consistently scheduled on the main GTK thread using the `self.schedule_in_gtk_thread()` helper, ensuring stability and adherence to GTK's thread safety rules.
         """
         return self.code_explanation.__doc__
