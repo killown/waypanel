@@ -18,6 +18,7 @@ class ConfigHandler:
         self._setup_config_paths()
         self.config_file = Path(self.config_path) / "config.toml"
         self.config_path = self.config_file.parent  # pyright: ignore
+        self._load_successful = False
         sock = WayfireSocket()
         outputs = sock.list_outputs()
         if outputs:
@@ -49,7 +50,30 @@ class ConfigHandler:
     def default_config_stripped(self) -> Dict[str, Any]:
         return self._strip_hints(self.default_config)
 
+    def _recursive_merge(
+        self,
+        user_config: Dict[str, Any],
+        default_config: Dict[str, Any],
+    ) -> bool:
+        """Recursively merges missing keys from default_config into user_config."""
+        write_back_needed = False
+        for key, default_value in default_config.items():
+            if key not in user_config:
+                user_config[key] = default_value
+                write_back_needed = True
+            elif isinstance(default_value, dict) and isinstance(
+                user_config.get(key), dict
+            ):
+                if self._recursive_merge(user_config[key], default_value):
+                    write_back_needed = True
+        return write_back_needed
+
     def save_config(self):
+        if not self._load_successful:
+            self.logger.warning(
+                "Skipping configuration save: Configuration is in an untrusted state (load failed). Please fix config.toml manually."
+            )
+            return
         try:
             with open(self.config_file, "w") as f:
                 toml.dump(self.config_data, f)
@@ -73,52 +97,50 @@ class ConfigHandler:
     def load_config(self, force_reload: bool = False) -> Dict[str, Any]:
         if self._cached_config and not force_reload:
             return self._cached_config
-        config_from_file = {}
+        config_from_file: Dict[str, Any] = {}
         file_path = Path(self.config_file)
-        needs_write_back = False
-        if not file_path.exists():
-            self.logger.info(
-                "Config file not found. Applying defaults and preparing to create."
-            )
+        file_must_be_created = not file_path.exists()
+        load_succeeded = False
+        if file_must_be_created:
+            self.logger.info("Config file is missing. Will apply defaults and create.")
             config_from_file = {}
-            needs_write_back = True
+            load_succeeded = True
         else:
             max_retries = 3
             retry_delay_seconds = 0.1
             for attempt in range(max_retries):
                 try:
-                    if file_path.stat().st_size == 0:
-                        self.logger.info(
-                            "Existing config file is empty. Will apply defaults and overwrite."
-                        )
-                        config_from_file = {}
-                        needs_write_back = True
-                        break
                     with open(file_path, "r") as f:
                         config_from_file = toml.load(f)
                     self.logger.debug("Existing config.toml loaded successfully.")
+                    load_succeeded = True
                     break
                 except Exception as e:
                     self.logger.error(
-                        f"Error loading config file on attempt {attempt + 1}: {e}"
+                        f"Error loading config file on attempt {attempt + 1}: {e}. Retrying..."
                     )
                     time.sleep(retry_delay_seconds)
-                    needs_write_back = True
+            else:
+                self.logger.error(
+                    "Failed to load config file after all retries. Using default configuration and skipping file save to preserve user data."
+                )
+                config_from_file = {}
+        self._load_successful = load_succeeded
         default_config_for_merge = self.default_config_stripped
-        for key, default_section in default_config_for_merge.items():
-            if key not in config_from_file:
-                config_from_file[key] = default_section
-                needs_write_back = True
-        self._cached_config = config_from_file
-        self.logger.debug("Configuration loaded and merged with defaults.")
+        defaults_added = self._recursive_merge(
+            config_from_file, default_config_for_merge
+        )
+        needs_write_back = file_must_be_created
         if needs_write_back:
             self.logger.info(
-                "Saving merged defaults to config file for initial setup or repair."
+                "Saving default configuration to file because it was missing."
             )
             original_config_data = getattr(self, "config_data", None)
             self.config_data = config_from_file
             self.save_config()
             self.config_data = original_config_data
+        self._cached_config = config_from_file
+        self.logger.debug("Configuration loaded and merged with defaults.")
         return config_from_file
 
     def _setup_config_paths(self) -> None:
@@ -212,18 +234,7 @@ class ConfigHandler:
 
     def update_config(self, key_path: List[str], new_value: Any) -> bool:
         """
-        Updates a configuration value by traversing nested keys, then saves and reloads the config.
-        This method is designed to safely replace the following three lines of code
-        used in plugins with a single call:
-            self.config_handler.config_data["notify"]["server"]["show_messages"] = new_value
-            self.config_handler.save_config()
-            self.config_handler.reload_config()
-        Args:
-            key_path: A list of strings representing the path to the config value
-                      (e.g., ["section", "subsection", "key"]).
-            new_value: The new value to set.
-        Returns:
-            True if the configuration was successfully updated and saved, False otherwise.
+        Updates a configuration value by traversing nested keys, then safely saves and reloads the config.
         """
         if not key_path:
             self.logger.error("Configuration key path cannot be empty.")
@@ -243,6 +254,11 @@ class ConfigHandler:
                 return False
         final_key = key_path[-1]
         if isinstance(current_data, dict):
+            if not self._load_successful:
+                self.logger.warning(
+                    f"Update to key {' -> '.join(key_path)} skipped: Config file failed to load. Please fix config.toml manually."
+                )
+                return False
             current_data[final_key] = new_value
             self.logger.info(
                 f"Updated config key {' -> '.join(key_path)} to {new_value}."

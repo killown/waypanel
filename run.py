@@ -8,17 +8,23 @@ import glob
 
 def main():
     APP_NAME = "waypanel"
+
+    XDG_DATA_HOME = os.getenv("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
+    XDG_CONFIG_HOME = os.getenv("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-    VENV_DIR = os.path.expanduser(f"~/.local/share/{APP_NAME}/venv")
-    CONFIG_DIR = os.path.expanduser(f"~/.config/{APP_NAME}")
+
+    VENV_DIR = os.path.join(XDG_DATA_HOME, APP_NAME, "venv")
+    CONFIG_DIR = os.path.join(XDG_CONFIG_HOME, APP_NAME)
     CONFIG_FILE = os.path.join(CONFIG_DIR, "config.toml")
+
     SYSTEM_CONFIG = f"/usr/lib/{APP_NAME}/config"
-    LOCAL_DEV_CONFIG = os.path.join(SCRIPT_DIR, "waypanel", "config")
+    LOCAL_DEV_CONFIG = os.path.join(SCRIPT_DIR, APP_NAME, "config")
     ALT_DEV_CONFIG = os.path.join(SCRIPT_DIR, "config")
 
-    # Add a function to find the system package path
     def find_package_files():
         candidate_patterns = [
+            os.path.join(XDG_DATA_HOME, "lib/python*/site-packages"),
             os.path.expanduser("~/.local/lib/python*/site-packages"),
             "/usr/lib/python*/dist-packages",
             "/usr/lib/python*/site-packages",
@@ -33,16 +39,13 @@ def main():
                     return pkg_path
         return None
 
-    # Find the installed package path
     INSTALLED_PATH = find_package_files()
     if INSTALLED_PATH:
-        # Use the installed package paths if found
         REQ_FILE = os.path.join(INSTALLED_PATH, "requirements.txt")
         MAIN_PY = os.path.join(INSTALLED_PATH, "main.py")
         print(f"[INFO] Using installed package from: {INSTALLED_PATH}")
         os.environ["PYTHONPATH"] = INSTALLED_PATH
     else:
-        # Fallback to the original development paths
         REQ_FILE = os.path.join(SCRIPT_DIR, "requirements.txt")
         MAIN_PY = os.path.join(SCRIPT_DIR, "main.py")
         print(f"[INFO] Using development path: {SCRIPT_DIR}")
@@ -50,13 +53,15 @@ def main():
 
     # ===== GTK4 Layer Shell detection =====
     def find_gtk_layer_shell():
+        LOCAL_LIB_PATH = os.path.join(
+            XDG_DATA_HOME, "lib", "gtk4-layer-shell", "lib", "libgtk4-layer-shell.so"
+        )
+
         candidates = [
             "/usr/lib/libgtk4-layer-shell.so",
             "/usr/lib/x86_64-linux-gnu/libgtk4-layer-shell.so",
             "/usr/lib64/libgtk4-layer-shell.so",
-            os.path.expanduser(
-                "~/.local/lib/gtk4-layer-shell/lib/libgtk4-layer-shell.so"
-            ),
+            LOCAL_LIB_PATH,
         ]
 
         for lib in candidates:

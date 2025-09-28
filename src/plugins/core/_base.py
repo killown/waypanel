@@ -3,11 +3,10 @@ from gi.repository import Gtk, GLib  # pyright: ignore
 import os
 import inspect
 import asyncio
-from asyncio import Task
+from asyncio import Task, Future as AwaitableFuture
 from concurrent.futures import ThreadPoolExecutor, Future
-from typing import Any, List, ClassVar, Callable, Awaitable, Optional, Union
+from typing import Any, List, ClassVar, Callable, Awaitable, Optional, Union, Set
 from src.plugins.core._event_loop import get_global_executor, get_global_loop
-
 from src.shared.path_handler import PathHandler
 from src.shared.notify_send import Notifier
 from src.shared.wayfire_helpers import WayfireHelpers
@@ -88,28 +87,18 @@ class PluginLogAdapter:
         return getattr(self._logger, name)
 
 
-# ====================================================================
-# BASE PLUGIN
-# ====================================================================
-
-
 class BasePlugin:
     """
     Base class for all waypanel plugins, now including integrated
-    asynchronous and threading utilities.
+    asynchronous and threading utilities with automatic cleanup.
     """
 
-    # --- Class Variables ---
     DEPS: ClassVar[List[str]] = []
-
-    # Internal storage attributes for core properties
     _panel_instance: Any
     _plugin_loader: Any
     _ipc: Any
     _ipc_server: Any
     _logger_adapter: PluginLogAdapter
-
-    # Internal storage attributes for helper instances
     _path_handler: PathHandler
     _notifier: Notifier
     _wf_helper: WayfireHelpers
@@ -117,24 +106,21 @@ class BasePlugin:
     _data_helper: DataHelpers
     _config_handler: ConfigHandler
     _cmd: CommandRunner
-
-    # --- New Async/Threading Attributes ---
     global_loop: asyncio.AbstractEventLoop
     global_executor: ThreadPoolExecutor
+    _running_futures: Set[Future[Any]]
+    _running_tasks: Set[Task]
 
     def __init__(self, panel_instance: Any):
         """
         Initializes the BasePlugin and injects core resources, including the
         global ThreadPoolExecutor and asyncio event loop.
         """
-        # Store core references internally
         self._panel_instance = panel_instance
         self._plugin_loader = panel_instance.plugin_loader
         self._ipc = panel_instance.ipc
         self._ipc_server = panel_instance.ipc_server
         self._logger_adapter = PluginLogAdapter(panel_instance.logger)
-
-        # Helper instances
         self._path_handler = PathHandler(panel_instance)
         self._notifier = Notifier()
         self._wf_helper = WayfireHelpers(panel_instance)
@@ -142,20 +128,14 @@ class BasePlugin:
         self._data_helper = DataHelpers()
         self._config_handler = ConfigHandler(panel_instance)
         self._cmd = CommandRunner(panel_instance)
-
-        # --- Asynchronous & Threading Integration ---
-        # Inject the global, shared resources onto the instance
         self.global_loop = get_global_loop()
         self.global_executor = get_global_executor()
-
-        # State attributes
+        self._running_futures = set()
+        self._running_tasks = set()
         self.main_widget: Optional[Union[tuple, list]] = None
         self.plugin_file = None
         self.ipc_client = None
-
         self.dependencies: List[str] = list(getattr(self, "DEPS", []))
-
-        # Core utility references
         self._layer_shell: Any = create_panel.LayerShell
         self._set_layer_pos_exclusive: Any = create_panel.set_layer_position_exclusive
         self._unset_layer_pos_exclusive: Any = (
@@ -165,11 +145,9 @@ class BasePlugin:
     def get_config(self, keys: List[str], default: Any = None):
         """
         Retrieves a configuration value by traversing nested keys.
-
         Args:
             keys: A list of strings representing the path to the config value (e.g., ["section", "subsection", "key"]).
             default: The value to return if the configuration path is not found.
-
         Returns:
             The config value or the specified default value.
         """
@@ -178,14 +156,11 @@ class BasePlugin:
     def update_config(self, key_path: List[str], new_value: Any) -> bool:
         """
         Updates a configuration value by path, saves the config file, and reloads the configuration.
-
         This method delegates the operation to the main ConfigHandler.
-
         Args:
             key_path: A list of strings representing the path to the config value
                       (e.g., ["section", "subsection", "key"]).
             new_value: The new value to set.
-
         Returns:
             True if the configuration was successfully updated and saved, False otherwise.
         """
@@ -195,29 +170,34 @@ class BasePlugin:
             self.logger.error(f"Failed to call update_config on config_handler: {e}")
             return False
 
-    # ====================================================================
-    # ASYNC / THREADING UTILITY METHODS
-    # ====================================================================
-
     def run_in_thread(self, func: Callable, *args, **kwargs) -> Future:
         """
         Executes a blocking function in a background thread via the shared executor.
-
+        The resulting Future is automatically tracked for cleanup during disable().
         Args:
             func (Callable): The function to execute.
             *args, **kwargs: Arguments passed to the function.
-
         Returns:
             Future: A Future object representing the result of the function call.
         """
         self.logger.debug(f"Scheduling function {func.__name__} in background thread.")
-        return self.global_executor.submit(func, *args, **kwargs)
+        future = self.global_executor.submit(func, *args, **kwargs)
+        self._running_futures.add(future)
+        future.add_done_callback(self._cleanup_future)
+        return future
+
+    def _cleanup_future(self, future: Future[Any]):
+        """Internal callback to remove a Future from the tracking set once it's done."""
+        try:
+            if future in self._running_futures:
+                self._running_futures.remove(future)
+        except Exception as e:
+            self.logger.error(f"Error cleaning up Future tracking: {e}")
 
     def schedule_in_gtk_thread(self, func: Callable, *args, **kwargs) -> None:
         """
         Schedules a function to be executed in the main GTK (GLib) thread.
         Crucial for any UI updates.
-
         Args:
             func (Callable): The function to execute.
             *args, **kwargs: Arguments passed to the function.
@@ -231,7 +211,7 @@ class BasePlugin:
                     f"Error executing function {func.__name__} in GTK thread: {e}",
                     exc_info=True,
                 )
-            return False  # Run once
+            return False
 
         GLib.idle_add(wrapper)
         self.logger.debug(f"Scheduled function {func.__name__} in GTK main thread.")
@@ -241,8 +221,7 @@ class BasePlugin:
     ) -> None:
         """
         Schedules an awaitable (async def function) to run as a task in the
-        background asyncio loop.
-
+        background asyncio loop. The task is tracked for cleanup during disable().
         Args:
             coro (Awaitable): The coroutine to run.
             on_finish (Optional[Callable]): A callback function to run in the
@@ -251,10 +230,11 @@ class BasePlugin:
         coro_name = getattr(coro, "__name__", repr(coro).split(" object")[0])
 
         def done_callback(task: Task[Any]):
+            if task in self._running_tasks:
+                self._running_tasks.remove(task)
             if task.cancelled():
                 self.logger.debug(f"Async task {coro_name} cancelled.")
                 return
-
             exception = task.exception()
             if exception:
                 self.logger.error(
@@ -265,12 +245,9 @@ class BasePlugin:
                 self.schedule_in_gtk_thread(on_finish, task.result())
 
         task = self.global_loop.create_task(coro)  # pyright: ignore
+        self._running_tasks.add(task)
         task.add_done_callback(done_callback)
         self.logger.debug(f"Scheduled async task {coro_name} in global loop.")
-
-    # ====================================================================
-    # READ-ONLY CORE PROPERTIES (@property)
-    # ====================================================================
 
     @property
     def obj(self) -> Any:
@@ -310,7 +287,7 @@ class BasePlugin:
     @property
     def config_data(self) -> dict:
         """All configuration data from config.toml."""
-        return self._config_handler.config_data
+        return self._config_handler.config_data  # pyright: ignore
 
     @property
     def bottom_panel(self) -> Any:
@@ -327,10 +304,6 @@ class BasePlugin:
     @property
     def right_panel(self) -> Any:
         return self.obj.right_panel
-
-    # ====================================================================
-    # HELPER INSTANCE PROPERTIES
-    # ====================================================================
 
     @property
     def path_handler(self) -> PathHandler:
@@ -367,10 +340,6 @@ class BasePlugin:
         """Read-only access to the CommandRunner instance."""
         return self._cmd
 
-    # ====================================================================
-    # CORE UTILITY PROPERTIES
-    # ====================================================================
-
     @property
     def layer_shell(self) -> Any:
         """Read-only reference to create_panel.LayerShell."""
@@ -385,10 +354,6 @@ class BasePlugin:
     def unset_layer_pos_exclusive(self) -> Any:
         """Read-only reference to create_panel.unset_layer_position_exclusive."""
         return self._unset_layer_pos_exclusive
-
-    # ====================================================================
-    # HELPER METHOD PROPERTIES
-    # ====================================================================
 
     @property
     def get_data_path(self):
@@ -420,7 +385,6 @@ class BasePlugin:
         """Read-only alias for self._gtk_helper.remove_widget."""
         return self._gtk_helper.remove_widget
 
-    # Data Validation Helpers
     @property
     def validate_iterable(self):
         """Read-only alias for self._data_helper.validate_iterable."""
@@ -461,7 +425,6 @@ class BasePlugin:
         """Read-only alias for self._data_helper.validate_list."""
         return self._data_helper.validate_list
 
-    # Safe GTK Update Helpers
     @property
     def update_widget_safely(self):
         """Read-only alias for self._gtk_helper.update_widget_safely."""
@@ -487,10 +450,6 @@ class BasePlugin:
         """Read-only alias for self._wf_helper.is_view_valid"""
         return self.wf_helper.is_view_valid
 
-    # ====================================================================
-    # METHODS
-    # ====================================================================
-
     def check_dependencies(self) -> bool:
         """Check if all dependencies are loaded"""
         return all(dep in self.obj.plugin_loader.plugins for dep in self.dependencies)
@@ -501,7 +460,8 @@ class BasePlugin:
 
     def disable(self) -> None:
         """
-        Disable the plugin and remove its widget.
+        Disable the plugin, remove its widget, and safely cancel all active
+        background tasks and threads started by the plugin.
         """
         try:
             if self.main_widget:
@@ -509,18 +469,26 @@ class BasePlugin:
                 self.logger.info("Widget removed successfully.")
             else:
                 self.logger.warning("No widget to remove.")
+            for task in list(self._running_tasks):
+                if not task.done():
+                    task.cancel()
+                    self.logger.debug(
+                        f"Attempted to cancel async task: {task.get_name()}"
+                    )
+            for future in list(self._running_futures):
+                if not future.done():
+                    future.cancel()
+                    self.logger.debug("Attempted to cancel thread Future.")
             self.on_disable()
         except Exception as e:
-            self.logger.error(
-                message=f"Error disabling plugin: {e}",
-            )
+            self.logger.error(message=f"Error disabling plugin: {e}", exc_info=True)
 
     def on_enable(self):
         """Hook for when plugin is enabled"""
         pass
 
     def on_disable(self):
-        """Hook for when plugin is disabled"""
+        """Hook for when plugin is disabled. Plugin authors should add any necessary cleanup here."""
         pass
 
     def set_widget(self):
@@ -581,30 +549,6 @@ class BasePlugin:
         )
         return self.main_widget
 
-    def on_start(self):
-        """
-        Hook called when the plugin is initialized.
-        """
-        pass
-
-    def on_stop(self):
-        """
-        Hook called when the plugin is stopped or unloaded.
-        """
-        pass
-
-    def on_reload(self):
-        """
-        Hook called when the plugin is reloaded dynamically.
-        """
-        pass
-
-    def on_cleanup(self):
-        """
-        Hook called before the plugin is completely removed.
-        """
-        pass
-
     def about(self):
         """
         This is a foundational class that serves as the blueprint for all
@@ -622,14 +566,17 @@ class BasePlugin:
             `asyncio` event loop and `ThreadPoolExecutor`, providing access
             via `self.global_loop` and `self.global_executor`. Helper methods
             (`run_in_thread`, `run_in_async_task`) simplify safe, non-blocking
-            operations.
-        2.  **GTK Synchronization**: The critical `schedule_in_gtk_thread` method
+            operations and now **automatically track** their running state.
+        2.  **Safe Cleanup (`disable`)**: The improved `disable()` method now automatically
+            iterates over `self._running_tasks` and `self._running_futures` to call
+            `.cancel()` on any active asynchronous or background thread work,
+            ensuring graceful termination before calling the custom `on_disable()` hook.
+            The type hint for `self._running_futures` was updated to `Set[Future[Any]]`
+            to resolve type-checking errors.
+        3.  **GTK Synchronization**: The critical `schedule_in_gtk_thread` method
             uses `GLib.idle_add` to ensure any UI updates originating from a
             background thread or async task are safely executed on the main
             GTK thread, preventing crashes.
-        3.  **Standardized Lifecycle**: Defines essential methods like `on_start()`,
-            `on_stop()`, and `on_cleanup()`, forming a Template Method Pattern for
-            resource management.
         4.  **Resource Injection & Safety**: Provides core resources (logger, IPC,
             config) and helper instances (`cmd`, `gtk_helper`) via read-only
             `@property` access, ensuring type safety and preventing accidental

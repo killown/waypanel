@@ -13,6 +13,23 @@ default_config = {
         "General configuration settings for Waypanel, a panel "
         "for Wayland compositors like Wayfire and Sway."
     ),
+    "plugins": {
+        "_section_hint": ("Configuration for loading and managing Waypanel plugins."),
+        "list": "",
+        "list_hint": (
+            "A comma-separated list of enabled plugins (e.g., 'taskbar, calendar'). "
+            "If left empty, all discovered plugins will be loaded, unless disabled."
+        ),
+        "disabled": "",
+        "disabled_hint": (
+            "A comma-separated list of disabled plugins (e.g., 'tile, weather'). "
+            "These plugins will be skipped during the loading process."
+        ),
+        "custom_path": "~/.local/share/waypanel/plugins",
+        "custom_path_hint": (
+            "Absolute path to search for user-defined or custom plugins."
+        ),
+    },
     "hardware": {
         "_section_hint": "Configuration for core system hardware and peripherals.",
         "primary_output": {
