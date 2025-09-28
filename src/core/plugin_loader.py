@@ -66,8 +66,9 @@ class PluginLoader:
         self.user_plugins_dir = os.path.join(
             self.get_real_user_home(), ".local", "share", "waypanel", "plugins"
         )
-        self.last_widget_plugin_added = None
+        self.plugin_icons = {}
 
+        self.last_widget_plugin_added = None
         self.ensure_proportional_layout_attempts = {"max": 30, "current": 0}
         GLib.timeout_add(100, self.ensure_proportional_layout)
 
@@ -93,70 +94,71 @@ class PluginLoader:
     def ensure_proportional_layout(self):
         """
         Checks if the actual allocated width of the Left, Center, or Right panel containers
-        exceeds their theoretical limits (33%, 33%, 33% of total width). If any side
-        exceeds its limit, the 'clock' plugin (Center) is disabled as a primary corrective action.
+        exceeds their theoretical limits (output_width / 3). If any side
+        exceeds its limit, the 'last_plugin' added plugin is disabled.
         """
-        max_attemps = self.ensure_proportional_layout_attempts["max"]
+        max_attempts = self.ensure_proportional_layout_attempts["max"]
         current_attempts = self.ensure_proportional_layout_attempts["current"]
-        if current_attempts >= max_attemps:
-            return False  # stop GLib
+
+        if current_attempts >= max_attempts:
+            self.logger.warning(
+                "Proportional layout check reached max attempts. Stopping source."
+            )
+            return False
 
         self.ensure_proportional_layout_attempts["current"] += 1
 
         if not self.panel_instance.plugins_startup_finished:
-            return True  # Continue waiting
+            return True
 
         try:
-            # Get total panel width
             width = self.config_handler.check_and_get_config(["panel", "top", "width"])
 
             if width is None or width <= 0:
                 self.logger.warning(
                     "Panel width not configured or invalid. Skipping proportional space check."
                 )
-                return False
+                return True
 
-            # Assuming proportional layout (33% | 33% | 33%)
             sections_to_check = [
-                (self.panel_instance.top_panel_box_left, 0.33, "Left Panel"),
-                (self.panel_instance.top_panel_box_center, 0.33, "Center Panel"),
-                (self.panel_instance.top_panel_grid_right, 0.33, "Right Panel"),
+                (self.panel_instance.top_panel_grid_right, "Top Panel: Right Space"),
+                (self.panel_instance.top_panel_box_center, "Top Panel: Center Space"),
+                (self.panel_instance.top_panel_box_left, "Top Panel: Left Space"),
             ]
 
-            # We track if a problem was found to avoid redundant notifications.
             limit_exceeded = False
-            TOLERANCE = 2  # Small tolerance for GTK rounding/borders
+            violating_side = "Unknown"
 
-            for container, max_percent, side_name in sections_to_check:
-                # Calculate the theoretical maximum allowed width
-                max_width_size = width * max_percent
-
-                # Get the actual width allocated to the container
+            for container, side_name in sections_to_check:
+                max_width_size = width / 3
                 allocated_width = container.get_allocated_width()
 
-                if allocated_width > (max_width_size + TOLERANCE):
+                if allocated_width > max_width_size:
                     self.logger.warning(
                         f"Space violation detected in {side_name}. "
                         f"Allocated: {allocated_width:.2f}px, Max: {max_width_size:.2f}px."
                     )
                     limit_exceeded = True
+                    violating_side = side_name
+                    break
 
             if limit_exceeded:
                 self.disable_plugin(self.last_widget_plugin_added)
+                icon_name = "plugins-symbolic"
                 self.nofitier = Notifier()
                 self.notify_send = self.nofitier.notify_send
                 self.notify_send(
                     "Plugin Loader",
-                    f"{self.last_widget_plugin_added} disabled. Panel element(s) are exceeding allocated space. Removed central element for layout stability.",
-                    "python",
+                    f"{self.last_widget_plugin_added} disabled due to violation in {violating_side}. Removed element for layout stability.",
+                    icon_name,
                 )
-                return False  # Stop GLib
+                return False
 
-            return True  # Still trying
+            return True
 
         except Exception as e:
             self.logger.error(f"Error during proportional space check: {e}")
-            return True  # Don't crash the loader, but log the error
+            return True
 
     def disable_plugin(self, plugin_name):
         """Disable a plugin by name.
@@ -633,6 +635,8 @@ class PluginLoader:
 
             # Append the widget(s) to the plugin's dedicated FlowBox
             for widget in widgets:
+                if hasattr(widget, "get_icon_name"):
+                    self.plugin_icons[module_name] = widget.get_icon_name()
                 self.update_widget_safely(flow_box.append, widget)
 
         elif widget_action == "set_content":
