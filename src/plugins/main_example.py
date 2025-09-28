@@ -20,7 +20,7 @@ def get_plugin_placement(panel_instance: Any):
     Uses the instance's inherited get_config for dynamic placement.
     """
     position = panel_instance.get_config(
-        ["example_base_plugin", "placement", "position"], "top-panel-center"
+        ["example_base_plugin", "placement", "position"], "top-panel-right"
     )
     order = panel_instance.get_config(["example_base_plugin", "placement", "order"], 1)
     priority = panel_instance.get_config(

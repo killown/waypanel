@@ -73,36 +73,27 @@ class ConfigHandler:
     def load_config(self, force_reload: bool = False) -> Dict[str, Any]:
         if self._cached_config and not force_reload:
             return self._cached_config
-
         config_from_file = {}
         file_path = Path(self.config_file)
-
-        needs_write_back = (
-            False  # <--- NEW FLAG to track if the file needs fixing/creation
-        )
-
+        needs_write_back = False
         if not file_path.exists():
             self.logger.info(
                 "Config file not found. Applying defaults and preparing to create."
             )
-            config_from_file = {}  # Start with empty dict for full merge
+            config_from_file = {}
             needs_write_back = True
-
-        else:  # File exists. Attempt to load (with retries for corruption/race condition)
+        else:
             max_retries = 3
             retry_delay_seconds = 0.1
-
             for attempt in range(max_retries):
                 try:
                     if file_path.stat().st_size == 0:
-                        # FIX 1: Stop pointless retries for an empty file immediately.
                         self.logger.info(
                             "Existing config file is empty. Will apply defaults and overwrite."
                         )
                         config_from_file = {}
                         needs_write_back = True
                         break
-
                     with open(file_path, "r") as f:
                         config_from_file = toml.load(f)
                     self.logger.debug("Existing config.toml loaded successfully.")
@@ -112,36 +103,22 @@ class ConfigHandler:
                         f"Error loading config file on attempt {attempt + 1}: {e}"
                     )
                     time.sleep(retry_delay_seconds)
-                    needs_write_back = (
-                        True  # If loading fails, treat as corruption/missing data
-                    )
-
-        # --- Merge logic (keeps original) ---
+                    needs_write_back = True
         default_config_for_merge = self.default_config_stripped
-
-        # Merge defaults. This part handles both missing keys and the initial empty/non-existent file case.
         for key, default_section in default_config_for_merge.items():
             if key not in config_from_file:
                 config_from_file[key] = default_section
-                needs_write_back = True  # If we merged anything, we need to save it.
-
+                needs_write_back = True
         self._cached_config = config_from_file
         self.logger.debug("Configuration loaded and merged with defaults.")
-
-        # --- FIX 2: Save if the file was missing, empty, or needed defaults merged ---
         if needs_write_back:
             self.logger.info(
                 "Saving merged defaults to config file for initial setup or repair."
             )
-
-            # Since save_config uses self.config_data, we must temporarily set it
-            # to the newly generated configuration before calling save.
             original_config_data = getattr(self, "config_data", None)
             self.config_data = config_from_file
             self.save_config()
-            self.config_data = original_config_data  # Restore original ref (will be overwritten by return value in __init__)
-        # --- END FIX ---
-
+            self.config_data = original_config_data
         return config_from_file
 
     def _setup_config_paths(self) -> None:
@@ -236,28 +213,22 @@ class ConfigHandler:
     def update_config(self, key_path: List[str], new_value: Any) -> bool:
         """
         Updates a configuration value by traversing nested keys, then saves and reloads the config.
-
         This method is designed to safely replace the following three lines of code
         used in plugins with a single call:
             self.config_handler.config_data["notify"]["server"]["show_messages"] = new_value
             self.config_handler.save_config()
             self.config_handler.reload_config()
-
         Args:
             key_path: A list of strings representing the path to the config value
                       (e.g., ["section", "subsection", "key"]).
             new_value: The new value to set.
-
         Returns:
             True if the configuration was successfully updated and saved, False otherwise.
         """
         if not key_path:
             self.logger.error("Configuration key path cannot be empty.")
             return False
-
         current_data = self.config_data
-
-        # Traverse to the parent dictionary of the key to be updated
         for i, key in enumerate(key_path[:-1]):
             if (
                 isinstance(current_data, dict)
@@ -266,21 +237,16 @@ class ConfigHandler:
             ):
                 current_data = current_data[key]
             else:
-                # Path segment is missing or not a dictionary
                 self.logger.error(
                     f"Cannot update config: Missing or invalid path segment '{key}' at level {i}. Path: {' -> '.join(key_path)}"
                 )
                 return False
-
-        # Update the final key in the parent dictionary
         final_key = key_path[-1]
         if isinstance(current_data, dict):
             current_data[final_key] = new_value
             self.logger.info(
                 f"Updated config key {' -> '.join(key_path)} to {new_value}."
             )
-
-            # Save and reload the configuration
             self.save_config()
             self.reload_config()
             return True

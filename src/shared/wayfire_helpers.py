@@ -1,4 +1,6 @@
 import os
+import psutil
+import sys
 from typing import Dict, Optional, Tuple, Union, Any
 from gi.repository import GLib  # pyright: ignore
 from pathlib import Path
@@ -139,7 +141,7 @@ class WayfireHelpers:
             )
         except Exception as e:
             self.logger.error(
-                f"Unexpected error while listing shared libraries for PID -> {pid}: {e}",
+                # pyright: ignore               f"Unexpected error while listing shared libraries for PID -> {pid}: {e}",
                 exc_info=True,
             )
         return libs
@@ -621,3 +623,74 @@ class WayfireHelpers:
         Check if a Wayfire plugin is enabled.
         """
         return plugin_name in self.ipc.get_option_value("core/plugins")["value"]
+
+    def find_redirection_file(self, process_name):
+        """
+        Finds the file path to which the standard output (file descriptor 1)
+        of a running process is redirected.
+        """
+        STDOUT_FD = 1
+        wayfire_processes = [
+            proc
+            for proc in psutil.process_iter(["pid", "name"])
+            if proc.info["name"] and process_name.lower() in proc.info["name"].lower()
+        ]
+        if not wayfire_processes:
+            self.logger.info(
+                f"Error: No running process found with the name '{process_name}'."
+            )
+            return
+        process = wayfire_processes[0]
+        pid = process.info["pid"]
+        try:
+            if sys.platform.startswith("linux") or sys.platform.startswith("darwin"):
+                fd_path = f"/proc/{pid}/fd/{STDOUT_FD}"
+                if not os.path.exists(fd_path):
+                    pass
+                try:
+                    target_file = os.readlink(fd_path)
+                    if target_file.startswith(("pipe", "socket")):
+                        self.logger.info(
+                            f"Stdout (FD {STDOUT_FD}) is connected to an in-memory pipe or socket."
+                        )
+                        self.logger.info(
+                            "This usually means it is being piped to another process or a terminal."
+                        )
+                        return
+                    elif target_file == "/dev/null":
+                        self.logger.info(
+                            f"Stdout (FD {STDOUT_FD}) is redirected to /dev/null (output is discarded)."
+                        )
+                        return
+                    elif target_file.startswith("/dev/pts"):
+                        return target_file
+                    elif target_file.startswith("/dev/tty"):
+                        return target_file
+                    else:
+                        return target_file
+                except FileNotFoundError:
+                    print(
+                        f"Could not find file descriptor {STDOUT_FD} path for PID {pid}."
+                    )
+                except PermissionError:
+                    self.logger.exception(
+                        f"Permission denied to read /proc/{pid}/fd/{STDOUT_FD}. Try running with 'sudo'."
+                    )
+                    return
+            self.logger.info("\nChecking process open files as a fallback...")
+            open_files = process.open_files()
+            for file in open_files:
+                if file.fd == STDOUT_FD and "w" in file.mode:
+                    return file.path
+            self.logger.warning(
+                "Stdout (FD 1) is not explicitly redirected to a standard file or could not be determined."
+            )
+            self.logger.warning(
+                "It is likely going to a terminal, system log (e.g., journald), or being piped."
+            )
+        except psutil.NoSuchProcess:
+            self.logger.exception(
+                f"Error: Process with PID {pid} is no longer running."
+            )
+        except Exception as e:
+            self.logger.exception(f"An unexpected error occurred: {e}")

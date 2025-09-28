@@ -320,7 +320,6 @@ default_config = {
         "weather": {
             "_section_hint": (
                 "Settings for the Weather sub-plugin, which attaches to the Calendar popover. "
-                "This section fixes the original structure."
             ),
             "coordinates": ("-23.5505", "-46.6333"),
             "coordinates_hint": (

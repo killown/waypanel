@@ -1,7 +1,6 @@
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
-# Enable or disable the plugin
 ENABLE_PLUGIN = True
 DEPS = ["event_manager"]
 
@@ -25,11 +24,9 @@ class TopPanelPlugin(BasePlugin):
     def __init__(self, panel_instance):
         """
         Initialize the TopPanelPlugin and prepare its UI structure.
-
         Sets up the internal box layout for the top panel (left, systray, button container),
         applies CSS styling, and initializes a readiness flag to indicate when the panel
         is fully constructed and ready for use.
-
         Args:
             panel_instance: The main panel object from panel.py,
                             providing access to shared resources and widgets.
@@ -50,8 +47,6 @@ class TopPanelPlugin(BasePlugin):
         )
         self.obj.top_panel_box_right = Gtk.Box()
         self.spacer = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-
-        # will set position of new widgets Gtk.Align.END
         self.spacer.set_hexpand(True)
         self.spacer.add_css_class("right-box-spacer")
         self.update_widget_safely(self.obj.top_panel_box_right.append, self.spacer)
@@ -71,7 +66,6 @@ class TopPanelPlugin(BasePlugin):
             1,
             2,
         )
-
         self.obj.top_panel_box_center = Gtk.Box()
         self.obj.top_panel_box_full = Gtk.Grid()
         self.obj.top_panel_box_full.set_column_homogeneous(True)
@@ -93,7 +87,6 @@ class TopPanelPlugin(BasePlugin):
         self.obj.top_panel_box_center.set_halign(Gtk.Align.CENTER)
         self.obj.top_panel_box_center.set_valign(Gtk.Align.CENTER)
         self.obj.top_panel_box_center.set_hexpand(False)
-
         self.main_widget = (self.obj.top_panel_box_full, "set_content")
         self.is_top_panel_ready = True
 
@@ -106,7 +99,6 @@ class TopPanelPlugin(BasePlugin):
             and self.is_widget_ready(self.obj.top_panel_box_center)
             and self.is_widget_ready(self.obj.top_panel_box_full)
         ):
-            # Apply CSS classes
             self.update_widget_safely(
                 self.obj.top_panel_box_left.add_css_class, "top-panel-box-left"
             )
@@ -126,9 +118,7 @@ class TopPanelPlugin(BasePlugin):
             self.update_widget_safely(
                 self.obj.top_panel_box_full.add_css_class, "top-panel-box-full"
             )
-
             return False
         else:
-            # Retry after a delay
             GLib.timeout_add(1, self.add_css_class)
             return True

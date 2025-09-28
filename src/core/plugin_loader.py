@@ -7,6 +7,7 @@ import traceback
 from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
 from src.shared.gtk_helpers import GtkHelpers
+from src.shared.notify_send import Notifier
 
 
 class PluginLoader:
@@ -61,28 +62,101 @@ class PluginLoader:
         self.config_path = self.config_handler.config_path
         self.gtk_helpers = GtkHelpers(panel_instance)
         self.update_widget_safely = self.gtk_helpers.update_widget_safely
+        self.panel_instance.plugins_startup_finished = False
         self.user_plugins_dir = os.path.join(
             self.get_real_user_home(), ".local", "share", "waypanel", "plugins"
         )
+        self.last_widget_plugin_added = None
+
+        self.ensure_proportional_layout_attempts = {"max": 30, "current": 0}
+        GLib.timeout_add(100, self.ensure_proportional_layout)
 
     def get_real_user_home(self):
-        """Determine the real user's home directory, even when running with elevated privileges.
+        """Determine the real user's home directory.
 
-        This function identifies the original user's home path by checking environment variables
-        commonly set when using privilege escalation tools like sudo or pkexec. It ensures correct
-        behavior whether running as root or a regular user.
+        This function handles privilege escalation scenarios (like sudo/pkexec) to ensure
+        paths point to the original user's home directory for configuration and data access.
+        It respects the $HOME environment variable for maximum compatibility in various desktop
+        environments.
 
         Returns:
             str: The absolute path to the real user's home directory.
         """
-        # Try SUDO_USER first
         if "SUDO_USER" in os.environ:
             return os.path.expanduser(f"~{os.environ['SUDO_USER']}")
-        # Fallback to PKEXEC_UID (used by pkexec)
+
         elif "PKEXEC_UID" in os.environ:
             return os.path.expanduser(f"~{os.environ['PKEXEC_UID']}")
-        # Default case (non-root or not running via sudo/pkexec)
-        return os.path.expanduser("~")
+
+        return os.environ.get("HOME") or os.path.expanduser("~")
+
+    def ensure_proportional_layout(self):
+        """
+        Checks if the actual allocated width of the Left, Center, or Right panel containers
+        exceeds their theoretical limits (33%, 33%, 33% of total width). If any side
+        exceeds its limit, the 'clock' plugin (Center) is disabled as a primary corrective action.
+        """
+        max_attemps = self.ensure_proportional_layout_attempts["max"]
+        current_attempts = self.ensure_proportional_layout_attempts["current"]
+        if current_attempts >= max_attemps:
+            return False  # stop GLib
+
+        self.ensure_proportional_layout_attempts["current"] += 1
+
+        if not self.panel_instance.plugins_startup_finished:
+            return True  # Continue waiting
+
+        try:
+            # Get total panel width
+            width = self.config_handler.check_and_get_config(["panel", "top", "width"])
+
+            if width is None or width <= 0:
+                self.logger.warning(
+                    "Panel width not configured or invalid. Skipping proportional space check."
+                )
+                return False
+
+            # Assuming proportional layout (33% | 33% | 33%)
+            sections_to_check = [
+                (self.panel_instance.top_panel_box_left, 0.33, "Left Panel"),
+                (self.panel_instance.top_panel_box_center, 0.33, "Center Panel"),
+                (self.panel_instance.top_panel_grid_right, 0.33, "Right Panel"),
+            ]
+
+            # We track if a problem was found to avoid redundant notifications.
+            limit_exceeded = False
+            TOLERANCE = 2  # Small tolerance for GTK rounding/borders
+
+            for container, max_percent, side_name in sections_to_check:
+                # Calculate the theoretical maximum allowed width
+                max_width_size = width * max_percent
+
+                # Get the actual width allocated to the container
+                allocated_width = container.get_allocated_width()
+
+                if allocated_width > (max_width_size + TOLERANCE):
+                    self.logger.warning(
+                        f"Space violation detected in {side_name}. "
+                        f"Allocated: {allocated_width:.2f}px, Max: {max_width_size:.2f}px."
+                    )
+                    limit_exceeded = True
+
+            if limit_exceeded:
+                self.disable_plugin(self.last_widget_plugin_added)
+                self.nofitier = Notifier()
+                self.notify_send = self.nofitier.notify_send
+                self.notify_send(
+                    "Plugin Loader",
+                    f"{self.last_widget_plugin_added} disabled. Panel element(s) are exceeding allocated space. Removed central element for layout stability.",
+                    "python",
+                )
+                return False  # Stop GLib
+
+            return True  # Still trying
+
+        except Exception as e:
+            self.logger.error(f"Error during proportional space check: {e}")
+            return True  # Don't crash the loader, but log the error
 
     def disable_plugin(self, plugin_name):
         """Disable a plugin by name.
@@ -628,6 +702,7 @@ class PluginLoader:
                 o=order,
                 pr=priority: self._initialize_plugin_with_deps(m, p, o, pr)
             )
+        self.panel_instance.plugins_startup_finished = True
 
     def _initialize_plugin_with_deps(self, module, position, order, priority):
         """
@@ -712,6 +787,7 @@ class PluginLoader:
             self.handle_set_widget(
                 widget_action, widget_to_append, target_box, module_name
             )
+            self.last_widget_plugin_added = module_name
 
         except Exception as e:
             self.logger.error(f"Failed to initialize plugin '{plugin_name}': {e}")
