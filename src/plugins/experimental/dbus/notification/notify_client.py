@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import json
+import re
 from gi.repository import Gtk  # pyright: ignore
 from ._utils import NotifyUtils
 from src.plugins.core._base import BasePlugin
@@ -76,7 +77,7 @@ class NotificationPopoverPlugin(BasePlugin):
     def fetch_last_notifications(self, limit=5):
         limit = self.max_notifications
         """
-        Fetch the last 3 notifications from the database.
+        Fetch the last notifications from the database.
         :return: List of notifications (dictionaries).
         """
         try:
@@ -106,8 +107,6 @@ class NotificationPopoverPlugin(BasePlugin):
                     hints,
                     timestamp,
                 ) = row
-                if notification_id in self.notification_on_popover:
-                    continue
                 notifications.append(
                     {
                         "id": notification_id,
@@ -124,41 +123,61 @@ class NotificationPopoverPlugin(BasePlugin):
         except Exception as e:
             self.logger.error(f"Error fetching notifications from database: {e}")
 
-    def on_notification_click(self, notification, widget):
-        """Handle click action on a notification."""
-        try:
-            actions = notification.get("actions", [])
-            if isinstance(actions, tuple):
-                action_id, action_label = actions[0]
-                if action_id == "default":
-                    self.handle_default_action(notification, widget)
-                else:
-                    self.logger.error(f"Unexpected action_id: {action_id}")
-            else:
-                actions = actions.split(",")[0]
-                if actions == "default":
-                    self.handle_default_action(notification, widget)
-                else:
-                    self.logger.error(f"Unexpected action_id: {actions}")
-        except Exception as e:
-            self.logger.error(f"Error handling notification click: {e}")
+    def _extract_first_uri_from_text(self, text: str) -> str | None:
+        """
+        Uses a regular expression to find and return the first URL in a string.
+        """
+        url_regex = r"(?:https?|ftp)://\S+|www\.\S+"
+        matches = re.findall(url_regex, text)
+        if matches:
+            uri = matches[0].rstrip(".,;")
+            return uri
+        return None
 
-    def handle_default_action(self, notification, widget):
-        """Handle the default action for a notification."""
-        try:
-            hints = notification.get("hints", {})
-            url = hints.get("url", "")
-            desktop_entry = hints.get("desktop-entry", "").lower()
-            if url:
-                self.cmd.open_url(url)
-            elif desktop_entry:
-                self.cmd.run(desktop_entry)
+    def on_launch_uri(self, uri: str):
+        """
+        Launches the specified URI using xdg-open via the command utility
+        and closes the popover.
+        """
+        self.cmd.open_url(uri)
+        if hasattr(self, "popover") and self.popover:
+            self.popover.popdown()
+        self.logger.info(f"Launching URI: {uri}")
+        return True
+
+    def on_launch_uri_clicked(self, button: Gtk.Button, uri: str):
+        """Handler for the dedicated 'Open Link' button."""
+        self.on_launch_uri(uri)
+
+    def on_notification_click(self, notification, widget):
+        """
+        Handle click action on a notification:
+        1. Link in body (Highest Priority)
+        2. Link in hints (Fallback)
+        3. Desktop Entry in hints (App Launch)
+        """
+        self.logger.info(f"Notification clicked: {notification.get('id')}")
+        extracted_uri = self._extract_first_uri_from_text(notification.get("body", ""))
+        hints = notification.get("hints", {})
+        hint_url = hints.get("url", "")
+        uri_to_launch = extracted_uri or hint_url
+        if uri_to_launch:
+            self.on_launch_uri(uri_to_launch)
+            return
+        desktop_entry = hints.get("desktop-entry", "").lower()
+        if desktop_entry:
+            self.cmd.run(desktop_entry)
+            if hasattr(self, "popover") and self.popover:
                 self.popover.popdown()
-                return True
-            else:
-                self.logger.info("No default action defined in hints.")
-        except Exception as e:
-            self.logger.error(f"Error handling default action: {e}")
+            self.logger.info(f"Launching application: {desktop_entry}")
+            return
+        if hasattr(self, "popover") and self.popover:
+            self.popover.popdown()
+            self.logger.debug("Notification click closed popover (no action found).")
+
+    def handle_default_action(self, notification):
+        """Deprecated: Logic centralized in on_notification_click."""
+        self.on_notification_click(notification, None)
 
     def execute_default_action(self, action, notification):
         """Execute the default action specified in hints."""
@@ -167,15 +186,13 @@ class NotificationPopoverPlugin(BasePlugin):
             if action.startswith("app://"):
                 app_id = action.split("://")[1]
                 self.cmd.run(app_id)
+                if hasattr(self, "popover") and self.popover:
+                    self.popover.popdown()
         except Exception as e:
             self.logger.error(f"Error executing default action '{action}': {e}")
 
     def create_notification_box(self, notification):
-        """Create a notification box with an optional image on the left, content on the right, and a close button.
-        :param notification: Dictionary containing notification details.
-        :param notification_box: The parent box to which the notification will be added.
-        :return: Gtk.Box containing the notification content.
-        """
+        """Create a notification box. No explicit link button is added."""
         body_max_width_chars = self.get_config(
             ["notify", "client", "body_max_width_chars"], 50
         )
@@ -233,8 +250,10 @@ class NotificationPopoverPlugin(BasePlugin):
         self.update_widget_safely(right_box.append, timestamp_label)
         self.update_widget_safely(hbox.append, left_box)
         self.update_widget_safely(hbox.append, right_box)
+        separator = Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
         self.update_widget_safely(self.vbox.append, hbox)
-        self.notification_on_popover["id"] = notification
+        self.update_widget_safely(self.vbox.append, separator)
+        self.notification_on_popover[notification["id"]] = hbox
         return hbox
 
     def clear_all_notifications(self, *_):
@@ -250,15 +269,15 @@ class NotificationPopoverPlugin(BasePlugin):
                 next_child = child.get_next_sibling()
                 self.vbox.remove(child)
                 child = next_child
+            self.notification_on_popover = {}
             self.logger.info("All notifications cleared.")
         except Exception as e:
             self.logger.error(f"Error clearing notifications: {e}")
 
     def delete_notification(self, notification_id, notification_box):
         """Delete a notification from the database and remove it from the UI.
-        If there are older notifications, append the next oldest one to the UI.
         :param notification_id: ID of the notification to delete.
-        :param notification_box: The Gtk.Box containing the notification content.
+        :param notification_box: The Gtk.Box containing the notification content (the hbox).
         """
         try:
             conn = sqlite3.connect(self.db_path)
@@ -268,26 +287,30 @@ class NotificationPopoverPlugin(BasePlugin):
             conn.close()
             parent = notification_box.get_parent()
             if parent:
+                separator = notification_box.get_next_sibling()
                 parent.remove(notification_box)
+                if separator and isinstance(separator, Gtk.Separator):
+                    parent.remove(separator)
+            if notification_id in self.notification_on_popover:
+                del self.notification_on_popover[notification_id]
             self.logger.info(f"Notification {notification_id} deleted.")
-            self.append_next_oldest_notification()
         except Exception as e:
             self.logger.error(f"Error deleting notification {notification_id}: {e}")
 
     def append_next_oldest_notification(self):
         """Fetch the next oldest notification from the database and append it to the UI."""
         try:
-            notifications = self.fetch_last_notifications(limit=1)
-            if notifications:
-                notifications = notifications[0]
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            cursor.execute("""
-                    SELECT id, app_name, summary, body, app_icon, actions, hints, timestamp
-                    FROM notifications
-                    ORDER BY timestamp DESC
-                    LIMIT 1
-                """)
+            displayed_ids = tuple(self.notification_on_popover.keys())
+            query = f"""
+                SELECT id, app_name, summary, body, app_icon, actions, hints, timestamp
+                FROM notifications
+                WHERE id NOT IN ({",".join(["?"] * len(displayed_ids)) if displayed_ids else "NULL"})
+                ORDER BY timestamp DESC
+                LIMIT 1
+            """
+            cursor.execute(query, displayed_ids)
             row = cursor.fetchone()
             conn.close()
             if row:
@@ -301,11 +324,6 @@ class NotificationPopoverPlugin(BasePlugin):
                     "hints": json.loads(row[6]),
                     "timestamp": row[7],
                 }
-                vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
-                vbox.set_margin_top(10)
-                vbox.set_margin_bottom(10)
-                vbox.set_margin_start(10)
-                vbox.set_margin_end(10)
                 self.create_notification_box(notification)
         except Exception as e:
             self.logger.error(f"Error appending next oldest notification: {e}")
@@ -359,14 +377,14 @@ class NotificationPopoverPlugin(BasePlugin):
             next_child = child.get_next_sibling()
             self.vbox.remove(child)
             child = next_child
+        self.notification_on_popover = {}
         notifications = self.fetch_last_notifications()
         if not notifications:
             self.logger.info("No notifications to display.")
-            return
-        box_size = 100
-        height = 100
+            no_notify_label = Gtk.Label(label="No recent notifications")
+            no_notify_label.add_css_class("no-notifications-label")
+            self.update_widget_safely(self.vbox.append, no_notify_label)
         for notification in notifications:
-            height += box_size
             self.create_notification_box(notification)
         self.main_vbox.set_size_request(self.popover_width, self.popover_height)
         self.update_dnd_switch_state()
@@ -390,14 +408,21 @@ class NotificationPopoverPlugin(BasePlugin):
             with notification data retrieved from a local SQLite database.
             It provides user controls like a "Clear All" button and a
             "Do Not Disturb" toggle.
-        2.  **State Management (Refined)**: The removal of the explicit
-            DEFAULT_CONFIG variable and initialization logic means the plugin
-            now relies completely on `BasePlugin.get_config(..., default)`
-            to read settings. Crucially, configuration updates (like the DND toggle)
-            now use the centralized `self.update_config()`
-            method (delegated from BasePlugin) to safely modify, save, and reload
-            the configuration with a single call.
-        3.  **Data Retrieval**: Notifications are fetched from a database
-            that is populated by the separate notification server daemon.
+        2.  **Robust Click Handling**: The `on_notification_click` method
+            now implements a robust action hierarchy:
+            - **Highest Priority**: Checks the notification's `body` for an
+              embedded URL using a regex.
+            - **Second Priority**: Checks the notification's `hints` for a
+              `url` field.
+            - **Action**: If *any* URL is found, it is launched using
+              `self.cmd.open_url` (which typically executes `xdg-open`),
+              and the popover closes.
+            - **Third Priority**: If no URL is found, it checks `hints` for a
+              `desktop-entry` field and launches the corresponding application
+              using `self.cmd.run`.
+            - **Fallback**: If no action is found, it simply closes the popover.
+        3.  **No Dedicated Button**: The explicit "Open Link" button has been
+            removed. All URI and app launch actions are now driven by the
+            single click gesture on the notification box itself.
         """
         return self.code_explanation.__doc__
