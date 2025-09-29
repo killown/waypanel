@@ -1,9 +1,8 @@
 import aiosqlite
 import datetime
 import asyncio
-from pathlib import Path
 from typing import List, Tuple
-from gi.repository import Gio, Gtk, GLib, Pango  # pyright: ignore
+from gi.repository import Gio, Gtk, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
@@ -59,6 +58,15 @@ class NotesManager:
             await db.execute("DELETE FROM notes WHERE id = ?", (note_id,))
             await db.commit()
 
+    async def edit_note(self, note_id: int, new_content: str):
+        """Update the content of a note by ID"""
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute(
+                "UPDATE notes SET content = ?, timestamp = CURRENT_TIMESTAMP WHERE id = ?",
+                (new_content, note_id),
+            )
+            await db.commit()
+
     async def clear_notes(self):
         """Delete all notes"""
         async with aiosqlite.connect(self.db_path) as db:
@@ -84,88 +92,14 @@ class MenuNotes(BasePlugin):
         self.notes_manager = NotesManager(self.path_handler, self.db_path)
         self.popover_notes = None
         self.find_text_using_button = {}
+        self.note_row_widgets = {}
+        self.is_editing = False
         self.row_content = None
         self.listbox = None
         self.menubutton_notes = Gtk.Button.new()
         self.main_widget = (self.menubutton_notes, "append")
         self.menubutton_notes.connect("clicked", self.open_popover_notes)
         self.gtk_helper.add_cursor_effect(self.menubutton_notes)
-
-    def clear_notes(self, *_):
-        """Handle clearing all notes with a GTK4 confirmation dialog"""
-        dialog = Gtk.AlertDialog(
-            message="Clear all notes?",
-            detail="This will permanently delete all your notes. Are you sure?",
-            buttons=["_Cancel", "_Clear All"],
-        )
-        dialog.set_default_button(1)
-        dialog.set_cancel_button(0)
-        dialog.choose(
-            callback=self.on_clear_confirmation_response,
-        )
-
-    def on_clear_confirmation_response(self, dialog, result, *_):
-        """Callback for the AlertDialog response"""
-        try:
-            response = dialog.choose_finish(result)
-            if response == 1:
-                """Handle clearing all notes"""
-                asyncio.run(self.async_clear_notes())
-                self.update_notes_list()
-                self.scrolled_window.set_min_content_height(50)
-        except Exception as e:
-            self.logger.error(f"Dialog error: {e}")
-
-    def update_notes_list(self):
-        """Update the list of notes in the popover"""
-        if self.listbox is not None:
-            self.listbox.remove_all()
-        notes = get_notes_sync(self.path_handler, self.db_path)
-        line_height = 40
-        padding = 20
-        notes_count = len(notes)
-        dynamic_height = min(notes_count * line_height + padding, 600)
-        self.scrolled_window.set_min_content_height(dynamic_height)
-        icon_name = self.get_config(["plugin", "notes", "delete_icon"], "edit-delete")
-        button_icon = self.gtk_helper.icon_exist(icon_name, ["edit-delete"])
-        for note_id, content in notes:
-            if not content:
-                continue
-            row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-            delete_button = Gtk.Button()
-            delete_button.add_css_class("notes_button_delete")
-            delete_button.set_icon_name(button_icon)
-            self.gtk_helper.add_cursor_effect(delete_button)
-            delete_button.connect("clicked", self.on_delete_note)
-            spacer = Gtk.Label(label="    ")
-            row_hbox.append(spacer)
-            row_hbox.MYTEXT = f"{note_id} {content.strip()}"  # pyright: ignore
-            row_hbox.note_id = note_id  # pyright: ignore
-            note_label = Gtk.Label.new()
-            note_label.set_wrap(True)
-            timestamp = content[:16]
-            message = content[19:]
-            if timestamp and message:
-                markup = f"{timestamp} — {message}"
-            else:
-                markup = content
-            note_label.set_markup(f'<span font="DejaVu Sans Mono">{markup}</span>')
-            note_label.props.margin_end = 10
-            note_label.props.hexpand = True
-            note_label.set_wrap(True)
-            note_label.set_ellipsize(Pango.EllipsizeMode.NONE)
-            note_label.set_halign(Gtk.Align.FILL)
-            note_label.set_hexpand(True)
-            note_label.set_valign(Gtk.Align.CENTER)
-            note_label.set_vexpand(False)
-            note_label.set_xalign(0)
-            note_label.set_yalign(0.5)
-            note_label.set_margin_end(5)
-            note_label.set_halign(Gtk.Align.START)
-            row_hbox.append(note_label)
-            row_hbox.append(delete_button)
-            self.listbox.append(row_hbox)  # pyright: ignore
-            self.find_text_using_button[delete_button] = row_hbox
 
     def create_popover_notes(self):
         """Create the notes popover content"""
@@ -215,6 +149,152 @@ class MenuNotes(BasePlugin):
         self.popover_notes.set_parent(self.menubutton_notes)
         return self.popover_notes
 
+    def clear_notes(self, *_):
+        """Handle clearing all notes with a GTK4 confirmation dialog"""
+        dialog = Gtk.AlertDialog(
+            message="Clear all notes?",
+            detail="This will permanently delete all your notes. Are you sure?",
+            buttons=["_Cancel", "_Clear All"],
+        )
+        dialog.set_default_button(1)
+        dialog.set_cancel_button(0)
+        dialog.choose(
+            callback=self.on_clear_confirmation_response,
+        )
+
+    def on_clear_confirmation_response(self, dialog, result, *_):
+        """Callback for the AlertDialog response"""
+        try:
+            response = dialog.choose_finish(result)
+            if response == 1:
+                """Handle clearing all notes"""
+                asyncio.run(self.async_clear_notes())
+                self.update_notes_list()
+                self.scrolled_window.set_min_content_height(50)
+        except Exception as e:
+            self.logger.error(f"Dialog error: {e}")
+
+    def update_notes_list(self):
+        """Update the list of notes in the popover, adding the edit button"""
+        if self.listbox is not None:
+            self.listbox.remove_all()
+        self.is_editing = False
+        self.note_row_widgets = {}
+        notes = get_notes_sync(self.path_handler, self.db_path)
+        line_height = 40
+        padding = 20
+        notes_count = len(notes)
+        dynamic_height = min(notes_count * line_height + padding, 600)
+        self.scrolled_window.set_min_content_height(dynamic_height)
+        delete_icon_name = self.get_config(
+            ["plugin", "notes", "delete_icon"], "edit-delete"
+        )
+        delete_button_icon = self.gtk_helper.icon_exist(
+            delete_icon_name, ["edit-delete"]
+        )
+        edit_icon_name = self.get_config(
+            ["plugin", "notes", "edit_icon"], "document-edit"
+        )
+        edit_button_icon = self.gtk_helper.icon_exist(edit_icon_name, ["document-edit"])
+        for note_id, content in notes:
+            if not content:
+                continue
+            row = Gtk.ListBoxRow()
+            row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 5)
+            row_hbox.set_margin_start(10)
+            row_hbox.set_margin_end(10)
+            row_hbox.note_id = note_id  # pyright: ignore
+            row.set_child(row_hbox)
+            spacer = Gtk.Label(label="  ")
+            row_hbox.append(spacer)
+            note_label = Gtk.Label.new()
+            note_label.set_wrap(True)
+            parts = content.split()
+            if len(parts) >= 3:
+                timestamp_str = f"{parts[0]} {parts[1]}"
+                message = " ".join(parts[2:])
+                if message.strip():
+                    markup = f'<span font="DejaVu Sans Mono"><b>{timestamp_str}</b> {message}</span>'
+                    note_label.original_content = message  # pyright: ignore
+                else:
+                    markup = f'<span font="DejaVu Sans Mono">{content}</span>'
+                    note_label.original_content = content  # pyright: ignore
+            else:
+                timestamp_str = ""
+                message = content
+                markup = f'<span font="DejaVu Sans Mono">{content}</span>'
+                note_label.original_content = content  # pyright: ignore
+            note_label.set_markup(markup)
+            note_label.set_halign(Gtk.Align.START)
+            note_label.set_hexpand(True)
+            note_label.set_valign(Gtk.Align.CENTER)
+            note_label.set_xalign(0)
+            row_hbox.append(note_label)
+            edit_button = Gtk.Button()
+            edit_button.add_css_class("notes_button_edit")
+            edit_button.set_icon_name(edit_button_icon)
+            self.gtk_helper.add_cursor_effect(edit_button)
+            edit_button.connect("clicked", self.on_start_edit_note, note_id)
+            row_hbox.append(edit_button)
+            delete_button = Gtk.Button()
+            delete_button.add_css_class("notes_button_delete")
+            delete_button.set_icon_name(delete_button_icon)
+            self.gtk_helper.add_cursor_effect(delete_button)
+            delete_button.connect("clicked", self.on_delete_note)
+            row_hbox.append(delete_button)
+            self.listbox.append(row)  # pyright: ignore
+            self.find_text_using_button[delete_button] = row_hbox
+            self.note_row_widgets[note_id] = {
+                "row": row,
+                "hbox": row_hbox,
+                "label": note_label,
+                "edit_button": edit_button,
+                "delete_button": delete_button,
+            }
+
+    def on_start_edit_note(self, button, note_id):
+        """Replaces the label with an entry to start editing the note."""
+        if self.is_editing:
+            return
+        if note_id not in self.note_row_widgets:
+            self.logger.error(f"Cannot find widgets for note_id: {note_id}")
+            return
+        self.is_editing = True
+        widgets = self.note_row_widgets[note_id]
+        hbox = widgets["hbox"]
+        old_label = widgets["label"]
+        initial_text = old_label.original_content  # pyright: ignore
+        edit_entry = Gtk.Entry.new()
+        edit_entry.set_text(initial_text)
+        edit_entry.set_hexpand(True)
+        edit_entry.set_halign(Gtk.Align.FILL)
+        edit_entry.connect("activate", self.on_finish_edit_note, note_id, widgets)
+        hbox.remove(old_label)
+        hbox.insert_child_after(edit_entry, hbox.get_first_child())
+        edit_entry.grab_focus()
+        edit_entry.select_region(0, -1)
+        widgets["edit_button"].set_sensitive(False)
+        widgets["delete_button"].set_sensitive(False)
+        widgets["edit_entry"] = edit_entry
+
+    def on_finish_edit_note(self, entry, note_id, widgets):
+        """Commits the edited note content to the database and reverts the UI."""
+        new_content_message = entry.get_text().strip()
+        if not new_content_message:
+            self.is_editing = False
+            self.update_notes_list()
+            return
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        new_full_content = f"{now} {new_content_message}"
+        asyncio.run(self.async_edit_note(note_id, new_full_content))
+        self.is_editing = False
+        self.update_notes_list()
+
+    async def async_edit_note(self, note_id: int, new_content: str):
+        """Async helper to edit a note"""
+        await self.notes_manager.initialize_db()
+        await self.notes_manager.edit_note(note_id, new_content)
+
     async def async_add_note(self, content):
         """Async helper to add a note"""
         await self.notes_manager.initialize_db()
@@ -223,9 +303,9 @@ class MenuNotes(BasePlugin):
     def on_add_note(self, *_):
         """Handle adding a new note with timestamp"""
         content = self.entry_add_note.get_text().strip()
-        if content:
-            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-            content_with_time = f"{now} — {content}"
+        if content and not self.is_editing:
+            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            content_with_time = f"{now} {content}"
             asyncio.run(self.async_add_note(content_with_time))
             self.entry_add_note.set_text("")
             self.update_notes_list()
@@ -237,11 +317,13 @@ class MenuNotes(BasePlugin):
 
     def on_delete_note(self, button):
         """Handle deleting a note"""
+        if self.is_editing:
+            return
         if button not in self.find_text_using_button:
             self.logger.info("Note delete button not found")
             return
-        row = self.find_text_using_button[button]
-        note_id = row.note_id
+        row_hbox = self.find_text_using_button[button]
+        note_id = row_hbox.note_id
         if note_id:
             asyncio.run(self.async_delete_note(note_id))
             self.update_notes_list()
@@ -280,16 +362,30 @@ class MenuNotes(BasePlugin):
 
     def on_filter_invalidate(self, row):
         search_text = self.searchbar.get_text().strip().lower()
-        if not self.data_helper.validate_string(row, "row from on_filter_invalidate"):
-            row_text = row.get_child().MYTEXT.lower()
-            return search_text in row_text
-        return False
+        if not search_text:
+            return True
+        row_hbox = row.get_child()
+        note_widget = None
+        for child in row_hbox:
+            if isinstance(child, Gtk.Label) and hasattr(child, "original_content"):
+                note_widget = child
+                break
+            elif isinstance(child, Gtk.Entry):
+                note_widget = child
+                break
+        if note_widget is None:
+            return False
+        if isinstance(note_widget, Gtk.Label):
+            row_text = note_widget.original_content.lower()  # pyright: ignore
+        elif isinstance(note_widget, Gtk.Entry):
+            row_text = note_widget.get_text().lower()
+        return search_text in row_text
 
     def about(self):
         """
         A plugin that provides a simple note-taking utility, allowing users
-        to add, delete, and view notes directly from the panel. The notes are
-        stored in an SQLite database.
+        to add, delete, view, and **edit** notes directly from the panel.
+        The notes are stored in an SQLite database.
         """
         return self.about.__doc__
 
@@ -300,20 +396,21 @@ class MenuNotes(BasePlugin):
         Its core logic is built around **asynchronous database management,
         dynamic UI manipulation, and user interaction**:
         1.  **Database Management**: The plugin uses `aiosqlite` to handle
-            all database operations asynchronously, ensuring the UI remains
-            responsive. It initializes a SQLite database file at
-            `~/.config/waypanel/notes.db`, creates a `notes` table if it
-            doesn't exist, and provides methods to add, retrieve, and delete
-            notes.
-        2.  **Dynamic UI**: The plugin creates a `Gtk.Popover` containing
-            widgets for adding notes, searching, and displaying the list of
-            existing notes. The list of notes is a `Gtk.ListBox` that is
-            dynamically populated and updated by the `update_notes_list` method,
-            which fetches notes from the database.
-        3.  **User Interaction**: It handles various user actions: adding a
-            new note via an entry field, deleting individual notes with a
-            button, and clearing all notes via a confirmation dialog. It also
-            implements a search function that filters the displayed notes
-            in real-time as the user types, using `Gtk.ListBox.set_filter_func`.
+            all database operations asynchronously. It now includes an `edit_note`
+            method to update existing notes, and updates the timestamp on edit.
+        2.  **Timestamp Fixes**: The logic in `update_notes_list`, `on_add_note`,
+            and `on_finish_edit_note` has been unified to use the space-separated
+            format: **"YYYY-MM-DD HH:MM:SS <content>"**. This allows the display
+            logic to correctly use `string.split()` to isolate the content
+            starting from the third element (`parts[2:]`).
+        3.  **Dynamic UI**: The `update_notes_list` method dynamically builds
+            each note row with an **Edit button** and stores only the note
+            message in the `original_content` attribute.
+        4.  **Editing Workflow**: The `on_start_edit_note` method swaps the
+            static `Gtk.Label` for a responsive `Gtk.Entry` widget, using the
+            clean content (`original_content`) for initialization.
+            The `on_finish_edit_note` commits the changes and refreshes the list.
+        5.  **Search Filtering**: `on_filter_invalidate` now correctly searches
+            against the clean, timestamp-less content stored in `original_content`.
         """
         return self.code_explanation.__doc__
