@@ -11,6 +11,7 @@ from PIL import Image
 import re
 from src.plugins.core._base import BasePlugin
 from .clipboard_server import AsyncClipboardServer
+from src.shared.path_handler import PathHandler
 
 ENABLE_PLUGIN = True
 DEPS = ["top_panel", "clipboard_server"]
@@ -29,10 +30,10 @@ def initialize_plugin(panel_instance):
 class ClipboardManager:
     def __init__(self, panel_instance):
         self.server = AsyncClipboardServer(panel_instance)
-        self.db_path = self._default_db_path()
-
-    def _default_db_path(self):
-        return str(Path.home() / ".config" / "waypanel" / "clipboard_server.db")
+        self.path_handler = PathHandler(panel_instance)
+        self.db_path = self.path_handler.get_data_path(
+            "db/clipboard/clipboard_server.db"
+        )
 
     async def initialize(self):
         await self.server.start()
@@ -246,7 +247,7 @@ class ClipboardClient(BasePlugin):
                     continue
                 row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
                 image_button = Gtk.Button()
-                icon_name = self.gtk_helper.set_widget_icon_name(None, ["tag-delete"])
+                icon_name = self.gtk_helper.icon_exist("tag-delete")
                 image_button.set_icon_name(icon_name)
                 image_button.connect("clicked", self.on_delete_selected)
                 spacer = Gtk.Label(label="    ")

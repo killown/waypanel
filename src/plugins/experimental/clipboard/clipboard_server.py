@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import aiosqlite
 import subprocess
-
+from src.shared.path_handler import PathHandler
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
@@ -40,15 +40,14 @@ def run_server_in_background(panel_instance):
     return thread
 
 
-def initialize_db(db_path=None):
+def initialize_db(panel_instance, db_path=None):
     """
     Synchronously creates database and table if they don't exist
     Returns: Database connection
     """
-    path = db_path or str(Path.home() / ".config" / "waypanel" / "clipboard_server.db")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-
-    conn = sqlite3.connect(path)
+    path_handler = PathHandler(panel_instance)
+    db_path = path_handler.get_data_path("db/clipboard/clipboard_server.db")
+    conn = sqlite3.connect(db_path)
     try:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS clipboard_items (
@@ -70,7 +69,7 @@ def verify_db(panel_instance):
 
     if not os.path.exists(db_path):
         logger.info("Database doesn't exist. Creating...")
-        initialize_db()
+        initialize_db(panel_instance, db_path)
     else:
         logger.info(f"Database exists at {db_path}")
         # Verify table structure
@@ -88,11 +87,12 @@ def verify_db(panel_instance):
 class AsyncClipboardServer(BasePlugin):
     def __init__(self, panel_instance, db_path=None):
         super().__init__(panel_instance)
-        self.db_path = db_path or self._default_db_path()
         self.last_clipboard_content = ""
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.running = False
-
+        self.db_path = self.path_handler.get_data_path(
+            "db/clipboard/clipboard_server.db"
+        )
         self.config_data_server = self.config_data.get("plugins", "").get(
             "clipboard", ""
         )
@@ -102,12 +102,11 @@ class AsyncClipboardServer(BasePlugin):
             "server_monitor_interval", 0.5
         )
 
-    def _default_db_path(self):
-        return str(Path.home() / ".config" / "waypanel" / "clipboard_server.db")
-
-    async def _init_db(self):
+    async def _init_db(self, panel_instance, db_path):
         """Initialize the SQLite database."""
-        async with aiosqlite.connect(self.db_path) as db:
+        path_handler = PathHandler(panel_instance)
+        db_path = path_handler.get_data_path("db/clipboard/clipboard_server.db")
+        async with aiosqlite.connect(db_path) as db:
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS clipboard_items (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -216,7 +215,7 @@ class AsyncClipboardServer(BasePlugin):
 
     async def start(self):
         """Start the clipboard monitor."""
-        await self._init_db()
+        await self._init_db(self.obj, self.db_path)
         asyncio.create_task(self.monitor())
         if self.log_enabled:
             self.logger.info("Clipboard monitor started.")
