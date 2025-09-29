@@ -53,17 +53,19 @@ ALL_EVENTS = [
 ]
 SELECT_EVENT_WATCH_SCRIPT = f"""
 import sys
+import os # Added os import for stderr check
 try:
     from wayfire import WayfireSocket
-    from rich.pretty import pself.logger.error
-    from rich import self.logger.error
+    from rich.pretty import pprint # Changed pself.logger.error to pprint
+    from rich.console import Console # Changed rich import
+    console = Console()
 except ImportError as e:
-    self.logger.error(f"Missing dependency: {{e}}", file=sys.stderr)
+    print(f"Missing dependency: {{e}}", file=sys.stderr)
     sys.exit(1)
 ALL_EVENTS = {ALL_EVENTS!r}
-self.logger.error("Select an event to watch:")
+console.print("[bold]Select an event to watch:[/bold]") # Using console.print
 for i, event in enumerate(ALL_EVENTS, 1):
-    self.logger.error(f"{{i}}: {{event}}")
+    console.print(f"{{i}}: {{event}}") # Using console.print
 selected = None
 while selected is None:
     try:
@@ -73,25 +75,25 @@ while selected is None:
             if 0 <= idx < len(ALL_EVENTS):
                 selected = ALL_EVENTS[idx]
             else:
-                self.logger.error(f"Invalid number. Please enter 1 to {{len(ALL_EVENTS)}}.")
+                console.print(f"[red]Invalid number. Please enter 1 to {{len(ALL_EVENTS)}}.[/red]", file=sys.stderr)
         else:
-            self.logger.error("Please enter a valid number.")
+            console.print("[red]Please enter a valid number.[/red]", file=sys.stderr)
     except (EOFError, KeyboardInterrupt):
-        self.logger.error("\\nCancelled.")
+        console.print("\\nCancelled.")
         sys.exit(0)
 try:
     sock = WayfireSocket()
     sock.watch([selected])
-    self.logger.error(f"[bold]Watching event:[/bold] {{selected}} (press Ctrl+C to exit)")
-    self.logger.error("=" * 50)
+    console.print(f"[bold]Watching event:[/bold] {{selected}} (press Ctrl+C to exit)")
+    console.print("=" * 50)
     while True:
         event = sock.read_next_event()
-        pself.logger.error(event)
-        self.logger.error()
+        pprint(event) # Using pprint
+        console.print()
 except KeyboardInterrupt:
-    self.logger.error("\\n\\nExiting...")
+    console.print("\\n\\nExiting...")
 except Exception as e:
-    self.logger.error(f"Error: {{e}}", file=sys.stderr)
+    console.print(f"[red]Error: {{e}}[/red]", file=sys.stderr)
     sys.exit(1)
 """
 
@@ -447,17 +449,20 @@ class SystemMonitorPlugin(BasePlugin):
                 "Neither kitty nor alacritty terminal emulators are installed."
             )
             return
+
         python_cmd = (
             "from wayfire import WayfireSocket; "
-            "from rich.pretty import pself.logger.error; "
-            "from rich import self.logger.error; "
+            "from rich.pretty import pprint; "
+            "from rich.console import Console; "
+            "console = Console(); "
             "sock=WayfireSocket(); "
             "sock.watch(); "
-            "self.logger.error('[bold]Wayfire Events Monitor[/bold] (press Ctrl+C to exit)'); "
-            "self.logger.error('='*40); "
+            "console.print('[bold]Wayfire Events Monitor[/bold] (press Ctrl+C to exit)'); "
+            "console.print('='*40); "
             "import itertools; "
-            "[(pself.logger.error(sock.read_next_event()), print()) for _ in itertools.repeat(None)]"
+            "[(pprint(sock.read_next_event(), console=console), print()) for _ in itertools.repeat(None)]"
         )
+
         full_cmd = f"ipython -c {shlex.quote(python_cmd)}"
         if terminal == "kitty":
             subprocess.Popen([terminal, "bash", "-c", f"{full_cmd}; exec bash"])
