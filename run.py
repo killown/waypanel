@@ -1,9 +1,98 @@
-#!/usr/bin/env python3
 import os
 import sys
 import shutil
-import subprocess
 import glob
+import subprocess
+from datetime import datetime
+import threading
+
+
+# =========================================================
+# BACKUP AND RETENTION HELPER FUNCTIONS
+# =========================================================
+
+
+def _enforce_retention_policy(backup_base_dir, max_copies):
+    """Removes the oldest backup folders if the maximum limit is exceeded."""
+    try:
+        # Get all backup folders. Sorting by os.path.basename uses the timestamp in the name,
+        # which guarantees chronological order regardless of filesystem mtime quirks.
+        all_backups = sorted(
+            glob.glob(os.path.join(backup_base_dir, "backup_*")), key=os.path.basename
+        )
+        if len(all_backups) > max_copies:
+            # Calculate how many folders to remove (e.g., if 11, remove 1)
+            to_remove = all_backups[: len(all_backups) - max_copies]
+            print(
+                f"[INFO] Backup limit ({max_copies}) exceeded. Removing {len(to_remove)} oldest backup(s)."
+            )
+            for old_backup in to_remove:
+                print(f"[INFO] Removing old backup: {os.path.basename(old_backup)}")
+                shutil.rmtree(old_backup)
+    except Exception as e:
+        print(f"[ERROR] Failed to manage backup retention: {e}", file=sys.stderr)
+
+
+def backup_waypanel_data(source_dirs, backup_base_dir, max_copies=10):
+    """
+    Copies multiple source directories (data and config) to a single timestamped backup folder.
+    Excludes 'venv' from the 'data' directory.
+    source_dirs: A dictionary mapping descriptive names (e.g., 'data', 'config') to source paths.
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_target_root = os.path.join(backup_base_dir, f"backup_{timestamp}")
+    print(f"[INFO] Creating comprehensive backup in {backup_target_root}")
+    success = True
+
+    # Callable to ignore the 'venv' folder when copying the data directory
+    ignore_venv = shutil.ignore_patterns("venv")
+
+    try:
+        os.makedirs(backup_target_root, exist_ok=True)
+        os.makedirs(backup_base_dir, exist_ok=True)
+
+        for name, source_path in source_dirs.items():
+            if not os.path.isdir(source_path):
+                print(
+                    f"[WARN] Backup source '{name}' directory not found: {source_path}. Skipping this path."
+                )
+                continue
+
+            target_path = os.path.join(backup_target_root, name)
+
+            # Use the ignore function only for the 'data' directory
+            ignore_arg = ignore_venv if name == "data" else None
+
+            try:
+                shutil.copytree(
+                    source_path, target_path, symlinks=False, ignore=ignore_arg
+                )
+
+                status_msg = " (venv excluded)" if name == "data" else ""
+                print(f"[INFO] Backed up {name} to {target_path}{status_msg}")
+            except Exception as e:
+                print(
+                    f"[ERROR] Failed to backup '{name}' ({source_path}): {e}",
+                    file=sys.stderr,
+                )
+                success = False
+
+        if success:
+            print("[INFO] Comprehensive backup complete.")
+            _enforce_retention_policy(backup_base_dir, max_copies)
+        else:
+            print(
+                "[ERROR] Backup completed with errors. Retention management skipped.",
+                file=sys.stderr,
+            )
+
+    except Exception as e:
+        print(f"[FATAL] Failed to create backup root directory: {e}", file=sys.stderr)
+
+
+# =========================================================
+# MAIN APPLICATION BOOTSTRAP
+# =========================================================
 
 
 def main():
@@ -11,18 +100,31 @@ def main():
 
     XDG_DATA_HOME = os.getenv("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
     XDG_CONFIG_HOME = os.getenv("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+    XDG_CACHE_HOME = os.getenv("XDG_CACHE_HOME", os.path.expanduser("~/.cache"))
 
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    VENV_DIR = os.path.join(XDG_DATA_HOME, APP_NAME, "venv")
+    # Define application paths
+    WAYPANEL_DATA_DIR = os.path.join(XDG_DATA_HOME, APP_NAME)
     CONFIG_DIR = os.path.join(XDG_CONFIG_HOME, APP_NAME)
+    BACKUP_BASE_DIR = os.path.join(XDG_CACHE_HOME, APP_NAME, "backups")
+    VENV_DIR = os.path.join(WAYPANEL_DATA_DIR, "venv")
     CONFIG_FILE = os.path.join(CONFIG_DIR, "config.toml")
 
-    SYSTEM_CONFIG = f"/usr/lib/{APP_NAME}/config"
-    LOCAL_DEV_CONFIG = os.path.join(SCRIPT_DIR, APP_NAME, "config")
-    ALT_DEV_CONFIG = os.path.join(SCRIPT_DIR, "config")
+    # 1. RUN BACKUP IN A THREAD
+    SOURCE_DIRS_TO_BACKUP = {"data": WAYPANEL_DATA_DIR, "config": CONFIG_DIR}
+    print("[INFO] Starting asynchronous data and config backup...")
+    backup_thread = threading.Thread(
+        target=backup_waypanel_data,
+        args=(SOURCE_DIRS_TO_BACKUP, BACKUP_BASE_DIR, 10),  # max_copies set to 10
+        daemon=True,
+    )
+    backup_thread.start()
+
+    # 2. APPLICATION SETUP AND RUN (continues immediately)
 
     def find_package_files():
+        """Finds the installed Waypanel package path or falls back to development path."""
         candidate_patterns = [
             os.path.join(XDG_DATA_HOME, "lib/python*/site-packages"),
             os.path.expanduser("~/.local/lib/python*/site-packages"),
@@ -33,7 +135,6 @@ def main():
         ]
         for pattern in candidate_patterns:
             for path in glob.glob(pattern):
-                # Look for the 'waypanel' directory, which should contain the source files
                 pkg_path = os.path.join(path, APP_NAME)
                 if os.path.isdir(pkg_path):
                     return pkg_path
@@ -53,6 +154,7 @@ def main():
 
     # ===== GTK4 Layer Shell detection =====
     def find_gtk_layer_shell():
+        """Locates the required libgtk4-layer-shell.so file."""
         LOCAL_LIB_PATH = os.path.join(
             XDG_DATA_HOME, "lib", "gtk4-layer-shell", "lib", "libgtk4-layer-shell.so"
         )
@@ -94,9 +196,9 @@ def main():
         )
 
         for src_dir, desc in [
-            (SYSTEM_CONFIG, "system"),
-            (LOCAL_DEV_CONFIG, "dev path"),
-            (ALT_DEV_CONFIG, "alt dev path"),
+            (f"/usr/lib/{APP_NAME}/config", "system"),
+            (os.path.join(SCRIPT_DIR, APP_NAME, "config"), "dev path"),
+            (os.path.join(SCRIPT_DIR, "config"), "alt dev path"),
         ]:
             if os.path.isdir(src_dir):
                 os.makedirs(CONFIG_DIR, exist_ok=True)
@@ -160,6 +262,7 @@ def main():
 
 if __name__ == "__main__":
     try:
+        # Attempt to kill any previous running instance of the app
         subprocess.run("pkill -f waypanel/main.py".split())
     except Exception as e:
         print(e)
