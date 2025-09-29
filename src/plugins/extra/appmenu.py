@@ -35,7 +35,7 @@ class AppLauncher(BasePlugin):
         self.icons = {}
         self.search_row = []
         self.desired_app_order = []
-        self.db_path = self.path_handler.get_data_path("waypanel", "recent_apps.db")
+        self.db_path = self.path_handler.get_data_path("db/appmenu/recent_apps.db")
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
         self._create_recent_apps_table()
