@@ -27,10 +27,11 @@ class ControlCenter(Adw.Application):
     def __init__(self, panel_instance):
         super().__init__(application_id="org.waypanel.ControlCenter")
         self.config_handler = config_handler.ConfigHandler(panel_instance)
-        self.default_config = self.config_handler.default_config
+        self.default_config: Dict = self.config_handler.default_config
         self.config = {}
         self.widget_map = {}
         self.notifier = Notifier()
+        self.toast_overlay: Adw.ToastOverlay = None
 
     def _get_hint_for_path(self, *keys) -> str:
         current_dict = self.default_config
@@ -287,6 +288,16 @@ class ControlCenter(Adw.Application):
             value_label.add_css_class("control-center-value-display")
             return value_label
 
+    def display_notify(self, title: str, icon_name: str):
+        """Displays an in-app Adw.Toast using the internal ToastOverlay."""
+        if not self.toast_overlay:
+            print("ERROR: Cannot show toast. Adw.ToastOverlay not initialized.")
+            return
+        toast = Adw.Toast.new(title)
+        if icon_name:
+            pass
+        self.toast_overlay.add_toast(toast)
+
     def do_activate(self):
         self.win = self.props.active_window
         if not self.win:
@@ -310,8 +321,10 @@ class ControlCenter(Adw.Application):
             self.save_button_stack.add_named(self.save_button, "save_button")
             self.save_button_stack.set_visible_child_name("empty")
             header_bar.pack_end(self.save_button_stack)
+            self.toast_overlay = Adw.ToastOverlay.new()
+            vbox.append(self.toast_overlay)
             main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-            vbox.append(main_box)
+            self.toast_overlay.set_child(main_box)
             left_panel_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
             left_panel_box.set_size_request(300, -1)
             left_panel_box.set_hexpand(False)
@@ -474,14 +487,12 @@ class ControlCenter(Adw.Application):
                 return
         try:
             self.config_handler.save_config()
-            self.notifier.notify_send(
-                "Waypanel Config",
+            self.display_notify(
                 f"The {category_name.replace('_', ' ').capitalize()} settings have been saved successfully!",
                 "configure-symbolic",
             )
         except Exception as e:
-            self.notifier.notify_send(
-                "Waypanel Config Save Failed",
+            self.display_notify(
                 f"Error saving {category_name.replace('_', ' ').capitalize()} settings: {e}",
                 "dialog-error",
             )
