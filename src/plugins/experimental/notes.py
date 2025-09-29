@@ -23,17 +23,12 @@ def initialize_plugin(panel_instance):
 
 
 class NotesManager:
-    def __init__(self, path_handler):
+    def __init__(self, path_handler, db_path):
         self.path_handler = path_handler
-        self.db_path = self._default_db_path()
-
-    def _default_db_path(self):
-        config_dir = self.path_handler.get_config_dir()
-        return str(config_dir / "notes.db")
+        self.db_path = db_path
 
     async def initialize_db(self):
         """Create notes table if it doesn't exist"""
-        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS notes (
@@ -71,11 +66,11 @@ class NotesManager:
             await db.commit()
 
 
-def get_notes_sync(path_handler) -> List[Tuple[int, str]]:
+def get_notes_sync(path_handler, db_path) -> List[Tuple[int, str]]:
     """Sync wrapper for getting notes"""
 
     async def _fetch_notes():
-        manager = NotesManager(path_handler)
+        manager = NotesManager(path_handler, db_path)
         await manager.initialize_db()
         return await manager.get_notes()
 
@@ -85,7 +80,8 @@ def get_notes_sync(path_handler) -> List[Tuple[int, str]]:
 class MenuNotes(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
-        self.notes_manager = NotesManager(self.path_handler)
+        self.db_path = self.path_handler.get_data_path("db/notes/notes.db")
+        self.notes_manager = NotesManager(self.path_handler, self.db_path)
         self.popover_notes = None
         self.find_text_using_button = {}
         self.row_content = None
@@ -124,7 +120,7 @@ class MenuNotes(BasePlugin):
         """Update the list of notes in the popover"""
         if self.listbox is not None:
             self.listbox.remove_all()
-        notes = get_notes_sync(self.path_handler)
+        notes = get_notes_sync(self.path_handler, self.db_path)
         line_height = 40
         padding = 20
         notes_count = len(notes)
