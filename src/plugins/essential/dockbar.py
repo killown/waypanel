@@ -1,10 +1,6 @@
 import gi
 import os
-import time
-from pathlib import Path
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-from gi.repository import Gtk, Gdk, GLib  # pyright: ignore
+from gi.repository import Gtk, Gdk, GLib, Gio  # pyright: ignore
 from core._base import BasePlugin
 from src.core.create_panel import (
     set_layer_position_exclusive,
@@ -24,7 +20,7 @@ DEPS = ["event_manager", "gestures_setup"]
 def get_plugin_placement(panel_instance):
     position = "left-panel-center"
     order = 5
-    priority = 99
+    priority = 10
     return position, order, priority
 
 
@@ -39,27 +35,6 @@ class DockbarPlugin(BasePlugin):
     A plugin that creates a configurable dockbar for launching applications.
     """
 
-    class _ConfigReloadHandler(FileSystemEventHandler):
-        """
-        A file system event handler for reloading the configuration file.
-        """
-
-        def __init__(self, callback, watched_path):
-            self.callback = callback
-            self.last_update_time = 0.0
-            self._watched = Path(watched_path).resolve()
-
-        def on_modified(self, event):
-            try:
-                p = Path(event.src_path).resolve()
-            except Exception:
-                return
-            if p == self._watched:
-                now = time.time()
-                if now - self.last_update_time > 1.0:
-                    self.last_update_time = now
-                    GLib.idle_add(self.callback)
-
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.dockbar = Gtk.Box(spacing=10, orientation=Gtk.Orientation.VERTICAL)
@@ -68,8 +43,39 @@ class DockbarPlugin(BasePlugin):
         self.layer_state = False
         self.dockbar_content = self.get_panel()
         self._setup_dockbar()
+        self.gio_config_file = None
         self._config_observer = None
+        self._last_config_mod_time = 0.0
         self._setup_file_watcher()
+
+    def _on_gio_config_file_changed(
+        self,
+        monitor: Gio.FileMonitor,
+        file: Gio.File,
+        other_file: Gio.File,
+        event_type: Gio.FileMonitorEvent,
+    ) -> None:
+        """
+        Callback for Gio.FileMonitor 'changed' signal, used to trigger config reload.
+        This includes a debouncing mechanism based on file modification time.
+        """
+        config_file = self.config_handler.config_file
+        if event_type in (
+            Gio.FileMonitorEvent.CHANGES_DONE_HINT,
+            Gio.FileMonitorEvent.MOVED,
+            Gio.FileMonitorEvent.CHANGED,
+        ):
+            try:
+                current_mod_time = os.path.getmtime(config_file)
+                if current_mod_time > self._last_config_mod_time + 0.1:
+                    self._last_config_mod_time = current_mod_time
+                    GLib.idle_add(self._on_config_changed)
+                else:
+                    self.logger.debug("Config change event debounced.")
+            except FileNotFoundError:
+                self.logger.warning("Config file not found during GIO change check.")
+            except Exception as e:
+                self.logger.error(f"Error checking mod time in GIO callback: {e}")
 
     def get_panel(self):
         """
@@ -215,9 +221,9 @@ class DockbarPlugin(BasePlugin):
                     app_name = child.app_name  # pyright: ignore
                     new_dockbar_config[app_name] = child.app_config  # pyright: ignore
                 child = child.get_next_sibling()
-            if "dockbar" not in self.config_handler.config_data:
-                self.config_handler.config_data["dockbar"] = {}
-            self.config_handler.config_data["dockbar"]["app"] = new_dockbar_config
+            if "dockbar" not in self.config_handler.config_data:  # pyright: ignore
+                self.config_handler.config_data["dockbar"] = {}  # pyright: ignore
+            self.config_handler.config_data["dockbar"]["app"] = new_dockbar_config  # pyright: ignore
             self.config_handler.save_config()
             self.logger.info("Dockbar order saved to config file.")
         except Exception as e:
@@ -280,29 +286,31 @@ class DockbarPlugin(BasePlugin):
 
     def _setup_file_watcher(self):
         """
-        Sets up a file monitor to watch for changes in the waypanel.toml config file using watchdog.
+        Sets up a file monitor to watch for changes in the waypanel.toml config file using Gio.FileMonitor.
         """
         config_file = self.config_handler.config_file
         try:
-            event_handler = self._ConfigReloadHandler(
-                self._on_config_changed, config_file
+            self.gio_config_file = Gio.File.new_for_path(str(config_file))
+            self._config_observer = self.gio_config_file.monitor_file(
+                Gio.FileMonitorFlags.NONE, None
             )
-            self._config_observer = Observer()
-            self._config_observer.schedule(
-                event_handler, str(Path(config_file).parent), recursive=False
-            )
-            self._config_observer.start()
+            self._config_observer.connect("changed", self._on_gio_config_file_changed)
+            self._last_config_mod_time = os.path.getmtime(config_file)
             self.logger.info(
-                f"Started monitoring config file with watchdog: {config_file}"
+                f"Started monitoring config file with Gio.FileMonitor: {config_file}"
             )
         except Exception as e:
-            self.logger.error(f"Failed to set up watchdog file watcher: {e}")
+            self.logger.error(f"Failed to set up Gio.FileMonitor: {e}")
+
+    def __del__(self):
+        """Cancels the GIO file monitor when the object is destroyed."""
+        if self._config_observer:
+            self._config_observer.cancel()
 
     def _on_config_changed(self):
         """
         Callback for file changes. Updates the dockbar on change.
         """
-        self.logger.info("Config file changed. Updating dockbar by rebuilding.")
         self.config_handler.reload_config()
         self._setup_dockbar()
 

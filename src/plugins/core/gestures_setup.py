@@ -3,6 +3,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, GLib
 from src.shared.data_helpers import DataHelpers
+from typing import Callable, Any
 
 ENABLE_PLUGIN = True
 
@@ -66,13 +67,21 @@ class GesturePlugin:
     def _setup_panel_gestures(self) -> None:
         """Set up gestures for the top panel (left, center, and right)."""
         # Gestures for the left section of the top panel
-        self.create_gesture(self.obj.top_panel_box_left, 1, self.pos_left_left_click)
+        self.create_gesture(
+            self.obj.top_panel_box_left,
+            1,
+            self.pos_left_left_click,
+            self.pos_left_left_double_click,
+        )  # NEW: Added double-click handler
         self.create_gesture(self.obj.top_panel_box_left, 2, self.pos_left_middle_click)
         self.create_gesture(self.obj.top_panel_box_left, 3, self.pos_left_right_click)
 
         # Gestures for the center section of the top panel
         self.create_gesture(
-            self.obj.top_panel_box_center, 1, self.pos_center_left_click
+            self.obj.top_panel_box_center,
+            1,
+            self.pos_center_left_click,
+            self.pos_center_left_double_click,  # NEW: Added double-click handler
         )
         self.create_gesture(
             self.obj.top_panel_box_center, 2, self.pos_center_middle_click
@@ -85,22 +94,62 @@ class GesturePlugin:
         self.create_gesture(self.obj.top_panel_box_full, 3, self.pos_full_right_click)
 
         # Gestures for the right section of the top panel
-        self.create_gesture(self.obj.top_panel_box_right, 1, self.pos_right_left_click)
+        self.create_gesture(
+            self.obj.top_panel_box_right,
+            1,
+            self.pos_right_left_click,
+            self.pos_right_left_double_click,
+        )  # NEW: Added double-click handler
         self.create_gesture(
             self.obj.top_panel_box_right, 2, self.pos_right_middle_click
         )
         self.create_gesture(self.obj.top_panel_box_right, 3, self.pos_right_right_click)
 
-    def create_gesture(self, widget, mouse_button, callback) -> None:
+    def create_gesture(
+        self,
+        widget: Gtk.Widget,
+        mouse_button: int,
+        callback: Callable,
+        double_click_callback: Callable | None = None,
+    ) -> None:
         """
         Create a gesture for a widget and attach it to the specified callback.
+
+        MODIFIED: This now handles single, double, and potentially other multi-clicks
+                  by using the 'pressed' signal and checking the click count.
+
         Args:
             widget: The widget to attach the gesture to.
             mouse_button: The mouse button to trigger the gesture (e.g., 1 for left click).
-            callback: The function to call when the gesture is triggered.
+            callback: The function to call on a single click.
+            double_click_callback: Optional function to call on a double click.
         """
         gesture = Gtk.GestureClick.new()
+
+        # Set the gesture to be exclusive for reliable input claiming
+        gesture.set_exclusive(True)
+
+        def click_handler(gesture, n_press, x, y):
+            """Internal handler for the 'pressed' signal."""
+            if n_press == 1:
+                # Claim the event immediately, but defer execution to 'released' for single-click behavior
+                # The single-click logic is kept in 'released' to allow other events (like drag) to cancel it.
+                pass
+            elif n_press == 2 and double_click_callback:
+                # Double-click detected (n_press == 2)
+                self.logger.debug(f"Double-click detected on {widget.get_name()}")
+                self.execute_callback(double_click_callback)
+            elif n_press > 2:
+                # Optionally handle triple-clicks, etc. (currently ignores)
+                self.logger.debug(
+                    f"Multi-click ({n_press}) ignored on {widget.get_name()}"
+                )
+
+        # Connect to 'pressed' to immediately catch multi-clicks
+        # The single-click execution remains on 'released' for proper timing/cancellation
+        gesture.connect("pressed", click_handler)
         gesture.connect("released", lambda *_: self.execute_callback(callback))
+
         gesture.set_button(mouse_button)
         widget.add_controller(gesture)
         self.gestures[widget] = gesture
@@ -111,13 +160,14 @@ class GesturePlugin:
             widget.remove_controller(gesture)
             del self.gestures[widget]
 
-    def execute_callback(self, callback, event=None) -> None:
+    def execute_callback(self, callback: Callable, event=None) -> None:
         """
         Execute the callback and any appended actions.
         Args:
             callback: The primary callback function to execute.
         """
         # Execute the primary callback
+        # The use of event=None is kept for backward compatibility with existing handlers
         callback(event)
 
         # Execute any appended actions for this callback
@@ -125,7 +175,7 @@ class GesturePlugin:
             for action in self.appended_actions[callback.__name__]:
                 action()
 
-    def append_action(self, callback_name, action) -> None:
+    def append_action(self, callback_name: str, action: Callable) -> None:
         if callback_name not in self.appended_actions:
             self.appended_actions[callback_name] = []
 
@@ -134,7 +184,18 @@ class GesturePlugin:
         if id(action) not in current_ids:
             self.appended_actions[callback_name].append(action)
 
-    # Gesture Handlers
+    def pos_left_left_double_click(self, *_):
+        """Callback for double left-click on the left section."""
+        pass
+
+    def pos_center_left_double_click(self, *_):
+        """Callback for double left-click on the center section."""
+        pass
+
+    def pos_right_left_double_click(self, *_):
+        """Callback for double left-click on the right section."""
+        pass
+
     def pos_left_left_click(self, *_):
         """Callback for left-click on the left section."""
         pass
@@ -149,9 +210,11 @@ class GesturePlugin:
 
     def pos_center_left_click(self, *_):
         """Callback for left-click on the center section."""
+        pass
 
     def pos_center_middle_click(self, *_):
         """Callback for middle-click on the center section."""
+        pass
 
     def pos_center_right_click(self, *_):
         """Callback for right-click on the center section."""
@@ -159,6 +222,7 @@ class GesturePlugin:
 
     def pos_full_right_click(self, *_):
         """Callback for right-click on the full section."""
+        pass
 
     def pos_right_left_click(self, *_):
         """Callback for left-click on the right section."""
@@ -166,9 +230,11 @@ class GesturePlugin:
 
     def pos_right_middle_click(self, *_):
         """Callback for middle-click on the right section."""
+        pass
 
     def pos_right_right_click(self, *_):
         """Callback for right-click on the right section."""
+        pass
 
     def about(self):
         """
@@ -198,11 +264,10 @@ class GesturePlugin:
             executes both the primary handler and all appended
             actions, enabling a modular and flexible design.
 
-        3.  **Centralized Gesture Creation**: The `create_gesture` method
-            acts as a factory, providing a standardized way to
-            attach a `Gtk.GestureClick` to any widget. It centralizes
-            the logic for connecting the gesture's `released` signal
-            to the primary `execute_callback` method, making the code
-            more maintainable and predictable.
+        3.  **Centralized Gesture Creation (Improved)**: The `create_gesture` method
+            now acts as a factory for both single and double clicks. It uses
+            the `Gtk.GestureClick::pressed` signal to check the `n_press` argument
+            to differentiate between single and double clicks, leveraging a core
+            GTK feature to enable richer panel interactions without complex manual timing.
         """
         return self.code_explanation.__doc__

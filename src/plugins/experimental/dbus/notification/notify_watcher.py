@@ -1,7 +1,6 @@
 import os
 import sqlite3
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+from gi.repository import Gio, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
@@ -27,8 +26,14 @@ class NotifyWatcherPlugin(BasePlugin):
         self.notify_client = None
         self.notification_button = None
         self.db_path = os.path.expanduser("~/.config/waypanel/notifications.db")
-        self.observer = None
+        self.gio_file = None
+        self.gio_monitor = None
+        self._last_mod_time = 0.0
         self.last_db_state = None
+
+    def __del__(self):
+        if self.gio_monitor:
+            self.gio_monitor.cancel()
 
     def start_watching(self):
         """Start watching for notifications by monitoring the database file."""
@@ -47,16 +52,30 @@ class NotifyWatcherPlugin(BasePlugin):
         except Exception as e:
             self.logger.error(f"Error initializing Notify Watcher Plugin: {e}")
 
+    def _on_db_file_changed(self, monitor, file, other_file, event_type):
+        if event_type in (
+            Gio.FileMonitorEvent.CHANGES_DONE_HINT,
+            Gio.FileMonitorEvent.MOVED,
+            Gio.FileMonitorEvent.CHANGED,
+        ):
+            try:
+                current_mod_time = os.path.getmtime(self.db_path)
+                if current_mod_time > self._last_mod_time:
+                    self._last_mod_time = current_mod_time
+                    GLib.idle_add(self.check_notifications)
+            except Exception as e:
+                self.logger.error(f"Error handling DB change: {e}")
+
     def monitor_database(self):
-        """Monitor the database file for changes using watchdog."""
+        """Monitor the database file for changes."""
         try:
             self.check_notifications()
-            event_handler = DatabaseChangeHandler(self)
-            self.observer = Observer()
-            self.observer.schedule(
-                event_handler, path=os.path.dirname(self.db_path), recursive=False
+            self.gio_file = Gio.File.new_for_path(self.db_path)
+            self.gio_monitor = self.gio_file.monitor_file(
+                Gio.FileMonitorFlags.NONE, None
             )
-            self.observer.start()
+            self.gio_monitor.connect("changed", self._on_db_file_changed)
+            self._last_mod_time = os.path.getmtime(self.db_path)
         except Exception as e:
             self.logger.error(f"Error setting up database monitoring: {e}")
 
@@ -95,21 +114,6 @@ class NotifyWatcherPlugin(BasePlugin):
         """Log an error message."""
         self.logger.error(message)
 
-
-class DatabaseChangeHandler(FileSystemEventHandler):
-    """Handles file system events for the database file."""
-
-    def __init__(self, plugin):
-        self.plugin = plugin
-
-    def on_modified(self, event):
-        """Triggered when the database file is modified."""
-        if event.src_path == self.plugin.db_path:
-            self.plugin.logger.info(
-                "Database file modified. Checking for notifications."
-            )
-            self.plugin.check_notifications()
-
     def about(self):
         """
         This plugin monitors a local notifications database file and
@@ -123,8 +127,8 @@ class DatabaseChangeHandler(FileSystemEventHandler):
         The core logic of this plugin is to create a dynamic visual
         indicator by linking a background process to a UI component
         from a separate plugin. It operates on three key principles:
-        1.  **File System Monitoring**: The plugin uses the `watchdog`
-            library to set up a listener on the notification database
+        1.  **File System Monitoring**: The plugin uses `Gio.FileMonitor`
+            to set up a listener on the notification database
             file. Instead of periodically polling the database, it
             reacts in real-time to file modification events, ensuring
             the UI is updated instantly when new data is written.

@@ -1,6 +1,8 @@
 import os
 import importlib
 import toml
+import time
+import datetime
 from gi.repository import GLib, Gtk  # pyright: ignore
 import sys
 import traceback
@@ -41,14 +43,6 @@ class PluginLoader:
     """
 
     def __init__(self, panel_instance):
-        """
-        Initialize the PluginLoader with core components.
-
-        Args:
-            panel_instance: Main Panel object (used for plugin access and event management).
-            logger: Logger instance for structured logging.
-            config_path: Path to `config.toml` for plugin enable/disable settings.
-        """
         self.panel_instance = panel_instance
         self.logger = self.panel_instance.logger
         self.plugins = {}
@@ -67,6 +61,7 @@ class PluginLoader:
             self.get_real_user_home(), ".local", "share", "waypanel", "plugins"
         )
         self.plugin_icons = {}
+        self._initialize_plugin_with_deps_attemps = {}
 
         self.last_widget_plugin_added = None
         self.ensure_proportional_layout_attempts = {"max": 30, "current": 0}
@@ -100,6 +95,17 @@ class PluginLoader:
         max_attempts = self.ensure_proportional_layout_attempts["max"]
         current_attempts = self.ensure_proportional_layout_attempts["current"]
 
+        sections_to_check = [
+            ("top_panel_box_right", "Top Panel: Right Space"),
+            ("top_panel_box_center", "Top Panel: Center Space"),
+            ("top_panel_box_left", "Top Panel: Left Space"),
+        ]
+
+        for section, _ in sections_to_check:
+            if not hasattr(self.panel_instance, section):
+                # not ready to check layout
+                return True
+
         if current_attempts >= max_attempts:
             self.logger.warning(
                 "Proportional layout check reached max attempts. Stopping source."
@@ -120,16 +126,11 @@ class PluginLoader:
                 )
                 return True
 
-            sections_to_check = [
-                (self.panel_instance.top_panel_grid_right, "Top Panel: Right Space"),
-                (self.panel_instance.top_panel_box_center, "Top Panel: Center Space"),
-                (self.panel_instance.top_panel_box_left, "Top Panel: Left Space"),
-            ]
-
             limit_exceeded = False
             violating_side = "Unknown"
 
-            for container, side_name in sections_to_check:
+            for section, side_name in sections_to_check:
+                container = getattr(self.panel_instance, section)
                 max_width_size = width / 3
                 allocated_width = container.get_allocated_width()
 
@@ -176,7 +177,6 @@ class PluginLoader:
 
         plugin_instance = self.plugins[plugin_name]
 
-        # Call the on_stop method if it exists
         if hasattr(plugin_instance, "on_stop"):
             try:
                 plugin_instance.on_stop()
@@ -227,26 +227,24 @@ class PluginLoader:
         self, directory_path, disabled_plugins, valid_plugins, plugin_metadata
     ):
         """
-        Recursively walks a specified directory to find and process plugin files.
+        Recursively searches a directory for Python plugin modules, filters out
+        ignored directories, and registers the discovered plugins for processing.
 
-        This method serves as a modular helper for the `load_plugins` method. It searches
-        for Python files (`.py`) within a given `directory_path`, excluding the
-        `__init__.py` and any `examples` folder. For each valid plugin file found, it
-        extracts essential metadata (module name, file path) and delegates the
-        processing to `_process_plugin`.
+        This method is a core part of the plugin discovery and loading process.
 
         Args:
-            directory_path (str): The absolute path of the directory to search for plugins.
-            disabled_plugins (list): A list of plugin names that should be skipped.
-            valid_plugins (list): A list that will be populated with the names of all
-                                  valid plugins found.
-            plugin_metadata (list): A list of tuples that will be populated with plugin
-                                    metadata for later initialization.
+            directory_path (str): The absolute path to the directory to scan (e.g., 'core', 'experimental').
+            disabled_plugins (set): A set of module names considered disabled by configuration.
+            valid_plugins (list): A list to be populated with the module names of valid, enabled plugins.
+            plugin_metadata (dict): A dictionary to be populated with metadata for each discovered plugin.
         """
         sys.path.append(directory_path)
         for root, dirs, files in os.walk(directory_path):
             if "examples" in dirs:
                 dirs.remove("examples")
+
+            if "__pycache__" in dirs:
+                dirs.remove("__pycache__")
 
             for file_name in files:
                 if file_name.endswith(".py") and file_name != "__init__.py":
@@ -266,6 +264,14 @@ class PluginLoader:
                         valid_plugins,
                         plugin_metadata,
                     )
+
+            dt_object = datetime.datetime.fromtimestamp(time.time())
+            time_only_str = (
+                dt_object.strftime("%H:%M:%S")
+                + "."
+                + str(dt_object.microsecond // 1000).zfill(3)
+            )
+            self.logger.info(f"{root} {time_only_str}")
 
     def load_plugins(self):
         """
@@ -699,7 +705,6 @@ class PluginLoader:
 
         # Schedule plugin initialization
         for module, position, order, priority in plugin_metadata:
-            # The lambda function captures the arguments correctly
             GLib.idle_add(
                 lambda m=module,
                 p=position,
@@ -723,20 +728,6 @@ class PluginLoader:
             order (int): The order of the plugin within its panel position.
             priority (int): The priority of the plugin, used for initial sorting.
 
-        Workflow:
-            1. **Dependency Check**: It first checks if the plugin has any dependencies defined
-               in its `DEPS` attribute.
-            2. **Non-Blocking Wait**: If dependencies are missing, the function returns `True`,
-               which tells `GLib.idle_add` to re-queue this function for a later time. This
-               ensures the event loop can continue running without waiting.
-            3. **Initialization**: Once all dependencies are satisfied, it calls the plugin's
-               `initialize_plugin` function to create an instance of the plugin.
-            4. **Lifecycle Method**: If the plugin instance has an `on_start` method, it is
-               called to perform any initial setup.
-            5. **Widget Handling**: The function then retrieves the plugin's widget and its
-               action (e.g., "append", "prepend") and handles adding it to the appropriate
-               panel based on the `position` argument.
-
         Returns:
             bool: `True` if the plugin is re-queued for later due to missing dependencies;
                   `False` if initialization is complete or an error occurred.
@@ -744,16 +735,39 @@ class PluginLoader:
         module_name = module.__name__.split(".")[-1]
         plugin_name = module.__name__.split(".src.plugins.")[-1]
 
+        MAX_RETRIES = 15  # Set a reasonable limit for retries
+
+        # Initialize attempt count if not present
+        if plugin_name not in self._initialize_plugin_with_deps_attemps:
+            self._initialize_plugin_with_deps_attemps[plugin_name] = 0
+
         # Check for dependencies
         has_plugin_deps = getattr(module, "DEPS", [])
 
         # Re-queue initialization if dependencies are not met
         if has_plugin_deps and not all(dep in self.plugins for dep in has_plugin_deps):
+            current_attempts = self._initialize_plugin_with_deps_attemps[plugin_name]
+
+            if current_attempts >= MAX_RETRIES:
+                self.logger.error(
+                    f"Failed to initialize plugin '{plugin_name}'. Max retries ({MAX_RETRIES}) exceeded. "
+                    "This indicates a circular dependency or a permanently missing dependency."
+                )
+                del self._initialize_plugin_with_deps_attemps[plugin_name]  # Clean up
+                return False  # Stop the callback
+
             self.logger.debug(
-                f"Delaying initialization of {plugin_name} due to missing dependencies."
+                f"Delaying initialization of {plugin_name} (Attempt {current_attempts + 1}/{MAX_RETRIES}) "
+                "due to missing dependencies."
             )
+            self._initialize_plugin_with_deps_attemps[plugin_name] += 1
+
             # Return True to reschedule this callback
             return True
+
+        # If dependencies are met, clear the retry count (if it was being tracked)
+        if plugin_name in self._initialize_plugin_with_deps_attemps:
+            del self._initialize_plugin_with_deps_attemps[plugin_name]
 
         # Initialize the plugin
         try:

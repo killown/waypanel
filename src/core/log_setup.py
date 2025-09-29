@@ -52,13 +52,13 @@ def setup_logging(level: int = logging.DEBUG) -> BoundLogger:
     json_processors = [
         add_log_level,
         add_logger_name,
-        TimeStamper(fmt=new_time_format),
+        TimeStamper(fmt=new_time_format, utc=False),
         StackInfoRenderer(),
         format_exc_info,
     ]
     console_pre_chain = [
         add_log_level,
-        TimeStamper(fmt=new_time_format),
+        TimeStamper(fmt=new_time_format, utc=False),
         StackInfoRenderer(),
         format_exc_info,
     ]

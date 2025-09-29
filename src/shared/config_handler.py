@@ -4,8 +4,7 @@ import time
 from pathlib import Path
 from typing import Dict, Any, List
 from wayfire import WayfireSocket
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+from gi.repository import Gio  # pyright: ignore
 from src.shared import config_template
 
 
@@ -17,6 +16,8 @@ class ConfigHandler:
         self.default_config = config_template.default_config
         self._setup_config_paths()
         self.config_file = Path(self.config_path) / "config.toml"
+        self.gio_config_file = Gio.File.new_for_path(str(self.config_file))
+        self.config_monitor = None
         self.config_path = self.config_file.parent  # pyright: ignore
         self._load_successful = False
         sock = WayfireSocket()
@@ -29,6 +30,43 @@ class ConfigHandler:
             self.first_output_name = None
         self.config_data = self.load_config()
         self._cached_config = self.config_data
+        self._start_watcher()
+
+    def __del__(self):
+        """Cancels the GIO file monitor when the object is destroyed."""
+        if self.config_monitor:
+            self.config_monitor.cancel()
+
+    def _on_config_file_changed(
+        self,
+        monitor: Gio.FileMonitor,
+        file: Gio.File,
+        other_file: Gio.File,
+        event_type: Gio.FileMonitorEvent,
+    ) -> None:
+        """
+        Callback for Gio.FileMonitor 'changed' signal.
+        This method reloads the configuration, using a file modification time
+        check to debounce rapid changes (like those from an editor's save).
+        """
+        if event_type in (
+            Gio.FileMonitorEvent.CHANGES_DONE_HINT,
+            Gio.FileMonitorEvent.MOVED,
+            Gio.FileMonitorEvent.CHANGED,
+        ):
+            try:
+                current_mod_time = os.path.getmtime(self.config_file)
+                if current_mod_time > self._last_mod_time:
+                    self.reload_config()
+                    self._last_mod_time = current_mod_time
+                else:
+                    self.logger.debug(
+                        "Change event received but ignored due to debounce."
+                    )
+            except FileNotFoundError:
+                self.logger.warning("Config file not found during GIO change check.")
+            except Exception as e:
+                self.logger.error(f"Error checking mod time in GIO callback: {e}")
 
     def _strip_hints(self, data: Dict[str, Any]) -> Dict[str, Any]:
         stripped_data = {}
@@ -76,7 +114,7 @@ class ConfigHandler:
             return
         try:
             with open(self.config_file, "w") as f:
-                toml.dump(self.config_data, f)
+                toml.dump(self.config_data, f)  # pyright: ignore
             self._last_mod_time = os.path.getmtime(self.config_file)
             self.logger.info("Configuration saved successfully.")
         except Exception as e:
@@ -90,7 +128,6 @@ class ConfigHandler:
         try:
             new_config = self.load_config(force_reload=True)
             self.config_data.update(new_config)  # pyright: ignore
-            self.logger.info("Configuration reloaded successfully.")
         except Exception as e:
             self.logger.error(f"Error reloading configuration: {e}")
 
@@ -114,6 +151,7 @@ class ConfigHandler:
                         config_from_file = toml.load(f)
                     self.logger.debug("Existing config.toml loaded successfully.")
                     load_succeeded = True
+                    self._last_mod_time = os.path.getmtime(self.config_file)
                     break
                 except Exception as e:
                     self.logger.error(
@@ -127,9 +165,7 @@ class ConfigHandler:
                 config_from_file = {}
         self._load_successful = load_succeeded
         default_config_for_merge = self.default_config_stripped
-        defaults_added = self._recursive_merge(
-            config_from_file, default_config_for_merge
-        )
+        self._recursive_merge(config_from_file, default_config_for_merge)
         needs_write_back = file_must_be_created
         if needs_write_back:
             self.logger.info(
@@ -181,42 +217,18 @@ class ConfigHandler:
     def initialize_config_section(self, section_name, default_config={}):
         if section_name not in self.config_data:
             section_defaults = self.default_config_stripped.get(section_name, {})
-            self.config_data[section_name] = section_defaults
+            self.config_data[section_name] = section_defaults  # pyright: ignore
             self.save_config()
             self.reload_config()
 
-    def check_for_changes_and_reload(self):
-        try:
-            current_mod_time = os.path.getmtime(self.config_file)
-            if current_mod_time > self._last_mod_time:
-                self.reload_config()
-                self._last_mod_time = current_mod_time
-        except FileNotFoundError:
-            self.logger.warning("Config file not found during change check.")
-        except Exception as e:
-            self.logger.error(f"Error checking for config changes: {e}")
-
     def _start_watcher(self):
-        class ConfigFileEventHandler(FileSystemEventHandler):
-            def __init__(self, handler_instance):
-                self.handler = handler_instance
-
-            def on_modified(self, event):
-                if not event.is_directory and os.path.abspath(
-                    event.src_path
-                ) == os.path.abspath(self.handler.config_file):
-                    self.handler.logger.info(
-                        "Configuration file modified. Reloading..."
-                    )
-                    self.handler.reload_config()
-
-        self.config_observer = Observer()
-        event_handler = ConfigFileEventHandler(self)
-        self.config_observer.schedule(
-            event_handler, str(self.config_file.parent), recursive=False
-        )
-        self.config_observer.start()
-        self.logger.info("Configuration file watcher started.")
+        try:
+            self.config_monitor = self.gio_config_file.monitor_file(
+                Gio.FileMonitorFlags.NONE, None
+            )
+            self.config_monitor.connect("changed", self._on_config_file_changed)
+        except Exception as e:
+            self.logger.error(f"Failed to start Gio.FileMonitor: {e}")
 
     def check_and_get_config(
         self, key_path: List[str], default_value: Any = None

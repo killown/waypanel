@@ -10,13 +10,21 @@ from src.core.create_panel import (
 ENABLE_PLUGIN = True
 if not os.getenv("WAYFIRE_SOCKET"):
     ENABLE_PLUGIN = False
-DEPS = ["event_manager", "gestures_setup", "on_output_connect"]
+DEPS = [
+    "event_manager",
+    "gestures_setup",
+    "on_output_connect",
+    "bottom_panel",
+    "top_panel",
+    "left_panel",
+    "right_panel",
+]
 
 
 def get_plugin_placement(panel_instance):
     position = "bottom-panel-center"
-    order = 5
-    priority = 99
+    order = 1
+    priority = 10
     return position, order, priority
 
 

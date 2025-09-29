@@ -1,4 +1,4 @@
-from gi.repository import GLib
+from gi.repository import GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 import os
 import collections

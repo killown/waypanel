@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import logging
 import os
 import asyncio
@@ -12,18 +11,18 @@ import sys
 import time
 import tempfile
 from pathlib import Path
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+
+from gi.repository import Gio
 from src.ipc.ipc_async_server import EventServer
 from src.core.compositor.ipc import IPC
 from src.core.log_setup import setup_logging
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+gi.require_version("Gio", "2.0")
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 XDG_CONFIG_HOME = Path(os.getenv("XDG_CONFIG_HOME", Path.home() / ".config"))
 XDG_CACHE_HOME = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
 XDG_DATA_HOME = Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share"))
-
 DEFAULT_CONFIG_PATH = XDG_CONFIG_HOME / "waypanel"
 GTK_LAYER_SHELL_INSTALL_PATH = Path(
     os.getenv("GTK_LAYER_SHELL_PATH", XDG_DATA_HOME / "lib" / "gtk4-layer-shell")
@@ -37,13 +36,10 @@ CONFIG_SUBDIR = "waypanel/config"
 DEFAULT_SYSTEM_CONFIG = Path(
     os.getenv("WAYPANEL_SYSTEM_CONFIG", "/usr/share/waypanel/default-config")
 )
-
 if os.path.exists("/nix/store") and not DEFAULT_SYSTEM_CONFIG.exists():
-    # Try NixOS system path
     nix_system_config = Path("/run/current-system/sw/share/waypanel/default-config")
     if nix_system_config.exists():
         DEFAULT_SYSTEM_CONFIG = nix_system_config
-
 logger = setup_logging(level=logging.INFO)
 sock = IPC()
 try:
@@ -52,26 +48,52 @@ except Exception:
     pass
 
 
-class ConfigReloadHandler(FileSystemEventHandler):
-    def __init__(self, callback, watched_path):
-        super().__init__()
+class WayfireConfigWatcher:
+    def __init__(self, watched_path, callback):
         self.callback = callback
-        self.last = 0.0
         self._watched = Path(watched_path).resolve()
+        self.last = 0.0
+        self.gio_file = Gio.File.new_for_path(str(self._watched))
+        self.monitor = None
+        self.logger = logging.getLogger("WaypanelLogger")
 
-    def on_modified(self, event):
-        try:
-            p = Path(event.src_path).resolve()
-        except Exception:
-            return
-        if p == self._watched:
+    def _on_file_changed(self, monitor, file, other_file, event_type):
+        """Callback for Gio.FileMonitor 'changed' signal."""
+        if event_type in (
+            Gio.FileMonitorEvent.CHANGES_DONE_HINT,
+            Gio.FileMonitorEvent.MOVED,
+        ):
             now = time.time()
             if now - self.last > 1.0:
                 self.last = now
                 try:
+                    self.logger.info(
+                        "Watched configuration file modified. Restarting application..."
+                    )
                     self.callback()
                 except Exception:
-                    logger.exception("reload callback failed")
+                    self.logger.exception("reload callback failed")
+
+    def start(self):
+        """Starts the GIO file monitor."""
+        if not self._watched.exists():
+            self.logger.warning(f"File to monitor does not exist: {self._watched}")
+            return
+        try:
+            self.monitor = self.gio_file.monitor_file(Gio.FileMonitorFlags.NONE, None)
+            self.monitor.connect("changed", self._on_file_changed)
+            self.logger.info(f"Gio.FileMonitor started for: {self._watched}")
+        except Exception as e:
+            self.logger.error(f"Failed to start Gio.FileMonitor: {e}")
+            self.monitor = None
+
+    def stop(self):
+        """Stops the GIO file monitor."""
+        if self.monitor:
+            self.monitor.cancel()
+
+    def join(self, timeout=None):
+        pass
 
 
 def global_exception_handler(exc_type, exc_value, exc_traceback):
@@ -102,12 +124,9 @@ def start_config_watcher():
     if not wayfire_ini.exists():
         logger.warning(f"wayfire.toml not found at {wayfire_ini}")
         return None
-    handler = ConfigReloadHandler(restart_application, wayfire_ini)
-    observer = Observer()
-    observer.schedule(handler, str(wayfire_ini.parent), recursive=False)
-    # Auto reload the panel on config saving,
-    # observer.start()
-    return observer
+    watcher = WayfireConfigWatcher(wayfire_ini, restart_application)
+    watcher.start()
+    return watcher
 
 
 def cleanup_resources():
@@ -189,16 +208,13 @@ def load_panel(ipc_server):
                 logger.warning(f"GI binding {ver} not available")
     except Exception:
         logger.warning("Some GI bindings not available")
-
     try:
         from src.panel import Panel
     except Exception:
         logger.exception("Failed to import Panel")
         raise
-
     compositor_sock = None
     utils = None
-
     if os.getenv("WAYFIRE_SOCKET"):
         try:
             from wayfire import WayfireSocket
@@ -215,7 +231,6 @@ def load_panel(ipc_server):
             compositor_sock = SwayIPC()
         except Exception:
             logger.warning("SwayIPC not available")
-
     config_path = find_config_path()
     config = load_config(config_path)
     panel_conf = config.get("panel", {}) if isinstance(config, dict) else {}
@@ -224,31 +239,26 @@ def load_panel(ipc_server):
         if len(sys.argv) > 1
         else get_monitor_name(panel_conf, compositor_sock)
     )
-
     app_name = f"com.waypanel.{monitor_name}"
     panel = Panel(application_id=app_name, ipc_server=ipc_server, logger=logger)
     panel.set_panel_instance(panel)
-
     append_to_env("output_name", monitor_name)
-
     if utils and os.getenv("WAYFIRE_SOCKET"):
         try:
             append_to_env("output_id", utils.get_output_id_by_name(monitor_name))
         except Exception:
             logger.exception("Failed to append Wayfire output id")
-
     if compositor_sock and os.getenv("SWAYSOCK"):
         try:
             outputs = [
                 o
-                for o in compositor_sock.list_outputs()
+                for o in compositor_sock.list_outputs()  # pyright: ignore
                 if o.get("name") == monitor_name
             ]
             if outputs:
                 append_to_env("output_id", outputs[0].get("id"))
         except Exception:
             logger.exception("Failed to append Sway output id")
-
     return panel
 
 
@@ -350,58 +360,42 @@ def get_monitor_name(config, sock_obj):
 
 
 def find_config_path():
-    # First check user config directory
     home_config = DEFAULT_CONFIG_PATH / "config.toml"
     if home_config.exists():
         return str(home_config)
-
-    # Check system-wide config locations (for NixOS and traditional distros)
     system_config_paths = [
         "/usr/lib/waypanel/waypanel/config/config.toml",
     ]
-
-    # NixOS-specific paths
     if os.path.exists("/nix/store"):
-        # Look for config in nix store (common locations)
         nix_config_paths = [
             "/run/current-system/sw/share/waypanel/config.toml",
             "/nix/var/nix/profiles/system/sw/share/waypanel/config.toml",
         ]
         system_config_paths.extend(nix_config_paths)
-
-        # Also search in nix store for any waypanel config
         try:
             nix_configs = list(Path("/nix/store").glob("*/share/waypanel/config.toml"))
             if nix_configs:
                 system_config_paths.extend(str(p) for p in nix_configs)
         except Exception:
             pass
-
-    # Check system config paths
     for config_path in system_config_paths:
         if os.path.exists(config_path):
             return config_path
-
-    # Fallback: check relative to script (for development)
     script_dir = Path(__file__).resolve().parent
     dev_config = script_dir.parent / "config" / "config.toml"
     if dev_config.exists():
         return str(dev_config)
-
-    # Final fallback: use environment variable or default
     env_config = os.getenv("WAYPANEL_CONFIG_PATH")
     if env_config and os.path.exists(env_config):
         return env_config
-
-    # If nothing found, return the user config path (will trigger create_first_config)
     return str(home_config)
 
 
 def main():
-    observer = None
+    watcher = None
     try:
         if os.getenv("WAYFIRE_SOCKET"):
-            observer = start_config_watcher()
+            watcher = start_config_watcher()
             try:
                 verify_required_wayfire_plugins()
             except Exception:
@@ -414,10 +408,10 @@ def main():
         logger.critical("Fatal error during initialization", exc_info=True)
         raise
     finally:
-        if observer:
+        if watcher:
             try:
-                observer.stop()
-                observer.join(timeout=1.0)
+                watcher.stop()
+                watcher.join(timeout=1.0)
             except Exception:
                 pass
         cleanup_resources()

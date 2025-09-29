@@ -24,8 +24,6 @@ class Panel(Adw.Application):
         self.config_handler = ConfigHandler(self)
         self.config_path = self.config_handler._setup_config_paths()
         self.config_data = self.config_handler.load_config()
-        self.plugin_loader = PluginLoader(self)
-        self.plugins = self.plugin_loader.plugins
         self.ipc = IPC()
         self.ipc_server = ipc_server
         self.display = None
@@ -34,6 +32,13 @@ class Panel(Adw.Application):
         self.update_widget = self.gtk_helpers.update_widget
         self._set_monitor_dimensions()
         self.config_handler._start_watcher()
+        self.plugins = None
+        self.plugin_loader = None
+        GLib.idle_add(self.start_plugin_loader)
+
+    def start_plugin_loader(self):
+        self.plugin_loader = PluginLoader(self)
+        self.plugins = self.plugin_loader.plugins
 
     def get_config(self, key_path, default=None):
         """Safely retrieves a configuration value using a list of keys."""
@@ -120,16 +125,19 @@ class Panel(Adw.Application):
             app: The application instance.
         """
         self.logger.info("Activating application...")
-        self._load_plugins()
+        GLib.idle_add(self._load_plugins)
         self.logger.info("Application activation completed.")
 
     def _load_plugins(self):
         """
         Load plugins asynchronously.
         """
-        self.logger.debug("Loading plugins...")
-        GLib.idle_add(self.plugin_loader.load_plugins)
-        self.logger.info("Plugins loading initiated.")
+        if self.plugin_loader:
+            self.logger.debug("Loading plugins...")
+            GLib.idle_add(self.plugin_loader.load_plugins)
+            self.logger.info("Plugins loading initiated.")
+            return False  # stop idle
+        return True  # continue idle_add
 
     def do_activate(self):
         self.gtk_helpers.load_css_from_file()
