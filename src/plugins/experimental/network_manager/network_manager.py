@@ -22,7 +22,10 @@ WIFI_SCAN_INTERVAL = 300
 
 def get_plugin_placement(panel_instance):
     """Define where the plugin should appear."""
-    return "top-panel-systray", 4
+    return (
+        "top-panel-systray",
+        4,
+    )
 
 
 def initialize_plugin(panel_instance):

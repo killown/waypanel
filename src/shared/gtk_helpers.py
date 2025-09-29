@@ -3,6 +3,7 @@ import configparser
 import rapidfuzz
 import subprocess
 import os
+import inspect
 from rapidfuzz.fuzz import token_set_ratio
 from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
@@ -38,7 +39,6 @@ class GtkHelpers:
             "rxvt",
         ]
         self.config_handler = ConfigHandler(panel_instance)
-
         if hasattr(panel_instance, "ipc"):
             self.command = CommandRunner(panel_instance)
 
@@ -96,6 +96,39 @@ class GtkHelpers:
         ):
             return False
         return True
+
+    def set_plugin_main_icon(
+        self,
+        widget: Gtk.Widget,
+    ):
+        """
+        Sets the main icon for a plugin widget, deriving the plugin name from the
+        calling file's name (e.g., 'my_plugin.py' becomes 'my_plugin').
+        Args:
+            widget (Gtk.Widget): The widget instance to set the icon on.
+            fallback_icons (list): A list of backup icon names to try.
+        """
+        try:
+            caller_frame = inspect.stack()[1]
+            file_path = caller_frame.filename
+            file_name = os.path.basename(file_path)
+            plugin_name = file_name.rsplit(".", 1)[0]
+        except Exception as e:
+            self.logger.error(f"Failed to determine calling plugin name: {e}")
+            plugin_name = "unknown_plugin"
+        icon_name = self.config_handler.check_and_get_config(
+            ["plugins", plugin_name, "main_icon"]
+        )
+        fallback_icons = self.config_handler.check_and_get_config(
+            ["plugins", plugin_name, "fallback_main_icons"]
+        )
+        icon_name = self.icon_exist(icon_name)
+        if not icon_name:
+            icon_name = self.icon_exist(icon_name, fallback_icons)
+        if icon_name:
+            widget.set_icon_name(icon_name)  # pyright: ignore
+        else:
+            self.logger.warning(f"Could not find icon for plugin: {plugin_name}")
 
     def icon_exist(self, argument: str, fallback_icons=None) -> str:
         """
@@ -608,7 +641,6 @@ class GtkHelpers:
                     exc_info=True,
                 )
                 return None
-
             icon_name = self.icon_exist(icon_name)
             button = Gtk.Button()
             assert button is not None, "Button creation failed"

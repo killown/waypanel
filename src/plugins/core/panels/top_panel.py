@@ -37,13 +37,15 @@ class TopPanelPlugin(BasePlugin):
 
     def _setup_panel_boxes(self):
         """Setup panel boxes and related configurations."""
-        self.obj.top_panel_box_left = Gtk.Box()
-        self.obj.top_panel_box_systray = Gtk.Box()
-        self.obj.top_panel_box_for_buttons = Gtk.Box()
-        self.obj.top_panel_box_widgets_left = Gtk.Box()
+        self.obj.top_panel_box_widgets_left = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        self.obj.top_panel_box_left = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        self.obj.top_panel_box_widgets_left.set_homogeneous(True)
+        self.obj.top_panel_box_widgets_left.set_spacing(6)
         self.update_widget_safely(
             self.obj.top_panel_box_left.append, self.obj.top_panel_box_widgets_left
         )
+        self.obj.top_panel_box_systray = Gtk.Box()
+        self.obj.top_panel_box_for_buttons = Gtk.Box()
         self.obj.top_panel_box_right = Gtk.Box()
         self.spacer = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
         self.spacer.set_hexpand(True)

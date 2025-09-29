@@ -29,6 +29,32 @@ default_config = {
         "custom_path_hint": (
             "Absolute path to search for user-defined or custom plugins."
         ),
+        "bluetooth": {"hide_in_systray": True},
+        "wayfire_plugins": {"hide_in_systray": True},
+        "notes": {
+            "main_icon": "stock_notes",
+            "fallback_main_icons": [
+                "accessories-notes-symbolic",
+                "xapp-annotations-text-symbolic",
+                "accessories-notes",
+            ],
+            "icon_delete": "edit-delete",
+        },
+        "overflow_indicator": {},
+        "clock": {"format": "%H:%M", "tooltip_format": "%A, %B %d, %Y"},
+        "network_manager": {
+            "hide_in_systray": False,
+            "scan_interval": 5,
+        },
+        "volume": {"hide_in_systray": False, "polling_interval": 0.5},
+        "appmenu": {
+            "main_icon": "start-here-symbolic",
+            "fallback_main_icons": ["applications-all-symbolic"],
+        },
+        "battery": {
+            "hide_in_systray": True,
+            "low_threshold": 20,
+        },
     },
     "hardware": {
         "_section_hint": "Configuration for core system hardware and peripherals.",

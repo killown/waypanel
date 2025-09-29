@@ -1,4 +1,4 @@
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
@@ -34,18 +34,29 @@ class LeftPanelPlugin(BasePlugin):
 
     def _setup_boxes(self):
         """Setup top, center, bottom boxes for vertical alignment."""
-        # Top: Appears first at the top of the left panel
-        self.obj.left_panel_box_top = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 
-        # Center: Appears in the middle
-        self.obj.left_panel_box_center = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-
-        # Bottom: Appears last at the bottom of the left panel
-        self.obj.left_panel_box_bottom = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        # Using Gtk.Box.new() for all children for clearer initialization
+        self.obj.left_panel_box_top = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.obj.left_panel_box_center = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.obj.left_panel_box_bottom = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
 
         # Full container: Vertical box to hold all sections
-        self.obj.left_panel_box_full = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.obj.left_panel_box_full.set_spacing(0)
+        self.obj.left_panel_box_full = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+
+        # --- EXPLICIT GTKBOXLAYOUT IMPLEMENTATION ---
+
+        # 1. Set Spacing (vertical gap between top, center, and bottom sections)
+        # Using a fixed 10px spacing for clean separation.
+        self.obj.left_panel_box_full.set_spacing(10)
+
+        # 2. Configure Vertical Expansion/Sizing
+        # We instruct the GtkBoxLayout to give all surplus space to the center box.
+        self.obj.left_panel_box_center.set_vexpand(True)
+        self.obj.left_panel_box_center.set_valign(Gtk.Align.CENTER)
+
+        # The top and bottom boxes will only take their minimum required height.
+
+        # --- END EXPLICIT GTKBOXLAYOUT IMPLEMENTATION ---
 
         # Append in order: top -> center -> bottom
         self.obj.left_panel_box_full.append(self.obj.left_panel_box_top)

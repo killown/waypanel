@@ -31,21 +31,16 @@ class RightPanelPlugin(BasePlugin):
 
     def _setup_boxes(self):
         """Setup top, center, and bottom boxes for vertical alignment."""
-        # Boxes for each section
-        self.obj.right_panel_box_top = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.obj.right_panel_box_center = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.obj.right_panel_box_bottom = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-
-        # Full container for the right panel
-        self.obj.right_panel_box_full = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.obj.right_panel_box_full.set_spacing(0)
-
-        # Append in order: top -> center -> bottom
+        self.obj.right_panel_box_top = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.obj.right_panel_box_center = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.obj.right_panel_box_bottom = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.obj.right_panel_box_full = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.obj.right_panel_box_full.set_spacing(10)
+        self.obj.right_panel_box_center.set_vexpand(True)
+        self.obj.right_panel_box_center.set_valign(Gtk.Align.CENTER)
         self.obj.right_panel_box_full.append(self.obj.right_panel_box_top)
         self.obj.right_panel_box_full.append(self.obj.right_panel_box_center)
         self.obj.right_panel_box_full.append(self.obj.right_panel_box_bottom)
-
-        # Set main widget to be used by plugin loader
         self.main_widget = (self.obj.right_panel_box_full, "set_content")
 
     def add_css_class(self):
@@ -56,7 +51,7 @@ class RightPanelPlugin(BasePlugin):
             self.obj.right_panel_box_bottom,
             self.obj.right_panel_box_full,
         ]
-        if all(self.gtk_helper.is_widget_ready(box) for box in boxes):
+        if all(self.is_widget_ready(box) for box in boxes):
             self.update_widget_safely(
                 self.obj.right_panel_box_top.add_css_class, "right-panel-box-top"
             )

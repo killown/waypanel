@@ -86,6 +86,11 @@ class PluginLoader:
 
         return os.environ.get("HOME") or os.path.expanduser("~")
 
+    def register_overflow_container(self, plugin_instance):
+        """Stores the instance of the overflow container plugin."""
+        self.overflow_container = plugin_instance
+        self.logger.info("Overflow indicator container registered.")
+
     def ensure_proportional_layout(self):
         """
         Checks if the actual allocated width of the Left, Center, or Right panel containers
@@ -598,7 +603,14 @@ class PluginLoader:
 
         return True
 
-    def handle_set_widget(self, widget_action, widget_to_append, target, module_name):
+    def handle_set_widget(
+        self,
+        widget_action,
+        widget_to_append,
+        target,
+        module_name,
+        hide_in_systray=False,
+    ):
         """
         Handles the placement of a plugin's widget on the panel.
 
@@ -612,9 +624,44 @@ class PluginLoader:
                                                     If a list, the widgets will be appended to a dedicated container.
             target (Gtk.Container): The target panel container (e.g., `self.left_panel`, `self.top_panel`).
             module_name (str): The name of the plugin module, used to create a unique identifier for its container.
+            hide_in_systray (bool): NEW ARGUMENT. True if the widget should be placed in the overflow container.
         """
+        if not hide_in_systray:
+            hide_in_systray = self.config_handler.check_and_get_config(
+                ["plugins", module_name, "hide_in_systray"]
+            )
+
+        if hide_in_systray:
+            if not hasattr(self, "overflow_container") or not self.overflow_container:
+                self.logger.warning(
+                    f"Plugin {module_name} is set to hide but overflow container is not registered. Placing normally."
+                )
+            else:
+                widgets = (
+                    widget_to_append
+                    if isinstance(widget_to_append, list)
+                    else [widget_to_append]
+                )
+
+                # If a plugin returns multiple widgets, wrap them in a Gtk.Box to keep them grouped
+                if len(widgets) > 1:
+                    container_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+                    container_box.set_name(f"{module_name}_overflow_box")
+
+                    for widget in widgets:
+                        # Append the widget to the new container box
+                        self.update_widget_safely(container_box.append, widget)
+
+                    # Add the container box to the OverflowIndicatorPlugin
+                    self.overflow_container.add_hidden_widget(container_box)
+
+                elif len(widgets) == 1:
+                    # Add the single widget directly
+                    self.overflow_container.add_hidden_widget(widgets[0])
+
+                return
+
         if widget_action == "append":
-            # Consolidate widget_to_append into a list for consistent handling
             widgets = (
                 widget_to_append
                 if isinstance(widget_to_append, list)
@@ -734,7 +781,6 @@ class PluginLoader:
         """
         module_name = module.__name__.split(".")[-1]
         plugin_name = module.__name__.split(".src.plugins.")[-1]
-
         MAX_RETRIES = 15  # Set a reasonable limit for retries
 
         # Initialize attempt count if not present
@@ -743,7 +789,7 @@ class PluginLoader:
 
         # Check for dependencies
         has_plugin_deps = getattr(module, "DEPS", [])
-
+        hide_in_systray = getattr(module, "HIDE_IN_SYSTRAY", False)
         # Re-queue initialization if dependencies are not met
         if has_plugin_deps and not all(dep in self.plugins for dep in has_plugin_deps):
             current_attempts = self._initialize_plugin_with_deps_attemps[plugin_name]
@@ -803,7 +849,11 @@ class PluginLoader:
             widget_action = plugin_instance.set_widget()[1]
 
             self.handle_set_widget(
-                widget_action, widget_to_append, target_box, module_name
+                widget_action,
+                widget_to_append,
+                target_box,
+                module_name,
+                hide_in_systray,
             )
             self.last_widget_plugin_added = module_name
 

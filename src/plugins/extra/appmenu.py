@@ -39,6 +39,13 @@ class AppLauncher(BasePlugin):
         self.cursor = self.conn.cursor()
         self._create_recent_apps_table()
         self.main_widget = (self.appmenu, "append")
+        try:
+            self.settings = Gio.Settings.new("org.gnome.desktop.interface")
+        except Exception as e:
+            self.logger.error(
+                f"Appmenu: Failed to initialize GSettings for icon-theme: {e}"
+            )
+            self.settings = None
 
     def _create_recent_apps_table(self):
         """Creates the SQLite table for recent apps if it doesn't exist."""
@@ -58,12 +65,9 @@ class AppLauncher(BasePlugin):
         """Create the menu button and connect its signal to open the popover launcher."""
         self.appmenu.connect("clicked", self.open_popover_launcher)
         self.appmenu.add_css_class("app-launcher-menu-button")
-        icon_name = self.gtk_helper.set_widget_icon_name(
-            "appmenu",
-            ["archlinux-logo"],
+        self.gtk_helper.set_plugin_main_icon(
+            self.appmenu,
         )
-        self.appmenu.set_icon_name(icon_name)
-        self.appmenu.add_css_class("app-launcher-menu-icon")
         self.gtk_helper.add_cursor_effect(self.appmenu)
 
     def create_popover_launcher(self, *_):
@@ -418,6 +422,74 @@ class AppLauncher(BasePlugin):
                 "Error: Could not find an editor to open the .desktop file."
             )
 
+    def _get_available_icon_themes(self):
+        """Scans common XDG directories for icon themes by looking for index.theme files."""
+        theme_names = set()
+        base_dirs = [
+            os.path.join(os.path.expanduser("~"), ".icons"),
+            "/usr/share/icons",
+        ]
+        for base_dir in base_dirs:
+            if os.path.exists(base_dir):
+                try:
+                    for entry in os.listdir(base_dir):
+                        theme_path = os.path.join(base_dir, entry, "index.theme")
+                        if os.path.exists(theme_path) and os.path.isdir(
+                            os.path.join(base_dir, entry)
+                        ):
+                            theme_names.add(entry)
+                except Exception as e:
+                    self.logger.warning(
+                        f"Failed to scan icon directory {base_dir}: {e}"
+                    )
+        theme_names.add("hicolor")
+        return sorted(list(theme_names))
+
+    def _get_available_icon_themes(self):
+        """Scans common XDG directories for icon themes by looking for index.theme files."""
+        theme_names = set()
+        base_dirs = [
+            os.path.join(os.path.expanduser("~"), ".icons"),
+            "/usr/share/icons",
+        ]
+        for base_dir in base_dirs:
+            if os.path.exists(base_dir):
+                try:
+                    for entry in os.listdir(base_dir):
+                        theme_path = os.path.join(base_dir, entry, "index.theme")
+                        if os.path.exists(theme_path) and os.path.isdir(
+                            os.path.join(base_dir, entry)
+                        ):
+                            theme_names.add(entry)
+                except Exception as e:
+                    self.logger.warning(
+                        f"Failed to scan icon directory {base_dir}: {e}"
+                    )
+        theme_names.add("hicolor")
+        return sorted(list(theme_names))
+
+    def _on_icon_theme_changed(self, dropdown, pspec):
+        """Sets the new icon theme via GSettings."""
+        if not self.settings:
+            self.logger.error("GSettings not initialized. Cannot change icon theme.")
+            return
+        selected_item = dropdown.get_selected_item()
+        if selected_item:
+            theme_name = selected_item.get_string()
+            try:
+                self.settings.set_string("icon-theme", theme_name)
+                self.logger.info(f"Icon theme set to: {theme_name}")
+                icon_name = self.gtk_helper.set_widget_icon_name(
+                    "appmenu",
+                    ["archlinux-logo"],
+                )
+                self.appmenu.set_icon_name(icon_name)
+                parent_popover = dropdown.get_root()
+                if isinstance(parent_popover, Gtk.Popover):
+                    parent_popover.popdown()
+            except Exception as e:
+                self.logger.error(f"Failed to set icon theme via GSettings: {e}")
+
     def on_right_click_popover(self, gesture, n_press, x, y, vbox):
         """
         Handle right-click event to show a popover menu.
@@ -429,6 +501,29 @@ class AppLauncher(BasePlugin):
         menu_box.set_margin_end(10)
         menu_box.set_margin_top(10)
         menu_box.set_margin_bottom(10)
+        if self.settings:
+            current_theme = self.settings.get_string("icon-theme")
+            available_themes = self._get_available_icon_themes()
+            theme_list_store = Gtk.StringList.new(available_themes)
+            theme_dropdown = Gtk.DropDown.new(theme_list_store, None)
+            theme_dropdown.set_hexpand(True)
+            theme_dropdown.connect("notify::selected-item", self._on_icon_theme_changed)
+            current_index = 0
+            for i, theme_name in enumerate(available_themes):
+                if theme_name == current_theme:
+                    current_index = i
+                    break
+            theme_dropdown.set_selected(current_index)
+            theme_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+            theme_box.set_halign(Gtk.Align.FILL)
+            theme_box.set_margin_bottom(10)
+            theme_label = Gtk.Label.new("Icon Theme:")
+            theme_label.set_halign(Gtk.Align.CENTER)
+            theme_box.append(theme_label)
+            theme_box.append(theme_dropdown)
+            separator = Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
+            theme_box.append(separator)
+            menu_box.prepend(theme_box)
         name, desktop_file, keywords = vbox.MYTEXT
         is_in_dockbar = desktop_file in self.config_handler.config_data.get(
             "dockbar", {}
@@ -547,5 +642,10 @@ class AppLauncher(BasePlugin):
         5.  **System Integration**: It interacts with the `Gtk4LayerShell` to
             manage keyboard focus, ensuring the search bar is active when the
             launcher is open and relinquishes focus when it's closed.
+        **New Feature: Icon Theme Selection**
+        The right-click popover now includes an **Icon Theme dropdown** at the top. This functionality is achieved by:
+        - Using **`Gio.Settings`** to read the current icon theme and apply a new one to the `org.gnome.desktop.interface` schema.
+        - Implementing **`_get_available_icon_themes`** which scans standard XDG directories (`/usr/share/icons`, `~/.icons`) for `index.theme` files to list installed themes.
+        - Creating a **`Gtk.DropDown`** populated with a **`Gtk.StringList`** of theme names, connecting its `notify::selected-item` signal to the **`_on_icon_theme_changed`** handler.
         """
         return self.code_explanation.__doc__

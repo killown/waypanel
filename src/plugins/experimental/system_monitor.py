@@ -16,7 +16,7 @@ DEPS = ["top_panel"]
 def get_plugin_placement(panel_instance):
     """Define the plugin's position and order."""
     position = "top-panel-systray"
-    order = 2
+    order = 5
     return position, order
 
 

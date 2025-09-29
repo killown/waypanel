@@ -12,7 +12,7 @@ DEPS = ["top_panel"]
 
 def get_plugin_placement(panel_instance):
     position = "top-panel-systray"
-    order = 1
+    order = 2
     return position, order
 
 
@@ -94,19 +94,10 @@ class MenuNotes(BasePlugin):
         self.main_widget = (self.menubutton_notes, "append")
         self.menubutton_notes.connect("clicked", self.open_popover_notes)
         self.gtk_helper.add_cursor_effect(self.menubutton_notes)
-        self.menubutton_notes.set_icon_name(
-            self.gtk_helper.set_widget_icon_name(
-                "notes",
-                [
-                    "accessories-notes-symbolic",
-                    "xapp-annotations-text-symbolic",
-                    "accessories-notes",
-                ],
-            )
-        )
 
-    def delete_button_icon(self):
-        return self.get_config(["notes", "notes_icon_delete"], "edit-delete")
+        self.gtk_helper.set_plugin_main_icon(
+            self.menubutton_notes,
+        )
 
     def clear_notes(self, *_):
         """Handle clearing all notes with a GTK4 confirmation dialog"""
@@ -143,9 +134,8 @@ class MenuNotes(BasePlugin):
         notes_count = len(notes)
         dynamic_height = min(notes_count * line_height + padding, 600)
         self.scrolled_window.set_min_content_height(dynamic_height)
-        button_icon = self.gtk_helper.set_widget_icon_name(
-            None, [self.delete_button_icon(), "edit-delete"]
-        )
+        icon_name = self.get_config(["plugin", "notes", "delete_icon"], "edit-delete")
+        button_icon = self.gtk_helper.icon_exist(icon_name, ["edit-delete"])
         for note_id, content in notes:
             if not content:
                 continue

@@ -13,7 +13,7 @@ def get_plugin_placement(panel_instance):
     Defines the placement and order of the plugin on the panel.
     """
     position = "top-panel-systray"
-    order = 2
+    order = 3
     return position, order
 
 
