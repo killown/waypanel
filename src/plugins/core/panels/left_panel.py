@@ -78,5 +78,5 @@ class LeftPanelPlugin(BasePlugin):
             )
             return False
         else:
-            GLib.timeout_add(1, self.add_css_class)
+            GLib.timeout_add(100, self.add_css_class)
             return True
