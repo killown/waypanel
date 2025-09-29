@@ -97,10 +97,7 @@ class GtkHelpers:
             return False
         return True
 
-    def set_plugin_main_icon(
-        self,
-        widget: Gtk.Widget,
-    ):
+    def set_plugin_main_icon(self, widget: Gtk.Widget, plugin_name, icon_name):
         """
         Sets the main icon for a plugin widget, deriving the plugin name from the
         calling file's name (e.g., 'my_plugin.py' becomes 'my_plugin').
@@ -108,17 +105,6 @@ class GtkHelpers:
             widget (Gtk.Widget): The widget instance to set the icon on.
             fallback_icons (list): A list of backup icon names to try.
         """
-        try:
-            caller_frame = inspect.stack()[1]
-            file_path = caller_frame.filename
-            file_name = os.path.basename(file_path)
-            plugin_name = file_name.rsplit(".", 1)[0]
-        except Exception as e:
-            self.logger.error(f"Failed to determine calling plugin name: {e}")
-            plugin_name = "unknown_plugin"
-        icon_name = self.config_handler.check_and_get_config(
-            ["plugins", plugin_name, "main_icon"]
-        )
         fallback_icons = self.config_handler.check_and_get_config(
             ["plugins", plugin_name, "fallback_main_icons"]
         )

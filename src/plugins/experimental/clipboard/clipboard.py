@@ -89,16 +89,18 @@ class ClipboardClient(BasePlugin):
         self.find_text_using_button = {}
         self.row_content = None
         self.listbox = None
-        self.client_config = self.config_handler.config_data.get("clipboard").get(
-            "client"
+        self.client_config = self.config_data.get("plugins", "").get("clipboard")
+        self.popover_min_width = self.client_config.get("client_popover_min_width", 500)
+        self.popover_max_height = self.client_config.get(
+            "client_popover_max_height", 600
         )
-        self.popover_min_width = self.client_config.get("popover_min_width", 500)
-        self.popover_max_height = self.client_config.get("popover_max_height", 600)
-        self.thumbnail_size = self.client_config.get("thumbnail_size", 128)
-        self.preview_text_length = self.client_config.get("preview_text_length", 50)
-        self.image_row_height = self.client_config.get("image_row_height", 60)
-        self.text_row_height = self.client_config.get("text_row_height", 38)
-        self.item_spacing = self.client_config.get("item_spacing", 5)
+        self.thumbnail_size = self.client_config.get("client_thumbnail_size", 128)
+        self.preview_text_length = self.client_config.get(
+            "client_preview_text_length", 50
+        )
+        self.image_row_height = self.client_config.get("client_image_row_height", 60)
+        self.text_row_height = self.client_config.get("client_text_row_height", 38)
+        self.item_spacing = self.client_config.get("client_item_spacing", 5)
         self.create_popover_menu_clipboard()
 
     def is_image_content(self, content):
@@ -309,11 +311,6 @@ class ClipboardClient(BasePlugin):
         self.menubutton_clipboard = Gtk.Button.new()
         self.main_widget = (self.menubutton_clipboard, "append")
         self.menubutton_clipboard.connect("clicked", self.open_popover_clipboard)
-        self.menubutton_clipboard.set_icon_name(
-            self.gtk_helper.set_widget_icon_name(
-                "clipboard", ["edit-paste-symbolic", "edit-paste"]
-            )
-        )
         self.gtk_helper.add_cursor_effect(self.menubutton_clipboard)
 
     def create_popover_clipboard(self, *_):

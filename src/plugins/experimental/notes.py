@@ -95,10 +95,6 @@ class MenuNotes(BasePlugin):
         self.menubutton_notes.connect("clicked", self.open_popover_notes)
         self.gtk_helper.add_cursor_effect(self.menubutton_notes)
 
-        self.gtk_helper.set_plugin_main_icon(
-            self.menubutton_notes,
-        )
-
     def clear_notes(self, *_):
         """Handle clearing all notes with a GTK4 confirmation dialog"""
         dialog = Gtk.AlertDialog(

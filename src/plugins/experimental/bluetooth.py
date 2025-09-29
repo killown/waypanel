@@ -19,20 +19,20 @@ def get_plugin_placement(panel_instance):
 
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
-        bt = BluetoothPlugin(panel_instance)
+        bt = Bluetooth(panel_instance)
         bt.global_loop.create_task(bt.create_menu_popover_bluetooth())
         bt.global_loop.create_task(bt._auto_connect_devices())
         return bt
 
 
-class BluetoothPlugin(BasePlugin):
+class Bluetooth(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.popover_dashboard = None
         self.bluetooth_buttons = {}
-        self.menubutton_dashboard = Gtk.Button()
-        self.gtk_helper.add_cursor_effect(self.menubutton_dashboard)
-        self.main_widget = (self.menubutton_dashboard, "append")
+        self.bluetooth_button_popover = Gtk.Button()
+        self.gtk_helper.add_cursor_effect(self.bluetooth_button_popover)
+        self.main_widget = (self.bluetooth_button_popover, "append")
 
     def _extract_mac_from_string(self, entry_string):
         """
@@ -184,11 +184,7 @@ class BluetoothPlugin(BasePlugin):
             self.logger.exception(f"Failed to set default sink with pulsectl: {e}")
 
     async def create_menu_popover_bluetooth(self):
-        self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
-        icon_name = self.gtk_helper.set_widget_icon_name(
-            "bluetooth", ["org.gnome.Settings-bluetooth-symbolic", "bluetooth"]
-        )
-        self.menubutton_dashboard.set_icon_name(icon_name)
+        self.bluetooth_button_popover.connect("clicked", self.open_popover_dashboard)
 
     def open_popover_dashboard(self, *_):
         if self.popover_dashboard and self.popover_dashboard.is_visible():
@@ -201,7 +197,7 @@ class BluetoothPlugin(BasePlugin):
     def create_popover_with_loading_state(self):
         self.popover_dashboard = Gtk.Popover.new()
         self.popover_dashboard.connect("closed", self.popover_is_closed)
-        self.popover_dashboard.set_parent(self.menubutton_dashboard)
+        self.popover_dashboard.set_parent(self.bluetooth_button_popover)
         box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         box.set_margin_top(10)
         box.set_margin_bottom(10)

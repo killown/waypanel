@@ -93,10 +93,14 @@ class AsyncClipboardServer(BasePlugin):
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.running = False
 
-        self.config_data_server = self.config_data.get("clipboard").get("server")
-        self.log_enabled = self.config_data_server.get("log_enabled", False)
-        self.max_items = self.config_data_server.get("max_items", 100)
-        self.monitor_interval = self.config_data_server.get("monitor_interval", 0.5)
+        self.config_data_server = self.config_data.get("plugins", "").get(
+            "clipboard", ""
+        )
+        self.log_enabled = self.config_data_server.get("server_log_enabled", False)
+        self.max_items = self.config_data_server.get("server_max_items", 100)
+        self.monitor_interval = self.config_data_server.get(
+            "server_monitor_interval", 0.5
+        )
 
     def _default_db_path(self):
         return str(Path.home() / ".config" / "waypanel" / "clipboard_server.db")

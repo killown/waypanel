@@ -65,9 +65,6 @@ class AppLauncher(BasePlugin):
         """Create the menu button and connect its signal to open the popover launcher."""
         self.appmenu.connect("clicked", self.open_popover_launcher)
         self.appmenu.add_css_class("app-launcher-menu-button")
-        self.gtk_helper.set_plugin_main_icon(
-            self.appmenu,
-        )
         self.gtk_helper.add_cursor_effect(self.appmenu)
 
     def create_popover_launcher(self, *_):

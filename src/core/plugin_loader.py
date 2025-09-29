@@ -626,6 +626,15 @@ class PluginLoader:
             module_name (str): The name of the plugin module, used to create a unique identifier for its container.
             hide_in_systray (bool): NEW ARGUMENT. True if the widget should be placed in the overflow container.
         """
+        icon_name = self.config_handler.check_and_get_config(
+            ["plugins", module_name, "main_icon"]
+        )
+        if icon_name:
+            print(icon_name)
+            self.gtk_helpers.set_plugin_main_icon(
+                widget_to_append, module_name, icon_name
+            )
+
         if not hide_in_systray:
             hide_in_systray = self.config_handler.check_and_get_config(
                 ["plugins", module_name, "hide_in_systray"]

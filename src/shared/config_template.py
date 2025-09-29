@@ -29,7 +29,14 @@ default_config = {
         "custom_path_hint": (
             "Absolute path to search for user-defined or custom plugins."
         ),
-        "bluetooth": {"hide_in_systray": True},
+        "bluetooth": {
+            "hide_in_systray": True,
+            "main_icon": "bluetooth-symbolic",
+            "fallback_main_icons": [
+                "org.gnome.Settings-bluetooth-symbolic",
+                "bluetooth",
+            ],
+        },
         "wayfire_plugins": {"hide_in_systray": True},
         "notes": {
             "main_icon": "stock_notes",
@@ -51,9 +58,56 @@ default_config = {
             "main_icon": "start-here-symbolic",
             "fallback_main_icons": ["applications-all-symbolic"],
         },
-        "battery": {
-            "hide_in_systray": True,
-            "low_threshold": 20,
+        "clipboard": {
+            "_section_hint": (
+                "Settings for the Clipboard Manager plugin, which tracks "
+                "copy/paste history."
+            ),
+            "server_log_enabled": False,
+            "server_log_enabled_hint": (
+                "If **True**, enables logging of clipboard activity for **debugging only**."
+            ),
+            "server_max_items": 100,
+            "server_max_items_hint": (
+                "Maximum number of items to keep in the clipboard history cache."
+            ),
+            "server_monitor_interval": 0.5,
+            "server_monitor_interval_hint": (
+                "The time interval (in seconds) the clipboard manager waits "
+                "before checking for new content."
+            ),
+            "client_popover_min_width": 500,
+            "client_popover_min_width_hint": (
+                "The minimum width (in pixels) for the clipboard "
+                "history popover window."
+            ),
+            "client_popover_max_height": 600,
+            "client_popover_max_height_hint": (
+                "The maximum height (in pixels) for the clipboard "
+                "history popover window."
+            ),
+            "client_thumbnail_size": 128,
+            "client_thumbnail_size_hint": (
+                "Size (in pixels) for image thumbnails displayed in the history list."
+            ),
+            "client_preview_text_length": 50,
+            "client_preview_text_length_hint": (
+                "Maximum number of characters to show for a plain text item preview."
+            ),
+            "client_image_row_height": 60,
+            "client_image_row_height_hint": (
+                "The fixed height (in pixels) for history rows that contain image data."
+            ),
+            "client_text_row_height": 38,
+            "client_text_row_height_hint": (
+                "The fixed height (in pixels) for history rows that contain plain text."
+            ),
+            "client_item_spacing": 5,
+            "client_item_spacing_hint": (
+                "Spacing (in pixels) between clipboard items in the popover's list."
+            ),
+            "main_icon": "clipboard",
+            "fallback_main_icons": ["edit-paste-symbolic", "edit-paste"],
         },
     },
     "hardware": {
@@ -371,65 +425,6 @@ default_config = {
             ),
         },
     },
-    "clipboard": {
-        "_section_hint": (
-            "Settings for the Clipboard Manager plugin, which tracks "
-            "copy/paste history."
-        ),
-        "server": {
-            "_section_hint": (
-                "Backend (server) settings for monitoring the clipboard."
-            ),
-            "log_enabled": False,
-            "log_enabled_hint": (
-                "If **True**, enables logging of clipboard activity for **debugging only**."
-            ),
-            "max_items": 100,
-            "max_items_hint": (
-                "Maximum number of items to keep in the clipboard history cache."
-            ),
-            "monitor_interval": 0.5,
-            "monitor_interval_hint": (
-                "The time interval (in seconds) the clipboard manager waits "
-                "before checking for new content."
-            ),
-        },
-        "client": {
-            "_section_hint": (
-                "Frontend (client/UI) settings for the clipboard popover window."
-            ),
-            "popover_min_width": 500,
-            "popover_min_width_hint": (
-                "The minimum width (in pixels) for the clipboard "
-                "history popover window."
-            ),
-            "popover_max_height": 600,
-            "popover_max_height_hint": (
-                "The maximum height (in pixels) for the clipboard "
-                "history popover window."
-            ),
-            "thumbnail_size": 128,
-            "thumbnail_size_hint": (
-                "Size (in pixels) for image thumbnails displayed in the history list."
-            ),
-            "preview_text_length": 50,
-            "preview_text_length_hint": (
-                "Maximum number of characters to show for a plain text item preview."
-            ),
-            "image_row_height": 60,
-            "image_row_height_hint": (
-                "The fixed height (in pixels) for history rows that contain image data."
-            ),
-            "text_row_height": 38,
-            "text_row_height_hint": (
-                "The fixed height (in pixels) for history rows that contain plain text."
-            ),
-            "item_spacing": 5,
-            "item_spacing_hint": (
-                "Spacing (in pixels) between clipboard items in the popover's list."
-            ),
-        },
-    },
     "notify": {
         "_section_hint": (
             "Settings for the Notification Daemon, which handles system notifications."
@@ -470,15 +465,6 @@ default_config = {
                 "console/log file for **debugging only**."
             ),
         },
-    },
-    "notes": {
-        "_section_hint": "Icon settings used by the Notes plugin.",
-        "notes_icon": "stock_notes",
-        "notes_icon_hint": "The icon name for the quick notes button.",
-        "notes_icon_delete": "edit-delete",
-        "notes_icon_delete_hint": (
-            "The icon name for the delete note button within the notes interface."
-        ),
     },
     "panel": {
         "_section_hint": (
