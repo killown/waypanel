@@ -50,7 +50,9 @@ class SystrayClientPlugin(BasePlugin):
         self.loop = global_loop
         self.main_widget = (self.tray_box, "append")
         self.notifier_watcher = StatusNotifierWatcher("", panel_instance)
-        self.notifier_watcher.run_server_in_background(panel_instance)
+        self.schedule_in_gtk_thread(
+            self.notifier_watcher.run_server_in_background, panel_instance
+        )
 
     def subscribe_to_icon_updates(self):
         """

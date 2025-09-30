@@ -280,7 +280,7 @@ class DockbarPlugin(BasePlugin):
         class_style = self.get_config(
             ["dockbar", "panel", "class_style"], "dockbar-buttons"
         )
-        self._load_and_populate_dockbar(orientation, class_style)
+        self.run_in_thread(self._load_and_populate_dockbar, orientation, class_style)
         self.main_widget = (self.dockbar, "append")
         self.logger.info("Dockbar setup completed.")
 

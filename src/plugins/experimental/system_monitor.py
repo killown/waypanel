@@ -1,6 +1,5 @@
 import psutil
 import gi
-import subprocess
 import shutil
 import shlex
 import tempfile
@@ -331,7 +330,7 @@ class SystemMonitorPlugin(BasePlugin):
             return None
 
     def open_system_monitor(self):
-        subprocess.Popen(["gnome-system-monitor"])
+        self.run_cmd("gnome-system-monitor")
 
     def open_terminal_with_amdgpu_top(self, *__):
         """
@@ -340,9 +339,9 @@ class SystemMonitorPlugin(BasePlugin):
             bool: True if the terminal was successfully opened, False otherwise.
         """
         if shutil.which("kitty"):
-            terminal_command = ["kitty"]
+            terminal_command = "kitty"
         elif shutil.which("alacritty"):
-            terminal_command = ["alacritty"]
+            terminal_command = "alacritty"
         else:
             self.logger.error("Error: Neither kitty nor alacritty is installed.")
             return False
@@ -350,7 +349,7 @@ class SystemMonitorPlugin(BasePlugin):
             self.logger.error("Error: amdgpu_top is not installed.")
             return False
         try:
-            subprocess.Popen(terminal_command + ["-e", "amdgpu_top"])
+            self.run_cmd(f"{terminal_command} -e amdgpu_top")
             return True
         except Exception as e:
             self.logger.error(f"Error launching terminal: {e}")
@@ -365,16 +364,16 @@ class SystemMonitorPlugin(BasePlugin):
             bool: True if the terminal was successfully opened, False otherwise.
         """
         if shutil.which("kitty"):
-            terminal_command = ["kitty"]
+            terminal_command = "kitty"
         elif shutil.which("alacritty"):
-            terminal_command = ["alacritty"]
+            terminal_command = "alacritty"
         else:
             self.logger.error("Error: Neither kitty nor alacritty is installed.")
             return False
-        htop_command = ["htop", "-p", str(pid)]
-        full_command = terminal_command + ["-e"] + htop_command
+        htop_command = f"htop -p {pid}"
+        full_command = f"{terminal_command} -e {htop_command}"
         try:
-            subprocess.Popen(full_command)
+            self.run_cmd(full_command)
             return True
         except Exception as e:
             self.logger.error(f"Error launching terminal: {e}")
@@ -389,21 +388,21 @@ class SystemMonitorPlugin(BasePlugin):
             bool: True if the terminal was successfully opened, False otherwise.
         """
         if shutil.which("kitty"):
-            terminal_command = ["kitty"]
+            terminal_command = "kitty"
         elif shutil.which("alacritty"):
-            terminal_command = ["alacritty"]
+            terminal_command = "alacritty"
         else:
             self.logger.error("Error: Neither kitty nor alacritty is installed.")
             return False
-        htop_command = ["sudo", "iotop", "-p", str(pid)]
+        htop_command = f"sudo iotop -p {pid}"
         self.notifier.notify_send(
             "iotop command",
             f"iotop requires permissions to monitor disk usage from the given PID:{pid}",
             "iotop",
         )
-        full_command = terminal_command + ["-e"] + htop_command
+        full_command = f"{terminal_command} -e {htop_command}"
         try:
-            subprocess.Popen(full_command)
+            self.run_cmd(full_command)
             return True
         except Exception as e:
             self.logger.error(f"Error launching terminal: {e}")
@@ -424,11 +423,11 @@ class SystemMonitorPlugin(BasePlugin):
             os.write(fd, SELECT_EVENT_WATCH_SCRIPT.encode("utf-8"))
             os.close(fd)
             if is_installed("ipython"):
-                cmd = ["ipython", temp_path]
+                cmd = f"ipython {temp_path}"
             else:
-                cmd = ["python", temp_path]
-            full_bash_cmd = f"{' '.join(map(shlex.quote, cmd))}; exec bash"
-            subprocess.Popen(["kitty", "bash", "-c", full_bash_cmd])
+                cmd = f"python {temp_path}"
+            full_bash_cmd = f"{cmd}; exec bash"
+            self.run_cmd(f"kitty -e {full_bash_cmd}")
         except Exception as e:
             self.logger.error(f"Failed to create or run script: {e}")
 
@@ -465,9 +464,9 @@ class SystemMonitorPlugin(BasePlugin):
 
         full_cmd = f"ipython -c {shlex.quote(python_cmd)}"
         if terminal == "kitty":
-            subprocess.Popen([terminal, "bash", "-c", f"{full_cmd}; exec bash"])
+            self.run_cmd(f"{terminal} -e {full_cmd}")
         else:
-            subprocess.Popen([terminal, "-e", "bash", "-c", f"{full_cmd}; exec bash"])
+            self.run_cmd(f"{terminal}  -e {full_cmd}")
 
     def open_kitty_with_ipython_view(self, view):
         def is_installed(cmd):
@@ -496,9 +495,9 @@ class SystemMonitorPlugin(BasePlugin):
         )
         cmd = f'ipython -i -c "{code}"'
         if terminal == "kitty":
-            subprocess.Popen([terminal, "bash", "-c", f"{cmd} ; exec bash"])
+            self.run_cmd(f"{terminal} -e {cmd}")
         else:
-            subprocess.Popen([terminal, "-e", "bash", "-c", f"{cmd} ; exec bash"])
+            self.run_cmd(f"{terminal} -e {cmd}")
 
     def open_view_info_window(self, id):
         try:
@@ -638,7 +637,7 @@ class SystemMonitorPlugin(BasePlugin):
         )
 
     def open_gnome_system_monitor(self, _):
-        subprocess.Popen(["gnome-system-monitor"])
+        self.run_cmd("gnome-system-monitor")
 
     def create_gesture_for_cpu_usage(self, hbox):
         create_gesture = self.plugins["gestures_setup"].create_gesture

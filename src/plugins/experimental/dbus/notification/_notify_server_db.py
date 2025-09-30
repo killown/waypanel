@@ -7,8 +7,7 @@ from src.shared.path_handler import PathHandler
 class Database:
     def __init__(self, panel_instance) -> None:
         self.path_handler = PathHandler(panel_instance)
-        config_dir = self.path_handler.get_config_dir()
-        self.db_path = str(config_dir / "notifications.db")
+        self.db_path = self.path_handler.get_data_path("db/notify/notifications.db")
         self._initialize_db()
 
     def _initialize_db(self):

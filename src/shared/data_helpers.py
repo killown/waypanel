@@ -1,5 +1,7 @@
 import gi
 import logging
+import time
+import datetime
 from typing import Any, Iterable, Optional, Union, Type, List
 from gi.repository import Gtk  # pyright: ignore
 
@@ -277,3 +279,20 @@ class DataHelpers:
                     )
                     return False
         return True
+
+    def get_current_time_with_ms(self, msg: Optional[str] = None) -> None:
+        """
+        Formats the current time, including milliseconds, and logs it
+        preceded by an optional custom message.
+        Args:
+            msg (str, optional): A custom message to prepend to the timestamp.
+                                 Defaults to an empty string.
+        """
+        custom_msg = msg if msg is not None else ""
+        dt_object = datetime.datetime.fromtimestamp(time.time())
+        time_only_str = (
+            dt_object.strftime("%H:%M:%S")
+            + "."
+            + str(dt_object.microsecond // 1000).zfill(3)
+        )
+        self.logger.info(f"{custom_msg} {time_only_str}")

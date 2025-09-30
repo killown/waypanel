@@ -62,7 +62,7 @@ class GoNextWorkspaceWithViewsPlugin(BasePlugin):
         callback_name = "pos_full_right_click"
 
         # Append the action to the existing gesture callback
-        self.gestures_setup_plugin.append_action(
+        self.gestures_setup_plugin.append_action(  # pyright: ignore
             callback_name=callback_name,
             action=self.go_next_workspace_with_views,
         )
@@ -124,10 +124,8 @@ class GoNextWorkspaceWithViewsPlugin(BasePlugin):
         """
         Navigate to the next workspace with views, skipping empty workspaces.
         """
-        # FIXME: need a better way to detect which compositor is active
+        # sway
         if not os.getenv("WAYFIRE_SOCKET"):
-            # it's necessary to re-import and get a new instance every time we call next_workpace
-            # if not, it will use old instances and duplicate workspaces and cause some bugs
             from pysway.extra.utils import SwayUtils
             from pysway.ipc import SwayIPC
 
@@ -139,6 +137,7 @@ class GoNextWorkspaceWithViewsPlugin(BasePlugin):
             self.ipc.sock.run_command(f"workspace {workspace_name}")
             return
 
+        # wayfire
         workspaces_with_views = self.get_workspaces_with_views()
         if not workspaces_with_views:
             self.logger.info("No workspaces with views found.")

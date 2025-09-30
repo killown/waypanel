@@ -2,6 +2,7 @@ import os
 import sqlite3
 from gi.repository import Gio, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
+from src.shared.path_handler import PathHandler
 
 ENABLE_PLUGIN = True
 DEPS = ["notify_client"]
@@ -25,7 +26,7 @@ class NotifyWatcherPlugin(BasePlugin):
         super().__init__(panel_instance)
         self.notify_client = None
         self.notification_button = None
-        self.db_path = os.path.expanduser("~/.config/waypanel/notifications.db")
+        self.db_path = self.path_handler.get_data_path("db/notify/notifications.db")
         self.gio_file = None
         self.gio_monitor = None
         self._last_mod_time = 0.0

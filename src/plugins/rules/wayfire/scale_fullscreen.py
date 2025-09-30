@@ -1,4 +1,4 @@
-from gi.repository import GLib
+from gi.repository import GLib  # pyright: ignore
 from src.plugins.core.event_handler_decorator import subscribe_to_event
 
 from core._base import BasePlugin

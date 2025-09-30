@@ -26,7 +26,7 @@ class FixFullscreenDragDropPlugin(BasePlugin):
         super().__init__(panel_instance)
         """Initialize the FixFullscreenDragDropPlugin."""
         self.logger.info("FixFullscreenDragDropPlugin initialized.")
-        self.subscribe_to_events()
+        self.schedule_in_gtk_thread(self.subscribe_to_events)
 
     def subscribe_to_events(self):
         """Subscribe to relevant events."""

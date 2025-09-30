@@ -29,8 +29,8 @@ class VolumeScrollPlugin(BasePlugin):
         self.icon = None
         self.label = None
         self.max_volume = 150
-        self.update_max_volume()
-        self.setup_scroll_event()
+        self.run_in_thread(self.update_max_volume)
+        self.run_in_thread(self.setup_scroll_event)
 
     def update_max_volume(self):
         """Fetch the maximum volume supported by the system."""

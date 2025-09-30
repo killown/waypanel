@@ -34,7 +34,7 @@ class Tile(BasePlugin):
         self.wf_utils = WayfireUtils(self.ipc)
         self.workarea_width = self.ipc.get_focused_output()["workarea"]["width"]
         self.keybind = KEYBIND
-        self.register_binding_toggle_maximize()
+        self.schedule_in_gtk_thread(self.register_binding_toggle_maximize)
 
     def register_binding_toggle_maximize(self):
         print(f"Registering binding: {self.keybind}")

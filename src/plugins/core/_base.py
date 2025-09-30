@@ -153,7 +153,7 @@ class BasePlugin:
         """
         return self.config_handler.check_and_get_config(keys, default)
 
-    def update_config(self, key_path: List[str], new_value: Any) -> bool:
+    def update_config(self, key_path: List[str], new_value: Any):
         """
         Updates a configuration value by path, saves the config file, and reloads the configuration.
         This method delegates the operation to the main ConfigHandler.
@@ -165,10 +165,15 @@ class BasePlugin:
             True if the configuration was successfully updated and saved, False otherwise.
         """
         try:
-            return self.config_handler.update_config(key_path, new_value)
+            return self.run_in_thread(
+                self.config_handler.update_config, key_path, new_value
+            )
         except AttributeError as e:
             self.logger.error(f"Failed to call update_config on config_handler: {e}")
             return False
+
+    def run_cmd(self, cmd: str) -> Future:
+        return self.run_in_thread(self.cmd.run, cmd)
 
     def run_in_thread(self, func: Callable, *args, **kwargs) -> Future:
         """

@@ -67,8 +67,8 @@ class TaskbarPlugin(BasePlugin):
         self.panel_name = self.config_handler.check_and_get_config(
             ["taskbar", "panel", "name"],
         )
-        self._setup_taskbar()
-        self._initialize_button_pool(10)
+        self.run_in_thread(self._setup_taskbar)
+        self.run_in_thread(self._initialize_button_pool, 10)
         self.main_widget = (self.scrolled_window, "append")
 
     def set_layer_exclusive(self, exclusive) -> None:

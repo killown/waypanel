@@ -52,8 +52,8 @@ class NotificationPopoverPlugin(BasePlugin):
         self.dnd_switch = Gtk.Switch()
         self.dnd_switch.set_active(False)
         self.dnd_switch.connect("state-set", self.on_dnd_toggled)
+        self.db_path = self.path_handler.get_data_path("db/notify/notifications.db")
         self.main_widget = (self.notification_button, "append")
-        self.db_path = os.path.expanduser("~/.config/waypanel/notifications.db")
 
     def update_dnd_switch_state(self):
         """Update the Do Not Disturb switch state based on the server setting."""
@@ -384,8 +384,9 @@ class NotificationPopoverPlugin(BasePlugin):
             no_notify_label = Gtk.Label(label="No recent notifications")
             no_notify_label.add_css_class("no-notifications-label")
             self.update_widget_safely(self.vbox.append, no_notify_label)
-        for notification in notifications:
-            self.create_notification_box(notification)
+        if notifications:
+            for notification in notifications:
+                self.run_in_thread(self.create_notification_box, notification)
         self.main_vbox.set_size_request(self.popover_width, self.popover_height)
         self.update_dnd_switch_state()
         self.popover.set_parent(self.notification_button)

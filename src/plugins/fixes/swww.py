@@ -33,7 +33,6 @@ class SwwwLayoutPlugin(BasePlugin):
         subprocess.run(["swww", "restore"], check=True)
         self.logger.info("Executed: swww clear")
         self.logger.info("Executed: swww restore")
-        return False
 
     @subscribe_to_event("output-layout-changed")
     def on_output_layout_changed(self, event_message):
@@ -41,6 +40,6 @@ class SwwwLayoutPlugin(BasePlugin):
         Handle the output-layout-changed event by running swww clear and swww restore.
         """
         try:
-            GLib.timeout_add_seconds(1, self.restore_wallpaper)
+            self.run_in_thread(self.restore_wallpaper)
         except Exception as e:
             self.logger.error(f"Unexpected error in on_output_layout_changed: {e}")

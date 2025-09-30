@@ -15,12 +15,12 @@ default_config = {
     ),
     "plugins": {
         "_section_hint": ("Configuration for loading and managing Waypanel plugins."),
-        "list": "",
+        "enabled": [],
         "list_hint": (
             "A comma-separated list of enabled plugins (e.g., 'taskbar, calendar'). "
             "If left empty, all discovered plugins will be loaded, unless disabled."
         ),
-        "disabled": "",
+        "disabled": [],
         "disabled_hint": (
             "A comma-separated list of disabled plugins (e.g., 'tile, weather'). "
             "These plugins will be skipped during the loading process."

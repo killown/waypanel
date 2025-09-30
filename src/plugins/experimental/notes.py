@@ -145,7 +145,7 @@ class MenuNotes(BasePlugin):
         self.scrolled_window.set_child(self.listbox)
         self.main_box.append(self.scrolled_window)
         self.popover_notes.set_child(self.main_box)
-        self.update_notes_list()
+        self.run_in_thread(self.update_notes_list)
         self.popover_notes.set_parent(self.menubutton_notes)
         return self.popover_notes
 

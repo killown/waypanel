@@ -51,6 +51,8 @@ class PluginLoader:
         self.plugin_containers = {}
         self.plugins_dir = self.plugins_base_path()
         self.position_mapping = {}
+        self.valid_plugins = []
+        self.plugin_metadata = []
         self.data_helper = DataHelpers()
         self.config_handler = ConfigHandler(panel_instance)
         self.config_path = self.config_handler.config_path
@@ -59,6 +61,9 @@ class PluginLoader:
         self.panel_instance.plugins_startup_finished = False
         self.user_plugins_dir = os.path.join(
             self.get_real_user_home(), ".local", "share", "waypanel", "plugins"
+        )
+        self.disabled_plugins = self.config_handler.check_and_get_config(
+            ["plugins", "disabled"]
         )
         self.plugin_icons = {}
         self._initialize_plugin_with_deps_attemps = {}
@@ -228,9 +233,7 @@ class PluginLoader:
                 level="error",
             )
 
-    def _find_plugins_in_dir(
-        self, directory_path, disabled_plugins, valid_plugins, plugin_metadata
-    ):
+    def _find_plugins_in_dir(self, directory_path, valid_plugins, plugin_metadata):
         """
         Recursively searches a directory for Python plugin modules, filters out
         ignored directories, and registers the discovered plugins for processing.
@@ -262,60 +265,59 @@ class PluginLoader:
                     file_path = os.path.join(root, file_name)
                     self.plugins_path[module_name] = file_path
 
-                    self._process_plugin(
+                    GLib.idle_add(
+                        self._process_plugin,
                         module_name,
                         module_path,
-                        disabled_plugins,
                         valid_plugins,
                         plugin_metadata,
                     )
 
-            dt_object = datetime.datetime.fromtimestamp(time.time())
-            time_only_str = (
-                dt_object.strftime("%H:%M:%S")
-                + "."
-                + str(dt_object.microsecond // 1000).zfill(3)
+            self.data_helper.get_current_time_with_ms(
+                f"Plugin loader: searching for plugins in the specified location {root}"
             )
-            self.logger.info(f"{root} {time_only_str}")
+
+    def _plugins_loaded_callback(self):
+        """
+        This method is called only after ALL plugin directories have been scanned.
+        Add the logic that depends on plugins being loaded here (e.g., enable_plugins).
+        """
+        self.logger.info("All plugin directories scanned. Starting plugin processing.")
+        GLib.idle_add(self._update_plugin_configuration, self.valid_plugins)
+        return False  # Stop GLib
+
+    def _scan_all_plugin_dirs(self):
+        """
+        Executes the two plugin scans sequentially in the GTK thread,
+        then calls the final callback.
+        """
+        try:
+            self._find_plugins_in_dir(
+                self.plugins_dir,
+                self.valid_plugins,
+                self.plugin_metadata,
+            )
+
+            self._find_plugins_in_dir(
+                self.user_plugins_dir,
+                self.valid_plugins,
+                self.plugin_metadata,
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error during plugin scanning: {e}")
+
+        finally:
+            self._plugins_loaded_callback()
+
+        return False
 
     def load_plugins(self):
         """
         Loads and prepares all plugins from built-in and custom directories.
-
-        This method orchestrates the entire plugin discovery and preparation process. It
-        first loads the application's configuration to identify disabled plugins. It then
-        calls the `_find_plugins_in_dir` helper to search both the core and user-defined
-        plugin directories, collecting metadata for all valid plugins. After discovery,
-        it updates the configuration file with any new plugins found. Finally, it
-        initiates the non-blocking initialization process by calling
-        `_initialize_sorted_plugins`.
-
-        This separation of concerns ensures that the application's startup is not
-        blocked by file system operations or plugin initialization, resulting in a
-        responsive user experience.
         """
-        config, disabled_plugins = self._load_plugin_configuration()
-        if config is None:
-            return
-
-        valid_plugins = []
-        plugin_metadata = []
-
-        # Find and process plugins from the main directory
-        self._find_plugins_in_dir(
-            self.plugins_dir, disabled_plugins, valid_plugins, plugin_metadata
-        )
-
-        # Find and process plugins from the user's custom directory
-        self._find_plugins_in_dir(
-            self.user_plugins_dir, disabled_plugins, valid_plugins, plugin_metadata
-        )
-
-        # Update the [plugins] section in the TOML configuration
-        self._update_plugin_configuration(config, valid_plugins, disabled_plugins)
-
-        # Initialize sorted plugins asynchronously using GLib.idle_add
-        self._initialize_sorted_plugins(plugin_metadata)
+        GLib.idle_add(self._scan_all_plugin_dirs)
+        GLib.idle_add(self._initialize_sorted_plugins, self.plugin_metadata)
 
     def plugins_base_path(self):
         """
@@ -417,7 +419,6 @@ class PluginLoader:
             self._process_plugin(
                 plugin_name,
                 module_path,
-                self.disabled_plugins,
                 valid_plugins,
                 plugin_metadata,
             )
@@ -443,45 +444,7 @@ class PluginLoader:
             self.logger.error(f"Error reloading plugin '{plugin_name}': {e}")
             print(f" {e}:\n{traceback.format_exc()}")
 
-    def _load_plugin_configuration(self):
-        """
-        Load plugin-specific settings from `config.toml`.
-
-        Parses the `[plugins]` section to:
-            - Determine which plugins are enabled/disabled
-            - Allow individual plugins to read their own config blocks
-
-        Returns:
-            Tuple[Dict, List]: (config_dict, disabled_plugins_list)
-        """
-        try:
-            if not os.path.exists(self.config_handler.config_path):
-                self.logger.error(
-                    f"Configuration file not found at '{self.config_handler.config_path}'."
-                )
-                return None, None
-
-            with open(self.config_handler.config_file, "r") as f:
-                config = toml.load(f)
-
-            # Ensure the [plugins] section exists
-            if "plugins" not in config:
-                config["plugins"] = {"list": "", "disabled": ""}
-
-            # Parse the disabled plugins list
-            self.disabled_plugins = config["plugins"]["disabled"].split()
-            return config, self.disabled_plugins
-        except Exception as e:
-            self.logger.error(
-                error=e,
-                message=f"Failed to load configuration file: {e}",
-                level="error",
-            )
-            return None, None
-
-    def _process_plugin(
-        self, module_name, module_path, disabled_plugins, valid_plugins, plugin_metadata
-    ):
+    def _process_plugin(self, module_name, module_path, valid_plugins, plugin_metadata):
         """Process and validate a single plugin.
 
         Validates the plugin's structure, checks for required functions,
@@ -497,11 +460,13 @@ class PluginLoader:
 
         # Skipping files with _name_conventions
         if module_name.startswith("_"):
-            return
+            return False
 
-        if module_name in disabled_plugins:
-            self.logger.info(f"Skipping plugin listed in 'disabled': {module_name}")
-            return
+        if module_name in self.disabled_plugins:
+            self.data_helper.get_current_time_with_ms(
+                f"Skipping plugin listed in 'disabled': {module_name}"
+            )
+            return False
 
         try:
             # Import the plugin module dynamically
@@ -516,12 +481,14 @@ class PluginLoader:
                 self.logger.error(
                     f"Module {module_name} is missing required functions. Skipping."
                 )
-                return
+                return False
 
             # Check if the plugin is enabled via ENABLE_PLUGIN
             if not is_plugin_enabled:
-                self.logger.info(f"Skipping disabled plugin: {module_name}")
-                return
+                self.data_helper.get_current_time_with_ms(
+                    f"Skipping disabled plugin: {module_name}"
+                )
+                return False
 
             # Add the plugin to the plugins_import dictionary
             self.plugins_import[module_name] = module_path
@@ -530,13 +497,13 @@ class PluginLoader:
 
             # Validate DEPS list
             has_plugin_deps = getattr(module, "DEPS", [])
-            if not self.validate_deps_list(has_plugin_deps, module_name):
+            if not self.validate_deps_list(has_plugin_deps):
                 self.logger.error(
                     error=ValueError("Invalid DEPS list."),
                     message=f"Plugin '{module_name}' has an invalid DEPS list. Skipping.",
                     level="error",
                 )
-                return
+                return False
 
             # Get position, order, and optional priority
             position_result = module.get_plugin_placement(self.panel_instance)
@@ -558,7 +525,7 @@ class PluginLoader:
                         self.logger.error(
                             f"Invalid position result for plugin {module_name}. Skipping."
                         )
-                        return
+                        return False
 
             # Add to valid plugins and metadata
             valid_plugins.append(module_name)
@@ -567,19 +534,22 @@ class PluginLoader:
             self.logger.error("Failed to initialize the plugin:")
             print(f" {e}:\n{traceback.format_exc()}")
 
-    def _update_plugin_configuration(self, config, valid_plugins, disabled_plugins):
+        return False
+
+    def _update_plugin_configuration(self, valid_plugins):
         """
         Persists the plugin configuration to the `config.toml` file.
 
         This method is responsible for saving the current state of discovered and
         disabled plugins back to the application's configuration file.
         """
-        self.config_handler.update_config(["plugins", "list"], " ".join(valid_plugins))
+        self.config_handler.update_config(["plugins", "enabled"], valid_plugins)
         self.config_handler.update_config(
-            ["plugins", "disabled"], " ".join(disabled_plugins)
+            ["plugins", "disabled"], self.disabled_plugins
         )
+        return False
 
-    def validate_deps_list(self, deps_list, module_name):
+    def validate_deps_list(self, deps_list):
         """
         Validates the DEPS list to ensure it contains only valid plugin names.
 
@@ -630,7 +600,6 @@ class PluginLoader:
             ["plugins", module_name, "main_icon"]
         )
         if icon_name:
-            print(icon_name)
             self.gtk_helpers.set_plugin_main_icon(
                 widget_to_append, module_name, icon_name
             )
@@ -732,6 +701,9 @@ class PluginLoader:
                initialization using `GLib.idle_add`, passing the necessary metadata to the
                `_initialize_plugin_with_deps` method.
         """
+        if not self.plugin_metadata:
+            return True  # try to find new metadata next time
+
         # Sort plugins by priority (descending), then by order (ascending)
         plugin_metadata.sort(key=lambda x: (-x[3], x[2]))
 

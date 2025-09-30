@@ -39,7 +39,7 @@ class PopoverBookmarks(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.popover_bookmarks = None
-        self._setup_config_paths()
+        self.run_in_thread(self._setup_config_paths)
         self.listbox = Gtk.ListBox.new()
 
     def _setup_config_paths(self):

@@ -83,7 +83,7 @@ class PopoverFolders(BasePlugin):
         self.main_box.append(self.scrolled_window)
         self.scrolled_window.set_child(self.listbox)
         self.popover_folders.set_child(self.main_box)
-        all_folders = self.config_handler.config_data.get("folders")
+        all_folders = self.config_handler.config_data.get("folders")  # pyright: ignore
         if all_folders:
             for folder in all_folders.items():
                 name = folder[1]["name"]
@@ -162,9 +162,9 @@ class PopoverFolders(BasePlugin):
 
     def pin_to_top(self, folder_path):
         folder_name = os.path.basename(folder_path)
-        if "folders" not in self.config_handler.config_data:
-            self.config_handler.config_data["folders"] = {}
-        all_folders = self.config_handler.config_data.get("folders")
+        if "folders" not in self.config_handler.config_data:  # pyright: ignore
+            self.config_handler.config_data["folders"] = {}  # pyright: ignore
+        all_folders = self.config_handler.config_data.get("folders")  # pyright: ignore
         for key, value in all_folders.items():  # pyright: ignore
             if value.get("path") == folder_path:
                 self.logger.info(f"{folder_path} is already pinned.")
@@ -175,7 +175,7 @@ class PopoverFolders(BasePlugin):
             "filemanager": "nautilus",
             "icon": "folder-symbolic",
         }
-        self.config_handler.config_data["folders"][folder_name] = new_folder_entry
+        self.config_handler.config_data["folders"][folder_name] = new_folder_entry  # pyright: ignore
         self.config_handler.save_config()
         self.config_handler.reload_config()
         self.logger.info(f"Pinned folder: {folder_name} to config.toml")

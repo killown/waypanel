@@ -191,9 +191,9 @@ class SoundCardDashboard(BasePlugin):
             self.logger.warning("No soundcard ID provided.")
             return
         try:
-            cmd = ["pactl", "set-default-sink", id]
-            self.logger.info(f"Attempting to set default sink with: {' '.join(cmd)}")
-            Popen(cmd, stdout=DEVNULL, stderr=DEVNULL)
+            cmd = f"pactl set-default-sink {id}"
+            self.logger.info(f"Attempting to set default sink with: {cmd}")
+            self.run_cmd(cmd)
         except FileNotFoundError:
             self.logger.error("pactl not found. Cannot set default soundcard.")
         except Exception as e:
@@ -207,9 +207,9 @@ class SoundCardDashboard(BasePlugin):
             self.logger.warning("No microphone ID provided.")
             return
         try:
-            cmd = ["pactl", "set-default-source", id]
-            self.logger.info(f"Attempting to set default source with: {' '.join(cmd)}")
-            Popen(cmd, stdout=DEVNULL, stderr=DEVNULL)
+            cmd = f"pactl set-default-source {id}"
+            self.logger.info(f"Attempting to set default source with: {cmd}")
+            self.run_cmd(cmd)
         except FileNotFoundError:
             self.logger.error("pactl not found. Cannot set default microphone.")
         except Exception as e:
@@ -297,13 +297,13 @@ class SoundCardDashboard(BasePlugin):
             self.soundcard_dropdown.handler_block(self.soundcard_handler_id)  # pyright: ignore
         if self.mic_handler_id:
             self.mic_dropdown.handler_block(self.mic_handler_id)  # pyright: ignore
-        self.update_soundcard_list()
-        self.update_mic_list()
+        self.schedule_in_gtk_thread(self.update_soundcard_list)
+        self.schedule_in_gtk_thread(self.update_mic_list)
         if self.soundcard_handler_id:
             self.soundcard_dropdown.handler_unblock(self.soundcard_handler_id)  # pyright: ignore
         if self.mic_handler_id:
             self.mic_dropdown.handler_unblock(self.mic_handler_id)  # pyright: ignore
-        self.popover_dashboard.popup()
+        self.schedule_in_gtk_thread(self.popover_dashboard.popup)
         return self.popover_dashboard
 
     def update_soundcard_list(self):
@@ -390,15 +390,6 @@ class SoundCardDashboard(BasePlugin):
         Popen(cmd, stdout=DEVNULL, stderr=DEVNULL)
         return ""
 
-    def run_app_from_dashboard(self, x):
-        """
-        Launches an application from the dashboard using gtk-launch.
-        """
-        selected_text, filename = x.get_child().MYTEXT
-        cmd = f"gtk-launch {filename}"
-        self.logger.info(cmd)
-        Popen(cmd)
-
     def open_popover_dashboard(self, *_):
         """
         Opens the dashboard popover for soundcard and mic selection.
@@ -462,7 +453,7 @@ class SoundCardDashboard(BasePlugin):
             discovered sound cards and microphones, providing a user-friendly
             way to select the desired device.
         3.  **System-Level Control**: When a user selects a new device from a
-            dropdown, the plugin uses `subprocess.Popen` to execute
+            dropdown, the plugin uses `self.run_cmd` to execute
             `pactl` commands. These commands directly interact with the
             PulseAudio server to set the newly selected sound card or
             microphone as the default system device.

@@ -36,8 +36,8 @@ class UpdateCheckerPlugin(BasePlugin):
         self.update_count = 0
         self.is_checking = False
         self.terminal_pid = None
-        self._setup_popover()
-        self._update_ui(0)
+        self.run_in_thread(self._setup_popover)
+        self.run_in_thread(self._update_ui, 0)
 
     def on_start(self):
         """Hook called when the plugin is initialized. Starts the initial and periodic checks."""

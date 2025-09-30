@@ -1,6 +1,6 @@
 import os
 import toml
-from gi.repository import Gtk, Pango
+from gi.repository import Gtk, Pango, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 import xml.etree.ElementTree as ET
 
@@ -63,7 +63,7 @@ class PluginListPopover(Gtk.Popover):
         self.main_box.append(scrolled)
 
         self.set_child(self.main_box)
-        self.update_popover_content(self.plugins_data)
+        GLib.idle_add(self.update_popover_content, self.plugins_data)
 
     def on_plugin_clicked(self, flowbox, child):
         plugin_name = child.get_child().MYTEXT
@@ -83,6 +83,7 @@ class PluginListPopover(Gtk.Popover):
         for plugin in plugins_data:
             self._add_plugin_row(plugin)
         self.flowbox.invalidate_filter()
+        return False  # stop loop
 
     def _add_plugin_row(self, plugin):
         """Creates and adds a single plugin row (a button with icon, label, and switch) to the flowbox."""

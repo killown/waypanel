@@ -46,7 +46,7 @@ class WindowTitlePlugin(BasePlugin):
         self._debounce_timer_id: Optional[int] = None
         self._debounce_interval: int = 50
         self._last_view_data: Optional[Dict[str, Any]] = None
-        self.update_title("", "focus-windows")
+        self.schedule_in_gtk_thread(self.update_title, "", "focus-windows")
 
     def _load_config(self) -> None:
         """Loads configuration from config_handler with defaults."""

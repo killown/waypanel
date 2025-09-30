@@ -13,10 +13,10 @@ def get_plugin_placement(panel_instance):
 
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
-        return OverflowIndicatorPlugin(panel_instance)
+        return OverflowIndicator(panel_instance)
 
 
-class OverflowIndicatorPlugin(BasePlugin):
+class OverflowIndicator(BasePlugin):
     PLUGIN_ID = "overflow_indicator"
 
     def __init__(self, panel_instance):
@@ -60,3 +60,24 @@ class OverflowIndicatorPlugin(BasePlugin):
         widget.set_visible(True)
         self.hidden_widgets_box.append(widget)
         self.logger.info(f"Widget {widget.get_name()} added to overflow container.")
+
+    def about(self):
+        """Provides a toggle button to reveal or hide an overflow container for other panel widgets."""
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin creates an overflow mechanism using a Gtk.Revealer.
+
+        1. Widget Structure: The main widget is a Gtk.Box containing the
+           `toggle_button` and the `revealer`. The `revealer` itself holds the
+           `hidden_widgets_box`, where overflowed plugin widgets are placed (via
+           `add_hidden_widget`).
+
+        2. Toggling Logic: The `_on_toggle_clicked` method flips the internal
+           `self.is_revealed` state and passes this boolean directly to
+           `self.revealer.set_reveal_child()`. This triggers the transition effect
+           (`SLIDE_RIGHT`) to show or hide the overflow box smoothly. The button's
+           icon is also updated to reflect the current state.
+        """
+        return self.code_explanation.__doc__
