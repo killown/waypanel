@@ -871,3 +871,49 @@ class GtkHelpers:
                 f"Failed to unparent widget: {widget} - Error: {e}", exc_info=True
             )
             return False
+
+    def create_popover(
+        self,
+        parent_widget,
+        css_class: str = "plugin-default-popover",
+        has_arrow: bool = True,
+        closed_handler=None,
+        visible_handler=None,
+    ):
+        """
+        Creates and configures a standard Gtk.Popover for use in plugins.
+
+        This function extracts the generic popover setup logic from AppLauncher.
+
+        Args:
+            gtk (module): The Gtk module (e.g., gi.repository.Gtk).
+            parent_widget (Gtk.Widget): The widget the popover will be parented to.
+            css_class (str, optional): A custom CSS class to add to the popover.
+                                       Defaults to "plugin-default-popover".
+            has_arrow (bool, optional): Whether the popover should display an arrow
+                                        pointing to its parent. Defaults to True.
+            closed_handler (function, optional): Handler for the 'closed' signal.
+            visible_handler (function, optional): Handler for the 'notify::visible' signal.
+
+        Returns:
+            Gtk.Popover: The configured popover object.
+        """
+        popover = Gtk.Popover()
+
+        # 1. Apply styling and arrow visibility (customizable/optional)
+        popover.add_css_class(css_class)
+        popover.set_has_arrow(has_arrow)
+
+        # 2. Connect optional lifecycle signals
+        if closed_handler:
+            # Connects to the signal found in AppLauncher._create_and_configure_popover
+            popover.connect("closed", closed_handler)
+
+        if visible_handler:
+            # Connects to the signal found in AppLauncher._create_and_configure_popover
+            popover.connect("notify::visible", visible_handler)
+
+        # 3. Set the parent (required for positioning, extracted from _finalize_popover_setup)
+        popover.set_parent(parent_widget)
+
+        return popover

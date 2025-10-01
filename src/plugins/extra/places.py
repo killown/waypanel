@@ -1,6 +1,3 @@
-import os
-from subprocess import Popen
-from gi.repository import Gio, Gtk  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
@@ -23,8 +20,8 @@ def initialize_plugin(panel_instance):
 class PopoverFolders(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
-        self.home = os.path.expanduser("~")
-        self.home_folders = os.listdir(self.home)
+        self.home = self.os.path.expanduser("~")
+        self.home_folders = self.os.listdir(self.home)
         self.popover_folders = None
 
     def set_main_widget(self):
@@ -34,7 +31,7 @@ class PopoverFolders(BasePlugin):
         self.layer_shell.set_keyboard_mode(
             self.obj.top_panel, self.layer_shell.KeyboardMode.ON_DEMAND
         )
-        self.menubutton_folders = Gtk.Button()
+        self.menubutton_folders = self.gtk.Button()
         self.menubutton_folders.connect("clicked", self.open_popover_folders)
         icon_name = self.gtk_helper.set_widget_icon_name(
             "places",
@@ -48,22 +45,31 @@ class PopoverFolders(BasePlugin):
         """
         Create and configure a popover for folders.
         """
-        self.popover_folders = Gtk.Popover.new()
-        self.popover_folders.set_has_arrow(False)
+
+        self.popover_folders = self.create_popover(
+            parent_widget=self.menubutton_folders,
+            css_class="places-popover",
+            has_arrow=False,
+            closed_handler=self.popover_is_closed,
+            visible_handler=self.popover_is_open,
+        )
         self.popover_folders.set_autohide(True)
-        self.popover_folders.connect("closed", self.popover_is_closed)
-        self.popover_folders.connect("notify::visible", self.popover_is_open)
-        self.popover_folders.add_css_class("places-popover")
-        show_searchbar_action = Gio.SimpleAction.new("show_searchbar")
+
+        # ACTION
+        show_searchbar_action = self.gio.SimpleAction.new("show_searchbar")
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
         self.obj.add_action(show_searchbar_action)
-        self.scrolled_window = Gtk.ScrolledWindow()
+
+        # SCROLLED WINDOW AND MAIN BOX SETUP
+        self.scrolled_window = self.gtk.ScrolledWindow()
         self.scrolled_window.set_min_content_width(400)
         self.scrolled_window.set_min_content_height(600)
         self.scrolled_window.add_css_class("places-scrolled-window")
-        self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
         self.main_box.add_css_class("places-main-box")
-        self.searchbar = Gtk.SearchEntry.new()
+
+        # SEARCH BAR SETUP
+        self.searchbar = self.gtk.SearchEntry.new()
         self.searchbar.grab_focus()
         self.searchbar.connect("search_changed", self.on_search_entry_changed)
         self.searchbar.set_focus_on_click(True)
@@ -71,17 +77,23 @@ class PopoverFolders(BasePlugin):
         self.searchbar.props.vexpand = True
         self.searchbar.add_css_class("places-search-entry")
         self.main_box.append(self.searchbar)
-        self.listbox = Gtk.ListBox.new()
+
+        # LISTBOX SETUP
+        self.listbox = self.gtk.ListBox.new()
         self.listbox.connect("row-selected", lambda widget, row: self.open_folder(row))
         self.searchbar.set_key_capture_widget(self.obj.top_panel)
         self.listbox.props.hexpand = True
         self.listbox.props.vexpand = True
-        self.listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.listbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
         self.listbox.set_show_separators(True)
         self.listbox.add_css_class("places-listbox")
+
+        # FINAL ASSEMBLY OF POPOVER CONTENT
         self.main_box.append(self.scrolled_window)
         self.scrolled_window.set_child(self.listbox)
         self.popover_folders.set_child(self.main_box)
+
+        # POPULATE FOLDERS
         all_folders = self.config_handler.config_data.get("folders")  # pyright: ignore
         if all_folders:
             for folder in all_folders.items():
@@ -89,51 +101,53 @@ class PopoverFolders(BasePlugin):
                 folders_path = folder[1]["path"]
                 filemanager = folder[1]["filemanager"]
                 icon = folder[1]["icon"]
-                row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+                row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
                 row_hbox.add_css_class("places-row-hbox")
                 row_hbox.MYTEXT = folders_path, filemanager  # pyright: ignore
                 self.listbox.append(row_hbox)
-                line = Gtk.Label.new()
+                line = self.gtk.Label.new()
                 line.set_label(name)
                 line.props.margin_start = 5
                 line.props.hexpand = True
-                line.set_halign(Gtk.Align.START)
+                line.set_halign(self.gtk.Align.START)
                 line.add_css_class("places-label-from-popover")
-                image = Gtk.Image.new_from_icon_name(icon)
-                image.set_icon_size(Gtk.IconSize.INHERIT)
+                image = self.gtk.Image.new_from_icon_name(icon)
+                image.set_icon_size(self.gtk.IconSize.INHERIT)
                 image.props.margin_end = 5
-                image.set_halign(Gtk.Align.END)
+                image.set_halign(self.gtk.Align.END)
                 image.add_css_class("places-icon-from-popover")
                 row_hbox.append(image)
                 row_hbox.append(line)
                 self.create_row_right_click(row_hbox, folders_path)
                 self.create_row_middle_click(row_hbox, folders_path)
                 self.gtk_helper.add_cursor_effect(line)
+
         for folder in self.home_folders:
-            folders_path = os.path.join(self.home, folder)
+            folders_path = self.os.path.join(self.home, folder)
             icon = "nautilus"
-            row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+            row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
             row_hbox.add_css_class("places-row-hbox")
             row_hbox.MYTEXT = folders_path, "nautilus"  # pyright: ignore
             self.listbox.append(row_hbox)
-            line = Gtk.Label.new()
+            line = self.gtk.Label.new()
             line.add_css_class("places-label-from-popover")
             line.set_label(folder)
             line.props.margin_start = 5
             line.props.hexpand = True
-            line.set_halign(Gtk.Align.START)
-            image = Gtk.Image.new_from_icon_name(icon)
+            line.set_halign(self.gtk.Align.START)
+            image = self.gtk.Image.new_from_icon_name(icon)
             image.add_css_class("places-icon-from-popover")
-            image.set_icon_size(Gtk.IconSize.LARGE)
+            image.set_icon_size(self.gtk.IconSize.LARGE)
             image.props.margin_end = 5
-            image.set_halign(Gtk.Align.END)
+            image.set_halign(self.gtk.Align.END)
             row_hbox.append(image)
             row_hbox.append(line)
             self.create_row_right_click(row_hbox, folders_path)
             self.create_row_middle_click(row_hbox, folders_path)
             self.gtk_helper.add_cursor_effect(line)
+
         self.listbox.set_filter_func(self.on_filter_invalidate)
-        self.popover_folders.set_parent(self.menubutton_folders)
+
         self.popover_folders.popup()
         return self.popover_folders
 
@@ -150,17 +164,17 @@ class PopoverFolders(BasePlugin):
         )
 
     def create_right_click_menu(self, row_hbox, folder_path):
-        popover = Gtk.Popover()
+        popover = self.gtk.Popover()
         popover.set_parent(row_hbox)
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        button = Gtk.Button.new_with_label("Pin to the top")
+        box = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL)
+        button = self.gtk.Button.new_with_label("Pin to the top")
         button.connect("clicked", lambda _, path=folder_path: self.pin_to_top(path))
         box.append(button)
         popover.set_child(box)
         popover.popup()
 
     def pin_to_top(self, folder_path):
-        folder_name = os.path.basename(folder_path)
+        folder_name = self.os.path.basename(folder_path)
         if "folders" not in self.config_handler.config_data:  # pyright: ignore
             self.config_handler.config_data["folders"] = {}  # pyright: ignore
         all_folders = self.config_handler.config_data.get("folders")  # pyright: ignore
@@ -188,20 +202,20 @@ class PopoverFolders(BasePlugin):
         )
 
     def open_kitty(self, folder_path):
-        cmd = "kitty --working-directory={0}".format(folder_path).split()
-        Popen(cmd)
+        cmd = "kitty --working-directory={0}".format(folder_path)
+        self.run_cmd(cmd)
 
     def open_baobab(self, folder_path):
-        cmd = "baobab {0}".format(folder_path).split()
-        Popen(cmd)
+        cmd = "baobab {0}".format(folder_path)
+        self.run_cmd(cmd)
 
     def open_folder(self, x):
         if not x:
             return
         folder, filemanager = x.get_child().MYTEXT.split()
-        path = os.path.join(self.home, folder)
-        cmd = "{0} {1}".format(filemanager, path).split()
-        Popen(cmd)
+        path = self.os.path.join(self.home, folder)
+        cmd = f"{filemanager} {path}"
+        self.run_cmd(cmd)
         if self.popover_folders:
             self.popover_folders.popdown()
 
@@ -239,10 +253,10 @@ class PopoverFolders(BasePlugin):
 
     def on_filter_invalidate(self, row):
         try:
-            if not isinstance(row, Gtk.ListBoxRow):
+            if not isinstance(row, self.gtk.ListBoxRow):
                 self.logger.error(
                     error=TypeError(
-                        f"Invalid row type: {type(row).__name__}. Expected Gtk.ListBoxRow."
+                        f"Invalid row type: {type(row).__name__}. Expected self.gtk.ListBoxRow."
                     ),
                     message="Invalid row type encountered in on_filter_invalidate.",
                     level="warning",

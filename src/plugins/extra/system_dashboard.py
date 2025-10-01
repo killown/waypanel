@@ -67,53 +67,88 @@ class SystemDashboard(BasePlugin):
         return self.menubutton_dashboard
 
     def create_popover_system(self, *_):
-        self.popover_dashboard = self.gtk.Popover.new()
-        self.popover_dashboard.set_has_arrow(True)
-        self.popover_dashboard.connect("closed", self.popover_is_closed)
-        self.popover_dashboard.connect("notify::visible", self.popover_is_open)
+        self.popover_dashboard = self.create_popover(
+            parent_widget=self.menubutton_dashboard,
+            css_class="system-popover",
+            has_arrow=True,
+            closed_handler=self.popover_is_closed,
+            visible_handler=self.popover_is_open,
+        )
+
         self.popover_dashboard.set_vexpand(True)
         self.popover_dashboard.set_hexpand(True)
         self.main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
         self.stack = self.gtk.Stack.new()
-        logout_icon = self.gtk_helper.set_widget_icon_name(
-            None,
-            [
-                "system-log-out-symbolic",
-                "gnome-logout-symbolic",
-                "gnome-logout",
-                "xfsm-logout",
-            ],
+
+        # --- Logout Icon ---
+        logout_icons = [
+            "system-log-out-symbolic",
+            "gnome-logout-symbolic",
+        ]
+        logout_icon = self.gtk_helper.icon_exist(
+            logout_icons[0],
+            logout_icons[1:],  # Fallbacks start from the second item
         )
-        reboot_icon = self.gtk_helper.set_widget_icon_name(
-            None, ["system-reboot-symbolic", "system-reboot"]
+
+        # --- Reboot Icon ---
+        reboot_icons = ["system-reboot-update-symbolic", "system-reboot-symbolic"]
+        reboot_icon = self.gtk_helper.icon_exist(
+            reboot_icons[0],
+            reboot_icons[1:],
         )
-        shutdown_icon = self.gtk_helper.set_widget_icon_name(
-            None,
-            ["gnome-shutdown-symbolic", "system-shutdown-symbolic", "system-shutdown"],
+
+        # --- Shutdown Icon ---
+        shutdown_icons = [
+            "gnome-shutdown-symbolic",
+            "system-shutdown-symbolic",
+        ]
+        shutdown_icon = self.gtk_helper.icon_exist(
+            shutdown_icons[0],
+            shutdown_icons[1:],
         )
-        suspend_icon = self.gtk_helper.set_widget_icon_name(
-            None, ["system-suspend-symbolic", "system-suspend"]
+
+        # --- Suspend Icon ---
+        suspend_icons = ["system-suspend-hibernate-symbolic", "system-suspend-symbolic"]
+        suspend_icon = self.gtk_helper.icon_exist(
+            suspend_icons[0],
+            suspend_icons[1:],
         )
-        lock_icon = self.gtk_helper.set_widget_icon_name(
-            None, ["system-lock-screen-symbolic", "system-lock-screen"]
+
+        # --- Lock Icon ---
+        lock_icons = ["system-lock-screen-symbolic", "lock-symbolic"]
+        lock_icon = self.gtk_helper.icon_exist(
+            lock_icons[0],
+            lock_icons[1:],
         )
-        exit_icon = self.gtk_helper.set_widget_icon_name(
-            None, ["application-exit-symbolic", "application-exit", "exit"]
+
+        # --- Exit Icon (Note: exit is a specific application close icon, distinct from logout) ---
+        exit_icons = ["application-exit-symbolic", "application-exit", "exit"]
+        exit_icon = self.gtk_helper.icon_exist(
+            exit_icons[0],
+            exit_icons[1:],
         )
-        restart_icon = self.gtk_helper.set_widget_icon_name(
-            None, ["system-restart-symbolic", "gnome-panel-separator"]
+
+        # --- Restart Icon ---
+        restart_icons = ["system-restart-symbolic", "system-restart-panel"]
+        restart_icon = self.gtk_helper.icon_exist(
+            restart_icons[0],
+            restart_icons[1:],
         )
-        settings_icon = self.gtk_helper.set_widget_icon_name(
-            None,
-            [
-                "settings-configure-symbolic",
-                "systemsettings-symbolic",
-                "settings",
-                "system-settings-symbolic",
-                "preferences-activities-symbolic",
-                "preferences-system",
-            ],
+
+        # --- Settings Icon ---
+        settings_icons = [
+            "settings-configure-symbolic",
+            "systemsettings-symbolic",
+            "settings",
+            "system-settings-symbolic",
+            "preferences-activities-symbolic",
+            "preferences-system",
+        ]
+        settings_icon = self.gtk_helper.icon_exist(
+            settings_icons[0],
+            settings_icons[1:],
         )
+
         data_and_categories = {
             ("Logout", "", logout_icon): "",
             ("Reboot", "", reboot_icon): "",

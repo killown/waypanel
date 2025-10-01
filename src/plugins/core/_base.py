@@ -592,6 +592,11 @@ class BasePlugin:
         return self._gtk_helper.widget_exists
 
     @property
+    def create_popover(self):
+        """Read-only alias for self._gtk_helper.create_popover."""
+        return self._gtk_helper.create_popover
+
+    @property
     def is_view_valid(self):
         """Read-only alias for self._wf_helper.is_view_valid"""
         return self.wf_helper.is_view_valid

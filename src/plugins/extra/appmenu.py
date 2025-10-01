@@ -75,15 +75,19 @@ class AppLauncher(BasePlugin):
 
     def _create_and_configure_popover(self):
         """Create and configure the popover."""
-        popover = self.gtk.Popover()
-        popover.add_css_class("app-launcher-popover")
-        popover.set_has_arrow(True)
-        popover.connect("closed", self.popover_is_closed)
-        popover.connect("notify::visible", self.popover_is_open)
+        popover = self.create_popover(
+            parent_widget=self.appmenu,
+            css_class="app-launcher-popover",
+            has_arrow=True,
+            closed_handler=self.popover_is_closed,
+            visible_handler=self.popover_is_open,
+        )
+
         show_searchbar_action = self.gio.SimpleAction.new("show_searchbar")
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
         if hasattr(self, "obj") and self.obj:
             self.obj.add_action(show_searchbar_action)
+
         return popover
 
     def _setup_scrolled_window_and_flowbox(self):
