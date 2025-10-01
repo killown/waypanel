@@ -1,16 +1,16 @@
-import gi
+from dbus_fast import Variant
 import re
 from unidecode import unidecode
-from dbus_fast import Variant
-from src.plugins.core._event_loop import global_loop
 from src.plugins.core._base import BasePlugin
 from ._notifier_watcher import (
     StatusNotifierWatcher,
 )
-from gi.repository import Gtk, Gio, Gdk, GdkPixbuf  # pyright: ignore
 
 ENABLE_PLUGIN = True
-DEPS = ["event_manager"]
+DEPS = [
+    "event_manager",
+    "top_panel",
+]
 
 
 def get_plugin_placement(panel_instance):
@@ -18,6 +18,11 @@ def get_plugin_placement(panel_instance):
 
 
 def initialize_plugin(panel_instance):
+    """
+    Initialize the plugin and return its instance.
+    Args:
+        panel_instance: The main panel object from panel.py.
+    """
     if not ENABLE_PLUGIN:
         panel_instance.logger.info("SystrayClientPlugin is disabled.")
         return None
@@ -29,10 +34,6 @@ def initialize_plugin(panel_instance):
 
 
 class SystrayClientPlugin(BasePlugin):
-    """
-    A plugin for managing system tray icons using the StatusNotifierItem specification.
-    """
-
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.subscribe_to_icon_updates()
@@ -42,14 +43,11 @@ class SystrayClientPlugin(BasePlugin):
         self.menus_layout = {}
         self.new_message = {}
         self.tray_button = {}
-        self.tray_box = Gtk.FlowBox()
+        self.tray_box = self.gtk.FlowBox()
         self.items = {}
-        self.loop = global_loop
         self.main_widget = (self.tray_box, "append")
         self.notifier_watcher = StatusNotifierWatcher("", panel_instance)
-        self.schedule_in_gtk_thread(
-            self.notifier_watcher.run_server_in_background, panel_instance
-        )
+        self.notifier_watcher.run_server_in_background(panel_instance)
 
     def subscribe_to_icon_updates(self):
         """
@@ -68,9 +66,6 @@ class SystrayClientPlugin(BasePlugin):
         )
 
     async def on_tray_icon_removed(self, message):
-        """
-        Handles the removal of a tray icon from the UI.
-        """
         service_name = message["data"]["service_name"]
         self.logger.info(f"Tray icon removed for service: {service_name}")
         if service_name in self.tray_button:
@@ -82,9 +77,6 @@ class SystrayClientPlugin(BasePlugin):
             del self.menus[service_name]
 
     def set_message_data(self, service_name):
-        """
-        Stores message data for a given service.
-        """
         self.messages[service_name] = {
             "bus": self.new_message["data"]["bus"],
             "service_name": self.new_message["data"]["service_name"],
@@ -113,9 +105,9 @@ class SystrayClientPlugin(BasePlugin):
                 raise ValueError(f"Unsupported pixel data type: {type(pixel_data)}")
             rowstride = width * 4
             has_alpha = True
-            return GdkPixbuf.Pixbuf.new_from_data(
-                pixel_data,  # pyright: ignore
-                GdkPixbuf.Colorspace.RGB,
+            return self.gdkpixbuf.Pixbuf.new_from_data(
+                pixel_data,
+                self.gdkpixbuf.Colorspace.RGB,
                 has_alpha,
                 8,
                 width,
@@ -229,7 +221,7 @@ class SystrayClientPlugin(BasePlugin):
         Wrapper function to schedule the async `on_menu_item_clicked` coroutine.
         """
         action, parameter, label_index, service_name = args
-        self.loop.create_task(
+        self.global_loop.create_task(
             self.on_menu_item_clicked(action, parameter, label_index, service_name)
         )
 
@@ -264,7 +256,7 @@ class SystrayClientPlugin(BasePlugin):
         """Fetch and log the full menu structure from com.canonical.dbusmenu."""
         await self.initialize_proxy_object(service_name)
         self.set_message_data(service_name)
-        bus = self.messages[service_name]["bus"]  # pyright: ignore
+        bus = self.messages[service_name]["bus"]
         try:
             dbusmenu = self.proxy_object.get_interface("com.canonical.dbusmenu")
             start_id = 0
@@ -294,7 +286,7 @@ class SystrayClientPlugin(BasePlugin):
             self.logger.debug(layout)
             parsed_structure = self.parse_menu_structure(layout)
             self.logger.info("Parsed Menu Structure:")
-            self.logger.info(parsed_structure)
+            self.logger.info(f"{parsed_structure}")
             self.menus_layout[service_name] = {
                 "layout": parsed_structure,
                 "dbusmenu": dbusmenu,
@@ -312,7 +304,7 @@ class SystrayClientPlugin(BasePlugin):
             action, parameter, self.label_index, self.service_name = args
             object_path = self.messages[self.service_name]["object_path"]
             event_id = "clicked"
-            timestamp = Gdk.CURRENT_TIME
+            timestamp = self.gdk.CURRENT_TIME
             await self.set_menu_layout(self.service_name)
             dbusmenu = self.menus_layout[self.service_name]["dbusmenu"]
             layout = self.menus_layout[self.service_name]["layout"]
@@ -328,7 +320,7 @@ class SystrayClientPlugin(BasePlugin):
 
     def sanitize_gio_action_name(self, name: str) -> str:
         """
-        Sanitize a string to be a valid Gio.SimpleAction or GMenu detailed action name.
+        Sanitize a string to be a valid self.gio.SimpleAction or GMenu detailed action name.
         - Removes all special characters except letters and numbers.
         - Ensures no invalid sequences like leading digits or repeated dots.
         """
@@ -345,12 +337,12 @@ class SystrayClientPlugin(BasePlugin):
         """Create a menu item with the specified name and command."""
         name_for_action = self.sanitize_gio_action_name(name)
         action_name = f"app.run-command-{name_for_action}"
-        action = Gio.SimpleAction.new(action_name, None)
+        action = self.gio.SimpleAction.new(action_name, None)
         action.connect(
             "activate", self._on_menu_item_clicked_wrapper, label_index, service_name
         )
         panel_instance.add_action(action)
-        menu_item = Gio.MenuItem.new(name, f"app.{action_name}")
+        menu_item = self.gio.MenuItem.new(name, f"app.{action_name}")
         menu.append_item(menu_item)
 
     def set_menu_items(self, menu_data, service_name):
@@ -384,14 +376,6 @@ class SystrayClientPlugin(BasePlugin):
                 self.logger.error(f"Error processing menu item: {item}. Error: {e}")
 
     def get_best_icon_entry(self, pixmap_data, target_size=24):
-        """
-        Selects the best icon from a list of pixmap data based on a target size.
-        Args:
-            pixmap_data (list): A list of pixmap entries.
-            target_size (int): The preferred icon size.
-        Returns:
-            list: The pixmap entry that is closest in size to the target.
-        """
         for entry in sorted(pixmap_data, key=lambda x: abs(x[0] - target_size)):
             return entry
         return pixmap_data[0]
@@ -402,23 +386,23 @@ class SystrayClientPlugin(BasePlugin):
         Args:
             menu_structure (list): The raw menu structure from D-Bus.
         Returns:
-            Gtk.MenuButton: A MenuButton with the parsed menu structure.
+            self.gtk.MenuButton: A MenuButton with the parsed menu structure.
         """
         icon_name = self.messages[service_name]["icon_name"]
         icon_pixmap = None
-        menubutton = Gtk.MenuButton()
+        menubutton = self.gtk.MenuButton()
         if self.messages[service_name]["icon_pixmap"] is not None:
             icon_pixmap = self.messages[service_name]["icon_pixmap"]
             icon_pixmap = self.get_best_icon_entry(icon_pixmap, target_size=32)
             icon_pixmap = self.create_pixbuf_from_pixels(icon_pixmap)
-            icon = Gtk.Image.new_from_pixbuf(icon_pixmap)
-            icon.set_halign(Gtk.Align.CENTER)
-            icon.set_valign(Gtk.Align.CENTER)
+            icon = self.gtk.Image.new_from_pixbuf(icon_pixmap)
+            icon.set_halign(self.gtk.Align.CENTER)
+            icon.set_valign(self.gtk.Align.CENTER)
             menubutton.set_child(icon)
         else:
             menubutton.set_icon_name(icon_name)
         menubutton.add_css_class("tray_icon")
-        menu = Gio.Menu()
+        menu = self.gio.Menu()
 
         def parse_menu(menu_data, gio_menu):
             if not isinstance(menu_data, (list, tuple)):
@@ -432,7 +416,7 @@ class SystrayClientPlugin(BasePlugin):
                     if last_item_was_separator:
                         last_item_was_separator = False
                         continue
-                    menu_item = Gio.MenuItem.new("-" * 30, "app.separator")
+                    menu_item = self.gio.MenuItem.new("-" * 30, "app.separator")
                     menu.append_item(menu_item)
                     last_item_was_separator = True
                     continue
@@ -441,7 +425,7 @@ class SystrayClientPlugin(BasePlugin):
                     and item["label"].split()[0].startswith("Item")
                     and item["label"].split()[-1].isalnum()
                 ):
-                    menu_item = Gio.MenuItem.new("-" * 30, "app.separator")
+                    menu_item = self.gio.MenuItem.new("-" * 30, "app.separator")
                     menu.append_item(menu_item)
                     continue
                 self.create_menu_item(
@@ -505,9 +489,9 @@ class SystrayClientPlugin(BasePlugin):
             - `on_menu_item_clicked`: Triggers the D-Bus `call_event` for the
               selected menu item, executing the corresponding action in the
               application.
-        3.  **UI Integration**: It creates a `Gtk.MenuButton` for each
+        3.  **UI Integration**: It creates a `self.gtk.MenuButton` for each
             tray icon. It can handle both icon names and raw pixel data
-            (`icon_pixmap`), dynamically generating a `GdkPixbuf` to render
+            (`icon_pixmap`), dynamically generating a `self.gdkpixbuf` to render
             the icon. The fetched D-Bus menu structure is parsed and used
             to populate the GTK menu, which is then attached to the button.
         """
