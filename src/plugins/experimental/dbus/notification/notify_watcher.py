@@ -1,8 +1,4 @@
-import os
-import sqlite3
-from gi.repository import Gio, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
-from src.shared.path_handler import PathHandler
 
 ENABLE_PLUGIN = True
 DEPS = ["notify_client"]
@@ -55,15 +51,15 @@ class NotifyWatcherPlugin(BasePlugin):
 
     def _on_db_file_changed(self, monitor, file, other_file, event_type):
         if event_type in (
-            Gio.FileMonitorEvent.CHANGES_DONE_HINT,
-            Gio.FileMonitorEvent.MOVED,
-            Gio.FileMonitorEvent.CHANGED,
+            self.gio.FileMonitorEvent.CHANGES_DONE_HINT,
+            self.gio.FileMonitorEvent.MOVED,
+            self.gio.FileMonitorEvent.CHANGED,
         ):
             try:
-                current_mod_time = os.path.getmtime(self.db_path)
+                current_mod_time = self.os.path.getmtime(self.db_path)
                 if current_mod_time > self._last_mod_time:
                     self._last_mod_time = current_mod_time
-                    GLib.idle_add(self.check_notifications)
+                    self.glib.idle_add(self.check_notifications)
             except Exception as e:
                 self.logger.error(f"Error handling DB change: {e}")
 
@@ -71,22 +67,22 @@ class NotifyWatcherPlugin(BasePlugin):
         """Monitor the database file for changes."""
         try:
             self.check_notifications()
-            self.gio_file = Gio.File.new_for_path(self.db_path)
+            self.gio_file = self.gio.File.new_for_path(self.db_path)
             self.gio_monitor = self.gio_file.monitor_file(
-                Gio.FileMonitorFlags.NONE, None
+                self.gio.FileMonitorFlags.NONE, None
             )
             self.gio_monitor.connect("changed", self._on_db_file_changed)
-            self._last_mod_time = os.path.getmtime(self.db_path)
+            self._last_mod_time = self.os.path.getmtime(self.db_path)
         except Exception as e:
             self.logger.error(f"Error setting up database monitoring: {e}")
 
     def check_notifications(self):
         """Check if there are any notifications in the database."""
         try:
-            if not os.path.exists(self.db_path):
+            if not self.os.path.exists(self.db_path):
                 has_notifications = False
             else:
-                conn = sqlite3.connect(self.db_path)
+                conn = self.sqlite3.connect(self.db_path)
                 cursor = conn.cursor()
                 cursor.execute("SELECT COUNT(*) FROM notifications")
                 count = cursor.fetchone()[0]
@@ -128,7 +124,7 @@ class NotifyWatcherPlugin(BasePlugin):
         The core logic of this plugin is to create a dynamic visual
         indicator by linking a background process to a UI component
         from a separate plugin. It operates on three key principles:
-        1.  **File System Monitoring**: The plugin uses `Gio.FileMonitor`
+        1.  **File System Monitoring**: The plugin uses `self.gio.FileMonitor`
             to set up a listener on the notification database
             file. Instead of periodically polling the database, it
             reacts in real-time to file modification events, ensuring

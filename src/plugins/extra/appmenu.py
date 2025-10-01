@@ -1,13 +1,8 @@
-import os
 import sqlite3
-import time
-from subprocess import Popen
-from gi.repository import Gio, Gtk, Pango, Gdk  # pyright: ignore
 from gi.repository import Gtk4LayerShell as LayerShell  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
-DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
@@ -30,7 +25,7 @@ class AppLauncher(BasePlugin):
         self.popover_launcher = None
         self.widgets_dict = {}
         self.all_apps = None
-        self.appmenu = Gtk.Button()
+        self.appmenu = self.gtk.Button()
         self.search_get_child = None
         self.icons = {}
         self.search_row = []
@@ -41,7 +36,7 @@ class AppLauncher(BasePlugin):
         self._create_recent_apps_table()
         self.main_widget = (self.appmenu, "append")
         try:
-            self.settings = Gio.Settings.new("org.gnome.desktop.interface")
+            self.settings = self.gio.Settings.new("org.gnome.desktop.interface")
         except Exception as e:
             self.logger.error(
                 f"Appmenu: Failed to initialize GSettings for icon-theme: {e}"
@@ -80,12 +75,12 @@ class AppLauncher(BasePlugin):
 
     def _create_and_configure_popover(self):
         """Create and configure the popover."""
-        popover = Gtk.Popover()
+        popover = self.gtk.Popover()
         popover.add_css_class("app-launcher-popover")
         popover.set_has_arrow(True)
         popover.connect("closed", self.popover_is_closed)
         popover.connect("notify::visible", self.popover_is_open)
-        show_searchbar_action = Gio.SimpleAction.new("show_searchbar")
+        show_searchbar_action = self.gio.SimpleAction.new("show_searchbar")
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
         if hasattr(self, "obj") and self.obj:
             self.obj.add_action(show_searchbar_action)
@@ -93,14 +88,14 @@ class AppLauncher(BasePlugin):
 
     def _setup_scrolled_window_and_flowbox(self):
         """Set up the scrolled window, search bar, and flowbox."""
-        self.scrolled_window = Gtk.ScrolledWindow()
+        self.scrolled_window = self.gtk.ScrolledWindow()
         self.scrolled_window.set_policy(
-            Gtk.PolicyType.NEVER,
-            Gtk.PolicyType.AUTOMATIC,
+            self.gtk.PolicyType.NEVER,
+            self.gtk.PolicyType.AUTOMATIC,
         )
-        self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
         self.main_box.add_css_class("app-launcher-main-box")
-        self.searchbar = Gtk.SearchEntry.new()
+        self.searchbar = self.gtk.SearchEntry.new()
         self.searchbar.grab_focus()
         self.searchbar.connect("search_changed", self.on_search_entry_changed)
         self.searchbar.connect("activate", self.on_keypress)
@@ -109,13 +104,13 @@ class AppLauncher(BasePlugin):
         self.searchbar.set_placeholder_text("Search apps...")
         self.searchbar.add_css_class("app-launcher-searchbar")
         self.main_box.append(self.searchbar)
-        self.flowbox = Gtk.FlowBox()
-        self.flowbox.set_valign(Gtk.Align.START)
-        self.flowbox.set_halign(Gtk.Align.FILL)
+        self.flowbox = self.gtk.FlowBox()
+        self.flowbox.set_valign(self.gtk.Align.START)
+        self.flowbox.set_halign(self.gtk.Align.FILL)
         self.flowbox.props.max_children_per_line = 30
         self.flowbox.set_max_children_per_line(5)
         self.flowbox.set_homogeneous(False)
-        self.flowbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.flowbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
         self.flowbox.set_activate_on_single_click(True)
         self.flowbox.connect("child-activated", self.run_app_from_launcher)
         self.flowbox.add_css_class("app-launcher-flowbox")
@@ -130,7 +125,7 @@ class AppLauncher(BasePlugin):
         Populates the flowbox with application buttons and ensures all are cached.
         This runs once on first popover open.
         """
-        all_apps_list = Gio.AppInfo.get_all()
+        all_apps_list = self.gio.AppInfo.get_all()
         self.all_apps = {i.get_id(): i for i in all_apps_list if i.get_id()}
         for app_id, app_info in self.all_apps.items():
             if app_id not in self.icons:
@@ -164,7 +159,7 @@ class AppLauncher(BasePlugin):
         Updates the flowbox by checking for installed/uninstalled apps
         and reordering existing, cached widgets to prioritize recently opened apps.
         """
-        all_apps_list = Gio.AppInfo.get_all()
+        all_apps_list = self.gio.AppInfo.get_all()
         current_installed_apps = {a.get_id(): a for a in all_apps_list if a.get_id()}
         recent_app_ids = self.get_recent_apps()
         apps_to_remove = set(self.icons.keys()) - set(current_installed_apps.keys())
@@ -202,7 +197,7 @@ class AppLauncher(BasePlugin):
         """
         Adds an application to the flowbox (and to the persistent self.icons cache).
         Args:
-            app: The Gio.AppInfo object representing the app.
+            app: The self.gio.AppInfo object representing the app.
             app_id: The unique desktop file ID (e.g., 'firefox.desktop').
         """
         if hasattr(app, "get_keywords"):
@@ -217,41 +212,41 @@ class AppLauncher(BasePlugin):
             truncated_display_name = display_name
         icon = app.get_icon()
         if icon is None:
-            icon = Gio.ThemedIcon.new_with_default_fallbacks(
+            icon = self.gio.ThemedIcon.new_with_default_fallbacks(
                 "application-x-executable-symbolic"
             )
         if app_id not in self.icons:
-            vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
-            vbox.set_halign(Gtk.Align.CENTER)
-            vbox.set_valign(Gtk.Align.CENTER)
+            vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
+            vbox.set_halign(self.gtk.Align.CENTER)
+            vbox.set_valign(self.gtk.Align.CENTER)
             vbox.set_margin_top(1)
             vbox.set_margin_bottom(1)
             vbox.set_margin_start(1)
             vbox.set_margin_end(1)
             vbox.add_css_class("app-launcher-vbox")
             vbox.MYTEXT = display_name, cmd, keywords  # pyright: ignore
-            image = Gtk.Image.new_from_gicon(icon)
-            image.set_halign(Gtk.Align.CENTER)
+            image = self.gtk.Image.new_from_gicon(icon)
+            image.set_halign(self.gtk.Align.CENTER)
             image.add_css_class("app-launcher-icon-from-popover")
             self.gtk_helper.add_cursor_effect(image)
-            label = Gtk.Label.new(truncated_display_name)
+            label = self.gtk.Label.new(truncated_display_name)
             label.set_max_width_chars(20)
-            label.set_ellipsize(Pango.EllipsizeMode.END)
-            label.set_halign(Gtk.Align.CENTER)
+            label.set_ellipsize(self.pango.EllipsizeMode.END)
+            label.set_halign(self.gtk.Align.CENTER)
             label.add_css_class("app-launcher-label-from-popover")
             self.icons[app_id] = {"icon": image, "label": label, "vbox": vbox}
             vbox = self.icons[app_id]["vbox"]
             vbox.append(self.icons[app_id]["icon"])
             vbox.append(self.icons[app_id]["label"])
-            gesture = Gtk.GestureClick.new()
-            gesture.set_button(Gdk.BUTTON_SECONDARY)
+            gesture = self.gtk.GestureClick.new()
+            gesture.set_button(self.gdk.BUTTON_SECONDARY)
             gesture.connect("pressed", self.on_right_click_popover, vbox)
             vbox.add_controller(gesture)
             self.flowbox.append(vbox)
             self.flowbox.add_css_class("app-launcher-flowbox")
 
     def app_sort_func(self, child1, child2, user_data=None):
-        """Custom sort function for Gtk.FlowBox based on index in self.desired_app_order."""
+        """Custom sort function for self.gtk.FlowBox based on index in self.desired_app_order."""
         _, app_id_1, _ = child1.get_child().MYTEXT
         _, app_id_2, _ = child2.get_child().MYTEXT
         try:
@@ -278,7 +273,7 @@ class AppLauncher(BasePlugin):
             INSERT OR REPLACE INTO recent_apps (app_name, last_opened_at)
             VALUES (?, ?)
         """,
-            (app_id, time.time()),
+            (app_id, self.time.time()),
         )
         self.conn.commit()
         self.cursor.execute("SELECT COUNT(*) FROM recent_apps")
@@ -347,7 +342,7 @@ class AppLauncher(BasePlugin):
         LayerShell.set_keyboard_mode(self.obj.top_panel, LayerShell.KeyboardMode.NONE)
         self.obj.top_panel.grab_focus()
         toplevel = self.obj.top_panel.get_root()
-        if isinstance(toplevel, Gtk.Window):
+        if isinstance(toplevel, self.gtk.Window):
             toplevel.set_focus(None)
         if hasattr(self, "listbox"):
             self.flowbox.invalidate_filter()
@@ -357,7 +352,7 @@ class AppLauncher(BasePlugin):
         Handle key release events on the search bar.
         """
         keyval = event.keyval
-        if keyval == Gdk.KEY_Escape:
+        if keyval == self.gdk.KEY_Escape:
             if self.popover_launcher:
                 self.popover_launcher.popdown()
             return True
@@ -387,7 +382,7 @@ class AppLauncher(BasePlugin):
         """
         Adds the selected app to the dockbar configuration in waypanel.toml.
         """
-        wclass = os.path.splitext(desktop_file)[0]
+        wclass = self.os.path.splitext(desktop_file)[0]
         if hasattr(self, "config_handler") and self.config_handler:
             new_entry = {
                 "cmd": f"gtk-launch {desktop_file.split('.desktop')[0]}",
@@ -416,12 +411,12 @@ class AppLauncher(BasePlugin):
         """
         common_locations = [
             "/usr/share/applications/",
-            os.path.expanduser("~/.local/share/applications/"),
+            self.os.path.expanduser("~/.local/share/applications/"),
         ]
         file_path = None
         for location in common_locations:
-            path_to_check = os.path.join(location, desktop_file)
-            if os.path.exists(path_to_check):
+            path_to_check = self.os.path.join(location, desktop_file)
+            if self.os.path.exists(path_to_check):
                 file_path = path_to_check
                 break
         if file_path:
@@ -449,8 +444,8 @@ class AppLauncher(BasePlugin):
             for term in terminal_emulators:
                 for editor in terminal_editors:
                     try:
-                        cmd = [term, "-e", editor, file_path]
-                        Popen(cmd)
+                        cmd = f"{term} -e {editor} {file_path}"
+                        self.run_cmd(cmd)
                         popover.popdown()
                         if self.popover_launcher:
                             self.popover_launcher.popdown()
@@ -466,16 +461,16 @@ class AppLauncher(BasePlugin):
         """Scans common XDG directories for icon themes by looking for index.theme files."""
         theme_names = set()
         base_dirs = [
-            os.path.join(os.path.expanduser("~"), ".icons"),
+            self.os.path.join(self.os.path.expanduser("~"), ".icons"),
             "/usr/share/icons",
         ]
         for base_dir in base_dirs:
-            if os.path.exists(base_dir):
+            if self.os.path.exists(base_dir):
                 try:
-                    for entry in os.listdir(base_dir):
-                        theme_path = os.path.join(base_dir, entry, "index.theme")
-                        if os.path.exists(theme_path) and os.path.isdir(
-                            os.path.join(base_dir, entry)
+                    for entry in self.os.listdir(base_dir):
+                        theme_path = self.os.path.join(base_dir, entry, "index.theme")
+                        if self.os.path.exists(theme_path) and self.os.path.isdir(
+                            self.os.path.join(base_dir, entry)
                         ):
                             theme_names.add(entry)
                 except Exception as e:
@@ -508,7 +503,7 @@ class AppLauncher(BasePlugin):
                     )
                     self.appmenu.set_icon_name(icon_name)
                 parent_popover = dropdown.get_root()
-                if isinstance(parent_popover, Gtk.Popover):
+                if isinstance(parent_popover, self.gtk.Popover):
                     parent_popover.popdown()
             except Exception as e:
                 if hasattr(self, "logger") and self.logger:
@@ -518,9 +513,9 @@ class AppLauncher(BasePlugin):
         """
         Handle right-click event to show a popover menu.
         """
-        popover = Gtk.Popover()
+        popover = self.gtk.Popover()
         popover.add_css_class("app-launcher-context-menu")
-        menu_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+        menu_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
         menu_box.set_margin_start(10)
         menu_box.set_margin_end(10)
         menu_box.set_margin_top(10)
@@ -529,8 +524,8 @@ class AppLauncher(BasePlugin):
         if self.settings:
             current_theme = self.settings.get_string("icon-theme")
             available_themes = self._get_available_icon_themes()
-            theme_list_store = Gtk.StringList.new(available_themes)
-            theme_dropdown = Gtk.DropDown.new(theme_list_store, None)
+            theme_list_store = self.gtk.StringList.new(available_themes)
+            theme_dropdown = self.gtk.DropDown.new(theme_list_store, None)
             theme_dropdown.set_hexpand(True)
             theme_dropdown.connect("notify::selected-item", self._on_icon_theme_changed)
             current_index = 0
@@ -539,14 +534,14 @@ class AppLauncher(BasePlugin):
                     current_index = i
                     break
             theme_dropdown.set_selected(current_index)
-            theme_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
-            theme_box.set_halign(Gtk.Align.FILL)
+            theme_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
+            theme_box.set_halign(self.gtk.Align.FILL)
             theme_box.set_margin_bottom(10)
-            theme_label = Gtk.Label.new("Icon Theme:")
-            theme_label.set_halign(Gtk.Align.CENTER)
+            theme_label = self.gtk.Label.new("Icon Theme:")
+            theme_label.set_halign(self.gtk.Align.CENTER)
             theme_box.append(theme_label)
             theme_box.append(theme_dropdown)
-            separator = Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
+            separator = self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL)
             theme_box.append(separator)
             menu_box.prepend(theme_box)
         name, desktop_file, keywords = vbox.MYTEXT
@@ -555,26 +550,26 @@ class AppLauncher(BasePlugin):
             is_in_dockbar = desktop_file in self.config_handler.config_data.get(  # pyright: ignore
                 "dockbar", {}
             )
-        open_button = Gtk.Button.new_with_label(f"Open {name}")
+        open_button = self.gtk.Button.new_with_label(f"Open {name}")
         open_button.connect("clicked", self.run_app_from_menu, desktop_file, popover)
         menu_box.append(open_button)
-        open_desktop_button = Gtk.Button.new_with_label("Open .desktop File")
+        open_desktop_button = self.gtk.Button.new_with_label("Open .desktop File")
         open_desktop_button.connect(
             "clicked", self.open_desktop_file, desktop_file, popover
         )
         menu_box.append(open_desktop_button)
-        search_button = Gtk.Button.new_with_label("Search in GNOME Software")
+        search_button = self.gtk.Button.new_with_label("Search in GNOME Software")
         search_button.connect("clicked", self.search_in_gnome_software, name, popover)
         menu_box.append(search_button)
         if config_handler_exists:
             if is_in_dockbar:
-                remove_button = Gtk.Button.new_with_label("Remove from dockbar")
+                remove_button = self.gtk.Button.new_with_label("Remove from dockbar")
                 remove_button.connect(
                     "clicked", self.remove_from_dockbar, desktop_file, popover
                 )
                 menu_box.append(remove_button)
             else:
-                add_button = Gtk.Button.new_with_label("Add to dockbar")
+                add_button = self.gtk.Button.new_with_label("Add to dockbar")
                 add_button.connect(
                     "clicked", self.add_to_dockbar, name, desktop_file, popover
                 )
@@ -583,7 +578,7 @@ class AppLauncher(BasePlugin):
         popover.set_parent(vbox)
         popover.set_has_arrow(False)
         popover.popup()
-        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        gesture.set_state(self.gtk.EventSequenceState.CLAIMED)
 
     def remove_from_dockbar(self, button, desktop_file, popover):
         """
@@ -615,9 +610,9 @@ class AppLauncher(BasePlugin):
         """
         Runs gnome-software with the search parameter for the selected application.
         """
-        cmd = ["gnome-software", f"--search={name}"]
+        cmd = f"gnome-software --search={name}"
         try:
-            Popen(cmd)
+            self.run_cmd(cmd)
         except FileNotFoundError:
             if hasattr(self, "logger") and self.logger:
                 self.logger.error("Error: gnome-software command not found.")
@@ -642,8 +637,8 @@ class AppLauncher(BasePlugin):
 
     def on_search_entry_changed(self, searchentry):
         """The filter_func will be called for each row after the call,
-        and it will continue to be called each time a row changes (via [method`Gtk`.ListBoxRow.changed])
-        or when [method`Gtk`.ListBox.invalidate_filter] is called."""
+        and it will continue to be called each self.time a row changes (via [method`self.gtk`.ListBoxRow.changed])
+        or when [method`self.gtk`.ListBox.invalidate_filter] is called."""
         searchentry.grab_focus()
         self.flowbox.invalidate_filter()
 
@@ -674,19 +669,19 @@ class AppLauncher(BasePlugin):
         It provides a visual, searchable interface for launching applications directly.
         Its core logic is centered on dynamic UI generation, state management, and interaction:
         1.  Application Discovery: It retrieves all installed applications using
-            Gio.AppInfo.get_all().
+            self.gio.AppInfo.get_all().
         2.  Recent Apps Persistence: It tracks recently launched applications using a
             SQLite database (recent_apps.db).
-        3.  Dynamic Filtering: It uses a Gtk.SearchEntry connected to a
-            Gtk.FlowBox to provide a fast, real-time search experience.
-        4.  Popover and UI: The launcher is displayed in a Gtk.Popover attached to a main button. Applications are in a grid-like Gtk.FlowBox.
-        5.  Icon Theme Selection: The right-click popover allows changing the system-wide icon theme using Gio.Settings.
+        3.  Dynamic Filtering: It uses a self.gtk.SearchEntry connected to a
+            self.gtk.FlowBox to provide a fast, real-time search experience.
+        4.  Popover and UI: The launcher is displayed in a self.gtk.Popover attached to a main button. Applications are in a grid-like self.gtk.FlowBox.
+        5.  Icon Theme Selection: The right-click popover allows changing the system-wide icon theme using self.gio.Settings.
         FIXED ERRORS:
         1. 'not loading all apps' (Previous fix): The code was refactored to use the application's unique **Desktop File ID (app.get_id())** as the primary key for all internal logic (`self.icons`, `self.desired_app_order`, and `recent_apps` database), ensuring every app has a distinct identifier and is loaded.
-        2. 'unnecessary widget destruction/re-creation' (Current fix): The core UI elements (`Gtk.Popover`, `Gtk.FlowBox`, `Gtk.SearchEntry`) are now created **once** during plugin initialization. The app icon widgets (`self.icons`) are now a **truly persistent cache**. On every open, `self.update_flowbox()` is called to incrementally:
-           - Remove uninstalled app widgets from the `Gtk.FlowBox` and `self.icons` cache.
-           - Add newly installed app widgets to the `Gtk.FlowBox` and `self.icons` cache.
-           - Re-sort the existing widgets in the `Gtk.FlowBox` based on recency.
+        2. 'unnecessary widget destruction/re-creation' (Current fix): The core UI elements (`self.gtk.Popover`, `self.gtk.FlowBox`, `Gtk.SearchEntry`) are now created **once** during plugin initialization. The app icon widgets (`self.icons`) are now a **truly persistent cache**. On every open, `self.update_flowbox()` is called to incrementally:
+           - Remove uninstalled app widgets from the `self.gtk.FlowBox` and `self.icons` cache.
+           - Add newly installed app widgets to the `self.gtk.FlowBox` and `self.icons` cache.
+           - Re-sort the existing widgets in the `self.gtk.FlowBox` based on recency.
         This refactoring ensures maximum efficiency by reusing the UI components and only performing updates (add/remove) when necessary, satisfying the requested pattern of incremental updates.
         """
         return self.code_explanation.__doc__

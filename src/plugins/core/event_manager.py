@@ -1,6 +1,4 @@
-from gi.repository import GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
-import os
 import collections
 
 ENABLE_PLUGIN = True
@@ -45,7 +43,7 @@ class EventManagerPlugin(BasePlugin):
 
         # New: Start the periodic event processing loop
         # The timeout will call _process_queued_events every 50ms
-        GLib.timeout_add(50, self._process_queued_events)
+        self.glib.timeout_add(50, self._process_queued_events)
 
     def handle_event(self, msg) -> None:
         """
@@ -83,8 +81,8 @@ class EventManagerPlugin(BasePlugin):
                 if event_type in self.event_subscribers:
                     for callback, plugin_name in self.event_subscribers[event_type]:
                         try:
-                            # Use GLib.idle_add to push callback to the main loop
-                            GLib.idle_add(callback, msg)
+                            # Use self.glib.idle_add to push callback to the main loop
+                            self.glib.idle_add(callback, msg)
                             if plugin_name:
                                 self.logger.debug(
                                     f"Event '{event_type}' triggered for plugin '{plugin_name}'"
@@ -286,15 +284,15 @@ class EventManagerPlugin(BasePlugin):
             self.ipc.unhide_view(id)
             # ***Warning*** this was freezing the panel
             # set focus will return an Exception in case the view is not toplevel
-            # GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))
+            # self.glib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))
             # if self.utils.widget_exists(widget):
             # self.obj.top_panel_box_center.remove(widget)
             #
 
     def get_socket_path(self) -> str:
-        runtime_dir = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+        runtime_dir = self.os.environ.get("XDG_RUNTIME_DIR", "/tmp")
         socket_name = "waypanel.sock"
-        return os.path.join(runtime_dir, socket_name)
+        return self.os.path.join(runtime_dir, socket_name)
 
     def about(self):
         """
@@ -313,7 +311,7 @@ class EventManagerPlugin(BasePlugin):
         1.  **Event Queue and Throttling**: Instead of immediately
             processing every incoming event from the IPC, the plugin
             queues them in a `collections.deque`. A periodic timer,
-            set by `GLib.timeout_add`, processes the queue in batches.
+            set by `self.glib.timeout_add`, processes the queue in batches.
             This throttling mechanism prevents a sudden burst of events
             from overwhelming the main event loop and freezing the UI.
 
@@ -324,7 +322,7 @@ class EventManagerPlugin(BasePlugin):
             all registered callbacks and executing them.
 
         3.  **Thread-Safe Dispatching**: To ensure stability, the
-            plugin uses `GLib.idle_add` to dispatch all callbacks.
+            plugin uses `self.glib.idle_add` to dispatch all callbacks.
             This guarantees that any plugin-specific logic, especially
             UI updates, is executed on the main GTK thread, preventing
             race conditions and application crashes.

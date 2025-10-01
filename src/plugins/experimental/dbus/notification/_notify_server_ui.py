@@ -1,17 +1,13 @@
-import gi
 import re
-from gi.repository import Gtk, GLib, Pango  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 from ._utils import NotifyUtils
-
-gi.require_version("Gtk", "4.0")
 
 
 class UI(BasePlugin):
     def __init__(self, panel_instance) -> None:
         super().__init__(panel_instance)
         self.notify_utils = NotifyUtils(panel_instance)
-        self.app = Gtk.Application(application_id="com.example.NotificationPopup")
+        self.app = self.gtk.Application(application_id="com.example.NotificationPopup")
         self.app.connect("activate", self.on_activate)
 
     def on_activate(self, app):
@@ -38,11 +34,11 @@ class UI(BasePlugin):
             return uri
         return None
 
-    def _launch_uri_async(self, uri: str, window: Gtk.Window):
+    def _launch_uri_async(self, uri: str, window):
         """
-        Launches the specified URI asynchronously using Gtk.UriLauncher.
+        Launches the specified URI asynchronously using self.gtk.UriLauncher.
         """
-        launcher = Gtk.UriLauncher.new(uri)
+        launcher = self.gtk.UriLauncher.new(uri)
         launcher.launch(
             window,
             None,
@@ -53,7 +49,7 @@ class UI(BasePlugin):
 
     def on_launch_finished(self, source_object, result, user_data):
         """
-        Callback to handle the result of the Gtk.UriLauncher.launch() operation.
+        Callback to handle the result of the self.gtk.UriLauncher.launch() operation.
         """
         try:
             launcher = source_object
@@ -64,7 +60,7 @@ class UI(BasePlugin):
                 self.logger.warning(
                     f"URI launch failed or was canceled for: {launcher.get_uri()}"
                 )
-        except GLib.Error as e:
+        except self.glib.Error as e:
             self.logger.error(f"Error launching URI: {e.message}")
 
     def on_notification_click(self, gesture, n_press, x, y, notification, window):
@@ -119,7 +115,7 @@ class UI(BasePlugin):
             center_popup_position = new_width_position
         if new_height_position:
             top_popup_position = new_height_position
-        window = Gtk.Window()
+        window = self.gtk.Window()
         window.add_css_class("notify-window")
         self.layer_shell.init_for_window(window)
         self.layer_shell.set_layer(window, self.layer_shell.Layer.TOP)
@@ -131,13 +127,13 @@ class UI(BasePlugin):
         self.layer_shell.set_margin(
             window, self.layer_shell.Edge.RIGHT, center_popup_position
         )
-        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        vbox = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL, spacing=10)
         vbox.set_margin_top(10)
         vbox.set_margin_bottom(10)
         vbox.set_margin_start(10)
         vbox.set_margin_end(10)
         vbox.add_css_class("notify-server-vbox")
-        click_gesture = Gtk.GestureClick.new()
+        click_gesture = self.gtk.GestureClick.new()
         click_gesture.set_button(0)
         click_gesture.connect(
             "released", self.on_notification_click, notification, window
@@ -147,19 +143,19 @@ class UI(BasePlugin):
         if icon:
             icon.set_pixel_size(48)
             vbox.append(icon)
-        summary_label = Gtk.Label(label=notification["summary"])
+        summary_label = self.gtk.Label(label=notification["summary"])
         summary_label.add_css_class("notify-server-summary-label")
         summary_label.set_wrap(True)
         vbox.append(summary_label)
-        body_label = Gtk.Label(label=notification["body"])
+        body_label = self.gtk.Label(label=notification["body"])
         body_label.add_css_class("notify-server-body-label")
         body_label.set_wrap(True)
         body_label.set_max_width_chars(100)
         body_label.set_lines(5)
-        body_label.set_ellipsize(Pango.EllipsizeMode.END)
-        body_label.set_halign(Gtk.Align.CENTER)
+        body_label.set_ellipsize(self.pango.EllipsizeMode.END)
+        body_label.set_halign(self.gtk.Align.CENTER)
         vbox.append(body_label)
-        close_button = Gtk.Button(label="Close")
+        close_button = self.gtk.Button(label="Close")
         close_button.connect("clicked", lambda _: window.close())
         vbox.append(close_button)
         window.set_child(vbox)
@@ -168,7 +164,7 @@ class UI(BasePlugin):
         summary_label.add_css_class("notification-summary")
         body_label.add_css_class("notification-body")
         window.present()
-        GLib.timeout_add_seconds(
+        self.glib.timeout_add_seconds(
             self.timeout, lambda: window.close() if window.is_visible() else False
         )
 
@@ -191,7 +187,7 @@ class UI(BasePlugin):
             Disturb" setting. The `show_popup` method is the entry point
             for this display logic.
         2.  **Platform-Specific Presentation**: It utilizes a specialized
-            API, `Gtk4LayerShell`, to create windows that are not managed
+            API, `self.gtk4LayerShell`, to create windows that are not managed
             by the typical window manager. This ensures that notifications
             appear consistently as non-intrusive overlays on the desktop.
         3.  **Dynamic Configuration**: The module dynamically loads
@@ -204,10 +200,10 @@ class UI(BasePlugin):
             they are a transient visual cue rather than a persistent window.
         5.  **Unified Click Action**: The previous link button has been
             removed. Now, the entire notification box is clickable via
-            `Gtk.GestureClick`. The `on_notification_click` method
+            `self.gtk.GestureClick`. The `on_notification_click` method
             centralizes the action hierarchy:
             - **Launch URI**: If a URL is found in the body or hints, it's
-              launched using `Gtk.UriLauncher` (the GTK equivalent of
+              launched using `self.gtk.UriLauncher` (the GTK equivalent of
               asynchronous `xdg-open`).
             - **Launch App**: If no URI, but a `desktop-entry` hint exists,
               the application is launched using `self.cmd.run`.

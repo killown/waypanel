@@ -9,7 +9,6 @@ WAYFIRE_METADATA_DIR = "/usr/share/wayfire/metadata"
 WAYFIRE_TOML_PATH = os.path.expanduser("~/.config/waypanel/wayfire/wayfire.toml")
 
 ENABLE_PLUGIN = True
-DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):

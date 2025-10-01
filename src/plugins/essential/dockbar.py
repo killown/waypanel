@@ -1,19 +1,6 @@
-import gi
-import os
-from gi.repository import Gtk, Gdk, GLib, Gio  # pyright: ignore
 from core._base import BasePlugin
-from src.core.create_panel import (
-    set_layer_position_exclusive,
-    unset_layer_position_exclusive,
-)
 
-gi.require_version("Gtk", "4.0")
-gi.require_version("Gdk", "4.0")
-gi.require_version("GLib", "2.0")
-gi.require_version("Gio", "2.0")
 ENABLE_PLUGIN = True
-if not os.getenv("WAYFIRE_SOCKET"):
-    ENABLE_PLUGIN = False
 DEPS = ["event_manager", "gestures_setup"]
 
 
@@ -31,13 +18,17 @@ def initialize_plugin(panel_instance):
 
 
 class DockbarPlugin(BasePlugin):
+    from gi.repository import Gio
+
     """
     A plugin that creates a configurable dockbar for launching applications.
     """
 
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
-        self.dockbar = Gtk.Box(spacing=10, orientation=Gtk.Orientation.VERTICAL)
+        self.dockbar = self.gtk.Box(
+            spacing=10, orientation=self.gtk.Orientation.VERTICAL
+        )
         self.create_gesture = self.plugins["gestures_setup"].create_gesture
         self._subscribe_to_events()
         self.layer_state = False
@@ -56,20 +47,20 @@ class DockbarPlugin(BasePlugin):
         event_type: Gio.FileMonitorEvent,
     ) -> None:
         """
-        Callback for Gio.FileMonitor 'changed' signal, used to trigger config reload.
+        Callback for self.gio.FileMonitor 'changed' signal, used to trigger config reload.
         This includes a debouncing mechanism based on file modification time.
         """
         config_file = self.config_handler.config_file
         if event_type in (
-            Gio.FileMonitorEvent.CHANGES_DONE_HINT,
-            Gio.FileMonitorEvent.MOVED,
-            Gio.FileMonitorEvent.CHANGED,
+            self.gio.FileMonitorEvent.CHANGES_DONE_HINT,
+            self.gio.FileMonitorEvent.MOVED,
+            self.gio.FileMonitorEvent.CHANGED,
         ):
             try:
-                current_mod_time = os.path.getmtime(config_file)
+                current_mod_time = self.os.path.getmtime(config_file)
                 if current_mod_time > self._last_config_mod_time + 0.1:
                     self._last_config_mod_time = current_mod_time
-                    GLib.idle_add(self._on_config_changed)
+                    self.glib.idle_add(self._on_config_changed)
                 else:
                     self.logger.debug("Config change event debounced.")
             except FileNotFoundError:
@@ -106,7 +97,7 @@ class DockbarPlugin(BasePlugin):
 
     def _create_dockbar_button(self, app_name, app_data, class_style, use_label=False):
         """
-        Creates and returns a Gtk.Button for a given app.
+        Creates and returns a self.gtk.Button for a given app.
         """
         app_cmd = app_data["cmd"]
         icon_name = app_data["icon"]
@@ -123,8 +114,8 @@ class DockbarPlugin(BasePlugin):
         button.app_config = app_data  # pyright: ignore
         self.create_gesture(button, 2, lambda _, cmd=app_cmd: self.on_middle_click(cmd))
         self.create_gesture(button, 3, lambda _, cmd=app_cmd: self.on_right_click(cmd))
-        drag_source = Gtk.DragSource.new()
-        drag_source.set_actions(Gdk.DragAction.MOVE)
+        drag_source = self.gtk.DragSource.new()
+        drag_source.set_actions(self.gdk.DragAction.MOVE)
         drag_source.connect("prepare", self.on_drag_prepare)
         drag_source.connect("drag-begin", self.on_drag_begin)
         drag_source.connect("drag-end", self.on_drag_end)
@@ -136,9 +127,9 @@ class DockbarPlugin(BasePlugin):
         Loads app list from config and populates the dockbar.
         """
         if orientation == "h":
-            orientation = Gtk.Orientation.HORIZONTAL
+            orientation = self.gtk.Orientation.HORIZONTAL
         elif orientation == "v":
-            orientation = Gtk.Orientation.VERTICAL
+            orientation = self.gtk.Orientation.VERTICAL
         self.dockbar.set_orientation(orientation)
         child = self.dockbar.get_first_child()
         while child:
@@ -150,7 +141,7 @@ class DockbarPlugin(BasePlugin):
                 app_name, app_data, class_style, use_label
             )
             self.gtk_helper.update_widget_safely(self.dockbar.append, button)
-        drop_target = Gtk.DropTarget.new(Gtk.Button, Gdk.DragAction.MOVE)
+        drop_target = self.gtk.DropTarget.new(self.gtk.Button, self.gdk.DragAction.MOVE)
         drop_target.connect("drop", self.on_drop)
         self.dockbar.add_controller(drop_target)
 
@@ -158,14 +149,14 @@ class DockbarPlugin(BasePlugin):
         """
         Prepares the content for a drag-and-drop operation.
         """
-        return Gdk.ContentProvider.new_for_value(drag_source.get_widget())
+        return self.gdk.ContentProvider.new_for_value(drag_source.get_widget())
 
     def on_drag_begin(self, drag_source, drag):
         """
         Starts a drag-and-drop operation.
         """
         dragged_widget = drag_source.get_widget()
-        paintable = Gtk.WidgetPaintable.new(dragged_widget)
+        paintable = self.gtk.WidgetPaintable.new(dragged_widget)
         drag_source.set_icon(paintable, 0, 0)
         dragged_widget.set_opacity(0.5)
 
@@ -183,7 +174,7 @@ class DockbarPlugin(BasePlugin):
         dragged_button = value
         parent_box = drop_target.get_widget()
         new_position_child = None
-        is_vertical = parent_box.get_orientation() == Gtk.Orientation.VERTICAL
+        is_vertical = parent_box.get_orientation() == self.gtk.Orientation.VERTICAL
         if is_vertical:
             drop_coordinate = y
         else:
@@ -286,21 +277,21 @@ class DockbarPlugin(BasePlugin):
 
     def _setup_file_watcher(self):
         """
-        Sets up a file monitor to watch for changes in the waypanel.toml config file using Gio.FileMonitor.
+        Sets up a file monitor to watch for changes in the waypanel.toml config file using self.gio.FileMonitor.
         """
         config_file = self.config_handler.config_file
         try:
-            self.gio_config_file = Gio.File.new_for_path(str(config_file))
+            self.gio_config_file = self.gio.File.new_for_path(str(config_file))
             self._config_observer = self.gio_config_file.monitor_file(
-                Gio.FileMonitorFlags.NONE, None
+                self.gio.FileMonitorFlags.NONE, None
             )
             self._config_observer.connect("changed", self._on_gio_config_file_changed)
-            self._last_config_mod_time = os.path.getmtime(config_file)
+            self._last_config_mod_time = self.os.path.getmtime(config_file)
             self.logger.info(
-                f"Started monitoring config file with Gio.FileMonitor: {config_file}"
+                f"Started monitoring config file with self.gio.FileMonitor: {config_file}"
             )
         except Exception as e:
-            self.logger.error(f"Failed to set up Gio.FileMonitor: {e}")
+            self.logger.error(f"Failed to set up self.gio.FileMonitor: {e}")
 
     def __del__(self):
         """Cancels the GIO file monitor when the object is destroyed."""
@@ -318,9 +309,7 @@ class DockbarPlugin(BasePlugin):
         """
         Handles the mouse enter event to set the layer position.
         """
-        if self.layer_state is False:
-            set_layer_position_exclusive(self.dockbar_content, 64)
-            self.layer_state = True
+        pass
 
     def _subscribe_to_events(self):
         """
@@ -346,12 +335,12 @@ class DockbarPlugin(BasePlugin):
         wm_class = view.get("app-id", "")
         initial_title = title.split(" ")[0].lower()
         icon_name = self.gtk_helper.get_icon(wm_class, initial_title, title)
-        button = Gtk.Button()
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        button = self.gtk.Button()
+        box = self.gtk.Box(orientation=self.gtk.Orientation.HORIZONTAL, spacing=4)
         if icon_name:
-            icon = Gtk.Image.new_from_icon_name(icon_name)
+            icon = self.gtk.Image.new_from_icon_name(icon_name)
             self.gtk_helper.update_widget_safely(box.append, icon)
-        label = Gtk.Label(label=title[:30])
+        label = self.gtk.Label(label=title[:30])
         self.gtk_helper.update_widget_safely(box.append, label)
         button.set_child(box)
         button.add_css_class("dockbar-button")
@@ -362,10 +351,7 @@ class DockbarPlugin(BasePlugin):
         """
         Handles the deactivation of the 'scale' plugin.
         """
-        self.gtk_helper.update_widget_safely(
-            unset_layer_position_exclusive, self.dockbar_content
-        )
-        self.layer_state = False
+        pass
 
     def handle_plugin_event(self, msg):
         """

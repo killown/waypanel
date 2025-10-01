@@ -1,12 +1,8 @@
-import asyncio
 import io
 import mimetypes
-import subprocess
 from pathlib import Path
 import aiosqlite
 import pyperclip
-from gi.repository import GdkPixbuf, Gio, Gtk, GLib  # pyright: ignore
-from gi.repository import Gtk4LayerShell as LayerShell  # pyright: ignore
 from PIL import Image
 import re
 from src.plugins.core._base import BasePlugin
@@ -14,7 +10,7 @@ from .clipboard_server import AsyncClipboardServer
 from src.shared.path_handler import PathHandler
 
 ENABLE_PLUGIN = True
-DEPS = ["top_panel", "clipboard_server"]
+DEPS = ["clipboard_server"]
 
 
 def get_plugin_placement(panel_instance):
@@ -93,6 +89,8 @@ class ClipboardManager:
         self, target_id: int
     ) -> tuple[int, str, str | None, int] | None:
         """Blocking version for non-async contexts"""
+        import asyncio
+
         return asyncio.run(self.get_item_by_id(target_id))
 
 
@@ -118,22 +116,20 @@ class ClipboardClient(BasePlugin):
         self.item_spacing = self.client_config.get("client_item_spacing", 5)
         self.create_popover_menu_clipboard()
 
-    def _create_menu_item_with_icon_and_label(
-        self, label_text: str, icon_name: str
-    ) -> Gtk.Button:
-        """Helper to create a Gtk.Button that visually guarantees both icon and label are shown.
+    def _create_menu_item_with_icon_and_label(self, label_text: str, icon_name: str):
+        """Helper to create a self.gtk.Button that visually guarantees both icon and label are shown.
         This fixes the issue of buttons in popovers only showing icons."""
-        button = Gtk.Button.new()
-        hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 10)
+        button = self.gtk.Button.new()
+        hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 10)
         hbox.set_margin_start(10)
         hbox.set_margin_end(10)
-        icon = Gtk.Image.new_from_icon_name(self.gtk_helper.icon_exist(icon_name))
+        icon = self.gtk.Image.new_from_icon_name(self.gtk_helper.icon_exist(icon_name))
         hbox.append(icon)
-        label = Gtk.Label.new(label_text)
-        label.set_halign(Gtk.Align.START)
+        label = self.gtk.Label.new(label_text)
+        label.set_halign(self.gtk.Align.START)
         hbox.append(label)
         button.set_child(hbox)
-        button.set_halign(Gtk.Align.FILL)
+        button.set_halign(self.gtk.Align.FILL)
         return button
 
     def is_image_content(self, content):
@@ -181,7 +177,7 @@ class ClipboardClient(BasePlugin):
         return False
 
     def create_thumbnail(self, image_path, size=128):
-        """Generate larger GdkPixbuf thumbnail"""
+        """Generate larger self.gdkpixbuf thumbnail"""
         try:
             if image_path == "<image>":
                 return None
@@ -189,7 +185,7 @@ class ClipboardClient(BasePlugin):
                 img.thumbnail((size, size), Image.Resampling.LANCZOS)
                 bio = io.BytesIO()
                 img.save(bio, format="PNG", quality=95)
-                loader = GdkPixbuf.PixbufLoader.new_with_type("png")
+                loader = self.gdkpixbuf.PixbufLoader.new_with_type("png")
                 loader.write(bio.getvalue())
                 loader.close()
                 return loader.get_pixbuf()
@@ -202,18 +198,18 @@ class ClipboardClient(BasePlugin):
         if self.is_image_content(content):
             if Path(content).exists():
                 try:
-                    subprocess.run(
+                    self.subprocess.run(
                         ["wl-copy", "-t", "image/png"],
                         stdin=open(content, "rb"),
                         check=True,
                     )
-                except subprocess.CalledProcessError:
+                except self.subprocess.CalledProcessError:
                     self.logger.error(f"Failed to copy image: {content}")
             elif self.data_helper.validate_bytes(
                 content, name="bytes from copy_to_clipboard"
             ):
                 try:
-                    subprocess.run(
+                    self.subprocess.run(
                         ["wl-copy", "-t", "image/png"],
                         input=content,
                         check=True,
@@ -230,7 +226,7 @@ class ClipboardClient(BasePlugin):
         """
         Clear the existing list and calculate the required height for the scrolled window.
         FIXED (GTK4/PyGObject Memory Leak): Implements the GTK4 iteration pattern and
-        adds explicit cleanup for Gtk.Popovers to resolve the "still has children left"
+        adds explicit cleanup for self.gtk.Popovers to resolve the "still has children left"
         warning and prevent the memory leak.
         Returns:
             int: The calculated total height.
@@ -261,9 +257,9 @@ class ClipboardClient(BasePlugin):
                             pass
                     self.listbox.remove(row)
                     row = next_row
-            asyncio.run(self.manager.initialize())
-            items = asyncio.run(self.manager.get_history())
-            asyncio.run(self.manager.server.stop())
+            self.asyncio.run(self.manager.initialize())
+            items = self.asyncio.run(self.manager.get_history())
+            self.asyncio.run(self.manager.server.stop())
             IMAGE_EXTENSIONS = (
                 ".png",
                 ".jpg",
@@ -295,9 +291,9 @@ class ClipboardClient(BasePlugin):
 
     def populate_listbox(self):
         try:
-            asyncio.run(self.manager.initialize())
-            clipboard_history = asyncio.run(self.manager.get_history())
-            asyncio.run(self.manager.server.stop())
+            self.asyncio.run(self.manager.initialize())
+            clipboard_history = self.asyncio.run(self.manager.get_history())
+            self.asyncio.run(self.manager.server.stop())
             pinned_items = sorted(
                 [item for item in clipboard_history if item[3] == 1],
                 key=lambda x: x[0],
@@ -317,12 +313,12 @@ class ClipboardClient(BasePlugin):
             ) in sorted_history:
                 if not item_content:
                     continue
-                row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 5)
-                delete_button = Gtk.Button()
+                row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 5)
+                delete_button = self.gtk.Button()
                 delete_button.set_icon_name(self.gtk_helper.icon_exist("tag-delete"))
                 delete_button.connect("clicked", self.on_delete_selected)
                 self.update_widget_safely(row_hbox.append, delete_button)
-                label_button = Gtk.Button()
+                label_button = self.gtk.Button()
                 label_icon = (
                     "document-edit-symbolic" if item_label else "list-add-symbolic"
                 )
@@ -338,14 +334,14 @@ class ClipboardClient(BasePlugin):
                 row_hbox.MYTEXT = f"{item_id} {item_content.strip()} {item_label.strip() if item_label else ''}"  # pyright: ignore
                 row_hbox.ITEM_ID = item_id  # pyright: ignore
                 row_hbox.IS_PINNED = is_pinned  # pyright: ignore
-                list_box_row = Gtk.ListBoxRow()
+                list_box_row = self.gtk.ListBoxRow()
                 list_box_row.set_child(row_hbox)
-                gesture_right_click = Gtk.GestureClick.new()
+                gesture_right_click = self.gtk.GestureClick.new()
                 gesture_right_click.set_button(3)
                 gesture_right_click.connect("pressed", self.on_right_click_row)
                 list_box_row.add_controller(gesture_right_click)
                 if is_pinned:
-                    pin_icon = Gtk.Image.new_from_icon_name(
+                    pin_icon = self.gtk.Image.new_from_icon_name(
                         self.gtk_helper.icon_exist("object-locked-symbolic")
                     )
                     pin_icon.set_opacity(0.7)
@@ -357,17 +353,17 @@ class ClipboardClient(BasePlugin):
                         item_content, size=self.thumbnail_size
                     )
                     if thumb:
-                        image_box = Gtk.Box(
-                            orientation=Gtk.Orientation.HORIZONTAL, spacing=5
+                        image_box = self.gtk.Box(
+                            orientation=self.gtk.Orientation.HORIZONTAL, spacing=5
                         )
-                        image_widget = Gtk.Image.new_from_pixbuf(thumb)
+                        image_widget = self.gtk.Image.new_from_pixbuf(thumb)
                         image_widget.set_margin_start(10)
                         image_widget.set_margin_end(10)
                         image_widget.set_margin_top(5)
                         image_widget.set_margin_bottom(5)
-                        image_widget.set_valign(Gtk.Align.CENTER)
+                        image_widget.set_valign(self.gtk.Align.CENTER)
                         self.update_widget_safely(image_box.append, image_widget)
-                        image_box.set_valign(Gtk.Align.CENTER)
+                        image_box.set_valign(self.gtk.Align.CENTER)
                         self.update_widget_safely(row_hbox.append, image_box)
                         if not item_label:
                             display_text = (
@@ -375,9 +371,9 @@ class ClipboardClient(BasePlugin):
                                 if Path(item_content).exists()
                                 else "Image Content"
                             )
-                line = Gtk.Label.new()
+                line = self.gtk.Label.new()
                 line.set_tooltip_markup(item_content)
-                escaped_text = GLib.markup_escape_text(display_text)
+                escaped_text = self.glib.markup_escape_text(display_text)
                 escaped_text = self.format_color_text(display_text)
                 markup_format = '<span font="DejaVu Sans Mono">{id} {text}</span>'
                 if item_label or is_pinned:
@@ -385,7 +381,7 @@ class ClipboardClient(BasePlugin):
                 line.set_markup(markup_format.format(id=item_id, text=escaped_text))
                 line.props.margin_end = 5
                 line.props.hexpand = True
-                line.set_halign(Gtk.Align.START)
+                line.set_halign(self.gtk.Align.START)
                 self.update_widget_safely(row_hbox.append, line)
                 self.find_text_using_button[delete_button] = line
                 self.find_text_using_button[label_button] = line
@@ -394,25 +390,23 @@ class ClipboardClient(BasePlugin):
                 message=f"Error populating ListBox in populate_listbox. {e}",
             )
 
-    def on_right_click_row(
-        self, gesture: Gtk.GestureClick, n_press: int, x: float, y: float
-    ):
+    def on_right_click_row(self, gesture, n_press: int, x: float, y: float):
         """
         Handler for the right-click gesture. Creates and displays a context menu Popover.
         FIXED: Uses helper to ensure buttons display both icon and label text.
         """
         if gesture.get_button() != 3:
             return
-        row: Gtk.ListBoxRow = gesture.get_widget()  # pyright: ignore
+        row: self.gtk.ListBoxRow = gesture.get_widget()  # pyright: ignore
         row_hbox = row.get_child()
         if not hasattr(row_hbox, "ITEM_ID") or not hasattr(row_hbox, "IS_PINNED"):
             self.logger.warning("Could not retrieve item data from row.")
             return
         item_id = row_hbox.ITEM_ID  # pyright: ignore
         is_pinned = row_hbox.IS_PINNED  # pyright: ignore
-        menu = Gtk.Popover.new()
+        menu = self.gtk.Popover.new()
         menu.set_parent(row)
-        vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
         vbox.set_margin_start(5)
         vbox.set_margin_end(5)
         vbox.set_margin_top(5)
@@ -427,9 +421,7 @@ class ClipboardClient(BasePlugin):
         menu.set_child(vbox)
         menu.popup()
 
-    def on_menu_edit_label_clicked(
-        self, button: Gtk.Button, item_id: int, menu: Gtk.Popover
-    ):
+    def on_menu_edit_label_clicked(self, button, item_id: int, menu):
         """
         Helper to close the context menu and then trigger the label editor Popover.
         """
@@ -442,23 +434,31 @@ class ClipboardClient(BasePlugin):
             self.logger.warning(f"Item ID {item_id} not found for label editing.")
 
     def on_pin_clicked(
-        self, button: Gtk.Button, item_id: int, current_status: bool, menu: Gtk.Popover
+        self,
+        button,
+        item_id: int,
+        current_status: bool,
+        menu,
     ):
         """
         NEW: Handler for the 'Stick to Top' / 'Unstick from Top' button.
         """
         menu.popdown()
         new_status = not current_status
-        asyncio.run(self.manager.update_item_pin_status(item_id, new_status))
+        self.asyncio.run(self.manager.update_item_pin_status(item_id, new_status))
         self.update_clipboard_list()
 
     def _save_label_popover_content(
-        self, button: Gtk.Button, entry: Gtk.Entry, item_id: int, popover: Gtk.Popover
+        self,
+        button,
+        entry,
+        item_id: int,
+        popover,
     ):
         """Handles saving the new label from the Popover."""
         new_label = entry.get_text().strip()
         label_to_save = new_label if new_label else None
-        asyncio.run(self.manager.update_item_label(item_id, label_to_save))
+        self.asyncio.run(self.manager.update_item_label(item_id, label_to_save))
         popover.popdown()
         anchor_button = popover.get_parent()
         if anchor_button:
@@ -471,29 +471,29 @@ class ClipboardClient(BasePlugin):
         self.update_clipboard_list()
 
     def create_label_editor_popover(
-        self, button_to_anchor: Gtk.Widget, item_id: int, current_label: str | None
+        self, button_to_anchor, item_id: int, current_label: str | None
     ):
         """
         NEW: Creates and displays a Popover for editing the clipboard item's label,
         using a compact layout with a left-aligned save (tick) button.
         """
-        popover = Gtk.Popover.new()
+        popover = self.gtk.Popover.new()
         popover.set_parent(button_to_anchor)
         popover.set_has_arrow(True)
         button_to_anchor._label_editor_popover = popover  # pyright: ignore
-        vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+        vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
         vbox.set_margin_start(10)
         vbox.set_margin_end(10)
         vbox.set_margin_top(10)
         vbox.set_margin_bottom(10)
         vbox.set_size_request(300, -1)
-        hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 5)
-        hbox.set_halign(Gtk.Align.FILL)
-        save_button = Gtk.Button.new()
+        hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 5)
+        hbox.set_halign(self.gtk.Align.FILL)
+        save_button = self.gtk.Button.new()
         save_button.set_icon_name(self.gtk_helper.icon_exist("emblem-ok-symbolic"))
         save_button.set_tooltip_text("Save label (Enter)")
-        save_button.set_valign(Gtk.Align.CENTER)
-        entry = Gtk.Entry()
+        save_button.set_valign(self.gtk.Align.CENTER)
+        entry = self.gtk.Entry()
         entry.set_text(current_label if current_label else "")
         entry.set_placeholder_text(f"Label for ID {item_id} (empty to clear)")
         entry.props.hexpand = True
@@ -512,13 +512,13 @@ class ClipboardClient(BasePlugin):
         popover.set_child(vbox)
         popover.popup()
 
-    def on_edit_label_clicked(self, button: Gtk.Button):
+    def on_edit_label_clicked(self, button):
         """
         Handler for the original 'Edit Label' button on the row.
         UPDATED to use the new Popover editor.
         """
         if button in self.find_text_using_button:
-            label_widget: Gtk.Label = self.find_text_using_button[button]
+            label_widget = self.find_text_using_button[button]
             full_text = label_widget.get_text()
             item_id = int(full_text.split()[0])
             item_data = self.manager.get_item_by_id_sync(item_id)
@@ -545,48 +545,48 @@ class ClipboardClient(BasePlugin):
             )
 
     def create_popover_menu_clipboard(self):
-        LayerShell.set_keyboard_mode(
-            self.obj.top_panel, LayerShell.KeyboardMode.ON_DEMAND
+        self.layer_shell.set_keyboard_mode(
+            self.obj.top_panel, self.layer_shell.KeyboardMode.ON_DEMAND
         )
-        self.menubutton_clipboard = Gtk.Button.new()
+        self.menubutton_clipboard = self.gtk.Button.new()
         self.main_widget = (self.menubutton_clipboard, "append")
         self.menubutton_clipboard.connect("clicked", self.open_popover_clipboard)
         self.gtk_helper.add_cursor_effect(self.menubutton_clipboard)
 
     def create_popover_clipboard(self, *_):
-        self.popover_clipboard = Gtk.Popover.new()
+        self.popover_clipboard = self.gtk.Popover.new()
         self.popover_clipboard.set_has_arrow(False)
         self.popover_clipboard.connect("closed", self.popover_is_closed)
         self.popover_clipboard.connect("notify::visible", self.popover_is_open)
-        show_searchbar_action = Gio.SimpleAction.new("show_searchbar")
+        show_searchbar_action = self.gio.SimpleAction.new("show_searchbar")
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
         self.obj.add_action(show_searchbar_action)
-        self.scrolled_window = Gtk.ScrolledWindow()
+        self.scrolled_window = self.gtk.ScrolledWindow()
         self.scrolled_window.set_min_content_width(self.popover_min_width)
         self.scrolled_window.set_min_content_height(self.popover_max_height)
-        self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 10)
+        self.main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 10)
         self.main_box.set_margin_top(10)
         self.main_box.set_margin_bottom(10)
         self.main_box.set_margin_start(10)
         self.main_box.set_margin_end(10)
-        self.searchbar = Gtk.SearchEntry.new()
+        self.searchbar = self.gtk.SearchEntry.new()
         self.searchbar.grab_focus()
         self.searchbar.connect("search_changed", self.on_search_entry_changed)
         self.searchbar.set_focus_on_click(True)
         self.searchbar.props.hexpand = True
         self.searchbar.props.vexpand = True
         self.update_widget_safely(self.main_box.append, self.searchbar)
-        self.button_clear = Gtk.Button()
+        self.button_clear = self.gtk.Button()
         self.button_clear.set_label("Clear")
         self.button_clear.connect("clicked", self.clear_clipboard)
-        self.listbox = Gtk.ListBox.new()
+        self.listbox = self.gtk.ListBox.new()
         self.listbox.connect(
             "row-selected", lambda widget, row: self.on_copy_clipboard(row)
         )
         self.searchbar.set_key_capture_widget(self.obj.top_panel)
         self.listbox.props.hexpand = True
         self.listbox.props.vexpand = True
-        self.listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.listbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
         self.listbox.set_show_separators(True)
         self.update_widget_safely(self.main_box.append, self.scrolled_window)
         self.update_widget_safely(self.main_box.append, self.button_clear)
@@ -661,7 +661,7 @@ class ClipboardClient(BasePlugin):
 
     def format_color_text(self, text):
         """Wrap color codes in markup with proper background/foreground colors."""
-        text = GLib.markup_escape_text(text)
+        text = self.glib.markup_escape_text(text)
         color_pattern = re.compile(r"(?<!\w)(#?[0-9a-fA-F]{3}|#?[0-9a-fA-F]{6})(?!\w)")
 
         def replace_color(match):
@@ -674,8 +674,8 @@ class ClipboardClient(BasePlugin):
         return color_pattern.sub(replace_color, text)
 
     def clear_clipboard(self, *_):
-        asyncio.run(self.manager.clear_history())
-        asyncio.run(self.manager.reset_ids())
+        self.asyncio.run(self.manager.clear_history())
+        self.asyncio.run(self.manager.reset_ids())
         self.update_clipboard_list()
         self.scrolled_window.set_min_content_height(50)
 
@@ -691,7 +691,7 @@ class ClipboardClient(BasePlugin):
         except (ValueError, IndexError):
             self.logger.error("Could not parse item ID from label text for deletion.")
             return
-        asyncio.run(self.manager.delete_item(item_id))
+        self.asyncio.run(self.manager.delete_item(item_id))
         self.update_clipboard_list()
 
     def run_app_from_launcher(self, x):
@@ -710,12 +710,14 @@ class ClipboardClient(BasePlugin):
             self.popover_clipboard = self.create_popover_clipboard()
 
     def popover_is_open(self, *_):
-        LayerShell.set_keyboard_mode(
-            self.obj.top_panel, LayerShell.KeyboardMode.ON_DEMAND
+        self.layer_shell.set_keyboard_mode(
+            self.obj.top_panel, self.layer_shell.KeyboardMode.ON_DEMAND
         )
 
     def popover_is_closed(self, *_):
-        LayerShell.set_keyboard_mode(self.obj.top_panel, LayerShell.KeyboardMode.NONE)
+        self.layer_shell.set_keyboard_mode(
+            self.obj.top_panel, self.layer_shell.KeyboardMode.NONE
+        )
 
     def on_show_searchbar_action_actived(self, action, parameter):
         self.searchbar.set_search_mode(True)  # pyright: ignore
@@ -728,21 +730,21 @@ class ClipboardClient(BasePlugin):
 
     def on_search_entry_changed(self, searchentry):
         """The filter_func will be called for each row after the call,
-        and it will continue to be called each time a row changes (via [method`Gtk`.ListBoxRow.changed])
-        or when [method`Gtk`.ListBox.invalidate_filter] is called."""
+        and it will continue to be called each time a row changes (via [method`self.gtk`.ListBoxRow.changed])
+        or when [method`self.gtk`.ListBox.invalidate_filter] is called."""
         searchentry.grab_focus()
         self.listbox.invalidate_filter()  # pyright: ignore
 
     def on_filter_invalidate(self, row):
         """
-        Filter function for the Gtk.ListBox.
+        Filter function for the self.gtk.ListBox.
         Args:
-            row (Gtk.ListBoxRow): The row to validate.
+            row (self.gtk.ListBoxRow): The row to validate.
         Returns:
             bool: True if the row matches the search criteria, False otherwise.
         """
         try:
-            if not isinstance(row, Gtk.ListBoxRow):
+            if not isinstance(row, self.gtk.ListBoxRow):
                 return False
             child = row.get_child()
             if not child or not hasattr(child, "MYTEXT"):
@@ -779,10 +781,10 @@ class ClipboardClient(BasePlugin):
             adds support for persisting item pin status.
         2.  **Synchronous-Asynchronous Integration**: The GTK-based UI
             operates synchronously. The code bridges this with the
-            asynchronous backend using `asyncio.run()`.
+            asynchronous backend using `self.asyncio.run()`.
         3.  **UI for New Feature**: The **`populate_listbox`** method is updated
             to unpack and display the new `label` and **`is_pinned`** fields.
-            A new **`Gtk.GestureClick`** is added to each row to detect right-clicks,
-            which triggers **`on_right_click_row`** to display a context **`Gtk.Popover`**
+            A new **`self.gtk.GestureClick`** is added to each row to detect right-clicks,
+            which triggers **`on_right_click_row`** to display a context **`self.gtk.Popover`**
         """
         return self.code_explanation.__doc__

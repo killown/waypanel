@@ -1,7 +1,3 @@
-import shutil
-import os
-import asyncio
-from gi.repository import Gtk, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
@@ -26,7 +22,7 @@ class RecordingPlugin(BasePlugin):
         self.button = None
         self.record_processes = []
         self.output_files = []
-        self.video_dir = f"/tmp/wfrec_{os.getpid()}"
+        self.video_dir = f"/tmp/wfrec_{self.os.getpid()}"
         self.final_dir = self._get_user_videos_dir()
         self.is_recording = False
         self.record_audio = False
@@ -35,7 +31,9 @@ class RecordingPlugin(BasePlugin):
         self.main_widget = (self.button, "append")
 
     def _setup_directories(self):
-        if os.path.exists(self.video_dir):
+        import shutil
+
+        if self.os.path.exists(self.video_dir):
             try:
                 shutil.rmtree(self.video_dir)
             except Exception as e:
@@ -43,28 +41,28 @@ class RecordingPlugin(BasePlugin):
                     f"Failed to remove temporary directory {self.video_dir}: {e}"
                 )
         try:
-            os.makedirs(self.video_dir, exist_ok=True)
+            self.os.makedirs(self.video_dir, exist_ok=True)
             self.logger.info(f"Recording directory: {self.video_dir}")
-            os.makedirs(self.final_dir, exist_ok=True)
+            self.os.makedirs(self.final_dir, exist_ok=True)
             self.logger.info(f"Final output folder: {self.final_dir}")
         except Exception as e:
             self.logger.exception(f"Failed to create necessary directories: {e}")
 
     def _get_user_videos_dir(self):
         try:
-            user_dirs_file = os.path.expanduser("~/.config/user-dirs.dirs")
-            if os.path.exists(user_dirs_file):
+            user_dirs_file = self.os.path.expanduser("~/.config/user-dirs.dirs")
+            if self.os.path.exists(user_dirs_file):
                 with open(user_dirs_file, "r") as f:
                     for line in f:
                         if line.startswith("XDG_VIDEOS_DIR"):
                             path = line.split("=")[1].strip().strip('"')
-                            return os.path.expandvars(path)
+                            return self.os.path.expandvars(path)
         except Exception as e:
             self.logger.exception(f"Failed to read ~/.config/user-dirs.dirs: {e}")
-        return os.path.join(os.path.expanduser("~"), "Videos")
+        return self.os.path.join(self.os.path.expanduser("~"), "Videos")
 
     def create_widget(self):
-        button = Gtk.Button()
+        button = self.gtk.Button()
         button.set_icon_name(
             self.gtk_helper.icon_exist(
                 "screen_recorder",
@@ -96,21 +94,21 @@ class RecordingPlugin(BasePlugin):
             if child:
                 child.unparent()
         else:
-            self.popover = Gtk.Popover()
+            self.popover = self.gtk.Popover()
             self.popover.set_has_arrow(True)
             self.popover.connect("closed", self.popover_is_closed)
         outputs = self.ipc.list_outputs()
         if not outputs:
-            label = Gtk.Label(label="No outputs detected.")
+            label = self.gtk.Label(label="No outputs detected.")
             self.popover.set_child(label)
             return
         output_names = [output["name"] for output in outputs]
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        main_box = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL, spacing=6)
         main_box.set_margin_top(10)
         main_box.set_margin_bottom(10)
         main_box.set_margin_start(10)
         main_box.set_margin_end(10)
-        record_all_btn = Gtk.Button(label="Record All Outputs")
+        record_all_btn = self.gtk.Button(label="Record All Outputs")
         record_all_btn.connect(
             "clicked",
             lambda x: self.global_loop.create_task(self.on_record_all_clicked()),
@@ -118,10 +116,10 @@ class RecordingPlugin(BasePlugin):
         record_all_btn.add_css_class("record-all-button")
         self.gtk_helper.add_cursor_effect(record_all_btn)
         main_box.append(record_all_btn)
-        separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        separator = self.gtk.Separator(orientation=self.gtk.Orientation.HORIZONTAL)
         main_box.append(separator)
         for name in output_names:
-            btn = Gtk.Button(label=f"Record Output: {name}")
+            btn = self.gtk.Button(label=f"Record Output: {name}")
             btn.connect(
                 "clicked",
                 lambda x, n=name: self.global_loop.create_task(
@@ -131,9 +129,9 @@ class RecordingPlugin(BasePlugin):
             btn.add_css_class("record-output-button")
             self.gtk_helper.add_cursor_effect(btn)
             main_box.append(btn)
-        separator2 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        separator2 = self.gtk.Separator(orientation=self.gtk.Orientation.HORIZONTAL)
         main_box.append(separator2)
-        slurp_btn = Gtk.Button(label="Record Region (slurp)")
+        slurp_btn = self.gtk.Button(label="Record Region (slurp)")
         slurp_btn.connect(
             "clicked",
             lambda x: self.global_loop.create_task(self.on_record_slurp_clicked()),
@@ -141,18 +139,20 @@ class RecordingPlugin(BasePlugin):
         slurp_btn.add_css_class("record-slurp-button")
         self.gtk_helper.add_cursor_effect(slurp_btn)
         main_box.append(slurp_btn)
-        audio_switch_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        audio_switch_label = Gtk.Label(label="Record Audio:")
-        audio_switch_label.set_halign(Gtk.Align.START)
+        audio_switch_box = self.gtk.Box(
+            orientation=self.gtk.Orientation.HORIZONTAL, spacing=10
+        )
+        audio_switch_label = self.gtk.Label(label="Record Audio:")
+        audio_switch_label.set_halign(self.gtk.Align.START)
         audio_switch_box.append(audio_switch_label)
-        self.audio_switch = Gtk.Switch()
+        self.audio_switch = self.gtk.Switch()
         self.audio_switch.set_active(self.record_audio)
         self.audio_switch.connect("state-set", self.on_audio_switch_toggled)
         audio_switch_box.append(self.audio_switch)
         main_box.append(audio_switch_box)
-        separator3 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        separator3 = self.gtk.Separator(orientation=self.gtk.Orientation.HORIZONTAL)
         main_box.append(separator3)
-        stop_join_btn = Gtk.Button(label="Stop All & Join Videos")
+        stop_join_btn = self.gtk.Button(label="Stop All & Join Videos")
         stop_join_btn.connect(
             "clicked",
             lambda x: self.global_loop.create_task(self.on_stop_and_join_clicked()),
@@ -182,7 +182,7 @@ class RecordingPlugin(BasePlugin):
         )
         for output in outputs:
             name = output["name"]
-            path = os.path.join(self.video_dir, f"{name}.mp4")
+            path = self.os.path.join(self.video_dir, f"{name}.mp4")
             self.output_files.append(path)
             cmd = ["wf-recorder", "-f", path, "-o", name]
             if self.record_audio:
@@ -191,7 +191,7 @@ class RecordingPlugin(BasePlugin):
                 f"Starting wf-recorder for {name} -> {path} {'with audio' if self.record_audio else ''}"
             )
             try:
-                proc = await asyncio.create_subprocess_exec(*cmd)
+                proc = await self.asyncio.create_subprocess_exec(*cmd)
                 self.record_processes.append(proc)
             except Exception as e:
                 self.logger.exception(f"Failed to start wf-recorder for {name}: {e}")
@@ -220,7 +220,7 @@ class RecordingPlugin(BasePlugin):
             return
         self.record_processes = []
         self.output_files = []
-        path = os.path.join(self.final_dir, f"{output_name}.mp4")
+        path = self.os.path.join(self.final_dir, f"{output_name}.mp4")
         self.output_files.append(path)
         cmd = ["wf-recorder", "-f", path, "-o", output_name]
         if self.record_audio:
@@ -229,7 +229,7 @@ class RecordingPlugin(BasePlugin):
             f"Starting wf-recorder for output '{output_name}' -> {path} {'with audio' if self.record_audio else ''}"
         )
         try:
-            proc = await asyncio.create_subprocess_exec(*cmd)
+            proc = await self.asyncio.create_subprocess_exec(*cmd)
             self.record_processes.append(proc)
             self.is_recording = True
             self.button.set_icon_name(  # pyright: ignore
@@ -251,17 +251,19 @@ class RecordingPlugin(BasePlugin):
         self.record_processes = []
         self.output_files = []
         try:
-            proc = await asyncio.create_subprocess_exec(
-                "slurp", stdout=asyncio.subprocess.PIPE
+            proc = await self.asyncio.create_subprocess_exec(
+                "slurp", stdout=self.asyncio.subprocess.PIPE
             )
-            geometry_bytes, _ = await asyncio.wait_for(proc.communicate(), timeout=5)
+            geometry_bytes, _ = await self.asyncio.wait_for(
+                proc.communicate(), timeout=5
+            )
             geometry = geometry_bytes.decode("utf-8").strip()
             if proc.returncode != 0:
                 raise Exception(f"slurp exited with non-zero code: {proc.returncode}")
             if not geometry:
                 self.logger.error("slurp returned empty geometry.")
                 return
-        except asyncio.TimeoutError:
+        except self.asyncio.TimeoutError:
             self.logger.error("slurp timed out. Make sure you select a region.")
             return
         except FileNotFoundError:
@@ -270,8 +272,8 @@ class RecordingPlugin(BasePlugin):
         except Exception as e:
             self.logger.exception(f"Failed to run slurp: {e}")
             return
-        timestamp = GLib.DateTime.new_now_utc().format("%Y%m%d_%H%M%S")  # pyright: ignore
-        path = os.path.join(self.final_dir, f"region_{timestamp}.mp4")
+        timestamp = self.glib.DateTime.new_now_utc().format("%Y%m%d_%H%M%S")  # pyright: ignore
+        path = self.os.path.join(self.final_dir, f"region_{timestamp}.mp4")
         self.output_files.append(path)
         cmd = ["wf-recorder", "-f", path, "-g", geometry]
         if self.record_audio:
@@ -280,7 +282,7 @@ class RecordingPlugin(BasePlugin):
             f"Starting wf-recorder for region '{geometry}' -> {path} {'with audio' if self.record_audio else ''}"
         )
         try:
-            proc = await asyncio.create_subprocess_exec(*cmd)
+            proc = await self.asyncio.create_subprocess_exec(*cmd)
             self.record_processes.append(proc)
             self.is_recording = True
             self.button.set_icon_name(  # pyright: ignore
@@ -325,8 +327,8 @@ class RecordingPlugin(BasePlugin):
                 p.terminate()
             except Exception as e:
                 self.logger.exception(f"Failed to terminate process: {e}")
-        stop_tasks = [asyncio.create_task(p.wait()) for p in self.record_processes]
-        done, pending = await asyncio.wait(stop_tasks, timeout=5)
+        stop_tasks = [self.asyncio.create_task(p.wait()) for p in self.record_processes]
+        done, pending = await self.asyncio.wait(stop_tasks, timeout=5)
         for task in pending:
             self.logger.warning("Process did not terminate gracefully, killing...")
             task.cancel()
@@ -367,9 +369,9 @@ class RecordingPlugin(BasePlugin):
             return
         min_height = min(output["geometry"]["height"] for output in outputs)
         num_outputs = len(self.output_files)
-        out_path = os.path.join(self.final_dir, "joined.mp4")
-        if os.path.exists(out_path):
-            os.remove(out_path)
+        out_path = self.os.path.join(self.final_dir, "joined.mp4")
+        if self.os.path.exists(out_path):
+            self.os.remove(out_path)
         filter_complex = ""
         input_video_streams = ""
         for i in range(num_outputs):
@@ -408,14 +410,14 @@ class RecordingPlugin(BasePlugin):
                     "-filter_complex",
                     filter_complex + f";{audio_filter}",
                     "-map",
-                    f"[aout]",
+                    "[aout]",
                 ]
             )
         cmd.append(out_path)
         self.logger.info(f"Starting ffmpeg: {' '.join(cmd)}")
         try:
-            proc = await asyncio.create_subprocess_exec(
-                *cmd, stderr=asyncio.subprocess.PIPE
+            proc = await self.asyncio.create_subprocess_exec(
+                *cmd, stderr=self.asyncio.subprocess.PIPE
             )
             _, stderr_bytes = await proc.communicate()
             stderr = stderr_bytes.decode("utf-8")
@@ -475,7 +477,7 @@ class RecordingPlugin(BasePlugin):
             saved in a logical and user-accessible location.
         2.  **Process Control**: It uses the `wf-recorder` command-line tool,
             which is a dedicated screen recorder for Wayland. By executing
-            `wf-recorder` with `asyncio.create_subprocess_exec`, the plugin
+            `wf-recorder` with `self.asyncio.create_subprocess_exec`, the plugin
             can start and stop recording processes non-blockingly, allowing the
             UI to remain responsive. It stores a list of these processes
             (`self.record_processes`) to manage them during recording.

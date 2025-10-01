@@ -1,13 +1,12 @@
 import gi
 
-gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib  # pyright: ignore
 from src.shared.data_helpers import DataHelpers
-from typing import Callable, Any
+from typing import Callable
+
+gi.require_version("Gtk", "4.0")
 
 ENABLE_PLUGIN = True
-
-DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):

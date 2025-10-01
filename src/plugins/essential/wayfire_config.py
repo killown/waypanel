@@ -1,12 +1,5 @@
-import os
-import time
-import toml
-import asyncio
 from gi.repository import Gio  # pyright: ignore
 from src.plugins.core._base import BasePlugin
-from src.plugins.core._event_loop import global_loop
-
-DEPS = ["dockbar", "taskbar", "event_manager"]
 
 
 def get_plugin_placement(panel_instance):
@@ -44,19 +37,23 @@ class WayfireConfigWatcherPlugin(BasePlugin):
     A plugin that watches the Wayfire configuration file and applies changes dynamically.
     """
 
-    CONFIG_PATH = os.path.expanduser("~/.config/waypanel/wayfire/wayfire.toml")
-    PLUGIN_NAME = "wayfire_config"
-
     def __init__(self, panel_instance):
         """
         Initializes the WayfireConfigWatcherPlugin.
         Args:
             panel_instance: The instance of the panel.
         """
+        config_home = self.os.environ.get(
+            "XDG_CONFIG_HOME", self.os.path.expanduser("~/.config")
+        )
+        self.wayfire_config_path = self.os.path.join(
+            config_home, "waypanel/wayfire/wayfire.toml"
+        )
+
         super().__init__(panel_instance)
         self.panel = panel_instance
         self.config = None
-        global_loop.create_task(self._initial_setup())
+        self.global_loop.create_task(self._initial_setup())
         self.monitor_handler = self.start_watching()
 
     async def _initial_setup(self):
@@ -77,9 +74,9 @@ class WayfireConfigWatcherPlugin(BasePlugin):
             dict: The loaded configuration as a dictionary, or an empty dictionary if an error occurs.
         """
         try:
-            return await asyncio.to_thread(self.load_config)
+            return await self.asyncio.to_thread(self.load_config)
         except Exception as e:
-            self.panel.logger.error(f"[{self.PLUGIN_NAME}] Failed to load config: {e}")
+            self.panel.logger.error(f"wayfire_config Failed to load config: {e}")
             return {}
 
     def load_config(self):
@@ -89,10 +86,10 @@ class WayfireConfigWatcherPlugin(BasePlugin):
             dict: The loaded configuration as a dictionary, or an empty dictionary if an error occurs.
         """
         try:
-            with open(self.CONFIG_PATH, "r") as f:
-                return toml.load(f)
+            with open(self.wayfire_config_path, "r") as f:
+                return self.toml.load(f)
         except Exception as e:
-            self.panel.logger.error(f"[{self.PLUGIN_NAME}] Failed to load config: {e}")
+            self.panel.logger.error(f"wayfire_config Failed to load config: {e}")
             return {}
 
     async def apply_config_async(self, config):
@@ -102,7 +99,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
             config (dict): The new configuration to apply.
         """
         try:
-            response = await asyncio.to_thread(self.ipc.sock.list_config_options)
+            response = await self.asyncio.to_thread(self.ipc.sock.list_config_options)
             if response.get("result") != "ok":
                 self.logger.warning("Failed to fetch runtime config")
                 return
@@ -168,7 +165,9 @@ class WayfireConfigWatcherPlugin(BasePlugin):
             update_successful = False
             while retry_count < max_retries:
                 try:
-                    await asyncio.to_thread(self.ipc.set_option_values, batch_updates)
+                    await self.asyncio.to_thread(
+                        self.ipc.set_option_values, batch_updates
+                    )
                     update_successful = True
                     break
                 except Exception as e:
@@ -176,7 +175,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
                         f"Attempt {retry_count + 1} of {max_retries} to batch update failed: {e}. Retrying..."
                     )
                     retry_count += 1
-                    await asyncio.sleep(0.5)
+                    await self.asyncio.sleep(0.5)
             if not update_successful:
                 self.logger.warning(
                     f"Batch update failed after {max_retries} attempts, falling back to individual updates."
@@ -184,7 +183,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
                 self.logger.warning(
                     "This update method is slower, try removing any invalid options from wayfire.toml"
                 )
-                await asyncio.to_thread(
+                await self.asyncio.to_thread(
                     self.notifier.notify_send,
                     "Wayfire Config Plugin",
                     "Batch update failed, falling back to individual updates",
@@ -195,7 +194,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
                     individual_update_successful = False
                     while individual_retry_count < max_retries:
                         try:
-                            await asyncio.to_thread(
+                            await self.asyncio.to_thread(
                                 self.ipc.set_option_values, {key: value}
                             )
                             self.logger.info(
@@ -208,7 +207,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
                                 f"Attempt {individual_retry_count + 1} of {max_retries} to set option '{key}' failed: {single_e}"
                             )
                             individual_retry_count += 1
-                            await asyncio.sleep(0.5)
+                            await self.asyncio.sleep(0.5)
                     if not individual_update_successful:
                         self.logger.warning(
                             f"Failed to set option '{key}' after {max_retries} attempts. Skipping this option."
@@ -243,7 +242,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
             update_successful = False
             while retry_count < max_retries:
                 try:
-                    await asyncio.to_thread(self.ipc.set_option_values, payload)
+                    await self.asyncio.to_thread(self.ipc.set_option_values, payload)
                     update_successful = True
                     break
                 except Exception as e:
@@ -251,7 +250,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
                         f"Attempt {retry_count + 1} of {max_retries} to apply command bindings failed: {e}"
                     )
                     retry_count += 1
-                    await asyncio.sleep(0.5)
+                    await self.asyncio.sleep(0.5)
             if update_successful:
                 self.logger.info("Command bindings applied successfully.")
             else:
@@ -276,7 +275,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
             update_successful = False
             while retry_count < max_retries:
                 try:
-                    await asyncio.to_thread(self.ipc.set_option_values, payload)
+                    await self.asyncio.to_thread(self.ipc.set_option_values, payload)
                     update_successful = True
                     break
                 except Exception as e:
@@ -284,7 +283,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
                         f"Attempt {retry_count + 1} of {max_retries} to apply window rules failed: {e}"
                     )
                     retry_count += 1
-                    await asyncio.sleep(0.5)
+                    await self.asyncio.sleep(0.5)
             if update_successful:
                 self.logger.info("Window rules applied successfully.")
             else:
@@ -301,7 +300,7 @@ class WayfireConfigWatcherPlugin(BasePlugin):
         monitor_handler = GioFileMonitorHandler(self)
         monitor_handler.start()
         self.logger.info(
-            f"[{self.PLUGIN_NAME}] Watching config file: {self.CONFIG_PATH}"
+            f"wayfire_config Watching config file: {self.wayfire_config_path}"
         )
         return monitor_handler
 
@@ -339,8 +338,14 @@ class GioFileMonitorHandler:
     """
 
     def __init__(self, plugin):
+        import os
+
+        config_home = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+        self.wayfire_config_path = os.path.join(
+            config_home, "waypanel/wayfire/wayfire.toml"
+        )
         self.plugin = plugin
-        self.watch_path = os.path.abspath(plugin.CONFIG_PATH)
+        self.watch_path = os.path.abspath(self.wayfire_config_path)
         self.gio_file = Gio.File.new_for_path(self.watch_path)
         self._last_reload = 0
         self._debounce_sec = 0.5
@@ -386,6 +391,9 @@ class GioFileMonitorHandler:
         """
         Debounces and triggers an asynchronous reload of the configuration.
         """
+        import time
+        from src.plugins.core._event_loop import global_loop
+
         now = time.time()
         if now - self._last_reload < self._debounce_sec:
             return

@@ -5,7 +5,6 @@ import os
 
 # install https://codeberg.org/dnkl/fuzzel to enable the plugin
 ENABLE_PLUGIN = shutil.which("fuzzel") is not None
-DEPS = ["event_manager"]  # Depends on the event manager to receive events
 
 
 def get_plugin_placement(panel_instance):

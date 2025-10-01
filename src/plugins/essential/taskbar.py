@@ -1,15 +1,6 @@
-import os
-import orjson as json
-from gi.repository import Gtk, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
-from src.core.create_panel import (
-    set_layer_position_exclusive,
-    unset_layer_position_exclusive,
-)
 
 ENABLE_PLUGIN = True
-if not os.getenv("WAYFIRE_SOCKET"):
-    ENABLE_PLUGIN = False
 DEPS = [
     "event_manager",
     "gestures_setup",
@@ -46,7 +37,7 @@ class TaskbarPlugin(BasePlugin):
         self.is_scale_active = {}
         self.create_gesture = self.plugins["gestures_setup"].create_gesture
         self.remove_gesture = self.plugins["gestures_setup"].remove_gesture
-        self.scrolled_window = Gtk.ScrolledWindow()
+        self.scrolled_window = self.gtk.ScrolledWindow()
         self.button_pool = []
         self.in_use_buttons = {}
         self.icon_size = self.get_config(
@@ -79,31 +70,33 @@ class TaskbarPlugin(BasePlugin):
             return
         if exclusive:
             self.update_widget_safely(
-                set_layer_position_exclusive, panel_instance, self.exclusive_zone
+                self._set_layer_pos_exclusive,
+                panel_instance,
+                self.exclusive_zone,  # pyright: ignore
             )
         else:
-            self.update_widget_safely(unset_layer_position_exclusive, panel_instance)
+            self.update_widget_safely(self._unset_layer_pos_exclusive, panel_instance)
 
     def _setup_taskbar(self) -> None:
-        self.taskbar = Gtk.FlowBox()
+        self.taskbar = self.gtk.FlowBox()
         self.taskbar.set_column_spacing(self.spacing)
         self.taskbar.set_row_spacing(self.spacing)
-        self.taskbar.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.taskbar.set_selection_mode(self.gtk.SelectionMode.NONE)
         self.logger.debug("Setting up bottom panel.")
         if self.layer_always_exclusive:
             self.layer_shell.set_layer(self.bottom_panel, self.layer_shell.Layer.TOP)
             self.layer_shell.auto_exclusive_zone_enable(self.bottom_panel)
             self.bottom_panel.set_size_request(10, 10)
-        output = os.getenv("waypanel")
+        output = self.os.getenv("waypanel")
         output_name = None
         output_id = None
         geometry = None
         if output:
             try:
-                output_data = json.loads(output)
+                output_data = self.json.loads(output)
                 output_name = output_data.get("output_name")
                 output_id = output_data.get("output_id")
-            except (json.JSONDecodeError, TypeError):
+            except (self.json.JSONDecodeError, TypeError):
                 self.logger.error("Could not parse waypanel environment variable.")
         if output_name:
             output_id = self.ipc.get_output_id_by_name(output_name)
@@ -114,8 +107,8 @@ class TaskbarPlugin(BasePlugin):
             self.scrolled_window.set_size_request(
                 monitor_width, self.get_config(["taskbar", "panel", "exclusive_zone"])
             )
-        self.taskbar.set_halign(Gtk.Align.CENTER)
-        self.taskbar.set_valign(Gtk.Align.END)
+        self.taskbar.set_halign(self.gtk.Align.CENTER)
+        self.taskbar.set_valign(self.gtk.Align.END)
         self.scrolled_window.set_child(self.taskbar)
         self.taskbar.add_css_class("taskbar")
         self.Taskbar()
@@ -162,10 +155,12 @@ class TaskbarPlugin(BasePlugin):
 
     def _initialize_button_pool(self, count):
         for _ in range(count):
-            button = Gtk.Button()
-            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=self.spacing)
-            button.icon = Gtk.Image.new_from_icon_name("")  # pyright: ignore
-            button.label = Gtk.Label()  # pyright: ignore
+            button = self.gtk.Button()
+            box = self.gtk.Box(
+                orientation=self.gtk.Orientation.HORIZONTAL, spacing=self.spacing
+            )
+            button.icon = self.gtk.Image.new_from_icon_name("")  # pyright: ignore
+            button.label = self.gtk.Label()  # pyright: ignore
             button.icon.set_pixel_size(self.icon_size)  # pyright: ignore
             box.append(button.icon)  # pyright: ignore
             if self.show_label:
@@ -233,7 +228,7 @@ class TaskbarPlugin(BasePlugin):
     def Taskbar(self):
         self.logger.debug("Reconciling taskbar views.")
         if self._debounce_timer_id:
-            GLib.source_remove(self._debounce_timer_id)
+            self.glib.source_remove(self._debounce_timer_id)
             self._debounce_timer_id = None
         self._debounce_pending = False
         current_views = self.ipc.list_views()
@@ -289,10 +284,12 @@ class TaskbarPlugin(BasePlugin):
         button, pool_item = self._get_available_button()
         if not button:
             self.logger.info("Button pool exhausted, creating a new button.")
-            button = Gtk.Button()
-            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=self.spacing)
-            button.icon = Gtk.Image()  # pyright: ignore
-            button.label = Gtk.Label()  # pyright: ignore
+            button = self.gtk.Button()
+            box = self.gtk.Box(
+                orientation=self.gtk.Orientation.HORIZONTAL, spacing=self.spacing
+            )
+            button.icon = self.gtk.Image()  # pyright: ignore
+            button.label = self.gtk.Label()  # pyright: ignore
             button.icon.set_pixel_size(self.icon_size)  # pyright: ignore
             box.append(button.icon)  # pyright: ignore
             if self.show_label:
@@ -321,7 +318,7 @@ class TaskbarPlugin(BasePlugin):
                 view_id, direction, toggle_scale_off
             ),
         )
-        motion_controller = Gtk.EventControllerMotion()
+        motion_controller = self.gtk.EventControllerMotion()
         motion_controller.connect("enter", lambda *_: self.on_button_hover(view))
         motion_controller.connect("leave", lambda *_: self.on_button_hover_leave(view))
         button.add_controller(motion_controller)
@@ -329,8 +326,8 @@ class TaskbarPlugin(BasePlugin):
         return button
 
     def add_scroll_gesture(self, widget, view):
-        scroll_controller = Gtk.EventControllerScroll.new(
-            Gtk.EventControllerScrollFlags.VERTICAL
+        scroll_controller = self.gtk.EventControllerScroll.new(
+            self.gtk.EventControllerScrollFlags.VERTICAL
         )
         scroll_controller.connect("scroll", self.on_scroll, view.get("id"))
         widget.add_controller(scroll_controller)
@@ -377,19 +374,23 @@ class TaskbarPlugin(BasePlugin):
             if self.allow_move_view_scroll:
                 self.allow_move_view_scroll = False
                 if dy > 0:
-                    GLib.timeout_add(300, self.set_allow_move_view_scroll)
+                    self.glib.timeout_add(300, self.set_allow_move_view_scroll)
                     output_from_right = self.wf_helper.get_output_from("right")
                     if view_output_id != output_from_right:
                         self.wf_helper.send_view_to_output(view_id, "right")
-                        GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
+                        self.glib.timeout_add(
+                            100, self.choose_fullscreen_state, view_id
+                        )
                 elif dy < 0:
-                    GLib.timeout_add(300, self.set_allow_move_view_scroll)
+                    self.glib.timeout_add(300, self.set_allow_move_view_scroll)
                     output_from_left = self.wf_helper.get_output_from("left")
                     if view_output_id != output_from_left:
                         self.wf_helper.send_view_to_output(view_id, "left")
-                        GLib.timeout_add(100, self.choose_fullscreen_state, view_id)
+                        self.glib.timeout_add(
+                            100, self.choose_fullscreen_state, view_id
+                        )
         except Exception as e:
-            GLib.timeout_add(300, self.set_allow_move_view_scroll)
+            self.glib.timeout_add(300, self.set_allow_move_view_scroll)
             self.logger.error(
                 message=f"Error handling scroll event {e}",
             )
@@ -462,7 +463,7 @@ class TaskbarPlugin(BasePlugin):
             return False
 
     def on_view_app_id_changed(self, view):
-        GLib.timeout_add(500, self.match_on_app_id_changed_view, view)
+        self.glib.timeout_add(500, self.match_on_app_id_changed_view, view)
 
     def on_view_focused(self, view):
         try:
@@ -484,7 +485,7 @@ class TaskbarPlugin(BasePlugin):
     def _trigger_debounced_update(self):
         if not self._debounce_pending:
             self._debounce_pending = True
-            self._debounce_timer_id = GLib.timeout_add(
+            self._debounce_timer_id = self.glib.timeout_add(
                 self._debounce_interval, self.Taskbar
             )
 

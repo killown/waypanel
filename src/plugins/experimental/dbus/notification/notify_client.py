@@ -1,13 +1,9 @@
-import os
-import sqlite3
-import json
 import re
-from gi.repository import Gtk  # pyright: ignore
 from ._utils import NotifyUtils
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
-DEPS = ["top_panel", "notify_server"]
+DEPS = ["notify_server"]
 
 
 def get_plugin_placement(panel_instance):
@@ -29,7 +25,7 @@ class NotificationPopoverPlugin(BasePlugin):
         super().__init__(panel_instance)
         self.notify_utils = NotifyUtils(self.obj)
         self.notification_server = self.plugins["notify_server"]
-        self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+        self.vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
         self.vbox.set_margin_top(10)
         self.vbox.set_margin_bottom(10)
         self.vbox.set_margin_start(10)
@@ -39,7 +35,7 @@ class NotificationPopoverPlugin(BasePlugin):
         )
         self.vbox.set_margin_end(10)
         self.notification_on_popover = {}
-        self.notification_button = Gtk.Button.new_from_icon_name(
+        self.notification_button = self.gtk.Button.new_from_icon_name(
             self.gtk_helper.set_widget_icon_name(
                 "notify",
                 ["liteupdatesnotify", "org.gnome.Settings-notifications-symbolic"],
@@ -49,7 +45,7 @@ class NotificationPopoverPlugin(BasePlugin):
         self.notification_button.set_tooltip_text("View Recent Notifications")
         self.notification_button.connect("clicked", self.open_popover_notifications)
         self.gtk_helper.add_cursor_effect(self.notification_button)
-        self.dnd_switch = Gtk.Switch()
+        self.dnd_switch = self.gtk.Switch()
         self.dnd_switch.set_active(False)
         self.dnd_switch.connect("state-set", self.on_dnd_toggled)
         self.db_path = self.path_handler.get_data_path("db/notify/notifications.db")
@@ -81,10 +77,10 @@ class NotificationPopoverPlugin(BasePlugin):
         :return: List of notifications (dictionaries).
         """
         try:
-            if not os.path.exists(self.db_path):
+            if not self.os.path.exists(self.db_path):
                 self.logger.warning(f"Database file not found at {self.db_path}")
                 return []
-            conn = sqlite3.connect(self.db_path)
+            conn = self.sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             limit_int = int(limit) if limit is not None else 5
             cursor.execute(f"""
@@ -115,7 +111,7 @@ class NotificationPopoverPlugin(BasePlugin):
                         "body": body,
                         "app_icon": app_icon,
                         "actions": actions,
-                        "hints": json.loads(hints) if hints else {},
+                        "hints": self.json.loads(hints) if hints else {},
                         "timestamp": timestamp,
                     }
                 )
@@ -145,7 +141,7 @@ class NotificationPopoverPlugin(BasePlugin):
         self.logger.info(f"Launching URI: {uri}")
         return True
 
-    def on_launch_uri_clicked(self, button: Gtk.Button, uri: str):
+    def on_launch_uri_clicked(self, button, uri: str):
         """Handler for the dedicated 'Open Link' button."""
         self.on_launch_uri(uri)
 
@@ -199,9 +195,9 @@ class NotificationPopoverPlugin(BasePlugin):
         notification_icon_size = self.get_config(
             ["notify", "client", "notification_icon_size"], 64
         )
-        hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 30)
+        hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 30)
         hbox.add_css_class("notify-client-box")
-        close_button = Gtk.Button.new_from_icon_name("window-close-symbolic")
+        close_button = self.gtk.Button.new_from_icon_name("window-close-symbolic")
         close_button.set_tooltip_text("Close Notification")
         self.gtk_helper.add_cursor_effect(close_button)
         close_button.set_margin_start(10)
@@ -209,11 +205,11 @@ class NotificationPopoverPlugin(BasePlugin):
             "clicked", lambda _: self.delete_notification(notification.get("id"), hbox)
         )
         self.update_widget_safely(hbox.append, close_button)
-        left_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
-        left_box.set_halign(Gtk.Align.START)
-        left_box.set_valign(Gtk.Align.START)
-        right_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
-        right_box.set_halign(Gtk.Align.START)
+        left_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
+        left_box.set_halign(self.gtk.Align.START)
+        left_box.set_valign(self.gtk.Align.START)
+        right_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
+        right_box.set_halign(self.gtk.Align.START)
         if "gestures_setup" in self.plugins:
             gestures_setup = self.plugins["gestures_setup"]
             gestures_setup.create_gesture(
@@ -226,31 +222,31 @@ class NotificationPopoverPlugin(BasePlugin):
         icon = self.notify_utils.load_icon(notification)
         if icon and icon.get_name():
             icon.set_pixel_size(notification_icon_size)
-            icon.set_halign(Gtk.Align.START)
+            icon.set_halign(self.gtk.Align.START)
             icon.add_css_class("notification-icon")
             self.update_widget_safely(left_box.append, icon)
-        app_label = Gtk.Label(label=f"<b>{notification['app_name']}</b>")
+        app_label = self.gtk.Label(label=f"<b>{notification['app_name']}</b>")
         app_label.set_use_markup(True)
-        app_label.set_halign(Gtk.Align.START)
+        app_label.set_halign(self.gtk.Align.START)
         self.update_widget_safely(left_box.append, app_label)
-        summary_label = Gtk.Label(label=notification["summary"])
+        summary_label = self.gtk.Label(label=notification["summary"])
         summary_label.set_wrap(True)
-        summary_label.set_halign(Gtk.Align.START)
+        summary_label.set_halign(self.gtk.Align.START)
         summary_label.add_css_class("notify-client-heading")
         self.update_widget_safely(right_box.append, summary_label)
-        body_label = Gtk.Label(label=notification["body"])
+        body_label = self.gtk.Label(label=notification["body"])
         body_label.set_wrap(True)
         body_label.set_max_width_chars(body_max_width_chars)
-        body_label.set_halign(Gtk.Align.START)
+        body_label.set_halign(self.gtk.Align.START)
         self.update_widget_safely(right_box.append, body_label)
         body_label.add_css_class("notify-client-body-label")
-        timestamp_label = Gtk.Label(label=notification["timestamp"])
-        timestamp_label.set_halign(Gtk.Align.START)
+        timestamp_label = self.gtk.Label(label=notification["timestamp"])
+        timestamp_label.set_halign(self.gtk.Align.START)
         timestamp_label.add_css_class("notify-client-timestamp")
         self.update_widget_safely(right_box.append, timestamp_label)
         self.update_widget_safely(hbox.append, left_box)
         self.update_widget_safely(hbox.append, right_box)
-        separator = Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
+        separator = self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL)
         self.update_widget_safely(self.vbox.append, hbox)
         self.update_widget_safely(self.vbox.append, separator)
         self.notification_on_popover[notification["id"]] = hbox
@@ -259,7 +255,7 @@ class NotificationPopoverPlugin(BasePlugin):
     def clear_all_notifications(self, *_):
         """Clear all notifications from the database and remove them from the UI."""
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self.sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             cursor.execute("DELETE FROM notifications")
             conn.commit()
@@ -277,10 +273,10 @@ class NotificationPopoverPlugin(BasePlugin):
     def delete_notification(self, notification_id, notification_box):
         """Delete a notification from the database and remove it from the UI.
         :param notification_id: ID of the notification to delete.
-        :param notification_box: The Gtk.Box containing the notification content (the hbox).
+        :param notification_box: The self.gtk.Box containing the notification content (the hbox).
         """
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self.sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             cursor.execute("DELETE FROM notifications WHERE id = ?", (notification_id,))
             conn.commit()
@@ -289,7 +285,7 @@ class NotificationPopoverPlugin(BasePlugin):
             if parent:
                 separator = notification_box.get_next_sibling()
                 parent.remove(notification_box)
-                if separator and isinstance(separator, Gtk.Separator):
+                if separator and isinstance(separator, self.gtk.Separator):
                     parent.remove(separator)
             if notification_id in self.notification_on_popover:
                 del self.notification_on_popover[notification_id]
@@ -300,7 +296,7 @@ class NotificationPopoverPlugin(BasePlugin):
     def append_next_oldest_notification(self):
         """Fetch the next oldest notification from the database and append it to the UI."""
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self.sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             displayed_ids = tuple(self.notification_on_popover.keys())
             query = f"""
@@ -321,7 +317,7 @@ class NotificationPopoverPlugin(BasePlugin):
                     "body": row[3],
                     "app_icon": row[4],
                     "actions": row[5],
-                    "hints": json.loads(row[6]),
+                    "hints": self.json.loads(row[6]),
                     "timestamp": row[7],
                 }
                 self.create_notification_box(notification)
@@ -330,41 +326,41 @@ class NotificationPopoverPlugin(BasePlugin):
 
     def open_popover_notifications(self, *_):
         if not hasattr(self, "popover") or not self.popover:
-            self.popover = Gtk.Popover.new()
+            self.popover = self.gtk.Popover.new()
             self.popover_width = self.get_config(
                 ["notify", "client", "popover_width"], 500
             )
             self.popover_height = self.get_config(
                 ["notify", "client", "popover_height"], 600
             )
-            self.main_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+            self.main_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
             self.main_vbox.set_margin_top(10)
             self.main_vbox.set_margin_bottom(10)
             self.main_vbox.set_margin_start(10)
             self.main_vbox.set_margin_end(10)
-            clear_button = Gtk.Button(label="Clear")
+            clear_button = self.gtk.Button(label="Clear")
             clear_button.connect("clicked", lambda _: self.clear_all_notifications())
             clear_button.set_tooltip_text("Clear All Notifications")
             clear_button.set_margin_start(10)
             self.gtk_helper.add_cursor_effect(clear_button)
             self.update_widget_safely(self.main_vbox.append, clear_button)
-            self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+            self.vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
             self.vbox.set_vexpand(True)
-            scrolled_window = Gtk.ScrolledWindow()
+            scrolled_window = self.gtk.ScrolledWindow()
             scrolled_window.set_child(self.vbox)
             scrolled_window.set_vexpand(True)
             scrolled_window.set_propagate_natural_width(True)
             self.update_widget_safely(self.main_vbox.append, scrolled_window)
-            bottom_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+            bottom_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
             bottom_box.set_margin_top(10)
-            self.dnd_switch = Gtk.Switch()
+            self.dnd_switch = self.gtk.Switch()
             self.dnd_switch.set_active(False)
             self.dnd_switch.connect("state-set", self.on_dnd_toggled)
             self.gtk_helper.add_cursor_effect(self.dnd_switch)
-            dnd_label = Gtk.Label(label="Do Not Disturb")
-            dnd_label.set_halign(Gtk.Align.START)
+            dnd_label = self.gtk.Label(label="Do Not Disturb")
+            dnd_label.set_halign(self.gtk.Align.START)
             dnd_label.set_margin_end(10)
-            dnd_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 5)
+            dnd_box = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 5)
             self.update_widget_safely(dnd_box.append, dnd_label)
             self.update_widget_safely(dnd_box.append, self.dnd_switch)
             self.update_widget_safely(bottom_box.append, dnd_box)
@@ -381,7 +377,7 @@ class NotificationPopoverPlugin(BasePlugin):
         notifications = self.fetch_last_notifications()
         if not notifications:
             self.logger.info("No notifications to display.")
-            no_notify_label = Gtk.Label(label="No recent notifications")
+            no_notify_label = self.gtk.Label(label="No recent notifications")
             no_notify_label.add_css_class("no-notifications-label")
             self.update_widget_safely(self.vbox.append, no_notify_label)
         if notifications:

@@ -6,7 +6,6 @@ import pulsectl
 
 gi.require_version("Gtk", "4.0")
 ENABLE_PLUGIN = True
-DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):

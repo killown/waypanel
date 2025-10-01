@@ -1,9 +1,4 @@
-import os
-import subprocess
-import sys
-from subprocess import Popen, check_output
 import psutil
-from gi.repository import Gtk  # pyright: ignore
 from src.tools.control_center import ControlCenter
 from src.plugins.core._base import BasePlugin
 
@@ -30,13 +25,13 @@ class SystemDashboard(BasePlugin):
         self.panel_instance = panel_instance
 
     def message(self, msg):
-        dialog = Gtk.MessageDialog(
+        dialog = self.gtk.MessageDialog(
             transient_for=None,
-            message_type=Gtk.MessageType.INFO,
-            buttons=Gtk.ButtonsType.NONE,
+            message_type=self.gtk.MessageType.INFO,
+            buttons=self.gtk.ButtonsType.NONE,
             text=msg,
         )
-        close_btn = Gtk.Button(label="_Close", use_underline=True)
+        close_btn = self.gtk.Button(label="_Close", use_underline=True)
         close_btn.connect("clicked", lambda *_: dialog.close())
         dialog.get_message_area().append(close_btn)  # pyright: ignore
         dialog.show()
@@ -44,29 +39,18 @@ class SystemDashboard(BasePlugin):
     def launch_settings(self):
         app = ControlCenter(self.panel_instance)
         app.run(None)
-        try:
-            subprocess.Popen(["waypanel-settings"], start_new_session=True)
-        except FileNotFoundError:
-            for path in [
-                "/usr/local/bin/waypanel-settings",
-                "/usr/bin/waypanel-settings",
-                f"{os.path.expanduser('~')}/.local/bin/waypanel-settings",
-            ]:
-                if os.path.exists(path):
-                    subprocess.Popen([path], start_new_session=True)
-                    break
-            else:
-                self.logger.info(
-                    "Error: waypanel-sett # pyright: ignoreings not found in PATH",
-                    file=sys.stderr,
-                )
 
     def get_system_list(self):
-        devices = check_output("systemctl devices".split()).decode().strip().split("\n")
+        devices = (
+            self.subprocess.check_output("systemctl devices".split())
+            .decode()
+            .strip()
+            .split("\n")
+        )
         return [" ".join(i.split(" ")[1:]) for i in devices]
 
     def create_menu_popover_system(self):
-        self.menubutton_dashboard = Gtk.Button()
+        self.menubutton_dashboard = self.gtk.Button()
         self.main_widget = (self.menubutton_dashboard, "append")
         self.menubutton_dashboard.connect("clicked", self.open_popover_dashboard)
         icon_name = self.gtk_helper.set_widget_icon_name(
@@ -83,14 +67,14 @@ class SystemDashboard(BasePlugin):
         return self.menubutton_dashboard
 
     def create_popover_system(self, *_):
-        self.popover_dashboard = Gtk.Popover.new()
+        self.popover_dashboard = self.gtk.Popover.new()
         self.popover_dashboard.set_has_arrow(True)
         self.popover_dashboard.connect("closed", self.popover_is_closed)
         self.popover_dashboard.connect("notify::visible", self.popover_is_open)
         self.popover_dashboard.set_vexpand(True)
         self.popover_dashboard.set_hexpand(True)
-        self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        self.stack = Gtk.Stack.new()
+        self.main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
+        self.stack = self.gtk.Stack.new()
         logout_icon = self.gtk_helper.set_widget_icon_name(
             None,
             [
@@ -143,9 +127,9 @@ class SystemDashboard(BasePlugin):
         done = []
         for data, category in data_and_categories.items():
             if category not in done:
-                flowbox = Gtk.FlowBox.new()
+                flowbox = self.gtk.FlowBox.new()
                 flowbox.props.homogeneous = True
-                flowbox.set_valign(Gtk.Align.START)
+                flowbox.set_valign(self.gtk.Align.START)
                 flowbox.props.margin_start = 15
                 flowbox.props.margin_end = 15
                 flowbox.props.margin_top = 15
@@ -153,22 +137,22 @@ class SystemDashboard(BasePlugin):
                 flowbox.props.hexpand = True
                 flowbox.props.vexpand = True
                 flowbox.props.max_children_per_line = 3
-                flowbox.props.selection_mode = Gtk.SelectionMode.NONE
+                flowbox.props.selection_mode = self.gtk.SelectionMode.NONE
                 self.stack.add_titled(flowbox, category, category)
                 done.append(category)
             else:
                 flowbox = self.stack.get_child_by_name(category)
-            icon_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-            icon = Gtk.Image.new_from_icon_name(data[2])
-            icon.set_icon_size(Gtk.IconSize.LARGE)
+            icon_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
+            icon = self.gtk.Image.new_from_icon_name(data[2])
+            icon.set_icon_size(self.gtk.IconSize.LARGE)
             icon_vbox.append(icon)
-            name_label = Gtk.Label.new(data[0])
+            name_label = self.gtk.Label.new(data[0])
             icon_vbox.append(name_label)
-            summary_label = Gtk.Label.new(data[1])
+            summary_label = self.gtk.Label.new(data[1])
             icon_vbox.append(summary_label)
-            button = Gtk.Button.new()
+            button = self.gtk.Button.new()
             button.set_has_frame(False)
-            if icon_vbox is not None and isinstance(icon_vbox, Gtk.Widget):
+            if icon_vbox is not None and isinstance(icon_vbox, self.gtk.Widget):
                 button.set_child(icon_vbox)
             else:
                 self.logger.info("Error: Invalid icon_vbox provided")
@@ -187,16 +171,16 @@ class SystemDashboard(BasePlugin):
     def on_system_clicked(self, device, *_):
         device_id = device.split()[0]
         cmd = "systemctl connect {0}".format(device_id).split()
-        Popen(cmd)
+        self.subprocess.Popen(cmd)
         connected_devices = "systemctl info".split()
         try:
-            connected_devices = check_output(connected_devices).decode()
+            connected_devices = self.subprocess.check_output(connected_devices).decode()
         except Exception as e:
-            self.logger.error(e)
+            self.logger.error(f"{e}")
             return
         if device_id in connected_devices:
             cmd = "systemctl disconnect {0}".format(device_id).split()
-            Popen(cmd)
+            self.subprocess.Popen(cmd)
 
     def run_app_from_dashboard(self, x):
         selected_text, filename = x.get_child().MYTEXT
@@ -224,23 +208,23 @@ class SystemDashboard(BasePlugin):
                 pass
 
     def run_later(self, command, delay):
-        Popen(["bash", "-c", f"sleep {delay} && {command}"])
+        self.subprocess.Popen(["bash", "-c", f"sleep {delay} && {command}"])
 
     def on_action(self, button, action):
         if action == "Exit Waypanel":
-            Popen("pkill -f waypanel/main.py".split())
+            self.subprocess.Popen("pkill -f waypanel/main.py".split())
         if action == "Restart Waypanel":
             self.run_later("waypanel &", 0.1)
         if action == "Logout":
-            Popen("wayland-logout".split())
+            self.subprocess.Popen("wayland-logout".split())
         if action == "Shutdown":
-            Popen("shutdown -h now".split())
+            self.subprocess.Popen("shutdown -h now".split())
         if action == "Suspend":
-            Popen("systemctl suspend".split())
+            self.subprocess.Popen("systemctl suspend".split())
         if action == "Reboot":
-            Popen("reboot".split())
+            self.subprocess.Popen("reboot".split())
         if action == "Lock":
-            Popen(
+            self.subprocess.Popen(
                 """swaylock --screenshots --clock --indicator
                      --grace-no-mouse --indicator-radius 99
                      --indicator-thickness 6 --effect-blur 7x5
@@ -273,8 +257,8 @@ class SystemDashboard(BasePlugin):
         This plugin creates a popover-based user interface for managing system-level actions.
         It provides a single access point for common tasks such as logging out, shutting down, or accessing settings.
         Its core logic is centered on **dynamic UI generation and system command execution**:
-        1.  **UI Generation**: It creates a popover that contains a grid of buttons (`Gtk.FlowBox`), where each button represents a system action. It dynamically selects the most suitable icon for each button from a predefined list.
-        2.  **System Command Execution**: For each button, it executes a corresponding system command (e.g., `reboot`, `shutdown`, `swaylock`) using `subprocess.Popen`, which allows the plugin to interact with the underlying operating system.
+        1.  **UI Generation**: It creates a popover that contains a grid of buttons (`self.gtk.FlowBox`), where each button represents a system action. It dynamically selects the most suitable icon for each button from a predefined list.
+        2.  **System Command Execution**: For each button, it executes a corresponding system command (e.g., `reboot`, `shutdown`, `swaylock`) using `subprocess.self.subprocess.Popen`, which allows the plugin to interact with the underlying operating system.
         3.  **External Tool Integration**: It includes a check to verify the existence of an external application (`waypanel-settings`) before attempting to launch it, providing graceful error handling if the dependency is not met.
         4.  **Session Management**: It provides direct commands to manage the user's session, including exiting and restarting the panel itself.
         """

@@ -1,14 +1,9 @@
-import os
 import random
-import asyncio
 import aiohttp
-import json
-from gi.repository import Gtk, Gio, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 from ._mullvad_info import MullvadStatusDialog
 
 ENABLE_PLUGIN = True
-DEPS = ["top_panel", "network_manager"]
 
 
 def get_plugin_placement(panel_instance):
@@ -30,7 +25,7 @@ class MullvadPlugin(BasePlugin):
         super().__init__(panel_instance)
         self.mullvad_version = None
         self.city_code = self.get_city_code()
-        self.menubutton_mullvad = Gtk.MenuButton()
+        self.menubutton_mullvad = self.gtk.MenuButton()
         self.status_label = None
         self.main_widget = (self.menubutton_mullvad, "append")
 
@@ -41,7 +36,7 @@ class MullvadPlugin(BasePlugin):
     def get_mullvad_version(self):
         """Retrieve the Mullvad version using the `mullvad --version` command."""
         try:
-            version = os.popen("mullvad --version").read().strip()
+            version = self.os.popen("mullvad --version").read().strip()
             return version
         except Exception as e:
             self.logger.info(f"Error retrieving Mullvad version: {e}")
@@ -49,16 +44,16 @@ class MullvadPlugin(BasePlugin):
 
     def get_city_code(self):
         """Get the city code from the plugin's config section in config.toml."""
-        plugin_config = self.config_handler.config_data.get("plugins", {}).get(
-            "mullvad", {}
-        )
-        return plugin_config.get("city_code", "sao")
+        plugin_config = self.get_config(["plugins", "mullvad", "city_code"])
+        if not plugin_config:
+            plugin_config = "sao"
+        return plugin_config
 
     async def _async_init_setup(self):
         """
         Asynchronous setup for the plugin.
         """
-        self.mullvad_version = await asyncio.to_thread(self.get_mullvad_version)
+        self.mullvad_version = await self.asyncio.to_thread(self.get_mullvad_version)
         self.icon_name = self.gtk_helper.icon_exist(
             "mullvad-tray-9", ["mullvad-vpn-symbolic", "mullvaddg"]
         )
@@ -66,19 +61,19 @@ class MullvadPlugin(BasePlugin):
         self.menubutton_mullvad.add_css_class("top_right_widgets")
         self.gtk_helper.add_cursor_effect(self.menubutton_mullvad)
         self.create_menu_model()
-        if os.path.exists("/usr/bin/mullvad"):
-            GLib.timeout_add(10000, self.update_vpn_status_async)
+        if self.os.path.exists("/usr/bin/mullvad"):
+            self.glib.timeout_add(10000, self.update_vpn_status_async)
 
     def create_menu_model(self):
-        """Create a Gio.Menu and populate it with options for Mullvad."""
-        menu = Gio.Menu()
-        connect_item = Gio.MenuItem.new("Connect", "app.connect")
-        disconnect_item = Gio.MenuItem.new("Disconnect", "app.disconnect")
-        status_item = Gio.MenuItem.new("Check Status", "app.status")
-        random_item_city = Gio.MenuItem.new(
+        """Create a self.gio.Menu and populate it with options for Mullvad."""
+        menu = self.gio.Menu()
+        connect_item = self.gio.MenuItem.new("Connect", "app.connect")
+        disconnect_item = self.gio.MenuItem.new("Disconnect", "app.disconnect")
+        status_item = self.gio.MenuItem.new("Check Status", "app.status")
+        random_item_city = self.gio.MenuItem.new(
             f"Random {self.city_code.capitalize()} Relay", "app.random_city"
         )
-        random_item_global = Gio.MenuItem.new(
+        random_item_global = self.gio.MenuItem.new(
             "Random Global Relay", "app.random_global"
         )
         menu.append_item(connect_item)
@@ -87,12 +82,12 @@ class MullvadPlugin(BasePlugin):
         menu.append_item(random_item_city)
         menu.append_item(random_item_global)
         self.menubutton_mullvad.set_menu_model(menu)
-        action_group = Gio.SimpleActionGroup()
-        connect_action = Gio.SimpleAction.new("connect", None)
-        disconnect_action = Gio.SimpleAction.new("disconnect", None)
-        status_action = Gio.SimpleAction.new("status", None)
-        random_action_city = Gio.SimpleAction.new("random_city", None)
-        random_action_global = Gio.SimpleAction.new("random_global", None)
+        action_group = self.gio.SimpleActionGroup()
+        connect_action = self.gio.SimpleAction.new("connect", None)
+        disconnect_action = self.gio.SimpleAction.new("disconnect", None)
+        status_action = self.gio.SimpleAction.new("status", None)
+        random_action_city = self.gio.SimpleAction.new("random_city", None)
+        random_action_global = self.gio.SimpleAction.new("random_global", None)
         connect_action.connect(
             "activate", lambda *args: self.run_in_async_task(self.connect_vpn())
         )
@@ -116,33 +111,33 @@ class MullvadPlugin(BasePlugin):
         action_group.add_action(random_action_city)
         action_group.add_action(random_action_global)
         self.menubutton_mullvad.insert_action_group("app", action_group)
-        self.popover_mullvad = Gtk.Popover()
+        self.popover_mullvad = self.gtk.Popover()
         self.popover_mullvad.set_parent(self.menubutton_mullvad)
         self.popover_mullvad.set_has_arrow(False)
         self.create_popover_content()
 
     def create_popover_content(self):
-        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        version_label = Gtk.Label(label=self.mullvad_version)  # pyright: ignore
+        vbox = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL, spacing=6)
+        version_label = self.gtk.Label(label=self.mullvad_version)  # pyright: ignore
         version_label.add_css_class("mullvad-header-label")
         vbox.append(version_label)
-        self.status_label = Gtk.Label(label="Checking status...")
+        self.status_label = self.gtk.Label(label="Checking status...")
         vbox.append(self.status_label)
-        vbox.append(Gtk.Separator())
-        connect_button = Gtk.Button(label="Connect")
+        vbox.append(self.gtk.Separator())
+        connect_button = self.gtk.Button(label="Connect")
         connect_button.connect(
             "clicked", lambda *args: self.run_in_async_task(self.connect_vpn())
         )
         vbox.append(connect_button)
-        disconnect_button = Gtk.Button(label="Disconnect")
+        disconnect_button = self.gtk.Button(label="Disconnect")
         disconnect_button.connect(
             "clicked", lambda *args: self.run_in_async_task(self.disconnect_vpn())
         )
         vbox.append(disconnect_button)
-        status_button = Gtk.Button(label="Check Status")
+        status_button = self.gtk.Button(label="Check Status")
         status_button.connect("clicked", self.check_status)
         vbox.append(status_button)
-        random_button_city = Gtk.Button(
+        random_button_city = self.gtk.Button(
             label=f"Random {self.city_code.capitalize()} Relay"
         )
         random_button_city.connect(
@@ -150,7 +145,7 @@ class MullvadPlugin(BasePlugin):
             lambda *args: self.run_in_async_task(self.set_mullvad_relay_by_city()),
         )
         vbox.append(random_button_city)
-        random_button_global = Gtk.Button(label="Random Global Relay")
+        random_button_global = self.gtk.Button(label="Random Global Relay")
         random_button_global.connect(
             "clicked",
             lambda *args: self.run_in_async_task(
@@ -161,14 +156,14 @@ class MullvadPlugin(BasePlugin):
         self.popover_mullvad.set_child(vbox)
 
     def update_vpn_status_async(self):
-        """Wrapper to call the async status update from GLib."""
+        """Wrapper to call the async status update from self.glib."""
         self.run_in_async_task(self.update_vpn_status())
         return True
 
     async def connect_vpn(self):
         """Connect to Mullvad VPN asynchronously."""
         self.logger.info("Connecting to Mullvad VPN...")
-        await asyncio.create_subprocess_exec("mullvad", "connect")
+        await self.asyncio.create_subprocess_exec("mullvad", "connect")
         self.notifier.notify_send(
             "Mullvad VPN", "The VPN is connected now", "mullvad-vpn"
         )
@@ -176,7 +171,7 @@ class MullvadPlugin(BasePlugin):
     async def disconnect_vpn(self):
         """Disconnect from Mullvad VPN asynchronously."""
         self.logger.info("Disconnecting from Mullvad VPN...")
-        await asyncio.create_subprocess_exec("mullvad", "disconnect")
+        await self.asyncio.create_subprocess_exec("mullvad", "disconnect")
         self.notifier.notify_send(
             "Mullvad VPN", "The VPN is disconnected now", "mullvad-vpn"
         )
@@ -188,16 +183,16 @@ class MullvadPlugin(BasePlugin):
 
     async def get_current_relay_hostname(self) -> str:
         try:
-            proc = await asyncio.create_subprocess_exec(
+            proc = await self.asyncio.create_subprocess_exec(
                 "mullvad",
                 "status",
                 "--json",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.DEVNULL,
+                stdout=self.asyncio.subprocess.PIPE,
+                stderr=self.asyncio.subprocess.DEVNULL,
             )
             stdout, _ = await proc.communicate()
             if stdout:
-                data = json.loads(stdout.decode())
+                data = self.json.loads(stdout.decode())
                 return data.get("relay", {}).get("hostname")
         except Exception as e:
             self.logger.error(f"Failed to get current relay: {e}")
@@ -226,7 +221,7 @@ class MullvadPlugin(BasePlugin):
             relay_choice = random.choice(available)["hostname"]
             msg = f"Changing Mullvad relay to {relay_choice}"
             self.notifier.notify_send("Mullvad VPN", msg, "mullvad-vpn")
-            await asyncio.create_subprocess_exec(
+            await self.asyncio.create_subprocess_exec(
                 "mullvad", "relay", "set", "location", relay_choice
             )
         except Exception as e:
@@ -253,7 +248,7 @@ class MullvadPlugin(BasePlugin):
             relay_choice = random.choice(available)["hostname"]
             msg = f"Changing Mullvad relay to {relay_choice}"
             self.notifier.notify_send("Mullvad VPN", msg, "mullvad-vpn")
-            await asyncio.create_subprocess_exec(
+            await self.asyncio.create_subprocess_exec(
                 "mullvad", "relay", "set", "location", relay_choice
             )
         except Exception as e:
@@ -262,7 +257,7 @@ class MullvadPlugin(BasePlugin):
     async def update_vpn_status(self):
         """Check the status of the Mullvad VPN and update the UI."""
         try:
-            net_files = await asyncio.to_thread(os.listdir, "/sys/class/net")
+            net_files = await self.asyncio.to_thread(self.os.listdir, "/sys/class/net")
             is_mullvad_active = any(
                 (file.startswith("wg") or file.startswith("tun")) for file in net_files
             )
@@ -287,11 +282,11 @@ class MullvadPlugin(BasePlugin):
     async def get_mullvad_status_string(self):
         """Get the full status string from the mullvad command."""
         try:
-            proc = await asyncio.create_subprocess_exec(
+            proc = await self.asyncio.create_subprocess_exec(
                 "mullvad",
                 "status",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.DEVNULL,
+                stdout=self.asyncio.subprocess.PIPE,
+                stderr=self.asyncio.subprocess.DEVNULL,
             )
             stdout, _ = await proc.communicate()
             return stdout.decode().strip()
@@ -327,14 +322,14 @@ class MullvadPlugin(BasePlugin):
            are executed safely on the main GTK thread, preventing crashes
            from concurrent access.
         3. **Asynchronous Command Execution**: The plugin uses
-           `asyncio.create_subprocess_exec` to run `mullvad` commands (connect,
-           disconnect, relay set) and `asyncio.to_thread(os.listdir, ...)` to
+           `self.asyncio.create_subprocess_exec` to run `mullvad` commands (connect,
+           disconnect, relay set) and `self.asyncio.to_thread(os.listdir, ...)` to
            run blocking file system checks in a thread pool. This is crucial for
            non-blocking UI operation.
         4. **UI and State Management**:
            - **`on_start`**: This method is the primary setup function. It
              asynchronously retrieves the Mullvad version, sets up the main GTK widget,
-             and starts a recurring `GLib.timeout_add` to update the VPN status.
+             and starts a recurring `self.glib.timeout_add` to update the VPN status.
            - **`update_vpn_status`**: This method is called periodically to
              check the VPN's connection state, inspecting network interfaces and
              updating the panel icon and status label accordingly.

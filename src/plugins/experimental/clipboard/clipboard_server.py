@@ -1,9 +1,3 @@
-import asyncio
-import os
-import sqlite3
-from concurrent.futures import ThreadPoolExecutor
-import aiosqlite
-import subprocess
 from src.shared.path_handler import PathHandler
 from src.plugins.core._base import BasePlugin
 
@@ -21,6 +15,7 @@ def initialize_plugin(panel_instance):
 
 def run_server_in_background(panel_instance):
     """Start the clipboard server without blocking main thread"""
+    import asyncio
 
     async def _run_server():
         server = AsyncClipboardServer(panel_instance)
@@ -44,6 +39,8 @@ def initialize_db(panel_instance):
     UPDATED: Includes the 'label' and 'is_pinned' columns.
     Returns: Database connection
     """
+    import sqlite3
+
     path_handler = PathHandler(panel_instance)
     db_path = path_handler.get_data_path("db/clipboard/clipboard_server.db")
     conn = sqlite3.connect(db_path)
@@ -65,6 +62,9 @@ def initialize_db(panel_instance):
 
 
 def verify_db(panel_instance):
+    import os
+    import sqlite3
+
     logger = panel_instance.logger
     path_handler = PathHandler(panel_instance)
     db_path = path_handler.get_data_path("db/clipboard/clipboard_server.db")
@@ -113,7 +113,7 @@ class AsyncClipboardServer(BasePlugin):
     def __init__(self, panel_instance, db_path=None):
         super().__init__(panel_instance)
         self.last_clipboard_content = ""
-        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.executor = self.thread_pool_executor(max_workers=1)
         self.running = False
         self.db_path = self.path_handler.get_data_path(
             "db/clipboard/clipboard_server.db"
@@ -134,7 +134,7 @@ class AsyncClipboardServer(BasePlugin):
         """
         path_handler = PathHandler(panel_instance)
         db_path = path_handler.get_data_path("db/clipboard/clipboard_server.db")
-        async with aiosqlite.connect(db_path) as db:
+        async with self.aiosqlite.connect(db_path) as db:
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS clipboard_items (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -155,7 +155,7 @@ class AsyncClipboardServer(BasePlugin):
         """
         if not content.strip() or content == self.last_clipboard_content:
             return
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute(
                 "SELECT COUNT(*) FROM clipboard_items WHERE content = ?", (content,)
             )
@@ -191,7 +191,7 @@ class AsyncClipboardServer(BasePlugin):
         Fetch recent items (pinned items first, then newest first).
         UPDATED: Now selects id, content, label, and is_pinned.
         """
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute(
                 "SELECT id, content, label, is_pinned FROM clipboard_items ORDER BY is_pinned DESC, timestamp DESC LIMIT ?",
                 (limit,),
@@ -202,7 +202,7 @@ class AsyncClipboardServer(BasePlugin):
         """
         Update the custom label for a specific item ID.
         """
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.aiosqlite.connect(self.db_path) as db:
             await db.execute(
                 "UPDATE clipboard_items SET label = ? WHERE id = ?",
                 (new_label, item_id),
@@ -216,7 +216,7 @@ class AsyncClipboardServer(BasePlugin):
         NEW: Update the 'is_pinned' status (pin/unpin) for a specific item ID.
         NOTE: Expects 0 (unpinned) or 1 (pinned).
         """
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.aiosqlite.connect(self.db_path) as db:
             await db.execute(
                 "UPDATE clipboard_items SET is_pinned = ? WHERE id = ?",
                 (pin_value, item_id),
@@ -229,7 +229,7 @@ class AsyncClipboardServer(BasePlugin):
 
     async def clear_all(self):
         """Delete all clipboard history."""
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.aiosqlite.connect(self.db_path) as db:
             await db.execute("DELETE FROM clipboard_items")
             await db.commit()
             if self.log_enabled:
@@ -237,7 +237,7 @@ class AsyncClipboardServer(BasePlugin):
 
     async def delete_item(self, item_id):
         """Delete a specific item by ID."""
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.aiosqlite.connect(self.db_path) as db:
             await db.execute("DELETE FROM clipboard_items WHERE id = ?", (item_id,))
             await db.commit()
             if self.log_enabled:
@@ -247,26 +247,26 @@ class AsyncClipboardServer(BasePlugin):
         """Background task: Watch clipboard for changes using wl-paste."""
         self.running = True
         while self.running:
-            content = await asyncio.to_thread(
-                lambda: subprocess.run(
+            content = await self.asyncio.to_thread(
+                lambda: self.subprocess.run(
                     ["wl-paste", "--no-newline"], capture_output=True, text=True
                 ).stdout.strip()
             )
             if not content:
-                image_data = await asyncio.to_thread(
-                    lambda: subprocess.run(
+                image_data = await self.asyncio.to_thread(
+                    lambda: self.subprocess.run(
                         ["wl-paste", "--type", "image/png"], capture_output=True
                     ).stdout
                 )
                 if image_data:
                     content = "<image>"
             await self.add_item(content)
-            await asyncio.sleep(self.monitor_interval)
+            await self.asyncio.sleep(self.monitor_interval)
 
     async def start(self):
         """Start the clipboard monitor."""
         await self._init_db(self.obj, self.db_path)
-        asyncio.create_task(self.monitor())
+        self.asyncio.create_task(self.monitor())
         if self.log_enabled:
             self.logger.info("Clipboard monitor started.")
 
@@ -291,14 +291,14 @@ class AsyncClipboardServer(BasePlugin):
         asynchronous, concurrent design for reliable clipboard history
         management. Its key principles are:
         1.  **Asynchronous Database Operations**: The `AsyncClipboardServer`
-            uses `asyncio` and `aiosqlite` to perform all database
+            uses `self.asyncio` and `self.aiosqlite` to perform all database
             interactions. This ensures that reading from and writing to
             the persistent SQLite database happens without blocking the
             main application thread, preserving responsiveness.
         2.  **Background Monitoring with Concurrency**: The `monitor`
             function continuously checks the system clipboard using an
             external command (`wl-paste`). It offloads this blocking
-            I/O operation to a separate thread using `asyncio.to_thread`
+            I/O operation to a separate thread using `self.asyncio.to_thread`
             to prevent the main event loop from freezing, a vital step
             for a responsive application.
         3.  **Data Persistence and Integrity**: The server stores a history

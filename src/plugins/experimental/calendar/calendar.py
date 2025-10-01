@@ -1,8 +1,5 @@
-import gi
-from gi.repository import Gtk  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
-gi.require_version("Gtk", "4.0")
 ENABLE_PLUGIN = True
 DEPS = ["clock"]
 
@@ -32,17 +29,17 @@ class CalendarPlugin(BasePlugin):
             return
         clock_plugin = self.obj.plugins["clock"]
         clock_button = clock_plugin.clock_button
-        self.popover_calendar = Gtk.Popover.new()
+        self.popover_calendar = self.gtk.Popover.new()
         self.popover_calendar.set_parent(clock_button)
         self.popover_calendar.set_has_arrow(False)
-        self.grid = Gtk.Grid()
+        self.grid = self.gtk.Grid()
         self.grid.set_row_spacing(10)
         self.grid.set_column_spacing(10)
         self.grid.set_margin_top(10)
         self.grid.set_margin_bottom(10)
         self.grid.set_margin_start(10)
         self.grid.set_margin_end(10)
-        self.calendar = Gtk.Calendar()
+        self.calendar = self.gtk.Calendar()
         self.calendar.add_css_class("calendar-widget")
         self.grid.attach(self.calendar, 0, 0, 1, 1)
         self.popover_calendar.set_child(self.grid)
@@ -69,14 +66,14 @@ class CalendarPlugin(BasePlugin):
         Its design is based on these principles:
         1.  **Dependent UI Augmentation**: This plugin does not create its
             own panel button. Instead, it explicitly depends on the `clock`
-            plugin and attaches its `Gtk.Popover` to the clock's button.
+            plugin and attaches its `self.gtk.Popover` to the clock's button.
             This approach creates a cohesive user experience where two
             logically related components are visually and functionally
             integrated.
         2.  **Modular UI Construction**: The calendar interface is built
-            by composing several standard GTK widgets: a `Gtk.Grid` for
-            layout, a `Gtk.Calendar` widget for the core functionality,
-            and a `Gtk.Popover` to serve as a floating, temporary window
+            by composing several standard GTK widgets: a `self.gtk.Grid` for
+            layout, a `self.gtk.Calendar` widget for the core functionality,
+            and a `self.gtk.Popover` to serve as a floating, temporary window
             for the entire structure.
         3.  **Event-Driven Interaction**: The plugin's primary interaction
             is handled by connecting the `clicked` signal of the clock

@@ -1,11 +1,21 @@
 from src.core import create_panel
-from gi.repository import Gtk, GLib  # pyright: ignore
+import gi
+from gi.repository import Gtk, GLib, Gdk, Gio, Pango, GdkPixbuf  # pyright: ignore
 import os
+import time
+import datetime
+import orjson
 import inspect
 import asyncio
+import importlib
+import requests
+import subprocess
+import sqlite3
+import aiosqlite
+import toml
 from asyncio import Task, Future as AwaitableFuture
 from concurrent.futures import ThreadPoolExecutor, Future
-from typing import Any, List, ClassVar, Callable, Awaitable, Optional, Union, Set
+from typing import Any, List, ClassVar, Callable, Awaitable, Optional, Union, Set, Dict
 from src.plugins.core._event_loop import get_global_executor, get_global_loop
 from src.shared.path_handler import PathHandler
 from src.shared.notify_send import Notifier
@@ -14,6 +24,11 @@ from src.shared.gtk_helpers import GtkHelpers
 from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
 from src.shared.command_runner import CommandRunner
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+gi.require_version("GLib", "2.0")
+gi.require_version("Gio", "2.0")
 
 
 class PluginLogAdapter:
@@ -141,6 +156,42 @@ class BasePlugin:
         self._unset_layer_pos_exclusive: Any = (
             create_panel.unset_layer_position_exclusive
         )
+        self._loaded_modules: Dict[str, Any] = {}
+
+    def lazy_load_module(self, module_name: str) -> Optional[Any]:
+        """
+        Lazily and dynamically imports a module by name.
+        It caches the imported module in the instance to prevent re-importing
+        on subsequent calls, which is faster and avoids potential side effects.
+
+        Args:
+            module_name (str): The full path of the module to import (e.g., 'gi.repository.Notify').
+
+        Returns:
+            Optional[Any]: The imported module object if successful, None otherwise.
+        """
+        if module_name in self._loaded_modules:
+            self.logger.debug(f"Module '{module_name}' retrieved from cache.")
+            return self._loaded_modules[module_name]
+
+        try:
+            # Use importlib for dynamic loading
+            module = importlib.import_module(module_name)
+            self._loaded_modules[module_name] = module
+            self.logger.debug(
+                f"Module '{module_name}' imported and cached successfully."
+            )
+            return module
+        except ImportError as e:
+            self.logger.error(
+                f"Failed to lazy-load module '{module_name}'. Check if it is installed. Error: {e}"
+            )
+            return None
+        except Exception as e:
+            self.logger.error(
+                f"An unexpected error occurred while loading module '{module_name}': {e}"
+            )
+            return None
 
     def get_config(self, keys: List[str], default: Any = None):
         """
@@ -253,6 +304,96 @@ class BasePlugin:
         self._running_tasks.add(task)
         task.add_done_callback(done_callback)
         self.logger.debug(f"Scheduled async task {coro_name} in global loop.")
+
+    @property
+    def os(self) -> Any:
+        """Read-only access to the imported 'os' standard library module."""
+        return os
+
+    @property
+    def json(self) -> Any:
+        """Read-only access to the imported 'orjson' standard library module."""
+        return orjson
+
+    @property
+    def gtk(self) -> Any:
+        """Read-only access to the gi.repository.Gtk module."""
+        return Gtk
+
+    @property
+    def glib(self) -> Any:
+        """Read-only access to the gi.repository.GLib module."""
+        return GLib
+
+    @property
+    def gio(self) -> Any:
+        """Read-only access to the gi.repository.Gio module."""
+        return Gio
+
+    @property
+    def gdk(self) -> Any:
+        """Read-only access to the gi.repository.Gdk module."""
+        return Gdk
+
+    @property
+    def gdkpixbuf(self) -> Any:
+        """Read-only access to the gi.repository.GdkPixbuf module."""
+        return GdkPixbuf
+
+    @property
+    def pango(self) -> Any:
+        """Read-only access to the gi.repository.Pango module."""
+        return Pango
+
+    @property
+    def time(self) -> Any:
+        """Read-only access to the time module."""
+        return time
+
+    @property
+    def asyncio(self) -> Any:
+        """Read-only access to the asyncio module."""
+        return asyncio
+
+    @property
+    def subprocess(self) -> Any:
+        """Read-only access to the subprocess module."""
+        return subprocess
+
+    @property
+    def requests(self) -> Any:
+        """Read-only access to the requests module."""
+        return requests
+
+    @property
+    def datetime(self) -> Any:
+        """Read-only access to the gi.repository.datetime module."""
+        return datetime
+
+    @property
+    def thread_pool_executor(self) -> Any:
+        """Read-only access to the ThreadPoolExecutor module."""
+        return ThreadPoolExecutor
+
+    @property
+    def future(self) -> Any:
+        """Read-only access to the Future module."""
+        return Future
+
+    @property
+    def sqlite3(self) -> Any:
+        """Read-only access to the sqlite3 module."""
+        return sqlite3
+
+    @property
+    def aiosqlite(self) -> Any:
+        """Read-only access to the aiosqlite module."""
+        return aiosqlite
+
+    @property
+    def toml(self) -> Any:
+        """Read-only access to the toml module."""
+        return toml
 
     @property
     def obj(self) -> Any:

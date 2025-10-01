@@ -5,6 +5,7 @@ import glob
 import subprocess
 from datetime import datetime
 import threading
+import compileall
 
 
 # =========================================================
@@ -143,11 +144,13 @@ def main():
     INSTALLED_PATH = find_package_files()
     if INSTALLED_PATH:
         REQ_FILE = os.path.join(INSTALLED_PATH, "requirements.txt")
-        MAIN_PY = os.path.join(INSTALLED_PATH, "main.py")
+        MAIN_PY_DIR = INSTALLED_PATH  # Directory where the main script resides
+        MAIN_PY = os.path.join(INSTALLED_PATH, "main.py", "-O")
         print(f"[INFO] Using installed package from: {INSTALLED_PATH}")
         os.environ["PYTHONPATH"] = INSTALLED_PATH
     else:
         REQ_FILE = os.path.join(SCRIPT_DIR, "requirements.txt")
+        MAIN_PY_DIR = SCRIPT_DIR
         MAIN_PY = os.path.join(SCRIPT_DIR, "main.py")
         print(f"[INFO] Using development path: {SCRIPT_DIR}")
         os.environ["PYTHONPATH"] = SCRIPT_DIR
@@ -254,16 +257,45 @@ def main():
             )
             sys.exit(1)
 
+    # ===== COMPILE PYTHON FILES =====
+    print("[INFO] Compiling Python source files to bytecode (.pyc) if necessary...")
+
+    try:
+        # Compile the application's source directory recursively
+        # quiet=1 suppresses output unless an error occurs.
+        compileall.compile_dir(MAIN_PY_DIR, quiet=1)
+
+        # Compile the main script itself
+        compileall.compile_file(MAIN_PY, quiet=1)
+        print("[INFO] Compilation complete (skipped if already up-to-date).")
+
+    except Exception as e:
+        # This catches general compilation errors but ignores the common SyntaxWarnings from libs.
+        print(
+            f"[WARN] Non-critical error during Python file compilation: {e}",
+            file=sys.stderr,
+        )
+
     # ===== RUN THE APP =====
     print("[INFO] Starting application...")
+    # Using python -B ensures the interpreter ignores the compilation step at runtime,
+    # relying solely on the .pyc files we just generated (or falls back to .py if none).
     cmd = [os.path.join(VENV_BIN, "python"), MAIN_PY]
+    # Optionally, you could add -W ignore::SyntaxWarning here to suppress the pulsectl warning:
+    # cmd = [os.path.join(VENV_BIN, "python"), "-W", "ignore::SyntaxWarning", MAIN_PY]
+
     subprocess.run(cmd, check=True)
 
 
 if __name__ == "__main__":
     try:
         # Attempt to kill any previous running instance of the app
-        subprocess.run("pkill -f waypanel/main.py".split())
+        subprocess.run(
+            "pkill -f waypanel/main.py".split(),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
     except Exception as e:
-        print(e)
+        # Don't fail if pkill isn't found or an instance isn't running
+        print(f"[WARN] Failed to run pkill (may be missing or harmless): {e}")
     main()

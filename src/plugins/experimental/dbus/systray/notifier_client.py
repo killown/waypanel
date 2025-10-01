@@ -10,10 +10,7 @@ from ._notifier_watcher import (
 from gi.repository import Gtk, Gio, Gdk, GdkPixbuf  # pyright: ignore
 
 ENABLE_PLUGIN = True
-DEPS = [
-    "event_manager",
-    "top_panel",
-]
+DEPS = ["event_manager"]
 
 
 def get_plugin_placement(panel_instance):

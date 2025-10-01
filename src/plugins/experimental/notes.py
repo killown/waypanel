@@ -6,7 +6,6 @@ from gi.repository import Gio, Gtk, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
-DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):

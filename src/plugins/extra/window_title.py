@@ -1,10 +1,9 @@
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib  # pyright: ignore
 from src.plugins.core.event_handler_decorator import subscribe_to_event
 from src.plugins.core._base import BasePlugin
 from typing import Any, Dict, Optional
 
 ENABLE_PLUGIN = True
-DEPS = ["top_panel"]
 
 
 def initialize_plugin(panel_instance) -> "WindowTitlePlugin":
@@ -26,8 +25,6 @@ def get_plugin_placement(panel_instance) -> tuple[str, int]:
 
 
 class WindowTitlePlugin(BasePlugin):
-    DEPS = DEPS
-
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         """

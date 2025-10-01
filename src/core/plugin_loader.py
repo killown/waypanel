@@ -1,8 +1,5 @@
 import os
 import importlib
-import toml
-import time
-import datetime
 from gi.repository import GLib, Gtk  # pyright: ignore
 import sys
 import traceback
@@ -264,7 +261,6 @@ class PluginLoader:
                     )
                     file_path = os.path.join(root, file_name)
                     self.plugins_path[module_name] = file_path
-
                     GLib.idle_add(
                         self._process_plugin,
                         module_name,
@@ -468,9 +464,56 @@ class PluginLoader:
             )
             return False
 
+        module = None
         try:
-            # Import the plugin module dynamically
-            module = importlib.import_module(module_path)
+            spec = importlib.util.spec_from_file_location(  # pyright: ignore
+                module_name,
+                self.plugins_path[module_name],
+            )
+
+            if spec is None:
+                self.logger.error(
+                    f"Could not create module spec for {module_name}. Skipping."
+                )
+                return False
+
+            if spec.loader:
+                try:
+                    module = importlib.util.module_from_spec(spec)  # pyright: ignore
+
+                    # CRITICAL CHECK FOR MODULE STABILITY AND COLLISION PREVENTION:
+                    # The module is created from the spec, but we check sys.modules before
+                    # committing it and executing its code. This handles two scenarios:
+                    # 1. Redundancy: Prevents redundant execution if the module was already
+                    #    imported by standard means (e.g., as a dependency of another plugin).
+                    # 2. Collision: Prevents the loader from overwriting an existing
+                    #    module's entry in sys.modules with a newly created (potentially incomplete)
+                    #    module object, which can cause import errors for other modules
+                    #    that rely on the original, correctly loaded module.
+                    if module_name not in sys.modules:
+                        sys.modules[module_name] = module
+                        spec.loader.exec_module(module)
+                    # If it is in sys.modules, we do not set or execute.
+                    # The 'module' variable must be re-obtained via importlib.import_module()
+                    # if subsequent code needs a guarantee that 'module' holds the valid object.
+
+                    module = importlib.import_module(module_path)
+                except Exception as e:
+                    # FALLBACK MECHANISM:
+                    # This block is executed if `spec.loader.exec_module(module)` fails.
+                    # This often indicates a severe import issue, such as:
+                    # a) An internal failure during the module's top-level execution.
+                    # b) A race condition where a dependency tried to import this module
+                    #    (module_a -> module_b) while our loader was processing it,
+                    #    leading to a conflict in sys.modules or during execution.
+                    self.logger.warning(
+                        f"Failed to load plugin using spec method ({e}). Trying standard importlib fallback."
+                    )
+
+                    # The fallback uses the standard import system, which is often more resilient
+                    # to complex import graph issues, relying on existing Python paths and loaders.
+                    # If successful, 'module' is updated to the valid, loaded module object.
+                    module = importlib.import_module(module_path)
 
             is_plugin_enabled = getattr(module, "ENABLE_PLUGIN", True)
 
@@ -506,7 +549,7 @@ class PluginLoader:
                 return False
 
             # Get position, order, and optional priority
-            position_result = module.get_plugin_placement(self.panel_instance)
+            position_result = module.get_plugin_placement(self.panel_instance)  # pyright: ignore
             # don't append any widget except if a position is found
             position = "background"
             priority = 0
@@ -530,6 +573,7 @@ class PluginLoader:
             # Add to valid plugins and metadata
             valid_plugins.append(module_name)
             plugin_metadata.append((module, position, order, priority))
+
         except Exception as e:
             self.logger.error("Failed to initialize the plugin:")
             print(f" {e}:\n{traceback.format_exc()}")

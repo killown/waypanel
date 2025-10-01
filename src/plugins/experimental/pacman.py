@@ -5,7 +5,6 @@ from gi.repository import Gtk, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = bool(shutil.which("pacman"))
-DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):

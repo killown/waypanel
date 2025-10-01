@@ -1,6 +1,3 @@
-import asyncio
-import requests
-from gi.repository import Gtk  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
@@ -44,7 +41,7 @@ class WeatherPlugin(BasePlugin):
 
     async def setup_weather_async(self):
         """Asynchronously set up the weather functionality."""
-        await asyncio.sleep(0)
+        await self.asyncio.sleep(0)
         if "calendar" not in self.plugins:
             self.logger.error(
                 "Calendar plugin is not loaded. Cannot initialize weather."
@@ -61,7 +58,7 @@ class WeatherPlugin(BasePlugin):
 
     async def attach_weather_to_calendar_async(self, calendar_plugin):
         """Asynchronously attach weather functionality to the calendar popover."""
-        self.weather_label = Gtk.Label()
+        self.weather_label = self.gtk.Label()
         self.weather_label.add_css_class("weather-label")
         self.weather_label.set_label("Loading weather...")
 
@@ -82,8 +79,8 @@ class WeatherPlugin(BasePlugin):
         url = f"https://api.met.no/weatherapi/locationforecast/2.0/compact?lat={lat}&lon={lon}"
         headers = {"User-Agent": "MyWeatherApp/1.0 youremail@example.com"}
         try:
-            response = await asyncio.to_thread(
-                requests.get, url, headers=headers, timeout=10
+            response = await self.asyncio.to_thread(
+                self.requests.get, url, headers=headers, timeout=10
             )
             response.raise_for_status()
             data = response.json()
@@ -91,7 +88,7 @@ class WeatherPlugin(BasePlugin):
                 "details"
             ]["air_temperature"]
             return temperature
-        except asyncio.TimeoutError:
+        except self.asyncio.TimeoutError:
             self.logger.error("Failed to fetch weather data: Request timed out.")
             return None
         except Exception as e:
@@ -116,9 +113,9 @@ class WeatherPlugin(BasePlugin):
         """Periodically fetch and update weather data."""
         while True:
             try:
-                await asyncio.sleep(1800)
+                await self.asyncio.sleep(1800)
                 self.run_in_async_task(self.fetch_and_update_weather_async())
-            except asyncio.CancelledError:
+            except self.asyncio.CancelledError:
                 self.logger.info("Periodic weather update task was cancelled.")
                 break
             except Exception as e:
@@ -151,7 +148,7 @@ class WeatherPlugin(BasePlugin):
             are replaced by `BasePlugin`'s helpers:
             -   `self.run_in_async_task()` is used for fire-and-forget coroutines (initial setup and periodic updates).
             -   `self.global_loop.create_task()` is used specifically for the `self.periodic_weather_update` coroutine so the resulting `Task` object can be captured and later cancelled in `on_stop`.
-        3.  **Asynchronous Networking**: The blocking `requests.get` call is safely wrapped using the modern, high-level `await asyncio.to_thread(...)`, which automatically runs the synchronous function in a thread pool executor without blocking the main event loop.
+        3.  **Asynchronous Networking**: The blocking `self.requests.get` call is safely wrapped using the modern, high-level `await self.asyncio.to_thread(...)`, which automatically runs the synchronous function in a thread pool executor without blocking the main event loop.
         4.  **Thread-Safe UI Updates**: All interactions with the GUI, previously handled by `GLib.idle_add()`, are now consistently scheduled on the main GTK thread using the `self.schedule_in_gtk_thread()` helper, ensuring stability and adherence to GTK's thread safety rules.
         """
         return self.code_explanation.__doc__
