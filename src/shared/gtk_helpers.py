@@ -3,11 +3,11 @@ import configparser
 import rapidfuzz
 import subprocess
 import os
-import inspect
 from rapidfuzz.fuzz import token_set_ratio
 from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
 from src.shared.command_runner import CommandRunner
+from src.shared.concurrency_helper import ConcurrencyHelper
 from gi.repository import Gtk, Gdk, GLib, Gio  # pyright: ignore
 from typing import Any, Optional, Callable, Union
 
@@ -22,6 +22,7 @@ class GtkHelpers:
         self.style_css_config = panel_instance.style_css_config
         self.logger = panel_instance.logger
         self.config_data = panel_instance.config_data
+        self.concurrency_helper = ConcurrencyHelper(panel_instance)
         self.data_helper = DataHelpers()
         self.terminal_emulators = [
             "kitty",
@@ -882,9 +883,7 @@ class GtkHelpers:
     ):
         """
         Creates and configures a standard Gtk.Popover for use in plugins.
-
         This function extracts the generic popover setup logic from AppLauncher.
-
         Args:
             gtk (module): The Gtk module (e.g., gi.repository.Gtk).
             parent_widget (Gtk.Widget): The widget the popover will be parented to.
@@ -894,26 +893,63 @@ class GtkHelpers:
                                         pointing to its parent. Defaults to True.
             closed_handler (function, optional): Handler for the 'closed' signal.
             visible_handler (function, optional): Handler for the 'notify::visible' signal.
-
         Returns:
             Gtk.Popover: The configured popover object.
         """
         popover = Gtk.Popover()
-
-        # 1. Apply styling and arrow visibility (customizable/optional)
         popover.add_css_class(css_class)
         popover.set_has_arrow(has_arrow)
-
-        # 2. Connect optional lifecycle signals
         if closed_handler:
-            # Connects to the signal found in AppLauncher._create_and_configure_popover
             popover.connect("closed", closed_handler)
-
         if visible_handler:
-            # Connects to the signal found in AppLauncher._create_and_configure_popover
             popover.connect("notify::visible", visible_handler)
-
-        # 3. Set the parent (required for positioning, extracted from _finalize_popover_setup)
         popover.set_parent(parent_widget)
-
         return popover
+
+    def create_menu_with_actions(self, action_map: dict, action_prefix: str = "app"):
+        """
+        Creates a Gtk.Menu and a Gtk.SimpleActionGroup based on a dictionary of actions.
+        Args:
+            action_map (dict): A dictionary where keys are action names (str) and
+                                values are dictionaries containing:
+                                - 'label' (str): The display text for the menu item.
+                                - 'callback' (function): The function to connect to the action.
+                                - 'is_async' (bool, optional): If True, the callback is wrapped
+                                  with self.run_in_async_task(). Defaults to False.
+            action_prefix (str, optional): The namespace for the menu actions (e.g., 'app').
+        Returns:
+            tuple: (Gio.Menu, Gio.SimpleActionGroup)
+        """
+        menu = Gio.Menu()
+        action_group = Gio.SimpleActionGroup()
+        for action_name, config in action_map.items():
+            menu_item_label = config["label"]
+            action_id = f"{action_prefix}.{action_name}"
+            menu_item = Gio.MenuItem.new(menu_item_label, action_id)
+            menu.append_item(menu_item)
+            action = Gio.SimpleAction.new(action_name, None)
+            callback = config["callback"]
+            if config.get("is_async", False):
+                action.connect(
+                    "activate",
+                    lambda *args,
+                    cb=callback: self.concurrency_helper.run_in_async_task(cb()),
+                )
+            else:
+                action.connect("activate", callback)
+            action_group.add_action(action)
+        return menu, action_group
+
+    def create_async_button(self, label: str, callback, css_class: str) -> Gtk.Button:
+        """
+        Creates a Gtk.Button, connects its 'clicked' signal to an asynchronous
+        task wrapper, and applies an optional CSS class.
+        """
+        button = Gtk.Button(label=label)
+        button.connect(
+            "clicked",
+            lambda *args: self.concurrency_helper.run_in_async_task(callback()),
+        )
+        if css_class:
+            button.add_css_class(css_class)
+        return button

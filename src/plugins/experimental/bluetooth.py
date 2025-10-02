@@ -1,12 +1,7 @@
-import gi
-import asyncio
-import subprocess
 import re
 import pulsectl
-from gi.repository import GLib, Gtk  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
-gi.require_version("Gtk", "4.0")
 ENABLE_PLUGIN = True
 
 
@@ -18,10 +13,7 @@ def get_plugin_placement(panel_instance):
 
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
-        bt = Bluetooth(panel_instance)
-        bt.global_loop.create_task(bt.create_menu_popover_bluetooth())
-        bt.global_loop.create_task(bt._auto_connect_devices())
-        return bt
+        return Bluetooth(panel_instance)
 
 
 class Bluetooth(BasePlugin):
@@ -29,9 +21,14 @@ class Bluetooth(BasePlugin):
         super().__init__(panel_instance)
         self.popover_dashboard = None
         self.bluetooth_buttons = {}
-        self.bluetooth_button_popover = Gtk.Button()
-        self.gtk_helper.add_cursor_effect(self.bluetooth_button_popover)
+        self.bluetooth_button_popover = self.gtk.Button()
+        self.add_cursor_effect(self.bluetooth_button_popover)
         self.main_widget = (self.bluetooth_button_popover, "append")
+
+    def on_start(self):
+        """Hook called by BasePlugin after successful initialization."""
+        self.bluetooth_button_popover.connect("clicked", self.open_popover_dashboard)
+        self.run_in_async_task(self._auto_connect_devices())
 
     def _extract_mac_from_string(self, entry_string):
         """
@@ -93,8 +90,8 @@ class Bluetooth(BasePlugin):
 
     async def _get_devices(self):
         try:
-            proc = await asyncio.to_thread(
-                subprocess.run,
+            proc = await self.asyncio.to_thread(
+                self.subprocess.run,
                 ["bluetoothctl", "devices"],
                 capture_output=True,
                 text=True,
@@ -112,8 +109,8 @@ class Bluetooth(BasePlugin):
 
     async def _get_device_info(self, mac_address):
         try:
-            proc = await asyncio.to_thread(
-                subprocess.run,
+            proc = await self.asyncio.to_thread(
+                self.subprocess.run,
                 ["bluetoothctl", "info", mac_address],
                 capture_output=True,
                 text=True,
@@ -152,7 +149,7 @@ class Bluetooth(BasePlugin):
                 return None
 
         try:
-            sink_info = await asyncio.to_thread(_sync_get_sink)
+            sink_info = await self.asyncio.to_thread(_sync_get_sink)
             return sink_info
         except Exception as e:
             self.logger.exception(
@@ -172,7 +169,7 @@ class Bluetooth(BasePlugin):
 
         try:
             self.logger.info(f"Setting default sink: {device_name}")
-            await asyncio.to_thread(_sync_set_default, sink_info)
+            await self.asyncio.to_thread(_sync_set_default, sink_info)
             display_name_part = device_name
             self.notifier.notify_send(
                 "Bluetooth Audio",
@@ -181,9 +178,6 @@ class Bluetooth(BasePlugin):
             )
         except Exception as e:
             self.logger.exception(f"Failed to set default sink with pulsectl: {e}")
-
-    async def create_menu_popover_bluetooth(self):
-        self.bluetooth_button_popover.connect("clicked", self.open_popover_dashboard)
 
     def open_popover_dashboard(self, *_):
         if self.popover_dashboard and self.popover_dashboard.is_visible():
@@ -194,19 +188,21 @@ class Bluetooth(BasePlugin):
             self.create_popover_with_loading_state()
 
     def create_popover_with_loading_state(self):
-        self.popover_dashboard = Gtk.Popover.new()
-        self.popover_dashboard.connect("closed", self.popover_is_closed)
-        self.popover_dashboard.set_parent(self.bluetooth_button_popover)
-        box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        self.popover_dashboard = self.create_popover(
+            parent_widget=self.bluetooth_button_popover,
+            closed_handler=self.popover_is_closed,
+            css_class="bluetooth-dashboard-popover",
+        )
+        box = self.gtk.Box.new(orientation=self.gtk.Orientation.VERTICAL, spacing=10)
         box.set_margin_top(10)
         box.set_margin_bottom(10)
         box.set_margin_start(10)
         box.set_margin_end(10)
-        loading_label = Gtk.Label(label="Loading...")
+        loading_label = self.gtk.Label(label="Loading...")
         box.append(loading_label)
         self.popover_dashboard.set_child(box)
         self.popover_dashboard.popup()
-        self.global_loop.create_task(self._fetch_and_update_bluetooth_info())
+        self.run_in_async_task(self._fetch_and_update_bluetooth_info())
 
     async def _fetch_and_update_bluetooth_info(self):
         devices_list = await self._get_devices()
@@ -216,7 +212,7 @@ class Bluetooth(BasePlugin):
             if info:
                 info["mac"] = device["mac"]
                 device_details.append(info)
-        GLib.idle_add(self._update_popover_buttons, device_details)
+        self.schedule_in_gtk_thread(self._update_popover_buttons, device_details)
 
     def _update_popover_buttons(self, device_details):
         if not self.popover_dashboard:
@@ -226,31 +222,33 @@ class Bluetooth(BasePlugin):
             popover_box.remove(child)  # pyright: ignore
         self.bluetooth_buttons.clear()
         if not device_details:
-            no_devices_label = Gtk.Label(label="No Bluetooth devices found.")
+            no_devices_label = self.gtk.Label(label="No Bluetooth devices found.")
             popover_box.append(no_devices_label)  # pyright: ignore
         else:
             for device in device_details:
-                bluetooth_button = Gtk.Box.new(
-                    orientation=Gtk.Orientation.HORIZONTAL, spacing=6
+                bluetooth_button = self.gtk.Box.new(
+                    orientation=self.gtk.Orientation.HORIZONTAL, spacing=6
                 )
-                self.gtk_helper.add_cursor_effect(bluetooth_button)
+                self.add_cursor_effect(bluetooth_button)
                 bluetooth_button.add_css_class("bluetooth-dashboard-buttons")
-                label = Gtk.Label()
+                label = self.gtk.Label()
                 label.set_label(" " + device.get("Name", device.get("mac")))
                 bluetooth_button.append(label)
-                spacer = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+                spacer = self.gtk.Box.new(
+                    orientation=self.gtk.Orientation.HORIZONTAL, spacing=0
+                )
                 spacer.set_hexpand(True)
                 bluetooth_button.append(spacer)
-                icon = Gtk.Image()
+                icon = self.gtk.Image()
                 icon_name = device.get("Icon", "audio-card")
                 icon.set_from_icon_name(icon_name)
                 icon.set_pixel_size(24)
                 bluetooth_button.append(icon)
-                gesture = Gtk.GestureClick.new()
+                gesture = self.gtk.GestureClick.new()
                 device_mac = device["mac"]
                 gesture.connect(
                     "released",
-                    lambda _, *args, mac=device_mac: self.global_loop.create_task(
+                    lambda _, *args, mac=device_mac: self.run_in_async_task(
                         self._handle_bluetooth_click(mac)
                     ),
                 )
@@ -291,7 +289,7 @@ class Bluetooth(BasePlugin):
                 if pa_sink_info:
                     self.logger.info(f"Successfully found PA sink on attempt {i + 1}.")
                     break
-                await asyncio.sleep(WAIT_TIME)
+                await self.asyncio.sleep(WAIT_TIME)
             if pa_sink_info:
                 await self._set_default_sink(pa_sink_info, device_name)
             else:
@@ -320,7 +318,8 @@ class Bluetooth(BasePlugin):
                 icon_name,
             )
             await self._connect_device_and_set_sink(device_id, device_info)
-        await self._update_single_button_state(device_id)
+        if self.popover_dashboard and self.popover_dashboard.is_visible():
+            await self._update_single_button_state(device_id)
 
     async def _update_single_button_state(self, device_id):
         if device_id in self.bluetooth_buttons:
@@ -328,14 +327,19 @@ class Bluetooth(BasePlugin):
             if not device_info:
                 return
             button = self.bluetooth_buttons[device_id]
-            if device_info.get("Connected", "no").lower() == "yes":
-                button.add_css_class("bluetooth-dashboard-buttons-connected")
-            else:
-                button.remove_css_class("bluetooth-dashboard-buttons-connected")
+            is_connected = device_info.get("Connected", "no").lower() == "yes"
+
+            def _update_ui():
+                if is_connected:
+                    button.add_css_class("bluetooth-dashboard-buttons-connected")
+                else:
+                    button.remove_css_class("bluetooth-dashboard-buttons-connected")
+
+            self.schedule_in_gtk_thread(_update_ui)
 
     async def disconnect_bluetooth_device(self, device_id):
-        await asyncio.to_thread(
-            subprocess.run,
+        await self.asyncio.to_thread(
+            self.subprocess.run,
             ["bluetoothctl", "disconnect", device_id],
             capture_output=True,
             text=True,
@@ -343,8 +347,8 @@ class Bluetooth(BasePlugin):
         )
 
     async def connect_bluetooth_device(self, device_id):
-        await asyncio.to_thread(
-            subprocess.run,
+        await self.asyncio.to_thread(
+            self.subprocess.run,
             ["bluetoothctl", "connect", device_id],
             capture_output=True,
             text=True,
@@ -372,18 +376,12 @@ class Bluetooth(BasePlugin):
         """
         This plugin acts as a user-friendly interface for the system's
         Bluetooth functionality.
-        **Concurrency Fix:**
-        The explicit import of `global_loop` was removed. All asynchronous task
-        scheduling is now correctly handled using the inherited instance attribute
-        `self.global_loop` (or `bt.global_loop` in the factory function), which
-        is injected by `BasePlugin.__init__`.
-        1. **Initialization:** The `initialize_plugin` function now correctly uses
-           `bt.global_loop.create_task()` to schedule startup tasks.
-        2. **Popover Logic:** `create_popover_with_loading_state` uses
-           `self.global_loop.create_task()`.
-        3. **Click Handling:** The `GestureClick` connection uses
-           `self.global_loop.create_task()`.
-        This refactoring ensures a consistent and robust approach to concurrency,
-        using the resources provided by the base class.
+        **Refactoring Summary using BasePlugin Helpers:**
+        - **Startup:** The plugin's initialization logic is moved from the factory function to the class method `on_start()`.
+        - **Task Management:** All `global_loop.create_task` calls were replaced by the robust helper **`self.run_in_async_task()`** (e.g., in `on_start`, `create_popover_with_loading_state`, and the `GestureClick` handler).
+        - **GTK Component Creation (FIXED):** The direct call was replaced by the fully encapsulated helper **`self.create_popover()`** in `create_popover_with_loading_state`, correctly passing `parent_widget` and `closed_handler` as arguments.
+        - **Thread Safety:** The old `GLib.idle_add` was replaced by **`self.schedule_in_gtk_thread()`** to ensure UI updates are performed safely on the main GTK thread.
+        - **Blocking Calls:** Blocking functions (`subprocess.run` and `pulsectl` operations) are wrapped using **`await self.asyncio.to_thread()`** to execute them in the thread pool without blocking the main event loop.
+        - **Standard Library Access:** Direct imports are consistently replaced with the read-only properties: **`self.os`**, **`self.asyncio`**, and **`self.subprocess`**.
         """
         return self.code_explanation.__doc__

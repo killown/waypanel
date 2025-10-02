@@ -33,6 +33,10 @@ class MullvadPlugin(BasePlugin):
         """Hook called when the plugin is initialized. Starts the async setup."""
         self.run_in_async_task(self._async_init_setup())
 
+    def _notify_mullvad_vpn(self, message: str):
+        """Helper to send a standard Mullvad notification."""
+        self.notifier.notify_send("Mullvad VPN", message, "mullvad-vpn")
+
     def get_mullvad_version(self):
         """Retrieve the Mullvad version using the `mullvad --version` command."""
         try:
@@ -66,54 +70,48 @@ class MullvadPlugin(BasePlugin):
 
     def create_menu_model(self):
         """Create a self.gio.Menu and populate it with options for Mullvad."""
-        menu = self.gio.Menu()
-        connect_item = self.gio.MenuItem.new("Connect", "app.connect")
-        disconnect_item = self.gio.MenuItem.new("Disconnect", "app.disconnect")
-        status_item = self.gio.MenuItem.new("Check Status", "app.status")
-        random_item_city = self.gio.MenuItem.new(
-            f"Random {self.city_code.capitalize()} Relay", "app.random_city"
+        action_map = {
+            "connect": {
+                "label": "Connect",
+                "callback": self.connect_vpn,
+                "is_async": True,
+            },
+            "reconnect": {
+                "label": "Reconnect",
+                "callback": self.reconnect_vpn,
+                "is_async": True,
+            },
+            "disconnect": {
+                "label": "Disconnect",
+                "callback": self.disconnect_vpn,
+                "is_async": True,
+            },
+            "status": {
+                "label": "Check Status",
+                "callback": self.check_status,
+                "is_async": False,
+            },
+            "random_city": {
+                "label": f"Random {self.city_code.capitalize()} Relay",
+                "callback": self.set_mullvad_relay_by_city,
+                "is_async": True,
+            },
+            "random_global": {
+                "label": "Random Global Relay",
+                "callback": self.set_mullvad_relay_random_global,
+                "is_async": True,
+            },
+        }
+        menu, action_group = self.create_menu_with_actions(
+            action_map=action_map, action_prefix="app"
         )
-        random_item_global = self.gio.MenuItem.new(
-            "Random Global Relay", "app.random_global"
-        )
-        menu.append_item(connect_item)
-        menu.append_item(disconnect_item)
-        menu.append_item(status_item)
-        menu.append_item(random_item_city)
-        menu.append_item(random_item_global)
         self.menubutton_mullvad.set_menu_model(menu)
-        action_group = self.gio.SimpleActionGroup()
-        connect_action = self.gio.SimpleAction.new("connect", None)
-        disconnect_action = self.gio.SimpleAction.new("disconnect", None)
-        status_action = self.gio.SimpleAction.new("status", None)
-        random_action_city = self.gio.SimpleAction.new("random_city", None)
-        random_action_global = self.gio.SimpleAction.new("random_global", None)
-        connect_action.connect(
-            "activate", lambda *args: self.run_in_async_task(self.connect_vpn())
-        )
-        disconnect_action.connect(
-            "activate", lambda *args: self.run_in_async_task(self.disconnect_vpn())
-        )
-        status_action.connect("activate", self.check_status)
-        random_action_city.connect(
-            "activate",
-            lambda *args: self.run_in_async_task(self.set_mullvad_relay_by_city()),
-        )
-        random_action_global.connect(
-            "activate",
-            lambda *args: self.run_in_async_task(
-                self.set_mullvad_relay_random_global()
-            ),
-        )
-        action_group.add_action(connect_action)
-        action_group.add_action(disconnect_action)
-        action_group.add_action(status_action)
-        action_group.add_action(random_action_city)
-        action_group.add_action(random_action_global)
         self.menubutton_mullvad.insert_action_group("app", action_group)
-        self.popover_mullvad = self.gtk.Popover()
-        self.popover_mullvad.set_parent(self.menubutton_mullvad)
-        self.popover_mullvad.set_has_arrow(False)
+        self.popover_mullvad = self.create_popover(
+            parent_widget=self.menubutton_mullvad,
+            css_class="mullvad-popover",
+            has_arrow=False,
+        )
         self.create_popover_content()
 
     def create_popover_content(self):
@@ -124,33 +122,31 @@ class MullvadPlugin(BasePlugin):
         self.status_label = self.gtk.Label(label="Checking status...")
         vbox.append(self.status_label)
         vbox.append(self.gtk.Separator())
-        connect_button = self.gtk.Button(label="Connect")
-        connect_button.connect(
-            "clicked", lambda *args: self.run_in_async_task(self.connect_vpn())
+        connect_button = self.create_async_button(
+            label="Connect", callback=self.connect_vpn, css_class=""
         )
         vbox.append(connect_button)
-        disconnect_button = self.gtk.Button(label="Disconnect")
-        disconnect_button.connect(
-            "clicked", lambda *args: self.run_in_async_task(self.disconnect_vpn())
+        reconnect_button = self.create_async_button(
+            label="Reconnect", callback=self.reconnect_vpn, css_class=""
+        )
+        vbox.append(reconnect_button)
+        disconnect_button = self.create_async_button(
+            label="Disconnect", callback=self.disconnect_vpn, css_class=""
         )
         vbox.append(disconnect_button)
         status_button = self.gtk.Button(label="Check Status")
         status_button.connect("clicked", self.check_status)
         vbox.append(status_button)
-        random_button_city = self.gtk.Button(
-            label=f"Random {self.city_code.capitalize()} Relay"
-        )
-        random_button_city.connect(
-            "clicked",
-            lambda *args: self.run_in_async_task(self.set_mullvad_relay_by_city()),
+        random_button_city = self.create_async_button(
+            label=f"Random {self.city_code.capitalize()} Relay",
+            callback=self.set_mullvad_relay_by_city,
+            css_class="",
         )
         vbox.append(random_button_city)
-        random_button_global = self.gtk.Button(label="Random Global Relay")
-        random_button_global.connect(
-            "clicked",
-            lambda *args: self.run_in_async_task(
-                self.set_mullvad_relay_random_global()
-            ),
+        random_button_global = self.create_async_button(
+            label="Random Global Relay",
+            callback=self.set_mullvad_relay_random_global,
+            css_class="",
         )
         vbox.append(random_button_global)
         self.popover_mullvad.set_child(vbox)
@@ -164,17 +160,20 @@ class MullvadPlugin(BasePlugin):
         """Connect to Mullvad VPN asynchronously."""
         self.logger.info("Connecting to Mullvad VPN...")
         await self.asyncio.create_subprocess_exec("mullvad", "connect")
-        self.notifier.notify_send(
-            "Mullvad VPN", "The VPN is connected now", "mullvad-vpn"
-        )
+        self._notify_mullvad_vpn("The VPN is connected now")
+
+    async def reconnect_vpn(self):
+        """Connect to Mullvad VPN asynchronously."""
+        self.logger.info("Reconnecting to Mullvad VPN...")
+        await self.asyncio.create_subprocess_exec("mullvad", "disconnect")
+        await self.asyncio.create_subprocess_exec("mullvad", "connect")
+        self._notify_mullvad_vpn("The VPN was reconnected")
 
     async def disconnect_vpn(self):
         """Disconnect from Mullvad VPN asynchronously."""
         self.logger.info("Disconnecting from Mullvad VPN...")
         await self.asyncio.create_subprocess_exec("mullvad", "disconnect")
-        self.notifier.notify_send(
-            "Mullvad VPN", "The VPN is disconnected now", "mullvad-vpn"
-        )
+        self._notify_mullvad_vpn("The VPN is disconnected now")
 
     def check_status(self, action, parameter=None):
         """Check the status of the Mullvad VPN."""
@@ -220,7 +219,7 @@ class MullvadPlugin(BasePlugin):
                 return
             relay_choice = random.choice(available)["hostname"]
             msg = f"Changing Mullvad relay to {relay_choice}"
-            self.notifier.notify_send("Mullvad VPN", msg, "mullvad-vpn")
+            self._notify_mullvad_vpn(msg)
             await self.asyncio.create_subprocess_exec(
                 "mullvad", "relay", "set", "location", relay_choice
             )
@@ -247,7 +246,7 @@ class MullvadPlugin(BasePlugin):
                 return
             relay_choice = random.choice(available)["hostname"]
             msg = f"Changing Mullvad relay to {relay_choice}"
-            self.notifier.notify_send("Mullvad VPN", msg, "mullvad-vpn")
+            self._notify_mullvad_vpn(msg)
             await self.asyncio.create_subprocess_exec(
                 "mullvad", "relay", "set", "location", relay_choice
             )

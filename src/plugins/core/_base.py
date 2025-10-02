@@ -13,9 +13,8 @@ import subprocess
 import sqlite3
 import aiosqlite
 import toml
-from asyncio import Task, Future as AwaitableFuture
-from concurrent.futures import ThreadPoolExecutor, Future
-from typing import Any, List, ClassVar, Callable, Awaitable, Optional, Union, Set, Dict
+from concurrent.futures import Future, ThreadPoolExecutor
+from typing import Any, List, ClassVar, Callable, Awaitable, Optional, Union, Dict
 from src.plugins.core._event_loop import get_global_executor, get_global_loop
 from src.shared.path_handler import PathHandler
 from src.shared.notify_send import Notifier
@@ -24,6 +23,7 @@ from src.shared.gtk_helpers import GtkHelpers
 from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
 from src.shared.command_runner import CommandRunner
+from src.shared.concurrency_helper import ConcurrencyHelper
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
@@ -123,8 +123,6 @@ class BasePlugin:
     _cmd: CommandRunner
     global_loop: asyncio.AbstractEventLoop
     global_executor: ThreadPoolExecutor
-    _running_futures: Set[Future[Any]]
-    _running_tasks: Set[Task]
 
     def __init__(self, panel_instance: Any):
         """
@@ -143,6 +141,7 @@ class BasePlugin:
         self._data_helper = DataHelpers()
         self._config_handler = ConfigHandler(panel_instance)
         self._cmd = CommandRunner(panel_instance)
+        self._concurrency_helper = ConcurrencyHelper(panel_instance)
         self.global_loop = get_global_loop()
         self.global_executor = get_global_executor()
         self._running_futures = set()
@@ -226,22 +225,6 @@ class BasePlugin:
     def run_cmd(self, cmd: str) -> Future:
         return self.run_in_thread(self.cmd.run, cmd)
 
-    def run_in_thread(self, func: Callable, *args, **kwargs) -> Future:
-        """
-        Executes a blocking function in a background thread via the shared executor.
-        The resulting Future is automatically tracked for cleanup during disable().
-        Args:
-            func (Callable): The function to execute.
-            *args, **kwargs: Arguments passed to the function.
-        Returns:
-            Future: A Future object representing the result of the function call.
-        """
-        self.logger.debug(f"Scheduling function {func.__name__} in background thread.")
-        future = self.global_executor.submit(func, *args, **kwargs)
-        self._running_futures.add(future)
-        future.add_done_callback(self._cleanup_future)
-        return future
-
     def _cleanup_future(self, future: Future[Any]):
         """Internal callback to remove a Future from the tracking set once it's done."""
         try:
@@ -250,60 +233,20 @@ class BasePlugin:
         except Exception as e:
             self.logger.error(f"Error cleaning up Future tracking: {e}")
 
-    def schedule_in_gtk_thread(self, func: Callable, *args, **kwargs) -> None:
-        """
-        Schedules a function to be executed in the main GTK (GLib) thread.
-        Crucial for any UI updates.
-        Args:
-            func (Callable): The function to execute.
-            *args, **kwargs: Arguments passed to the function.
-        """
+    @property
+    def run_in_async_task(self):
+        """Read-only access to the imported self._concurrency_helper.run_in_async_task."""
+        return self._concurrency_helper.run_in_async_task
 
-        def wrapper():
-            try:
-                func(*args, **kwargs)
-            except Exception as e:
-                self.logger.error(
-                    f"Error executing function {func.__name__} in GTK thread: {e}",
-                    exc_info=True,
-                )
-            return False
+    @property
+    def run_in_thread(self):
+        """Read-only access to the imported self._concurrency_helper.run_in_thread."""
+        return self._concurrency_helper.run_in_thread
 
-        GLib.idle_add(wrapper)
-        self.logger.debug(f"Scheduled function {func.__name__} in GTK main thread.")
-
-    def run_in_async_task(
-        self, coro: Awaitable[Any], on_finish: Optional[Callable[[Any], None]] = None
-    ) -> None:
-        """
-        Schedules an awaitable (async def function) to run as a task in the
-        background asyncio loop. The task is tracked for cleanup during disable().
-        Args:
-            coro (Awaitable): The coroutine to run.
-            on_finish (Optional[Callable]): A callback function to run in the
-                                            GTK thread when the task is done.
-        """
-        coro_name = getattr(coro, "__name__", repr(coro).split(" object")[0])
-
-        def done_callback(task: Task[Any]):
-            if task in self._running_tasks:
-                self._running_tasks.remove(task)
-            if task.cancelled():
-                self.logger.debug(f"Async task {coro_name} cancelled.")
-                return
-            exception = task.exception()
-            if exception:
-                self.logger.error(
-                    f"Async task {coro_name} raised exception: {exception}",
-                    exc_info=True,
-                )
-            elif on_finish:
-                self.schedule_in_gtk_thread(on_finish, task.result())
-
-        task = self.global_loop.create_task(coro)  # pyright: ignore
-        self._running_tasks.add(task)
-        task.add_done_callback(done_callback)
-        self.logger.debug(f"Scheduled async task {coro_name} in global loop.")
+    @property
+    def schedule_in_gtk_thread(self):
+        """Read-only access to the imported self._concurrency_helper.schedule_in_gtk_thread."""
+        return self._concurrency_helper.schedule_in_gtk_thread
 
     @property
     def os(self) -> Any:
@@ -492,6 +435,11 @@ class BasePlugin:
         return self._layer_shell
 
     @property
+    def icon_exist(self) -> Any:
+        """Read-only access to the GtkHelpers instance."""
+        return self._gtk_helper.icon_exist
+
+    @property
     def set_layer_pos_exclusive(self) -> Any:
         """Read-only reference to create_panel.set_layer_position_exclusive."""
         return self._set_layer_pos_exclusive
@@ -595,6 +543,16 @@ class BasePlugin:
     def create_popover(self):
         """Read-only alias for self._gtk_helper.create_popover."""
         return self._gtk_helper.create_popover
+
+    @property
+    def create_menu_with_actions(self):
+        """Read-only alias for self._gtk_helper.create_menu_model."""
+        return self._gtk_helper.create_menu_with_actions
+
+    @property
+    def create_async_button(self):
+        """Read-only alias for self._gtk_helper.create_async_button."""
+        return self._gtk_helper.create_async_button
 
     @property
     def is_view_valid(self):

@@ -1,10 +1,5 @@
-import os
-from PIL import Image
-import requests
-import toml
 from bs4 import BeautifulSoup
-from gi.repository import GdkPixbuf, Gtk  # pyright: ignore
-
+from PIL import Image
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
@@ -19,215 +14,241 @@ def get_plugin_placement(panel_instance):
 def initialize_plugin(panel_instance):
     """
     Initialize the plugin by checking for the existence of a bookmarks file.
-    If the file exists, create a bookmarks popover menu.
-
-    Args:
-        obj: The object where the popover will be added.
-        app: The application instance.
+    If the file exists, initialize the PopoverBookmarks class.
     """
-    bookmarks_file = os.path.join(os.path.expanduser("~"), ".bookmarks")
+    import os
 
+    bookmarks_file = os.path.join(os.path.expanduser("~"), ".bookmarks")
     if os.path.exists(bookmarks_file):
         if ENABLE_PLUGIN:
-            bookmarks = PopoverBookmarks(panel_instance)
-            bookmarks.create_menu_popover_bookmarks()
-            return bookmarks
+            return PopoverBookmarks(panel_instance)
 
 
 class PopoverBookmarks(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.popover_bookmarks = None
+        self.menubutton_bookmarks = None
+        self.flowbox = None
+        self.scrolled_window = None
         self.run_in_thread(self._setup_config_paths)
-        self.listbox = Gtk.ListBox.new()
+        self.listbox = self.gtk.ListBox.new()
+
+    def on_start(self):
+        """Hook called by BasePlugin after successful initialization."""
+        self.create_menu_popover_bookmarks()
 
     def _setup_config_paths(self):
         """Set up configuration paths based on the user's home directory."""
-        self.home = os.path.expanduser("~")
-        self.config_path = os.path.join(self.home, ".config/waypanel")
-        self.bookmarks_image_path = os.path.join(self.config_path, "bookmarks/images/")
-        self.thumbnails_path = os.path.join(self.bookmarks_image_path, "thumbnails")
-        os.makedirs(self.thumbnails_path, exist_ok=True)
+        self.home = self.os.path.expanduser("~")
+        self.config_path = self.os.path.join(self.home, ".config/waypanel")
+        self.bookmarks_image_path = self.os.path.join(
+            self.config_path, "bookmarks/images/"
+        )
+        self.thumbnails_path = self.os.path.join(
+            self.bookmarks_image_path, "thumbnails"
+        )
+        self.os.makedirs(self.thumbnails_path, exist_ok=True)
 
     def create_menu_popover_bookmarks(self):
-        self.menubutton_bookmarks = Gtk.Button()
+        self.menubutton_bookmarks = self.gtk.Button()
         self.menubutton_bookmarks.connect("clicked", self.open_popover_bookmarks)
         self.main_widget = (self.menubutton_bookmarks, "append")
-        icon_name = self.gtk_helper.set_widget_icon_name(
+        icon_name = self.icon_exist(
             "bookmarks",
             ["applications-internet"],
         )
         self.menubutton_bookmarks.set_icon_name(icon_name)
         self.menubutton_bookmarks.add_css_class("bookmarks-menu-button")
-        self.gtk_helper.add_cursor_effect(self.menubutton_bookmarks)
+        self.add_cursor_effect(self.menubutton_bookmarks)
 
-    def create_popover_bookmarks(self, *_):
-        """
-        Create and configure a popover for bookmarks with optimized thumbnails.
-        """
-        self._initialize_popover()
-        self._setup_layout()
-        self._load_and_process_bookmarks()
-        self._finalize_popover_setup()
-        return self.popover_bookmarks
+    def open_popover_bookmarks(self, *_):
+        if self.popover_bookmarks and self.popover_bookmarks.is_visible():
+            self.popover_bookmarks.popdown()
+        elif self.popover_bookmarks and not self.popover_bookmarks.is_visible():
+            self.popover_bookmarks.popup()
+        else:
+            self._create_loading_popover_and_start_load()
 
-    def _initialize_popover(self):
-        """Initialize the popover widget."""
-        self.popover_bookmarks = Gtk.Popover.new()
-        self.popover_bookmarks.set_has_arrow(False)
-        self.popover_bookmarks.set_autohide(True)
-        self.popover_bookmarks.connect("closed", self.popover_is_closed)
-        self.popover_bookmarks.connect("notify::visible", self.popover_is_open)
-
-    def _setup_layout(self):
-        """Set up the layout components: scrolled window, main box, and flowbox."""
-        # Scrolled window
-        self.scrolled_window = Gtk.ScrolledWindow()
-        self.scrolled_window.set_policy(
-            Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC
+    def _create_loading_popover_and_start_load(self):
+        """Create a popover with a loading state, then start the async load."""
+        self.popover_bookmarks = self.create_popover(
+            parent_widget=self.menubutton_bookmarks,
+            closed_handler=self.popover_is_closed,
+            has_arrow=False,
+            css_class="plugin-default-popover bookmarks-popover",
         )
+        main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 10)
+        main_box.set_halign(self.gtk.Align.CENTER)
+        main_box.set_valign(self.gtk.Align.CENTER)
+        loading_label = self.gtk.Label(label="Loading bookmarks...")
+        loading_label.set_margin_top(20)
+        loading_label.set_margin_bottom(20)
+        main_box.append(loading_label)
+        self.popover_bookmarks.set_child(main_box)
+        self.popover_bookmarks.popup()
+        self.run_in_async_task(self._load_and_update_bookmarks())
 
-        # Main box
-        self.main_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+    def _sync_download_and_save_image(self, url, save_path):
+        """Blocking image download and save utility, to be run in a thread."""
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+        }
+        full_url = "https://" + url if "https://" not in url else url
+        final_image_url = None
+        try:
+            response = self.requests.get(full_url, headers=headers, timeout=5)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, "html.parser")
+                og_image_meta = soup.find("meta", property="og:image")
+                if og_image_meta and og_image_meta.get("content"):
+                    final_image_url = og_image_meta.get("content")
+            if final_image_url:
+                image_response = self.requests.get(
+                    final_image_url, headers=headers, timeout=5
+                )
+                if (
+                    image_response.status_code == 200
+                    and "image" in image_response.headers.get("Content-Type", "")
+                ):
+                    self.os.makedirs(self.os.path.dirname(save_path), exist_ok=True)
+                    with open(save_path, "wb") as f:
+                        f.write(image_response.content)
+                    self.logger.info(f"Image downloaded successfully to {save_path}.")
+                    return True
+        except Exception as e:
+            self.logger.warning(f"Error during image download for {url}: {e}")
+        self.logger.info(
+            "No suitable image found/download failed. Check if domain blocks scraping."
+        )
+        return False
 
-        # Flowbox
-        self.flowbox = Gtk.FlowBox()
-        self.flowbox.set_valign(Gtk.Align.START)
-        self.flowbox.set_max_children_per_line(2)
-        self.flowbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
-        self.flowbox.set_activate_on_single_click(True)
-        self.flowbox.connect("child-activated", self.open_url_from_bookmarks)
-
-        # Attach widgets
-        self.scrolled_window.set_child(self.flowbox)
-        self.main_box.append(self.scrolled_window)
-        if self.popover_bookmarks:
-            self.popover_bookmarks.set_child(self.main_box)
-
-    def _load_and_process_bookmarks(self):
-        """Load bookmarks from file and populate the flowbox."""
-        bookmarks_path = os.path.join(self.home, ".bookmarks")
-        with open(bookmarks_path, "r") as f:
-            all_bookmarks = toml.load(f)
-
+    def _sync_process_all_bookmarks(self):
+        """Blocking function to load bookmarks, check/generate thumbnails."""
         THUMBNAIL_SIZE = (32, 32)
         THUMBNAIL_QUALITY = 75
-
+        bookmarks_path = self.os.path.join(self.home, ".bookmarks")
+        with open(bookmarks_path, "r") as f:
+            all_bookmarks = self.toml.load(f)
+        processed_bookmarks = []
         for name, bookmark_data in all_bookmarks.items():
             url = bookmark_data.get("url", "")
             container = bookmark_data.get("container", "")
-            row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-            row_hbox.MYTEXT = (url, container)  # pyright: ignore
-
-            # Configure bookmark icon
             icon = url
             if "/" in icon:
                 icon = [i for i in icon.split("/") if "." in i][0]
                 icon = "{0}.png".format(icon)
             else:
                 icon = url + ".png"
-
-            # Create label for the bookmark name
-            line = Gtk.Label.new()
-            line.set_label(name)
-            line.props.margin_start = 5
-            line.props.hexpand = True
-            line.set_halign(Gtk.Align.START)
-
-            bookmark_image = os.path.join(self.bookmarks_image_path, icon)
-            thumbnail_path = os.path.join(self.thumbnails_path, icon)
-
-            # Try to load or generate thumbnail
-            try:
-                if not os.path.exists(bookmark_image):
-                    if "image" in bookmark_data:
-                        new_url = bookmark_data.get("image", "")
-                        self.download_image(new_url, bookmark_image)
-
-                # Generate thumbnail if needed
-                if (not os.path.exists(thumbnail_path)) or (
-                    os.path.getmtime(bookmark_image) > os.path.getmtime(thumbnail_path)
-                ):
+            bookmark_image = self.os.path.join(self.bookmarks_image_path, icon)
+            thumbnail_path = self.os.path.join(self.thumbnails_path, icon)
+            if "image" in bookmark_data and not self.os.path.exists(bookmark_image):
+                image_url_to_fetch = bookmark_data.get("image", "")
+                self._sync_download_and_save_image(image_url_to_fetch, bookmark_image)
+            if self.os.path.exists(bookmark_image):
+                needs_thumbnail = (not self.os.path.exists(thumbnail_path)) or (
+                    self.os.path.getmtime(bookmark_image)
+                    > self.os.path.getmtime(thumbnail_path)
+                )
+                if needs_thumbnail:
                     with Image.open(bookmark_image) as img:
                         img.thumbnail(THUMBNAIL_SIZE)
                         img.save(thumbnail_path, quality=THUMBNAIL_QUALITY)
-
-                # Load the thumbnail
-                thumbnail_pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    thumbnail_path, THUMBNAIL_SIZE[0], THUMBNAIL_SIZE[1], True
+                processed_bookmarks.append(
+                    {
+                        "name": name,
+                        "url": url,
+                        "container": container,
+                        "thumbnail_path": thumbnail_path,
+                        "size": THUMBNAIL_SIZE,
+                    }
                 )
-                image = Gtk.Image.new_from_pixbuf(thumbnail_pixbuf)
-            except Exception as e:
-                self.logger.error(f"Error processing image for {url}: {e}")
-                # Fallback to symbolic icon
-                image = Gtk.Image.new_from_icon_name("web-browser-symbolic")
-                image.set_pixel_size(THUMBNAIL_SIZE[0])
+            else:
+                processed_bookmarks.append(
+                    {
+                        "name": name,
+                        "url": url,
+                        "container": container,
+                        "symbolic_icon": True,
+                        "size": THUMBNAIL_SIZE,
+                    }
+                )
+        return processed_bookmarks
 
+    async def _load_and_update_bookmarks(self):
+        """Async function to load bookmarks, process images, and update the UI."""
+        try:
+            processed_bookmarks = await self.asyncio.to_thread(
+                self._sync_process_all_bookmarks
+            )
+        except Exception as e:
+            self.logger.exception(f"Error loading and processing bookmarks: {e}")
+            processed_bookmarks = None
+        self.schedule_in_gtk_thread(self._update_popover_ui, processed_bookmarks)
+
+    def _update_popover_ui(self, processed_bookmarks):
+        """Update the popover with processed bookmark data (runs on GTK thread)."""
+        if not self.popover_bookmarks:
+            return False
+        if not processed_bookmarks:
+            main_box = self.popover_bookmarks.get_child()
+            for child in main_box:  # pyright: ignore
+                main_box.remove(child)  # pyright: ignore
+            label = self.gtk.Label(label="No bookmarks found or error loading.")
+            main_box.append(label)  # pyright: ignore
+            return False
+        self.scrolled_window = self.gtk.ScrolledWindow()
+        self.scrolled_window.set_policy(
+            self.gtk.PolicyType.AUTOMATIC, self.gtk.PolicyType.AUTOMATIC
+        )
+        self.flowbox = self.gtk.FlowBox()
+        self.flowbox.set_valign(self.gtk.Align.START)
+        self.flowbox.set_max_children_per_line(2)
+        self.flowbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
+        self.flowbox.set_activate_on_single_click(True)
+        self.flowbox.connect("child-activated", self.open_url_from_bookmarks)
+        self.scrolled_window.set_child(self.flowbox)
+        main_box = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
+        main_box.append(self.scrolled_window)
+        self.popover_bookmarks.set_child(main_box)
+        for data in processed_bookmarks:
+            name, url, container, size = (
+                data["name"],
+                data["url"],
+                data["container"],
+                data["size"],
+            )
+            row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
+            row_hbox.MYTEXT = (url, container)
+            line = self.gtk.Label.new()
+            line.set_label(name)
+            line.props.margin_start = 5
+            line.props.hexpand = True
+            line.set_halign(self.gtk.Align.START)
+            image = self.gtk.Image()
+            if data.get("symbolic_icon"):
+                image.set_from_icon_name("web-browser-symbolic")
+                image.set_pixel_size(size[0])
+            else:
+                thumbnail_pixbuf = self.gdkpixbuf.Pixbuf.new_from_file_at_scale(
+                    data["thumbnail_path"], size[0], size[1], True
+                )
+                image = self.gtk.Image.new_from_pixbuf(thumbnail_pixbuf)
             image.props.margin_end = 5
-            image.set_halign(Gtk.Align.END)
-
-            # Add label and image to the bookmark box
+            image.set_halign(self.gtk.Align.END)
             row_hbox.append(image)
             row_hbox.append(line)
-            self.gtk_helper.add_cursor_effect(line)
+            self.add_cursor_effect(row_hbox)
             self.flowbox.append(row_hbox)
             line.add_css_class("bookmarks-label-from-popover")
             image.add_css_class("bookmarks-icon-from-popover")
-
-    def _finalize_popover_setup(self):
-        """Finalize the popover setup, including dimensions and parent."""
         height = self.flowbox.get_preferred_size().natural_size.height  # pyright: ignore
         width = self.flowbox.get_preferred_size().natural_size.width  # pyright: ignore
         self.scrolled_window.set_min_content_width(width)
         self.scrolled_window.set_min_content_height(height)
-
-        if self.popover_bookmarks:
-            self.popover_bookmarks.set_parent(self.menubutton_bookmarks)
-
-        def download_image_direct(self, url, save_path):
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-            }
-
-            if "https://" not in url:
-                url = "https://" + url
-            response = requests.get(url, headers=headers)
-
-            if response.status_code == 200:
-                with open(save_path, "wb") as f:
-                    f.write(response.content)
-                self.logger.info("Image downloaded successfully.")
-            else:
-                self.logger.info(
-                    f"Failed to download image. Status code: {response.status_code}"
-                )
-
-    def download_image(self, url, save_path):
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-        }
-
-        if "https://" not in url:
-            url = "https://" + url
-        response = requests.get(url, headers=headers)
-
-        soup = BeautifulSoup(response.text, "html.parser")
-        og_image_meta = soup.find("meta", property="og:image")
-
-        if og_image_meta:
-            image_url = og_image_meta.get("content")  # pyright: ignore
-            if image_url:
-                image_response = requests.get(image_url, headers=headers)  # pyright: ignore
-                if image_response.status_code == 200:
-                    if not os.path.exists(save_path):
-                        os.makedirs(save_path)
-                    with open(os.path.join(save_path, f"{url}.png"), "wb") as f:
-                        f.write(image_response.content)
-                    self.logger.info("Image downloaded successfully.")
-
-        self.logger.info(
-            "No suitable image found. If the domain doesn't allow scraping tools, that may deny the image download"
-        )
+        self.flowbox.show()
+        self.popover_bookmarks.popup()
+        return False
 
     def open_url_from_bookmarks(self, x, *_):
         url, container = [i.get_child().MYTEXT for i in x.get_selected_children()][0]
@@ -239,26 +260,13 @@ class PopoverBookmarks(BasePlugin):
             self.ipc.set_focus(view[0])
         cmd = f"firefox-developer-edition 'ext+container:name={container}&url={url}'"
         self.cmd.run(cmd)
-        self.popover_bookmarks.popdown()  # pyright: ignore
-
-    def open_popover_bookmarks(self, *_):
-        if self.popover_bookmarks is None:
-            self.popover_bookmarks = self.create_popover_bookmarks()
-
-        if self.popover_bookmarks and self.popover_bookmarks.is_visible():
+        if self.popover_bookmarks:
             self.popover_bookmarks.popdown()
-            del self.listbox
-            del self.popover_bookmarks
-            self.listbox = Gtk.ListBox.new()
-            self.popover_bookmarks = None
-
-        if self.popover_bookmarks and not self.popover_bookmarks.is_visible():
-            self.popover_bookmarks.popup()
-
-    def popover_is_open(self, *_):
-        return
 
     def popover_is_closed(self, *_):
+        self.popover_bookmarks = None
+        self.flowbox = None
+        self.scrolled_window = None
         return
 
     def about(self):
@@ -274,28 +282,16 @@ class PopoverBookmarks(BasePlugin):
         """
         This plugin seamlessly integrates web bookmarks into the panel by
         combining file I/O, network requests, image processing, and GTK UI
-        components.
-
-        Its core logic is centered on **file-based configuration, dynamic asset
-        management, and UI-driven process execution**:
-
-        1.  **File-Based Configuration**: The plugin begins by checking for a
-            `.bookmarks` file in the user's home directory. This file, in the
-            **TOML format**, serves as the single source of truth for all
-            bookmarks. This approach makes the plugin highly configurable
-            without needing a separate settings window.
-        2.  **Dynamic Asset Management**: For each bookmark, the plugin
-            dynamically downloads and manages favicon images. It first checks
-            if a local image exists; if not, it attempts to scrape the `og:image`
-            Open Graph metadata from the website using `requests` and
-            `BeautifulSoup`. It then processes these images to create optimized
-            thumbnails using the `Pillow` library, ensuring the UI remains
-            performant and responsive.
-        3.  **UI-Driven Process Execution**: The plugin creates a `Gtk.FlowBox`
-            within a `Gtk.Popover` to display bookmarks with their icons and
-            names. When a user clicks a bookmark, the `open_url_from_bookmarks`
-            method is activated. This method uses `subprocess.Popen` to launch
-            the specified URL in a new or existing browser instance, correctly
-            handling Firefox containers for isolated browsing.
+        components, now fully leveraging the BasePlugin helpers:
+        **Key Refactoring Points (Using BasePlugin Helpers):**
+        1.  **I/O and Threading:** All blocking operations (`self.os` calls, `self.toml.load`, `self.requests.get`, `self.Image` processing) are bundled into `_sync_process_all_bookmarks` and executed non-blockingly using **`await self.asyncio.to_thread(...)`** inside the asynchronous function `_load_and_update_bookmarks`.
+        2.  **Asynchronous Workflow:** The `open_popover_bookmarks` entry point calls `_create_loading_popover_and_start_load`, which sets up a temporary loading UI and starts the I/O work with **`self.run_in_async_task`**.
+        3.  **GTK Thread Safety:** The UI update function `_update_popover_ui` is called via **`self.schedule_in_gtk_thread`** to safely manipulate GTK widgets after the background I/O is complete.
+        4.  **GTK Helpers:**
+            * Popover creation is consolidated into **`self.create_popover(...)`**, correctly setting the parent, closed handler, and properties like `has_arrow=False`.
+            * All GTK components (`Gtk.Box`, `Gtk.Label`, `Gtk.FlowBox`, etc.) now consistently use the **`self.gtk`** alias.
+            * Icon and cursor effects use **`self.set_widget_icon_name`** and **`self.add_cursor_effect`**.
+            * Pixbuf operations use **`self.gdkpixbuf`**.
+        5.  **Standard Library Aliases:** Direct imports of `os`, `requests`, `toml`, `PIL.Image`, and `bs4.BeautifulSoup` are eliminated and replaced with the safe, exposed properties **`self.os`**, **`self.requests`**, **`self.toml`**, **`self.Image`**, and **`self.BeautifulSoup`**.
         """
         return self.code_explanation.__doc__
