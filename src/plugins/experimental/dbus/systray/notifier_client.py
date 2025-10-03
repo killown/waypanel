@@ -5,6 +5,7 @@ from src.plugins.core._base import BasePlugin
 from ._notifier_watcher import (
     StatusNotifierWatcher,
 )
+import asyncio
 
 ENABLE_PLUGIN = True
 DEPS = [
@@ -336,7 +337,7 @@ class SystrayClientPlugin(BasePlugin):
     def create_menu_item(self, menu, name, label_index, service_name, panel_instance):
         """Create a menu item with the specified name and command."""
         name_for_action = self.sanitize_gio_action_name(name)
-        action_name = f"app.run-command-{name_for_action}"
+        action_name = f"run-command-{name_for_action}-{label_index}"
         action = self.gio.SimpleAction.new(action_name, None)
         action.connect(
             "activate", self._on_menu_item_clicked_wrapper, label_index, service_name
@@ -348,9 +349,7 @@ class SystrayClientPlugin(BasePlugin):
     def set_menu_items(self, menu_data, service_name):
         """
         Process the menu data and populate the internal menu structure.
-        Args:
-            menu_data (list): List of menu items as dictionaries.
-            service_name (str): The name of the service associated with the menu.
+        NOTE: This is retained as a synchronous data preparation step.
         """
         if service_name not in self.menus:
             self.menus[service_name] = []
@@ -380,13 +379,43 @@ class SystrayClientPlugin(BasePlugin):
             return entry
         return pixmap_data[0]
 
+    async def _async_populate_menu(self, menu_data, gio_menu, service_name):
+        """
+        Asynchronously processes and populates the GIO menu model, yielding
+        control to the event loop between items to prevent GUI hangs.
+        """
+        if not isinstance(menu_data, (list, tuple)):
+            self.logger.warning("Invalid menu data format in async_populate_menu.")
+            return
+        self.set_menu_items(menu_data, service_name)
+        items = self.menus[service_name]
+        last_item_was_separator = False
+        for item in items:
+            await asyncio.sleep(0)
+            if item["type"] == "separator":
+                if last_item_was_separator:
+                    last_item_was_separator = False
+                    continue
+                menu_item = self.gio.MenuItem.new("-" * 30, "app.separator")
+                gio_menu.append_item(menu_item)
+                last_item_was_separator = True
+                continue
+            if (
+                len(item["label"].split()) == 2
+                and item["label"].split()[0].startswith("Item")
+                and item["label"].split()[-1].isalnum()
+            ):
+                menu_item = self.gio.MenuItem.new("-" * 30, "app.separator")
+                gio_menu.append_item(menu_item)
+                continue
+            self.create_menu_item(
+                gio_menu, item["label"], item["label_id"], service_name, self.obj
+            )
+
     def create_menubutton(self, menu_structure, service_name):
         """
         Create a MenuButton with the given menu structure.
-        Args:
-            menu_structure (list): The raw menu structure from D-Bus.
-        Returns:
-            self.gtk.MenuButton: A MenuButton with the parsed menu structure.
+        Starts the asynchronous menu population.
         """
         icon_name = self.messages[service_name]["icon_name"]
         icon_pixmap = None
@@ -403,36 +432,9 @@ class SystrayClientPlugin(BasePlugin):
             menubutton.set_icon_name(icon_name)
         menubutton.add_css_class("tray_icon")
         menu = self.gio.Menu()
-
-        def parse_menu(menu_data, gio_menu):
-            if not isinstance(menu_data, (list, tuple)):
-                print("Invalid menu data format:", menu_data)
-                return
-            self.set_menu_items(menu_data, service_name)
-            items = self.menus[service_name]
-            last_item_was_separator = False
-            for item in items:
-                if item["type"] == "separator":
-                    if last_item_was_separator:
-                        last_item_was_separator = False
-                        continue
-                    menu_item = self.gio.MenuItem.new("-" * 30, "app.separator")
-                    menu.append_item(menu_item)
-                    last_item_was_separator = True
-                    continue
-                if (
-                    len(item["label"].split()) == 2
-                    and item["label"].split()[0].startswith("Item")
-                    and item["label"].split()[-1].isalnum()
-                ):
-                    menu_item = self.gio.MenuItem.new("-" * 30, "app.separator")
-                    menu.append_item(menu_item)
-                    continue
-                self.create_menu_item(
-                    gio_menu, item["label"], item["label_id"], service_name, self.obj
-                )
-
-        parse_menu(menu_structure, menu)
+        self.global_loop.create_task(
+            self._async_populate_menu(menu_structure, menu, service_name)
+        )
         menubutton.set_menu_model(menu)
         menubutton.add_css_class("tray-menu-button")
         self.tray_box.append(menubutton)
@@ -489,10 +491,12 @@ class SystrayClientPlugin(BasePlugin):
             - `on_menu_item_clicked`: Triggers the D-Bus `call_event` for the
               selected menu item, executing the corresponding action in the
               application.
-        3.  **UI Integration**: It creates a `self.gtk.MenuButton` for each
-            tray icon. It can handle both icon names and raw pixel data
-            (`icon_pixmap`), dynamically generating a `self.gdkpixbuf` to render
-            the icon. The fetched D-Bus menu structure is parsed and used
-            to populate the GTK menu, which is then attached to the button.
+        3.  **UI Integration (FIXED)**: It creates a `self.gtk.MenuButton` for each
+            tray icon. The fetching of the large D-Bus menu structure is now
+            parsed and populated into the GTK menu **asynchronously** using
+            `asyncio.sleep(0)` within the new `_async_populate_menu` method. This
+            prevents the GTK main loop from being blocked by the creation of
+            hundreds of GIO menu items, resolving the startup hang with large
+            menus like Steam's.
         """
         return self.code_explanation.__doc__

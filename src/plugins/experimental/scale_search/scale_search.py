@@ -13,7 +13,6 @@ def get_plugin_placement(panel_instance):
 
 
 def initialize_plugin(panel_instance):
-    ENABLE_PLUGIN = False
     if not ENABLE_PLUGIN:
         panel_instance.logger.info("fuzzel Watcher Plugin is disabled.")
         return None

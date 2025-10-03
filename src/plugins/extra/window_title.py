@@ -130,7 +130,9 @@ class WindowTitlePlugin(BasePlugin):
             if not view:
                 return
             title: str = self.filter_title(view.get("title", ""))
-            initial_title = title.split()[0]
+            initial_title = ""
+            if title:
+                initial_title = title.split()[0]
             app_id: Optional[str] = None
             if view.get("window_properties"):
                 app_id = view.get("window_properties", {}).get("class")

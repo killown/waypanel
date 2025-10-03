@@ -13,7 +13,16 @@ from structlog.processors import (
 from rich.logging import RichHandler
 from structlog.dev import ConsoleRenderer
 
-LOG_FILE_PATH = os.path.expanduser("~/.config/waypanel/waypanel.log")
+
+XDG_STATE_HOME = os.environ.get("XDG_STATE_HOME") or os.path.expanduser(
+    "~/.local/state"
+)
+APP_DIR = "waypanel"
+
+LOG_FILE_PATH = os.path.join(XDG_STATE_HOME, APP_DIR, "waypanel.log")
+
+os.makedirs(os.path.dirname(LOG_FILE_PATH), exist_ok=True)
+
 LOGGER_NAME = None
 os.makedirs(os.path.dirname(LOG_FILE_PATH), exist_ok=True)
 
