@@ -57,8 +57,8 @@ class PopoverBookmarks(BasePlugin):
         self.icons_loaded = False
         self.icon_cache: Dict[str, Any] = {}
         self.listbox = self.gtk.ListBox.new()
-        self.THUMBNAIL_SIZE = (64, 64)
-        self.THUMBNAIL_QUALITY = 75
+        self.THUMBNAIL_SIZE = (128, 128)
+        self.THUMBNAIL_QUALITY = 100
 
     def _get_cache_path(self) -> str:
         return self.os.path.join(self.config_path, "bookmarks_cache.toml")

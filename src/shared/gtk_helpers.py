@@ -26,16 +26,15 @@ class GtkHelpers:
         self.data_helper = DataHelpers()
         self.terminal_emulators = [
             "kitty",
+            "alacritty",
             "gnome-terminal",
             "terminator",
+            "tilix",
             "xterm",
-            "konsole",
             "urxvt",
-            "alacritty",
             "wezterm",
             "lxterminal",
             "xfce4-terminal",
-            "tilix",
             "st",
             "rxvt",
         ]

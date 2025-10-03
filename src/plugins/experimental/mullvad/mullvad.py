@@ -64,7 +64,7 @@ class MullvadPlugin(BasePlugin):
         """
         self.mullvad_version = await self.asyncio.to_thread(self.get_mullvad_version)
         self.icon_name = self.gtk_helper.icon_exist(
-            "mullvad-tray-9", ["mullvad-vpn-symbolic", "mullvaddg"]
+            "mullvad", ["mullvad-vpn-symbolic", "mullvaddg", "network-vpn-symbolic"]
         )
         self.menubutton_mullvad.set_icon_name(self.icon_name)
         self.menubutton_mullvad.add_css_class("top_right_widgets")

@@ -130,14 +130,16 @@ class WindowTitlePlugin(BasePlugin):
             if not view:
                 return
             title: str = self.filter_title(view.get("title", ""))
+            initial_title = title.split()[0]
             app_id: Optional[str] = None
             if view.get("window_properties"):
                 app_id = view.get("window_properties", {}).get("class")
             else:
                 app_id = view.get("app-id", "").lower()
             if app_id:
-                icon: str = self.gtk_helper.icon_exist(app_id)
-                self.update_title(title, icon)
+                icon_name = self._gtk_helper.get_icon(app_id, initial_title, title)
+                if icon_name:
+                    self.update_title(title, icon_name)
         except Exception as e:
             self.logger.error(f"Error updating title/icon: {e}")
             self.clear_widget()

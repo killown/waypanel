@@ -96,8 +96,7 @@ class SystemDashboard(BasePlugin):
         icon_name = self.gtk_helper.set_widget_icon_name(
             "exit-symbolic",
             [
-                "exit",
-                "gnome-logout-symbolic",
+                "exit-symbolic",
                 "application-exit-symbolic",
             ],
         )
