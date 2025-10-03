@@ -159,7 +159,7 @@ class WindowTitlePlugin(BasePlugin):
         if not title:
             return ""
         title = self.gtk_helper.filter_utf_for_gtk(title)
-        MAX_WORD_LENGTH = 50
+        MAX_WORD_LENGTH = 30
         MAX_TITLE_LENGTH = self.title_length
         if " — " in title:
             title = title.split(" — ")[0].strip()

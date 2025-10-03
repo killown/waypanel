@@ -1,21 +1,18 @@
-from src.core import create_panel
 import gi
-from gi.repository import Gtk, GLib, Gdk, Gio, Pango, GdkPixbuf  # pyright: ignore
 import os
-import time
-import datetime
-import orjson
 import inspect
-import asyncio
-import importlib
-import requests
-import subprocess
-import sqlite3
-import aiosqlite
-import toml
-from concurrent.futures import Future, ThreadPoolExecutor
-from typing import Any, List, ClassVar, Callable, Awaitable, Optional, Union, Dict
+import lazy_loader as lazy
+
+# ----------------------------------------------------------------------
+# IMMEDIATE IMPORTS
+# These are required for gi.require_version, PluginLogAdapter init,
+# BasePlugin init, or for the core concurrency helpers.
+# ----------------------------------------------------------------------
+from gi.repository import Gtk, GLib, Gdk, Gio, Pango, GdkPixbuf  # pyright: ignore
+from src.core import create_panel
 from src.plugins.core._event_loop import get_global_executor, get_global_loop
+
+# Classes instantiated in __init__ must be imported immediately
 from src.shared.path_handler import PathHandler
 from src.shared.notify_send import Notifier
 from src.shared.wayfire_helpers import WayfireHelpers
@@ -25,6 +22,33 @@ from src.shared.config_handler import ConfigHandler
 from src.shared.command_runner import CommandRunner
 from src.shared.concurrency_helper import ConcurrencyHelper
 
+# Type hints are not lazy-loaded
+from typing import Any, List, ClassVar, Callable, Awaitable, Optional, Union, Dict, Set
+import asyncio  # Keep asyncio for type hint asyncio.Task
+
+# ----------------------------------------------------------------------
+# LAZY MODULE DEFINITIONS
+# These are only imported when their corresponding @property is accessed.
+# The concurrency module is now loaded as a module, not extracting classes.
+# ----------------------------------------------------------------------
+
+# Standard Library Modules
+TIME_MODULE = lazy.load("time")
+DATETIME_MODULE = lazy.load("datetime")
+ASYNCI_MODULE = lazy.load("asyncio")
+SUBPROCESS_MODULE = lazy.load("subprocess")
+SQLITE3_MODULE = lazy.load("sqlite3")
+IMPORTLIB_MODULE = lazy.load("importlib")
+CONCURRENCY_FUTURES_MODULE = lazy.load("concurrent.futures")
+
+# Third-Party / External Modules
+ORJSON_MODULE = lazy.load("orjson")
+REQUESTS_MODULE = lazy.load("requests")
+AIOSQLITE_MODULE = lazy.load("aiosqlite")
+TOML_MODULE = lazy.load("toml")
+
+
+# Required gi versions (cannot be lazy)
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 gi.require_version("GLib", "2.0")
@@ -122,7 +146,9 @@ class BasePlugin:
     _config_handler: ConfigHandler
     _cmd: CommandRunner
     global_loop: asyncio.AbstractEventLoop
-    global_executor: ThreadPoolExecutor
+    global_executor: Any  # Cannot use ThreadPoolExecutor until imported
+    _running_futures: Set[Any]  # Cannot use Future until imported
+    _running_tasks: Set[asyncio.Task]
 
     def __init__(self, panel_instance: Any):
         """
@@ -174,8 +200,8 @@ class BasePlugin:
             return self._loaded_modules[module_name]
 
         try:
-            # Use importlib for dynamic loading
-            module = importlib.import_module(module_name)
+            # Use the lazy-loaded importlib for dynamic loading
+            module = IMPORTLIB_MODULE.import_module(module_name)
             self._loaded_modules[module_name] = module
             self.logger.debug(
                 f"Module '{module_name}' imported and cached successfully."
@@ -222,10 +248,11 @@ class BasePlugin:
             self.logger.error(f"Failed to call update_config on config_handler: {e}")
             return False
 
-    def run_cmd(self, cmd: str) -> Future:
+    def run_cmd(self, cmd: str) -> Any:
+        # NOTE: Using 'Any' for Future type hint to avoid import error
         return self.run_in_thread(self.cmd.run, cmd)
 
-    def _cleanup_future(self, future: Future[Any]):
+    def _cleanup_future(self, future: Any):
         """Internal callback to remove a Future from the tracking set once it's done."""
         try:
             if future in self._running_futures:
@@ -256,7 +283,7 @@ class BasePlugin:
     @property
     def json(self) -> Any:
         """Read-only access to the imported 'orjson' standard library module."""
-        return orjson
+        return ORJSON_MODULE
 
     @property
     def gtk(self) -> Any:
@@ -291,52 +318,54 @@ class BasePlugin:
     @property
     def time(self) -> Any:
         """Read-only access to the time module."""
-        return time
+        return TIME_MODULE
 
     @property
     def asyncio(self) -> Any:
         """Read-only access to the asyncio module."""
-        return asyncio
+        return ASYNCI_MODULE
 
     @property
     def subprocess(self) -> Any:
         """Read-only access to the subprocess module."""
-        return subprocess
+        return SUBPROCESS_MODULE
 
     @property
     def requests(self) -> Any:
         """Read-only access to the requests module."""
-        return requests
+        return REQUESTS_MODULE
 
     @property
     def datetime(self) -> Any:
-        """Read-only access to the gi.repository.datetime module."""
-        return datetime
+        """Read-only access to the datetime module."""
+        return DATETIME_MODULE
 
     @property
     def thread_pool_executor(self) -> Any:
-        """Read-only access to the ThreadPoolExecutor module."""
-        return ThreadPoolExecutor
+        """Read-only access to the ThreadPoolExecutor class."""
+        # FIX: Access the class from the lazy-loaded module
+        return CONCURRENCY_FUTURES_MODULE.ThreadPoolExecutor
 
     @property
     def future(self) -> Any:
-        """Read-only access to the Future module."""
-        return Future
+        """Read-only access to the Future class."""
+        # FIX: Access the class from the lazy-loaded module
+        return CONCURRENCY_FUTURES_MODULE.Future
 
     @property
     def sqlite3(self) -> Any:
         """Read-only access to the sqlite3 module."""
-        return sqlite3
+        return SQLITE3_MODULE
 
     @property
     def aiosqlite(self) -> Any:
         """Read-only access to the aiosqlite module."""
-        return aiosqlite
+        return AIOSQLITE_MODULE
 
     @property
     def toml(self) -> Any:
         """Read-only access to the toml module."""
-        return toml
+        return TOML_MODULE
 
     @property
     def obj(self) -> Any:

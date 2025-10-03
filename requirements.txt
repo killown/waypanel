@@ -26,3 +26,4 @@ cairosvg
 unidecode
 pygments
 rapidfuzz
+lazy-loader

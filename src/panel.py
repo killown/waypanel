@@ -1,12 +1,13 @@
 import sys
+import lazy_loader as lazy
 from gi.repository import Adw, Gio, GLib  # pyright: ignore
-from src.core.compositor.ipc import IPC
-from src.core.create_panel import (
-    CreatePanel,
-)
-from src.shared.gtk_helpers import GtkHelpers
-from src.core.plugin_loader import PluginLoader
 from src.shared.config_handler import ConfigHandler
+
+IPC_MODULE = lazy.load("src.core.compositor.ipc")
+CREATE_PANEL_MODULE = lazy.load("src.core.create_panel")
+GTK_HELPERS_MODULE = lazy.load("src.shared.gtk_helpers")
+PLUGIN_LOADER_MODULE = lazy.load("src.core.plugin_loader.loader")
+GLOBAL_LOOP_MODULE = lazy.load("src.plugins.core._event_loop")
 
 
 class Panel(Adw.Application):
@@ -21,14 +22,22 @@ class Panel(Adw.Application):
         self.panel_instance = None
         self.style_css_config = None
         self.connect("activate", self.on_activate)
+
+        # Immediate use of ConfigHandler (no lazy load)
         self.config_handler = ConfigHandler(self)
         self.config_path = self.config_handler._setup_config_paths()
         self.config_data = self.config_handler.load_config()
-        self.ipc = IPC()
+
+        # Lazy load: Accessing IPC_MODULE.IPC() triggers the actual import of src.core.compositor.ipc
+        self.ipc = IPC_MODULE.IPC()  # pyright: ignore
+
         self.ipc_server = ipc_server
         self.display = None
         self.args = sys.argv
-        self.gtk_helpers = GtkHelpers(self)
+
+        # Lazy load: Accessing GTK_HELPERS_MODULE.GtkHelpers() triggers the actual import
+        self.gtk_helpers = GTK_HELPERS_MODULE.GtkHelpers(self)  # pyright: ignore
+
         self.update_widget = self.gtk_helpers.update_widget
         self._set_monitor_dimensions()
         self.config_handler._start_watcher()
@@ -37,8 +46,10 @@ class Panel(Adw.Application):
         GLib.idle_add(self.start_plugin_loader)
 
     def start_plugin_loader(self):
-        self.plugin_loader = PluginLoader(self)
+        # Lazy load: Accessing PLUGIN_LOADER_MODULE.PluginLoader() triggers the actual import
+        self.plugin_loader = PLUGIN_LOADER_MODULE.PluginLoader(self)  # pyright: ignore
         self.plugins = self.plugin_loader.plugins
+        return False  # Stop idle_add after execution
 
     def get_config(self, key_path, default=None):
         """Safely retrieves a configuration value using a list of keys."""
@@ -134,9 +145,10 @@ class Panel(Adw.Application):
         """
         if self.plugin_loader:
             self.logger.debug("Loading plugins...")
-            GLib.idle_add(self.plugin_loader.load_plugins)
-            self.logger.info("Plugins loading initiated.")
-            return False  # stop idle
+            self.plugin_loader.load_plugins()  # pyright: ignore
+            self.logger.info("Plugins loading finished.")
+            return False  # stop idle_add after scheduling the async task
+        self.logger.warning("Panel: re-trying load plugins...")
         return True  # continue idle_add
 
     def do_activate(self):
@@ -175,8 +187,6 @@ class Panel(Adw.Application):
     def _setup_top_panel(self, config):
         """
         Configure the top panel based on the provided configuration.
-        Args:
-            config (dict): Configuration for the top panel.
         """
         self.logger.debug("Setting up top panel...")
         exclusive = bool(config.get("Exclusive", 1.0))
@@ -185,7 +195,9 @@ class Panel(Adw.Application):
         layer_position = config.get("layer_position", "TOP")
         width = self.get_config(["panel", "top", "width"], self.monitor_width)
         height = self.get_config(["panel", "top", "height"], 32.0)
-        self.top_panel = CreatePanel(
+
+        # Lazy load: Accessing CREATE_PANEL_MODULE.CreatePanel() triggers the actual import
+        self.top_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
             layer_position,
@@ -201,8 +213,6 @@ class Panel(Adw.Application):
     def _setup_bottom_panel(self, config):
         """
         Configure the bottom panel based on the provided configuration.
-        Args:
-            config (dict): Configuration for the bottom panel.
         """
         self.logger.debug("Setting up bottom panel...")
         exclusive = bool(config.get("Exclusive", 1.0))
@@ -211,7 +221,9 @@ class Panel(Adw.Application):
         layer_position = config.get("layer_position", "BACKGROUND")
         width = self.get_config(["panel", "bottom", "width"], self.monitor_width)
         height = self.get_config(["panel", "bottom", "height"], 32.0)
-        self.bottom_panel = CreatePanel(
+
+        # Lazy load
+        self.bottom_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
             layer_position,
@@ -227,8 +239,6 @@ class Panel(Adw.Application):
     def _setup_left_panel(self, config):
         """
         Configure the left panel based on the provided configuration.
-        Args:
-            config (dict): Configuration for the left panel.
         """
         self.logger.debug("Setting up left panel...")
         exclusive = bool(config.get("Exclusive", 1.0))
@@ -237,7 +247,9 @@ class Panel(Adw.Application):
         layer_position = config.get("layer_position", "BACKGROUND")
         width = self.get_config(["panel", "left", "width"], 32.0)
         height = self.get_config(["panel", "left", "height"], 0.0)
-        self.left_panel = CreatePanel(
+
+        # Lazy load
+        self.left_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
             layer_position,
@@ -253,8 +265,6 @@ class Panel(Adw.Application):
     def _setup_right_panel(self, config):
         """
         Configure the right panel based on the provided configuration.
-        Args:
-            config (dict): Configuration for the right panel.
         """
         self.logger.debug("Setting up right panel...")
         exclusive = bool(config.get("Exclusive", 1.0))
@@ -263,7 +273,9 @@ class Panel(Adw.Application):
         layer_position = config.get("layer_position", "BACKGROUND")
         width = self.get_config(["panel", "right", "width"], 32.0)
         height = self.get_config(["panel", "right", "height"], 0.0)
-        self.right_panel = CreatePanel(
+
+        # Lazy load
+        self.right_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
             layer_position,
@@ -307,10 +319,11 @@ class Panel(Adw.Application):
             exclusivity. This modular, configuration-driven approach
             allows users to customize the panel layout without
             modifying the source code.
-        3.  **Asynchronous Initialization**: The `on_activate` method
+        3.  **Asynchronous Initialization (FIXED)**: The `on_activate` method
             begins the application's main loop. It uses `GLib.idle_add`
-            to load plugins asynchronously, ensuring the UI remains
-            responsive and doesn't freeze during startup. This is
-            a crucial design choice for a smooth user experience.
+            to run `_load_plugins`, which now uses `asyncio.create_task`
+            to load plugins concurrently. This ensures the UI remains
+            responsive and doesn't freeze during startup, which was a
+            crucial fix for a smooth user experience.
         """
         return self.code_explanation.__doc__

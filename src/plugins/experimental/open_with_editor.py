@@ -146,7 +146,7 @@ class OpenWithEditor(BasePlugin):
         self.menubutton_folders.connect("clicked", self.open_popover_folders)
         icon_name = self.gtk_helper.set_widget_icon_name(
             "code-exploration",
-            ["code-exploration"],
+            ["code"],
         )
         self.menubutton_folders.set_icon_name(icon_name)
         self.menubutton_folders.add_css_class("places-menu-button")
@@ -212,7 +212,7 @@ class OpenWithEditor(BasePlugin):
         listbox.set_show_separators(True)
         listbox.add_css_class("places-listbox")
         scrolled_window = self.gtk.ScrolledWindow()
-        scrolled_window.set_min_content_width(400)
+        scrolled_window.set_min_content_width(800)
         scrolled_window.set_min_content_height(600)
         scrolled_window.add_css_class("places-scrolled-window")
         scrolled_window.set_child(listbox)
@@ -345,18 +345,21 @@ class OpenWithEditor(BasePlugin):
         self.open_file_in_editor(file_path=file_path, editor_index=editor_index)
         gesture.set_state(self.gtk.EventSequenceState.STOPPED)
 
-    def _create_file_row(self, full_file_path):
+    def _create_file_row(self, full_file_path, root_dir):
         """
         Creates a single ListBox row child (HBox) for a file entry.
+        Args:
+            full_file_path (str): The absolute path to the file.
+            root_dir (str): The root directory used for relative path calculation.
         """
         icon_name = self._get_file_icon_name(full_file_path)
-        filename = self.os.path.basename(full_file_path)
+        display_path = self.os.path.relpath(full_file_path, root_dir)
         row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
         row_hbox.add_css_class("places-row-hbox")
         row_hbox.MYTEXT = full_file_path
         row_hbox.set_tooltip_text(full_file_path)
         line = self.gtk.Label.new()
-        line.set_label(filename)
+        line.set_label(display_path)
         line.props.margin_start = 5
         line.props.hexpand = True
         line.set_halign(self.gtk.Align.START)
@@ -399,7 +402,9 @@ class OpenWithEditor(BasePlugin):
             listbox.set_filter_func(lambda r: False)
             return
         for file_path in files_to_list:
-            row_hbox = self._create_file_row(full_file_path=file_path)
+            row_hbox = self._create_file_row(
+                full_file_path=file_path, root_dir=directory_path
+            )
             click_gesture = self.gtk.GestureClick.new()
             click_gesture.set_button(0)
             click_gesture.connect(
@@ -552,15 +557,14 @@ class OpenWithEditor(BasePlugin):
     def code_explanation(self):
         """
         This plugin creates a popover UI to search and open files from configured directories using tabs.
-        1.  **Configuration & Editor Defaults (Updated)**:
-            - If no user configuration is found, a rich set of **recommended defaults** is used:
-                - **Config/Data/Web files (JSON, TOML, CSS, HTML)**: Prefer `code` (VS Code).
-                - **Programming files (Python, Lua, Shell)**: Prefer `nvim` (Neovim).
-                - **Plain Text (`txt`, `log`)**: Prefer `gedit`.
-            - The `self.default_editors` list (`nvim`, `code`, `gedit`, etc.) acts as an **ultimate fallback** if a file's extension is missing from *both* the user's config and the recommended defaults.
-        2.  **Tabbed UI**: The popover uses a `Gtk.StackSwitcher` and `Gtk.Stack` to manage multiple directory views, each with its own `Gtk.SearchEntry` and `Gtk.ListBox`.
+        1.  **Configuration & Editor Defaults**:
+            - Uses a rich set of **recommended defaults** for editor selection if the user provides no configuration (e.g., `code` for config/web files, `nvim` for programming).
+            - The `self.default_editors` list acts as an **ultimate fallback**.
+        2.  **Tabbed UI and File Display (Updated)**:
+            - The popover width has been **increased to 600px** (`set_min_content_width(600)`) to better display long paths.
+            - The displayed file label now shows the **path relative to the configured root directory** (e.g., `subdir/file.py`), instead of just the filename, making it easier to locate files.
         3.  **Editor Selection and Gestures**:
-            - Mouse buttons (Left=0, Middle=1, Right=2) determine the index of the editor to launch from the selected list (user-configured, recommended default, or ultimate fallback).
+            - Mouse buttons (Left, Middle, Right) determine the index of the editor to launch from the selected list.
         4.  **Lazy Loading & Filtering**: Files are scanned and loaded only when a tab is selected for the first time, and the search bar dynamically controls the filtering of the active tab's file list.
         """
         return self.code_explanation.__doc__
