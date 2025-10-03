@@ -24,11 +24,9 @@ class UpdateCheckerPlugin(BasePlugin):
         super().__init__(panel_instance)
         self.button = Gtk.Button(label="0")
         self.button.add_css_class("update-checker-button")
-        self.popover = Gtk.Popover()
+        self.popover = None
+        self.popover_box = None
         self.menu_button = Gtk.MenuButton()
-        self.menu_button.set_popover(self.popover)
-        self.popover_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        self.popover.set_child(self.popover_box)
         self.button.connect("clicked", self._on_button_click)
         self.menu_button.set_icon_name("software-update-available-symbolic")
         self.gtk_helper.add_cursor_effect(self.menu_button)
@@ -36,6 +34,7 @@ class UpdateCheckerPlugin(BasePlugin):
         self.update_count = 0
         self.is_checking = False
         self.terminal_pid = None
+        self.count_label = None
         self.run_in_thread(self._setup_popover)
         self.run_in_thread(self._update_ui, 0)
 
@@ -46,6 +45,20 @@ class UpdateCheckerPlugin(BasePlugin):
         GLib.timeout_add_seconds(3600, self._check_updates_periodically)
 
     def _setup_popover(self):
+        """
+        Creates and configures the popover and its contents, utilizing
+        self.create_popover to handle instantiation and signal connections.
+        """
+        self.popover_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self.popover = self.create_popover(
+            parent_widget=self.menu_button,
+            css_class="update-checker-popover",
+            has_arrow=False,
+            closed_handler=None,
+            visible_handler=self._on_popover_visibility_changed,
+        )
+        self.popover.set_child(self.popover_box)
+        self.menu_button.set_popover(self.popover)
         label = Gtk.Label(label="System Updates")
         label.add_css_class("heading")
         self.popover_box.append(label)
@@ -61,7 +74,6 @@ class UpdateCheckerPlugin(BasePlugin):
         update_btn.connect("clicked", self._launch_terminal)
         self.popover_box.append(update_btn)
         self.gtk_helper.add_cursor_effect(update_btn)
-        self.popover.connect("notify::visible", self._on_popover_visibility_changed)
 
     def _on_popover_visibility_changed(self, popover, param):
         if popover.get_property("visible"):
@@ -72,7 +84,8 @@ class UpdateCheckerPlugin(BasePlugin):
             return
         self.is_checking = True
         self.schedule_in_gtk_thread(
-            self.count_label.set_label, "Checking for updates..."
+            self.count_label.set_label,  # pyright: ignore
+            "Checking for updates...",
         )
         await self._check_updates()
         self.is_checking = False
@@ -114,20 +127,20 @@ class UpdateCheckerPlugin(BasePlugin):
     def _update_ui(self, count):
         """Updates the UI based on the update count. Must run on the GTK thread."""
         if count == -1:
-            self.count_label.set_label("Error checking updates")
+            self.count_label.set_label("Error checking updates")  # pyright: ignore
             self.button.set_label("!")
             self.menu_button.show()
         elif count == 0:
-            self.count_label.set_label("System is up to date")
+            self.count_label.set_label("System is up to date")  # pyright: ignore
             self.button.set_label("0")
             self.menu_button.hide()
         else:
-            self.count_label.set_label(f"{count} updates available")
+            self.count_label.set_label(f"{count} updates available")  # pyright: ignore
             self.button.set_label(str(count))
             self.menu_button.show()
 
     def _on_button_click(self, button):
-        self.schedule_in_gtk_thread(self.popover.popup)
+        self.schedule_in_gtk_thread(self.popover.popup)  # pyright: ignore
 
     def _launch_terminal(self, button):
         terminal = None
@@ -189,9 +202,14 @@ class UpdateCheckerPlugin(BasePlugin):
         updates by integrating with Arch Linux's package management tools.
         Its core logic revolves around **asynchronous process management,
         UI integration, and dependency handling**:
-        1.  **Concurrency Refactoring**: All usage of the old `global_loop.create_task()` has been replaced with the robust `self.run_in_async_task()`. The initial and periodic check scheduling is moved to the `on_start()` lifecycle hook.
-        2.  **GTK Thread Safety**: The `_update_ui` method, which manipulates GTK widgets, is now called exclusively using `self.schedule_in_gtk_thread()` from the asynchronous `_check_updates` method. This guarantees UI stability by ensuring GTK calls always happen on the main thread.
-        3.  **Asynchronous Update Check**: The `_check_updates` method continues to use `asyncio.create_subprocess_exec` to run the `checkupdates` command non-blockingly.
-        4.  **Process and State Management**: When the "Update Now" button is clicked, it launches a terminal process (`sudo pacman -Syu`) and uses `GLib.timeout_add_seconds` to synchronously monitor the terminal's PID. Once the process is finished, a new update check is automatically triggered via `self.run_in_async_task(self._manual_refresh())`.
+        1. **Gtk.Popover Refactoring**: The manual creation and signal connection
+           for `self.popover` in `__init__` were moved to `_setup_popover` and
+           replaced by a call to `self.create_popover`. The result is assigned
+           to `self.popover`, and the manual `self.menu_button.set_popover()`
+           call is maintained.
+        2. **Concurrency Refactoring**: All usage of the old `global_loop.create_task()` has been replaced with the robust `self.run_in_async_task()`. The initial and periodic check scheduling is moved to the `on_start()` lifecycle hook.
+        3. **GTK Thread Safety**: The `_update_ui` method, which manipulates GTK widgets, is now called exclusively using `self.schedule_in_gtk_thread()` from the asynchronous `_check_updates` method. This guarantees UI stability by ensuring GTK calls always happen on the main thread.
+        4. **Asynchronous Update Check**: The `_check_updates` method continues to use `asyncio.create_subprocess_exec` to run the `checkupdates` command non-blockingly.
+        5. **Process and State Management**: When the "Update Now" button is clicked, it launches a terminal process (`sudo pacman -Syu`) and uses `GLib.timeout_add_seconds` to synchronously monitor the terminal's PID. Once the process is finished, a new update check is automatically triggered via `self.run_in_async_task(self._manual_refresh())`.
         """
         return self.code_explanation.__doc__

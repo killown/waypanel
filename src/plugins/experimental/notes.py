@@ -378,7 +378,7 @@ class MenuNotes(BasePlugin):
             row_text = note_widget.original_content.lower()  # pyright: ignore
         elif isinstance(note_widget, Gtk.Entry):
             row_text = note_widget.get_text().lower()
-        return search_text in row_text
+        return search_text in row_text  # pyright: ignore
 
     def about(self):
         """

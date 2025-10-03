@@ -908,37 +908,58 @@ class GtkHelpers:
 
     def create_menu_with_actions(self, action_map: dict, action_prefix: str = "app"):
         """
-        Creates a Gtk.Menu and a Gtk.SimpleActionGroup based on a dictionary of actions.
+        Creates a Gtk.MenuButton with a Gtk.Menu and a Gio.SimpleActionGroup based on a
+        recursive dictionary structure of actions and optional submenus.
+        This version uses the documented and simpler Gio.MenuItem.set_icon() method,
+        which correctly handles GIcon serialization internally, matching the requirement
+        for the "icon" attribute.
         Args:
-            action_map (dict): A dictionary where keys are action names (str) and
-                                values are dictionaries containing:
-                                - 'label' (str): The display text for the menu item.
-                                - 'callback' (function): The function to connect to the action.
-                                - 'is_async' (bool, optional): If True, the callback is wrapped
-                                  with self.run_in_async_task(). Defaults to False.
+            action_map (dict): A recursive dictionary defining menu items and submenus.
             action_prefix (str, optional): The namespace for the menu actions (e.g., 'app').
         Returns:
-            tuple: (Gio.Menu, Gio.SimpleActionGroup)
+            Gtk.MenuButton: A fully configured Gtk.MenuButton.
         """
-        menu = Gio.Menu()
         action_group = Gio.SimpleActionGroup()
-        for action_name, config in action_map.items():
-            menu_item_label = config["label"]
-            action_id = f"{action_prefix}.{action_name}"
-            menu_item = Gio.MenuItem.new(menu_item_label, action_id)
-            menu.append_item(menu_item)
-            action = Gio.SimpleAction.new(action_name, None)
-            callback = config["callback"]
-            if config.get("is_async", False):
-                action.connect(
-                    "activate",
-                    lambda *args,
-                    cb=callback: self.concurrency_helper.run_in_async_task(cb()),
-                )
-            else:
-                action.connect("activate", callback)
-            action_group.add_action(action)
-        return menu, action_group
+
+        def _create_menu_recursive(menu_config: dict) -> Gio.Menu:
+            """Recursively builds the Gio.Menu and populates the action_group."""
+            menu = Gio.Menu()
+            for key, config in menu_config.items():
+                if config.get("is_submenu", False):
+                    submenu_label = key
+                    submenu_config = config.get("items", {})
+                    submenu = _create_menu_recursive(submenu_config)
+                    menu.append_submenu(submenu_label, submenu)
+                else:
+                    action_name = key
+                    menu_item_label = config["label"]
+                    action_id = f"{action_prefix}.{action_name}"
+                    menu_item = Gio.MenuItem.new(menu_item_label, action_id)
+                    icon_name = config.get("icon")
+                    if icon_name:
+                        gicon = Gio.ThemedIcon.new(icon_name)
+                        menu_item.set_icon(gicon)
+                    menu.append_item(menu_item)
+                    action = Gio.SimpleAction.new(action_name, None)
+                    callback = config["callback"]
+                    if config.get("is_async", False):
+                        action.connect(
+                            "activate",
+                            lambda *args,
+                            cb=callback: self.concurrency_helper.run_in_async_task(
+                                cb()
+                            ),
+                        )
+                    else:
+                        action.connect("activate", callback)
+                    action_group.add_action(action)
+            return menu
+
+        menu = _create_menu_recursive(action_map)
+        menubutton = Gtk.MenuButton()
+        menubutton.set_menu_model(menu)
+        menubutton.insert_action_group(action_prefix, action_group)
+        return menubutton
 
     def create_async_button(self, label: str, callback, css_class: str) -> Gtk.Button:
         """
@@ -953,3 +974,96 @@ class GtkHelpers:
         if css_class:
             button.add_css_class(css_class)
         return button
+
+    def create_dashboard_popover(
+        self,
+        parent_widget,
+        popover_closed_handler,
+        popover_visible_handler,
+        action_handler,
+        button_config: dict,
+        css_class: str = "dashboard-popover",
+        max_children_per_line: int = 3,
+    ):
+        """
+        Creates and configures a reusable dashboard popover containing a FlowBox
+        of custom action buttons, based on the provided configuration.
+        Args:
+            Gtk: The gi.repository.Gtk module (passed from the caller).
+            gtk_helper: The object containing helper methods like icon_exist, add_cursor_effect.
+            create_popover_func: The function (e.g., self.create_popover) to instantiate the popover.
+            parent_widget: The widget the popover is attached to.
+            popover_closed_handler: The callback function for popover closure.
+            popover_visible_handler: The callback function for popover visibility.
+            action_handler: The callback function for button clicks (e.g., self.on_action).
+            logger: The logger object.
+            button_config (dict): A dict defining buttons:
+                                  { "Label": {"icons": ["name1", "name2"], "summary": "...", "category": "..."} }
+            css_class (str): The CSS class for the popover (default: 'dashboard-popover').
+            max_children_per_line (int): Max number of buttons per row in the FlowBox.
+        Returns:
+            Gtk.Popover: The fully configured dashboard popover.
+        """
+        popover_dashboard = self.create_popover(
+            parent_widget=parent_widget,
+            css_class=css_class,
+            has_arrow=True,
+            closed_handler=popover_closed_handler,
+            visible_handler=popover_visible_handler,
+        )
+        popover_dashboard.set_vexpand(True)
+        popover_dashboard.set_hexpand(True)
+        main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        stack = Gtk.Stack.new()
+        data_and_categories = {}
+        for label, config in button_config.items():
+            icons = config.get("icons", [])
+            summary = config.get("summary", "")
+            category = config.get("category", "")
+            icon_name = None
+            if icons:
+                icon_name = self.icon_exist(icons[0], icons[1:])
+            data_and_categories[(label, summary, icon_name)] = category
+        done = []
+        for data, category in data_and_categories.items():
+            if category not in done:
+                flowbox = Gtk.FlowBox.new()
+                flowbox.props.homogeneous = True
+                flowbox.set_valign(Gtk.Align.START)
+                flowbox.props.margin_start = 15
+                flowbox.props.margin_end = 15
+                flowbox.props.margin_top = 15
+                flowbox.props.margin_bottom = 15
+                flowbox.props.hexpand = True
+                flowbox.props.vexpand = True
+                flowbox.props.max_children_per_line = max_children_per_line
+                flowbox.props.selection_mode = Gtk.SelectionMode.NONE
+                stack.add_titled(flowbox, category, category if category else "Default")
+                done.append(category)
+            else:
+                flowbox = stack.get_child_by_name(category)
+            icon_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+            if data[2]:
+                icon = Gtk.Image.new_from_icon_name(data[2])
+                icon.set_icon_size(Gtk.IconSize.LARGE)
+                icon_vbox.append(icon)
+            name_label = Gtk.Label.new(data[0])
+            icon_vbox.append(name_label)
+            summary_label = Gtk.Label.new(data[1])
+            icon_vbox.append(summary_label)
+            button = Gtk.Button.new()
+            button.set_has_frame(False)
+            if icon_vbox is not None and isinstance(icon_vbox, Gtk.Widget):
+                button.set_child(icon_vbox)
+            else:
+                self.logger.info("Error: Invalid icon_vbox provided")
+            flowbox.append(button)  # pyright: ignore
+            button.connect("clicked", action_handler, data[0])
+            name_label.add_css_class("system_dash_label")
+            summary_label.add_css_class("system_dash_summary")
+            self.add_cursor_effect(button)
+        main_box.append(stack)
+        popover_dashboard.set_child(main_box)
+        stack.add_css_class("system_dashboard_stack")
+        popover_dashboard.popup()
+        return popover_dashboard

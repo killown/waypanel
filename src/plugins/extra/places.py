@@ -43,9 +43,17 @@ class PopoverFolders(BasePlugin):
 
     def create_popover_folders(self):
         """
-        Create and configure a popover for folders.
+        Create and configure a popover for folders by chaining helper methods.
         """
+        self._setup_popover_base()
+        main_box = self._setup_search_and_listbox()
+        self.popover_folders.set_child(main_box)  # pyright: ignore
+        self._populate_folder_list()
+        self.popover_folders.popup()  # pyright: ignore
+        return self.popover_folders
 
+    def _setup_popover_base(self):
+        """Creates and configures the main popover object and its GIO action."""
         self.popover_folders = self.create_popover(
             parent_widget=self.menubutton_folders,
             css_class="places-popover",
@@ -54,21 +62,18 @@ class PopoverFolders(BasePlugin):
             visible_handler=self.popover_is_open,
         )
         self.popover_folders.set_autohide(True)
-
-        # ACTION
         show_searchbar_action = self.gio.SimpleAction.new("show_searchbar")
         show_searchbar_action.connect("activate", self.on_show_searchbar_action_actived)
         self.obj.add_action(show_searchbar_action)
 
-        # SCROLLED WINDOW AND MAIN BOX SETUP
+    def _setup_search_and_listbox(self):
+        """Sets up the scrolled window, main box, search entry, and listbox structure."""
         self.scrolled_window = self.gtk.ScrolledWindow()
         self.scrolled_window.set_min_content_width(400)
         self.scrolled_window.set_min_content_height(600)
         self.scrolled_window.add_css_class("places-scrolled-window")
         self.main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
         self.main_box.add_css_class("places-main-box")
-
-        # SEARCH BAR SETUP
         self.searchbar = self.gtk.SearchEntry.new()
         self.searchbar.grab_focus()
         self.searchbar.connect("search_changed", self.on_search_entry_changed)
@@ -77,8 +82,6 @@ class PopoverFolders(BasePlugin):
         self.searchbar.props.vexpand = True
         self.searchbar.add_css_class("places-search-entry")
         self.main_box.append(self.searchbar)
-
-        # LISTBOX SETUP
         self.listbox = self.gtk.ListBox.new()
         self.listbox.connect("row-selected", lambda widget, row: self.open_folder(row))
         self.searchbar.set_key_capture_widget(self.obj.top_panel)
@@ -87,13 +90,38 @@ class PopoverFolders(BasePlugin):
         self.listbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
         self.listbox.set_show_separators(True)
         self.listbox.add_css_class("places-listbox")
-
-        # FINAL ASSEMBLY OF POPOVER CONTENT
         self.main_box.append(self.scrolled_window)
         self.scrolled_window.set_child(self.listbox)
-        self.popover_folders.set_child(self.main_box)
+        return self.main_box
 
-        # POPULATE FOLDERS
+    def _create_folder_row(self, name, folders_path, filemanager, icon, icon_size=None):
+        """Creates a single ListBox row (HBox) for a folder entry with an icon and label."""
+        row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
+        row_hbox.add_css_class("places-row-hbox")
+        row_hbox.MYTEXT = folders_path, filemanager  # pyright: ignore
+        line = self.gtk.Label.new()
+        line.set_label(name)
+        line.props.margin_start = 5
+        line.props.hexpand = True
+        line.set_halign(self.gtk.Align.START)
+        line.add_css_class("places-label-from-popover")
+        image = self.gtk.Image.new_from_icon_name(icon)
+        image.add_css_class("places-icon-from-popover")
+        if icon_size == self.gtk.IconSize.LARGE:
+            image.set_icon_size(self.gtk.IconSize.LARGE)
+        else:
+            image.set_icon_size(self.gtk.IconSize.INHERIT)
+        image.props.margin_end = 5
+        image.set_halign(self.gtk.Align.END)
+        row_hbox.append(image)
+        row_hbox.append(line)
+        self.gtk_helper.add_cursor_effect(line)
+        self.create_row_right_click(row_hbox, folders_path)
+        self.create_row_middle_click(row_hbox, folders_path)
+        return row_hbox
+
+    def _populate_folder_list(self):
+        """Populates the listbox with configured folders and home directory folders."""
         all_folders = self.config_handler.config_data.get("folders")  # pyright: ignore
         if all_folders:
             for folder in all_folders.items():
@@ -101,55 +129,27 @@ class PopoverFolders(BasePlugin):
                 folders_path = folder[1]["path"]
                 filemanager = folder[1]["filemanager"]
                 icon = folder[1]["icon"]
-                row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
-                row_hbox.add_css_class("places-row-hbox")
-                row_hbox.MYTEXT = folders_path, filemanager  # pyright: ignore
+                row_hbox = self._create_folder_row(
+                    name=name,
+                    folders_path=folders_path,
+                    filemanager=filemanager,
+                    icon=icon,
+                    icon_size=self.gtk.IconSize.INHERIT,
+                )
                 self.listbox.append(row_hbox)
-                line = self.gtk.Label.new()
-                line.set_label(name)
-                line.props.margin_start = 5
-                line.props.hexpand = True
-                line.set_halign(self.gtk.Align.START)
-                line.add_css_class("places-label-from-popover")
-                image = self.gtk.Image.new_from_icon_name(icon)
-                image.set_icon_size(self.gtk.IconSize.INHERIT)
-                image.props.margin_end = 5
-                image.set_halign(self.gtk.Align.END)
-                image.add_css_class("places-icon-from-popover")
-                row_hbox.append(image)
-                row_hbox.append(line)
-                self.create_row_right_click(row_hbox, folders_path)
-                self.create_row_middle_click(row_hbox, folders_path)
-                self.gtk_helper.add_cursor_effect(line)
-
         for folder in self.home_folders:
             folders_path = self.os.path.join(self.home, folder)
             icon = "nautilus"
-            row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
-            row_hbox.add_css_class("places-row-hbox")
-            row_hbox.MYTEXT = folders_path, "nautilus"  # pyright: ignore
+            filemanager = "nautilus"
+            row_hbox = self._create_folder_row(
+                name=folder,
+                folders_path=folders_path,
+                filemanager=filemanager,
+                icon=icon,
+                icon_size=self.gtk.IconSize.LARGE,
+            )
             self.listbox.append(row_hbox)
-            line = self.gtk.Label.new()
-            line.add_css_class("places-label-from-popover")
-            line.set_label(folder)
-            line.props.margin_start = 5
-            line.props.hexpand = True
-            line.set_halign(self.gtk.Align.START)
-            image = self.gtk.Image.new_from_icon_name(icon)
-            image.add_css_class("places-icon-from-popover")
-            image.set_icon_size(self.gtk.IconSize.LARGE)
-            image.props.margin_end = 5
-            image.set_halign(self.gtk.Align.END)
-            row_hbox.append(image)
-            row_hbox.append(line)
-            self.create_row_right_click(row_hbox, folders_path)
-            self.create_row_middle_click(row_hbox, folders_path)
-            self.gtk_helper.add_cursor_effect(line)
-
         self.listbox.set_filter_func(self.on_filter_invalidate)
-
-        self.popover_folders.popup()
-        return self.popover_folders
 
     def create_row_right_click(self, row_hbox, folder_path):
         create_gesture = self.plugins["gestures_setup"].create_gesture
@@ -163,13 +163,25 @@ class PopoverFolders(BasePlugin):
             ),
         )
 
-    def create_right_click_menu(self, row_hbox, folder_path):
-        popover = self.gtk.Popover()
-        popover.set_parent(row_hbox)
-        box = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL)
-        button = self.gtk.Button.new_with_label("Pin to the top")
-        button.connect("clicked", lambda _, path=folder_path: self.pin_to_top(path))
+    def _append_menu_button_to_box(self, box, label, callback):
+        """Creates a button with a label and connects a clicked signal, then appends it to the provided box."""
+        button = self.gtk.Button.new_with_label(label)
+        button.connect("clicked", callback)
         box.append(button)
+        return button
+
+    def create_right_click_menu(self, row_hbox, folder_path):
+        popover = self.create_popover(
+            parent_widget=row_hbox,
+            css_class="places-right-click-popover",
+            has_arrow=False,
+        )
+        box = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL)
+        self._append_menu_button_to_box(
+            box=box,
+            label="Pin to the top",
+            callback=lambda _, path=folder_path: self.pin_to_top(path),
+        )
         popover.set_child(box)
         popover.popup()
 

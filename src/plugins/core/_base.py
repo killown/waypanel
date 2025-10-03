@@ -440,6 +440,11 @@ class BasePlugin:
         return self._gtk_helper.icon_exist
 
     @property
+    def create_dashboard_popover(self):
+        """Read-only access to the self._gtk_helper.create_dashboard_popover"""
+        return self._gtk_helper.create_dashboard_popover
+
+    @property
     def set_layer_pos_exclusive(self) -> Any:
         """Read-only reference to create_panel.set_layer_position_exclusive."""
         return self._set_layer_pos_exclusive

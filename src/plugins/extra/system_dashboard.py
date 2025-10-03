@@ -4,6 +4,45 @@ from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
 
+SYSTEM_BUTTON_CONFIG = {
+    "Logout": {
+        "icons": ["system-log-out-symbolic", "gnome-logout-symbolic"],
+        "summary": "",
+    },
+    "Reboot": {
+        "icons": ["system-reboot-update-symbolic", "system-reboot-symbolic"],
+        "summary": "",
+    },
+    "Shutdown": {
+        "icons": ["gnome-shutdown-symbolic", "system-shutdown-symbolic"],
+        "summary": "",
+    },
+    "Suspend": {
+        "icons": ["system-suspend-hibernate-symbolic", "system-suspend-symbolic"],
+        "summary": "",
+    },
+    "Lock": {"icons": ["system-lock-screen-symbolic", "lock-symbolic"], "summary": ""},
+    "Exit Waypanel": {
+        "icons": ["application-exit-symbolic", "application-exit", "exit"],
+        "summary": "",
+    },
+    "Restart Waypanel": {
+        "icons": ["system-restart-symbolic", "system-restart-panel"],
+        "summary": "",
+    },
+    "Settings": {
+        "icons": [
+            "settings-configure-symbolic",
+            "systemsettings-symbolic",
+            "settings",
+            "system-settings-symbolic",
+            "preferences-activities-symbolic",
+            "preferences-system",
+        ],
+        "summary": "",
+    },
+}
+
 
 def get_plugin_placement(panel_instance):
     position = "top-panel-systray"
@@ -23,6 +62,7 @@ class SystemDashboard(BasePlugin):
         super().__init__(panel_instance)
         self.popover_dashboard = None
         self.panel_instance = panel_instance
+        self.menubutton_dashboard = None
 
     def message(self, msg):
         dialog = self.gtk.MessageDialog(
@@ -33,7 +73,7 @@ class SystemDashboard(BasePlugin):
         )
         close_btn = self.gtk.Button(label="_Close", use_underline=True)
         close_btn.connect("clicked", lambda *_: dialog.close())
-        dialog.get_message_area().append(close_btn)  # pyright: ignore
+        dialog.get_message_area().append(close_btn)
         dialog.show()
 
     def launch_settings(self):
@@ -67,140 +107,22 @@ class SystemDashboard(BasePlugin):
         return self.menubutton_dashboard
 
     def create_popover_system(self, *_):
-        self.popover_dashboard = self.create_popover(
+        """
+        Creates the system dashboard popover using the reusable helper method
+        self.create_dashboard_popover and the global configuration data.
+        """
+        if not self.menubutton_dashboard:
+            self.logger.error("menubutton_dashboard not initialized.")
+            return
+        self.popover_dashboard = self.create_dashboard_popover(
             parent_widget=self.menubutton_dashboard,
+            popover_closed_handler=self.popover_is_closed,
+            popover_visible_handler=self.popover_is_open,
+            action_handler=self.on_action,
+            button_config=SYSTEM_BUTTON_CONFIG,
             css_class="system-popover",
-            has_arrow=True,
-            closed_handler=self.popover_is_closed,
-            visible_handler=self.popover_is_open,
+            max_children_per_line=3,
         )
-
-        self.popover_dashboard.set_vexpand(True)
-        self.popover_dashboard.set_hexpand(True)
-        self.main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
-        self.stack = self.gtk.Stack.new()
-
-        # --- Logout Icon ---
-        logout_icons = [
-            "system-log-out-symbolic",
-            "gnome-logout-symbolic",
-        ]
-        logout_icon = self.gtk_helper.icon_exist(
-            logout_icons[0],
-            logout_icons[1:],  # Fallbacks start from the second item
-        )
-
-        # --- Reboot Icon ---
-        reboot_icons = ["system-reboot-update-symbolic", "system-reboot-symbolic"]
-        reboot_icon = self.gtk_helper.icon_exist(
-            reboot_icons[0],
-            reboot_icons[1:],
-        )
-
-        # --- Shutdown Icon ---
-        shutdown_icons = [
-            "gnome-shutdown-symbolic",
-            "system-shutdown-symbolic",
-        ]
-        shutdown_icon = self.gtk_helper.icon_exist(
-            shutdown_icons[0],
-            shutdown_icons[1:],
-        )
-
-        # --- Suspend Icon ---
-        suspend_icons = ["system-suspend-hibernate-symbolic", "system-suspend-symbolic"]
-        suspend_icon = self.gtk_helper.icon_exist(
-            suspend_icons[0],
-            suspend_icons[1:],
-        )
-
-        # --- Lock Icon ---
-        lock_icons = ["system-lock-screen-symbolic", "lock-symbolic"]
-        lock_icon = self.gtk_helper.icon_exist(
-            lock_icons[0],
-            lock_icons[1:],
-        )
-
-        # --- Exit Icon (Note: exit is a specific application close icon, distinct from logout) ---
-        exit_icons = ["application-exit-symbolic", "application-exit", "exit"]
-        exit_icon = self.gtk_helper.icon_exist(
-            exit_icons[0],
-            exit_icons[1:],
-        )
-
-        # --- Restart Icon ---
-        restart_icons = ["system-restart-symbolic", "system-restart-panel"]
-        restart_icon = self.gtk_helper.icon_exist(
-            restart_icons[0],
-            restart_icons[1:],
-        )
-
-        # --- Settings Icon ---
-        settings_icons = [
-            "settings-configure-symbolic",
-            "systemsettings-symbolic",
-            "settings",
-            "system-settings-symbolic",
-            "preferences-activities-symbolic",
-            "preferences-system",
-        ]
-        settings_icon = self.gtk_helper.icon_exist(
-            settings_icons[0],
-            settings_icons[1:],
-        )
-
-        data_and_categories = {
-            ("Logout", "", logout_icon): "",
-            ("Reboot", "", reboot_icon): "",
-            ("Shutdown", "", shutdown_icon): "",
-            ("Suspend", "", suspend_icon): "",
-            ("Lock", "", lock_icon): "",
-            ("Exit Waypanel", "", exit_icon): "",
-            ("Restart Waypanel", "", restart_icon): "",
-            ("Settings", "", settings_icon): "",
-        }
-        done = []
-        for data, category in data_and_categories.items():
-            if category not in done:
-                flowbox = self.gtk.FlowBox.new()
-                flowbox.props.homogeneous = True
-                flowbox.set_valign(self.gtk.Align.START)
-                flowbox.props.margin_start = 15
-                flowbox.props.margin_end = 15
-                flowbox.props.margin_top = 15
-                flowbox.props.margin_bottom = 15
-                flowbox.props.hexpand = True
-                flowbox.props.vexpand = True
-                flowbox.props.max_children_per_line = 3
-                flowbox.props.selection_mode = self.gtk.SelectionMode.NONE
-                self.stack.add_titled(flowbox, category, category)
-                done.append(category)
-            else:
-                flowbox = self.stack.get_child_by_name(category)
-            icon_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
-            icon = self.gtk.Image.new_from_icon_name(data[2])
-            icon.set_icon_size(self.gtk.IconSize.LARGE)
-            icon_vbox.append(icon)
-            name_label = self.gtk.Label.new(data[0])
-            icon_vbox.append(name_label)
-            summary_label = self.gtk.Label.new(data[1])
-            icon_vbox.append(summary_label)
-            button = self.gtk.Button.new()
-            button.set_has_frame(False)
-            if icon_vbox is not None and isinstance(icon_vbox, self.gtk.Widget):
-                button.set_child(icon_vbox)
-            else:
-                self.logger.info("Error: Invalid icon_vbox provided")
-            flowbox.append(button)  # pyright: ignore
-            button.connect("clicked", self.on_action, data[0])
-            name_label.add_css_class("system_dash_label")
-            summary_label.add_css_class("system_dash_summary")
-            self.gtk_helper.add_cursor_effect(button)
-        self.main_box.append(self.stack)
-        self.popover_dashboard.set_child(self.main_box)
-        self.popover_dashboard.set_parent(self.menubutton_dashboard)
-        self.popover_dashboard.popup()
-        self.stack.add_css_class("system_dashboard_stack")
         return self.popover_dashboard
 
     def on_system_clicked(self, device, *_):
@@ -226,9 +148,9 @@ class SystemDashboard(BasePlugin):
     def open_popover_dashboard(self, *_):
         if self.popover_dashboard and self.popover_dashboard.is_visible():
             self.popover_dashboard.popdown()
-        if self.popover_dashboard and not self.popover_dashboard.is_visible():
+        elif self.popover_dashboard and not self.popover_dashboard.is_visible():
             self.popover_dashboard.popup()
-        if not self.popover_dashboard:
+        elif not self.popover_dashboard:
             self.popover_dashboard = self.create_popover_system()
 
     def kill_process_by_name(self, name):
@@ -279,9 +201,7 @@ class SystemDashboard(BasePlugin):
         return
 
     def on_show_searchbar_action_actived(self, action, parameter):
-        self.searchbar.set_search_mode(  # pyright: ignore
-            True
-        )
+        self.searchbar.set_search_mode(True)  # pyright: ignore
 
     def about(self):
         """A system dashboard providing quick access to common system actions like power management, session control, and settings."""
@@ -290,11 +210,12 @@ class SystemDashboard(BasePlugin):
     def code_explanation(self):
         """
         This plugin creates a popover-based user interface for managing system-level actions.
-        It provides a single access point for common tasks such as logging out, shutting down, or accessing settings.
-        Its core logic is centered on **dynamic UI generation and system command execution**:
-        1.  **UI Generation**: It creates a popover that contains a grid of buttons (`self.gtk.FlowBox`), where each button represents a system action. It dynamically selects the most suitable icon for each button from a predefined list.
-        2.  **System Command Execution**: For each button, it executes a corresponding system command (e.g., `reboot`, `shutdown`, `swaylock`) using `subprocess.self.subprocess.Popen`, which allows the plugin to interact with the underlying operating system.
-        3.  **External Tool Integration**: It includes a check to verify the existence of an external application (`waypanel-settings`) before attempting to launch it, providing graceful error handling if the dependency is not met.
-        4.  **Session Management**: It provides direct commands to manage the user's session, including exiting and restarting the panel itself.
+        The system actions are defined in a global configuration dictionary (SYSTEM_BUTTON_CONFIG),
+        and the UI generation logic is delegated to the reusable helper method (self.create_dashboard_popover)
+        provided by the BasePlugin.
+        The plugin's core methods are:
+        1. create_menu_popover_system: Sets up the panel button.
+        2. create_popover_system: Calls the external helper to build the popover.
+        3. on_action: Executes the specific system command (e.g., shutdown, reboot) based on the button label.
         """
         return self.code_explanation.__doc__

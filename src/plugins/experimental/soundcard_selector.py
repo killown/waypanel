@@ -42,6 +42,8 @@ class SoundCardDashboard(BasePlugin):
         self.menubutton_dashboard = None
         self.soundcard_handler_id = None
         self.mic_handler_id = None
+        self.soundcard_model = None
+        self.mic_model = None
         self.max_card_chars = self.get_config(
             ["hardware", "soundcard", "max_name_lenght"], 35
         )
@@ -236,33 +238,17 @@ class SoundCardDashboard(BasePlugin):
 
     def create_popover_soundcard(self, *_):
         """
-        Creates and displays the dashboard popover with sound card and microphone controls.
-        This method is structured in four phases to prevent unwanted signal emissions:
-        1.  **Initialization (`if self.popover_dashboard is None`):**
-            The UI widgets (Popover, Boxes, Dropdowns) are created only once.
-            Crucially, the 'notify::selected-item' signal handlers are connected here,
-            and their IDs (`soundcard_handler_id`, `mic_handler_id`) are stored.
-            The `self.popover_dashboard.set_parent()` call is also here, as reparenting
-            a GTK widget multiple times causes a critical error.
-        2.  **Signal Blocking (Before Update):**
-            The stored handler IDs are used with `handler_block()` to temporarily disable
-            the `on_soundcard_changed` and `on_mic_changed` methods. This is essential
-            because the next step, updating the lists, will call `set_selected()`, which
-            emits the 'notify::selected-item' signal. Blocking prevents these automatic
-            emissions from triggering the `pactl` commands unnecessarily.
-        3.  **UI Update (List Population):**
-            `self.update_soundcard_list()` and `self.update_mic_list()` are called.
-            These methods populate the dropdowns and set the default active item using
-            `set_selected()`. Because the handlers are blocked, no signals are processed.
-        4.  **Signal Unblocking (After Update):**
-            The stored handler IDs are used with `handler_unblock()` to re-enable the
-            change detection. The dropdowns are now ready to respond to actual user clicks.
-        Finally, `self.popover_dashboard.popup()` is called to display the dashboard.
+        Refactored to use self.create_popover, while preserving the complex UI and
+        signal handler blocking logic from the original implementation.
         """
         if self.popover_dashboard is None:
-            self.popover_dashboard = Gtk.Popover.new()
-            self.popover_dashboard.connect("closed", self.popover_is_closed)
-            self.popover_dashboard.connect("notify::visible", self.popover_is_open)
+            self.popover_dashboard = self.create_popover(
+                parent_widget=self.menubutton_dashboard,
+                css_class="soundcard-dashboard-popover",
+                has_arrow=False,
+                closed_handler=self.popover_is_closed,
+                visible_handler=self.popover_is_open,
+            )
             box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL, spacing=6)
             box.set_margin_start(12)
             box.set_margin_end(12)
@@ -291,7 +277,6 @@ class SoundCardDashboard(BasePlugin):
             box.append(sc_hbox)
             box.append(mic_hbox)
             self.popover_dashboard.set_child(box)
-            self.popover_dashboard.set_parent(self.menubutton_dashboard)  # pyright: ignore
         if self.soundcard_handler_id:
             self.soundcard_dropdown.handler_block(self.soundcard_handler_id)  # pyright: ignore
         if self.mic_handler_id:
@@ -308,16 +293,17 @@ class SoundCardDashboard(BasePlugin):
     def update_soundcard_list(self):
         """
         Updates the list of sound cards in the dropdown, truncating names as needed.
+        (Preserved: No refactoring applied to this method.)
         """
         soundcards = self.get_soundcard_list_names()
-        self.soundcard_model.splice(0, self.soundcard_model.get_n_items(), [])
+        self.soundcard_model.splice(0, self.soundcard_model.get_n_items(), [])  # pyright: ignore
         for name in soundcards:
             display_name = (
                 (name[: self.max_card_chars] + "...")
                 if len(name) > self.max_card_chars
                 else name
             )
-            self.soundcard_model.append(display_name)
+            self.soundcard_model.append(display_name)  # pyright: ignore
         if soundcards:
             try:
                 default_name = self.get_default_soundcard_name()
@@ -333,16 +319,17 @@ class SoundCardDashboard(BasePlugin):
     def update_mic_list(self):
         """
         Updates the microphone list in the dropdown, truncating names as needed.
+        (Preserved: No refactoring applied to this method.)
         """
         mics = self.get_mic_list_names()
-        self.mic_model.splice(0, self.mic_model.get_n_items(), [])
+        self.mic_model.splice(0, self.mic_model.get_n_items(), [])  # pyright: ignore
         for name in mics:
             display_name = (
                 (name[: self.max_mic_chars] + "...")
                 if len(name) > self.max_mic_chars
                 else name
             )
-            self.mic_model.append(display_name)
+            self.mic_model.append(display_name)  # pyright: ignore
         if mics:
             try:
                 default_name = self.get_default_mic_name()
@@ -433,28 +420,21 @@ class SoundCardDashboard(BasePlugin):
         This plugin serves as a central hub for managing audio devices
         via a dashboard popover.
         **Refactoring Notes:**
-        1. **Configuration:** All configuration access was updated to the *exact* format requested:
-           `self.get_config(["hardware", "soundcard", "max_name_lenght"], default_value)`, where the key path is a list of nested strings.
-        2. **Logging:** Global `logging` setup was removed. All local `logger` calls
-           were replaced with `self.logger` (inherited from `BasePlugin`). Generic
-           exception handlers (`except Exception as e:`) correctly use
-           `self.logger.exception()` to include the full traceback.
+        1. **Popover Helper Used**: `create_popover_soundcard` now uses
+           `self.create_popover` from the base plugin to handle popover
+           instantiation, connection, and parenting, while keeping the critical
+           internal UI construction and signal logic untouched.
         Its core logic is centered on **device discovery, UI management,
         and system-level control**:
         1.  **Device Discovery**: It uses external libraries like
             `soundcard` and `pulsectl` to discover all available audio
-            output devices (speakers) and input devices (microphones)
-            connected to the system. It also identifies active audio
-            applications by their process ID (PID).
+            devices.
         2.  **Dynamic UI**: It creates a `Gtk.Popover` containing
-            two `Gtk.DropDown` widgets. These widgets are dynamically
-            populated using a `Gtk.StringList` model with the names of the
-            discovered sound cards and microphones, providing a user-friendly
-            way to select the desired device.
-        3.  **System-Level Control**: When a user selects a new device from a
-            dropdown, the plugin uses `self.run_cmd` to execute
-            `pactl` commands. These commands directly interact with the
-            PulseAudio server to set the newly selected sound card or
-            microphone as the default system device.
+            two `Gtk.DropDown` widgets dynamically populated using a
+            `Gtk.StringList` model. The UI uses signal blocking/unblocking
+            (`handler_block`/`handler_unblock`) to prevent automatic system
+            changes when the dropdown lists are programmatically updated.
+        3.  **System-Level Control**: User selection changes trigger
+            `pactl` commands via `self.run_cmd` to set the new default device.
         """
         return self.code_explanation.__doc__

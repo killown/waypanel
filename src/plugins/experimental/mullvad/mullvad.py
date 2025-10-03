@@ -25,7 +25,12 @@ class MullvadPlugin(BasePlugin):
         super().__init__(panel_instance)
         self.mullvad_version = None
         self.city_code = self.get_city_code()
-        self.menubutton_mullvad = self.gtk.MenuButton()
+        self.menubutton_mullvad = self.create_menu_button()
+        self.popover_mullvad = self.create_popover(
+            parent_widget=self.menubutton_mullvad,
+            css_class="mullvad-popover",
+            has_arrow=False,
+        )
         self.status_label = None
         self.main_widget = (self.menubutton_mullvad, "append")
 
@@ -64,11 +69,11 @@ class MullvadPlugin(BasePlugin):
         self.menubutton_mullvad.set_icon_name(self.icon_name)
         self.menubutton_mullvad.add_css_class("top_right_widgets")
         self.gtk_helper.add_cursor_effect(self.menubutton_mullvad)
-        self.create_menu_model()
+        self.create_popover_content()
         if self.os.path.exists("/usr/bin/mullvad"):
             self.glib.timeout_add(10000, self.update_vpn_status_async)
 
-    def create_menu_model(self):
+    def create_menu_button(self):
         """Create a self.gio.Menu and populate it with options for Mullvad."""
         action_map = {
             "connect": {
@@ -102,17 +107,7 @@ class MullvadPlugin(BasePlugin):
                 "is_async": True,
             },
         }
-        menu, action_group = self.create_menu_with_actions(
-            action_map=action_map, action_prefix="app"
-        )
-        self.menubutton_mullvad.set_menu_model(menu)
-        self.menubutton_mullvad.insert_action_group("app", action_group)
-        self.popover_mullvad = self.create_popover(
-            parent_widget=self.menubutton_mullvad,
-            css_class="mullvad-popover",
-            has_arrow=False,
-        )
-        self.create_popover_content()
+        return self.create_menu_with_actions(action_map)
 
     def create_popover_content(self):
         vbox = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL, spacing=6)

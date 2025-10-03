@@ -1,7 +1,4 @@
-import os
 from gi.repository import Gtk, Gio  # pyright: ignore
-import toml
-import subprocess
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
@@ -24,48 +21,68 @@ class MenuSetupPlugin(BasePlugin):
     def __init__(self, panel_instance):
         super().__init__(panel_instance)
         self.menu_button = None
-        self.config_path = os.path.expanduser("~/.config/waypanel/config.toml")
+        self.config_path = self.os.path.expanduser("~/.config/waypanel/config.toml")
         self.widgets = []
         self.main_widget = (self.widgets, "append")
 
     def load_menu_config(self):
         """Load menu configuration from config.toml."""
-        if not os.path.exists(self.config_path):
+        if not self.os.path.exists(self.config_path):
             self.logger.error(f"Menu config file not found: {self.config_path}")
             return {}
         with open(self.config_path, "r") as f:
-            config = toml.load(f)
+            config = self.toml.load(f)
             return config.get("menu", {})
 
-    def create_menu_item(self, menu, name, cmd):
-        """Create a menu item with the specified name and command."""
-        action_name = f"app.run-command-{name.replace(' ', '-')}"
-        action = Gio.SimpleAction.new(action_name, None)
-        action.connect("activate", self.menu_run_action, cmd)
-        self.obj.add_action(action)
-        menu_item = Gio.MenuItem.new(name, f"app.{action_name}")
-        menu.append_item(menu_item)
+    def menu_run_action(self, action, parameter, cmd):
+        """Run the specified command when a menu item is activated."""
+        try:
+            self.run_cmd(cmd)
+        except Exception as e:
+            self.logger.error(f"Error running command '{cmd}': {e}")
 
-    def create_submenu(self, parent_menu, submenu_label, submenu_items):
-        """Create a submenu and append it to the parent menu."""
-        submenu = Gio.Menu()
-        for item in submenu_items:
+    def _sanitize_name(self, name):
+        """Creates a safe action name from a menu label (e.g., 'My App' -> 'my-app')."""
+        return name.lower().replace(" ", "-").replace("_", "-")
+
+    def _convert_toml_to_action_map(self, toml_items: list) -> dict:
+        """
+        Recursively converts the TOML list structure into the nested action_map
+        dictionary structure, now correctly including the optional 'icon' name.
+        """
+        action_map = {}
+        for item in toml_items:
             if "submenu" in item:
-                self.create_submenu(submenu, item["submenu"], item["items"])
+                submenu_label = item["submenu"]
+                action_map[submenu_label] = {
+                    "is_submenu": True,
+                    "items": self._convert_toml_to_action_map(item["items"]),
+                }
             else:
-                self.create_menu_item(submenu, item["name"], item["cmd"])
-        parent_menu.append_submenu(submenu_label, submenu)
+                action_name = self._sanitize_name(item["name"])
+                cmd = item["cmd"]
+                icon_name = item.get("icon")
+                action_entry = {
+                    "label": item["name"],
+                    "callback": lambda a, p, c=cmd: self.menu_run_action(a, p, c),
+                }
+                if icon_name:
+                    action_entry["icon"] = icon_name
+                action_map[action_name] = action_entry
+        return action_map
 
     def setup_menus(self):
-        """Set up menus based on the configuration."""
+        """Set up menus based on the configuration by using the enhanced gtk_helper."""
         menu_config = self.load_menu_config()
         if not menu_config:
             self.logger.warning("No menu configuration found.")
             return
-        menu_buttons = {}
         for menu_name, menu_data in menu_config.items():
-            menu = Gio.Menu()
-            menu_button = Gtk.MenuButton(label=menu_name)
+            action_map = self._convert_toml_to_action_map(menu_data.get("items", []))
+            menu_button = self.gtk_helper.create_menu_with_actions(
+                action_map=action_map, action_prefix="app"
+            )
+            menu_button.set_label(menu_name)
             self.gtk_helper.add_cursor_effect(menu_button)
             menu_button.set_icon_name(
                 self.gtk_helper.icon_exist(
@@ -76,21 +93,7 @@ class MenuSetupPlugin(BasePlugin):
                     ],
                 )
             )
-            menu_button.set_menu_model(menu)
-            menu_buttons[menu_name] = menu_button
             self.widgets.append(menu_button)
-            for item in menu_data.get("items", []):
-                if "submenu" in item:
-                    self.create_submenu(menu, item["submenu"], item["items"])
-                else:
-                    self.create_menu_item(menu, item["name"], item["cmd"])
-
-    def menu_run_action(self, action, parameter, cmd):
-        """Run the specified command when a menu item is activated."""
-        try:
-            subprocess.Popen(cmd, shell=True)
-        except Exception as e:
-            self.logger.error(f"Error running command '{cmd}': {e}")
 
     def about(self):
         """A plugin that dynamically creates custom menus and submenus based on a TOML configuration file."""
@@ -99,20 +102,20 @@ class MenuSetupPlugin(BasePlugin):
     def code_explanation(self):
         """
         This plugin creates dynamic, user-configurable menus for the panel.
-        Instead of hardcoding menu items, it reads a structured TOML file to build the
-        menu's hierarchy and functionality.
-        Its core logic is centered on **configuration-driven UI generation and command execution**:
-        1.  **Configuration Loading**: It reads a `config.toml` file to get the menu
-            structure, including labels, icons, commands, and submenus. This decouples
-            the UI from the code, making the menus highly customizable without
-            requiring code changes.
-        2.  **Recursive Menu Creation**: It uses a recursive approach to handle nested menu structures,
-            allowing for complex, multi-level menus.
-        3.  **Command Execution**: For each menu item, it creates an action that executes
-            a shell command, ensuring that clicking a menu item correctly launches the
-            configured application or runs a script.
-        4.  **Flexible UI**: It dynamically creates menu button widgets based on
-            the top-level menu names found in the configuration, and can use either
-            labels or icons as specified in the TOML file.
+        The refactored code now fully leverages the enhanced `self.gtk_helper.create_menu_with_actions`
+        utility, significantly simplifying the `MenuSetupPlugin` logic.
+        The key change is the introduction of `_convert_toml_to_action_map`, which is a recursive
+        method that transforms the TOML file's structure (which uses lists of dictionaries) into
+        the hierarchical dictionary structure (`action_map`) expected by the helper.
+        This method:
+        1.  **Handles Recursion**: It detects `submenu` items and recursively calls itself to build
+            the nested `items` dictionary.
+        2.  **Generates Actions**: For command items (leaf nodes), it creates a unique, safe action name
+            using `_sanitize_name` and generates a `callback` lambda. This lambda captures the shell
+            command (`cmd`) from the TOML file and passes it to the `menu_run_action` method when the
+            menu item is clicked. It now correctly includes the optional 'icon' field in the action map.
+        By providing this structured `action_map` to `self.gtk_helper.create_menu_with_actions`, the
+        plugin delegates all boilerplate Gtk/Gio setup—including recursive menu model construction,
+        action group creation, and callback wiring—making `setup_menus` much more concise and robust.
         """
         return self.code_explanation.__doc__

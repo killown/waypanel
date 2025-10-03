@@ -34,7 +34,7 @@ class NetworkManager(BasePlugin):
         super().__init__(panel_instance)
         self.cli_backend = NetworkCLI(self.logger)
         self.button = self.gtk.MenuButton()
-        self.popover = self.gtk.Popover()
+        self.popover = None
         self.icon_wired_connected = self.gtk_helper.icon_exist(
             "gnome-dev-network-symbolic",
             [
@@ -53,10 +53,8 @@ class NetworkManager(BasePlugin):
             ICON_WIFI_DISCONNECTED, ["network-wireless-disconnected-symbolic"]
         )
         self.icon = self.icon_wired_disconnected
-        self.popover.set_parent(self.button)
         self.init_ui()
         self.global_loop.create_task(self.periodic_check_async())
-        self.popover.connect("notify::visible", self.on_popover_visibility_changed)
         self.network_disconnected = None
         self.notify_was_sent = False
         self.scan_revealer = None
@@ -93,13 +91,21 @@ class NetworkManager(BasePlugin):
             self.notify_was_sent = True
 
     def init_ui(self):
-        """Initialize button and popover UI."""
+        """
+        Initialize button and popover UI.
+        Refactored to use self.create_popover helper.
+        """
+        self.popover = self.create_popover(
+            parent_widget=self.button,
+            css_class="network-manager-popover",
+            has_arrow=False,
+            closed_handler=None,
+            visible_handler=self.on_popover_visibility_changed,
+        )
+        self.glib.idle_add(self.button.set_popover, self.popover)
         self.global_loop.create_task(self.update_icon_async())
         self.glib.idle_add(self.button.set_icon_name, self.icon)
-        self.button.set_popover(self.popover)
         self.gtk_helper.add_cursor_effect(self.button)
-        self.popover.set_parent(self.button)
-        self.global_loop.create_task(self.update_icon_async())
         self.main_widget = (self.button, "append")
 
     def _is_wireless_interface(self, interface: str) -> bool:
@@ -145,13 +151,13 @@ class NetworkManager(BasePlugin):
 
     def on_popover_visibility_changed(self, popover, param):
         """Update content when popover becomes visible."""
-        if self.popover.get_property("visible"):
+        if self.popover.get_property("visible"):  # pyright: ignore
             self.global_loop.create_task(self.update_popover_content_async())
 
     async def update_popover_content_async(self):
         """Update popover content without changing the icon."""
         content = await self.create_scrollable_grid_content_async()
-        self.glib.idle_add(self.popover.set_child, content)
+        self.glib.idle_add(self.popover.set_child, content)  # pyright: ignore
 
     async def is_internet_connected_async(self) -> bool:
         """
@@ -388,7 +394,7 @@ class NetworkManager(BasePlugin):
         """Update icon and refresh popover content."""
         await self.update_icon_async()
         content = await self.create_scrollable_grid_content_async()
-        self.glib.idle_add(self.popover.set_child, content)
+        self.glib.idle_add(self.popover.set_child, content)  # pyright: ignore
 
     def on_connect_button_clicked(self, button, ssid):
         """UI event handler to connect to a specified Wi-Fi network."""
@@ -415,7 +421,7 @@ class NetworkManager(BasePlugin):
         if self.scanning_in_progress:
             return
         self.scanning_in_progress = True
-        if self.popover.get_property("visible") and self.scan_status_label:
+        if self.popover.get_property("visible") and self.scan_status_label:  # pyright: ignore
             self.glib.idle_add(self.scan_status_label.set_label, "Scanning...")
         return_code, raw_output = await self.cli_backend.scan_networks_async()
         self.scanning_in_progress = False
@@ -457,7 +463,7 @@ class NetworkManager(BasePlugin):
                     "bssid": bssid,
                 }
             )
-        if self.popover.get_property("visible"):
+        if self.popover.get_property("visible"):  # pyright: ignore
             self.global_loop.create_task(self.update_popover_async())
 
     async def _apply_config_autoconnect_settings_async(self):
@@ -470,6 +476,45 @@ class NetworkManager(BasePlugin):
     async def _connect_to_network_async(self, ssid: str):
         """UI-side wrapper for the connection attempt."""
         self.logger.info(f"UI: Attempting connection to {ssid}")
-        self.glib.idle_add(self.popover.popdown)
+        self.glib.idle_add(self.popover.popdown)  # pyright: ignore
         await self.cli_backend._connect_to_network_async(ssid)
         await self.update_icon_and_popover()
+
+    def about(self):
+        """
+        A plugin that monitors and displays system network status (wired and Wi-Fi)
+        in the panel. It provides a Gtk.Popover with detailed device information,
+        a list of available Wi-Fi networks for easy connection via nmcli, and
+        direct access to network settings.
+        """
+        return self.about.__doc__
+
+    def code_explanation(self):
+        """
+        This plugin manages network status display and control using asynchronous
+        operations and the NetworkManager Command Line Interface (nmcli) via a
+        dedicated backend. Key aspects include:
+
+        1. Asynchronous Networking: All network checks (`is_internet_connected_async`,
+           `scan_networks_async`) are run non-blockingly using asyncio to ensure
+           the panel UI remains responsive.
+
+        2. Dynamic Icon Status: The panel icon dynamically reflects the current
+           connection status (wired/Wi-Fi) and visually indicates Wi-Fi quality
+           using signal strength icons (excellent, good, ok, weak).
+
+        3. Popover Management: The `Gtk.Popover` is set up using the
+           `self.create_popover` helper, which automatically connects the
+           `notify::visible` signal to refresh the popover content whenever it is opened.
+
+        4. Data Presentation: The popover content is built using a complex GTK
+           structure featuring:
+           - Detailed device information gathered from `nmcli device show` output,
+             presented inside collapsible `Gtk.Revealer` widgets.
+           - A list of scannable Wi-Fi networks allowing direct connection attempts.
+
+        5. Thread Safety: All necessary GTK UI manipulations within asynchronous
+           methods (like updating icons or popover content) are safely delegated
+           to the main GTK thread using `self.glib.idle_add`.
+        """
+        return self.code_explanation.__doc__

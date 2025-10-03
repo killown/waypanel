@@ -4,7 +4,6 @@ from gi.repository import GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 gi.require_version("Gtk", "4.0")
-
 ENABLE_PLUGIN = True
 
 
@@ -49,18 +48,15 @@ class GoNextWorkspaceWithViewsPlugin(BasePlugin):
                 "gestures_setup"
             ]
             self.append_right_click_action()
-            return False  # Stop the timeout loop
-        return True  # Continue checking
+            return False
+        return True
 
     def append_right_click_action(self):
         """
         Append the 'go_next_workspace_with_views' action to the right-click gesture
         in the full section of the top panel.
         """
-        # Define the callback name for the right-click gesture in the full section
         callback_name = "pos_full_right_click"
-
-        # Append the action to the existing gesture callback
         self.gestures_setup_plugin.append_action(  # pyright: ignore
             callback_name=callback_name,
             action=self.go_next_workspace_with_views,
@@ -72,16 +68,11 @@ class GoNextWorkspaceWithViewsPlugin(BasePlugin):
         """
         focused_output = self.ipc.get_focused_output()
         monitor = focused_output["geometry"]
-
-        # Always include the current workspace
         current_ws_x = focused_output["workspace"]["x"]
         current_ws_y = focused_output["workspace"]["y"]
         ws_with_views = [{"x": current_ws_x, "y": current_ws_y}]
-
         views = self.ipc.get_focused_output_views()
-
         if views:
-            # Filter views to include only valid toplevel views
             views = [
                 view
                 for view in views
@@ -90,18 +81,15 @@ class GoNextWorkspaceWithViewsPlugin(BasePlugin):
                 and view["app-id"] != "nil"
                 and view["pid"] > 0
             ]
-
             if views:
                 grid_width = focused_output["workspace"]["grid_width"]
                 grid_height = focused_output["workspace"]["grid_height"]
-
-                # Check each workspace for visible views
                 for ws_x in range(grid_width):
                     for ws_y in range(grid_height):
                         if (ws_x, ws_y) != (
                             current_ws_x,
                             current_ws_y,
-                        ):  # Avoid duplicate entry
+                        ):
                             for view in views:
                                 intersection_area = (
                                     self.ipc._calculate_intersection_area(
@@ -111,19 +99,15 @@ class GoNextWorkspaceWithViewsPlugin(BasePlugin):
                                         monitor,
                                     )
                                 )
-                                if (
-                                    intersection_area > 0
-                                ):  # View is visible on this workspace
+                                if intersection_area > 0:
                                     ws_with_views.append({"x": ws_x, "y": ws_y})
-                                    break  # No need to check other views for this workspace
-
+                                    break
         return ws_with_views
 
     def go_next_workspace_with_views(self):
         """
         Navigate to the next workspace with views, skipping empty workspaces.
         """
-        # sway
         if not os.getenv("WAYFIRE_SOCKET"):
             from pysway.extra.utils import SwayUtils
             from pysway.ipc import SwayIPC
@@ -135,23 +119,15 @@ class GoNextWorkspaceWithViewsPlugin(BasePlugin):
                 return
             self.ipc.sock.run_command(f"workspace {workspace_name}")
             return
-
-        # wayfire
         workspaces_with_views = self.get_workspaces_with_views()
         if not workspaces_with_views:
             self.logger.info("No workspaces with views found.")
             return
-
-        # Get the currently active workspace
         active_workspace = self.ipc.get_focused_output()["workspace"]
         active_workspace_coords = (active_workspace["x"], active_workspace["y"])
-
-        # Sort workspaces by row (y) and then column (x)
         workspaces_with_views = sorted(
             workspaces_with_views, key=lambda ws: (ws["y"], ws["x"])
         )
-
-        # Find the index of the current workspace
         current_index = next(
             (
                 i
@@ -160,18 +136,13 @@ class GoNextWorkspaceWithViewsPlugin(BasePlugin):
             ),
             None,
         )
-
         if current_index is None:
             self.logger.info(
                 "Current workspace not found in the list of workspaces with views."
             )
             return
-
-        # Calculate the index of the next workspace (cyclically)
         next_index = (current_index + 1) % len(workspaces_with_views)
         next_workspace = workspaces_with_views[next_index]
-
-        # Switch to the next workspace
         self.logger.info(
             f"Switching to workspace: x={next_workspace['x']}, y={next_workspace['y']}"
         )
@@ -189,10 +160,8 @@ class GoNextWorkspaceWithViewsPlugin(BasePlugin):
         This plugin extends the panel's functionality by providing a smart
         workspace navigation feature. It dynamically finds and switches
         between only those workspaces that are in use.
-
         Its core functionality is built on **cross-plugin integration,
         compositor IPC, and dynamic workspace detection**:
-
         1.  **Plugin Dependency Management**: It uses a `GLib.timeout` to
             periodically check for the availability of the `gestures_setup`
             plugin. Once found, it registers its workspace-switching logic
