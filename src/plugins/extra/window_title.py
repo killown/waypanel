@@ -4,6 +4,7 @@ from src.plugins.core._base import BasePlugin
 from typing import Any, Dict, Optional
 
 ENABLE_PLUGIN = True
+DEPS = ["top_panel", "event_manager"]
 
 
 def initialize_plugin(panel_instance) -> "WindowTitlePlugin":
@@ -43,7 +44,44 @@ class WindowTitlePlugin(BasePlugin):
         self._debounce_timer_id: Optional[int] = None
         self._debounce_interval: int = 50
         self._last_view_data: Optional[Dict[str, Any]] = None
-        self.schedule_in_gtk_thread(self.update_title, "", "focus-windows")
+
+    def on_start(self) -> None:
+        """
+        Hook for when plugin is loaded. Used to defer event subscription until
+        the EventManagerPlugin is guaranteed to be loaded.
+        """
+        GLib.idle_add(self._subscribe_to_events_with_retry)
+
+    def _subscribe_to_events_with_retry(self) -> bool:
+        """
+        Implements the retry logic to manually subscribe to events only when the
+        'event_manager' plugin is fully loaded, ensuring the callbacks work.
+        Returns:
+            bool: GLib.SOURCE_CONTINUE (True) to retry, GLib.SOURCE_REMOVE (False) to stop.
+        """
+        plugin_name = self.__module__.split(".")[-1]
+        if "event_manager" not in self._panel_instance.plugin_loader.plugins:
+            self.logger.debug(f"{plugin_name} is waiting for EventManagerPlugin.")
+            GLib.timeout_add(100, self._subscribe_to_events_with_retry)
+            return GLib.SOURCE_CONTINUE
+        event_manager = self._panel_instance.plugin_loader.plugins["event_manager"]
+        self.logger.info(f"Subscribing to events for {plugin_name} Plugin (deferred).")
+        event_manager.subscribe_to_event(
+            "view-focused",
+            self.on_view_focused,
+            plugin_name=plugin_name,
+        )
+        event_manager.subscribe_to_event(
+            "view-closed",
+            self.on_view_closed,
+            plugin_name=plugin_name,
+        )
+        event_manager.subscribe_to_event(
+            "view-title-changed",
+            self.on_view_title_changed,
+            plugin_name=plugin_name,
+        )
+        return GLib.SOURCE_REMOVE
 
     def _load_config(self) -> None:
         """Loads configuration from config_handler with defaults."""
@@ -190,7 +228,7 @@ class WindowTitlePlugin(BasePlugin):
         self._debounce_timer_id = None
         if self._last_view_data:
             self.update_title_icon(self._last_view_data)
-        return False
+        return GLib.SOURCE_REMOVE
 
     def about(self):
         """
@@ -209,7 +247,9 @@ class WindowTitlePlugin(BasePlugin):
         1.  **Event Subscription**: The plugin listens for system events
             such as "view-focused," "view-closed," and "view-title-changed."
             This allows it to react instantly to changes in the active
-            window's state.
+            window's state. It now uses a deferred retry loop (`_subscribe_to_events_with_retry`)
+            to ensure the `event_manager` plugin is loaded before attempting
+            to register callbacks.
         2.  **Debounced Updates**: To prevent the panel from flickering or
             excessively updating during rapid title changes (e.g., when a
             web page is loading), it uses a debouncing mechanism. This
