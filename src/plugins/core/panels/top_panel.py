@@ -54,7 +54,7 @@ class TopPanelPlugin(BasePlugin):
         self.obj.top_panel_grid_right = Gtk.Grid()
         self.obj.top_panel_grid_right.attach(self.obj.top_panel_box_right, 1, 0, 1, 2)
 
-        def attach_to_grid_later():
+        def attach_to_grid():
             """
             Defers the attachment of the top-panel systray and button boxes until
             the main panel plugin startup process is finished.
@@ -84,7 +84,14 @@ class TopPanelPlugin(BasePlugin):
                 return False  # stop GLib.timeout_add
             return True  # continue GLib.timeout_add
 
-        GLib.timeout_add(300, attach_to_grid_later)  # 300ms
+        def attach_grid_later():
+            """prevent GTK BUG: assertion failed: (self->buckets[bucket] > 0)"""
+            if self._panel_instance.plugins_startup_finished:
+                GLib.timeout_add(500, attach_to_grid)
+                return False
+            return True
+
+        GLib.timeout_add(100, attach_grid_later)
 
         self.obj.top_panel_box_center = Gtk.Box()
         self.obj.top_panel_box_full = Gtk.Grid()
