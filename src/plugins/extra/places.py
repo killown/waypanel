@@ -46,9 +46,9 @@ class PopoverFolders(BasePlugin):
         """
         self._setup_popover_base()
         main_box = self._setup_search_and_listbox()
-        self.popover_folders.set_child(main_box)  # pyright: ignore
+        self.popover_folders.set_child(main_box)
         self._populate_folder_list()
-        self.popover_folders.popup()  # pyright: ignore
+        self.popover_folders.popup()
         return self.popover_folders
 
     def _setup_popover_base(self):
@@ -97,7 +97,7 @@ class PopoverFolders(BasePlugin):
         """Creates a single ListBox row (HBox) for a folder entry with an icon and label."""
         row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
         row_hbox.add_css_class("places-row-hbox")
-        row_hbox.MYTEXT = folders_path, filemanager  # pyright: ignore
+        row_hbox.MYTEXT = folders_path, filemanager
         line = self.gtk.Label.new()
         line.set_label(name)
         line.props.margin_start = 5
@@ -120,14 +120,19 @@ class PopoverFolders(BasePlugin):
         return row_hbox
 
     def _populate_folder_list(self):
-        """Populates the listbox with configured folders and home directory folders."""
-        all_folders = self.config_handler.config_data.get("folders")  # pyright: ignore
+        """
+        Populates the listbox with configured folders and all directories from the home directory,
+        with non-hidden folders listed before hidden folders, ensuring no duplicates.
+        """
+        all_folders = self.config_handler.config_data.get("folders")
+        pinned_paths = set()
         if all_folders:
-            for folder in all_folders.items():
-                name = folder[1]["name"]
-                folders_path = folder[1]["path"]
-                filemanager = folder[1]["filemanager"]
-                icon = folder[1]["icon"]
+            for key, folder_data in all_folders.items():
+                name = folder_data["name"]
+                folders_path = folder_data["path"]
+                filemanager = folder_data["filemanager"]
+                icon = folder_data["icon"]
+                pinned_paths.add(folders_path)
                 row_hbox = self._create_folder_row(
                     name=name,
                     folders_path=folders_path,
@@ -136,7 +141,22 @@ class PopoverFolders(BasePlugin):
                     icon_size=self.gtk.IconSize.INHERIT,
                 )
                 self.listbox.append(row_hbox)
+        visible_dirs = []
+        hidden_dirs = []
         for folder in self.home_folders:
+            folders_path = self.os.path.join(self.home, folder)
+            if folders_path in pinned_paths:
+                continue
+            if not self.os.path.isdir(folders_path):
+                continue
+            if folder.startswith("."):
+                hidden_dirs.append(folder)
+            else:
+                visible_dirs.append(folder)
+        visible_dirs.sort()
+        hidden_dirs.sort()
+        sorted_home_dirs = visible_dirs + hidden_dirs
+        for folder in sorted_home_dirs:
             folders_path = self.os.path.join(self.home, folder)
             icon = "nautilus"
             filemanager = "nautilus"
@@ -176,33 +196,156 @@ class PopoverFolders(BasePlugin):
             has_arrow=False,
         )
         box = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL)
+        listbox_row = row_hbox.get_parent()
+        all_folders = self.config_handler.config_data.get("folders") or {}
+        is_pinned = any(
+            data.get("path") == folder_path for data in all_folders.values()
+        )
+        if is_pinned:
+            self._append_menu_button_to_box(
+                box=box,
+                label="Unpin folder",
+                callback=lambda _, path=folder_path, row=listbox_row: self.unpin_folder(
+                    path, row
+                ),
+            )
+        else:
+            self._append_menu_button_to_box(
+                box=box,
+                label="Pin to the top",
+                callback=lambda _, path=folder_path, row=listbox_row: self.pin_to_top(
+                    path, row
+                ),
+            )
         self._append_menu_button_to_box(
             box=box,
-            label="Pin to the top",
-            callback=lambda _, path=folder_path: self.pin_to_top(path),
+            label="Move to Trash",
+            callback=lambda _,
+            path=folder_path,
+            row=listbox_row,
+            popover=popover: self.move_to_trash(path, row, popover),
         )
         popover.set_child(box)
         popover.popup()
 
-    def pin_to_top(self, folder_path):
+    def move_to_trash(self, folder_path, listbox_row, popover):
+        popover.popdown()
         folder_name = self.os.path.basename(folder_path)
-        if "folders" not in self.config_handler.config_data:  # pyright: ignore
-            self.config_handler.config_data["folders"] = {}  # pyright: ignore
-        all_folders = self.config_handler.config_data.get("folders")  # pyright: ignore
-        for key, value in all_folders.items():  # pyright: ignore
-            if value.get("path") == folder_path:
-                self.logger.info(f"{folder_path} is already pinned.")
-                return
+        cmd = f"gio trash '{folder_path}'"
+        self.run_cmd(cmd)
+        self.logger.info(f"Moved to trash: {folder_name} at {folder_path}")
+        if listbox_row and isinstance(listbox_row, self.gtk.ListBoxRow):
+            parent_listbox = listbox_row.get_parent()
+            if parent_listbox:
+                parent_listbox.remove(listbox_row)
+                self.logger.info(f"Removed ListBoxRow for {folder_name}")
+
+    def pin_to_top(self, folder_path, listbox_row):
+        """
+        Pins a folder by moving its entry to the top of the 'folders' section
+        in the configuration data, and then moves the existing ListBoxRow
+        to the top of the ListBox to reflect the change visually.
+        """
+        folder_name = self.os.path.basename(folder_path)
+        if "folders" not in self.config_handler.config_data:
+            self.config_handler.config_data["folders"] = {}
+        all_folders = self.config_handler.config_data.get("folders")
         new_folder_entry = {
             "name": folder_name,
             "path": folder_path,
             "filemanager": "nautilus",
             "icon": "folder-symbolic",
         }
-        self.config_handler.config_data["folders"][folder_name] = new_folder_entry  # pyright: ignore
+        keys_to_delete = [
+            key for key, data in all_folders.items() if data.get("path") == folder_path
+        ]
+        for key in keys_to_delete:
+            del all_folders[key]
+        temp_dict = {folder_name: new_folder_entry}
+        temp_dict.update(all_folders)
+        self.config_handler.config_data["folders"] = temp_dict
         self.config_handler.save_config()
-        self.config_handler.reload_config()
-        self.logger.info(f"Pinned folder: {folder_name} to config.toml")
+        parent_listbox = listbox_row.get_parent()
+        if parent_listbox and parent_listbox == self.listbox:
+            parent_listbox.remove(listbox_row)
+            new_row_hbox = self._create_folder_row(
+                name=new_folder_entry["name"],
+                folders_path=new_folder_entry["path"],
+                filemanager=new_folder_entry["filemanager"],
+                icon=new_folder_entry["icon"],
+                icon_size=self.gtk.IconSize.INHERIT,
+            )
+            new_listbox_row = self.gtk.ListBoxRow()
+            new_listbox_row.set_child(new_row_hbox)
+            self.listbox.insert(new_listbox_row, 0)
+            new_listbox_row.show()
+            self.listbox.invalidate_filter()
+        self.logger.info(f"'{folder_name}' is now at the top of the list.")
+
+    def unpin_folder(self, folder_path, listbox_row):
+        """
+        Unpins a folder by removing its entry from the 'folders' section in the
+        configuration data, removing its current ListBoxRow, and then re-inserting
+        a new row into the correct alphabetical position in the unpinned section.
+        This method is fully GTK4-compliant, using iteration over containers (ListBox, Box)
+        instead of deprecated methods like get_children().
+        """
+        folder_name = self.os.path.basename(folder_path)
+        all_folders = self.config_handler.config_data.get("folders") or {}
+        if not all_folders:
+            self.logger.warning(
+                f"Attempted to unpin {folder_name}, but 'folders' list is empty or missing in config."
+            )
+            return
+        key_to_delete = None
+        for key, data in all_folders.items():
+            if data.get("path") == folder_path:
+                key_to_delete = key
+                break
+        if key_to_delete:
+            del all_folders[key_to_delete]
+            self.config_handler.save_config()
+            self.logger.info(
+                f"'{folder_name}' unpinned from config and removed from pinned list."
+            )
+        else:
+            self.logger.warning(
+                f"Could not find {folder_name} in pinned list to unpin."
+            )
+            return
+        parent_listbox = listbox_row.get_parent()
+        if parent_listbox and parent_listbox == self.listbox:
+            parent_listbox.remove(listbox_row)
+            new_unpinned_hbox = self._create_folder_row(
+                name=folder_name,
+                folders_path=folder_path,
+                filemanager="nautilus",
+                icon="nautilus",
+                icon_size=self.gtk.IconSize.LARGE,
+            )
+            new_listbox_row = self.gtk.ListBoxRow()
+            new_listbox_row.set_child(new_unpinned_hbox)
+            children = list(self.listbox)
+            insert_index = -1
+            pinned_count = len(all_folders)
+            for i in range(pinned_count, len(children)):
+                child_row = children[i]
+                row_hbox_child = child_row.get_child()
+                if row_hbox_child:
+                    hbox_children = list(row_hbox_child)
+                    if len(hbox_children) > 1:
+                        row_label_widget = hbox_children[1]
+                        row_name = row_label_widget.get_label()
+                        if folder_name.lower() < row_name.lower():
+                            insert_index = i
+                            break
+            if insert_index == -1:
+                insert_index = len(children)
+            self.listbox.insert(new_listbox_row, insert_index)
+            self.listbox.invalidate_filter()
+        self.logger.info(
+            f"'{folder_name}' is now unpinned and returned to the main list."
+        )
 
     def create_row_middle_click(self, row_hbox, folder_path):
         create_gesture = self.plugins["gestures_setup"].create_gesture
@@ -223,8 +366,11 @@ class PopoverFolders(BasePlugin):
     def open_folder(self, x):
         if not x:
             return
-        folder, filemanager = x.get_child().MYTEXT.split()
-        path = self.os.path.join(self.home, folder)
+        path_tuple = x.get_child().MYTEXT
+        if isinstance(path_tuple, tuple):
+            path, filemanager = path_tuple
+        else:
+            path, filemanager = path_tuple.split()
         cmd = f"{filemanager} {path}"
         self.run_cmd(cmd)
         if self.popover_folders:
@@ -250,12 +396,12 @@ class PopoverFolders(BasePlugin):
         )
 
     def on_show_searchbar_action_actived(self, action, parameter):
-        self.searchbar.set_search_mode(True)  # pyright: ignore
+        self.searchbar.set_search_mode(True)
 
     def search_entry_grab_focus(self):
-        self.searchentry.grab_focus()  # pyright: ignore
+        self.searchentry.grab_focus()
         self.logger.info(
-            "search entry is focused: {}".format(self.searchentry.is_focus())  # pyright: ignore
+            "search entry is focused: {}".format(self.searchentry.is_focus())
         )
 
     def on_search_entry_changed(self, searchentry):
@@ -279,20 +425,20 @@ class PopoverFolders(BasePlugin):
                     message="Row child is missing the required 'MYTEXT' attribute.",
                 )
                 return False
-            row_text = child.MYTEXT  # pyright: ignore
+            row_text_data = child.MYTEXT
+            if isinstance(row_text_data, tuple):
+                row_text = row_text_data[0]
+            else:
+                row_text = str(row_text_data)
             if not isinstance(row_text, str):
-                if isinstance(row_text, tuple):
-                    row_text = " ".join(str(item) for item in row_text)
-                    child.MYTEXT = row_text  # pyright: ignore
-                else:
-                    self.logger.error(
-                        error=TypeError(
-                            f"Invalid row text type: {type(row_text).__name__}. Expected str."
-                        ),
-                        message=f"Invalid row text encountered: {row_text}.",
-                        level="warning",
-                    )
-                    return False
+                self.logger.error(
+                    error=TypeError(
+                        f"Invalid row text type: {type(row_text).__name__}. Expected str."
+                    ),
+                    message=f"Invalid row text encountered: {row_text}.",
+                    level="warning",
+                )
+                return False
             text_to_search = self.searchbar.get_text().strip().lower()
             return text_to_search in row_text.lower()
         except Exception as e:
