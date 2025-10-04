@@ -2,8 +2,9 @@ import os
 import psutil
 import sys
 from typing import Dict, Optional, Tuple, Union, Any
-from gi.repository import GLib  # pyright: ignore
+from gi.repository import GLib
 from pathlib import Path
+import operator
 
 
 class WayfireHelpers:
@@ -141,7 +142,6 @@ class WayfireHelpers:
             )
         except Exception as e:
             self.logger.error(
-                # pyright: ignore               f"Unexpected error while listing shared libraries for PID -> {pid}: {e}",
                 exc_info=True,
             )
         return libs
@@ -694,3 +694,28 @@ class WayfireHelpers:
             )
         except Exception as e:
             self.logger.exception(f"An unexpected error occurred: {e}")
+
+    def get_the_last_focused_view_id(self, skip_minimized=False, skip_maximized=False):
+        workspace_ids = self.ipc.get_views_from_active_workspace()
+        if not workspace_ids:
+            return None
+        active_views_data = []
+        for view_id in workspace_ids:
+            view_data = self.ipc.get_view(view_id)
+            is_minimized = view_data.get("minimized", False)
+            timestamp = view_data.get("last-focus-timestamp")
+            if timestamp is None:
+                continue
+            skip_view = False
+            if skip_minimized and is_minimized:
+                skip_view = True
+            if skip_maximized and not is_minimized:
+                skip_view = True
+            if skip_view:
+                continue
+            active_views_data.append((view_id, timestamp))
+        if not active_views_data:
+            return None
+        most_recent_tuple = max(active_views_data, key=operator.itemgetter(1))
+        most_recent_id = most_recent_tuple[0]
+        return most_recent_id
