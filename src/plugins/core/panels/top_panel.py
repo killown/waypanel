@@ -68,7 +68,9 @@ class TopPanelPlugin(BasePlugin):
         self.spacer.add_css_class("right-box-spacer")
         self.update_widget_safely(self.obj.top_panel_box_right.append, self.spacer)
         self.obj.top_panel_grid_right = Gtk.Grid()
-        self.last_box_width = self.obj.top_panel_box_right.get_width()
+        self.obj.top_panel_grid_right.get_allocated_width()
+        self.last_grid_width = self.obj.top_panel_grid_right.get_width()
+        self._attach_timer_id = None
 
         def attach_deferred_widgets():
             """
@@ -81,6 +83,18 @@ class TopPanelPlugin(BasePlugin):
             full panel layout recalculations. The timeout periodically checks
             the startup status and attaches the widgets only once ready.
             """
+            self._attach_timer_id = None
+
+            current_width = self.obj.top_panel_grid_right.get_width()
+            next_delay_ms = 500
+            if self.last_grid_width != current_width:
+                self.last_grid_width = current_width
+                next_delay_ms = 1000
+                self._attach_timer_id = GLib.timeout_add(
+                    next_delay_ms, attach_deferred_widgets
+                )
+                return False
+
             if self._panel_instance.plugins_startup_finished:
                 self.obj.top_panel_grid_right.attach(
                     self.obj.top_panel_box_right, 1, 0, 1, 2
@@ -102,10 +116,13 @@ class TopPanelPlugin(BasePlugin):
                     2,
                 )
                 return False
-            return True
+            self._attach_timer_id = GLib.timeout_add(
+                next_delay_ms, attach_deferred_widgets
+            )
+            return False
 
-        # FIXME: check if the gtk bug is gone after some point, then remove this delay
-        GLib.timeout_add(500, attach_deferred_widgets)
+        ## Removing this method, may lead to panel crashes during startup.
+        self._attach_timer_id = GLib.timeout_add(500, attach_deferred_widgets)
 
         self.obj.top_panel_box_center = Gtk.Box()
         self.obj.top_panel_box_full = Gtk.Grid()
@@ -127,10 +144,15 @@ class TopPanelPlugin(BasePlugin):
             1,
             3,
         )
+        self.obj.top_panel_scrolled_window = Gtk.ScrolledWindow()
+        self.obj.top_panel_scrolled_window.set_policy(
+            Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER
+        )
+        self.obj.top_panel_scrolled_window.set_child(self.obj.top_panel_box_full)
         self.obj.top_panel_box_center.set_halign(Gtk.Align.CENTER)
         self.obj.top_panel_box_center.set_valign(Gtk.Align.CENTER)
         self.obj.top_panel_box_center.set_hexpand(False)
-        self.main_widget = (self.obj.top_panel_box_full, "set_content")
+        self.main_widget = (self.obj.top_panel_scrolled_window, "set_content")
         self.is_top_panel_ready = True
 
     def add_css_class(self):
@@ -141,6 +163,7 @@ class TopPanelPlugin(BasePlugin):
             and self.is_widget_ready(self.obj.top_panel_box_systray)
             and self.is_widget_ready(self.obj.top_panel_box_center)
             and self.is_widget_ready(self.obj.top_panel_box_full)
+            and self.is_widget_ready(self.obj.top_panel_scrolled_window)
         ):
             self.update_widget_safely(
                 self.obj.top_panel_box_left.add_css_class, "top-panel-box-left"
@@ -160,6 +183,10 @@ class TopPanelPlugin(BasePlugin):
             )
             self.update_widget_safely(
                 self.obj.top_panel_box_full.add_css_class, "top-panel-box-full"
+            )
+            self.update_widget_safely(
+                self.obj.top_panel_scrolled_window.add_css_class,
+                "top-panel-scrolled-window",
             )
             return False
         else:
