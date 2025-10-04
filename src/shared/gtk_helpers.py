@@ -43,6 +43,7 @@ class GtkHelpers:
             self.command = CommandRunner(panel_instance)
 
         self.app_css_provider = None
+        self.css_load_id = None
 
     def load_css_from_file(self):
         if self.app_css_provider is None:
