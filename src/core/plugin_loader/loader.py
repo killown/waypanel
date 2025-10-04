@@ -136,8 +136,6 @@ class PluginLoader:
         )
         if num_plugins > 0:
             GLib.idle_add(self._batch_import_and_validate)
-        else:
-            self.panel_instance.plugins_startup_finished = True
         return False
 
     def load_plugins(self):
@@ -379,7 +377,6 @@ class PluginLoader:
         """
         if not self.plugin_metadata:
             self.logger.info("No plugin metadata found. Skipping initialization.")
-            self.panel_instance.plugins_startup_finished = True
             return False
         all_plugins = {}
         for metadata in self.plugin_metadata:
@@ -457,7 +454,6 @@ class PluginLoader:
             self.plugins_to_initialize = []
             self.plugins_to_initialize_index = 0
             self.logger.info("Plugin initialization complete.")
-            self.panel_instance.plugins_startup_finished = True
             return False
         for module, position, order, priority in plugins_chunk:
             self._initialize_single_plugin(module, position, order, priority)
