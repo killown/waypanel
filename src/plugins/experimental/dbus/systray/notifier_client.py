@@ -48,7 +48,9 @@ class SystrayClientPlugin(BasePlugin):
         self.items = {}
         self.main_widget = (self.tray_box, "append")
         self.notifier_watcher = StatusNotifierWatcher("", panel_instance)
-        self.notifier_watcher.run_server_in_background(panel_instance)
+
+    def on_start(self):
+        self.notifier_watcher.run_server_in_background(self._panel_instance)
 
     def subscribe_to_icon_updates(self):
         """
@@ -439,12 +441,6 @@ class SystrayClientPlugin(BasePlugin):
         menubutton.add_css_class("tray-menu-button")
         self.tray_box.append(menubutton)
         return menubutton
-
-    def on_start(self):
-        """
-        Called when the plugin is started.
-        """
-        self.logger.info("SystrayClientPlugin has started.")
 
     def on_stop(self):
         """

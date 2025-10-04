@@ -114,6 +114,8 @@ class ClipboardClient(BasePlugin):
         self.image_row_height = self.client_config.get("client_image_row_height", 60)
         self.text_row_height = self.client_config.get("client_text_row_height", 38)
         self.item_spacing = self.client_config.get("client_item_spacing", 5)
+
+    def on_start(self):
         self.create_popover_menu_clipboard()
 
     def _create_menu_item_with_icon_and_label(self, label_text: str, icon_name: str):

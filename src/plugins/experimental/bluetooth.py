@@ -259,8 +259,8 @@ class Bluetooth(BasePlugin):
                         "bluetooth-dashboard-buttons-connected"
                     )
                 else:
-                    bluetooth_button.remove_css_class(
-                        "bluetooth-dashboard-buttons-connected"
+                    self.safe_remove_css_class(
+                        bluetooth_button, "bluetooth-dashboard-buttons-connected"
                     )
                 self.bluetooth_buttons[device["mac"]] = bluetooth_button
                 popover_box.append(bluetooth_button)  # pyright: ignore
@@ -333,7 +333,9 @@ class Bluetooth(BasePlugin):
                 if is_connected:
                     button.add_css_class("bluetooth-dashboard-buttons-connected")
                 else:
-                    button.remove_css_class("bluetooth-dashboard-buttons-connected")
+                    self.safe_remove_css_class(
+                        button, "bluetooth-dashboard-buttons-connected"
+                    )
 
             self.schedule_in_gtk_thread(_update_ui)
 

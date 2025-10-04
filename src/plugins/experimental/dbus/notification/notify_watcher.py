@@ -13,7 +13,6 @@ def initialize_plugin(panel_instance):
     """Initialize the Notify Watcher Plugin."""
     if ENABLE_PLUGIN:
         watcher = NotifyWatcherPlugin(panel_instance)
-        watcher.start_watching()
         return watcher
 
 
@@ -27,6 +26,9 @@ class NotifyWatcherPlugin(BasePlugin):
         self.gio_monitor = None
         self._last_mod_time = 0.0
         self.last_db_state = None
+
+    def on_start(self):
+        self.start_watching()
 
     def __del__(self):
         if self.gio_monitor:

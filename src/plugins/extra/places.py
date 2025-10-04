@@ -12,8 +12,6 @@ def get_plugin_placement(panel_instance):
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
         places = PopoverFolders(panel_instance)
-        places.create_menu_popover_folders()
-        places.set_main_widget()
         return places
 
 
@@ -24,7 +22,8 @@ class PopoverFolders(BasePlugin):
         self.home_folders = self.os.listdir(self.home)
         self.popover_folders = None
 
-    def set_main_widget(self):
+    def on_start(self):
+        self.create_menu_popover_folders()
         self.main_widget = (self.menubutton_folders, "append")
 
     def create_menu_popover_folders(self):

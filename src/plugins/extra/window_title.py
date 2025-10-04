@@ -31,6 +31,13 @@ class WindowTitlePlugin(BasePlugin):
         """
         Initialize the Window Title plugin.
         """
+        pass
+
+    def on_start(self) -> None:
+        """
+        Hook for when plugin is loaded. Used to defer event subscription until
+        the EventManagerPlugin is guaranteed to be loaded.
+        """
         self._load_config()
         self.window_title_content = Gtk.Box()
         self.main_widget = (self.window_title_content, "append")
@@ -44,12 +51,9 @@ class WindowTitlePlugin(BasePlugin):
         self._debounce_timer_id: Optional[int] = None
         self._debounce_interval: int = 50
         self._last_view_data: Optional[Dict[str, Any]] = None
-
-    def on_start(self) -> None:
-        """
-        Hook for when plugin is loaded. Used to defer event subscription until
-        the EventManagerPlugin is guaranteed to be loaded.
-        """
+        first_title_update_from_focused_view = self.ipc.get_focused_view()
+        if first_title_update_from_focused_view:
+            self.update_title_icon(first_title_update_from_focused_view)
         GLib.idle_add(self._subscribe_to_events_with_retry)
 
     def _subscribe_to_events_with_retry(self) -> bool:
@@ -152,7 +156,6 @@ class WindowTitlePlugin(BasePlugin):
         self._debounce_timer_id = GLib.timeout_add(
             self._debounce_interval, self._perform_debounced_update
         )
-        pass
 
     def update_title_icon(self, view: Optional[Dict[str, Any]]) -> None:
         """
@@ -215,11 +218,18 @@ class WindowTitlePlugin(BasePlugin):
     def update_title(self, title: str, icon_name: str) -> None:
         """
         Update the window title widget with new title and icon.
+        Includes a defensive CSS check to prevent the GTK assertion crash.
         """
         try:
             self.window_title_label.set_label(title)
             icon_to_set = icon_name if icon_name else "None"
             self.window_title_icon.set_from_icon_name(icon_to_set)
+            CLASS_NAME = "title-active"
+            if title:
+                self.window_title_content.add_css_class(CLASS_NAME)
+            else:
+                if self.window_title_content.has_css_class(CLASS_NAME):
+                    self.safe_remove_css_class(self.window_title_content, CLASS_NAME)
         except Exception as e:
             self.logger.error(f"Error updating window title widget: {e}")
 

@@ -53,7 +53,6 @@ def get_plugin_placement(panel_instance):
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
         system = SystemDashboard(panel_instance)
-        system.create_menu_popover_system()
         return system
 
 
@@ -63,6 +62,9 @@ class SystemDashboard(BasePlugin):
         self.popover_dashboard = None
         self.panel_instance = panel_instance
         self.menubutton_dashboard = None
+
+    def on_start(self):
+        self.create_menu_popover_system()
 
     def message(self, msg):
         dialog = self.gtk.MessageDialog(

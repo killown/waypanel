@@ -44,6 +44,8 @@ class EventHandlerDecoratorPlugin(BasePlugin):
                             including the logger and loaded plugins.
         """
         super().__init__(panel_instance)
+
+    def on_start(self):
         self._register_handlers()
 
     def _register_handlers(self) -> None:

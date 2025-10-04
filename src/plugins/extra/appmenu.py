@@ -33,7 +33,8 @@ class AppLauncher(BasePlugin):
         self.db_path = self.path_handler.get_data_path("db/appmenu/recent_apps.db")
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
-        self._create_recent_apps_table()
+
+    def on_start(self):
         self.main_widget = (self.appmenu, "append")
         try:
             self.settings = self.gio.Settings.new("org.gnome.desktop.interface")
@@ -42,6 +43,7 @@ class AppLauncher(BasePlugin):
                 f"Appmenu: Failed to initialize GSettings for icon-theme: {e}"
             )
             self.settings = None
+        self._create_recent_apps_table()
 
     def _create_recent_apps_table(self):
         """Creates the SQLite table for recent apps if it doesn't exist."""

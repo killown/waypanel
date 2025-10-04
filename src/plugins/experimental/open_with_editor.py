@@ -13,8 +13,6 @@ def get_plugin_placement(panel_instance):
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
         places = OpenWithEditor(panel_instance)
-        places.create_menu_popover_folders()
-        places.set_main_widget()
         return places
 
 
@@ -134,6 +132,10 @@ class OpenWithEditor(BasePlugin):
             "st",
             "rxvt",
         ]
+
+    def on_start(self):
+        self.create_menu_popover_folders()
+        self.set_main_widget()
 
     def set_main_widget(self):
         self.main_widget = (self.menubutton_folders, "append")

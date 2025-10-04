@@ -13,13 +13,6 @@ def initialize_plugin(panel_instance):
     """Initialize the weather plugin."""
     if ENABLE_PLUGIN:
         weather_plugin = WeatherPlugin(panel_instance)
-        if weather_plugin.coordinates:
-            weather_plugin.run_in_async_task(weather_plugin.setup_weather_async())
-        else:
-            panel_instance.logger.error(
-                "Weather coordinates are missing or invalid in config. Plugin functionally disabled."
-            )
-            return None
         return weather_plugin
     return None
 
@@ -38,6 +31,15 @@ class WeatherPlugin(BasePlugin):
             self.logger.warning(
                 f"Weather coordinates not configured or invalid. Defaulting to {self.coordinates}."
             )
+
+    def on_start(self):
+        if self.coordinates:
+            self.run_in_async_task(self.setup_weather_async())
+        else:
+            self.logger.error(
+                "Weather coordinates are missing or invalid in config. Plugin functionally disabled."
+            )
+            return None
 
     async def setup_weather_async(self):
         """Asynchronously set up the weather functionality."""

@@ -42,6 +42,7 @@ class EventManagerPlugin(BasePlugin):
         self.event_queue = collections.deque()
         self.is_processing_events = False
 
+    def on_start(self):
         # New: Start the periodic event processing loop
         # The timeout will call _process_queued_events every 50ms
         self.glib.timeout_add(50, self._process_queued_events)

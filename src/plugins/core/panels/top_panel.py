@@ -53,20 +53,39 @@ class TopPanelPlugin(BasePlugin):
         self.update_widget_safely(self.obj.top_panel_box_right.append, self.spacer)
         self.obj.top_panel_grid_right = Gtk.Grid()
         self.obj.top_panel_grid_right.attach(self.obj.top_panel_box_right, 1, 0, 1, 2)
-        self.obj.top_panel_grid_right.attach_next_to(
-            self.obj.top_panel_box_systray,
-            self.obj.top_panel_box_right,
-            Gtk.PositionType.RIGHT,
-            1,
-            2,
-        )
-        self.obj.top_panel_grid_right.attach_next_to(
-            self.obj.top_panel_box_for_buttons,
-            self.obj.top_panel_box_systray,
-            Gtk.PositionType.RIGHT,
-            1,
-            2,
-        )
+
+        def attach_to_grid_later():
+            """
+            Defers the attachment of the top-panel systray and button boxes until
+            the main panel plugin startup process is finished.
+
+            This addresses the issue of GTK layout thrashing (which leads to
+            assertion crashes like GtkCountingBloomFilter) caused by rapidly
+            and sequentially adding multiple plugin widgets to these dynamic
+            containers during initial application launch, forcing repeated
+            full panel layout recalculations. The timeout periodically checks
+            the startup status and attaches the widgets only once ready.
+            """
+            if self._panel_instance.plugins_startup_finished:
+                self.obj.top_panel_grid_right.attach_next_to(
+                    self.obj.top_panel_box_systray,
+                    self.obj.top_panel_box_right,
+                    Gtk.PositionType.RIGHT,
+                    1,
+                    2,
+                )
+                self.obj.top_panel_grid_right.attach_next_to(
+                    self.obj.top_panel_box_for_buttons,
+                    self.obj.top_panel_box_systray,
+                    Gtk.PositionType.RIGHT,
+                    1,
+                    2,
+                )
+                return False  # stop GLib.timeout_add
+            return True  # continue GLib.timeout_add
+
+        GLib.timeout_add(300, attach_to_grid_later)  # 300ms
+
         self.obj.top_panel_box_center = Gtk.Box()
         self.obj.top_panel_box_full = Gtk.Grid()
         self.obj.top_panel_box_full.set_column_homogeneous(True)

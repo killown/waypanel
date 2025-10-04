@@ -152,12 +152,16 @@ class Panel(Adw.Application):
         return True  # continue idle_add
 
     def do_activate(self):
+        self.setup_panels()
+        GLib.idle_add(self.load_css)
+
+    def load_css(self):
         self.gtk_helpers.load_css_from_file()
         self.css_monitor = Gio.File.new_for_path(
             self.config_handler.style_css_config
         ).monitor(Gio.FileMonitorFlags.NONE, None)
         self.css_monitor.connect("changed", self.gtk_helpers.on_css_file_changed)
-        self.setup_panels()
+        return False  # stop GLib.timeout_add
 
     def setup_panels(self):
         """

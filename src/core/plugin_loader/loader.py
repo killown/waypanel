@@ -187,7 +187,7 @@ class PluginLoader:
         This runs as a GLib idle callback. Returning True reschedules it,
         which yields control and maintains responsiveness.
         """
-        CHUNK_SIZE = 10
+        CHUNK_SIZE = 5
         start_index = self.plugins_to_process_index
         end_index = min(start_index + CHUNK_SIZE, len(self.plugins_to_process))
         plugins_chunk = self.plugins_to_process[start_index:end_index]
@@ -332,9 +332,13 @@ class PluginLoader:
                     container_box.set_name(f"{module_name}_overflow_box")
                     for widget in widgets:
                         self.update_widget_safely(container_box.append, widget)
-                    self.overflow_container.add_hidden_widget(container_box)
+                    self.update_widget_safely(
+                        self.overflow_container.add_hidden_widget, container_box
+                    )
                 elif len(widgets) == 1:
-                    self.overflow_container.add_hidden_widget(widgets[0])
+                    self.update_widget_safely(
+                        self.overflow_container.add_hidden_widget, widgets[0]
+                    )
                 return
         if widget_action == "append":
             widgets = (

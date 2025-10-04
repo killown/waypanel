@@ -252,7 +252,7 @@ class TaskbarPlugin(BasePlugin):
             return
         button = self.in_use_buttons.pop(view_id)
         button.set_visible(False)
-        button.remove_css_class("focused")
+        self.safe_remove_css_class(button, "focused")
         self.remove_gesture(button)
         for item in self.button_pool:
             if item["button"] == button:
@@ -480,7 +480,7 @@ class TaskbarPlugin(BasePlugin):
             if view_id == focused_view_id:
                 button.add_css_class("focused")
             else:
-                button.remove_css_class("focused")
+                self.safe_remove_css_class(button, "focused")
 
     def _trigger_debounced_update(self):
         if not self._debounce_pending:

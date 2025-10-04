@@ -13,7 +13,6 @@ def initialize_plugin(panel_instance):
     """Initialize the plugin."""
     if ENABLE_PLUGIN:
         plugin = MenuSetupPlugin(panel_instance)
-        plugin.setup_menus()
         return plugin
 
 
@@ -24,6 +23,9 @@ class MenuSetupPlugin(BasePlugin):
         self.config_path = self.os.path.expanduser("~/.config/waypanel/config.toml")
         self.widgets = []
         self.main_widget = (self.widgets, "append")
+
+    def on_start(self):
+        self.setup_menus()
 
     def load_menu_config(self):
         """Load menu configuration from config.toml."""

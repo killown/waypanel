@@ -514,6 +514,11 @@ class BasePlugin:
         return self._gtk_helper.remove_widget
 
     @property
+    def safe_remove_css_class(self):
+        """Read-only alias for self._gtk_helper.safe_remove_css_class."""
+        return self._gtk_helper.safe_remove_css_class
+
+    @property
     def validate_iterable(self):
         """Read-only alias for self._data_helper.validate_iterable."""
         return self._data_helper.validate_iterable

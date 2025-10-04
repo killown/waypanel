@@ -42,30 +42,37 @@ class GtkHelpers:
         if hasattr(panel_instance, "ipc"):
             self.command = CommandRunner(panel_instance)
 
+        self.app_css_provider = None
+
+    def load_css_from_file(self):
+        if self.app_css_provider is None:
+            self.app_css_provider = Gtk.CssProvider()
+            Gtk.StyleContext.add_provider_for_display(
+                Gdk.Display.get_default(),  # pyright: ignore
+                self.app_css_provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+            )
+
+        try:
+            self.app_css_provider.load_from_file(
+                Gio.File.new_for_path(self.config_handler.style_css_config)
+            )
+        except GLib.Error as e:
+            self.logger.error(f"Error loading CSS file: {e.message}")
+
     def on_css_file_changed(
         self, monitor, file, other_file, event_type: Gio.FileMonitorEvent
     ):
         if event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT:
+            if self.css_load_id is not None:
+                GLib.source_remove(self.css_load_id)
 
-            def run_once():
+            def run_once_after_delay():
                 self.load_css_from_file()
-                return False
+                self.css_load_id = None
+                return GLib.SOURCE_REMOVE
 
-            GLib.idle_add(run_once)
-
-    def load_css_from_file(self):
-        css_provider = Gtk.CssProvider()
-        try:
-            css_provider.load_from_file(
-                Gio.File.new_for_path(self.config_handler.style_css_config)
-            )
-            Gtk.StyleContext.add_provider_for_display(
-                Gdk.Display.get_default(),  # pyright: ignore
-                css_provider,
-                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
-            )
-        except GLib.Error as e:
-            self.logger.error(f"Error loading CSS file: {e.message}")
+            self.css_load_id = GLib.timeout_add(100, run_once_after_delay)
 
     def widget_exists(self, widget: Any) -> bool:
         """
@@ -1066,3 +1073,11 @@ class GtkHelpers:
         stack.add_css_class("system_dashboard_stack")
         popover_dashboard.popup()
         return popover_dashboard
+
+    def safe_remove_css_class(self, widget: Gtk.Widget, class_name: str):
+        """
+        Removes a CSS class only if it is currently present on the widget.
+        Prevents the Gtk:ERROR assertion failure.
+        """
+        if class_name in widget.get_css_classes():
+            widget.remove_css_class(class_name)

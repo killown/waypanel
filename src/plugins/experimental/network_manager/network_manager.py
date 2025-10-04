@@ -68,6 +68,8 @@ class NetworkManager(BasePlugin):
         self.ssids_to_auto_connect = self.config_handler.check_and_get_config(
             ["hardware", "network", "auto_connect_ssids"]
         )
+
+    def on_start(self):
         self.global_loop.create_task(self.start_periodic_wifi_scan_async())
         self.global_loop.create_task(self._apply_config_autoconnect_settings_async())
 

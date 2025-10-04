@@ -12,7 +12,6 @@ def initialize_plugin(panel_instance):
     """Initialize the calendar plugin."""
     if ENABLE_PLUGIN:
         calendar_plugin = CalendarPlugin(panel_instance)
-        calendar_plugin.setup_calendar()
         return calendar_plugin
 
 
@@ -44,6 +43,9 @@ class CalendarPlugin(BasePlugin):
         self.grid.attach(self.calendar, 0, 0, 1, 1)
         self.popover_calendar.set_child(self.grid)
         clock_button.connect("clicked", self.toggle_calendar)
+
+    def on_start(self):
+        self.setup_calendar()
 
     def toggle_calendar(self, *_):
         """Toggle the calendar popover."""
