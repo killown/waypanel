@@ -35,6 +35,22 @@ class TopPanelPlugin(BasePlugin):
         self.add_css_class()
         self.is_top_panel_ready = False
 
+    def _attach_widget_to_grid_next_to(
+        self, grid, widget_to_attach, relative_widget, position_type, width, height
+    ):
+        """
+        A reusable internal method to attach a widget to a Gtk.Grid next to another widget.
+        This centralizes the Gtk.Grid.attach_next_to call, allowing callers to easily
+        specify any Gtk.PositionType (LEFT, RIGHT, TOP, BOTTOM).
+        """
+        grid.attach_next_to(
+            widget_to_attach,
+            relative_widget,
+            position_type,
+            width,
+            height,
+        )
+
     def _setup_panel_boxes(self):
         """Setup panel boxes and related configurations."""
         self.obj.top_panel_box_widgets_left = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
@@ -52,10 +68,9 @@ class TopPanelPlugin(BasePlugin):
         self.spacer.add_css_class("right-box-spacer")
         self.update_widget_safely(self.obj.top_panel_box_right.append, self.spacer)
         self.obj.top_panel_grid_right = Gtk.Grid()
-        self.obj.top_panel_grid_right.attach(self.obj.top_panel_box_right, 1, 0, 1, 2)
         self.last_box_width = self.obj.top_panel_box_right.get_width()
 
-        def attach_to_grid():
+        def attach_deferred_widgets():
             """
             Defers the attachment of the top-panel systray and button boxes until
             the main panel plugin startup process is finished.
@@ -66,20 +81,20 @@ class TopPanelPlugin(BasePlugin):
             full panel layout recalculations. The timeout periodically checks
             the startup status and attaches the widgets only once ready.
             """
-            if self.last_box_width != self.obj.top_panel_box_right.get_width():
-                ### still not ready if the box is still resizing
-                self.last_box_width = self.obj.top_panel_box_right.get_width()
-                return True
-
             if self._panel_instance.plugins_startup_finished:
-                self.obj.top_panel_grid_right.attach_next_to(
+                self.obj.top_panel_grid_right.attach(
+                    self.obj.top_panel_box_right, 1, 0, 1, 2
+                )
+                self._attach_widget_to_grid_next_to(
+                    self.obj.top_panel_grid_right,
                     self.obj.top_panel_box_systray,
                     self.obj.top_panel_box_right,
                     Gtk.PositionType.RIGHT,
                     1,
                     2,
                 )
-                self.obj.top_panel_grid_right.attach_next_to(
+                self._attach_widget_to_grid_next_to(
+                    self.obj.top_panel_grid_right,
                     self.obj.top_panel_box_for_buttons,
                     self.obj.top_panel_box_systray,
                     Gtk.PositionType.RIGHT,
@@ -89,19 +104,23 @@ class TopPanelPlugin(BasePlugin):
                 return False
             return True
 
-        GLib.timeout_add(100, attach_to_grid)
+        # FIXME: check if the gtk bug is gone after some point, then remove this delay
+        GLib.timeout_add(500, attach_deferred_widgets)
+
         self.obj.top_panel_box_center = Gtk.Box()
         self.obj.top_panel_box_full = Gtk.Grid()
         self.obj.top_panel_box_full.set_column_homogeneous(True)
         self.obj.top_panel_box_full.attach(self.obj.top_panel_box_left, 1, 0, 1, 2)
-        self.obj.top_panel_box_full.attach_next_to(
+        self._attach_widget_to_grid_next_to(
+            self.obj.top_panel_box_full,
             self.obj.top_panel_box_center,
             self.obj.top_panel_box_left,
             Gtk.PositionType.RIGHT,
             1,
             2,
         )
-        self.obj.top_panel_box_full.attach_next_to(
+        self._attach_widget_to_grid_next_to(
+            self.obj.top_panel_box_full,
             self.obj.top_panel_grid_right,
             self.obj.top_panel_box_center,
             Gtk.PositionType.RIGHT,
