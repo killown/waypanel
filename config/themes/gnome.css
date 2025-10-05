@@ -1,0 +1,132 @@
+:root {
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+
+  /* Primary Background Hierarchy (GNOME PURE BLACK) */
+  --theme-bg-view-primary: #000000;   /* Deepest Black (Shell BG, Overview) */
+  --theme-bg-view-secondary: #121212; /* Main Surface (Panel, Popover Base) */
+  --theme-bg-view-tertiary: #252525;  /* Hover/Active BG */
+
+  /* Interactive/State Backgrounds */
+  --theme-bg-control-base: #252525;
+  --theme-bg-selected-primary: #3584E4; /* Official GNOME Blue */
+  --theme-bg-selected-secondary: #404040;
+  --theme-bg-text-selection: #3584E480;
+  
+  /* Specialized Backgrounds */
+  --theme-bg-under-page: #000000;
+  --theme-bg-alternating-row: #1E1E1E;
+  --theme-bg-find-highlight: #E5A50A60; /* GNOME Yellow with transparency */
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: #FFFFFF;    /* Pure White */
+  --theme-fg-label-secondary: #F0F0F0;  /* Secondary/Dim Text */
+  --theme-fg-label-tertiary: #808080;   /* Disabled Text/Placeholder */
+  --theme-fg-label-quaternary: #606060;
+  
+  /* Interactive Foreground */
+  --theme-fg-control-text: #FFFFFF;
+  --theme-fg-control-text-disabled: #808080;
+  --theme-fg-link: #3584E4;
+  --theme-fg-placeholder: #808080;
+  --theme-fg-header-text: #F0F0F0;
+  
+  /* State Foreground */
+  --theme-fg-text-selected: #FFFFFF;
+  --theme-fg-text-alternate-selected: #FFFFFF;
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: #424242; /* Stronger divider line */
+  --theme-decoration-grid-line: #303030;
+  --theme-decoration-keyboard-focus: #3584E4;
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* ================================================= */
+  
+  --theme-status-accent: #3584E4;  /* Official GNOME Blue */
+  --theme-status-success: #2EC27E; /* Official GNOME Green */
+  --theme-status-danger: #E01B24;  /* Official GNOME Red */
+  --theme-status-warning: #E5A50A; /* Official GNOME Yellow */
+  --theme-status-highlight-virtual: #121212;
+
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
+  /* ================================================= */
+
+  /* Backgrounds */
+  --primary-bg: var(--theme-bg-view-primary);    /* #000000 */
+  --secondary-bg: var(--theme-bg-view-secondary); /* #121212 */
+  --tertiary-bg: var(--theme-bg-view-tertiary);  /* #252525 */
+  --header-border: var(--theme-decoration-separator);
+
+  /* Foreground/Text */
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+
+  /* Functional Colors */
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  
+  /* Specific Color Variants */
+  --success-green-light: rgba(46, 194, 126, 0.2);
+  --window-control-hover-bg: var(--theme-bg-control-base);
+  --window-control-border-color: var(--primary-bg);
+
+  /* DSEG Font Shadows */
+  --dseg-shadow-soft: rgba(255, 255, 255, 0.1);
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.9); /* Harder shadow for visibility on black */
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY ============== */
+  /* (ADJUSTED FOR PURE BLACK) */
+  /* ================================================= */
+
+  /* Raw Shadow Primitives */
+  --shadow-dark: rgba(0, 0, 0, 0.9); /* Very opaque black for shadows on black */
+  --shadow-medium: rgba(0, 0, 0, 0.6);
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.05); /* Faint separator/highlight */
+
+  /* Opacity */
+  --opacity-0: 0.0;
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  /* Shadow Styles (Generalised by prominence/function) */
+  --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
+  --shadow-elevated: 0 8px 20px var(--shadow-medium); /* Deeper shadow for popovers on black */
+  --shadow-button-flat: none; 
+  --shadow-control-small: none; 
+  --shadow-control-small-hover: none; 
+  --shadow-element-minimal: none; 
+  
+  /* Neumorphic/Inset Inversion */
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-neumorphic-outset-large: 0 2px 5px rgba(0, 0, 0, 0.5);
+  --shadow-neumorphic-press: inset 0 1px 4px rgba(0, 0, 0, 0.8);
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES ================ */
+  /* ================================================= */
+
+  --font-family-default: "Cantarell", "Roboto", sans-serif; 
+  --font-family-system: var(--font-family-default);
+}

@@ -1,0 +1,96 @@
+:root {
+  /* ================================================= */
+  /* ===== GENERIC PALETTE (GNOME Shell Deep Black) == */
+  /* ================================================= */
+
+  /* Inverted Grays: Very Dark/OLED Black Surfaces */
+  --color-bg-dark: #1a1a1a; /* Main Surface/Window Background (Window/Panel BG) */
+  --color-bg-medium: #111111; /* Secondary Surface (Deep Black View BG/Content Area) */
+  --color-bg-light: #282828; /* Tertiary Surface/Hover/Active BG (e.g., Button Base/Popover) */
+  --color-bg-highlight: #404040; /* Borders, Disabled BG, Divider lines (Higher contrast) */
+
+  /* Inverted Foreground: Very Bright Text */
+  --color-fg-main: #ffffff; /* Main Text Color (Pure White) */
+  --color-fg-light: #f0f0f0; /* Secondary/Dim Text (Almost white) */
+  --color-fg-dark: #9a9a9a; /* Disabled Text/Placeholder/Subtle Info */
+
+  /* Accents: Official GNOME Adwaita Colors (Dark Variants) */
+  --color-red: #e01b24; /* Error/Danger Red */
+  --color-green: #2ec27e; /* Success Green */
+  --color-blue: #3584e4; /* Official Adwaita Accent Blue */
+  --color-yellow: #e5a50a; /* Warning Yellow */
+  --color-magenta: #9141ac; /* Purple/Magenta */
+  --color-cyan: #2190a4; /* Teal/Cyan */
+  --color-orange: #ed5b00; /* Orange */
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (Used by Base CSS) ====== */
+  /* (MAPPED TO DEEP BLACK GNOME PALETTE) */
+  /* ================================================= */
+
+  /* Backgrounds */
+  --primary-bg: var(--color-bg-dark); /* Main window/app background */
+  --secondary-bg: var(
+    --color-bg-medium
+  ); /* Content area/view background (Deepest Black) */
+  --tertiary-bg: var(--color-bg-light); /* Hover/Active states, popovers */
+  --header-border: var(--color-bg-highlight); /* Subtle border lines */
+
+  /* Foreground/Text */
+  --main-text: var(--color-fg-main);
+  --soft-text: var(--color-fg-light);
+  --calendar-other-month: var(--color-fg-dark);
+
+  /* Functional Colors (Used by the Base CSS) */
+  --accent-blue: var(--color-blue);
+  --success-green: var(--color-green);
+  --danger-red: var(--color-red);
+
+  /* Specific Color Variants */
+  --success-green-light: rgba(46, 194, 126, 0.2);
+  --window-control-hover-bg: var(--color-bg-light);
+  --window-control-border-color: var(--primary-bg);
+
+  /* DSEG Font Shadows (Adjusted for Dark Background) */
+  --dseg-shadow-soft: rgba(255, 255, 255, 0.1);
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.5);
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY ============== */
+  /* (ADJUSTED FOR DEEP BLACK) */
+  /* ================================================= */
+
+  /* Shadows: Need slightly larger spread on deep black to be visible. */
+  --shadow-dark: rgba(0, 0, 0, 0.8);
+  --shadow-medium: rgba(0, 0, 0, 0.5);
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  --opacity-0: 0;
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  /* Shadow Styles */
+  --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
+  --shadow-panel: 0 6px 15px var(--shadow-dark); /* Deeper shadow on black for clear separation */
+  --shadow-dockbar-buttons: none;
+  --shadow-window-controls: none;
+  --shadow-window-controls-hover: none;
+  --shadow-notes-buttons: none;
+
+  /* Neumorphic/Inset Inversion */
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-neumorphic-outset-large: 0 2px 5px rgba(0, 0, 0, 0.4);
+  --shadow-neumorphic-press: inset 0 1px 4px rgba(0, 0, 0, 0.7);
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES ================ */
+  /* ================================================= */
+
+  --font-family-default: "Cantarell", "Roboto", sans-serif;
+  --font-family-system: var(--font-family-default);
+}

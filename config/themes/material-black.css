@@ -1,0 +1,90 @@
+:root {
+  /* ================================================= */
+  /* ==== MATERIAL BLACK PALETTE (Theme Specific) ==== */
+  /* ================================================= */
+  --color-bg-dark: #000000; /* Pure Black (AMOLED Friendly) */
+  --color-bg-medium: #0d0d0d; /* Low Elevation Surfaces */
+  --color-bg-light: #1e1e1e; /* High Elevation Surfaces, Hover */
+  --color-bg-highlight: #333333; /* Borders, Active/Selected/Disabled bg */
+
+  --color-fg-main: #ffffff; /* Main Foreground (100% White) */
+  --color-fg-light: #b0b0b0; /* Secondary Foreground (~69% White/Medium-emphasis) */
+  --color-fg-dark: #707070; /* Muted Foreground (~44% White/Disabled text) */
+
+  --color-red: #f44336; /* Material Red 500 */
+  --color-green: #4caf50; /* Material Green 500 */
+  --color-blue: #2196f3; /* Material Blue 500 (Primary Accent) */
+  --color-yellow: #ffeb3b; /* Material Yellow 500 */
+  --color-magenta: #9c27b0; /* Material Purple 500 */
+  --color-cyan: #00bcd4; /* Material Cyan 500 */
+  --color-orange: #ff9800; /* Material Orange 500 */
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (Used by Base CSS) ====== */
+  /* ================================================= */
+
+  /* Backgrounds */
+  --primary-bg: var(--color-bg-dark);
+  --secondary-bg: var(--color-bg-medium);
+  --tertiary-bg: var(--color-bg-light);
+  --header-border: var(--color-bg-highlight);
+
+  /* Foreground/Text */
+  --main-text: var(--color-fg-main);
+  --soft-text: var(--color-fg-light);
+  --calendar-other-month: var(--color-fg-dark);
+
+  /* Functional Colors (Used by the Base CSS) */
+  --accent-blue: var(--color-blue);
+  --success-green: var(--color-green);
+  --danger-red: var(--color-red);
+
+  /* Specific Color Variants */
+  --success-green-light: rgba(
+    76,
+    175,
+    80,
+    0.2
+  ); /* Lighter variant for subtle effect */
+  --window-control-hover-bg: var(--color-bg-light);
+  --window-control-border-color: var(--primary-bg);
+
+  /* DSEG Font Shadows */
+  --dseg-shadow-soft: rgba(255, 255, 255, 0.15);
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY ============== */
+  /* ================================================= */
+
+  --shadow-dark: rgba(0, 0, 0, 0.8);
+  --shadow-medium: rgba(0, 0, 0, 0.6);
+  --shadow-subtle-white: rgba(255, 255, 255, 0.15);
+
+  --opacity-0: 0;
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  --shadow-subtle: 0 1px 0 rgba(0, 0, 0, 0.5);
+  --shadow-panel: 0 4px 8px var(--shadow-dark);
+  /* Material Black uses higher saturation/less blur on shadows due to deep black background */
+  --shadow-dockbar-buttons: none;
+  --shadow-window-controls: none;
+  --shadow-window-controls-hover: none;
+  --shadow-notes-buttons: none;
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--color-bg-highlight);
+  --shadow-neumorphic-outset-large: 0 3px 6px rgba(0, 0, 0, 0.5);
+  --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES ================ */
+  /* ================================================= */
+
+  --font-family-default: "Roboto", sans-serif;
+  --font-family-system: var(--font-family-default);
+}

@@ -1,0 +1,91 @@
+:root {
+  /* ----------------------------------------
+   * 🐧 Adwaita Dark Palette (GNOME Standard)
+   * ---------------------------------------- */
+  --adw-bg-deep: #242424; /* Window/Canvas Background */
+  --adw-bg-medium: #303030; /* Header Bar/Sidebar/Card Background */
+  --adw-bg-light: #383838; /* Hover/Subtle Accent BG */
+  --adw-fg-main: #ffffff; /* Main Text Color */
+  --adw-fg-soft: #b8b8b8; /* Secondary/Dim Text Color */
+  --adw-accent-blue: #3584e4; /* Primary Accent Blue */
+  --adw-red: #e01b24; /* Error/Destructive Action */
+  --adw-green: #26a269; /* Success/Positive Action */
+  --adw-yellow: #f6d326; /* Warning/Highlight */
+  --adw-border: #424242; /* Subtle Separator/Border */
+
+  /* ----------------------------------------
+   * 🗺️ Semantic Mappings (Adwaita Colors)
+   * ---------------------------------------- */
+  --gruv-bg: var(--adw-bg-deep);
+  --gruv-bg-light: var(--adw-bg-medium);
+  --gruv-bg-medium: var(--adw-bg-medium);
+  --gruv-fg: var(--adw-fg-main);
+  --gruv-fg-soft: var(--adw-fg-soft);
+  --gruv-red: var(--adw-red);
+  --gruv-green: var(--adw-green);
+  --gruv-blue: var(--adw-accent-blue);
+  --gruv-hover-bg: var(--adw-bg-light);
+
+  /* New Derived Colors for Hardcoded Values */
+  --gruv-fg-contrast: #000000; /* For text on bright backgrounds (e.g., selected day/button) */
+  --gruv-green-light: #48a57e; /* Lightened success-green for hover effect */
+  --gruv-shadow-dark: rgba(0, 0, 0, 0.4); /* General dark shadow */
+  --gruv-shadow-soft: rgba(0, 0, 0, 0.3); /* Softer shadow */
+  --gruv-shadow-border: rgba(
+    255,
+    255,
+    255,
+    0.05
+  ); /* White shadow for borders/insets */
+  --gruv-window-control-hover: #5c8f97; /* Specific hover color from original */
+  --gruv-window-control-border: rgba(
+    36,
+    40,
+    59,
+    0.744
+  ); /* Specific border from original */
+  --gruv-calendar-other-month: #504945; /* Soft color for other month days */
+
+  /* ----------------------------------------
+   * 🎨 Core Theme Variables (Adwaita Style)
+   * ---------------------------------------- */
+  /* Common Opacities (Kept for shadows) */
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  /* Backgrounds */
+  --primary-bg: var(--gruv-bg);
+  --secondary-bg: var(--gruv-bg-medium);
+  --tertiary-bg: var(--gruv-hover-bg);
+
+  /* Text Colors */
+  --main-text: var(--gruv-fg);
+  --soft-text: var(--gruv-fg-soft);
+
+  /* Accent Colors */
+  --accent-blue: var(--gruv-blue);
+  --success-green: var(--gruv-green);
+
+  /* Global Styles */
+  --header-border: var(--adw-border);
+  --shadow-subtle: 0 1px 0 rgba(0, 0, 0, 0.15);
+
+  /* 📏 Reusable Box Shadows (Flat/Adwaita Style) */
+  --shadow-panel: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-dockbar-buttons: none;
+  --shadow-window-controls: none;
+  --shadow-window-controls-hover: none;
+  --shadow-notes-buttons: none;
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--adw-border);
+  --shadow-neumorphic-outset-large: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+
+  /* Fonts */
+  --font-family-default: "Cantarell", "Roboto", sans-serif;
+  --font-family-system: var(--font-family-default);
+}

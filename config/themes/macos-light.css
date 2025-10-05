@@ -1,0 +1,94 @@
+:root {
+  /* ================================================= */
+  /* ===== MACOS LIGHT THEME (Based on HIG/Aqua) ===== */
+  /* ================================================= */
+
+  /* Backgrounds & Surfaces */
+  --macos-bg-0: #f2f2f7; /* Window/Content Background (Subtle off-white) */
+  --macos-bg-1: #ffffff; /* Primary Surface (e.g., Toolbar, main window body) */
+  --macos-bg-2: #e5e5ea; /* Secondary Surface / Hover / Selection */
+  --macos-bg-3: #d1d1d6; /* Border / Separator */
+
+  /* Foreground (Text/Icons) */
+  --macos-fg-0: #1d1d1f; /* Primary Label Color (Nearly black) */
+  --macos-fg-1: #6a6a6a; /* Secondary/Muted Label Color */
+  --macos-fg-2: #8e8e93; /* Tertiary/Placeholder Label Color */
+
+  /* System/Accent Colors (Default: Blue) */
+  --macos-blue: #007aff; /* Control Accent Color (The iconic Blue) */
+  --macos-green: #34c759; /* Success/Notification (System Green) */
+  --macos-red: #ff3b30; /* Danger/Close Button (System Red) */
+  --macos-yellow: #ffcc00; /* Warning (System Yellow) */
+
+  /* ================================================= */
+  /* === MAPPING MACOS LIGHT TO YOUR EXISTING VARIABLES ===*/
+  /* ================================================= */
+
+  /* Primary Theme Colors */
+  --primary-bg: var(--macos-bg-0); /* Main window/content background */
+  --secondary-bg: var(--macos-bg-1); /* Header/Panel background */
+  --tertiary-bg: var(--macos-bg-2); /* Hover/Selection background */
+
+  --main-text: var(--macos-fg-0); /* Main text color */
+  --soft-text: var(--macos-fg-1); /* Muted text color */
+
+  --accent-blue: var(--macos-blue); /* Primary accent color (Blue) */
+  --success-green: var(--macos-green); /* Success/Save color (Green) */
+
+  /* Old/Custom Variables Mapped */
+  --gruv-bg: var(--macos-bg-1);
+  --gruv-bg-light: var(--macos-bg-2);
+  --gruv-bg-medium: var(--macos-bg-1);
+  --gruv-fg: var(--macos-fg-0);
+  --gruv-fg-soft: var(--macos-fg-1);
+  --gruv-red: var(--macos-red);
+  --gruv-green: var(--macos-green);
+  --gruv-blue: var(--macos-blue);
+  --gruv-hover-bg: var(--macos-bg-2);
+
+  --gruv-green-light: var(--macos-green);
+  --gruv-white: var(--macos-bg-1); /* White equivalent */
+  --gruv-black: var(--macos-fg-0); /* Black equivalent (darkest text) */
+
+  --gruv-calendar-other-month: var(--macos-fg-2);
+  --header-border: var(--macos-bg-3); /* Subtle border */
+
+  /* DSEG Font Shadows (Subtle Dark Shadow for Light Theme) */
+  --gruv-dseg-shadow-soft: rgba(0, 0, 0, 0.05);
+  --gruv-dseg-shadow-dark: rgba(0, 0, 0, 0.15);
+
+  /* ================================================= */
+  /* === SHADOWS, OPACITY, AND FONT (Light-specific) ===*/
+  /* ================================================= */
+
+  --shadow-dark: rgba(0, 0, 0, 0.15);
+  --shadow-medium: rgba(0, 0, 0, 0.1);
+  --shadow-subtle-white: rgba(0, 0, 0, 0.05);
+
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  /* Custom window controls */
+  --gruv-window-control-hover-bg: var(--macos-bg-2);
+  --gruv-window-control-border-color: var(--macos-bg-3);
+
+  /* Shadow Variables (Light, subtle shadows) */
+  --shadow-subtle: 0 1px 0 rgba(0, 0, 0, 0.05);
+  --shadow-panel: 0 4px 12px var(--shadow-medium);
+  --shadow-dockbar-buttons: none;
+  --shadow-window-controls: none;
+  --shadow-window-controls-hover: none;
+  --shadow-notes-buttons: none;
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--macos-bg-3);
+  --shadow-neumorphic-outset-large: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+
+  /* Font Variables */
+  --font-family-default: "SF Pro Text", "Cantarell", "Roboto", sans-serif;
+  --font-family-system: var(--font-family-default);
+}

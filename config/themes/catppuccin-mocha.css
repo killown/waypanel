@@ -1,0 +1,132 @@
+:root {
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+
+  /* Primary Background Hierarchy (CATPPUCCIN MOCHA) */
+  --theme-bg-view-primary: #1E1E2E;   /* Base - Primary Background */
+  --theme-bg-view-secondary: #313244; /* Surface 0 - Raised/Card Background */
+  --theme-bg-view-tertiary: #45475A;  /* Surface 1 - Popover/Menu Background */
+
+  /* Interactive/State Backgrounds */
+  --theme-bg-control-base: #585B70;   /* Surface 2 - Control Background */
+  --theme-bg-selected-primary: #89B4FA; /* Blue - Primary Accent/Selection */
+  --theme-bg-selected-secondary: #45475A; /* Surface 1 - Subtle Selection */
+  --theme-bg-text-selection: #89B4FA60; /* Blue with transparency */
+  
+  /* Specialized Backgrounds */
+  --theme-bg-under-page: #11111B; /* Crust - Deepest Background */
+  --theme-bg-alternating-row: #24243A;
+  --theme-bg-find-highlight: #F9E2AF40; /* Yellow with transparency */
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: #CDD6F4;    /* Text - Primary Text */
+  --theme-fg-label-secondary: #BAC2DE;  /* Subtext 1 - Secondary Text/Labels */
+  --theme-fg-label-tertiary: #A6ADC8;   /* Subtext 0 - Disabled Text/Placeholder */
+  --theme-fg-label-quaternary: #7F849C; /* Overlay 1 - Very subtle text/Comments */
+  
+  /* Interactive Foreground */
+  --theme-fg-control-text: #CDD6F4;
+  --theme-fg-control-text-disabled: #A6ADC8;
+  --theme-fg-link: #89B4FA; /* Blue */
+  --theme-fg-placeholder: #7F849C;
+  --theme-fg-header-text: #CDD6F4;
+  
+  /* State Foreground */
+  --theme-fg-text-selected: #1E1E2E; /* Dark text on pastel selection for contrast */
+  --theme-fg-text-alternate-selected: #CDD6F4;
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: #585B70; /* Surface 2 - Subtle border line */
+  --theme-decoration-grid-line: #313244;
+  --theme-decoration-keyboard-focus: #CBA6F7; /* Mauve - Focus/Keywords */
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* (Catppuccin Pastel Colors) */
+  /* ================================================= */
+  
+  --theme-status-accent: #89B4FA;  /* Blue (Primary Accent) */
+  --theme-status-success: #A6E3A1; /* Green */
+  --theme-status-danger: #F38BA8;  /* Red */
+  --theme-status-warning: #F9E2AF; /* Yellow */
+  --theme-status-highlight-virtual: #45475A;
+
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
+  /* ================================================= */
+
+  /* Backgrounds */
+  --primary-bg: var(--theme-bg-view-primary);
+  --secondary-bg: var(--theme-bg-view-secondary);
+  --tertiary-bg: var(--theme-bg-view-tertiary);
+  --header-border: var(--theme-decoration-separator);
+
+  /* Foreground/Text */
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+
+  /* Functional Colors */
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  
+  /* Specific Color Variants */
+  --success-green-light: rgba(166, 227, 161, 0.2);
+  --window-control-hover-bg: var(--theme-bg-control-base);
+  --window-control-border-color: var(--primary-bg);
+
+  /* DSEG Font Shadows */
+  --dseg-shadow-soft: rgba(255, 255, 255, 0.1);
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY ============== */
+  /* ================================================= */
+
+  /* Raw Shadow Primitives (Catppuccin typically uses subtle or no shadows) */
+  --shadow-dark: rgba(0, 0, 0, 0.3);
+  --shadow-medium: rgba(0, 0, 0, 0.15);
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* Opacity (Retaining previous values) */
+  --opacity-0: 0.0;
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  /* Shadow Styles (Generalised by prominence/function) */
+  --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
+  --shadow-elevated: 0 4px 12px var(--shadow-dark); 
+  --shadow-button-flat: none; 
+  --shadow-control-small: none; 
+  --shadow-control-small-hover: none; 
+  --shadow-element-minimal: none; 
+  
+  /* Neumorphic/Inset Inversion */
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-neumorphic-outset-large: 0 2px 5px rgba(0, 0, 0, 0.5);
+  --shadow-neumorphic-press: inset 0 1px 4px rgba(0, 0, 0, 0.7);
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES ================ */
+  /* ================================================= */
+
+  --font-family-default: "Cantarell", "Roboto", sans-serif; 
+  --font-family-system: var(--font-family-default);
+}

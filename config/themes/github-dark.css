@@ -1,0 +1,95 @@
+/* ================================================= */
+/* ========= GITHUB DARK DEFAULT (ROOT) ========== */
+/* ================================================= */
+
+:root {
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+  
+  /* Primary Background Hierarchy (Used for main canvas/editor) */
+  --theme-bg-view-primary: #0D1117;   /* Deepest BG (Body/Editor) */
+  --theme-bg-view-secondary: #161B22; /* Secondary BG (Sidebars/Panels) */
+  --theme-bg-view-tertiary: #21262D;  /* Raised Surfaces (Cards/Modals) */
+
+  /* Interactive/State Backgrounds */
+  --theme-bg-control-base: #30363D;   /* Input Fields/Control Borders */
+  --theme-bg-selected-primary: #1F6FEB; /* GitHub Blue (Primary Accent) */
+  --theme-bg-selected-secondary: #30363D; /* Hover/Subtle Selection */
+  --theme-bg-text-selection: #1F6FEB60; /* Blue with transparency */
+  
+  /* Specialized Backgrounds */
+  --theme-bg-under-page: #010409;     /* Deeper than body (e.g., behind sticky headers) */
+  --theme-bg-alternating-row: #161B22;
+  --theme-bg-find-highlight: #FCD94C40; /* Yellow with transparency */
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: #C9D1D9;    /* Primary Text (High contrast) */
+  --theme-fg-label-secondary: #8B949E;  /* Secondary Text (Body text/subtitles) */
+  --theme-fg-label-tertiary: #484F58;   /* Disabled Text/Placeholder/Comments */
+  --theme-fg-label-quaternary: #484F58; /* Very subtle text */
+  
+  /* Interactive Foreground */
+  --theme-fg-control-text: #C9D1D9;
+  --theme-fg-control-text-disabled: #484F58;
+  --theme-fg-link: #58A6FF;           /* Lighter Blue for links */
+  --theme-fg-placeholder: #8B949E;
+  --theme-fg-header-text: #C9D1D9;
+  
+  /* State Foreground */
+  --theme-fg-text-selected: #FFFFFF; /* White text on blue selection */
+  --theme-fg-text-alternate-selected: #C9D1D9;
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: #30363D; /* Control borders/Separators */
+  --theme-decoration-grid-line: #30363D;
+  --theme-decoration-keyboard-focus: #1F6FEB; /* Blue - Focus Ring */
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* ================================================= */
+  
+  --theme-status-accent: #1F6FEB;  /* Blue (Primary Action Color) */
+  --theme-status-success: #3FB950; /* Green */
+  --theme-status-danger: #F85149;  /* Red */
+  --theme-status-warning: #FCD94C; /* Yellow/Orange */
+  --theme-status-highlight-virtual: #30363D;
+
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
+  /* ================================================= */
+
+  /* Backgrounds */
+  --primary-bg: var(--theme-bg-view-primary);
+  --secondary-bg: var(--theme-bg-view-secondary);
+  --tertiary-bg: var(--theme-bg-view-tertiary);
+  --header-border: var(--theme-decoration-separator);
+
+  /* Foreground/Text */
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+
+  /* Functional Colors */
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  
+  /* Specific Color Variants */
+  --success-green-light: rgba(63, 185, 80, 0.2);
+  --window-control-hover-bg: #30363D; 
+  --window-control-border-color: #0D1117; 
+
+  /* Shadows */
+  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.5); 
+}

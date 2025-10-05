@@ -1,0 +1,136 @@
+:root {
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+
+  /* Primary Background Hierarchy (WINDOWS 11 DARK) */
+  --theme-bg-view-primary: #202020;   /* Mica/Window Backdrop Fallback (Dark Slate) */
+  --theme-bg-view-secondary: #2d2d2d; /* Primary Surface (Main Panel/Card Background) */
+  --theme-bg-view-tertiary: #3a3a3a;  /* Raised/Hover Background */
+
+  /* Interactive/State Backgrounds */
+  --theme-bg-control-base: #3a3a3a;
+  --theme-bg-selected-primary: #0078D4; /* Default Windows Blue */
+  --theme-bg-selected-secondary: #404040;
+  --theme-bg-text-selection: #0078D480;
+  
+  /* Specialized Backgrounds */
+  --theme-bg-under-page: #1e1e1e; /* Taskbar/Deepest Background */
+  --theme-bg-alternating-row: #282828;
+  --theme-bg-find-highlight: #FFD70060; /* Soft Gold/Yellow Highlight */
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: #FFFFFF;    /* Pure White Primary Text */
+  --theme-fg-label-secondary: #E0E0E0;  /* Secondary Text */
+  --theme-fg-label-tertiary: #AFAFAF;   /* Disabled Text/Placeholder */
+  --theme-fg-label-quaternary: #808080; /* Subtle/Infolabel */
+  
+  /* Interactive Foreground */
+  --theme-fg-control-text: #FFFFFF;
+  --theme-fg-control-text-disabled: #AFAFAF;
+  --theme-fg-link: #4CC6FF; /* Slightly brighter blue for links */
+  --theme-fg-placeholder: #AFAFAF;
+  --theme-fg-header-text: #FFFFFF;
+  
+  /* State Foreground */
+  --theme-fg-text-selected: #FFFFFF;
+  --theme-fg-text-alternate-selected: #FFFFFF;
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: #484848; /* Subtle divider line */
+  --theme-decoration-grid-line: #353535;
+  --theme-decoration-keyboard-focus: #FFFFFF; /* White focus border */
+  
+  /* Windows 11 Acrylic/Mica Effects (CSS Approximation) */
+  /* A semi-transparent overlay to simulate the backdrop tint */
+  --theme-bg-acrylic-backdrop: rgba(32, 32, 32, 0.9); /* Dark backdrop with slight transparency/blur if supported */
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* ================================================= */
+  
+  --theme-status-accent: #0078D4;  /* Default Windows Blue */
+  --theme-status-success: #388E3C; /* Standard Green */
+  --theme-status-danger: #D83B01;  /* Standard Red/Error */
+  --theme-status-warning: #FFB74D; /* Standard Orange/Yellow */
+  --theme-status-highlight-virtual: #3a3a3a;
+
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
+  /* ================================================= */
+
+  /* Backgrounds */
+  --primary-bg: var(--theme-bg-view-primary);    /* #202020 */
+  --secondary-bg: var(--theme-bg-view-secondary); /* #2d2d2d */
+  --tertiary-bg: var(--theme-bg-view-tertiary);  /* #3a3a3a */
+  --header-border: var(--theme-decoration-separator);
+
+  /* Foreground/Text */
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+
+  /* Functional Colors */
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  
+  /* Specific Color Variants */
+  --success-green-light: rgba(56, 142, 60, 0.2);
+  --window-control-hover-bg: var(--theme-bg-control-base);
+  --window-control-border-color: var(--primary-bg);
+
+  /* DSEG Font Shadows */
+  --dseg-shadow-soft: rgba(0, 0, 0, 0.9);
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.9);
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY ============== */
+  /* (Subtle shadows for a flatter look) */
+  /* ================================================= */
+
+  /* Raw Shadow Primitives */
+  --shadow-dark: rgba(0, 0, 0, 0.2); 
+  --shadow-medium: rgba(0, 0, 0, 0.1);
+  --shadow-subtle-white: none; 
+
+  /* Opacity */
+  --opacity-0: 0.0;
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  /* Shadow Styles (Generalised by prominence/function) */
+  --shadow-subtle: none; 
+  --shadow-elevated: 0 4px 8px var(--shadow-dark); 
+  --shadow-button-flat: none; 
+  --shadow-control-small: none; 
+  --shadow-control-small-hover: none; 
+  --shadow-element-minimal: none; 
+  
+  /* Neumorphic/Inset Inversion */
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-neumorphic-outset-large: 0 2px 5px rgba(0, 0, 0, 0.5);
+  --shadow-neumorphic-press: inset 0 1px 4px rgba(0, 0, 0, 0.6);
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES ================ */
+  /* ================================================= */
+
+  --font-family-default: "Segoe UI Variable", "Roboto", sans-serif; 
+  --font-family-system: var(--font-family-default);
+}

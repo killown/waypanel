@@ -1,0 +1,83 @@
+:root {
+  /* ================================================= */
+  /* ===== GENERIC PALETTE (To be set by any theme) ==== */
+  /* ================================================= */
+  --color-bg-dark: #1a1b26;
+  --color-bg-medium: #24283b;
+  --color-bg-light: #2c3043;
+  --color-bg-highlight: #3b4261;
+
+  --color-fg-main: #c0caf5;
+  --color-fg-light: #a9b1d6;
+  --color-fg-dark: #787c99;
+
+  --color-red: #f7768e;
+  --color-green: #9ece6a;
+  --color-blue: #7aa2f7;
+  --color-yellow: #e0af68;
+  --color-magenta: #bb9af7;
+  --color-cyan: #7dcfff;
+  --color-orange: #ff9e64;
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (Used by Base CSS) ====== */
+  /* ================================================= */
+
+  /* Backgrounds */
+  --primary-bg: var(--color-bg-dark);
+  --secondary-bg: var(--color-bg-medium);
+  --tertiary-bg: var(--color-bg-light);
+  --header-border: var(--color-bg-highlight);
+
+  /* Foreground/Text */
+  --main-text: var(--color-fg-main);
+  --soft-text: var(--color-fg-light);
+  --calendar-other-month: var(--color-fg-dark);
+
+  /* Functional Colors (Used by the Base CSS) */
+  --accent-blue: var(--color-blue);
+  --success-green: var(--color-green);
+  --danger-red: var(--color-red);
+  
+  /* Specific Color Variants */
+  --success-green-light: #cbe0a4;
+  --window-control-hover-bg: var(--tertiary-bg);
+  --window-control-border-color: var(--primary-bg);
+
+  /* DSEG Font Shadows */
+  --dseg-shadow-soft: rgba(192, 202, 245, 0.15);
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY ============== */
+  /* ================================================= */
+
+  --shadow-dark: rgba(0, 0, 0, 0.4);
+  --shadow-medium: rgba(0, 0, 0, 0.3);
+  --shadow-subtle-white: rgba(255, 255, 255, 0.05);
+
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  --shadow-subtle: 0 1px 0 rgba(0, 0, 0, 0.15);
+  --shadow-panel: 0 4px 12px var(--shadow-medium);
+  --shadow-dockbar-buttons: none;
+  --shadow-window-controls: none;
+  --shadow-window-controls-hover: none;
+  --shadow-notes-buttons: none;
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--color-bg-highlight);
+  --shadow-neumorphic-outset-large: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES ================ */
+  /* ================================================= */
+
+  --font-family-default: "Cantarell", "Roboto", sans-serif;
+  --font-family-system: var(--font-family-default);
+}

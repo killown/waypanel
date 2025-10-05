@@ -1,0 +1,95 @@
+/* ================================================= */
+/* ========= GITHUB LIGHT DEFAULT (ROOT) ========= */
+/* ================================================= */
+
+:root {
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+
+  /* Primary Background Hierarchy (Used for main canvas/editor) */
+  --theme-bg-view-primary: #FFFFFF;   /* Pure White (Main Body/Editor) */
+  --theme-bg-view-secondary: #F6F8FA; /* Light Gray (Sidebars/Panels) */
+  --theme-bg-view-tertiary: #FFFFFF;  /* Raised Surfaces (Cards/Modals) */
+
+  /* Interactive/State Backgrounds */
+  --theme-bg-control-base: #F0F3F6;   /* Input Fields/Control Borders */
+  --theme-bg-selected-primary: #0969DA; /* GitHub Blue (Primary Accent/Selection) */
+  --theme-bg-selected-secondary: #D0D7DE; /* Hover/Subtle Selection */
+  --theme-bg-text-selection: #B6E3FF; /* Light Blue selection */
+  
+  /* Specialized Backgrounds */
+  --theme-bg-under-page: #F6F8FA;     /* Deeper background */
+  --theme-bg-alternating-row: #F6F8FA;
+  --theme-bg-find-highlight: #FCD94C40; /* Yellow with transparency */
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: #1F2328;    /* Primary Text (Dark Gray/Black) */
+  --theme-fg-label-secondary: #57606A;  /* Secondary Text (Subtitles) */
+  --theme-fg-label-tertiary: #6E7781;   /* Disabled Text/Placeholder/Comments */
+  --theme-fg-label-quaternary: #6E7781; /* Very subtle text */
+  
+  /* Interactive Foreground */
+  --theme-fg-control-text: #1F2328;
+  --theme-fg-control-text-disabled: #6E7781;
+  --theme-fg-link: #0969DA;           /* Primary Blue for links */
+  --theme-fg-placeholder: #6E7781;
+  --theme-fg-header-text: #1F2328;
+  
+  /* State Foreground */
+  --theme-fg-text-selected: #FFFFFF; /* White text on blue selection */
+  --theme-fg-text-alternate-selected: #1F2328;
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: #D0D7DE; /* Control borders/Separators */
+  --theme-decoration-grid-line: #D0D7DE;
+  --theme-decoration-keyboard-focus: #0969DA; /* Blue - Focus Ring */
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* ================================================= */
+  
+  --theme-status-accent: #0969DA;  /* Blue (Primary Action Color) */
+  --theme-status-success: #1A7F37; /* Green (Used for 'merged' or 'success' states) */
+  --theme-status-danger: #CF222E;  /* Red (Used for 'closed' or 'error' states) */
+  --theme-status-warning: #9A6700; /* Yellow/Orange */
+  --theme-status-highlight-virtual: #D0D7DE;
+
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
+  /* ================================================= */
+
+  /* Backgrounds */
+  --primary-bg: var(--theme-bg-view-primary);
+  --secondary-bg: var(--theme-bg-view-secondary);
+  --tertiary-bg: var(--theme-bg-view-tertiary);
+  --header-border: var(--theme-decoration-separator);
+
+  /* Foreground/Text */
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+
+  /* Functional Colors */
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  
+  /* Specific Color Variants */
+  --success-green-light: rgba(26, 127, 55, 0.1);
+  --window-control-hover-bg: #F0F3F6; 
+  --window-control-border-color: #FFFFFF; 
+
+  /* Shadows */
+  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.1);
+}

@@ -1,0 +1,131 @@
+:root {
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+
+  /* Primary Background Hierarchy */
+  --theme-bg-view-primary: #1C1C1E;
+  --theme-bg-view-secondary: #2C2C2E;
+  --theme-bg-view-tertiary: #3A3A3C;
+
+  /* Interactive/State Backgrounds */
+  --theme-bg-control-base: #3A3A3C;
+  --theme-bg-selected-primary: #0A84FF;
+  --theme-bg-selected-secondary: #404040;
+  --theme-bg-text-selection: #0A84FF80;
+  
+  /* Specialized Backgrounds */
+  --theme-bg-under-page: #0D0D0D;
+  --theme-bg-alternating-row: #222224;
+  --theme-bg-find-highlight: #FFD60A60;
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: #FFFFFF;
+  --theme-fg-label-secondary: #C7C7CC;
+  --theme-fg-label-tertiary: #8E8E93;
+  --theme-fg-label-quaternary: #6D6D70;
+  
+  /* Interactive Foreground */
+  --theme-fg-control-text: #FFFFFF;
+  --theme-fg-control-text-disabled: #8E8E93;
+  --theme-fg-link: #0A84FF;
+  --theme-fg-placeholder: #8E8E93;
+  --theme-fg-header-text: #C7C7CC;
+  
+  /* State Foreground */
+  --theme-fg-text-selected: #FFFFFF;
+  --theme-fg-text-alternate-selected: #FFFFFF;
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: #545458;
+  --theme-decoration-grid-line: #4D4D50;
+  --theme-decoration-keyboard-focus: #0A84FF;
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* ================================================= */
+  
+  --theme-status-accent: #0A84FF;
+  --theme-status-success: #32D74B;
+  --theme-status-danger: #FF453A;
+  --theme-status-warning: #FFD60A;
+  --theme-status-highlight-virtual: #3A3A3C;
+
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
+  /* ================================================= */
+
+  /* Backgrounds */
+  --primary-bg: var(--theme-bg-view-primary);
+  --secondary-bg: var(--theme-bg-view-secondary);
+  --tertiary-bg: var(--theme-bg-view-tertiary);
+  --header-border: var(--theme-decoration-separator);
+
+  /* Foreground/Text */
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+
+  /* Functional Colors */
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  
+  /* Specific Color Variants */
+  --success-green-light: rgba(50, 215, 75, 0.2);
+  --window-control-hover-bg: var(--theme-bg-control-base);
+  --window-control-border-color: var(--primary-bg);
+
+  /* DSEG Font Shadows */
+  --dseg-shadow-soft: rgba(255, 255, 255, 0.1);
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY ============== */
+  /* ================================================= */
+
+  /* Raw Shadow Primitives */
+  --shadow-dark: rgba(0, 0, 0, 0.5);
+  --shadow-medium: rgba(0, 0, 0, 0.3);
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  /* Opacity */
+  --opacity-0: 0.0;
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  /* Shadow Styles (Generalised by prominence/function) */
+  --shadow-subtle: 0 1px 0 var(--shadow-subtle-white); /* Faint separator/highlight */
+  --shadow-elevated: 0 4px 12px var(--shadow-medium); /* For pop-ups, modals, or primary elevated panels */
+  --shadow-button-flat: none; /* Shadow style for flat, zero-depth buttons/controls */
+  --shadow-control-small: none; /* Shadow style for small UI controls (e.g., traffic lights, icons) */
+  --shadow-control-small-hover: none; /* Hover state for small controls */
+  --shadow-element-minimal: none; /* General minimal/zero shadow for components */
+  
+  /* Neumorphic/Inset Inversion */
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --shadow-neumorphic-outset-large: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES ================ */
+  /* ================================================= */
+
+  --font-family-default: "SF Pro Text", "Helvetica Neue", "Roboto", sans-serif; 
+  --font-family-system: var(--font-family-default);
+}

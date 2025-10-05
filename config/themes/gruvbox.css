@@ -1,442 +1,103 @@
-.window-title-content {
-  background-color: transparent;
-  margin-top: 5px;
-  margin-left: 8px;
+/* ================================================= */
+/* ========= GRUVBOX DARK (ROOT) - MEDIUM ========== */
+/* ================================================= */
 
+:root {
+  /* Gruvbox Palette References (Medium/Soft) */
+  /* BG0 (Medium/Normal): #282828 */
+  /* BG1 (Surface/Sidebar): #3c3836 */
+  /* FG1 (Primary Text): #ebdbb2 */
+  /* Accent Red: #cc241d (Muted) / #fb4934 (Strong) */
+  /* Accent Blue: #458588 (Muted) / #83a598 (Strong) */
+  /* Accent Yellow: #d79921 (Muted) / #fabd2f (Strong) */
+
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+
+  /* Primary Background Hierarchy (Main Editor/Canvas) */
+  --theme-bg-view-primary: #282828;   /* Dark0 - Main Body/Editor */
+  --theme-bg-view-secondary: #3c3836; /* Dark1 - Sidebars/Panels */
+  --theme-bg-view-tertiary: #504945;  /* Dark2 - Raised Surfaces/Cards */
+
+  /* Interactive/State Backgrounds */
+  --theme-bg-control-base: #3c3836;   /* Input Fields/Subtle Hover */
+  --theme-bg-selected-primary: #458588; /* Blue Muted - Primary Accent/Selection */
+  --theme-bg-selected-secondary: #504945; /* Dark2 - Hover/Subtle Selection */
+  --theme-bg-text-selection: #45858840; /* Blue with transparency */
+  
+  /* Specialized Backgrounds */
+  --theme-bg-under-page: #1d2021;     /* Dark0 Hard - Deepest background */
+  --theme-bg-alternating-row: #3c3836;
+  --theme-bg-find-highlight: #d7992140; /* Yellow Muted with transparency (Search) */
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: #ebdbb2;    /* Light1 - Primary Text */
+  --theme-fg-label-secondary: #a89984;  /* Light3 - Secondary Text (Subtitles) */
+  --theme-fg-label-tertiary: #928374;   /* Gray/Muted BG - Disabled/Placeholder/Comments */
+  --theme-fg-label-quaternary: #665c54; /* Very subtle text */
+  
+  /* Interactive Foreground */
+  --theme-fg-control-text: #ebdbb2;
+  --theme-fg-control-text-disabled: #928374;
+  --theme-fg-link: #83a598;           /* Blue Strong for links */
+  --theme-fg-placeholder: #928374;
+  --theme-fg-header-text: #ebdbb2;
+  
+  /* State Foreground */
+  --theme-fg-text-selected: #ebdbb2; /* Light text on selection */
+  --theme-fg-text-alternate-selected: #282828; /* Dark text on brighter background */
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: #504945; /* Dark2 - Control borders/Separators */
+  --theme-decoration-grid-line: #504945;
+  --theme-decoration-keyboard-focus: #fabd2f; /* Yellow Strong - Focus Ring */
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* ================================================= */
+  
+  --theme-status-accent: #83a598;  /* Blue Strong (Primary Action Color) */
+  --theme-status-success: #b8bb26; /* Green Strong */
+  --theme-status-danger: #fb4934;  /* Red Strong */
+  --theme-status-warning: #fabd2f; /* Yellow Strong */
+  --theme-status-highlight-virtual: #3c3836; /* Dark1 for subtle highlight */
+
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
+  /* ================================================= */
+
+  /* Backgrounds */
+  --primary-bg: var(--theme-bg-view-primary);
+  --secondary-bg: var(--theme-bg-view-secondary);
+  --tertiary-bg: var(--theme-bg-view-tertiary);
+  --header-border: var(--theme-decoration-separator);
+
+  /* Foreground/Text */
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+
+  /* Functional Colors */
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  
+  /* Specific Color Variants */
+  --success-green-light: #98971A40; /* Green Muted with transparency */
+  --window-control-hover-bg: #3c3836; 
+  --window-control-border-color: #282828; 
+
+  /* Shadows */
+  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
-
-.window-title-label {
-  margin-left: 8px;
-  font-size: 15px;
-  font-weight: bold;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
-    sans-serif;
-  color: #ebdbb2;
-}
-
-.window-title-icon {
-   -gtk-icon-size: 28px;
-}
-
-.left-panel {
-  -gtk-icon-size: 48px;
-  background: transparent;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08); 
-  border-radius: 8px;
-  border-style: none;
-  color: #ebdbb2;
-  padding: 6px;
-    box-shadow:
-    rgba(0, 0, 0, 0.507) 0 2px 0px,
-    rgba(0, 0, 0, 0.555) 0 2px 0px,
-    #00000075 0 -4px 0 inset;
-}
-
-.right-panel {
-  -gtk-icon-size: 42px;
-  background: transparent;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08); 
-  border-radius: 8px;
-  border-style: none;
-  color: #ebdbb2;
-  padding: 6px;
-    box-shadow:
-    rgba(0, 0, 0, 0.507) 0 2px 0px,
-    rgba(0, 0, 0, 0.555) 0 2px 0px,
-    #00000075 0 -4px 0 inset;
-}
-
-.dockbar-buttons {
-  background-color: #1d2021de;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
-  color: #ebdbb2;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
-    sans-serif;
-  border-radius: 8px;
-  border-style: none;
-  padding: 6px 8px 6px 8px;
-  margin: 1px;
-  box-shadow:
-    rgba(0, 0, 0, 0.507) 0 2px 0px,
-    rgba(0, 0, 0, 0.555) 0 2px 0px,
-    #00000075 0 -4px 0 inset;
-  -gtk-icon-size: 42px;
-  font-size: 16px;
-}
-
-
-.dockbar-buttons:hover {
-  color: #282828;
-  background-color: #d5c4a1;
-  text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
-}
-
-.box-widgets{
-  margin: -3px;
-     padding: 1px;
-
-}
-
-.window-controls-box {
-  border-style: solid;
-  background: rgba(36, 40, 59, 0);
-  margin: 5px;
-}
-
-.window-controls-close-button {
-  -gtk-icon-size: 20px;
-  background-color: #cc241d;
-  box-shadow:
-    rgba(0, 0, 0, 0.507) 0 1px 1px,
-    rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -4px 0 inset;
-  padding: 2px 8px 2px 8px;
-  margin-left: 2px;
-  margin-right: 1px;
-  background-size: 100% auto;
-  color: #ebdbb2;
-  border-color: rgba(36, 40, 59, 0.744);
-  border-radius: 4px;
-}
-
-.window-controls-maximize-button {
-  -gtk-icon-size: 20px;
-  background-color: #458588;
-  box-shadow:
-    rgba(0, 0, 0, 0.507) 0 1px 1px,
-    rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -4px 0 inset;
-  padding: 2px 8px 2px 8px;
-  margin-left: 2px;
-  margin-right: 1px;
-  background-size: 100% auto;
-  color: #ebdbb2;
-  border-color: rgba(36, 40, 59, 0.744);
-  border-radius: 4px;
-}
-
-.window-controls-minimize-button {
-  -gtk-icon-size: 20px;
-  background-color: #458588;
-  box-shadow:
-    rgba(0, 0, 0, 0.507) 0 1px 1px,
-    rgba(0, 0, 0, 0.555) 0 1px 1px,
-    #00000075 0 -4px 0 inset;
-  padding: 2px 8px 2px 8px;
-  margin-left: 2px;
-  margin-right: 1px;
-  background-size: 100% auto;
-  color: #ebdbb2;
-  border-color: rgba(36, 40, 59, 0.744);
-  border-radius: 4px;
-}
-
-/* notes plugin */
-.notes_button_clear.text-button {
-  background-color: #FF0000;
-  color: white;
-  border: none;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-}
-
-.notes_button_add.text-button {
-  background-color: #008000;
-  color: white;
-  border: none;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-}
-
-.notes_button_delete.image-button {
-  background-color: #FF0000;
-  color: white;
-  border: none;
-  box-shadow: 0 1px 1px rgba(0,0,0,0.1);
-}
-
-
-/* Hover states */
-.close-button:hover {
-  background-color: #ff5f56cc;
-}
-
-.maximize-button:hover {
-  background-color: #ffbd2ecc;
-}
-
-.minimize-button:hover {
-  background-color: #28c940cc;
-}
-
-/* Active states */
-.close-button:active {
-  background-color: #ff5f5699;
-}
-
-.maximize-button:active {
-  background-color: #ffbd2e99;
-}
-
-.minimize-button:active {
-  background-color: #28c94099;
-}
-
-.top_panel_box_widgets_left {
-  /* Complete transparency */
-  background-color: transparent;
-  border: none;
-  box-shadow: none;
-  margin: 2px;
-
-  /* Text styling only */
-  font-family: inherit;
-  text-decoration: none;
-}
-
-scale slider {
-  min-width: 20px;
-  min-height: 20px;
-  color: #ebdbb2;
-}
-
-scale {
-  min-width: 60px;
-}
-
-.weather-label {
-  font-size: 15px;
-  font-weight: bold;
-  background-color: transparent;
-  color: #89a899;
-}
-
-/*this is for menubuttons from systray menus*/
-.image-button {
-  -gtk-icon-size: 16px;
-  color: #ffffffd8;
-  background-color: #ffffff00;
-}
-
-.text-button {
-  border-radius: 0px;
-  background-color: rgba(13, 61, 151, 0);
-  font-size: 12px;
-  color: rgba(221, 221, 221, 0.9);
-  border-style: solid;
-  border-color: rgba(36, 40, 59, 0.744);
-}
-
-.bluetooth-dashboard-buttons {
-  background-color: #4479e1;
-  color: white;
-  border: none;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-  font-size: 18px;
-}
-
-.button_clear_from_clipboard {
-  background-color: #FF0000;
-  color: white;
-  border: none;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-}
-
-.notify-vbox{
-  background-color: #282828;
-  color: #fff;
-}
-
-.notify-window{
-  background-color: #282828;
-  color: #fff;
-}
-
-
-
-/*prevent the popover menu icon from being selected*/
-.applications-menu-icon:focus {
-    outline: none;
-    background-color: transparent;
-}
-
-/*icons from bookbarks menu*/
-.app-launcher-icon-from-popover {
-  -gtk-icon-size: 52px;
-}
-
-.app-launcher-label-from-popover {
-  font-size: 14px;
-}
-
-.app-launcher-popover {
-  border-color: shade(@dark_bg_color, 0.8);
-  background-image: none;
-  background-color: @dark_bg_color;
-  color: @dark_fg_color;
-}
-
-.app-launcher-flowbox {
-  background-color: transparent;
-}
-
-.places-icon-from-popover {
-  -gtk-icon-size: 42px;
-}
-
-.places-label-from-popover {
-  font-size: 20px;
-  font-family: "Sriracha";
-}
-
-.places-label-from-popover {
-  font-size: 20px;
-  font-weight: bold;
-}
-
-.bookmarks-icon-from-popover {
-  -gtk-icon-size: 36px;
-}
-
-.clock-label {
-  /* Complete transparency */
-  background-color: transparent;
-  border: none;
-  box-shadow: none;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
-    sans-serif;
-  text-decoration: none;
-  color: #ebdbb2;
-  font-family: inherit;
-  text-decoration: none;
-  font-size: 18px;
-}
-
-.Clock-box {
-  /* Complete transparency */
-  background-color: transparent;
-  border: none;
-  box-shadow: none;
-}
-
-.clock-button {
-  background-color: transparent;
-}
-
-/*system dashboard: if gsettings prefer-dark, then changes for white colors is necessary*/
-.system_dashboard_stack {
-  color: #282828;
-  box-shadow: 10px 10px 30px #2d2d2d;
-  font-family: 'Segoe UI', sans-serif;
-  font-size: 16px;
-  font-weight: 400;
-}
-
-.top-panel {
-  background-color: #282828;
-  border-bottom: 1px solid #1a1a1a;
-  color: #e0e0e0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  font-weight: 400;
-}
-
-.top_panel_box_left {
-  -gtk-icon-size: 28px;
-}
-
-.right-box-spacer {
-  background-color: #282828;
-}
-
-.top_panel_box_right {
-  background-color: #fff;
-}
-
-
-.app-launcher-menu-button,
-.bookmarks-menu-button,
-.places-menu-button {
-  -gtk-icon-size: 28px;
-}
-
-.top_panel_box_systray {
-  -gtk-icon-size: 22px;
-  background-color: transparent;
-  border: none;
-  box-shadow: none;
-  color: inherit;
-  font-family: inherit;
-  text-decoration: none;
-}
-
-.top_panel_box_center {
-  -gtk-icon-size: 0px;
-}
-
-.floating-volume-widget {
-    background-color: rgba(30, 30, 30, 0.6);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
-}
-
-.floating-volume-icon {
-    color: #fff; 
-}
-
-.floating-volume-label {
-    font-size: 14px;
-    font-weight: bold;
-    color: #ffffff; 
-}
-
-.mullvad-header-label {
-    font-weight: bold;
-    font-size: 14px;
-    color: #ffffff;
-}
-
-.BottomBar {
-  background-color: #00000000;
-  margin: 1px 11px 1px 1px;
-  padding: 1px 1px 1px 1px;
-}
-
-.taskbar {
-  border-radius: 8px;
-  -gtk-icon-size: 42px;
-  background: transparent;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08); 
-  border-radius: 8px;
-  border-style: none;
-  color: #ebdbb2;
-  padding: 6px;
-    box-shadow:
-    rgba(0, 0, 0, 0.507) 0 2px 0px,
-    rgba(0, 0, 0, 0.555) 0 2px 0px,
-    #00000075 0 -4px 0 inset;
-}
-
-.taskbar-button {
-  background-color: #1d2021de;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
-  color: #ebdbb2;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
-    sans-serif;
-  border-radius: 8px;
-  border-style: none;
-  padding: 5px 5px 5px 5px;
-  box-shadow:
-    rgba(0, 0, 0, 0.507) 0 2px 0px,
-    rgba(0, 0, 0, 0.555) 0 2px 0px,
-    #00000075 0 -4px 0 inset;
-  -gtk-icon-size: 42px;
-  font-size: 16px;
-}
-
-.taskbar-button:hover {
-  color: #282828;
-  background-color: #d5c4a1;
-  text-shadow: 0.006em 0.006em 0.007em rgba(9, 5, 5, 0.8);
-}
-

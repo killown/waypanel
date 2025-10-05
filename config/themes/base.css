@@ -1,0 +1,953 @@
+/* Base Styles */
+* {
+  font-family: var(--font-family-default);
+  color: var(--main-text);
+}
+
+popover.background {
+    background-color: transparent;
+    border: none;
+}
+
+popover.background > contents {
+    background-color: var(--primary-bg);
+}
+
+popover.background > arrow {
+    background-color: var(--primary-bg);
+}
+
+/* Control Center Components */
+.control-center-header {
+  background-color: var(--secondary-bg);
+  border-bottom: 1px solid var(--header-border);
+  box-shadow: 0 1px 3px var(--shadow-dark);
+}
+
+.control-center-save-button {
+  color: var(--main-text);
+  background-color: var(--success-green);
+  font-weight: bold;
+  border-radius: 6px;
+  box-shadow: var(--shadow-elevated);
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.control-center-save-button:hover {
+  background-color: var(--success-green-light);
+  box-shadow: 0 4px 8px var(--shadow-dark);
+}
+
+.control-center-save-button:active {
+  box-shadow: none;
+  transform: translateY(1px);
+}
+
+.control-center-category-list {
+  background-color: var(--primary-bg);
+  padding: 10px 0;
+  border: none;
+}
+
+.control-center-category-item {
+  margin: 3px 8px;
+  padding: 8px 15px;
+  border-radius: 6px;
+  background-color: transparent;
+  box-shadow: none;
+  transition: all 0.15s ease-out;
+  color: var(--main-text);
+}
+
+.control-center-category-item:hover {
+  background-color: var(--tertiary-bg);
+  box-shadow: none;
+}
+
+.control-center-category-item:checked {
+  background-color: var(--accent-blue);
+  color: var(--main-text);
+  font-weight: bold;
+  box-shadow: none;
+  transform: none;
+}
+
+.control-center-content-area {
+  background-color: var(--primary-bg);
+  padding: 15px;
+}
+
+.control-center-config-group {
+  background-color: var(--secondary-bg);
+  border-radius: 10px;
+  margin: 15px 0;
+  padding: 15px;
+  box-shadow:
+    0 0 0 1px var(--shadow-subtle-white),
+    var(--shadow-subtle);
+}
+
+.control-center-setting-row {
+  color: var(--main-text);
+  padding: 8px 0;
+  margin: 2px 0;
+  border-bottom: none;
+  background-color: transparent;
+}
+
+.control-center-setting-row:hover,
+.control-center-config-expander:hover {
+  background-color: var(--tertiary-bg);
+  border-radius: 4px;
+}
+
+.control-center-config-expander {
+  color: var(--main-text);
+  padding: 8px 0;
+  margin: 2px 0;
+}
+
+.control-center-nested-group-box {
+  background-color: var(--primary-bg);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 10px;
+  box-shadow: inset 0 0 5px var(--shadow-dark);
+}
+
+.control-center-list-editor .control-center-config-group {
+  background-color: var(--primary-bg);
+  border: 1px solid var(--secondary-bg);
+  box-shadow: none;
+}
+
+.control-center-list-item-row {
+  padding-left: 10px;
+}
+
+.control-center-text-input,
+.control-center-numeric-input {
+  background-color: var(--primary-bg);
+  color: var(--main-text);
+  border-radius: 5px;
+  padding: 5px 8px;
+  box-shadow: none;
+  border: 1px solid var(--tertiary-bg);
+  min-height: 28px;
+}
+
+.control-center-text-input:focus,
+.control-center-numeric-input:focus {
+  box-shadow: 0 0 0 2px var(--accent-blue);
+  border-color: var(--accent-blue);
+  background-color: var(--primary-bg);
+}
+
+.control-center-value-display {
+  color: var(--soft-text);
+  font-style: italic;
+}
+
+.control-center-toggle-switch {
+}
+
+/* Panel and Taskbar */
+.top-panel {
+  background-color: var(--primary-bg);
+  color: var(--main-text);
+  font-weight: 400;
+  border-radius: 7px;
+  box-shadow:
+    inset 3px 3px 5px var(--shadow-subtle-white),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    2px 2px 5px var(--shadow-medium);
+  font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
+  font-size: 22px;
+  text-decoration: none;
+  text-shadow:
+    0 0 2px var(--dseg-shadow-soft),
+    0 0 5px var(--dseg-shadow-soft);
+}
+
+.left-panel {
+  -gtk-icon-size: 48px;
+  margin-left: 5px;
+  background: transparent;
+}
+
+.right-panel {
+  -gtk-icon-size: 42px;
+  background: transparent;
+  border-bottom: 0px solid rgba(0, 0, 0, 0.0);
+  border-radius: 0px;
+  border-style: none;
+  color: transparent;
+  padding: 0px;
+  box-shadow: none;
+}
+
+.dockbar-buttons {
+  background: var(--secondary-bg);
+  border-radius: 10px;
+  padding: 7px;
+  box-shadow: var(--shadow-button-flat); /* Generalized shadow */
+  -gtk-icon-size: 42px;
+  font-size: 16px;
+  color: var(--main-text);
+}
+
+.dockbar-buttons:hover {
+  color: var(--primary-bg);
+  background-color: var(--tertiary-bg);
+  text-shadow: 0.006em 0.006em 0.007em var(--dseg-shadow-dark);
+}
+
+.box-widgets {
+  margin: -6px;
+  padding: 1px 3px 3px 1px;
+}
+
+.top-panel-box-widgets-left {
+  background: var(--secondary-bg);
+  border-radius: 7px;
+  box-shadow:
+    inset 3px 3px 5px var(--shadow-subtle-white),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    2px 2px 5px var(--shadow-medium);
+  font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
+  font-size: 22px;
+  color: var(--main-text);
+  text-decoration: none;
+  text-shadow:
+    0 0 2px var(--dseg-shadow-soft),
+    0 0 5px var(--dseg-shadow-soft);
+}
+
+.top-panel-box-systray {
+  background: var(--secondary-bg);
+  border-radius: 7px;
+  padding: -5px;
+  margin-left: 5px;
+  margin-top: 3px;
+  box-shadow:
+    inset 3px 3px 5px var(--shadow-subtle-white),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    2px 2px 5px var(--shadow-medium);
+  font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
+  font-size: 22px;
+  color: var(--main-text);
+  text-decoration: none;
+  text-shadow:
+    0 0 2px var(--dseg-shadow-soft),
+    0 0 5px var(--dseg-shadow-soft);
+}
+
+.bottom-panel {
+  background: transparent;
+  background-color: transparent;
+  margin: 1px 11px 1px 1px;
+  padding: 1px 1px 1px 1px;
+}
+
+.taskbar {
+}
+
+.taskbar-button {
+  background: var(--secondary-bg);
+  border-radius: 7px;
+  box-shadow:
+    inset 3px 3px 5px var(--shadow-subtle-white),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    2px 2px 5px var(--shadow-medium);
+  font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
+  font-size: 14px;
+  color: var(--soft-text);
+  text-decoration: none;
+  text-shadow:
+    0 0 2px var(--dseg-shadow-soft),
+    0 0 5px var(--dseg-shadow-soft);
+}
+
+.taskbar-button.focused {
+  background-color: var(--tertiary-bg);
+  color: var(--main-text);
+  font-weight: bold;
+  border: 1px solid var(--main-text);
+  box-shadow: 0 0 8px var(--accent-blue);
+}
+
+.taskbar-button.focused:hover {
+  background-color: var(--primary-bg);
+  transform: scale(1.05);
+  transition: all 0.1s ease;
+  color: var(--soft-text);
+}
+
+.taskbar-button:hover {
+  color: var(--main-text);
+  background-color: var(--primary-bg);
+  text-shadow: 0.006em 0.006em 0.007em var(--dseg-shadow-dark);
+}
+
+/* Window Decorations */
+.window-title-content {
+  background: var(--secondary-bg);
+  border-radius: 7px;
+  padding: 3px;
+  margin-left: 5px;
+  margin-top: 4px;
+  box-shadow:
+    inset 3px 3px 5px var(--shadow-subtle-white),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    2px 2px 5px var(--shadow-medium);
+  font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
+  font-size: 22px;
+  color: var(--main-text);
+  text-decoration: none;
+  text-shadow:
+    0 0 2px var(--dseg-shadow-soft),
+    0 0 5px var(--dseg-shadow-soft);
+}
+
+.window-title-label {
+  margin-left: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: var(--font-family-default);
+  color: var(--main-text);
+}
+
+.window-title-icon {
+  -gtk-icon-size: 28px;
+}
+
+.window-controls-box {
+  border-style: solid;
+  background: transparent;
+  margin: 5px;
+}
+
+.window-controls-close-button:hover,
+.window-controls-maximize-button:hover,
+.window-controls-minimize-button:hover {
+  background-color: var(--window-control-hover-bg);
+  box-shadow: var(--shadow-control-small-hover); /* Generalized shadow */
+  transform: scale(1.05);
+  transition: all 0.2s ease-in-out;
+}
+
+.window-controls-close-button {
+  -gtk-icon-size: 20px;
+  background: linear-gradient(145deg, var(--danger-red), var(--secondary-bg));
+  background-color: var(--accent-blue);
+  box-shadow: var(--shadow-control-small); /* Generalized shadow */
+  padding: 2px 8px 2px 8px;
+  margin-left: 2px;
+  margin-right: 1px;
+  background-size: 100% auto;
+  color: var(--main-text);
+  border-color: var(--window-control-border-color);
+  border-radius: 4px;
+}
+
+.window-controls-maximize-button {
+  -gtk-icon-size: 20px;
+  background: linear-gradient(145deg, var(--accent-blue), var(--secondary-bg));
+  background-color: var(--accent-blue);
+  box-shadow: var(--shadow-control-small); /* Generalized shadow */
+  padding: 2px 8px 2px 8px;
+  margin-left: 2px;
+  margin-right: 1px;
+  background-size: 100% auto;
+  color: var(--main-text);
+  border-color: var(--window-control-border-color);
+  border-radius: 4px;
+}
+
+.window-controls-minimize-button {
+  -gtk-icon-size: 20px;
+  background: linear-gradient(145deg, var(--success-green), var(--secondary-bg));
+  background-color: var(--accent-blue);
+  box-shadow: var(--shadow-control-small); /* Generalized shadow */
+  padding: 2px 8px 2px 8px;
+  margin-left: 2px;
+  margin-right: 1px;
+  background-size: 100% auto;
+  color: var(--main-text);
+  border-color: var(--window-control-border-color);
+  border-radius: 4px;
+}
+
+/* Tray & Clock */
+.tray_icon {
+  background-color: var(--primary-bg);
+  min-width: 24px;
+  min-height: 24px;
+  -gtk-icon-size: 16px;
+}
+
+.tray-menu-button {
+  border-radius: 8px;
+  margin-left: 5px;
+}
+
+.clock-label {
+  background: var(--secondary-bg);
+  border-radius: 7px;
+  padding: 5px;
+  box-shadow:
+    inset 3px 3px 5px var(--shadow-subtle-white),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    2px 2px 5px var(--shadow-medium);
+  font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
+  font-size: 16px;
+  color: var(--main-text);
+  text-decoration: none;
+  text-shadow:
+    0 0 2px var(--dseg-shadow-soft),
+    0 0 5px var(--dseg-shadow-soft);
+}
+
+.clock-box {
+  background-color: linear-gradient(145deg, var(--primary-bg), var(--primary-bg));
+}
+
+.clock-button {
+  background-color: linear-gradient(145deg, var(--primary-bg), var(--primary-bg));
+}
+
+.weather-label {
+  font-size: 15px;
+  font-weight: bold;
+  background-color: transparent;
+  color: var(--success-green);
+}
+
+/* Notes Widget */
+.notes_button_clear.text-button {
+  background-color: var(--danger-red);
+  color: var(--main-text);
+  border: none;
+  box-shadow: var(--shadow-element-minimal); /* Generalized shadow */
+}
+
+.notes_button_add.text-button {
+  background-color: var(--success-green);
+  color: var(--main-text);
+  border: none;
+  box-shadow: var(--shadow-element-minimal); /* Generalized shadow */
+}
+
+.notes_button_delete.image-button {
+  background-color: var(--danger-red);
+  color: var(--main-text);
+  border: none;
+  box-shadow: var(--shadow-element-minimal); /* Generalized shadow */
+}
+
+/* App Launcher */
+.app-launcher-popover {
+  background: var(--opacity-0);
+  background-color: var(--opacity-0);
+}
+
+.app-launcher-searchbar {
+  background-color: var(--primary-bg);
+  border-width: 0px;
+  border-radius: 10px;
+  padding: 5px 10px;
+  color: var(--main-text);
+  font-size: 18px;
+  font-weight: 500;
+  font-family: var(--font-family-default);
+}
+
+.app-launcher-flowbox {
+  padding: 10px;
+}
+
+.app-launcher-vbox {
+  background: var(--opacity-0);
+  background-color: var(--opacity-0);
+}
+
+.app-launcher-scrolled-window {
+  background: var(--opacity-0);
+  background-color: var(--opacity-0);
+}
+
+.app-launcher-main-box {
+    background-color: var(--primary-bg);
+}
+
+.app-launcher-icon-from-popover {
+  -gtk-icon-size: 68px;
+  padding: 10px;
+  background-color: var(--secondary-bg);
+  border-width: 0px;
+  border-radius: 10px;
+  box-shadow:
+    2px 2px 4px rgba(0, 0, 0, 0.5),
+    -2px -2px 4px var(--shadow-subtle-white);
+  transition: all 0.2s ease-in-out;
+}
+
+.app-launcher-icon-from-popover:hover {
+  background-color: var(--tertiary-bg);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-neumorphic-outset-large);
+}
+
+.app-launcher-icon-from-popover:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-neumorphic-press);
+  background-color: var(--primary-bg);
+}
+
+.app-launcher-label-from-popover {
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--main-text);
+}
+
+/* System Dashboard */
+.system-popover {
+  border: none;
+}
+
+.system-dashboard-button:hover {
+}
+
+.system-dashboard-button:active {
+}
+
+.system_dashboard_stack {
+  background-color: var(--primary-bg);
+  border-radius: 10px;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.system_dash_label {
+  color: var(--soft-text);
+  font-weight: bold;
+}
+
+.system_dash_summary {
+  color: var(--soft-text);
+}
+
+.bluetooth-dashboard-buttons {
+  background-color: var(--primary-bg);
+  color: var(--main-text);
+  border-radius: 8px;
+  border-style: none;
+  font-family: var(--font-family-default);
+  font-weight: 800;
+  font-size: 18px;
+  padding: 8px 12px;
+  box-shadow:
+    inset 3px 3px 5px rgba(0, 0, 0, 0.5),
+    inset -3px -3px 5px var(--shadow-subtle-white);
+}
+
+.bluetooth-dashboard-buttons:hover {
+  background-color: var(--secondary-bg);
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, 0.2),
+    0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease-in-out;
+}
+
+.bluetooth-dashboard-buttons-connected {
+  background-color: var(--success-green);
+  color: var(--primary-bg);
+  border-radius: 8px;
+  border-style: none;
+  font-weight: 800;
+  font-family: var(--font-family-default);
+  font-size: 18px;
+  padding: 8px 12px;
+  box-shadow:
+    5px 5px 10px var(--shadow-dark),
+    -5px -5px 10px var(--shadow-subtle-white);
+}
+
+.bluetooth-dashboard-buttons-connected:hover {
+  background-color: var(--success-green);
+  box-shadow:
+    0 6px 12px rgba(0, 0, 0, 0.5),
+    0 2px 5px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+  transition: all 0.2s ease-in-out;
+}
+
+/* Calendar Widget */
+.calendar-widget {
+  background-color: var(--secondary-bg);
+  color: var(--soft-text);
+  border-radius: 10px;
+  box-shadow: var(--shadow-neumorphic-outset-large);
+  padding: 10px;
+}
+
+.calendar-widget .header {
+  background-color: var(--primary-bg);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  padding: 5px;
+  box-shadow:
+    inset 2px 2px 5px rgba(0, 0, 0, 0.5),
+    inset -2px -2px 5px var(--shadow-subtle-white);
+}
+
+.calendar-widget .header button {
+  background-color: transparent;
+  border: none;
+  color: var(--main-text);
+  font-weight: bold;
+  -gtk-icon-size: 16px;
+}
+
+.calendar-widget .header button:hover {
+  color: var(--tertiary-bg);
+}
+
+.calendar-widget .day {
+  background-color: transparent;
+  border: none;
+  color: var(--main-text);
+  border-radius: 5px;
+  padding: 5px;
+  transition: all 0.2s ease-in-out;
+}
+
+.calendar-widget .day:hover {
+  background-color: var(--primary-bg);
+  box-shadow:
+    inset 2px 2px 4px rgba(0, 0, 0, 0.6),
+    inset -2px -2px 4px var(--shadow-subtle-white);
+}
+
+.calendar-widget .day.selected {
+  background-color: var(--accent-blue);
+  color: var(--primary-bg);
+  font-weight: bold;
+  box-shadow: var(--shadow-neumorphic-press);
+}
+
+.calendar-widget .day.other-month {
+  color: var(--calendar-other-month);
+}
+
+.calendar-widget .day.marked {
+  box-shadow: 0 0 0 2px var(--success-green) inset;
+  font-weight: bold;
+}
+
+.calendar-widget .week-number {
+  color: var(--soft-text);
+}
+
+/* Network Manager */
+.network-manager-container {
+  background-color: var(--primary-bg);
+  color: var(--main-text);
+  border-radius: 12px;
+  box-shadow: var(--shadow-neumorphic-inset-medium);
+}
+
+.network-manager-scrolledwindow {
+  border: none;
+}
+
+.network-manager-device-toggle-button,
+.network-manager-config-box {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  transition: all 0.2s ease-in-out;
+}
+
+.network-manager-device-toggle-button:hover,
+.network-manager-config-box:hover {
+  background-color: var(--secondary-bg);
+  border-radius: 8px;
+  box-shadow: var(--shadow-neumorphic-outset-large);
+}
+
+.network-manager-device-toggle-button:active,
+.network-manager-config-box:active {
+  background-color: var(--secondary-bg);
+  box-shadow: var(--shadow-neumorphic-press);
+}
+
+.network-manager-device-separator {
+  background-color: var(--secondary-bg);
+  min-height: 2px;
+  border-radius: 1px;
+}
+
+.network-manager-config-button {
+  background-color: transparent;
+  border: none;
+  color: var(--main-text);
+}
+
+.network-manager-config-label {
+  color: var(--main-text);
+  font-weight: bold;
+}
+
+/* Notifications */
+.notify-client-box {
+  background-color: var(--accent-blue);
+  border-radius: 10px;
+  margin: 3px;
+}
+
+.notify-client-heading {
+  margin-top: 12px;
+  font-weight: bold;
+  font-family: var(--font-family-system);
+  font-size: 16px;
+  color: var(--dseg-shadow-dark);
+}
+
+.notify-client-body-label,
+.notify-client-timestamp {
+  margin: 3px;
+  font-family: var(--font-family-system);
+  color: var(--dseg-shadow-dark);
+}
+
+.notify-client-timestamp {
+  font-size: 13px;
+}
+
+.notify-window {
+  background-color: transparent;
+  color: var(--main-text);
+  border-radius: 10px;
+}
+
+.notify-server-vbox {
+  background-color: var(--primary-bg);
+  color: var(--main-text);
+  padding: 10px;
+  font-weight: bold;
+  font-family: var(--font-family-system);
+  font-size: 16px;
+  border-radius: 10px;
+}
+
+/* Volume Widget */
+.floating-volume-widget {
+  background-color: var(--secondary-bg);
+  box-shadow: 0 8px 15px var(--shadow-medium);
+}
+
+.floating-volume-icon {
+  color: var(--main-text);
+}
+
+.floating-volume-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--main-text);
+}
+
+/* Misc Buttons and Labels */
+.mullvad-header-label {
+  font-weight: bold;
+  font-size: 14px;
+  color: var(--main-text);
+}
+
+.image-button {
+  -gtk-icon-size: 16px;
+  color: var(--main-text);
+  background-color: transparent;
+}
+
+.text-button {
+  border-radius: 0px;
+  background-color: transparent;
+  font-size: 12px;
+  color: var(--soft-text);
+  border-style: solid;
+  border-color: var(--header-border);
+}
+
+.button_clear_from_clipboard {
+  background-color: var(--danger-red);
+  color: var(--main-text);
+  border: none;
+  box-shadow: var(--shadow-element-minimal); /* Generalized shadow */
+}
+
+.close-button:hover {
+  background-color: var(--danger-red);
+}
+
+.maximize-button:hover {
+  background-color: var(--accent-blue);
+}
+
+.minimize-button:hover {
+  background-color: var(--success-green);
+}
+
+.close-button:active {
+  background-color: var(--danger-red);
+}
+
+.maximize-button:active {
+  background-color: var(--accent-blue);
+}
+
+.minimize-button:active {
+  background-color: var(--success-green);
+}
+
+.ai-prompt-label:hover {
+  color: var(--primary-bg);
+  background-color: var(--tertiary-bg);
+  text-shadow: 0.006em 0.006em 0.007em var(--shadow-dark);
+}
+
+/* App and Places Launchers */
+.app-launcher-menu-button,
+.bookmarks-menu-button,
+.places-menu-button {
+  -gtk-icon-size: 29px;
+}
+
+.places-popover {
+  border: none;
+}
+
+.places-main-box {
+  padding: 15px;
+}
+
+.places-right-click-popover {
+  border: none;
+}
+
+.places-label-from-popover{
+  color: var(--main-text);
+}
+
+.places-popover-menu-items {
+  font-size: 16px;
+}
+
+.places-popover-menu-items:hover {
+   background-color: var(--success-green);
+   color:var(--primary-bg);
+  box-shadow: var(--shadow-neumorphic-outset-large);
+  transform: translateY(-2px);
+}
+
+.places-search-entry {
+  background-color: var(--primary-bg);
+  border-width: 0px;
+  border-radius: 10px;
+  padding: 5px 10px;
+  color: var(--main-text);
+  font-size: 16px;
+  font-weight: 500;
+  font-family: var(--font-family-default);
+  box-shadow: var(--shadow-neumorphic-inset-medium);
+}
+
+.places-scrolled-window {
+  border: none;
+  background-color: transparent;
+}
+
+.places-listbox {
+  background-color: transparent;
+  padding: 10px;
+}
+
+.places-row-hbox {
+  min-height: 40px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background-color: transparent;
+  transition: all 0.2s ease-in-out;
+}
+
+.places-row-hbox:hover {
+  background-color: var(--secondary-bg);
+  box-shadow: var(--shadow-neumorphic-outset-large);
+  transform: translateY(-2px);
+}
+
+.places-row-hbox:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-neumorphic-press);
+}
+
+.places-icon-from-popover {
+  -gtk-icon-size: 42px;
+  color: var(--main-text);
+}
+
+.places-label-from-popover {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--main-text);
+}
+
+/* Desktop */
+.desktop-layer-window {
+    background-image: url("file:///home/neo/.config/waypanel/fav.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    box-shadow: none;
+}
+.desktop-popover {
+    background-color: var(--primary-bg);
+    background-image: none;
+    box-shadow: none;
+    border: none;
+}
+
+
+.bookmarks-icon-from-popover {
+  -gtk-icon-size: 36px;
+}
+
+/* Panel Internal Boxes */
+.top-panel-box-right {
+  background-color: transparent;
+}
+
+.top-panel-box-left {
+  -gtk-icon-size: 32px;
+}
+
+.right-box-spacer {
+  background-color: transparent;
+}
+
+.top_panel_box_center {
+  -gtk-icon-size: 0px;
+}
+
+.notification-panel-button {
+  padding-top: 6px;
+}
+
+.network-manager-device-header {
+}
+
+.network-manager-device-details-grid {
+}

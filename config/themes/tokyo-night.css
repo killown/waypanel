@@ -1,0 +1,132 @@
+:root {
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+
+  /* Primary Background Hierarchy (TOKYO NIGHT) */
+  --theme-bg-view-primary: #222436;   /* Main Background (Deep Purple/Blue) */
+  --theme-bg-view-secondary: #292E42; /* Raised/Header Bar/Card Background (Slightly Lighter) */
+  --theme-bg-view-tertiary: #414868;  /* Popover/Menu/Control Background (Comments Color) */
+
+  /* Interactive/State Backgrounds */
+  --theme-bg-control-base: #414868;   /* Control BG (Comments Color) */
+  --theme-bg-selected-primary: #7AA2F7; /* Accent Blue (Function Names) */
+  --theme-bg-selected-secondary: #414868; /* Slightly less prominent highlight */
+  --theme-bg-text-selection: #7AA2F740; /* Accent Blue with transparency */
+  
+  /* Specialized Backgrounds */
+  --theme-bg-under-page: #1F2335; /* Deeper for page underlay */
+  --theme-bg-alternating-row: #202434;
+  --theme-bg-find-highlight: #E0AF6860; /* Warning Yellow with transparency */
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: #C0CAF5;    /* Primary Text (Variables, Class names) */
+  --theme-fg-label-secondary: #A9B1D6;  /* Editor Foreground/Secondary Text */
+  --theme-fg-label-tertiary: #9AA5CE;   /* Markdown Text/Disabled/Placeholder */
+  --theme-fg-label-quaternary: #565F89; /* Very subtle text/Comments Color */
+  
+  /* Interactive Foreground */
+  --theme-fg-control-text: #C0CAF5;
+  --theme-fg-control-text-disabled: #9AA5CE;
+  --theme-fg-link: #7AA2F7; /* Accent Blue */
+  --theme-fg-placeholder: #565F89;
+  --theme-fg-header-text: #C0CAF5;
+  
+  /* State Foreground */
+  --theme-fg-text-selected: #24283B; /* Dark text on selection background for contrast */
+  --theme-fg-text-alternate-selected: #C0CAF5;
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: #414868; /* Subtle border line (Comments Color) */
+  --theme-decoration-grid-line: #303650;
+  --theme-decoration-keyboard-focus: #BB9AF7; /* Magenta/Purple Control Keywords */
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* (Tokyo Night Syntax Highlighting Colors) */
+  /* ================================================= */
+  
+  --theme-status-accent: #7AA2F7;  /* Function Names Blue */
+  --theme-status-success: #9ECE6A; /* Strings Green */
+  --theme-status-danger: #F7768E;  /* Keywords/Red */
+  --theme-status-warning: #E0AF68; /* Yellow */
+  --theme-status-highlight-virtual: #414868;
+
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
+  /* ================================================= */
+
+  /* Backgrounds */
+  --primary-bg: var(--theme-bg-view-primary);
+  --secondary-bg: var(--theme-bg-view-secondary);
+  --tertiary-bg: var(--theme-bg-view-tertiary);
+  --header-border: var(--theme-decoration-separator);
+
+  /* Foreground/Text */
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+
+  /* Functional Colors */
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  
+  /* Specific Color Variants */
+  --success-green-light: rgba(158, 206, 106, 0.2);
+  --window-control-hover-bg: var(--theme-bg-control-base);
+  --window-control-border-color: var(--primary-bg);
+
+  /* DSEG Font Shadows */
+  --dseg-shadow-soft: rgba(255, 255, 255, 0.1);
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY ============== */
+  /* ================================================= */
+
+  /* Raw Shadow Primitives (Tokyo Night often uses minimal shadows) */
+  --shadow-dark: rgba(0, 0, 0, 0.4);
+  --shadow-medium: rgba(0, 0, 0, 0.2);
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* Opacity (Retaining previous values) */
+  --opacity-0: 0.0;
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  /* Shadow Styles (Generalised by prominence/function) */
+  --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
+  --shadow-elevated: 0 4px 10px var(--shadow-dark); 
+  --shadow-button-flat: none; 
+  --shadow-control-small: none; 
+  --shadow-control-small-hover: none; 
+  --shadow-element-minimal: none; 
+  
+  /* Neumorphic/Inset Inversion */
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-neumorphic-outset-large: 0 2px 5px rgba(0, 0, 0, 0.5);
+  --shadow-neumorphic-press: inset 0 1px 4px rgba(0, 0, 0, 0.7);
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES ================ */
+  /* ================================================= */
+
+  --font-family-default: "Cantarell", "Roboto", sans-serif; 
+  --font-family-system: var(--font-family-default);
+}

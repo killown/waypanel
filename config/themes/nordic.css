@@ -1,0 +1,95 @@
+/* ================================================= */
+/* ========= NORD DARK AMBIENCE (ROOT) =========== */
+/* ================================================= */
+
+:root {
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+
+  /* Primary Background Hierarchy (Used for main canvas/editor) */
+  --theme-bg-view-primary: #2E3440;   /* nord0: Deepest Dark (Main Body/Editor) */
+  --theme-bg-view-secondary: #3B4252; /* nord1: Mid Dark (Sidebars/Panels) */
+  --theme-bg-view-tertiary: #434C5E;  /* nord2: Less Dark (Raised Surfaces) */
+
+  /* Interactive/State Backgrounds */
+  --theme-bg-control-base: #4C566A;   /* nord3: Control/Input Background */
+  --theme-bg-selected-primary: #88C0D0; /* nord8: Primary Blue Accent */
+  --theme-bg-selected-secondary: #4C566A; /* nord3: Hover/Subtle Selection */
+  --theme-bg-text-selection: #5E81AC60; /* nord10 with transparency */
+  
+  /* Specialized Backgrounds */
+  --theme-bg-under-page: #242933;     /* Slightly deeper than nord0 */
+  --theme-bg-alternating-row: #3B4252;
+  --theme-bg-find-highlight: #EBCB8B40; /* nord13 (Info) with transparency */
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: #D8DEE9;    /* nord4: Primary Text (Light) */
+  --theme-fg-label-secondary: #E5E9F0;  /* nord5: Secondary Text (Brighter) */
+  --theme-fg-label-tertiary: #4C566A;   /* nord3: Disabled Text/Comments/Punctuation */
+  --theme-fg-label-quaternary: #6E7781; /* Darker than nord3 for ultra-subtle */
+  
+  /* Interactive Foreground */
+  --theme-fg-control-text: #D8DEE9;
+  --theme-fg-control-text-disabled: #4C566A;
+  --theme-fg-link: #88C0D0;           /* nord8: Primary Blue for links */
+  --theme-fg-placeholder: #4C566A;
+  --theme-fg-header-text: #ECEFF4;   /* nord6 */
+  
+  /* State Foreground */
+  --theme-fg-text-selected: #2E3440; /* nord0: Dark text on bright selection */
+  --theme-fg-text-alternate-selected: #D8DEE9;
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: #4C566A; /* nord3: Separators/Borders */
+  --theme-decoration-grid-line: #4C566A;
+  --theme-decoration-keyboard-focus: #5E81AC; /* nord10: Deep Blue - Focus Ring */
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* ================================================= */
+  
+  --theme-status-accent: #88C0D0;  /* nord8: Blue (Primary Action Color) */
+  --theme-status-success: #A3BE8C; /* nord14: Green */
+  --theme-status-danger: #BF616A;  /* nord11: Red */
+  --theme-status-warning: #D08770; /* nord12: Orange */
+  --theme-status-highlight-virtual: #4C566A; /* nord3 */
+
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
+  /* ================================================= */
+
+  /* Backgrounds */
+  --primary-bg: var(--theme-bg-view-primary);
+  --secondary-bg: var(--theme-bg-view-secondary);
+  --tertiary-bg: var(--theme-bg-view-tertiary);
+  --header-border: var(--theme-decoration-separator);
+
+  /* Foreground/Text */
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+
+  /* Functional Colors */
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  
+  /* Specific Color Variants */
+  --success-green-light: rgba(163, 190, 140, 0.2);
+  --window-control-hover-bg: #434C5E; /* nord2 */
+  --window-control-border-color: #2E3440; /* nord0 */
+
+  /* Shadows */
+  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.5); 
+}
