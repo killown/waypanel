@@ -1,4 +1,3 @@
-from gi.repository import Gtk, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
@@ -31,13 +30,19 @@ class BottomPanelPlugin(BasePlugin):
 
     def _setup_boxes(self):
         """Setup left, center, right boxes and the main grid."""
-        self.obj.bottom_panel_box_left = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 6)
-        self.obj.bottom_panel_box_center = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 6)
-        self.obj.bottom_panel_box_right = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 6)
-        self.obj.bottom_panel_box_center.set_halign(Gtk.Align.CENTER)
-        self.obj.bottom_panel_box_left.set_halign(Gtk.Align.START)
-        self.obj.bottom_panel_box_right.set_halign(Gtk.Align.END)
-        self.obj.bottom_panel_box_full = Gtk.Grid()
+        self.obj.bottom_panel_box_left = self.gtk.Box.new(
+            self.gtk.Orientation.HORIZONTAL, 6
+        )
+        self.obj.bottom_panel_box_center = self.gtk.Box.new(
+            self.gtk.Orientation.HORIZONTAL, 6
+        )
+        self.obj.bottom_panel_box_right = self.gtk.Box.new(
+            self.gtk.Orientation.HORIZONTAL, 6
+        )
+        self.obj.bottom_panel_box_center.set_halign(self.gtk.Align.CENTER)
+        self.obj.bottom_panel_box_left.set_halign(self.gtk.Align.START)
+        self.obj.bottom_panel_box_right.set_halign(self.gtk.Align.END)
+        self.obj.bottom_panel_box_full = self.gtk.Grid()
         self.obj.bottom_panel_box_full.set_column_homogeneous(True)
         self.obj.bottom_panel_box_full.attach(
             self.obj.bottom_panel_box_left, 0, 0, 1, 1
@@ -45,14 +50,14 @@ class BottomPanelPlugin(BasePlugin):
         self.obj.bottom_panel_box_full.attach_next_to(
             self.obj.bottom_panel_box_center,
             self.obj.bottom_panel_box_left,
-            Gtk.PositionType.RIGHT,
+            self.gtk.PositionType.RIGHT,
             1,
             1,
         )
         self.obj.bottom_panel_box_full.attach_next_to(
             self.obj.bottom_panel_box_right,
             self.obj.bottom_panel_box_center,
-            Gtk.PositionType.RIGHT,
+            self.gtk.PositionType.RIGHT,
             1,
             1,
         )
@@ -84,5 +89,5 @@ class BottomPanelPlugin(BasePlugin):
             )
             return False
         else:
-            GLib.timeout_add(100, self.add_css_class)
+            self.glib.timeout_add(100, self.add_css_class)
             return True

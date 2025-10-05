@@ -141,7 +141,7 @@ def main():
                     return pkg_path
         return None
 
-    INSTALLED_PATH = find_package_files()
+    INSTALLED_PATH = find_package_files()  # pyright: ignore
     if INSTALLED_PATH:
         REQ_FILE = os.path.join(INSTALLED_PATH, "requirements.txt")
         MAIN_PY_DIR = INSTALLED_PATH  # Directory where the main script resides

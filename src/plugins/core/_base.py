@@ -8,9 +8,8 @@ import lazy_loader as lazy
 # These are required for gi.require_version, PluginLogAdapter init,
 # BasePlugin init, or for the core concurrency helpers.
 # ----------------------------------------------------------------------
-from gi.repository import Gtk, GLib, Gdk, Gio, Pango, GdkPixbuf  # pyright: ignore
+from gi.repository import Gtk, GLib, Gdk, Gio, Pango, GdkPixbuf, Adw  # pyright: ignore
 from src.core import create_panel
-from src.plugins.core._event_loop import get_global_executor, get_global_loop
 
 # Classes instantiated in __init__ must be imported immediately
 from src.shared.path_handler import PathHandler
@@ -23,7 +22,7 @@ from src.shared.command_runner import CommandRunner
 from src.shared.concurrency_helper import ConcurrencyHelper
 
 # Type hints are not lazy-loaded
-from typing import Any, List, ClassVar, Callable, Awaitable, Optional, Union, Dict, Set
+from typing import Any, List, ClassVar, Optional, Union, Dict, Set
 import asyncio  # Keep asyncio for type hint asyncio.Task
 
 # ----------------------------------------------------------------------
@@ -168,10 +167,8 @@ class BasePlugin:
         self._config_handler = ConfigHandler(panel_instance)
         self._cmd = CommandRunner(panel_instance)
         self._concurrency_helper = ConcurrencyHelper(panel_instance)
-        self.global_loop = get_global_loop()
-        self.global_executor = get_global_executor()
-        self._running_futures = set()
-        self._running_tasks = set()
+        self.global_loop = self._concurrency_helper.global_loop
+        self.global_executor = self._concurrency_helper.global_executor
         self.main_widget: Optional[Union[tuple, list]] = None
         self.plugin_file = None
         self.ipc_client = None
@@ -201,7 +198,7 @@ class BasePlugin:
 
         try:
             # Use the lazy-loaded importlib for dynamic loading
-            module = IMPORTLIB_MODULE.import_module(module_name)
+            module = IMPORTLIB_MODULE.import_module(module_name)  # pyright: ignore
             self._loaded_modules[module_name] = module
             self.logger.debug(
                 f"Module '{module_name}' imported and cached successfully."
@@ -311,6 +308,11 @@ class BasePlugin:
         return GdkPixbuf
 
     @property
+    def adw(self) -> Any:
+        """Read-only access to Adw module."""
+        return Adw
+
+    @property
     def pango(self) -> Any:
         """Read-only access to the gi.repository.Pango module."""
         return Pango
@@ -344,13 +346,13 @@ class BasePlugin:
     def thread_pool_executor(self) -> Any:
         """Read-only access to the ThreadPoolExecutor class."""
         # FIX: Access the class from the lazy-loaded module
-        return CONCURRENCY_FUTURES_MODULE.ThreadPoolExecutor
+        return CONCURRENCY_FUTURES_MODULE.ThreadPoolExecutor  # pyright: ignore
 
     @property
     def future(self) -> Any:
         """Read-only access to the Future class."""
         # FIX: Access the class from the lazy-loaded module
-        return CONCURRENCY_FUTURES_MODULE.Future
+        return CONCURRENCY_FUTURES_MODULE.Future  # pyright: ignore
 
     @property
     def sqlite3(self) -> Any:
@@ -617,16 +619,7 @@ class BasePlugin:
                 self.logger.info("Widget removed successfully.")
             else:
                 self.logger.warning("No widget to remove.")
-            for task in list(self._running_tasks):
-                if not task.done():
-                    task.cancel()
-                    self.logger.debug(
-                        f"Attempted to cancel async task: {task.get_name()}"
-                    )
-            for future in list(self._running_futures):
-                if not future.done():
-                    future.cancel()
-                    self.logger.debug("Attempted to cancel thread Future.")
+            self._concurrency_helper.cleanup_tasks_and_futures()
             self.on_disable()
         except Exception as e:
             self.logger.error(message=f"Error disabling plugin: {e}", exc_info=True)

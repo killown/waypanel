@@ -186,6 +186,7 @@ class PopoverFolders(BasePlugin):
         """Creates a button with a label and connects a clicked signal, then appends it to the provided box."""
         button = self.gtk.Button.new_with_label(label)
         button.connect("clicked", callback)
+        button.add_css_class("places-popover-menu-items")
         box.append(button)
         return button
 
@@ -197,6 +198,7 @@ class PopoverFolders(BasePlugin):
         )
         box = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL)
         listbox_row = row_hbox.get_parent()
+        listbox_row.add_css_class("places-lisbox-row")
         all_folders = self.config_handler.config_data.get("folders") or {}
         is_pinned = any(
             data.get("path") == folder_path for data in all_folders.values()

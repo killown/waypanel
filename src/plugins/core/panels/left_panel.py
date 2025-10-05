@@ -1,4 +1,3 @@
-from gi.repository import Gtk, GLib  # pyright: ignore
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
@@ -17,12 +16,10 @@ def initialize_plugin(panel_instance):
 class LeftPanelPlugin(BasePlugin):
     def __init__(self, panel_instance):
         """Initialize the LeftPanelPlugin and set up its UI components.
-
         This plugin creates the structure for the left panel by setting up
         the necessary boxes (top, center, bottom, full) and attaching them to
         the main grid. It also ensures that CSS classes are applied once the
         widgets are ready.
-
         Args:
             panel_instance: The main panel object that provides access to shared resources
                             like configuration, logger, and widget containers.
@@ -33,36 +30,22 @@ class LeftPanelPlugin(BasePlugin):
 
     def _setup_boxes(self):
         """Setup top, center, bottom boxes for vertical alignment."""
-
-        # Using Gtk.Box.new() for all children for clearer initialization
-        self.obj.left_panel_box_top = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        self.obj.left_panel_box_center = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        self.obj.left_panel_box_bottom = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-
-        # Full container: Vertical box to hold all sections
-        self.obj.left_panel_box_full = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-
-        # --- EXPLICIT GTKBOXLAYOUT IMPLEMENTATION ---
-
-        # 1. Set Spacing (vertical gap between top, center, and bottom sections)
-        # Using a fixed 10px spacing for clean separation.
+        self.obj.left_panel_box_top = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
+        self.obj.left_panel_box_center = self.gtk.Box.new(
+            self.gtk.Orientation.VERTICAL, 0
+        )
+        self.obj.left_panel_box_bottom = self.gtk.Box.new(
+            self.gtk.Orientation.VERTICAL, 0
+        )
+        self.obj.left_panel_box_full = self.gtk.Box.new(
+            self.gtk.Orientation.VERTICAL, 0
+        )
         self.obj.left_panel_box_full.set_spacing(10)
-
-        # 2. Configure Vertical Expansion/Sizing
-        # We instruct the GtkBoxLayout to give all surplus space to the center box.
         self.obj.left_panel_box_center.set_vexpand(True)
-        self.obj.left_panel_box_center.set_valign(Gtk.Align.CENTER)
-
-        # The top and bottom boxes will only take their minimum required height.
-
-        # --- END EXPLICIT GTKBOXLAYOUT IMPLEMENTATION ---
-
-        # Append in order: top -> center -> bottom
+        self.obj.left_panel_box_center.set_valign(self.gtk.Align.CENTER)
         self.obj.left_panel_box_full.append(self.obj.left_panel_box_top)
         self.obj.left_panel_box_full.append(self.obj.left_panel_box_center)
         self.obj.left_panel_box_full.append(self.obj.left_panel_box_bottom)
-
-        # Set main widget for plugin loader
         self.main_widget = (self.obj.left_panel_box_full, "set_content")
 
     def add_css_class(self):
@@ -88,5 +71,5 @@ class LeftPanelPlugin(BasePlugin):
             )
             return False
         else:
-            GLib.timeout_add(100, self.add_css_class)
+            self.glib.timeout_add(100, self.add_css_class)
             return True

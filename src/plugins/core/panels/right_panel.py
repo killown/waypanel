@@ -1,4 +1,3 @@
-from gi.repository import Gtk, GLib
 from src.plugins.core._base import BasePlugin
 
 ENABLE_PLUGIN = True
@@ -31,13 +30,21 @@ class RightPanelPlugin(BasePlugin):
 
     def _setup_boxes(self):
         """Setup top, center, and bottom boxes for vertical alignment."""
-        self.obj.right_panel_box_top = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        self.obj.right_panel_box_center = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        self.obj.right_panel_box_bottom = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        self.obj.right_panel_box_full = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.obj.right_panel_box_top = self.gtk.Box.new(
+            self.gtk.Orientation.VERTICAL, 0
+        )
+        self.obj.right_panel_box_center = self.gtk.Box.new(
+            self.gtk.Orientation.VERTICAL, 0
+        )
+        self.obj.right_panel_box_bottom = self.gtk.Box.new(
+            self.gtk.Orientation.VERTICAL, 0
+        )
+        self.obj.right_panel_box_full = self.gtk.Box.new(
+            self.gtk.Orientation.VERTICAL, 0
+        )
         self.obj.right_panel_box_full.set_spacing(10)
         self.obj.right_panel_box_center.set_vexpand(True)
-        self.obj.right_panel_box_center.set_valign(Gtk.Align.CENTER)
+        self.obj.right_panel_box_center.set_valign(self.gtk.Align.CENTER)
         self.obj.right_panel_box_full.append(self.obj.right_panel_box_top)
         self.obj.right_panel_box_full.append(self.obj.right_panel_box_center)
         self.obj.right_panel_box_full.append(self.obj.right_panel_box_bottom)
@@ -66,5 +73,5 @@ class RightPanelPlugin(BasePlugin):
             )
             return False
         else:
-            GLib.timeout_add(100, self.add_css_class)
+            self.glib.timeout_add(100, self.add_css_class)
             return True
