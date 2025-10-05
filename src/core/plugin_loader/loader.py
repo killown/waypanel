@@ -3,9 +3,6 @@ import importlib
 from gi.repository import GLib, Gtk  # pyright: ignore
 import sys
 import traceback
-from src.shared.data_helpers import DataHelpers
-from src.shared.config_handler import ConfigHandler
-from src.shared.gtk_helpers import GtkHelpers
 from src.core.plugin_loader.helper import PluginLoaderHelpers
 
 
@@ -72,10 +69,10 @@ class PluginLoader:
         self.plugins_to_process_index = 0
         self.plugins_to_initialize = []
         self.plugins_to_initialize_index = 0
-        self.data_helper = DataHelpers()
-        self.config_handler = ConfigHandler(panel_instance)
+        self.data_helper = self.panel_instance.data_helper
+        self.config_handler = self.panel_instance.config_handler
         self.config_path = self.config_handler.config_path
-        self.gtk_helpers = GtkHelpers(panel_instance)
+        self.gtk_helpers = self.panel_instance.gtk_helpers
         self.update_widget_safely = self.gtk_helpers.update_widget_safely
         self.panel_instance.plugins_startup_finished = False
         self.user_plugins_dir = os.path.join(
@@ -207,7 +204,8 @@ class PluginLoader:
                 plugins_imported_in_chunk += 1
                 is_plugin_enabled = getattr(module, "ENABLE_PLUGIN", True)
                 if not hasattr(module, "get_plugin_placement") or not hasattr(
-                    module, "initialize_plugin"
+                    module,
+                    "initialize_plugin" or not hasattr(module, "call_plugin_class"),
                 ):
                     self.logger.error(
                         f"Module {module_name} is missing required functions. Skipping."

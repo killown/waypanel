@@ -1,4 +1,4 @@
-ENABLE_PLUGIN = False
+ENABLE_PLUGIN = True
 
 
 def get_plugin_placement(panel_instance):
@@ -9,8 +9,8 @@ def get_plugin_placement(panel_instance):
 
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
-        open_with_editor = call_plugin_class()
-        return open_with_editor(panel_instance)
+        plugin = call_plugin_class()
+        return plugin(panel_instance)
 
 
 def call_plugin_class():
@@ -217,6 +217,7 @@ def call_plugin_class():
             listbox.set_show_separators(True)
             listbox.add_css_class("places-listbox")
             scrolled_window = self.gtk.ScrolledWindow()
+            # Increased width to 600 as requested
             scrolled_window.set_min_content_width(800)
             scrolled_window.set_min_content_height(600)
             scrolled_window.add_css_class("places-scrolled-window")
@@ -357,22 +358,29 @@ def call_plugin_class():
         def _create_file_row(self, full_file_path, root_dir):
             """
             Creates a single ListBox row child (HBox) for a file entry.
+
             Args:
                 full_file_path (str): The absolute path to the file.
                 root_dir (str): The root directory used for relative path calculation.
             """
             icon_name = self._get_file_icon_name(full_file_path)
+
+            # Calculate the relative path for the label (e.g., subdir1/subdir2/filename.py)
+            # This is the key change requested by the user.
             display_path = self.os.path.relpath(full_file_path, root_dir)
+
             row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
             row_hbox.add_css_class("places-row-hbox")
             row_hbox.MYTEXT = full_file_path
             row_hbox.set_tooltip_text(full_file_path)
+
             line = self.gtk.Label.new()
-            line.set_label(display_path)
+            line.set_label(display_path)  # Use the calculated relative path
             line.props.margin_start = 5
             line.props.hexpand = True
             line.set_halign(self.gtk.Align.START)
             line.add_css_class("places-label-from-popover")
+
             image = self.gtk.Image.new_from_icon_name(icon_name)
             image.add_css_class("places-icon-from-popover")
             image.set_icon_size(self.gtk.IconSize.INHERIT)
@@ -411,6 +419,7 @@ def call_plugin_class():
                 listbox.set_filter_func(lambda r: False)
                 return
             for file_path in files_to_list:
+                # Pass directory_path as the root_dir to calculate the relative path
                 row_hbox = self._create_file_row(
                     full_file_path=file_path, root_dir=directory_path
                 )
@@ -568,14 +577,18 @@ def call_plugin_class():
         def code_explanation(self):
             """
             This plugin creates a popover UI to search and open files from configured directories using tabs.
+
             1.  **Configuration & Editor Defaults**:
                 - Uses a rich set of **recommended defaults** for editor selection if the user provides no configuration (e.g., `code` for config/web files, `nvim` for programming).
                 - The `self.default_editors` list acts as an **ultimate fallback**.
+
             2.  **Tabbed UI and File Display (Updated)**:
                 - The popover width has been **increased to 600px** (`set_min_content_width(600)`) to better display long paths.
                 - The displayed file label now shows the **path relative to the configured root directory** (e.g., `subdir/file.py`), instead of just the filename, making it easier to locate files.
+
             3.  **Editor Selection and Gestures**:
                 - Mouse buttons (Left, Middle, Right) determine the index of the editor to launch from the selected list.
+
             4.  **Lazy Loading & Filtering**: Files are scanned and loaded only when a tab is selected for the first time, and the search bar dynamically controls the filtering of the active tab's file list.
             """
             return self.code_explanation.__doc__

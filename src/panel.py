@@ -7,6 +7,7 @@ IPC_MODULE = lazy.load("src.core.compositor.ipc")
 CREATE_PANEL_MODULE = lazy.load("src.core.create_panel")
 GTK_HELPERS_MODULE = lazy.load("src.shared.gtk_helpers")
 PLUGIN_LOADER_MODULE = lazy.load("src.core.plugin_loader.loader")
+DATA_HELPERS_MODULE = lazy.load("src.shared.data_helpers")
 GLOBAL_LOOP_MODULE = lazy.load("src.plugins.core._event_loop")
 
 
@@ -30,6 +31,8 @@ class Panel(Adw.Application):
 
         # Lazy load: Accessing IPC_MODULE.IPC() triggers the actual import of src.core.compositor.ipc
         self.ipc = IPC_MODULE.IPC()  # pyright: ignore
+
+        self.data_helper = DATA_HELPERS_MODULE.DataHelpers()  # pyright: ignore
 
         self.ipc_server = ipc_server
         self.display = None
