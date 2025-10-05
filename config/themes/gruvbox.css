@@ -3,74 +3,89 @@
 /* ================================================= */
 
 :root {
-  /* Gruvbox Palette References (Medium/Soft) */
-  /* BG0 (Medium/Normal): #282828 */
-  /* BG1 (Surface/Sidebar): #3c3836 */
-  /* FG1 (Primary Text): #ebdbb2 */
-  /* Accent Red: #cc241d (Muted) / #fb4934 (Strong) */
-  /* Accent Blue: #458588 (Muted) / #83a598 (Strong) */
-  /* Accent Yellow: #d79921 (Muted) / #fabd2f (Strong) */
+  /* ================================================= */
+  /* ==== GRUVBOX PALETTE (Theme Specific) - CORE ==== */
+  /* ================================================= */
+  
+  /* Core Backgrounds */
+  --color-bg-dark: #282828;      /* BG0 Medium (Primary Background) */
+  --color-bg-medium: #3c3836;    /* BG1 (Surface/Sidebar) */
+  --color-bg-light: #504945;     /* BG2 (Raised Surfaces/Cards) */
+  --color-bg-highlight: #665c54; /* BG3 (Subtle Borders/Highlight) */
+  --color-bg-deepest: #1d2021;   /* BG0 Hard (Deepest background) */
+
+  /* Core Foregrounds */
+  --color-fg-main: #ebdbb2;      /* FG1 (Primary Text/Light1) */
+  --color-fg-light: #a89984;     /* FG3 (Secondary Text/Light3) */
+  --color-fg-dark: #928374;      /* Gray (Muted/Placeholder) */
+
+  /* Accent Colors (Strong) */
+  --color-red: #fb4934;          
+  --color-green: #b8bb26;        
+  --color-yellow: #fabd2f;       
+  --color-blue: #83a598;         
+  --color-blue-muted: #458588;
+
 
   /* ================================================= */
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
   /* ================================================= */
 
-  /* Primary Background Hierarchy (Main Editor/Canvas) */
-  --theme-bg-view-primary: #282828;   /* Dark0 - Main Body/Editor */
-  --theme-bg-view-secondary: #3c3836; /* Dark1 - Sidebars/Panels */
-  --theme-bg-view-tertiary: #504945;  /* Dark2 - Raised Surfaces/Cards */
+  --theme-bg-view-primary: var(--color-bg-dark);
+  --theme-bg-view-secondary: var(--color-bg-medium);
+  --theme-bg-view-tertiary: var(--color-bg-light);
 
   /* Interactive/State Backgrounds */
-  --theme-bg-control-base: #3c3836;   /* Input Fields/Subtle Hover */
-  --theme-bg-selected-primary: #458588; /* Blue Muted - Primary Accent/Selection */
-  --theme-bg-selected-secondary: #504945; /* Dark2 - Hover/Subtle Selection */
-  --theme-bg-text-selection: #45858840; /* Blue with transparency */
+  --theme-bg-control-base: var(--color-bg-medium);
+  --theme-bg-selected-primary: var(--color-blue-muted);
+  --theme-bg-selected-secondary: var(--color-bg-light);
+  --theme-bg-text-selection: #45858840; 
   
   /* Specialized Backgrounds */
-  --theme-bg-under-page: #1d2021;     /* Dark0 Hard - Deepest background */
-  --theme-bg-alternating-row: #3c3836;
-  --theme-bg-find-highlight: #d7992140; /* Yellow Muted with transparency (Search) */
+  --theme-bg-under-page: var(--color-bg-deepest);
+  --theme-bg-alternating-row: var(--color-bg-medium);
+  --theme-bg-find-highlight: #d7992140; 
 
 
   /* ================================================= */
   /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
   /* ================================================= */
 
-  --theme-fg-label-primary: #ebdbb2;    /* Light1 - Primary Text */
-  --theme-fg-label-secondary: #a89984;  /* Light3 - Secondary Text (Subtitles) */
-  --theme-fg-label-tertiary: #928374;   /* Gray/Muted BG - Disabled/Placeholder/Comments */
-  --theme-fg-label-quaternary: #665c54; /* Very subtle text */
+  --theme-fg-label-primary: var(--color-fg-main);
+  --theme-fg-label-secondary: var(--color-fg-light);
+  --theme-fg-label-tertiary: var(--color-fg-dark);
+  --theme-fg-label-quaternary: #665c54; 
   
   /* Interactive Foreground */
-  --theme-fg-control-text: #ebdbb2;
-  --theme-fg-control-text-disabled: #928374;
-  --theme-fg-link: #83a598;           /* Blue Strong for links */
-  --theme-fg-placeholder: #928374;
-  --theme-fg-header-text: #ebdbb2;
+  --theme-fg-control-text: var(--color-fg-main);
+  --theme-fg-control-text-disabled: var(--color-fg-dark);
+  --theme-fg-link: var(--color-blue);           
+  --theme-fg-placeholder: var(--color-fg-dark);
+  --theme-fg-header-text: var(--color-fg-main);
   
   /* State Foreground */
-  --theme-fg-text-selected: #ebdbb2; /* Light text on selection */
-  --theme-fg-text-alternate-selected: #282828; /* Dark text on brighter background */
+  --theme-fg-text-selected: var(--color-fg-main);
+  --theme-fg-text-alternate-selected: var(--color-bg-dark);
 
 
   /* ================================================= */
   /* ============= DECORATION & SEPARATORS ============= */
   /* ================================================= */
 
-  --theme-decoration-separator: #504945; /* Dark2 - Control borders/Separators */
-  --theme-decoration-grid-line: #504945;
-  --theme-decoration-keyboard-focus: #fabd2f; /* Yellow Strong - Focus Ring */
+  --theme-decoration-separator: var(--color-bg-light);
+  --theme-decoration-grid-line: var(--color-bg-light);
+  --theme-decoration-keyboard-focus: var(--color-yellow);
 
 
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
   /* ================================================= */
   
-  --theme-status-accent: #83a598;  /* Blue Strong (Primary Action Color) */
-  --theme-status-success: #b8bb26; /* Green Strong */
-  --theme-status-danger: #fb4934;  /* Red Strong */
-  --theme-status-warning: #fabd2f; /* Yellow Strong */
-  --theme-status-highlight-virtual: #3c3836; /* Dark1 for subtle highlight */
+  --theme-status-accent: var(--color-blue);
+  --theme-status-success: var(--color-green);
+  --theme-status-danger: var(--color-red);
+  --theme-status-warning: var(--color-yellow);
+  --theme-status-highlight-virtual: var(--color-bg-medium);
 
 
   /* ================================================= */
@@ -94,10 +109,51 @@
   --danger-red: var(--theme-status-danger);
   
   /* Specific Color Variants */
-  --success-green-light: #98971A40; /* Green Muted with transparency */
-  --window-control-hover-bg: #3c3836; 
-  --window-control-border-color: #282828; 
+  --success-green-light: #98971A40; 
+  --window-control-hover-bg: var(--color-bg-medium); 
+  --window-control-border-color: var(--color-bg-dark); 
 
   /* Shadows */
-  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 4px 12px var(--shadow-dark);
+
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY ============== */
+  /* ================================================= */
+
+  /* Gruvbox Shadows are typically soft and dark */
+  --shadow-dark: rgba(0, 0, 0, 0.6);          /* Stronger shadow for raised elements */
+  --shadow-medium: rgba(0, 0, 0, 0.4);        /* Standard shadow for subtle depth */
+  --shadow-subtle-white: rgba(255, 255, 255, 0.05); /* Very faint highlight on dark surfaces */
+
+  --opacity-0: 0;
+  --opacity-08: 0.08;
+  --opacity-507: 0.5;
+  --opacity-555: 0.56;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  /* Custom Shadow Mappings */
+  --shadow-subtle: 0 1px 0 rgba(0, 0, 0, 0.2);
+  --shadow-panel: 0 4px 8px var(--shadow-dark);
+  --shadow-dockbar-buttons: 0 1px 3px var(--shadow-medium);
+  --shadow-window-controls: none;
+  --shadow-window-controls-hover: none;
+  --shadow-notes-buttons: none;
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--color-bg-highlight);
+  --shadow-neumorphic-outset-large: 0 3px 6px var(--shadow-medium);
+  --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.8);
+
+  /* DSEG Font Shadows (Using Gruvbox FG) */
+  --dseg-shadow-soft: rgba(235, 219, 178, 0.15); /* Lightest FG with opacity */
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES ================ */
+  /* ================================================= */
+
+  --font-family-default: "Roboto", sans-serif;
+  --font-family-system: var(--font-family-default);
 }

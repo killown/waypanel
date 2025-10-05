@@ -5,5 +5,5 @@
  * This section defines a central palette and reusable styles
  * to maintain consistency and make future changes easier.
  */
-@import url("themes/gnome.css");
+@import url("themes/macos-dark.css");
 @import url("themes/base.css");

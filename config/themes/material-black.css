@@ -1,53 +1,118 @@
+/* ================================================= */
+/* ==== MATERIAL BLACK THEME ADAPTED (DARK ROOT) === */
+/* ================================================= */
+
 :root {
   /* ================================================= */
   /* ==== MATERIAL BLACK PALETTE (Theme Specific) ==== */
   /* ================================================= */
-  --color-bg-dark: #000000; /* Pure Black (AMOLED Friendly) */
-  --color-bg-medium: #0d0d0d; /* Low Elevation Surfaces */
-  --color-bg-light: #1e1e1e; /* High Elevation Surfaces, Hover */
+  --color-bg-dark: #000000;      /* Pure Black (AMOLED Friendly) */
+  --color-bg-medium: #0d0d0d;    /* Low Elevation Surfaces */
+  --color-bg-light: #1e1e1e;     /* High Elevation Surfaces, Hover */
   --color-bg-highlight: #333333; /* Borders, Active/Selected/Disabled bg */
 
-  --color-fg-main: #ffffff; /* Main Foreground (100% White) */
-  --color-fg-light: #b0b0b0; /* Secondary Foreground (~69% White/Medium-emphasis) */
-  --color-fg-dark: #707070; /* Muted Foreground (~44% White/Disabled text) */
+  --color-fg-main: #ffffff;      /* Main Foreground (100% White) */
+  --color-fg-light: #b0b0b0;     /* Secondary Foreground (~69% White/Medium-emphasis) */
+  --color-fg-dark: #707070;      /* Muted Foreground (~44% White/Disabled text) */
 
-  --color-red: #f44336; /* Material Red 500 */
-  --color-green: #4caf50; /* Material Green 500 */
-  --color-blue: #2196f3; /* Material Blue 500 (Primary Accent) */
-  --color-yellow: #ffeb3b; /* Material Yellow 500 */
-  --color-magenta: #9c27b0; /* Material Purple 500 */
-  --color-cyan: #00bcd4; /* Material Cyan 500 */
-  --color-orange: #ff9800; /* Material Orange 500 */
+  --color-red: #f44336;          /* Material Red 500 */
+  --color-green: #4caf50;        /* Material Green 500 */
+  --color-blue: #2196f3;         /* Material Blue 500 (Primary Accent) */
+  --color-yellow: #ffeb3b;       /* Material Yellow 500 */
+  --color-magenta: #9c27b0;      /* Material Purple 500 */
+  --color-cyan: #00bcd4;         /* Material Cyan 500 */
+  --color-orange: #ff9800;       /* Material Orange 500 */
+
+
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+
+  /* Primary Background Hierarchy (Used for main canvas/editor) */
+  --theme-bg-view-primary: var(--color-bg-dark);     /* #000000 (Main Body/Editor) */
+  --theme-bg-view-secondary: var(--color-bg-medium); /* #0d0d0d (Sidebars/Panels) */
+  --theme-bg-view-tertiary: var(--color-bg-light);   /* #1e1e1e (Raised Surfaces/Headers) */
+
+  /* Interactive/State Backgrounds */
+  --theme-bg-control-base: var(--color-bg-medium);   /* Input Fields/Control Borders/Subtle Hover */
+  --theme-bg-selected-primary: var(--color-blue);    /* #2196F3 (Primary Accent/Selection) */
+  --theme-bg-selected-secondary: var(--color-bg-light); /* #1e1e1e (Hover/Subtle Selection) */
+  --theme-bg-text-selection: #2196f340; /* Blue with transparency */
+  
+  /* Specialized Backgrounds */
+  --theme-bg-under-page: var(--color-bg-dark);     /* Deepest background (Pure Black) */
+  --theme-bg-alternating-row: var(--color-bg-medium);
+  --theme-bg-find-highlight: #ffeb3b40; /* Yellow with transparency (Search) */
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: var(--color-fg-main);    /* #ffffff (Primary Text) */
+  --theme-fg-label-secondary: var(--color-fg-light); /* #b0b0b0 (Secondary Text) */
+  --theme-fg-label-tertiary: var(--color-fg-dark);   /* #707070 (Disabled/Placeholder/Comments) */
+  --theme-fg-label-quaternary: #4a4a4a; /* Slightly darker than tertiary */
+  
+  /* Interactive Foreground */
+  --theme-fg-control-text: var(--color-fg-main);
+  --theme-fg-control-text-disabled: var(--color-fg-dark);
+  --theme-fg-link: var(--color-blue);           /* Material Blue for links */
+  --theme-fg-placeholder: var(--color-fg-dark);
+  --theme-fg-header-text: var(--color-fg-main);
+  
+  /* State Foreground */
+  --theme-fg-text-selected: var(--color-fg-main); /* White text on blue selection */
+  --theme-fg-text-alternate-selected: var(--color-bg-dark); /* Dark text on brighter background (not used much in this scheme) */
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: var(--color-bg-highlight); /* #333333 (Control borders/Separators) */
+  --theme-decoration-grid-line: var(--color-bg-highlight);
+  --theme-decoration-keyboard-focus: var(--color-blue); /* Blue - Focus Ring */
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* ================================================= */
+  
+  --theme-status-accent: var(--color-blue);    /* Blue (Primary Action Color) */
+  --theme-status-success: var(--color-green);  /* Green */
+  --theme-status-danger: var(--color-red);     /* Red */
+  --theme-status-warning: var(--color-yellow); /* Yellow */
+  --theme-status-highlight-virtual: var(--color-bg-light); /* #1e1e1e for virtual highlight */
+
 
   /* ================================================= */
   /* ====== SEMANTIC MAPPING (Used by Base CSS) ====== */
   /* ================================================= */
 
   /* Backgrounds */
-  --primary-bg: var(--color-bg-dark);
-  --secondary-bg: var(--color-bg-medium);
-  --tertiary-bg: var(--color-bg-light);
-  --header-border: var(--color-bg-highlight);
+  --primary-bg: var(--theme-bg-view-primary);
+  --secondary-bg: var(--theme-bg-view-secondary);
+  --tertiary-bg: var(--theme-bg-view-tertiary);
+  --header-border: var(--theme-decoration-separator);
 
   /* Foreground/Text */
-  --main-text: var(--color-fg-main);
-  --soft-text: var(--color-fg-light);
-  --calendar-other-month: var(--color-fg-dark);
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
 
-  /* Functional Colors (Used by the Base CSS) */
-  --accent-blue: var(--color-blue);
-  --success-green: var(--color-green);
-  --danger-red: var(--color-red);
-
+  /* Functional Colors */
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  
   /* Specific Color Variants */
-  --success-green-light: rgba(
-    76,
-    175,
-    80,
-    0.2
-  ); /* Lighter variant for subtle effect */
+  --success-green-light: rgba(76, 175, 80, 0.2); 
   --window-control-hover-bg: var(--color-bg-light);
   --window-control-border-color: var(--primary-bg);
+
+  /* Shadows (Re-mapped using the provided original variables) */
+  --shadow-elevated: 0 4px 8px var(--shadow-dark);
 
   /* DSEG Font Shadows */
   --dseg-shadow-soft: rgba(255, 255, 255, 0.15);
@@ -56,6 +121,7 @@
   /* ================================================= */
   /* =============== SHADOWS AND OPACITY ============== */
   /* ================================================= */
+  /* Keeping original shadow/opacity variables for compatibility */
 
   --shadow-dark: rgba(0, 0, 0, 0.8);
   --shadow-medium: rgba(0, 0, 0, 0.6);
@@ -72,7 +138,6 @@
 
   --shadow-subtle: 0 1px 0 rgba(0, 0, 0, 0.5);
   --shadow-panel: 0 4px 8px var(--shadow-dark);
-  /* Material Black uses higher saturation/less blur on shadows due to deep black background */
   --shadow-dockbar-buttons: none;
   --shadow-window-controls: none;
   --shadow-window-controls-hover: none;

@@ -1,22 +1,65 @@
 :root {
   /* ================================================= */
+  /* ==== CORE PALETTE (Theme Specific) - macOS ==== */
+  /* ================================================= */
+  
+  /* Core Backgrounds */
+  --color-bg-base: #1C1C1E;        /* View Primary (Content Body) */
+  --color-bg-surface: #2C2C2E;     /* View Secondary (Sidebar/Control Base) */
+  --color-bg-raised: #3A3A3C;      /* View Tertiary (Cards/Raised Elements) */
+  --color-bg-deep: #0D0D0D;        /* Under Page (Pure Black/Deepest) */
+  --color-bg-alt-row: #222224;     /* Alternating List Rows */
+  --color-bg-transparent-active: rgba(255, 255, 255, 0.1); /* Subtle hover/active transparency */
+
+  /* Core Foregrounds */
+  --color-fg-primary: #FFFFFF;     /* Label Primary */
+  --color-fg-secondary: #C7C7CC;   /* Label Secondary/Header Text */
+  --color-fg-muted: #8E8E93;       /* Label Tertiary/Disabled */
+  --color-fg-subtle: #6D6D70;      /* Label Quaternary */
+
+  /* Accent Colors (macOS System Colors) */
+  --color-accent-blue: #0A84FF;    /* Primary Accent (Active Window) */
+  --color-accent-gray: #636366;    /* Inactive Accent (Inactive Window) */
+  --color-status-success: #32D74B;
+  --color-status-danger: #FF453A;
+  --color-status-warning: #FFD60A;
+  --color-separator-line: #545458;
+  
+  /* Shadow Primitives */
+  --color-shadow-dark: rgba(0, 0, 0, 0.5);
+  --color-shadow-medium: rgba(0, 0, 0, 0.3);
+  --color-shadow-lighter: rgba(0, 0, 0, 0.15); /* For subtle, wide shadows */
+
+  /* ================================================= */
+  /* ========= TRANSPARENCY AND VIBRANCY (macOS) ===== */
+  /* ================================================= */
+  
+  /* Define the transparent colors used with backdrop-filter: blur() */
+  --color-vibrancy-dark-blur: rgba(28, 28, 30, 0.96);   /* Standard window/menu bar blur */
+  --color-vibrancy-light-blur: rgba(44, 44, 46, 0.9);   /* Sidebar/control panel blur */
+  --opacity-vibrancy-bar: 0.96;                         /* Specific opacity for main bars */
+
+
+  /* ================================================= */
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
   /* ================================================= */
 
   /* Primary Background Hierarchy */
-  --theme-bg-view-primary: #1C1C1E;
-  --theme-bg-view-secondary: #2C2C2E;
-  --theme-bg-view-tertiary: #3A3A3C;
+  --theme-bg-view-primary: var(--color-bg-base);
+  --theme-bg-view-secondary: var(--color-bg-surface);
+  --theme-bg-view-tertiary: var(--color-bg-raised);
+  --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); /* New: Used for Menu/Header with blur */
 
   /* Interactive/State Backgrounds */
-  --theme-bg-control-base: #3A3A3C;
-  --theme-bg-selected-primary: #0A84FF;
-  --theme-bg-selected-secondary: #404040;
-  --theme-bg-text-selection: #0A84FF80;
+  --theme-bg-control-base: var(--color-bg-raised);
+  --theme-bg-selected-primary: var(--color-accent-blue);
+  --theme-bg-selected-inactive: var(--color-accent-gray);   /* New: Selection color when window is not focused */
+  --theme-bg-selected-secondary: var(--color-bg-transparent-active); /* Using transparency for hover/subtle select */
+  --theme-bg-text-selection: #0A84FF80;   
   
   /* Specialized Backgrounds */
-  --theme-bg-under-page: #0D0D0D;
-  --theme-bg-alternating-row: #222224;
+  --theme-bg-under-page: var(--color-bg-deep);
+  --theme-bg-alternating-row: var(--color-bg-alt-row);
   --theme-bg-find-highlight: #FFD60A60;
 
 
@@ -24,41 +67,42 @@
   /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
   /* ================================================= */
 
-  --theme-fg-label-primary: #FFFFFF;
-  --theme-fg-label-secondary: #C7C7CC;
-  --theme-fg-label-tertiary: #8E8E93;
-  --theme-fg-label-quaternary: #6D6D70;
+  --theme-fg-label-primary: var(--color-fg-primary);
+  --theme-fg-label-secondary: var(--color-fg-secondary);
+  --theme-fg-label-tertiary: var(--color-fg-muted);
+  --theme-fg-label-quaternary: var(--color-fg-subtle);
   
   /* Interactive Foreground */
-  --theme-fg-control-text: #FFFFFF;
-  --theme-fg-control-text-disabled: #8E8E93;
-  --theme-fg-link: #0A84FF;
-  --theme-fg-placeholder: #8E8E93;
-  --theme-fg-header-text: #C7C7CC;
+  --theme-fg-control-text: var(--color-fg-primary);
+  --theme-fg-control-text-disabled: var(--color-fg-muted);
+  --theme-fg-link: var(--color-accent-blue);
+  --theme-fg-placeholder: var(--color-fg-muted);
+  --theme-fg-header-text: var(--color-fg-secondary);
   
   /* State Foreground */
-  --theme-fg-text-selected: #FFFFFF;
-  --theme-fg-text-alternate-selected: #FFFFFF;
+  --theme-fg-text-selected: var(--color-fg-primary);
+  --theme-fg-text-alternate-selected: var(--color-fg-primary); 
 
 
   /* ================================================= */
   /* ============= DECORATION & SEPARATORS ============= */
   /* ================================================= */
 
-  --theme-decoration-separator: #545458;
-  --theme-decoration-grid-line: #4D4D50;
-  --theme-decoration-keyboard-focus: #0A84FF;
+  --theme-decoration-separator: var(--color-separator-line);
+  --theme-decoration-grid-line: #4D4D50; 
+  --theme-decoration-keyboard-focus: var(--color-accent-blue);
 
 
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
   /* ================================================= */
   
-  --theme-status-accent: #0A84FF;
-  --theme-status-success: #32D74B;
-  --theme-status-danger: #FF453A;
-  --theme-status-warning: #FFD60A;
-  --theme-status-highlight-virtual: #3A3A3C;
+  --theme-status-accent: var(--color-accent-blue);
+  --theme-status-accent-inactive: var(--color-accent-gray); /* New: Inactive accent for controls */
+  --theme-status-success: var(--color-status-success);
+  --theme-status-danger: var(--color-status-danger);
+  --theme-status-warning: var(--color-status-warning);
+  --theme-status-highlight-virtual: var(--color-bg-raised);
 
 
   /* ================================================= */
@@ -83,7 +127,7 @@
   
   /* Specific Color Variants */
   --success-green-light: rgba(50, 215, 75, 0.2);
-  --window-control-hover-bg: var(--theme-bg-control-base);
+  --window-control-hover-bg: var(--color-bg-transparent-active); /* Using the transparent active color */
   --window-control-border-color: var(--primary-bg);
 
   /* DSEG Font Shadows */
@@ -91,13 +135,13 @@
   --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
 
   /* ================================================= */
-  /* =============== SHADOWS AND OPACITY ============== */
+  /* =============== SHADOWS AND OPACITY (macOS) ====== */
   /* ================================================= */
 
   /* Raw Shadow Primitives */
-  --shadow-dark: rgba(0, 0, 0, 0.5);
-  --shadow-medium: rgba(0, 0, 0, 0.3);
-  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.08);
+  --shadow-dark: var(--color-shadow-dark);
+  --shadow-medium: var(--color-shadow-medium);
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.08); /* White top line for glass effect */
 
   /* Opacity */
   --opacity-0: 0.0;
@@ -110,12 +154,16 @@
   --opacity-60: 0.6;
 
   /* Shadow Styles (Generalised by prominence/function) */
-  --shadow-subtle: 0 1px 0 var(--shadow-subtle-white); /* Faint separator/highlight */
-  --shadow-elevated: 0 4px 12px var(--shadow-medium); /* For pop-ups, modals, or primary elevated panels */
-  --shadow-button-flat: none; /* Shadow style for flat, zero-depth buttons/controls */
-  --shadow-control-small: none; /* Shadow style for small UI controls (e.g., traffic lights, icons) */
-  --shadow-control-small-hover: none; /* Hover state for small controls */
-  --shadow-element-minimal: none; /* General minimal/zero shadow for components */
+  --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
+  --shadow-elevated: 0 4px 12px var(--shadow-medium);
+  --shadow-button-flat: none;
+  --shadow-control-small: none;
+  --shadow-control-small-hover: none;
+  --shadow-element-minimal: none;
+
+  /* macOS-Specific Shadows */
+  --shadow-window-float: 0 10px 30px var(--color-shadow-lighter), 0 0 0 1px rgba(255, 255, 255, 0.05); /* Soft, wide shadow for floating panels */
+  --shadow-menubar-separator: inset 0 -1px 0 rgba(255, 255, 255, 0.05); /* Subtle white line at bottom of headers */
   
   /* Neumorphic/Inset Inversion */
   --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 255, 255, 0.1);

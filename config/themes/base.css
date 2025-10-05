@@ -154,10 +154,10 @@ popover.background > arrow {
 
 /* Panel and Taskbar */
 .top-panel {
-  background-color: var(--primary-bg);
+  background-color: var(--shadow-dark);
   color: var(--main-text);
   font-weight: 400;
-  border-radius: 7px;
+  border-radius: none;
   box-shadow:
     inset 3px 3px 5px var(--shadow-subtle-white),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
@@ -172,8 +172,13 @@ popover.background > arrow {
 
 .left-panel {
   -gtk-icon-size: 48px;
-  margin-left: 5px;
-  background: transparent;
+  background: var(--shadow-dark);
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  box-shadow:
+    inset 3px 3px 5px var(--shadow-subtle-white),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    2px 2px 5px var(--shadow-medium);
 }
 
 .right-panel {
@@ -188,13 +193,12 @@ popover.background > arrow {
 }
 
 .dockbar-buttons {
-  background: var(--secondary-bg);
   border-radius: 10px;
-  padding: 7px;
+  padding: 5px, 5px, 10px, 5px;
   box-shadow: var(--shadow-button-flat); /* Generalized shadow */
   -gtk-icon-size: 42px;
   font-size: 16px;
-  color: var(--main-text);
+  color: transparent;
 }
 
 .dockbar-buttons:hover {
@@ -204,19 +208,19 @@ popover.background > arrow {
 }
 
 .box-widgets {
-  margin: -6px;
+  margin: -7px;
   padding: 1px 3px 3px 1px;
 }
 
 .top-panel-box-widgets-left {
   background: var(--secondary-bg);
-  border-radius: 7px;
+  border-top-right-radius: 10px;
   box-shadow:
     inset 3px 3px 5px var(--shadow-subtle-white),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
     2px 2px 5px var(--shadow-medium);
   font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
-  font-size: 22px;
+  font-size: 20px;
   color: var(--main-text);
   text-decoration: none;
   text-shadow:
@@ -229,7 +233,7 @@ popover.background > arrow {
   border-radius: 7px;
   padding: -5px;
   margin-left: 5px;
-  margin-top: 3px;
+  margin-top: 1px;
   box-shadow:
     inset 3px 3px 5px var(--shadow-subtle-white),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
@@ -294,8 +298,8 @@ popover.background > arrow {
 .window-title-content {
   background: var(--secondary-bg);
   border-radius: 7px;
-  padding: 3px;
-  margin-left: 5px;
+  padding: 2px;
+  margin-left: 10px;
   margin-top: 4px;
   box-shadow:
     inset 3px 3px 5px var(--shadow-subtle-white),
@@ -767,9 +771,11 @@ popover.background > arrow {
   color: var(--main-text);
 }
 
+/* icons from systray box */
 .image-button {
   -gtk-icon-size: 16px;
   color: var(--main-text);
+  margin-left: 3px;
   background-color: transparent;
 }
 
