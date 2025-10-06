@@ -105,10 +105,10 @@ def call_plugin_class():
             """
             proc = None
             try:
-                proc = await self.asyncio.create_self.subprocess_exec(
+                proc = await self.asyncio.create_subprocess_exec(
                     "checkupdates",
-                    stdout=self.asyncio.self.subprocess.PIPE,
-                    stderr=self.asyncio.self.subprocess.DEVNULL,
+                    stdout=self.subprocess.PIPE,
+                    stderr=self.subprocess.DEVNULL,
                 )
                 stdout, _ = await self.asyncio.wait_for(proc.communicate(), timeout=10)
                 lines = stdout.decode("utf-8").strip().splitlines()
@@ -213,7 +213,7 @@ def call_plugin_class():
                call is maintained.
             2. **Concurrency Refactoring**: All usage of the old `global_loop.create_task()` has been replaced with the robust `self.run_in_async_task()`. The initial and periodic check scheduling is moved to the `on_start()` lifecycle hook.
             3. **GTK Thread Safety**: The `_update_ui` method, which manipulates GTK widgets, is now called exclusively using `self.schedule_in_gtk_thread()` from the asynchronous `_check_updates` method. This guarantees UI stability by ensuring GTK calls always happen on the main thread.
-            4. **Asynchronous Update Check**: The `_check_updates` method continues to use ` self.asyncio.create_self.subprocess_exec` to run the `checkupdates` command non-blockingly.
+            4. **Asynchronous Update Check**: The `_check_updates` method continues to use ` self.asyncio.create_subprocess_exec` to run the `checkupdates` command non-blockingly.
             5. **Process and State Management**: When the "Update Now" button is clicked, it launches a terminal process (`sudo pacman -Syu`) and uses `self.glib.timeout_add_seconds` to synchronously monitor the terminal's PID. Once the process is finished, a new update check is automatically triggered via `self.run_in_async_task(self._manual_refresh())`.
             """
             return self.code_explanation.__doc__
