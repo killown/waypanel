@@ -93,10 +93,10 @@ def call_plugin_class():
                 self._attach_timer_id = None
 
                 current_width = self.obj.top_panel_grid_right.get_width()
-                next_delay_ms = 500
-                if self.last_grid_width != current_width:
+                next_delay_ms = 1000
+                if self.last_grid_width < current_width:
                     self.last_grid_width = current_width
-                    next_delay_ms = 1000
+                    next_delay_ms = 1500
                     self._attach_timer_id = self.glib.timeout_add(
                         next_delay_ms, attach_deferred_widgets
                     )
@@ -129,7 +129,7 @@ def call_plugin_class():
                 return False
 
             ## Removing this method, may lead to panel crashes during startup.
-            self._attach_timer_id = self.glib.timeout_add(100, attach_deferred_widgets)
+            self._attach_timer_id = self.glib.timeout_add(500, attach_deferred_widgets)
 
             self.obj.top_panel_box_center = self.gtk.Box()
             self.obj.top_panel_box_full = self.gtk.Grid()
