@@ -66,7 +66,7 @@ def call_plugin_class():
             ]
             for panel, action in actions:
                 if exclusive:
-                    self.update_widget_safely(action, panel, size)
+                    self.update_widget_safely(action, panel)
                 else:
                     self.update_widget_safely(action, panel)
             state_value = True if exclusive else False
