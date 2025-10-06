@@ -41,7 +41,6 @@ class GtkHelpers:
         self.config_handler = ConfigHandler(panel_instance)
         if hasattr(panel_instance, "ipc"):
             self.command = CommandRunner(panel_instance)
-
         self.app_css_provider = None
         self.css_load_id = None
 
@@ -53,7 +52,6 @@ class GtkHelpers:
                 self.app_css_provider,
                 Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
             )
-
         try:
             self.app_css_provider.load_from_file(
                 Gio.File.new_for_path(self.config_handler.style_css_config)
@@ -1082,3 +1080,21 @@ class GtkHelpers:
         """
         if class_name in widget.get_css_classes():
             widget.remove_css_class(class_name)
+
+    def clear_listbox(self, listbox: Gtk.ListBox):
+        """
+        Clears all children from a Gtk.ListBox and explicitly unparents them.
+        Args:
+            listbox (Gtk.ListBox | None): The listbox widget to clear.
+        """
+        try:
+            while True:
+                row = listbox.get_row_at_index(0)
+                if row is None:
+                    break
+                if not isinstance(row, Gtk.ListBoxRow):
+                    break
+                listbox.remove(row)
+                row.unparent()
+        except Exception as e:
+            self.logger.exception(f"Gtk Helper failed to clear Gtk.ListBox: {e}")

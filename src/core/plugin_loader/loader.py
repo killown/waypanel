@@ -190,8 +190,6 @@ class PluginLoader:
             self.logger.info(
                 f"Plugin loader: Batch import and validation complete for all {len(self.plugins_to_process)} plugins."
             )
-            GLib.idle_add(self._initialize_sorted_plugins)
-            GLib.idle_add(self._update_plugin_configuration, self.valid_plugins)
             self.plugins_to_process = []
             self.plugins_to_process_index = 0
             return False
@@ -210,11 +208,16 @@ class PluginLoader:
                     self.logger.error(
                         f"Module {module_name} is missing required functions. Skipping."
                     )
+                    # FIX: Unload module
+                    if module_path in sys.modules:
+                        del sys.modules[module_path]
                     continue
                 if not is_plugin_enabled:
                     self.data_helper.get_current_time_with_ms(
                         f"Skipping disabled plugin: {module_name}"
                     )
+                    if module_path in sys.modules:
+                        del sys.modules[module_path]
                     continue
                 self.plugins_import[module_name] = module_path
                 self.logger.debug(f"Registered plugin: {module_name} -> {module_path}")
@@ -225,6 +228,8 @@ class PluginLoader:
                         message=f"Plugin '{module_name}' has an invalid DEPS list. Skipping.",
                         level="error",
                     )
+                    if module_path in sys.modules:
+                        del sys.modules[module_path]
                     continue
                 position_result = module.get_plugin_placement(self.panel_instance)  # pyright: ignore
                 position = "background"
@@ -244,9 +249,12 @@ class PluginLoader:
                             self.logger.error(
                                 f"Invalid position result for plugin {module_name}. Skipping."
                             )
+                            if module_path in sys.modules:
+                                del sys.modules[module_path]
                             continue
                 self.valid_plugins.append(module_name)
                 self.plugin_metadata.append((module, position, order, priority))
+
             except Exception as e:
                 self.logger.error(f"Failed to load or validate plugin {module_name}:")
                 print(f" {e}:\n{traceback.format_exc()}")
@@ -467,8 +475,15 @@ class PluginLoader:
         else:
             self.plugins_to_initialize = []
             self.plugins_to_initialize_index = 0
-            self.logger.info("Plugin initialization complete.")
-            self.panel_instance.plugins_startup_finished = True
+
+            def run_once():
+                """Some plugins may take a moment to load, add a brief delay to mark them as finished."""
+                self.panel_instance.plugins_startup_finished = True
+                self.logger.info("Plugin initialization complete.")
+                return False
+
+            GLib.timeout_add(300, run_once)
+
             return False
 
     def _initialize_single_plugin(self, module, position, order, priority):

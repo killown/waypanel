@@ -2,21 +2,12 @@ ENABLE_PLUGIN = True
 
 
 def get_plugin_placement(panel_instance):
-    """
-    Defines the placement and order of the plugin on the panel.
-    """
     position = "top-panel-systray"
     order = 2
     return position, order
 
 
 def call_plugin_classes():
-    """
-    Factory function for the plugin.
-    - Deferredly imports all dependencies (aiosqlite, GTK, BasePlugin).
-    - Defines the NotesManager class and the get_notes_sync helper function.
-    - Defines and returns the MenuNotes class.
-    """
     import aiosqlite
     import datetime
     import asyncio
@@ -30,7 +21,6 @@ def call_plugin_classes():
             self.db_path = db_path
 
         async def initialize_db(self):
-            """Create notes table if it doesn't exist"""
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute("""
                     CREATE TABLE IF NOT EXISTS notes (
@@ -42,7 +32,6 @@ def call_plugin_classes():
                 await db.commit()
 
         async def get_notes(self) -> list[tuple[int, str]]:
-            """Returns all notes as (id, content) tuples"""
             async with aiosqlite.connect(self.db_path) as db:
                 cursor = await db.execute(
                     "SELECT id, content FROM notes ORDER BY timestamp DESC"
@@ -50,19 +39,16 @@ def call_plugin_classes():
                 return await cursor.fetchall()  # pyright: ignore
 
         async def add_note(self, content: str):
-            """Add a new note"""
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute("INSERT INTO notes (content) VALUES (?)", (content,))
                 await db.commit()
 
         async def delete_note(self, note_id: int):
-            """Delete a note by ID"""
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute("DELETE FROM notes WHERE id = ?", (note_id,))
                 await db.commit()
 
         async def edit_note(self, note_id: int, new_content: str):
-            """Update the content of a note by ID"""
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute(
                     "UPDATE notes SET content = ?, timestamp = CURRENT_TIMESTAMP WHERE id = ?",
@@ -71,14 +57,11 @@ def call_plugin_classes():
                 await db.commit()
 
         async def clear_notes(self):
-            """Delete all notes"""
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute("DELETE FROM notes")
                 await db.commit()
 
     def get_notes_sync(path_handler, db_path) -> List[Tuple[int, str]]:
-        """Sync wrapper for getting notes"""
-
         async def _fetch_notes():
             manager = NotesManager(path_handler, db_path)
             await manager.initialize_db()
@@ -103,7 +86,6 @@ def call_plugin_classes():
             self.gtk_helper.add_cursor_effect(self.menubutton_notes)
 
         def create_popover_notes(self):
-            """Create the notes popover content"""
             self.popover_notes = Gtk.Popover.new()
             self.popover_notes.set_has_arrow(False)
             self.popover_notes.connect("closed", self.popover_is_closed)
@@ -148,12 +130,11 @@ def call_plugin_classes():
             self.scrolled_window.set_child(self.listbox)
             self.main_box.append(self.scrolled_window)
             self.popover_notes.set_child(self.main_box)
-            self.run_in_thread(self.update_notes_list)
+            self.run_in_thread(self.update_notes_list)  # Initial list population
             self.popover_notes.set_parent(self.menubutton_notes)
             return self.popover_notes
 
         def clear_notes(self, *_):
-            """Handle clearing all notes with a GTK4 confirmation dialog"""
             dialog = Gtk.AlertDialog(
                 message="Clear all notes?",
                 detail="This will permanently delete all your notes. Are you sure?",
@@ -166,11 +147,9 @@ def call_plugin_classes():
             )
 
         def on_clear_confirmation_response(self, dialog, result, *_):
-            """Callback for the AlertDialog response"""
             try:
                 response = dialog.choose_finish(result)
                 if response == 1:
-                    """Handle clearing all notes"""
                     asyncio.run(self.async_clear_notes())
                     self.update_notes_list()
                     self.scrolled_window.set_min_content_height(50)
@@ -178,9 +157,9 @@ def call_plugin_classes():
                 self.logger.error(f"Dialog error: {e}")
 
         def update_notes_list(self):
-            """Update the list of notes in the popover, adding the edit button"""
             if self.listbox is not None:
-                self.listbox.remove_all()
+                self._gtk_helper.clear_listbox(self.listbox)
+
             self.is_editing = False
             self.note_row_widgets = {}
             notes = get_notes_sync(self.path_handler, self.db_path)
@@ -258,7 +237,6 @@ def call_plugin_classes():
                 }
 
         def on_start_edit_note(self, button, note_id):
-            """Replaces the label with an entry to start editing the note."""
             if self.is_editing:
                 return
             if note_id not in self.note_row_widgets:
@@ -268,7 +246,7 @@ def call_plugin_classes():
             widgets = self.note_row_widgets[note_id]
             hbox = widgets["hbox"]
             old_label = widgets["label"]
-            initial_text = old_label.original_content  # pyright: ignore
+            initial_text = old_label.original_content
             edit_entry = Gtk.Entry.new()
             edit_entry.set_text(initial_text)
             edit_entry.set_hexpand(True)
@@ -283,7 +261,6 @@ def call_plugin_classes():
             widgets["edit_entry"] = edit_entry
 
         def on_finish_edit_note(self, entry, note_id, widgets):
-            """Commits the edited note content to the database and reverts the UI."""
             new_content_message = entry.get_text().strip()
             if not new_content_message:
                 self.is_editing = False
@@ -296,17 +273,14 @@ def call_plugin_classes():
             self.update_notes_list()
 
         async def async_edit_note(self, note_id: int, new_content: str):
-            """Async helper to edit a note"""
             await self.notes_manager.initialize_db()
             await self.notes_manager.edit_note(note_id, new_content)
 
         async def async_add_note(self, content):
-            """Async helper to add a note"""
             await self.notes_manager.initialize_db()
             await self.notes_manager.add_note(content)
 
         def on_add_note(self, *_):
-            """Handle adding a new note with timestamp"""
             content = self.entry_add_note.get_text().strip()
             if content and not self.is_editing:
                 now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -316,12 +290,10 @@ def call_plugin_classes():
                 self.update_notes_list()
 
         async def async_delete_note(self, note_id):
-            """Async helper to delete a note"""
             await self.notes_manager.initialize_db()
             await self.notes_manager.delete_note(note_id)
 
         def on_delete_note(self, button):
-            """Handle deleting a note"""
             if self.is_editing:
                 return
             if button not in self.find_text_using_button:
@@ -334,16 +306,15 @@ def call_plugin_classes():
                 self.update_notes_list()
 
         async def async_clear_notes(self):
-            """Async helper to clear all notes"""
             await self.notes_manager.initialize_db()
             await self.notes_manager.clear_notes()
 
         def open_popover_notes(self, *_):
-            """Handle opening the notes popover"""
             if self.popover_notes and self.popover_notes.is_visible():
                 self.popover_notes.popdown()
             elif self.popover_notes and not self.popover_notes.is_visible():
-                self.update_notes_list()
+                # Removed self.update_notes_list() to prevent clearing/reloading on every open.
+                # The list now persists between popover opens/closes.
                 self.popover_notes.popup()
             else:
                 self.popover_notes = self.create_popover_notes()
@@ -387,46 +358,15 @@ def call_plugin_classes():
             return search_text in row_text  # pyright: ignore
 
         def about(self):
-            """
-            A plugin that provides a simple note-taking utility, allowing users
-            to add, delete, view, and **edit** notes directly from the panel.
-            The notes are stored in an SQLite database.
-            """
             return self.about.__doc__
 
         def code_explanation(self):
-            """
-            This plugin serves as a persistent note-taking tool that integrates
-            seamlessly into the `waypanel` application.
-            Its core logic is built around **asynchronous database management,
-            dynamic UI manipulation, and user interaction**:
-            1.  **Database Management**: The plugin uses `aiosqlite` to handle
-                all database operations asynchronously. It now includes an `edit_note`
-                method to update existing notes, and updates the timestamp on edit.
-            2.  **Timestamp Fixes**: The logic in `update_notes_list`, `on_add_note`,
-                and `on_finish_edit_note` has been unified to use the space-separated
-                format: **"YYYY-MM-DD HH:MM:SS <content>"**. This allows the display
-                logic to correctly use `string.split()` to isolate the content
-                starting from the third element (`parts[2:]`).
-            3.  **Dynamic UI**: The `update_notes_list` method dynamically builds
-                each note row with an **Edit button** and stores only the note
-                message in the `original_content` attribute.
-            4.  **Editing Workflow**: The `on_start_edit_note` method swaps the
-                static `Gtk.Label` for a responsive `Gtk.Entry` widget, using the
-                clean content (`original_content`) for initialization.
-                The `on_finish_edit_note` commits the changes and refreshes the list.
-            5.  **Search Filtering**: `on_filter_invalidate` now correctly searches
-                against the clean, timestamp-less content stored in `original_content`.
-            """
             return self.code_explanation.__doc__
 
     return MenuNotes
 
 
 def initialize_plugin(panel_instance):
-    """
-    Initializes and returns the plugin instance using the deferred factory function.
-    """
     if ENABLE_PLUGIN:
         MenuNotes_Class = call_plugin_classes()
         notes = MenuNotes_Class(panel_instance)

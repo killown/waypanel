@@ -318,7 +318,7 @@ def main():
         )
 
     print("[INFO] Starting application...")
-    cmd = [os.path.join(VENV_BIN, "python"), MAIN_PY]
+    cmd = [os.path.join(VENV_BIN, "python"), "-O", MAIN_PY]
 
     subprocess.run(cmd, check=True)
 

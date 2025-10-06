@@ -2,6 +2,11 @@ ENABLE_PLUGIN = True
 
 
 def get_plugin_placement(panel_instance):
+    """
+    Initialize the plugin.
+    Args:
+        panel_instance: The main panel object from panel.py
+    """
     position = "top-panel"
     return position, 1, 1
 
@@ -32,6 +37,8 @@ def call_plugin_class():
                                 providing access to shared resources and widgets.
             """
             super().__init__(panel_instance)
+            # FIX: Flag to ensure deferred widgets are attached only once
+            self._deferred_widgets_attached = False
             self._setup_panel_boxes()
             self.add_css_class()
             self.is_top_panel_ready = False
@@ -44,13 +51,15 @@ def call_plugin_class():
             This centralizes the self.gtk.Grid.attach_next_to call, allowing callers to easily
             specify any self.gtk.PositionType (LEFT, RIGHT, TOP, BOTTOM).
             """
-            grid.attach_next_to(
-                widget_to_attach,
-                relative_widget,
-                position_type,
-                width,
-                height,
-            )
+            # FIX: Only attach if the widget does not have a parent yet.
+            if widget_to_attach.get_parent() is None:
+                grid.attach_next_to(
+                    widget_to_attach,
+                    relative_widget,
+                    position_type,
+                    width,
+                    height,
+                )
 
         def _setup_panel_boxes(self):
             """Setup panel boxes and related configurations."""
@@ -92,20 +101,26 @@ def call_plugin_class():
                 """
                 self._attach_timer_id = None
 
+                # FIX: Exit early if already attached
+                if self._deferred_widgets_attached:
+                    return False
+
                 current_width = self.obj.top_panel_grid_right.get_width()
-                next_delay_ms = 1000
+                next_delay_ms = 500
                 if self.last_grid_width < current_width:
                     self.last_grid_width = current_width
-                    next_delay_ms = 1500
                     self._attach_timer_id = self.glib.timeout_add(
                         next_delay_ms, attach_deferred_widgets
                     )
-                    return False
+                    return True
 
                 if self._panel_instance.plugins_startup_finished:
-                    self.obj.top_panel_grid_right.attach(
-                        self.obj.top_panel_box_right, 1, 0, 1, 2
-                    )
+                    # FIX: Check if widget is already attached before calling attach
+                    if self.obj.top_panel_box_right.get_parent() is None:
+                        self.obj.top_panel_grid_right.attach(
+                            self.obj.top_panel_box_right, 1, 0, 1, 2
+                        )
+
                     self._attach_widget_to_grid_next_to(
                         self.obj.top_panel_grid_right,
                         self.obj.top_panel_box_systray,
@@ -122,15 +137,16 @@ def call_plugin_class():
                         1,
                         2,
                     )
+                    # FIX: Set flag to prevent future re-attachments
+                    self._deferred_widgets_attached = True
                     return False
+
                 self._attach_timer_id = self.glib.timeout_add(
                     next_delay_ms, attach_deferred_widgets
                 )
-                return False
+                return True
 
-            ## Removing this method, may lead to panel crashes during startup.
-            self._attach_timer_id = self.glib.timeout_add(500, attach_deferred_widgets)
-
+            self._attach_timer_id = self.glib.idle_add(attach_deferred_widgets)
             self.obj.top_panel_box_center = self.gtk.Box()
             self.obj.top_panel_box_full = self.gtk.Grid()
             self.obj.top_panel_box_full.set_column_homogeneous(True)

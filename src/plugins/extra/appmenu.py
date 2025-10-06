@@ -102,7 +102,6 @@ def call_plugin_class():
                 self.gtk.PolicyType.NEVER,
                 self.gtk.PolicyType.AUTOMATIC,
             )
-            self.scrolled_window.add_css_class("app-launcher-scrolled-window")
             self.main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
             self.main_box.add_css_class("app-launcher-main-box")
             self.searchbar = self.gtk.SearchEntry.new()
