@@ -21,7 +21,7 @@ gi.require_version("Gtk", "4.0")
 PRIMARY_OUTPUT_NAME = None
 
 
-def set_layer_position_exclusive(window, size) -> None:
+def set_layer_position_exclusive(window) -> None:
     """
     Sets the layer position exclusively for the given window.
     """
