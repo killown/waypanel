@@ -29,6 +29,11 @@
   border-radius: 10px;
 }
 
+.notification-panel-button {
+  -gtk-icon-size: 22px;
+  margin-top: 5px;
+}
+
 .notify-server-vbox {
   background-color: var(--primary-bg);
   color: var(--main-text);

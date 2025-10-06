@@ -24,13 +24,18 @@ popover.background > arrow {
 }
 
 
-/* GTK-box systray icons */
+/* GTK-box systray icons -- BEGIN */
 .image-button {
   -gtk-icon-size: 16px;
   color: var(--main-text);
   margin-left: 3px;
   background-color: transparent;
 }
+
+menubutton > button.toggle {
+  -gtk-icon-size: 16px;
+}
+/* GTK-box systray icons -- END */
 
 .text-button {
   border-radius: 0px;
