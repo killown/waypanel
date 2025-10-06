@@ -25,7 +25,9 @@
 .window-controls-box {
   border-style: solid;
   background: transparent;
-  margin: 5px;
+  margin-top: 7px;
+  margin-left: 5px;
+  margin-right: 5px;
 }
 
 .window-controls-close-button:hover,

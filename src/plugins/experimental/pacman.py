@@ -3,7 +3,7 @@ DEPS = ["top_panel"]
 
 
 def get_plugin_placement(panel_instance):
-    return "top-panel-center", 99, 99
+    return "top-panel-center", 1
 
 
 def initialize_plugin(panel_instance):
@@ -11,7 +11,7 @@ def initialize_plugin(panel_instance):
 
     ENABLE_PLUGIN = bool(shutil.which("pacman"))
 
-    if not ENABLE_PLUGIN:
+    if ENABLE_PLUGIN:
         plugin = call_plugin_class()
         return plugin(panel_instance)
 
@@ -30,18 +30,19 @@ def call_plugin_class():
             self.menu_button = self.gtk.MenuButton()
             self.button.connect("clicked", self._on_button_click)
             self.menu_button.set_icon_name("software-update-available-symbolic")
+            self.menu_button.add_css_class("update-checker-button")
             self.gtk_helper.add_cursor_effect(self.menu_button)
             self.main_widget = (self.menu_button, "append")
             self.update_count = 0
             self.is_checking = False
             self.terminal_pid = None
             self.count_label = None
-            self.run_in_thread(self._setup_popover)
-            self.run_in_thread(self._update_ui, 0)
 
         def on_start(self):
             """Hook called when the plugin is initialized. Starts the initial and periodic checks."""
             self.logger.info("Scheduling initial update check with BasePlugin helper.")
+            self.run_in_thread(self._setup_popover)
+            self.run_in_thread(self._update_ui, 0)
             self.run_in_async_task(self._manual_refresh())
             self.glib.timeout_add_seconds(3600, self._check_updates_periodically)
 
