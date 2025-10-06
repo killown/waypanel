@@ -16,19 +16,27 @@
   --color-fg-secondary: #C7C7CC;   /* Label Secondary/Header Text */
   --color-fg-muted: #8E8E93;       /* Label Tertiary/Disabled */
   --color-fg-subtle: #6D6D70;      /* Label Quaternary */
+  --color-fg-inverse: #000000;     /* New: For text on bright/accent backgrounds */
 
   /* Accent Colors (macOS System Colors) */
   --color-accent-blue: #0A84FF;    /* Primary Accent (Active Window) */
+  --color-accent-blue-dark: #007AFF; /* New: Slightly darker for pressed state */
   --color-accent-gray: #636366;    /* Inactive Accent (Inactive Window) */
   --color-status-success: #32D74B;
   --color-status-danger: #FF453A;
   --color-status-warning: #FFD60A;
   --color-separator-line: #545458;
   
+  /* Status Color Backgrounds (New: For notifications/badges) */
+  --color-status-success-bg: rgba(50, 215, 75, 0.2);
+  --color-status-danger-bg: rgba(255, 69, 58, 0.2);
+  --color-status-warning-bg: rgba(255, 214, 10, 0.2);
+
   /* Shadow Primitives */
   --color-shadow-dark: rgba(0, 0, 0, 0.5);
   --color-shadow-medium: rgba(0, 0, 0, 0.3);
   --color-shadow-lighter: rgba(0, 0, 0, 0.15); /* For subtle, wide shadows */
+
 
   /* ================================================= */
   /* ========= TRANSPARENCY AND VIBRANCY (macOS) ===== */
@@ -53,8 +61,8 @@
   /* Interactive/State Backgrounds */
   --theme-bg-control-base: var(--color-bg-raised);
   --theme-bg-selected-primary: var(--color-accent-blue);
-  --theme-bg-selected-inactive: var(--color-accent-gray);   /* New: Selection color when window is not focused */
-  --theme-bg-selected-secondary: var(--color-bg-transparent-active); /* Using transparency for hover/subtle select */
+  --theme-bg-selected-inactive: var(--color-accent-gray);
+  --theme-bg-selected-secondary: var(--color-bg-transparent-active);
   --theme-bg-text-selection: #0A84FF80;   
   
   /* Specialized Backgrounds */
@@ -71,6 +79,7 @@
   --theme-fg-label-secondary: var(--color-fg-secondary);
   --theme-fg-label-tertiary: var(--color-fg-muted);
   --theme-fg-label-quaternary: var(--color-fg-subtle);
+  --theme-fg-label-inverse: var(--color-fg-inverse); /* New: For text on accent backgrounds */
   
   /* Interactive Foreground */
   --theme-fg-control-text: var(--color-fg-primary);
@@ -80,7 +89,7 @@
   --theme-fg-header-text: var(--color-fg-secondary);
   
   /* State Foreground */
-  --theme-fg-text-selected: var(--color-fg-primary);
+  --theme-fg-text-selected: var(--color-fg-primary); 
   --theme-fg-text-alternate-selected: var(--color-fg-primary); 
 
 
@@ -91,6 +100,7 @@
   --theme-decoration-separator: var(--color-separator-line);
   --theme-decoration-grid-line: #4D4D50; 
   --theme-decoration-keyboard-focus: var(--color-accent-blue);
+  --theme-decoration-border-control: var(--color-separator-line); /* New: For explicit thin borders */
 
 
   /* ================================================= */
@@ -98,7 +108,7 @@
   /* ================================================= */
   
   --theme-status-accent: var(--color-accent-blue);
-  --theme-status-accent-inactive: var(--color-accent-gray); /* New: Inactive accent for controls */
+  --theme-status-accent-inactive: var(--color-accent-gray);
   --theme-status-success: var(--color-status-success);
   --theme-status-danger: var(--color-status-danger);
   --theme-status-warning: var(--color-status-warning);
@@ -126,8 +136,8 @@
   --danger-red: var(--theme-status-danger);
   
   /* Specific Color Variants */
-  --success-green-light: rgba(50, 215, 75, 0.2);
-  --window-control-hover-bg: var(--color-bg-transparent-active); /* Using the transparent active color */
+  --success-green-light: var(--color-status-success-bg); /* Mapped to new palette var */
+  --window-control-hover-bg: var(--color-bg-transparent-active);
   --window-control-border-color: var(--primary-bg);
 
   /* DSEG Font Shadows */
@@ -141,7 +151,7 @@
   /* Raw Shadow Primitives */
   --shadow-dark: var(--color-shadow-dark);
   --shadow-medium: var(--color-shadow-medium);
-  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.08); /* White top line for glass effect */
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.08);
 
   /* Opacity */
   --opacity-0: 0.0;
@@ -162,8 +172,8 @@
   --shadow-element-minimal: none;
 
   /* macOS-Specific Shadows */
-  --shadow-window-float: 0 10px 30px var(--color-shadow-lighter), 0 0 0 1px rgba(255, 255, 255, 0.05); /* Soft, wide shadow for floating panels */
-  --shadow-menubar-separator: inset 0 -1px 0 rgba(255, 255, 255, 0.05); /* Subtle white line at bottom of headers */
+  --shadow-window-float: 0 10px 30px var(--color-shadow-lighter), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-menubar-separator: inset 0 -1px 0 rgba(255, 255, 255, 0.05); 
   
   /* Neumorphic/Inset Inversion */
   --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
@@ -171,9 +181,22 @@
   --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.6);
 
   /* ================================================= */
+  /* ============= GEOMETRY & RADIUS (New) ============= */
+  /* ================================================= */
+  
+  --radius-xs: 4px;     /* Small controls/buttons (e.g., traffic lights) */
+  --radius-s: 6px;      /* Standard control radius/smaller elements */
+  --radius-m: 8px;      /* Primary element radius (e.g., list items) */
+  --radius-l: 10px;     /* Surface/Card radius */
+  --radius-xl: 12px;    /* Window/Popover radius */
+
+  /* ================================================= */
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
   --font-family-default: "SF Pro Text", "Helvetica Neue", "Roboto", sans-serif; 
   --font-family-system: var(--font-family-default);
+  --font-weight-regular: 400; /* New */
+  --font-weight-medium: 500;  /* New */
+  --font-weight-bold: 600;    /* New */
 }

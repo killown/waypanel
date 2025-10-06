@@ -1,4 +1,3 @@
-/* Base Styles */
 * {
   font-family: var(--font-family-default);
   color: var(--main-text);
@@ -17,7 +16,6 @@ popover.background > arrow {
     background-color: var(--primary-bg);
 }
 
-/* Control Center Components */
 .control-center-header {
   background-color: var(--secondary-bg);
   border-bottom: 1px solid var(--header-border);
@@ -35,7 +33,7 @@ popover.background > arrow {
 }
 
 .control-center-save-button:hover {
-  background-color: var(--success-green-light);
+  background-color: var(--success-green-light); 
   box-shadow: 0 4px 8px var(--shadow-dark);
 }
 
@@ -84,8 +82,8 @@ popover.background > arrow {
   margin: 15px 0;
   padding: 15px;
   box-shadow:
-    0 0 0 1px var(--shadow-subtle-white),
-    var(--shadow-subtle);
+    0 0 0 1px rgba(255, 255, 255, 0.08), 
+    0 1px 0 rgba(0, 0, 0, 0.5);          
 }
 
 .control-center-setting-row {
@@ -152,14 +150,12 @@ popover.background > arrow {
 .control-center-toggle-switch {
 }
 
-/* Panel and Taskbar */
 .top-panel {
   background-color: var(--shadow-dark);
   color: var(--main-text);
   font-weight: 400;
-  border-radius: none;
   box-shadow:
-    inset 3px 3px 5px var(--shadow-subtle-white),
+    inset 3px 3px 5px rgba(255, 255, 255, 0.08),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
     2px 2px 5px var(--shadow-medium);
   font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
@@ -176,7 +172,7 @@ popover.background > arrow {
   border-top-right-radius: 10px;
   border-bottom-right-radius: 10px;
   box-shadow:
-    inset 3px 3px 5px var(--shadow-subtle-white),
+    inset 3px 3px 5px rgba(255, 255, 255, 0.08),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
     2px 2px 5px var(--shadow-medium);
 }
@@ -195,7 +191,6 @@ popover.background > arrow {
 .dockbar-buttons {
   border-radius: 10px;
   padding: 5px, 5px, 10px, 5px;
-  box-shadow: var(--shadow-button-flat); /* Generalized shadow */
   -gtk-icon-size: 42px;
   font-size: 16px;
   color: transparent;
@@ -216,7 +211,7 @@ popover.background > arrow {
   background: var(--secondary-bg);
   border-top-right-radius: 10px;
   box-shadow:
-    inset 3px 3px 5px var(--shadow-subtle-white),
+    inset 3px 3px 5px rgba(255, 255, 255, 0.08),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
     2px 2px 5px var(--shadow-medium);
   font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
@@ -231,11 +226,10 @@ popover.background > arrow {
 .top-panel-box-systray {
   background: var(--secondary-bg);
   border-radius: 7px;
-  padding: -5px;
   margin-left: 5px;
   margin-top: 1px;
   box-shadow:
-    inset 3px 3px 5px var(--shadow-subtle-white),
+    inset 3px 3px 5px rgba(255, 255, 255, 0.08),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
     2px 2px 5px var(--shadow-medium);
   font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
@@ -261,7 +255,7 @@ popover.background > arrow {
   background: var(--secondary-bg);
   border-radius: 7px;
   box-shadow:
-    inset 3px 3px 5px var(--shadow-subtle-white),
+    inset 3px 3px 5px rgba(255, 255, 255, 0.08),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
     2px 2px 5px var(--shadow-medium);
   font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
@@ -294,7 +288,6 @@ popover.background > arrow {
   text-shadow: 0.006em 0.006em 0.007em var(--dseg-shadow-dark);
 }
 
-/* Window Decorations */
 .window-title-content {
   background: var(--secondary-bg);
   border-radius: 7px;
@@ -302,7 +295,7 @@ popover.background > arrow {
   margin-left: 10px;
   margin-top: 4px;
   box-shadow:
-    inset 3px 3px 5px var(--shadow-subtle-white),
+    inset 3px 3px 5px rgba(255, 255, 255, 0.08),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
     2px 2px 5px var(--shadow-medium);
   font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
@@ -336,16 +329,15 @@ popover.background > arrow {
 .window-controls-maximize-button:hover,
 .window-controls-minimize-button:hover {
   background-color: var(--window-control-hover-bg);
-  box-shadow: var(--shadow-control-small-hover); /* Generalized shadow */
+  box-shadow: var(--shadow-control-small-hover);
   transform: scale(1.05);
   transition: all 0.2s ease-in-out;
 }
 
 .window-controls-close-button {
   -gtk-icon-size: 20px;
-  background: linear-gradient(145deg, var(--danger-red), var(--secondary-bg));
-  background-color: var(--accent-blue);
-  box-shadow: var(--shadow-control-small); /* Generalized shadow */
+  background: linear-gradient(145deg, var(--danger-red), var(--secondary-bg)); 
+  box-shadow: var(--shadow-control-small);
   padding: 2px 8px 2px 8px;
   margin-left: 2px;
   margin-right: 1px;
@@ -358,8 +350,7 @@ popover.background > arrow {
 .window-controls-maximize-button {
   -gtk-icon-size: 20px;
   background: linear-gradient(145deg, var(--accent-blue), var(--secondary-bg));
-  background-color: var(--accent-blue);
-  box-shadow: var(--shadow-control-small); /* Generalized shadow */
+  box-shadow: var(--shadow-control-small);
   padding: 2px 8px 2px 8px;
   margin-left: 2px;
   margin-right: 1px;
@@ -372,8 +363,7 @@ popover.background > arrow {
 .window-controls-minimize-button {
   -gtk-icon-size: 20px;
   background: linear-gradient(145deg, var(--success-green), var(--secondary-bg));
-  background-color: var(--accent-blue);
-  box-shadow: var(--shadow-control-small); /* Generalized shadow */
+  box-shadow: var(--shadow-control-small);
   padding: 2px 8px 2px 8px;
   margin-left: 2px;
   margin-right: 1px;
@@ -383,7 +373,6 @@ popover.background > arrow {
   border-radius: 4px;
 }
 
-/* Tray & Clock */
 .tray_icon {
   background-color: var(--primary-bg);
   min-width: 24px;
@@ -401,7 +390,7 @@ popover.background > arrow {
   border-radius: 7px;
   padding: 5px;
   box-shadow:
-    inset 3px 3px 5px var(--shadow-subtle-white),
+    inset 3px 3px 5px rgba(255, 255, 255, 0.08),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
     2px 2px 5px var(--shadow-medium);
   font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
@@ -414,11 +403,11 @@ popover.background > arrow {
 }
 
 .clock-box {
-  background-color: linear-gradient(145deg, var(--primary-bg), var(--primary-bg));
+  background-color: transparent; 
 }
 
 .clock-button {
-  background-color: linear-gradient(145deg, var(--primary-bg), var(--primary-bg));
+  background-color: var(--primary-bg);
 }
 
 .weather-label {
@@ -428,32 +417,30 @@ popover.background > arrow {
   color: var(--success-green);
 }
 
-/* Notes Widget */
 .notes_button_clear.text-button {
   background-color: var(--danger-red);
   color: var(--main-text);
   border: none;
-  box-shadow: var(--shadow-element-minimal); /* Generalized shadow */
+  box-shadow: var(--shadow-element-minimal);
 }
 
 .notes_button_add.text-button {
   background-color: var(--success-green);
   color: var(--main-text);
   border: none;
-  box-shadow: var(--shadow-element-minimal); /* Generalized shadow */
+  box-shadow: var(--shadow-element-minimal);
 }
 
 .notes_button_delete.image-button {
   background-color: var(--danger-red);
   color: var(--main-text);
   border: none;
-  box-shadow: var(--shadow-element-minimal); /* Generalized shadow */
+  box-shadow: var(--shadow-element-minimal);
 }
 
-/* App Launcher */
 .app-launcher-popover {
-  background: var(--opacity-0);
-  background-color: var(--opacity-0);
+  background: transparent;
+  background-color: transparent;
 }
 
 .app-launcher-searchbar {
@@ -472,13 +459,13 @@ popover.background > arrow {
 }
 
 .app-launcher-vbox {
-  background: var(--opacity-0);
-  background-color: var(--opacity-0);
+  background: transparent;
+  background-color: transparent;
 }
 
 .app-launcher-scrolled-window {
-  background: var(--opacity-0);
-  background-color: var(--opacity-0);
+  background: transparent;
+  background-color: transparent;
 }
 
 .app-launcher-main-box {
@@ -493,7 +480,7 @@ popover.background > arrow {
   border-radius: 10px;
   box-shadow:
     2px 2px 4px rgba(0, 0, 0, 0.5),
-    -2px -2px 4px var(--shadow-subtle-white);
+    -2px -2px 4px rgba(255, 255, 255, 0.08);
   transition: all 0.2s ease-in-out;
 }
 
@@ -515,7 +502,6 @@ popover.background > arrow {
   color: var(--main-text);
 }
 
-/* System Dashboard */
 .system-popover {
   border: none;
 }
@@ -554,7 +540,7 @@ popover.background > arrow {
   padding: 8px 12px;
   box-shadow:
     inset 3px 3px 5px rgba(0, 0, 0, 0.5),
-    inset -3px -3px 5px var(--shadow-subtle-white);
+    inset -3px -3px 5px rgba(255, 255, 255, 0.08);
 }
 
 .bluetooth-dashboard-buttons:hover {
@@ -577,7 +563,7 @@ popover.background > arrow {
   padding: 8px 12px;
   box-shadow:
     5px 5px 10px var(--shadow-dark),
-    -5px -5px 10px var(--shadow-subtle-white);
+    -5px -5px 10px rgba(255, 255, 255, 0.08);
 }
 
 .bluetooth-dashboard-buttons-connected:hover {
@@ -589,7 +575,6 @@ popover.background > arrow {
   transition: all 0.2s ease-in-out;
 }
 
-/* Calendar Widget */
 .calendar-widget {
   background-color: var(--secondary-bg);
   color: var(--soft-text);
@@ -605,7 +590,7 @@ popover.background > arrow {
   padding: 5px;
   box-shadow:
     inset 2px 2px 5px rgba(0, 0, 0, 0.5),
-    inset -2px -2px 5px var(--shadow-subtle-white);
+    inset -2px -2px 5px rgba(255, 255, 255, 0.08);
 }
 
 .calendar-widget .header button {
@@ -633,7 +618,7 @@ popover.background > arrow {
   background-color: var(--primary-bg);
   box-shadow:
     inset 2px 2px 4px rgba(0, 0, 0, 0.6),
-    inset -2px -2px 4px var(--shadow-subtle-white);
+    inset -2px -2px 4px rgba(255, 255, 255, 0.08);
 }
 
 .calendar-widget .day.selected {
@@ -656,7 +641,6 @@ popover.background > arrow {
   color: var(--soft-text);
 }
 
-/* Network Manager */
 .network-manager-container {
   background-color: var(--primary-bg);
   color: var(--main-text);
@@ -706,7 +690,6 @@ popover.background > arrow {
   font-weight: bold;
 }
 
-/* Notifications */
 .notify-client-box {
   background-color: var(--accent-blue);
   border-radius: 10px;
@@ -748,7 +731,6 @@ popover.background > arrow {
   border-radius: 10px;
 }
 
-/* Volume Widget */
 .floating-volume-widget {
   background-color: var(--secondary-bg);
   box-shadow: 0 8px 15px var(--shadow-medium);
@@ -764,14 +746,12 @@ popover.background > arrow {
   color: var(--main-text);
 }
 
-/* Misc Buttons and Labels */
 .mullvad-header-label {
   font-weight: bold;
   font-size: 14px;
   color: var(--main-text);
 }
 
-/* icons from systray box */
 .image-button {
   -gtk-icon-size: 16px;
   color: var(--main-text);
@@ -792,7 +772,7 @@ popover.background > arrow {
   background-color: var(--danger-red);
   color: var(--main-text);
   border: none;
-  box-shadow: var(--shadow-element-minimal); /* Generalized shadow */
+  box-shadow: var(--shadow-element-minimal);
 }
 
 .close-button:hover {
@@ -825,7 +805,6 @@ popover.background > arrow {
   text-shadow: 0.006em 0.006em 0.007em var(--shadow-dark);
 }
 
-/* App and Places Launchers */
 .app-launcher-menu-button,
 .bookmarks-menu-button,
 .places-menu-button {
@@ -911,9 +890,8 @@ popover.background > arrow {
   color: var(--main-text);
 }
 
-/* Desktop */
 .desktop-layer-window {
-    background-image: url("file:///home/neo/.config/waypanel/fav.jpg");
+    /*background-image: url("file://...");*/
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -931,7 +909,6 @@ popover.background > arrow {
   -gtk-icon-size: 36px;
 }
 
-/* Panel Internal Boxes */
 .top-panel-box-right {
   background-color: transparent;
 }
