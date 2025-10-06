@@ -1,0 +1,81 @@
+.close-button:hover {
+  background-color: var(--danger-red);
+}
+
+.maximize-button:hover {
+  background-color: var(--accent-blue);
+}
+
+.minimize-button:hover {
+  background-color: var(--success-green);
+}
+
+.close-button:active {
+  background-color: var(--danger-red);
+}
+
+.maximize-button:active {
+  background-color: var(--accent-blue);
+}
+
+.minimize-button:active {
+  background-color: var(--success-green);
+}
+
+.window-controls-box {
+  border-style: solid;
+  background: transparent;
+  margin: 5px;
+}
+
+.window-controls-close-button:hover,
+.window-controls-maximize-button:hover,
+.window-controls-minimize-button:hover {
+  background-color: var(--window-control-hover-bg);
+  box-shadow: var(--shadow-control-small-hover);
+  transform: scale(1.05);
+  transition: all 0.2s ease-in-out;
+}
+
+.window-controls-close-button {
+  -gtk-icon-size: 20px;
+  background: linear-gradient(145deg, var(--danger-red), var(--secondary-bg));
+  box-shadow: var(--shadow-control-small);
+  padding: 2px 8px 2px 8px;
+  margin-left: 2px;
+  margin-right: 1px;
+  background-size: 100% auto;
+  color: var(--main-text);
+  border-color: var(--window-control-border-color);
+  border-radius: 4px;
+}
+
+.window-controls-maximize-button {
+  -gtk-icon-size: 20px;
+  background: linear-gradient(145deg, var(--accent-blue), var(--secondary-bg));
+  box-shadow: var(--shadow-control-small);
+  padding: 2px 8px 2px 8px;
+  margin-left: 2px;
+  margin-right: 1px;
+  background-size: 100% auto;
+  color: var(--main-text);
+  border-color: var(--window-control-border-color);
+  border-radius: 4px;
+}
+
+.window-controls-minimize-button {
+  -gtk-icon-size: 20px;
+  background: linear-gradient(
+    145deg,
+    var(--success-green),
+    var(--secondary-bg)
+  );
+  box-shadow: var(--shadow-control-small);
+  padding: 2px 8px 2px 8px;
+  margin-left: 2px;
+  margin-right: 1px;
+  background-size: 100% auto;
+  color: var(--main-text);
+  border-color: var(--window-control-border-color);
+  border-radius: 4px;
+}

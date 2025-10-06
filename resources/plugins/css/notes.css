@@ -1,0 +1,20 @@
+.notes_button_clear.text-button {
+  background-color: var(--danger-red);
+  color: var(--main-text);
+  border: none;
+  box-shadow: var(--shadow-element-minimal);
+}
+
+.notes_button_add.text-button {
+  background-color: var(--success-green);
+  color: var(--main-text);
+  border: none;
+  box-shadow: var(--shadow-element-minimal);
+}
+
+.notes_button_delete.image-button {
+  background-color: var(--danger-red);
+  color: var(--main-text);
+  border: none;
+  box-shadow: var(--shadow-element-minimal);
+}

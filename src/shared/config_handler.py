@@ -11,6 +11,7 @@ from src.shared import config_template
 class ConfigHandler:
     def __init__(self, panel_instance):
         self.logger = panel_instance.logger
+        self.panel_instance = panel_instance
         self._cached_config = None
         self._last_mod_time = 0.0
         self.default_config = config_template.default_config
@@ -58,6 +59,7 @@ class ConfigHandler:
                 current_mod_time = os.path.getmtime(self.config_file)
                 if current_mod_time > self._last_mod_time:
                     self.reload_config()
+                    self._reload_css()
                     self._last_mod_time = current_mod_time
                 else:
                     self.logger.debug(
@@ -67,6 +69,10 @@ class ConfigHandler:
                 self.logger.warning("Config file not found during GIO change check.")
             except Exception as e:
                 self.logger.error(f"Error checking mod time in GIO callback: {e}")
+
+    def _reload_css(self):
+        if "css_generator" in self.panel_instance.plugins:
+            self.panel_instance.plugins["css_generator"].generate_styles_css()
 
     def _strip_hints(self, data: Dict[str, Any]) -> Dict[str, Any]:
         stripped_data = {}

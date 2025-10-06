@@ -8,21 +8,13 @@ import threading
 import compileall
 
 
-# =========================================================
-# BACKUP AND RETENTION HELPER FUNCTIONS
-# =========================================================
-
-
 def _enforce_retention_policy(backup_base_dir, max_copies):
     """Removes the oldest backup folders if the maximum limit is exceeded."""
     try:
-        # Get all backup folders. Sorting by os.path.basename uses the timestamp in the name,
-        # which guarantees chronological order regardless of filesystem mtime quirks.
         all_backups = sorted(
             glob.glob(os.path.join(backup_base_dir, "backup_*")), key=os.path.basename
         )
         if len(all_backups) > max_copies:
-            # Calculate how many folders to remove (e.g., if 11, remove 1)
             to_remove = all_backups[: len(all_backups) - max_copies]
             print(
                 f"[INFO] Backup limit ({max_copies}) exceeded. Removing {len(to_remove)} oldest backup(s)."
@@ -45,7 +37,6 @@ def backup_waypanel_data(source_dirs, backup_base_dir, max_copies=10):
     print(f"[INFO] Creating comprehensive backup in {backup_target_root}")
     success = True
 
-    # Callable to ignore the 'venv' folder when copying the data directory
     ignore_venv = shutil.ignore_patterns("venv")
 
     try:
@@ -61,7 +52,6 @@ def backup_waypanel_data(source_dirs, backup_base_dir, max_copies=10):
 
             target_path = os.path.join(backup_target_root, name)
 
-            # Use the ignore function only for the 'data' directory
             ignore_arg = ignore_venv if name == "data" else None
 
             try:
@@ -91,11 +81,6 @@ def backup_waypanel_data(source_dirs, backup_base_dir, max_copies=10):
         print(f"[FATAL] Failed to create backup root directory: {e}", file=sys.stderr)
 
 
-# =========================================================
-# MAIN APPLICATION BOOTSTRAP
-# =========================================================
-
-
 def main():
     APP_NAME = "waypanel"
 
@@ -105,24 +90,23 @@ def main():
 
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    # Define application paths
     WAYPANEL_DATA_DIR = os.path.join(XDG_DATA_HOME, APP_NAME)
     CONFIG_DIR = os.path.join(XDG_CONFIG_HOME, APP_NAME)
     BACKUP_BASE_DIR = os.path.join(XDG_CACHE_HOME, APP_NAME, "backups")
     VENV_DIR = os.path.join(WAYPANEL_DATA_DIR, "venv")
     CONFIG_FILE = os.path.join(CONFIG_DIR, "config.toml")
 
-    # 1. RUN BACKUP IN A THREAD
+    RESOURCES_SUBDIR_NAME = "resources"
+    WAYPANEL_RESOURCES_DIR = os.path.join(WAYPANEL_DATA_DIR, RESOURCES_SUBDIR_NAME)
+
     SOURCE_DIRS_TO_BACKUP = {"data": WAYPANEL_DATA_DIR, "config": CONFIG_DIR}
     print("[INFO] Starting asynchronous data and config backup...")
     backup_thread = threading.Thread(
         target=backup_waypanel_data,
-        args=(SOURCE_DIRS_TO_BACKUP, BACKUP_BASE_DIR, 10),  # max_copies set to 10
+        args=(SOURCE_DIRS_TO_BACKUP, BACKUP_BASE_DIR, 10),
         daemon=True,
     )
     backup_thread.start()
-
-    # 2. APPLICATION SETUP AND RUN (continues immediately)
 
     def find_package_files():
         """Finds the installed Waypanel package path or falls back to development path."""
@@ -141,11 +125,11 @@ def main():
                     return pkg_path
         return None
 
-    INSTALLED_PATH = find_package_files()  # pyright: ignore
+    INSTALLED_PATH = find_package_files()
     if INSTALLED_PATH:
         REQ_FILE = os.path.join(INSTALLED_PATH, "requirements.txt")
-        MAIN_PY_DIR = INSTALLED_PATH  # Directory where the main script resides
-        MAIN_PY = os.path.join(INSTALLED_PATH, "main.py", "-O")
+        MAIN_PY_DIR = INSTALLED_PATH
+        MAIN_PY = os.path.join(INSTALLED_PATH, "main.py")
         print(f"[INFO] Using installed package from: {INSTALLED_PATH}")
         os.environ["PYTHONPATH"] = INSTALLED_PATH
     else:
@@ -155,7 +139,6 @@ def main():
         print(f"[INFO] Using development path: {SCRIPT_DIR}")
         os.environ["PYTHONPATH"] = SCRIPT_DIR
 
-    # ===== GTK4 Layer Shell detection =====
     def find_gtk_layer_shell():
         """Locates the required libgtk4-layer-shell.so file."""
         LOCAL_LIB_PATH = os.path.join(
@@ -192,17 +175,30 @@ def main():
     os.environ["LD_PRELOAD"] = GTK_LIB
     print(f"[INFO] Using GTK4 Layer Shell: {GTK_LIB}")
 
-    # ===== CONFIGURATION =====
     if not os.path.isfile(CONFIG_FILE):
         print(
             f"[INFO] Config not found at {CONFIG_FILE}. Attempting to copy defaults..."
         )
 
-        for src_dir, desc in [
-            (f"/usr/lib/{APP_NAME}/config", "system"),
-            (os.path.join(SCRIPT_DIR, APP_NAME, "config"), "dev path"),
-            (os.path.join(SCRIPT_DIR, "config"), "alt dev path"),
-        ]:
+        config_search_paths = []
+
+        config_search_paths.append(
+            (os.path.join(SCRIPT_DIR, "config"), "dev path (flat - current dir)")
+        )
+        config_search_paths.append(
+            (os.path.join(SCRIPT_DIR, APP_NAME, "config"), "dev path (app)")
+        )
+
+        if INSTALLED_PATH:
+            config_search_paths.append(
+                (os.path.join(INSTALLED_PATH, "config"), "detected installed path")
+            )
+
+        config_search_paths.append(
+            (f"/usr/lib/{APP_NAME}/config", "hardcoded system path")
+        )
+
+        for src_dir, desc in config_search_paths:
             if os.path.isdir(src_dir):
                 os.makedirs(CONFIG_DIR, exist_ok=True)
                 for item in os.listdir(src_dir):
@@ -218,7 +214,58 @@ def main():
             print("[ERROR] No default config found.", file=sys.stderr)
             sys.exit(1)
 
-    # ===== VIRTUAL ENVIRONMENT SETUP =====
+    if not os.path.isdir(WAYPANEL_RESOURCES_DIR):
+        print(
+            f"[INFO] Resources not found at {WAYPANEL_RESOURCES_DIR}. Attempting to copy defaults..."
+        )
+
+        resource_search_paths = []
+
+        resource_search_paths.append(
+            (
+                os.path.join(SCRIPT_DIR, RESOURCES_SUBDIR_NAME),
+                "dev path (flat - current dir)",
+            )
+        )
+        resource_search_paths.append(
+            (
+                os.path.join(SCRIPT_DIR, APP_NAME, RESOURCES_SUBDIR_NAME),
+                "dev path (app)",
+            )
+        )
+
+        if INSTALLED_PATH:
+            resource_search_paths.append(
+                (
+                    os.path.join(INSTALLED_PATH, RESOURCES_SUBDIR_NAME),
+                    "detected installed path",
+                )
+            )
+
+        resource_search_paths.append(
+            (f"/usr/lib/{APP_NAME}/{RESOURCES_SUBDIR_NAME}", "hardcoded system path")
+        )
+
+        for src_dir, desc in resource_search_paths:
+            if os.path.isdir(src_dir):
+                try:
+                    os.makedirs(WAYPANEL_DATA_DIR, exist_ok=True)
+
+                    shutil.copytree(src_dir, WAYPANEL_RESOURCES_DIR)
+                    print(f"[INFO] Default resources copied from {desc}: {src_dir}")
+                    break
+                except Exception as e:
+                    print(
+                        f"[ERROR] Failed to copy resources from {src_dir}: {e}",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+        else:
+            print(
+                "[WARN] No default resources found. Proceeding without user resources.",
+                file=sys.stderr,
+            )
+
     if not os.path.isdir(VENV_DIR):
         print("[INFO] Creating virtual environment...")
         os.makedirs(VENV_DIR, exist_ok=True)
@@ -230,7 +277,6 @@ def main():
     VENV_BIN = os.path.join(VENV_DIR, "bin")
     os.environ["PATH"] = f"{VENV_BIN}:{os.environ['PATH']}"
 
-    # Install dependencies if needed
     REQUIREMENTS_INSTALLED_FLAG = os.path.join(VENV_DIR, ".requirements_installed")
     if not os.path.isfile(REQUIREMENTS_INSTALLED_FLAG):
         print("[INFO] Installing dependencies...")
@@ -257,45 +303,33 @@ def main():
             )
             sys.exit(1)
 
-    # ===== COMPILE PYTHON FILES =====
     print("[INFO] Compiling Python source files to bytecode (.pyc) if necessary...")
 
     try:
-        # Compile the application's source directory recursively
-        # quiet=1 suppresses output unless an error occurs.
         compileall.compile_dir(MAIN_PY_DIR, quiet=1)
 
-        # Compile the main script itself
         compileall.compile_file(MAIN_PY, quiet=1)
         print("[INFO] Compilation complete (skipped if already up-to-date).")
 
     except Exception as e:
-        # This catches general compilation errors but ignores the common SyntaxWarnings from libs.
         print(
             f"[WARN] Non-critical error during Python file compilation: {e}",
             file=sys.stderr,
         )
 
-    # ===== RUN THE APP =====
     print("[INFO] Starting application...")
-    # Using python -B ensures the interpreter ignores the compilation step at runtime,
-    # relying solely on the .pyc files we just generated (or falls back to .py if none).
     cmd = [os.path.join(VENV_BIN, "python"), MAIN_PY]
-    # Optionally, you could add -W ignore::SyntaxWarning here to suppress the pulsectl warning:
-    # cmd = [os.path.join(VENV_BIN, "python"), "-W", "ignore::SyntaxWarning", MAIN_PY]
 
     subprocess.run(cmd, check=True)
 
 
 if __name__ == "__main__":
     try:
-        # Attempt to kill any previous running instance of the app
         subprocess.run(
             "pkill -f waypanel/main.py".split(),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
     except Exception as e:
-        # Don't fail if pkill isn't found or an instance isn't running
         print(f"[WARN] Failed to run pkill (may be missing or harmless): {e}")
     main()

@@ -1,9 +1,27 @@
-/*
- * ----------------------------------------
- * 🎨 CSS Variables & Base Styles
- * ----------------------------------------
- * This section defines a central palette and reusable styles
- * to maintain consistency and make future changes easier.
- */
-@import url("themes/macos-dark.css");
-@import url("themes/base.css");
+@import url("../../.local/share/waypanel/resources/themes/css/macos-dark.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/base.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/app-launcher.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/bluetooth.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/bookmarks.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/bottom-panel.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/calendar.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/clipboard.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/clock.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/control-center.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/desktop-layer.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/dockbar.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/floating-volume.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/left-panel.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/mullvad.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/network-manager.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/notes.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/notify.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/places.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/right-panel.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/system-dashboard.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/taskbar.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/top-panel.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/tray.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/weather.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/window-controls.css");
+@import url("../../.local/share/waypanel/resources/plugins/css/window-title.css");

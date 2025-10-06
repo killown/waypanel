@@ -1,0 +1,66 @@
+.app-launcher-menu-button {
+  -gtk-icon-size: 29px;
+}
+.app-launcher-popover {
+  background: transparent;
+  background-color: transparent;
+}
+
+.app-launcher-searchbar {
+  background-color: var(--primary-bg);
+  border-width: 0px;
+  border-radius: 10px;
+  padding: 5px 10px;
+  color: var(--main-text);
+  font-size: 18px;
+  font-weight: 500;
+  font-family: var(--font-family-default);
+}
+
+.app-launcher-flowbox {
+  padding: 10px;
+}
+
+.app-launcher-vbox {
+  background: transparent;
+  background-color: transparent;
+}
+
+.app-launcher-scrolled-window {
+  background: transparent;
+  background-color: transparent;
+}
+
+.app-launcher-main-box {
+  background-color: var(--primary-bg);
+}
+
+.app-launcher-icon-from-popover {
+  -gtk-icon-size: 68px;
+  padding: 10px;
+  background-color: var(--secondary-bg);
+  border-width: 0px;
+  border-radius: 10px;
+  box-shadow:
+    2px 2px 4px rgba(0, 0, 0, 0.5),
+    -2px -2px 4px rgba(255, 255, 255, 0.08);
+  transition: all 0.2s ease-in-out;
+}
+
+.app-launcher-icon-from-popover:hover {
+  background-color: var(--tertiary-bg);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-neumorphic-outset-large);
+}
+
+.app-launcher-icon-from-popover:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-neumorphic-press);
+  background-color: var(--primary-bg);
+}
+
+.app-launcher-label-from-popover {
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--main-text);
+}

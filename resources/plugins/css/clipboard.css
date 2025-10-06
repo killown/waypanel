@@ -1,0 +1,7 @@
+
+.button_clear_from_clipboard {
+  background-color: var(--danger-red);
+  color: var(--main-text);
+  border: none;
+  box-shadow: var(--shadow-element-minimal);
+}

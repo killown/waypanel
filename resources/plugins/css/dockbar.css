@@ -1,0 +1,13 @@
+.dockbar-buttons {
+  border-radius: 10px;
+  padding: 5px 5px 10px 5px;
+  -gtk-icon-size: 42px;
+  font-size: 16px;
+  color: transparent;
+}
+
+.dockbar-buttons:hover {
+  color: var(--primary-bg);
+  background-color: var(--tertiary-bg);
+  text-shadow: 0.006em 0.006em 0.007em var(--dseg-shadow-dark);
+}

@@ -1,0 +1,26 @@
+.system-popover {
+  border: none;
+}
+
+.system-dashboard-button:hover {
+}
+
+.system-dashboard-button:active {
+}
+
+.system_dashboard_stack {
+  background-color: var(--primary-bg);
+  border-radius: 10px;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.system_dash_label {
+  color: var(--soft-text);
+  font-weight: bold;
+}
+
+.system_dash_summary {
+  color: var(--soft-text);
+}

@@ -1,0 +1,40 @@
+.notify-client-box {
+  background-color: var(--accent-blue);
+  border-radius: 10px;
+  margin: 3px;
+}
+
+.notify-client-heading {
+  margin-top: 12px;
+  font-weight: bold;
+  font-family: var(--font-family-system);
+  font-size: 16px;
+  color: var(--dseg-shadow-dark);
+}
+
+.notify-client-body-label,
+.notify-client-timestamp {
+  margin: 3px;
+  font-family: var(--font-family-system);
+  color: var(--dseg-shadow-dark);
+}
+
+.notify-client-timestamp {
+  font-size: 13px;
+}
+
+.notify-window {
+  background-color: transparent;
+  color: var(--main-text);
+  border-radius: 10px;
+}
+
+.notify-server-vbox {
+  background-color: var(--primary-bg);
+  color: var(--main-text);
+  padding: 10px;
+  font-weight: bold;
+  font-family: var(--font-family-system);
+  font-size: 16px;
+  border-radius: 10px;
+}

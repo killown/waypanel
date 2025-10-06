@@ -1,0 +1,11 @@
+
+.right-panel {
+  -gtk-icon-size: 42px;
+  background: transparent;
+  border-bottom: 0px solid rgba(0, 0, 0, 0);
+  border-radius: 0px;
+  border-style: none;
+  color: transparent;
+  padding: 0px;
+  box-shadow: none;
+}

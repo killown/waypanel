@@ -1,0 +1,40 @@
+.taskbar {
+}
+
+.taskbar-button {
+  background: var(--secondary-bg);
+  border-radius: 7px;
+  box-shadow:
+    inset 3px 3px 5px rgba(255, 255, 255, 0.08),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    2px 2px 5px var(--shadow-medium);
+  font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
+  font-size: 14px;
+  color: var(--soft-text);
+  text-decoration: none;
+  text-shadow:
+    0 0 2px var(--dseg-shadow-soft),
+    0 0 5px var(--dseg-shadow-soft);
+}
+
+.taskbar-button.focused {
+  background-color: var(--tertiary-bg);
+  color: var(--main-text);
+  font-weight: bold;
+  border: 1px solid var(--main-text);
+  box-shadow: 0 0 8px var(--accent-blue);
+}
+
+.taskbar-button.focused:hover {
+  background-color: var(--primary-bg);
+  transform: scale(1.05);
+  transition: all 0.1s ease;
+  color: var(--soft-text);
+}
+
+.taskbar-button:hover {
+  color: var(--main-text);
+  background-color: var(--primary-bg);
+  text-shadow: 0.006em 0.006em 0.007em var(--dseg-shadow-dark);
+}
+

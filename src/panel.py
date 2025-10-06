@@ -8,6 +8,7 @@ CREATE_PANEL_MODULE = lazy.load("src.core.create_panel")
 GTK_HELPERS_MODULE = lazy.load("src.shared.gtk_helpers")
 PLUGIN_LOADER_MODULE = lazy.load("src.core.plugin_loader.loader")
 DATA_HELPERS_MODULE = lazy.load("src.shared.data_helpers")
+PATH_HELPERS_MODULE = lazy.load("src.shared.path_handler")
 GLOBAL_LOOP_MODULE = lazy.load("src.plugins.core._event_loop")
 
 
@@ -23,24 +24,16 @@ class Panel(Adw.Application):
         self.panel_instance = None
         self.style_css_config = None
         self.connect("activate", self.on_activate)
-
-        # Immediate use of ConfigHandler (no lazy load)
         self.config_handler = ConfigHandler(self)
         self.config_path = self.config_handler._setup_config_paths()
         self.config_data = self.config_handler.load_config()
-
-        # Lazy load: Accessing IPC_MODULE.IPC() triggers the actual import of src.core.compositor.ipc
+        self.path_handler = PATH_HELPERS_MODULE.PathHandler(self)  # pyright: ignore
         self.ipc = IPC_MODULE.IPC()  # pyright: ignore
-
         self.data_helper = DATA_HELPERS_MODULE.DataHelpers()  # pyright: ignore
-
         self.ipc_server = ipc_server
         self.display = None
         self.args = sys.argv
-
-        # Lazy load: Accessing GTK_HELPERS_MODULE.GtkHelpers() triggers the actual import
         self.gtk_helpers = GTK_HELPERS_MODULE.GtkHelpers(self)  # pyright: ignore
-
         self.update_widget = self.gtk_helpers.update_widget
         self._set_monitor_dimensions()
         self.config_handler._start_watcher()
@@ -49,10 +42,9 @@ class Panel(Adw.Application):
         GLib.idle_add(self.start_plugin_loader)
 
     def start_plugin_loader(self):
-        # Lazy load: Accessing PLUGIN_LOADER_MODULE.PluginLoader() triggers the actual import
         self.plugin_loader = PLUGIN_LOADER_MODULE.PluginLoader(self)  # pyright: ignore
         self.plugins = self.plugin_loader.plugins
-        return False  # Stop idle_add after execution
+        return False
 
     def get_config(self, key_path, default=None):
         """Safely retrieves a configuration value using a list of keys."""
@@ -150,9 +142,9 @@ class Panel(Adw.Application):
             self.logger.debug("Loading plugins...")
             self.plugin_loader.load_plugins()  # pyright: ignore
             self.logger.info("Plugins loading finished.")
-            return False  # stop idle_add after scheduling the async task
+            return False
         self.logger.warning("Panel: re-trying load plugins...")
-        return True  # continue idle_add
+        return True
 
     def do_activate(self):
         self.setup_panels()
@@ -160,11 +152,22 @@ class Panel(Adw.Application):
 
     def load_css(self):
         self.gtk_helpers.load_css_from_file()
-        self.css_monitor = Gio.File.new_for_path(
-            self.config_handler.style_css_config
-        ).monitor(Gio.FileMonitorFlags.NONE, None)
-        self.css_monitor.connect("changed", self.gtk_helpers.on_css_file_changed)
-        return False  # stop GLib.timeout_add
+        directories_to_monitor = [
+            self.path_handler.get_data_path("resources/plugins/css"),
+            self.path_handler.get_data_path("resources/themes/css"),
+        ]
+        styles_css_path = self.path_handler.get_config_dir() / "styles.css"
+        self.css_monitors = []
+        for path in directories_to_monitor:
+            gio_file = Gio.File.new_for_path(str(path))
+            monitor = gio_file.monitor_directory(Gio.FileMonitorFlags.NONE, None)
+            monitor.connect("changed", self.gtk_helpers.on_css_file_changed)
+            self.css_monitors.append(monitor)
+        gio_file_css = Gio.File.new_for_path(str(styles_css_path))
+        monitor_css = gio_file_css.monitor_file(Gio.FileMonitorFlags.NONE, None)
+        monitor_css.connect("changed", self.gtk_helpers.on_css_file_changed)
+        self.css_monitors.append(monitor_css)
+        return False
 
     def setup_panels(self):
         """
@@ -202,8 +205,6 @@ class Panel(Adw.Application):
         layer_position = config.get("layer_position", "TOP")
         width = self.get_config(["panel", "top", "width"], self.monitor_width)
         height = self.get_config(["panel", "top", "height"], 32.0)
-
-        # Lazy load: Accessing CREATE_PANEL_MODULE.CreatePanel() triggers the actual import
         self.top_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
@@ -228,8 +229,6 @@ class Panel(Adw.Application):
         layer_position = config.get("layer_position", "BACKGROUND")
         width = self.get_config(["panel", "bottom", "width"], self.monitor_width)
         height = self.get_config(["panel", "bottom", "height"], 32.0)
-
-        # Lazy load
         self.bottom_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
@@ -254,8 +253,6 @@ class Panel(Adw.Application):
         layer_position = config.get("layer_position", "BACKGROUND")
         width = self.get_config(["panel", "left", "width"], 32.0)
         height = self.get_config(["panel", "left", "height"], 0.0)
-
-        # Lazy load
         self.left_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
@@ -280,8 +277,6 @@ class Panel(Adw.Application):
         layer_position = config.get("layer_position", "BACKGROUND")
         width = self.get_config(["panel", "right", "width"], 32.0)
         height = self.get_config(["panel", "right", "height"], 0.0)
-
-        # Lazy load
         self.right_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,

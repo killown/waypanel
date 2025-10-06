@@ -1,0 +1,11 @@
+.tray_icon {
+  background-color: var(--primary-bg);
+  min-width: 24px;
+  min-height: 24px;
+  -gtk-icon-size: 16px;
+}
+
+.tray-menu-button {
+  border-radius: 8px;
+  margin-left: 5px;
+}

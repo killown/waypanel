@@ -1,0 +1,54 @@
+.network-manager-device-header {
+}
+
+.network-manager-device-details-grid {
+}
+
+.network-manager-container {
+  background-color: var(--primary-bg);
+  color: var(--main-text);
+  border-radius: 12px;
+  box-shadow: var(--shadow-neumorphic-inset-medium);
+}
+
+.network-manager-scrolledwindow {
+  border: none;
+}
+
+.network-manager-device-toggle-button,
+.network-manager-config-box {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  transition: all 0.2s ease-in-out;
+}
+
+.network-manager-device-toggle-button:hover,
+.network-manager-config-box:hover {
+  background-color: var(--secondary-bg);
+  border-radius: 8px;
+  box-shadow: var(--shadow-neumorphic-outset-large);
+}
+
+.network-manager-device-toggle-button:active,
+.network-manager-config-box:active {
+  background-color: var(--secondary-bg);
+  box-shadow: var(--shadow-neumorphic-press);
+}
+
+.network-manager-device-separator {
+  background-color: var(--secondary-bg);
+  min-height: 2px;
+  border-radius: 1px;
+}
+
+.network-manager-config-button {
+  background-color: transparent;
+  border: none;
+  color: var(--main-text);
+}
+
+.network-manager-config-label {
+  color: var(--main-text);
+  font-weight: bold;
+}

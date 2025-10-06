@@ -1,5 +1,5 @@
 ENABLE_PLUGIN = True
-DEPS = ["top_panel", "bottom_panel", "left_panel", "right_panel"]
+DEPS = ["top_panel", "bottom_panel", "left_panel", "right_panel", "css_generator"]
 
 
 def get_plugin_placement(panel_instance):

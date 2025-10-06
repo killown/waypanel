@@ -1,0 +1,13 @@
+.desktop-layer-window {
+  /*background-image: url("file://...");*/
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: none;
+}
+.desktop-popover {
+  background-color: var(--primary-bg);
+  background-image: none;
+  box-shadow: none;
+  border: none;
+}
