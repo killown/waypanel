@@ -30,6 +30,9 @@ default_config = {
             "Absolute path to search for user-defined or custom plugins."
         ),
         "bluetooth": {
+            "_section_hint": (
+                "Settings for the Bluetooth plugin, used to manage connections to local devices."
+            ),
             "hide_in_systray": True,
             "main_icon": "bluetooth-symbolic",
             "fallback_main_icons": [
@@ -37,8 +40,41 @@ default_config = {
                 "bluetooth",
             ],
         },
-        "wayfire_plugins": {"hide_in_systray": True},
+        "global_shortcuts": {
+            "_section_hint": (
+                "Provides system-wide D-Bus actions to link keyboard shortcuts directly to commands in active plugins"
+            ),
+            "open_editor": "open_with_editor.open_popover_folders",
+        },
+        "open_with_editor": {
+            "_section_hint": (
+                "A plugin to quickly search and open files from a configured directory, using a specified editor based on file extension"
+            ),
+            "directories": ["~/.config/nvim"],
+        },
+        "wayfire_plugins": {
+            "_section_hint": (
+                "Settings for Wayfire-specific plugin integration and status updates."
+            ),
+            "hide_in_systray": True,
+        },
+        "screen_recorder": {
+            "_section_hint": (
+                "A plugin to quickly search and open files from a configured directory, using a specified editor based on file extension"
+            ),
+            "hide_in_systray": False,
+        },
+        "system_dashboard": {
+            "hide_in_systray": False,
+        },
+        "system_monitor": {"hide_in_systray": False},
+        "mullvad": {
+            "hide_in_systray": False,
+        },
         "notes": {
+            "_section_hint": (
+                "Configuration for the Quick Notes plugin, allowing users to save and view short text entries."
+            ),
             "main_icon": "stock_notes",
             "fallback_main_icons": [
                 "accessories-notes-symbolic",
@@ -46,15 +82,37 @@ default_config = {
                 "accessories-notes",
             ],
             "icon_delete": "edit-delete",
+            "hide_in_systray": False,
         },
-        "overflow_indicator": {},
-        "clock": {"format": "%H:%M", "tooltip_format": "%A, %B %d, %Y"},
+        "overflow_indicator": {
+            "_section_hint": (
+                "Settings for the Overflow Indicator plugin, which shows a button when other panel items are hidden due to lack of space."
+            )
+        },
+        "clock": {
+            "_section_hint": (
+                "Configuration for the Clock plugin, defining time and date display formats."
+            ),
+            "format": "%H:%M",
+            "tooltip_format": "%A, %B %d, %Y",
+        },
         "network_manager": {
+            "_section_hint": (
+                "Settings for the Network Manager plugin, which controls and displays network connection status."
+            ),
             "hide_in_systray": False,
             "scan_interval": 5,
         },
-        "volume": {"hide_in_systray": False, "polling_interval": 0.5},
+        "volume": {
+            "_section_hint": (
+                "Configuration for the Volume plugin, which provides sound level control and display."
+            ),
+            "polling_interval": 0.5,
+        },
         "appmenu": {
+            "_section_hint": (
+                "Configuration for the Application Menu (Start Menu) button and associated settings."
+            ),
             "main_icon": "start-here-symbolic",
             "fallback_main_icons": ["applications-all-symbolic"],
         },
@@ -108,6 +166,7 @@ default_config = {
             ),
             "main_icon": "clipboard",
             "fallback_main_icons": ["edit-paste-symbolic", "edit-paste"],
+            "hide_in_systray": False,
         },
     },
     "hardware": {
@@ -158,7 +217,7 @@ default_config = {
             ),
         },
         "network": {
-            "_section_hint": "auto connect network",
+            "_section_hint": "Settings related to network connection management, including Wi-Fi auto-connection behavior.",
             "auto_connect_ssid": [""],
             "auto_connect_ssid_hint": (
                 "List of Wi-Fi SSIDs to automatically connect to on "
@@ -172,7 +231,7 @@ default_config = {
             "Configuration for the Taskbar plugin (shows running applications)."
         ),
         "panel": {
-            "_section_hint": "Base panel settings for the taskbar's container.",
+            "_section_hint": "Layer-shell and size configuration for the panel that hosts the Taskbar plugin.",
             "name": "bottom-panel",
             "name_hint": (
                 "The unique **Layer-shell name** for this panel (e.g., "
@@ -215,7 +274,7 @@ default_config = {
             "Configuration for the Dockbar plugin (for favorite/pinned applications)."
         ),
         "panel": {
-            "_section_hint": "Base panel settings for the dockbar's container.",
+            "_section_hint": "Layer-shell, size, and orientation configuration for the panel that hosts the Dockbar plugin.",
             "name": "left-panel",
             "name_hint": (
                 "The unique **Layer-shell name** for this panel (e.g., 'left-panel')."
@@ -233,8 +292,7 @@ default_config = {
         },
         "app": {
             "_section_hint": (
-                "Definitions for pinned applications in the dockbar. "
-                "Each key is a unique ID."
+                "Settings defining the list of pinned/favorite applications that appear in the Dockbar."
             ),
             "firefox-developer-edition": {
                 "_section_hint": (
@@ -593,6 +651,7 @@ default_config = {
             "Configuration for the custom menu plugin, used for running "
             "scripts or system commands."
         ),
+        "hide_in_systray": False,
         "Wayfire": {
             "_section_hint": (
                 "A custom submenu for Wayfire-related scripts and commands."

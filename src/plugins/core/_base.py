@@ -179,6 +179,13 @@ class BasePlugin:
         self._unset_layer_pos_exclusive: Any = (
             create_panel.unset_layer_position_exclusive
         )
+        self.gtk = Gtk
+        self.gdk = Gdk
+        self.gdkpixbuf = GdkPixbuf
+        self.adw = Adw
+        self.glib = GLib
+        self.gio = Gio
+        self.pango = Pango
         self._loaded_modules: Dict[str, Any] = {}
         GLib.timeout_add_seconds(10, self.run_gc_cleanup)
 
@@ -211,6 +218,22 @@ class BasePlugin:
         self._periodic_gc()
         GLib.timeout_add_seconds(300, self._periodic_gc)
         return False
+
+    def set_keyboard_on_demand(self, mode=True):
+        """Set the keyboard mode to ON_DEMAND."""
+        if mode is True:
+            self._layer_shell.set_keyboard_mode(
+                self._panel_instance.top_panel, self._layer_shell.KeyboardMode.ON_DEMAND
+            )
+
+        if mode is False:
+            self._layer_shell.set_keyboard_mode(
+                self.obj.top_panel, self._layer_shell.KeyboardMode.NONE
+            )
+            self.obj.top_panel.grab_focus()
+            toplevel = self.obj.top_panel.get_root()
+            if isinstance(toplevel, self.gtk.Window):
+                toplevel.set_focus(None)
 
     def lazy_load_module(self, module_name: str) -> Optional[Any]:
         """
@@ -313,41 +336,6 @@ class BasePlugin:
     def json(self) -> Any:
         """Read-only access to the imported 'orjson' standard library module."""
         return ORJSON_MODULE
-
-    @property
-    def gtk(self) -> Any:
-        """Read-only access to the gi.repository.Gtk module."""
-        return Gtk
-
-    @property
-    def glib(self) -> Any:
-        """Read-only access to the gi.repository.GLib module."""
-        return GLib
-
-    @property
-    def gio(self) -> Any:
-        """Read-only access to the gi.repository.Gio module."""
-        return Gio
-
-    @property
-    def gdk(self) -> Any:
-        """Read-only access to the gi.repository.Gdk module."""
-        return Gdk
-
-    @property
-    def gdkpixbuf(self) -> Any:
-        """Read-only access to the gi.repository.GdkPixbuf module."""
-        return GdkPixbuf
-
-    @property
-    def adw(self) -> Any:
-        """Read-only access to Adw module."""
-        return Adw
-
-    @property
-    def pango(self) -> Any:
-        """Read-only access to the gi.repository.Pango module."""
-        return Pango
 
     @property
     def time(self) -> Any:

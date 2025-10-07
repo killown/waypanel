@@ -338,9 +338,7 @@ def call_plugin_class():
 
         def popover_is_open(self, *_):
             """Set the keyboard mode to ON_DEMAND when the popover is opened."""
-            LayerShell.set_keyboard_mode(
-                self.obj.top_panel, LayerShell.KeyboardMode.ON_DEMAND
-            )
+            self.set_keyboard_on_demand()
             vadjustment = self.scrolled_window.get_vadjustment()
             vadjustment.set_value(0)
             return
@@ -350,13 +348,7 @@ def call_plugin_class():
             Set the keyboard mode to NONE when the popover is closed.
             FIX: No destruction or cache clearing is done here. The UI is simply hidden.
             """
-            LayerShell.set_keyboard_mode(
-                self.obj.top_panel, LayerShell.KeyboardMode.NONE
-            )
-            self.obj.top_panel.grab_focus()
-            toplevel = self.obj.top_panel.get_root()
-            if isinstance(toplevel, self.gtk.Window):
-                toplevel.set_focus(None)
+            self.set_keyboard_on_demand(False)
             if hasattr(self, "listbox"):
                 self.flowbox.invalidate_filter()
 

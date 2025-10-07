@@ -370,6 +370,8 @@ def call_plugin_class():
             )
             list_item._bindings.append(binding_tooltip)
             name = metric_item.name
+            if name == "APP ID":
+                self.create_gesture_for_focused_view_id(hbox)
             if name == "APP PID":
                 self.create_gesture_for_focused_view_pid(hbox)
             elif name == "CPU Usage":
@@ -394,6 +396,14 @@ def call_plugin_class():
 
         def create_gesture_for_cpu_usage(self, hbox):
             self.create_gesture(hbox, 1, self.open_gnome_system_monitor)
+
+        def create_gesture_for_focused_view_id(self, hbox):
+            def view_callback(_):
+                view_id = self.wf_helper.get_the_last_focused_view_id()
+                view = self.ipc.get_view(view_id)
+                self.helper.open_kitty_with_ipython_view(view)
+
+            self.create_gesture(hbox, 1, view_callback)
 
         def create_gesture_for_focused_view_pid(self, hbox):
             """

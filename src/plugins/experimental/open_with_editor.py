@@ -162,18 +162,30 @@ def call_plugin_class():
             self._setup_popover_base()
             main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
             main_box.add_css_class("places-main-box")
-            self.switcher, self.stack = self._setup_tabbed_ui()
+            self.switcher, self.stack = self._setup_tabbed_ui()  # pyright: ignore
             main_box.append(self.switcher)
             main_box.append(self.stack)
-            self.popover_folders.set_child(main_box)
+            self.popover_folders.set_child(main_box)  # pyright: ignore
             self.active_listbox = self.listbox_widgets[self.active_dir_name]
             self.active_searchbar = self.searchbar_widgets[self.active_dir_name]
             self._populate_listbox(
                 self.active_listbox, self.config_dir, self.active_searchbar
             )
             self.active_searchbar.grab_focus()
-            self.popover_folders.popup()
+            self.popover_folders.popup()  # pyright: ignore
             return self.popover_folders
+
+        def on_listbox_row_activated(self, listbox, row):
+            """
+            Handler for the 'row-activated' signal (Enter key press or double-click).
+            Opens the selected file using the default (index 0) editor.
+            """
+            row_hbox = row.get_child()
+            if row_hbox and hasattr(row_hbox, "MYTEXT"):
+                file_path = row_hbox.MYTEXT
+                self.open_file_in_editor(file_path=file_path, editor_index=0)
+            else:
+                self.logger.warning("Activated row does not contain a valid file path.")
 
         def _setup_tabbed_ui(self):
             """
@@ -206,23 +218,26 @@ def call_plugin_class():
             searchbar = self.gtk.SearchEntry.new()
             searchbar.connect("search_changed", self.on_search_entry_changed)
             searchbar.set_focus_on_click(True)
+            searchbar.grab_focus()
             searchbar.props.hexpand = True
             searchbar.props.vexpand = False
             searchbar.add_css_class("places-search-entry")
             page_box.append(searchbar)
             listbox = self.gtk.ListBox.new()
+            listbox.connect("row-activated", self.on_listbox_row_activated)
+            listbox.set_can_focus(True)
+            listbox.set_focusable(True)
             listbox.props.hexpand = True
             listbox.props.vexpand = True
             listbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
             listbox.set_show_separators(True)
             listbox.add_css_class("places-listbox")
-            scrolled_window = self.gtk.ScrolledWindow()
-            # Increased width to 600 as requested
-            scrolled_window.set_min_content_width(800)
-            scrolled_window.set_min_content_height(600)
-            scrolled_window.add_css_class("places-scrolled-window")
-            scrolled_window.set_child(listbox)
-            page_box.append(scrolled_window)
+            self.scrolled_window = self.gtk.ScrolledWindow()
+            self.scrolled_window.set_min_content_width(800)
+            self.scrolled_window.set_min_content_height(600)
+            self.scrolled_window.add_css_class("places-scrolled-window")
+            self.scrolled_window.set_child(listbox)
+            page_box.append(self.scrolled_window)
             return page_box, searchbar, listbox
 
         def on_tab_switched(self, stack, pspec):
@@ -353,34 +368,27 @@ def call_plugin_class():
             editor_index = button - 1
             file_path = row_hbox.MYTEXT
             self.open_file_in_editor(file_path=file_path, editor_index=editor_index)
-            gesture.set_state(self.gtk.EventSequenceState.STOPPED)
+            gesture.set_state(self.gtk.EventSequenceState.STOPPED)  # pyright: ignore
 
         def _create_file_row(self, full_file_path, root_dir):
             """
             Creates a single ListBox row child (HBox) for a file entry.
-
             Args:
                 full_file_path (str): The absolute path to the file.
                 root_dir (str): The root directory used for relative path calculation.
             """
             icon_name = self._get_file_icon_name(full_file_path)
-
-            # Calculate the relative path for the label (e.g., subdir1/subdir2/filename.py)
-            # This is the key change requested by the user.
             display_path = self.os.path.relpath(full_file_path, root_dir)
-
             row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
             row_hbox.add_css_class("places-row-hbox")
-            row_hbox.MYTEXT = full_file_path
+            row_hbox.MYTEXT = full_file_path  # pyright: ignore
             row_hbox.set_tooltip_text(full_file_path)
-
             line = self.gtk.Label.new()
-            line.set_label(display_path)  # Use the calculated relative path
+            line.set_label(display_path)
             line.props.margin_start = 5
             line.props.hexpand = True
             line.set_halign(self.gtk.Align.START)
             line.add_css_class("places-label-from-popover")
-
             image = self.gtk.Image.new_from_icon_name(icon_name)
             image.add_css_class("places-icon-from-popover")
             image.set_icon_size(self.gtk.IconSize.INHERIT)
@@ -419,7 +427,6 @@ def call_plugin_class():
                 listbox.set_filter_func(lambda r: False)
                 return
             for file_path in files_to_list:
-                # Pass directory_path as the root_dir to calculate the relative path
                 row_hbox = self._create_file_row(
                     full_file_path=file_path, root_dir=directory_path
                 )
@@ -533,26 +540,30 @@ def call_plugin_class():
                 self.popover_folders = self.create_popover_folders()
 
         def popover_is_open(self, *_):
-            self.layer_shell.set_keyboard_mode(
-                self.obj.top_panel, self.layer_shell.KeyboardMode.ON_DEMAND
-            )
+            if self.active_searchbar:
+                self.active_searchbar.grab_focus()
+            self.set_keyboard_on_demand()
+            self.set_keyboard_on_demand()
+            vadjustment = self.scrolled_window.get_vadjustment()
+            vadjustment.set_value(0)
 
         def popover_is_closed(self, *_):
-            self.layer_shell.set_keyboard_mode(
-                self.obj.top_panel, self.layer_shell.KeyboardMode.NONE
-            )
+            self.set_keyboard_on_demand(False)
+            if hasattr(self, "listbox"):
+                self.listbox.invalidate_filter()
 
         def on_show_searchbar_action_actived(self, action, parameter):
             if self.active_searchbar:
                 self.active_searchbar.set_search_mode(True)
+                self.active_searchbar.grab_focus()
 
         def on_search_entry_changed(self, searchentry):
             """Finds the associated listbox and invalidates its filter."""
             searchentry.grab_focus()
             for dir_name, bar in self.searchbar_widgets.items():
                 if bar == searchentry:
-                    listbox = self.listbox_widgets[dir_name]
-                    listbox.invalidate_filter()
+                    self.listbox = self.listbox_widgets[dir_name]
+                    self.listbox.invalidate_filter()
                     return
 
         def _filter_logic(self, row, searchbar):
@@ -577,18 +588,14 @@ def call_plugin_class():
         def code_explanation(self):
             """
             This plugin creates a popover UI to search and open files from configured directories using tabs.
-
             1.  **Configuration & Editor Defaults**:
                 - Uses a rich set of **recommended defaults** for editor selection if the user provides no configuration (e.g., `code` for config/web files, `nvim` for programming).
                 - The `self.default_editors` list acts as an **ultimate fallback**.
-
             2.  **Tabbed UI and File Display (Updated)**:
                 - The popover width has been **increased to 600px** (`set_min_content_width(600)`) to better display long paths.
                 - The displayed file label now shows the **path relative to the configured root directory** (e.g., `subdir/file.py`), instead of just the filename, making it easier to locate files.
-
             3.  **Editor Selection and Gestures**:
                 - Mouse buttons (Left, Middle, Right) determine the index of the editor to launch from the selected list.
-
             4.  **Lazy Loading & Filtering**: Files are scanned and loaded only when a tab is selected for the first time, and the search bar dynamically controls the filtering of the active tab's file list.
             """
             return self.code_explanation.__doc__
