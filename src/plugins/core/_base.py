@@ -1,5 +1,6 @@
 import gi
 import os
+import gc
 import inspect
 import lazy_loader as lazy
 
@@ -179,6 +180,37 @@ class BasePlugin:
             create_panel.unset_layer_position_exclusive
         )
         self._loaded_modules: Dict[str, Any] = {}
+        GLib.timeout_add_seconds(10, self.run_gc_cleanup)
+
+    def _periodic_gc(self):
+        """
+        Manually forces Python's garbage collector (GC) to run.
+
+        Crucial for GObject/GTK applications, this reclaims memory
+        stuck in uncollectable reference cycles that frequently form
+        between Python objects and the C-level library bindings.
+
+        Returns:
+            bool: True, signaling GLib to repeat the timer.
+        """
+        gc.collect()
+        return True
+
+    def run_gc_cleanup(self):
+        """
+        Initializes the entire memory cleanup lifecycle.
+
+        1. Runs `_periodic_gc` immediately to clear memory leaks
+           accumulated during startup initialization.
+        2. Sets up the long-running timer (5 minutes) for continuous
+           memory maintenance throughout the application's lifespan.
+
+        Returns:
+            bool: False, to ensure this setup function runs only once.
+        """
+        self._periodic_gc()
+        GLib.timeout_add_seconds(300, self._periodic_gc)
+        return False
 
     def lazy_load_module(self, module_name: str) -> Optional[Any]:
         """
