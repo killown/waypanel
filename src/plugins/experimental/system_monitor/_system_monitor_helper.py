@@ -28,49 +28,49 @@ ALL_EVENTS = [
     "output-gain-focus",
 ]
 SELECT_EVENT_WATCH_SCRIPT = f"""
-    import sys
-    import os
+import sys
+import os
+try:
+    from wayfire import WayfireSocket
+    from rich.pretty import pprint
+    from rich.console import Console
+    console = Console()
+except ImportError as e:
+    print(f"Missing dependency: {{e}}", file=sys.stderr)
+    sys.exit(1)
+ALL_EVENTS = {ALL_EVENTS!r}
+console.print("[bold]Select an event to watch:[/bold]")
+for i, event in enumerate(ALL_EVENTS, 1):
+    console.print(f"{{i}}: {{event}}")
+selected = None
+while selected is None:
     try:
-        from wayfire import WayfireSocket
-        from rich.pretty import pprint
-        from rich.console import Console
-        console = Console()
-    except ImportError as e:
-        print(f"Missing dependency: {{e}}", file=sys.stderr)
-        sys.exit(1)
-    ALL_EVENTS = {ALL_EVENTS!r}
-    console.print("[bold]Select an event to watch:[/bold]")
-    for i, event in enumerate(ALL_EVENTS, 1):
-        console.print(f"{{i}}: {{event}}")
-    selected = None
-    while selected is None:
-        try:
-            s = input("Enter event number: ").strip()
-            if s.isdigit():
-                idx = int(s) - 1
-                if 0 <= idx < len(ALL_EVENTS):
-                    selected = ALL_EVENTS[idx]
-                else:
-                    console.print(f"[red]Invalid number. Please enter 1 to {{len(ALL_EVENTS)}}.[/red]", file=sys.stderr)
+        s = input("Enter event number: ").strip()
+        if s.isdigit():
+            idx = int(s) - 1
+            if 0 <= idx < len(ALL_EVENTS):
+                selected = ALL_EVENTS[idx]
             else:
-                console.print("[red]Please enter a valid number.[/red]", file=sys.stderr)
-        except (EOFError, KeyboardInterrupt):
-            console.print("\\nCancelled.")
-            sys.exit(0)
-    try:
-        sock = WayfireSocket()
-        sock.watch([selected])
-        console.print(f"[bold]Watching event:[/bold] {{selected}} (press Ctrl+C to exit)")
-        console.print("=" * 50)
-        while True:
-            event = sock.read_next_event()
-            pprint(event)
-            console.print()
-    except KeyboardInterrupt:
-        console.print("\\n\\nExiting...")
-    except Exception as e:
-        console.print(f"[red]Error: {{e}}[/red]", file=sys.stderr)
-        sys.exit(1)
+                console.print(f"[red]Invalid number. Please enter 1 to {{len(ALL_EVENTS)}}.[/red]", file=sys.stderr)
+        else:
+            console.print("[red]Please enter a valid number.[/red]", file=sys.stderr)
+    except (EOFError, KeyboardInterrupt):
+        console.print("\\nCancelled.")
+        sys.exit(0)
+try:
+    sock = WayfireSocket()
+    sock.watch([selected])
+    console.print(f"[bold]Watching event:[/bold] {{selected}} (press Ctrl+C to exit)")
+    console.print("=" * 50)
+    while True:
+        event = sock.read_next_event()
+        pprint(event)
+        console.print()
+except KeyboardInterrupt:
+    console.print("\\n\\nExiting...")
+except Exception as e:
+    console.print(f"[red]Error: {{e}}[/red]", file=sys.stderr)
+    sys.exit(1)
     """
 
 

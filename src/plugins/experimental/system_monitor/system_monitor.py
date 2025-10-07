@@ -1,4 +1,5 @@
 ENABLE_PLUGIN = True
+DEPS = ["gestures_setup"]
 
 
 class MetricItemPlaceholder:
@@ -73,6 +74,7 @@ def call_plugin_class():
             self.list_view = None
             self.list_store = Gio.ListStore.new(ProperMetricItem)
             self.metric_items = {}
+            self.create_gesture = self.plugins["gestures_setup"].create_gesture
             self.create_menu_popover_system()
 
         def create_menu_popover_system(self):
@@ -226,8 +228,8 @@ def call_plugin_class():
                 "Exec",
                 "APP ID",
                 "APP PID",
-                "Win Memory Usage",
-                "Win Disk Read",
+                "APP Memory Usage",
+                "APP Disk Read",
                 "APP Disk Write",
                 "APP Disk Read Count",
                 "APP Disk Write Count",
@@ -245,13 +247,13 @@ def call_plugin_class():
                 )
                 proc_usage_visible = process_usage is not None
                 self.update_metric(
-                    "Win Memory Usage",
+                    "APP Memory Usage",
                     process_usage["memory_usage"] if proc_usage_visible else "...",
                     is_visible=proc_usage_visible,
                 )
                 disk_read_visible = process_disk_usage is not None
                 self.update_metric(
-                    "Win Disk Read",
+                    "APP Disk Read",
                     process_disk_usage["read_bytes"] if disk_read_visible else "...",
                     is_visible=disk_read_visible,
                 )
@@ -293,9 +295,12 @@ def call_plugin_class():
                 self.start_system_updates()
 
         def create_popover_system(self):
-            """Create the system monitor popover and populate it with a GtkListView."""
+            """
+            Create the system monitor popover and populate it with a GtkListView.
+            Height is now dynamic, up to POPOVER_MAX_HEIGHT, with a fixed minimum.
+            """
             POPOVER_WIDTH = 380
-            POPOVER_MAX_HEIGHT = 500
+            POPOVER_HEIGHT_ROWS_TIMES_PIXELS = 19 * 26
             POPOVER_MIN_HEIGHT = 200
             self.popover_system = self.gtk.Popover.new()
             self.popover_system.connect("closed", self.popover_is_closed)
@@ -317,8 +322,9 @@ def call_plugin_class():
             scrolled_window.set_policy(
                 self.gtk.PolicyType.NEVER, self.gtk.PolicyType.AUTOMATIC
             )
-            scrolled_window.set_max_content_height(POPOVER_MAX_HEIGHT)
-            scrolled_window.set_size_request(300, 600)
+            scrolled_window.set_size_request(
+                POPOVER_WIDTH, POPOVER_HEIGHT_ROWS_TIMES_PIXELS
+            )
             vbox.append(scrolled_window)
             self.popover_system.set_child(vbox)
             self.popover_system.set_parent(self.menubutton_system)
@@ -376,73 +382,65 @@ def call_plugin_class():
                 self.create_watch_events_gesture(hbox)
 
         def last_toplevel_focused_view(self):
-            taskbar = self.plugins["taskbar"]
-            return taskbar.last_toplevel_focused_view
+            if "taskbar" in self.plugins:
+                return self.plugins["taskbar"].last_toplevel_focused_view
+            return None
 
         def create_gesture_for_amdgpu_top(self, hbox):
-            create_gesture = self.plugins["gestures_setup"].create_gesture
-            create_gesture(hbox, 1, self.helper.open_terminal_with_amdgpu_top)
+            self.create_gesture(hbox, 1, self.helper.open_terminal_with_amdgpu_top)
 
         def open_gnome_system_monitor(self, _):
             self.run_cmd("gnome-system-monitor")
 
         def create_gesture_for_cpu_usage(self, hbox):
-            create_gesture = self.plugins["gestures_setup"].create_gesture
-            create_gesture(hbox, 1, self.open_gnome_system_monitor)
+            self.create_gesture(hbox, 1, self.open_gnome_system_monitor)
 
         def create_gesture_for_focused_view_pid(self, hbox):
-            focused_view = self.last_toplevel_focused_view()
-            if focused_view is not None:
-                last_view_pid = focused_view["pid"]
-                create_gesture = self.plugins["gestures_setup"].create_gesture
-                create_gesture(
-                    hbox,
-                    1,
-                    lambda _, pid=last_view_pid: self.helper.open_terminal_with_htop(
-                        pid
-                    ),
-                )
-                create_gesture(
-                    hbox,
-                    2,
-                    lambda _, pid=last_view_pid: self.helper.open_system_monitor(),
-                )
-                create_gesture(
-                    hbox, 3, lambda _, pid=last_view_pid: self.helper.kill_process(pid)
-                )
+            """
+            Create gestures for the APP PID row.
+            The PID is fetched dynamically on click (via the lambda) to ensure it's current.
+            """
+
+            def htop_callback(_):
+                focused_view = self.last_toplevel_focused_view()
+                if focused_view is not None:
+                    pid = focused_view["pid"]
+                    self.helper.open_terminal_with_htop(pid)
+
+            self.create_gesture(hbox, 1, htop_callback)
+            self.create_gesture(hbox, 2, lambda _: self.helper.open_system_monitor())
+
+            def kill_callback(_):
+                focused_view = self.last_toplevel_focused_view()
+                if focused_view is not None:
+                    pid = focused_view["pid"]
+                    self.helper.kill_process(pid)
+
+            self.create_gesture(hbox, 3, kill_callback)
 
         def create_iotop_gesture_for_focused_view_pid(self, hbox):
-            focused_view = self.last_toplevel_focused_view()
-            if focused_view is not None:
-                last_view_pid = focused_view["pid"]
-                create_gesture = self.plugins["gestures_setup"].create_gesture
-                create_gesture(
-                    hbox,
-                    1,
-                    lambda _, pid=last_view_pid: self.helper.open_terminal_with_iotop(
-                        pid
-                    ),
-                )
+            """
+            Create gestures for disk rows.
+            The PID is fetched dynamically on click (via the lambda) to ensure it's current.
+            """
+
+            def iotop_callback(_):
+                focused_view = self.last_toplevel_focused_view()
+                if focused_view is not None:
+                    pid = focused_view["pid"]
+                    disk_read_metric = self.metric_items.get("APP Disk Read")
+                    if disk_read_metric and disk_read_metric.value != "...":
+                        self.helper.open_terminal_with_iotop(pid)
+                    else:
+                        pass
+
+            self.create_gesture(hbox, 1, iotop_callback)
 
         def create_watch_events_gesture(self, hbox):
-            create_gesture = self.plugins["gestures_setup"].create_gesture
-            create_gesture(hbox, 1, self.helper.open_kitty_with_rich_events_view)
-            create_gesture(
+            self.create_gesture(hbox, 1, self.helper.open_kitty_with_rich_events_view)
+            self.create_gesture(
                 hbox, 3, self.helper.open_kitty_with_prompt_and_watch_selected_event
             )
-
-        def create_gesture_for_focused_view_id(self, hbox):
-            focused_view = self.last_toplevel_focused_view()
-            if focused_view is not None:
-                create_gesture = self.plugins["gestures_setup"].create_gesture
-                create_gesture(
-                    hbox,
-                    1,
-                    lambda _,
-                    id=focused_view["id"]: self.helper.open_kitty_with_ipython_view(
-                        focused_view
-                    ),
-                )
 
         def popover_is_closed(self, *_):
             self.stop_system_updates()
