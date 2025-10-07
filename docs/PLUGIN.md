@@ -37,68 +37,63 @@ nano ~/.config/waypanel/plugins/random_plugin.py
 
 ```python
 
-from gi.repository import Gtk, GLib
-import random
-from waypanel.src.plugins.core._base import BasePlugin
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "container": "top-panel-center",
+        "index": 10,
+        "deps": ["top_panel"],
+    }
 
-# Enable or disable the plugin
-ENABLE_PLUGIN = True
-
-# Define where the plugin should appear
-def get_plugin_placement(panel_instance):
-    position = "top-panel-right"
-    order = 10
-    return position, order
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        return RandomNumberPlugin(panel_instance)
-
-class RandomNumberPlugin(BasePlugin):
-    def __init__(self, panel_instance):
-        super().__init__(panel_instance)
-        self.popover = None
-        self.button = None
-
-    def create_widget(self):
-        """Create the main widget for the plugin."""
-        self.button = Gtk.Button()
-        self.button.set_icon_name("dialog-information-symbolic")
-        self.button.connect("clicked", self.on_button_clicked)
-        self.button.set_tooltip_text("Show random number")
-        return self.button
-
-    def on_button_clicked(self, widget):
-        """Handle button click to show a random number."""
-        if not self.popover:
-            self.popover = Gtk.Popover()
-            self.popover.set_parent(self.button)
-            self.popover.set_autohide(True)
-
-            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-            box.set_margin_top(10)
-            box.set_margin_bottom(10)
-            box.set_margin_start(10)
-            box.set_margin_end(10)
-
-            label = Gtk.Label.new(f"🎲 Random Number: {random.randint(1, 100)}")
-            box.append(label)
-
-            refresh_btn = Gtk.Button(label="Generate Again")
-            refresh_btn.connect("clicked", self.refresh_random_number, label)
-            box.append(refresh_btn)
-
-            self.popover.set_child(box)
-
-        self.popover.popup()
-
-    def refresh_random_number(self, button, label):
-        """Refresh the random number in the popover."""
-        label.set_text(f"🎲 Random Number: {random.randint(1, 100)}")
-
-    def set_widget(self):
-        """Return the widget and append mode."""
-        return self.create_widget(), "append"
+def get_plugin_class()
+    from gi.repository import Gtk, GLib
+    import random
+    from waypanel.src.plugins.core._base import BasePlugin
+    class RandomNumberPlugin(BasePlugin):
+        def __init__(self, panel_instance):
+            super().__init__(panel_instance)
+            self.popover = None
+            self.button = None
+    
+        def create_widget(self):
+            """Create the main widget for the plugin."""
+            self.button = Gtk.Button()
+            self.button.set_icon_name("dialog-information-symbolic")
+            self.button.connect("clicked", self.on_button_clicked)
+            self.button.set_tooltip_text("Show random number")
+            return self.button
+    
+        def on_button_clicked(self, widget):
+            """Handle button click to show a random number."""
+            if not self.popover:
+                self.popover = Gtk.Popover()
+                self.popover.set_parent(self.button)
+                self.popover.set_autohide(True)
+    
+                box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+                box.set_margin_top(10)
+                box.set_margin_bottom(10)
+                box.set_margin_start(10)
+                box.set_margin_end(10)
+    
+                label = Gtk.Label.new(f"🎲 Random Number: {random.randint(1, 100)}")
+                box.append(label)
+    
+                refresh_btn = Gtk.Button(label="Generate Again")
+                refresh_btn.connect("clicked", self.refresh_random_number, label)
+                box.append(refresh_btn)
+    
+                self.popover.set_child(box)
+    
+            self.popover.popup()
+    
+        def refresh_random_number(self, button, label):
+            """Refresh the random number in the popover."""
+            label.set_text(f"🎲 Random Number: {random.randint(1, 100)}")
+    
+        def set_widget(self):
+            """Return the widget and append mode."""
+            return self.create_widget(), "append"
 ```
 
 ## 🔄 Step 2: Reload or Restart waypanel
@@ -106,54 +101,14 @@ class RandomNumberPlugin(BasePlugin):
 After saving the file, reload or restart waypanel to load the plugin:
 bash
 
-killall waypanel
-waypanel
-
-## 🎯 Understanding the Code
-
-### Let's break down the structure so you can modify it later.
-🔹 ENABLE_PLUGIN = True
-
-    Enables/disables the plugin globally.
-
-🔹 get_plugin_placement()
-
-    Determines where the plugin appears (top-panel-left, top-panel-right, etc.)
-
-    order sets its priority within that area.
-
-🔹 initialize_plugin()
-
-    Instantiates the plugin class if enabled.
-
-🔹 RandomNumberPlugin Class
-
-    Inherits from BasePlugin
-
-    Contains logic for creating the UI and handling interactions
-
-🔹 create_widget()
-
-    Returns the main widget (in this case, a button with an icon)
-
-🔹 on_button_clicked()
-
-    Creates a popover with a random number and a refresh button
-
-🔹 refresh_random_number()
-
-    Updates the label with a new random number
-
-🔹 set_widget()
-
-    Tells waypanel how to place the widget (append adds it at the end)
+pkill -f waypanel/main.py  
+python run.py
 
 ## 🛠️ Tips & Troubleshooting
 
 
 ### ❗ Common Issues
 Problem	Solution
-Plugin doesn't show up	Make sure ENABLE_PLUGIN = True
 Button appears but nothing happens	Ensure Gtk.Popover is properly initialized
 No logs visible	Add self.logger.info("Debug message")
 Import errors	Confirm path matches waypanel/src/plugins/core/_base.py
@@ -172,34 +127,148 @@ Once you've created your first plugin, try these advanced steps:
 Use this as a boilerplate for future plugins:
 ```python
 
-from gi.repository import Gtk
-from waypanel.src.plugins.core._base import BasePlugin
+def get_plugin_metadata(_):
+    """
+    Define the plugin's properties and placement using the modern dictionary format.
 
-ENABLE_PLUGIN = True
+    Valid Positions:
+        - Top Panel:
+            "top-panel-left"
+            "top-panel-center"
+            "top-panel-right"
+            "top-panel-systray"
+            "top-panel-after-systray"
 
-def get_plugin_placement(panel_instance):
-    return "top-panel-right", 10
+        - Bottom Panel:
+            "bottom-panel-left"
+            "bottom-panel-center"
+            "bottom-panel-right"
 
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        return MyPlugin(panel_instance)
+        - Left Panel:
+            "left-panel-top"
+            "left-panel-center"
+            "left-panel-bottom"
 
-class MyPlugin(BasePlugin):
-    def __init__(self, panel_instance):
-        super().__init__(panel_instance)
-        self.button = None
+        - Right Panel:
+            "right-panel-top"
+            "right-panel-center"
+            "right-panel-bottom"
 
-    def create_widget(self):
-        self.button = Gtk.Button(label="Click Me!")
-        self.button.connect("clicked", self.on_click)
-        return self.button
+        - Background:
+            "background"  # For plugins that don't have a UI
 
-    def on_click(self, _):
-        print("Button clicked!")
+    Returns:
+        dict: Plugin configuration metadata.
+    """
+    return {
+        "enabled": True,
+        "container": "top-panel-right",
+        "index": 5,
+        "deps": ["event_manager"],
+    }
 
-    def set_widget(self):
-        return self.create_widget(), "append"
+
+def get_plugin_class():
+    """
+    Returns the main plugin class. All necessary imports are deferred here.
+    """
+    import asyncio
+    from src.plugins.core._base import BasePlugin
+
+    class ExampleBroadcastPlugin(BasePlugin):
+        def __init__(self, panel_instance):
+            super().__init__(panel_instance)
+            self.button = None
+
+        async def on_start(self):
+            """
+            Asynchronous entry point, replacing the deprecated initialize_plugin().
+            """
+            self.logger.info("Setting up ExampleBroadcastPlugin...")
+            self._setup_plugin_ui()
+            self.logger.info("ExampleBroadcastPlugin has started.")
+
+        def _setup_plugin_ui(self):
+            """
+            Set up the plugin's UI and functionality.
+            """
+            self.button = self.create_broadcast_button()
+            self.main_widget = (self.button, "append")
+
+        def create_broadcast_button(self):
+            """
+            Create a button that triggers an IPC broadcast when clicked.
+            """
+            # Use self.gtk helper for widget creation
+            button = self.gtk.Button()
+            button.connect("clicked", self.on_button_clicked)
+            button.set_tooltip_text("Click to broadcast a message!")
+            return button
+
+        def on_button_clicked(self, widget):
+            """
+            Handle button click event by correctly scheduling the async broadcast.
+            """
+            self.logger.info("ExampleBroadcastPlugin button clicked!")
+
+            message = {
+                "event": "custom_message",
+                "data": "Hello from ExampleBroadcastPlugin!",
+            }
+
+            asyncio.create_task(self.broadcast_message(message))
+
+        async def broadcast_message(self, message):
+            """
+            Broadcast a custom message to all connected clients via the IPC server.
+            """
+            try:
+                self.logger.info(f"Broadcasting message: {message}")
+                await self.ipc_server.broadcast_message(message)
+            except Exception as e:
+                self.logger.error(f"Failed to broadcast message: {e}")
+
+        async def on_stop(self):
+            """
+            Called when the plugin is stopped or unloaded.
+            """
+            self.logger.info("ExampleBroadcastPlugin has stopped.")
+
+        async def on_reload(self):
+            """
+            Called when the plugin is reloaded dynamically.
+            """
+            self.logger.info("ExampleBroadcastPlugin has been reloaded.")
+
+        async def on_cleanup(self):
+            """
+            Called before the plugin is completely removed.
+            """
+            self.logger.info("ExampleBroadcastPlugin is cleaning up resources.")
+
+        def about(self):
+            """An example plugin that demonstrates how to create a UI widget and broadcast a message via the IPC server."""
+            return self.about.__doc__
+
+        def code_explanation(self):
+            """
+            This plugin is an example demonstrating how to create a simple user
+            interface (UI) element and use the Inter-Process Communication (IPC)
+            system to broadcast a message to other components.
+
+            The core logic is centered on **event-driven UI and IPC broadcasting**:
+
+            1.  **UI Creation**: It creates a Gtk.Button and sets it as the main
+                widget, specifying its placement on the top-right of the panel.
+            2.  **Event Handling**: It connects the button's "clicked" signal to the
+                `on_button_clicked` method, which correctly schedules the
+                asynchronous `broadcast_message` using `asyncio.create_task`.
+            3.  **IPC Broadcasting**: The `broadcast_message` method then uses the
+                `ipc_server` to send a predefined message to any other plugin or
+                client that is listening for the "custom_message" event.
+            """
+            return self.code_explanation.__doc__
+
+    return ExampleBroadcastPlugin
 ```
 
-
-Happy coding! 🚀
