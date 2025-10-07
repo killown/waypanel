@@ -1,20 +1,11 @@
-ENABLE_PLUGIN = True
-DEPS = ["notify_client"]
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "deps": ["notify_client"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    """Define the plugin's position and order."""
-    return
-
-
-def initialize_plugin(panel_instance):
-    """Initialize the Notify Watcher Plugin."""
-    if ENABLE_PLUGIN:
-        plugin = call_plugin_class()
-        return plugin(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     from src.plugins.core._base import BasePlugin
 
     class NotifyWatcherPlugin(BasePlugin):

@@ -10,36 +10,12 @@ class PluginLoader:
     """
     Manages the entire lifecycle of plugins for Waypanel, ensuring non-blocking,
     dependency-aware startup and correct placement on the GTK panel.
-    The process is executed in non-blocking stages using GLib.idle_add to maintain
-    UI responsiveness during the potentially slow tasks of I/O and module importing.
     The plugin loading sequence is structured into three main phases:
-    1.  Discovery and Validation:
-        - Scans built-in (`self.plugins_dir`) and user-defined directories (`self.user_plugins_dir`)
-          for Python modules (`_scan_all_plugin_dirs`).
-        - Uses `_batch_import_and_validate` to dynamically import plugin modules in small,
-          yielded batches (chunks of 10).
-        - Validates that each module defines the necessary entry points: `get_plugin_placement`
-          and `initialize_plugin`.
-        - Checks and collects essential metadata, including dependencies (`DEPS`) and
-          UI placement (position, order, priority).
+    1.  Discovery and Validation.
     2.  Dependency Sorting and Ordering:
-        - Uses `_initialize_sorted_plugins` to build a dependency graph based on the `DEPS` attribute.
-        - Applies **Topological Sort (Kahn's Algorithm)** to determine a safe, sequential
-          loading order where all dependencies are initialized before their dependents.
-        - Plugins are ordered by `priority` (highest first) and `order` (lowest first)
-          as tie-breakers for UI layout.
-        - Detects and logs fatal **circular dependencies**, skipping initialization for the affected plugins.
-    3.  Initialization and Placement:
-        - Uses `_chunked_initialize_plugins` to initialize the sorted plugins one-by-one,
-          guaranteed to be in the correct dependency order.
-        - Calls `module.initialize_plugin(self.panel_instance)` to instantiate the plugin.
-        - The `handle_set_widget` method manages the final UI presentation:
-            - It retrieves the plugin's GTK widget.
-            - It places the widget in the correct panel box (Left, Center, or Right) as
-              determined by `get_plugin_placement`.
-            - It handles routing the widget to the overflow container if `hide_in_systray` is set.
-        - Updates the persistent configuration file (`config.toml`) with the final list of
-          enabled and disabled plugins.
+        - Uses **Topological Sort** to satisfy dependencies first.
+        - Applies `priority` (highest first) and `order` (lowest first) as tie-breakers for final UI layout.
+    3.  Initialization and Placement.
     """
 
     def __init__(self, panel_instance):
@@ -200,64 +176,54 @@ class PluginLoader:
             try:
                 module = importlib.import_module(module_path)
                 plugins_imported_in_chunk += 1
-                is_plugin_enabled = getattr(module, "ENABLE_PLUGIN", True)
-                if not hasattr(module, "get_plugin_placement") or not hasattr(
-                    module,
-                    "initialize_plugin" or not hasattr(module, "call_plugin_class"),
+                if not hasattr(module, "get_plugin_metadata") or not hasattr(
+                    module, "get_plugin_class"
                 ):
                     self.logger.error(
-                        f"Module {module_name} is missing required functions. Skipping."
+                        f"Module {module_name} is missing required functions (get_plugin_metadata or get_plugin_class). Skipping."
                     )
-                    # FIX: Unload module
                     if module_path in sys.modules:
                         del sys.modules[module_path]
                     continue
-                if not is_plugin_enabled:
+                metadata = module.get_plugin_metadata(self.panel_instance)
+                if not isinstance(metadata, dict):
+                    self.logger.error(
+                        f"Plugin {module_name} get_plugin_metadata did not return a dictionary. Skipping."
+                    )
+                    if module_path in sys.modules:
+                        del sys.modules[module_path]
+                    continue
+                if not metadata.get("enabled", True):
                     self.data_helper.get_current_time_with_ms(
-                        f"Skipping disabled plugin: {module_name}"
+                        f"Skipping disabled plugin (metadata 'enabled' is False): {module_name}"
                     )
                     if module_path in sys.modules:
                         del sys.modules[module_path]
                     continue
-                self.plugins_import[module_name] = module_path
-                self.logger.debug(f"Registered plugin: {module_name} -> {module_path}")
-                has_plugin_deps = getattr(module, "DEPS", [])
+                has_plugin_deps = metadata.get("deps", [])
                 if not self.validate_deps_list(has_plugin_deps):
                     self.logger.error(
-                        error=ValueError("Invalid DEPS list."),
-                        message=f"Plugin '{module_name}' has an invalid DEPS list. Skipping.",
+                        error=ValueError("Invalid 'deps' list in plugin metadata."),
+                        message=f"Plugin '{module_name}' has an invalid 'deps' list. Skipping.",
                         level="error",
                     )
                     if module_path in sys.modules:
                         del sys.modules[module_path]
                     continue
-                position_result = module.get_plugin_placement(self.panel_instance)  # pyright: ignore
-                position = "background"
-                priority = 0
-                order = 0
-                if position_result != "background":
-                    if position_result:
-                        if self.data_helper.validate_tuple(
-                            position_result, name="position_result"
-                        ):
-                            if len(position_result) == 3:
-                                position, order, priority = position_result
-                            else:
-                                position, order = position_result
-                                priority = 0
-                        else:
-                            self.logger.error(
-                                f"Invalid position result for plugin {module_name}. Skipping."
-                            )
-                            if module_path in sys.modules:
-                                del sys.modules[module_path]
-                            continue
+                container = metadata.get("container", "background")
+                priority = metadata.get("priority", 0)
+                index = metadata.get("index", 0)
+                if container == "background":
+                    self.logger.debug(f"Plugin {module_name} is a background service.")
+                self.plugins_import[module_name] = module_path
+                self.logger.debug(f"Registered plugin: {module_name} -> {module_path}")
                 self.valid_plugins.append(module_name)
-                self.plugin_metadata.append((module, position, order, priority))
-
+                self.plugin_metadata.append((module, container, priority, index))
             except Exception as e:
                 self.logger.error(f"Failed to load or validate plugin {module_name}:")
                 print(f" {e}:\n{traceback.format_exc()}")
+                if module_path in sys.modules:
+                    del sys.modules[module_path]
         self.plugins_to_process_index = end_index
         remaining_plugins = len(self.plugins_to_process) - self.plugins_to_process_index
         if remaining_plugins > 0:
@@ -392,10 +358,17 @@ class PluginLoader:
         adj_list = {name: [] for name in all_plugins}
         for name, metadata in all_plugins.items():
             module = metadata[0]
-            deps = getattr(module, "DEPS", [])
-            if not isinstance(deps, list):
+            try:
+                metadata_dict_for_deps = module.get_plugin_metadata(self.panel_instance)
+                deps = metadata_dict_for_deps.get("deps", [])
+                if not isinstance(deps, list):
+                    self.logger.error(
+                        f"Plugin '{name}' metadata 'deps' is not a list. Skipping dependency check."
+                    )
+                    deps = []
+            except Exception as e:
                 self.logger.error(
-                    f"Plugin '{name}' DEPS is not a list. Skipping dependency check."
+                    f"Failed to retrieve metadata/deps for plugin '{name}': {e}"
                 )
                 deps = []
             for dep in deps:
@@ -411,7 +384,9 @@ class PluginLoader:
         for name, degree in in_degree.items():
             if degree == 0:
                 metadata = all_plugins[name]
-                ready_to_load.append((name, metadata[3], metadata[2]))
+                priority = metadata[2]
+                order = metadata[3]
+                ready_to_load.append((name, priority, order))
         ready_to_load.sort(key=lambda x: (-x[1], x[2]))
         sorted_plugin_names = []
         while ready_to_load:
@@ -421,8 +396,8 @@ class PluginLoader:
                 in_degree[dependent_plugin_name] -= 1
                 if in_degree[dependent_plugin_name] == 0:
                     dependent_metadata = all_plugins[dependent_plugin_name]
-                    dependent_priority = dependent_metadata[3]
-                    dependent_order = dependent_metadata[2]
+                    dependent_priority = dependent_metadata[2]
+                    dependent_order = dependent_metadata[3]
                     ready_to_load.append(
                         (dependent_plugin_name, dependent_priority, dependent_order)
                     )
@@ -441,7 +416,7 @@ class PluginLoader:
         self.plugins_to_initialize_index = 0
         self.logger.info(
             f"Scheduling chunked initialization for {len(self.plugins_to_initialize)} plugins, "
-            "guaranteed to be in dependency order."
+            "guaranteed to be in dependency order, then sorted by priority (high-to-low), then order (low-to-high)."
         )
         GLib.idle_add(self._chunked_initialize_plugins)
         return False
@@ -461,8 +436,13 @@ class PluginLoader:
             self.plugins_to_initialize_index = 0
             self.logger.info("Plugin initialization complete.")
             return False
-        for module, position, order, priority in plugins_chunk:
-            self._initialize_single_plugin(module, position, order, priority)
+        for (
+            module,
+            container,
+            priority,
+            order,
+        ) in plugins_chunk:
+            self._initialize_single_plugin(module, container, order, priority)
         self.plugins_to_initialize_index = end_index
         remaining_plugins = (
             len(self.plugins_to_initialize) - self.plugins_to_initialize_index
@@ -483,10 +463,9 @@ class PluginLoader:
                 return False
 
             GLib.timeout_add(300, run_once)
-
             return False
 
-    def _initialize_single_plugin(self, module, position, order, priority):
+    def _initialize_single_plugin(self, module, container, order, priority):
         """
         Initializes a single plugin. Since plugins are loaded in dependency order
         (Topological Sort), the complex retry logic is no longer necessary.
@@ -495,17 +474,22 @@ class PluginLoader:
         plugin_name = module.__name__.split(".src.plugins.")[-1]
         hide_in_systray = getattr(module, "HIDE_IN_SYSTRAY", False)
         try:
-            plugin_instance = module.initialize_plugin(self.panel_instance)
+            plugin_instance = None
+            if hasattr(module, "initialize_plugin"):
+                plugin_instance = module.initialize_plugin(self.panel_instance)
+            else:
+                plugin_class = module.get_plugin_class()
+                plugin_instance = plugin_class(self.panel_instance)
             if hasattr(plugin_instance, "on_start"):
                 plugin_instance.on_start()
             self.logger.info(f"Initialized plugin: {plugin_name}")
             self.plugins[module_name] = plugin_instance
-            target_box = self._get_target_panel_box(position, plugin_name)
+            target_box = self._get_target_panel_box(container, plugin_name)
             if target_box is None:
                 self.logger.error(
-                    f"No target box found for plugin {plugin_name} with position {position}. Assuming background."
+                    f"No target box found for plugin {plugin_name} with container {container}. Assuming background."
                 )
-            if position == "background" or target_box is None:
+            if container == "background" or target_box is None:
                 self.logger.info(
                     f"Plugin [{plugin_name}] initialized as a background plugin. ✅"
                 )

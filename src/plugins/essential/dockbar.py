@@ -1,21 +1,13 @@
-ENABLE_PLUGIN = True
-DEPS = ["event_manager", "gestures_setup"]
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "container": "left-panel-center",
+        "priority": 1,
+        "deps": ["event_manager", "gestures_setup", "left_panel"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    position = "left-panel-center"
-    order = 5
-    priority = 10
-    return position, order, priority
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        dockbar = call_plugin_class()
-        return dockbar(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     from core._base import BasePlugin
 
     class DockbarPlugin(BasePlugin):

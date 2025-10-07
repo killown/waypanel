@@ -1,26 +1,13 @@
-ENABLE_PLUGIN = True
-DEPS = ["gestures_setup"]
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 6,
+        "container": "top-panel-systray",
+        "deps": ["top_panel", "gestures_setup"],
+    }
 
 
-class MetricItemPlaceholder:
-    pass
-
-
-def get_plugin_placement(panel_instance):
-    """Define the plugin's position and order."""
-    position = "top-panel-systray"
-    order = 5
-    return position, order
-
-
-def initialize_plugin(panel_instance):
-    """Initialize the system monitor plugin."""
-    if ENABLE_PLUGIN:
-        system_monitor = call_plugin_class()
-        return system_monitor(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     import gi
 
     gi.require_version("Gtk", "4.0")

@@ -1,20 +1,13 @@
-ENABLE_PLUGIN = True
-DEPS = ["top_panel"]
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "container": "top-panel-center",
+        "index": 5,
+        "deps": ["top_panel"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    position = "top-panel-center"
-    order = 5
-    return position, order
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        clock = call_plugin_class()
-        return clock(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     from src.plugins.core._base import BasePlugin
 
     class ClockPlugin(BasePlugin):

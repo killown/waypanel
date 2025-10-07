@@ -1,23 +1,13 @@
-ENABLE_PLUGIN = True
-DEPS = ["notify_server"]
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 7,
+        "container": "top-panel-center",
+        "deps": ["top_panel", "notify_server"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    """Define the plugin's position and order."""
-    position = "top-panel-center"
-    order = 10
-    priority = 99
-    return position, order, priority
-
-
-def initialize_plugin(panel_instance):
-    """Initialize the Notification Popover Plugin."""
-    if ENABLE_PLUGIN:
-        plugin = call_plugin_class()
-        return plugin(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     import re
     from ._utils import NotifyUtils
     from src.plugins.core._base import BasePlugin

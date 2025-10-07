@@ -1,19 +1,15 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 10,
+        "container": "top-panel-systray",
+        "deps": [
+            "top_panel",
+        ],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    position = "top-panel-systray"
-    order = 999
-    return position, order
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        system_dashoboard = call_plugin_class()
-        return system_dashoboard(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     import psutil
     from src.tools.control_center import ControlCenter
     from src.plugins.core._base import BasePlugin

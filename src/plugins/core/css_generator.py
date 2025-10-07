@@ -1,18 +1,11 @@
-ENABLE_PLUGIN = True
-DEPS = []
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "deps": ["event_manager"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    return
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        css_generator = call_plugin_class()
-        return css_generator(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     import os
     from pathlib import Path
     from src.plugins.core._base import BasePlugin

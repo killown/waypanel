@@ -1,45 +1,24 @@
-ENABLE_PLUGIN = True
+DEFAULT_BOOKMARKS_TEMPLATE = """
+[Google]
+url = "https://www.google.com"
+container = "personal"
+icon = "https://www.google.com/favicon.ico"
+[GitHub]
+url = "https://www.github.com"
+container = "dev"
+"""
 
 
-def get_plugin_placement(panel_instance):
-    position = "top-panel-box-widgets-left"
-    order = 2
-    return position, order
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 2,
+        "container": "top-panel-box-widgets-left",
+        "deps": ["top_panel"],
+    }
 
 
-def initialize_plugin(panel_instance):
-    import os
-    from src.shared.path_handler import PathHandler
-
-    DEFAULT_BOOKMARKS_TEMPLATE = """
-    [Google]
-    url = "https://www.google.com"
-    container = "personal"
-    icon = "https://www.google.com/favicon.ico"
-    [GitHub]
-    url = "https://www.github.com"
-    container = "dev"
-    """
-
-    path_handler = PathHandler(panel_instance)
-    bookmarks_path = path_handler.get_data_path()
-    bookmarks_dir = os.path.join(bookmarks_path, "bookmarks")
-    bookmarks_file = os.path.join(bookmarks_dir, "bookmarks.toml")
-    if not os.path.exists(bookmarks_file):
-        try:
-            os.makedirs(bookmarks_dir, exist_ok=True)
-            with open(bookmarks_file, "w") as f:
-                f.write(DEFAULT_BOOKMARKS_TEMPLATE.strip())
-            print(f"Created default bookmarks file at: {bookmarks_file}")
-        except Exception as e:
-            print(f"Error creating default bookmarks file: {e}")
-    if os.path.exists(bookmarks_file):
-        if ENABLE_PLUGIN:
-            bookmarks = call_plugin_class()
-            return bookmarks(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     import re
     from bs4 import BeautifulSoup
     from PIL import Image, ImageDraw
@@ -84,7 +63,27 @@ def call_plugin_class():
             except Exception as e:
                 self.logger.warning(f"Error saving bookmarks cache: {e}")
 
+        def _ensure_default_bookmarks_file(self):
+            """
+            Checks for and creates the default bookmarks.toml file if it doesn't exist,
+            using the global DEFAULT_BOOKMARKS_TEMPLATE.
+            """
+            bookmarks_path = self._path_handler.get_data_path()
+            bookmarks_dir = self.os.path.join(bookmarks_path, "bookmarks")
+            bookmarks_file = self.os.path.join(bookmarks_dir, "bookmarks.toml")
+            if not self.os.path.exists(bookmarks_file):
+                try:
+                    self.os.makedirs(bookmarks_dir, exist_ok=True)
+                    with open(bookmarks_file, "w") as f:
+                        f.write(DEFAULT_BOOKMARKS_TEMPLATE.strip())
+                    self.logger.info(
+                        f"Created default bookmarks file at: {bookmarks_file}"
+                    )
+                except Exception as e:
+                    self.logger.error(f"Error creating default bookmarks file: {e}")
+
         def on_start(self):
+            self._ensure_default_bookmarks_file()
             self._setup_config_paths()
             self.create_menu_popover_bookmarks()
             self.run_in_async_task(
@@ -93,7 +92,7 @@ def call_plugin_class():
 
         def _setup_config_paths(self):
             self.home = self.os.path.expanduser("~")
-            self.config_path = self.path_handler.get_data_path()
+            self.config_path = self._path_handler.get_data_path()
             print(self.config_path)
             self.bookmarks_image_path = self.os.path.join(
                 self.config_path, "bookmarks/images/"

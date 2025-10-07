@@ -1,19 +1,13 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 3,
+        "container": "top-panel-box-widgets-left",
+        "deps": ["top_panel"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    position = "top-panel-box-widgets-left"
-    order = 3
-    return position, order
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        plugin = call_plugin_class()
-        return plugin(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     from src.plugins.core._base import BasePlugin
     import fnmatch
 

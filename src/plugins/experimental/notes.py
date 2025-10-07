@@ -1,13 +1,13 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 6,
+        "container": "top-panel-systray",
+        "deps": ["top_panel"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    position = "top-panel-systray"
-    order = 2
-    return position, order
-
-
-def call_plugin_classes():
+def get_plugin_class():
     import aiosqlite
     import datetime
     import asyncio
@@ -364,10 +364,3 @@ def call_plugin_classes():
             return self.code_explanation.__doc__
 
     return MenuNotes
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        MenuNotes_Class = call_plugin_classes()
-        notes = MenuNotes_Class(panel_instance)
-        return notes

@@ -1,17 +1,8 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {"enabled": True, "priority": 1, "deps": ["event_manager"]}
 
 
-def get_plugin_placement(panel_instance):
-    return "background"
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        output_mover = call_plugin_class()
-        return output_mover(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     from gi.repository import Gtk4LayerShell as LayerShell  # pyright: ignore
     from src.core.create_panel import get_monitor_info, get_target_monitor
     from src.plugins.core._base import BasePlugin

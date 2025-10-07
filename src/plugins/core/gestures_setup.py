@@ -1,17 +1,8 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {"enabled": True, "priority": 1}
 
 
-def get_plugin_placement(panel_instance):
-    return
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        gestures = call_plugin_class()
-        return gestures(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     import gi
 
     from gi.repository import Gtk, GLib  # pyright: ignore

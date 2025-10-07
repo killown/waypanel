@@ -1,21 +1,16 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 1,
+        "container": "top-panel-box-widgets-left",
+        "deps": [
+            "top_panel",
+        ],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    position = "top-panel-box-widgets-left"
-    order = 1
-    return position, order
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        appmenu = call_plugin_class()
-        return appmenu(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     import sqlite3
-    from gi.repository import Gtk4LayerShell as LayerShell  # pyright: ignore
     from src.plugins.core._base import BasePlugin
 
     class AppMenu(BasePlugin):

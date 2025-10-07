@@ -1,19 +1,11 @@
-ENABLE_PLUGIN = True
-DEPS = ["top_panel", "bottom_panel", "left_panel", "right_panel", "css_generator"]
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "priority": 1,
+    }
 
 
-def get_plugin_placement(panel_instance):
-    return
-
-
-def initialize_plugin(panel_instance):
-    """Initialize the Event Manager plugin."""
-    if ENABLE_PLUGIN:
-        ev = call_plugin_class()
-        return ev(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     from src.plugins.core._base import BasePlugin
     import collections
 

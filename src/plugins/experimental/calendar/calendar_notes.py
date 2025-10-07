@@ -9,7 +9,7 @@ ENABLE_PLUGIN = False
 DEPS = ["calendar"]
 
 
-def get_plugin_placement(panel_instance):
+def get_plugin_metadata(panel_instance):
     return "background", 0, 0
 
 

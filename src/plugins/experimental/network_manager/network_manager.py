@@ -1,29 +1,17 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 7,
+        "container": "top-panel-systray",
+        "deps": ["top_panel"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    """Define where the plugin should appear."""
-    return (
-        "top-panel-systray",
-        4,
-    )
-
-
-def initialize_plugin(panel_instance):
-    """Initialize the Network Status plugin."""
-    if ENABLE_PLUGIN:
-        network_manager = call_plugin_class()
-        return network_manager(panel_instance)
-    return None
-
-
-def call_plugin_class():
+def get_plugin_class():
     from typing import Dict, Any, List
     from src.plugins.core._base import BasePlugin
     from ._network_cli_backend import NetworkCLI
 
-    ICON_CONNECTED = "notification-network-wired"
-    ICON_DISCONNECTED = "network-wired-disconnected-symbolic"
     ICON_WIFI_CONNECTED = "wifi"
     ICON_WIFI_DISCONNECTED = "network-wireless-disconnected-symbolic"
     ICON_WIFI_EXCELLENT = "network-wireless-signal-excellent-symbolic"

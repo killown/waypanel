@@ -1,27 +1,13 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 2,
+        "container": "top-panel-systray",
+        "deps": ["top_panel"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    """
-    Defines the placement and order of the plugin on the panel.
-    """
-    position = "top-panel-systray"
-    order = 3
-    return position, order
-
-
-def initialize_plugin(panel_instance):
-    """
-    Initializes and returns the plugin instance.
-    """
-    if ENABLE_PLUGIN:
-        SoundCardDashboard_Class = call_class()
-        card = SoundCardDashboard_Class(panel_instance)
-        card.create_menu_popover_soundcard()
-        return card
-
-
-def call_class():
+def get_plugin_class():
     from src.plugins.core._base import BasePlugin
 
     class SoundCardDashboard(BasePlugin):
@@ -51,6 +37,9 @@ def call_class():
             self.max_mic_chars = self.get_config(
                 ["hardware", "microphone", "max_name_lenght"], 35
             )
+
+        def on_start(self):
+            self.create_menu_popover_soundcard()
 
         def get_view_id_by_pid(self, pid):
             """
@@ -430,12 +419,6 @@ def call_class():
             audio_apps = self.get_active_audio_app_info()
             for app_info in audio_apps.values():
                 pass
-
-        def on_start(self):
-            """
-            Placeholder method to be called at the start of the application.
-            """
-            pass
 
         def about(self):
             """

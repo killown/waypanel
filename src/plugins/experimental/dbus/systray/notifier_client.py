@@ -1,20 +1,13 @@
-ENABLE_PLUGIN = True
-DEPS = [
-    "event_manager",
-    "top_panel",
-]
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "container": "top-panel-center",
+        "index": 5,
+        "deps": ["event_manager", "top_panel"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    return "top-panel-center", 10, 10
-
-
-def initialize_plugin(panel_instance):
-    plugin = call_plugin_class()
-    return plugin(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     from dbus_fast import Variant
     import re
     from unidecode import unidecode

@@ -6,7 +6,7 @@ ENABLE_PLUGIN = False
 DEPS = ["top_panel"]
 
 
-def get_plugin_placement(panel_instance):
+def get_plugin_metadata(panel_instance):
     position = "top-panel-systray"
     order = 99
     return position, order

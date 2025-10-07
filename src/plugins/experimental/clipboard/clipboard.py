@@ -1,19 +1,13 @@
-ENABLE_PLUGIN = True
-DEPS = ["clipboard_server"]
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "container": "top-panel-systray",
+        "index": 6,
+        "deps": ["top_panel", "clipboard_server"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    return "top-panel-systray", 2
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        clipboard_client = call_plugin_class(panel_instance)
-        return clipboard_client(panel_instance)
-    return None
-
-
-def call_plugin_class(panel_instance):
+def get_plugin_class():
     import io
     import mimetypes
     from pathlib import Path
@@ -22,12 +16,13 @@ def call_plugin_class(panel_instance):
     from PIL import Image
     import re
     from src.plugins.core._base import BasePlugin
-    from .clipboard_server import AsyncClipboardServer
+    from .clipboard_server import get_plugin_class
     from src.shared.path_handler import PathHandler
 
     class ClipboardManager:
         def __init__(self, panel_instance):
-            self.server = AsyncClipboardServer(panel_instance)
+            plugin = get_plugin_class()
+            self.server = plugin(panel_instance)
             self.path_handler = PathHandler(panel_instance)
             self.db_path = self.path_handler.get_data_path(
                 "db/clipboard/clipboard_server.db"

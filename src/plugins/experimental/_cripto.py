@@ -7,7 +7,7 @@ ENABLE_PLUGIN = True
 # load the plugin only after essential plugins is loaded
 
 
-def get_plugin_placement(panel_instance):
+def get_plugin_metadata(panel_instance):
     """
     Define the plugin's position and order.
     """

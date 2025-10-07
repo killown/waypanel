@@ -14,7 +14,7 @@ if os.getenv("WAYFIRE_SOCKET"):
     ENABLE_PLUGIN = False
 
 
-def get_plugin_placement(panel_instance):
+def get_plugin_metadata(panel_instance):
     """
     This is a background plugin with no UI.
     """

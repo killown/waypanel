@@ -1,19 +1,10 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+    }
 
 
-def get_plugin_placement(panel_instance):
-    """This is a background plugin with no UI."""
-    return "background"
-
-
-def initialize_plugin(panel_instance):
-    """Initialize the plugin if enabled."""
-    if ENABLE_PLUGIN:
-        color_picker = call_plugin_class()
-        return color_picker(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     KEYBIND_PRIMARY = "<ctrl><super><alt> BTN_LEFT"
     KEYBIND_FALLBACK = "<super><shift> KEY_C"
     from src.plugins.core._base import BasePlugin

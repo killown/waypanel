@@ -1,19 +1,13 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 6,
+        "container": "top-panel-systray",
+        "deps": ["top_panel"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    position = "top-panel-systray"
-    order = 3
-    return position, order
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        bluetooth = call_plugin_class()
-        return bluetooth(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     import re
     import pulsectl
     from src.plugins.core._base import BasePlugin

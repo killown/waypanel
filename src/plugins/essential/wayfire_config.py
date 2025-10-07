@@ -1,32 +1,10 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+    }
 
 
-def get_plugin_placement(panel_instance):
-    """
-    Returns the placement of the plugin.
-    Args:
-        panel_instance: The instance of the panel.
-    Returns:
-        str: The placement of the plugin, "background".
-    """
-    return "background", 99, 99
-
-
-def initialize_plugin(panel_instance):
-    """
-    Initializes the Wayfire Config Watcher plugin.
-    Args:
-        panel_instance: The instance of the panel.
-    Returns:
-        WayfireConfigWatcherPlugin or None: The initialized plugin instance if
-        the required IPC method is available, otherwise None.
-    """
-    if ENABLE_PLUGIN:
-        wayfire_config = call_plugin_class()
-        return wayfire_config(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     from gi.repository import Gio  # pyright: ignore
     from src.plugins.core._base import BasePlugin
 

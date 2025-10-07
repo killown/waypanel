@@ -21,27 +21,21 @@
 # SOFTWARE.
 
 
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "deps": ["top_panel"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    return
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        plugin = call_plugin_class()
-        return plugin(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     import asyncio
     from dbus_next.aio.message_bus import MessageBus
     from dbus_next.service import ServiceInterface, method, signal
     from dbus_next.constants import BusType, NameFlag, RequestNameReply
     from gi.repository import GLib  # pyright: ignore
     from ._notify_server_db import Database
-    from ._notify_server_ui import UI
+    from ._notify_server_ui import get_plugin_class
 
     def run_server_in_background(panel_instance):
         async def _run_server():
@@ -65,7 +59,8 @@ def call_plugin_class():
             super().__init__("org.freedesktop.Notifications")
             self.last_modified = None
             self.db = Database(panel_instance)
-            self.ui = UI(panel_instance)
+            ui = get_plugin_class()
+            self.ui = ui(panel_instance)
             self.logger = self.ui.logger
             self.config_handler = panel_instance.config_handler
             self.timeout = (

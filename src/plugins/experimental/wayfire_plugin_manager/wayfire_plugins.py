@@ -1,22 +1,20 @@
-ENABLE_PLUGIN = True
-
-
-def get_plugin_placement(panel_instance):
-    """Returns the placement for the plugin's widget."""
-    return "top-panel-systray", 4
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 6,
+        "container": "top-panel-systray",
+        "deps": ["top_panel"],
+    }
 
 
 def initialize_plugin(panel_instance):
-    """Entry point for the plugin system."""
-    if ENABLE_PLUGIN:
-        wayfire_plugins = call_class_plugin()
-        plugin = wayfire_plugins(panel_instance)
-        plugin.run_in_thread(plugin._initial_load_async)
-        return plugin
-    return None
+    wayfire_plugins = get_plugin_class()
+    plugin = wayfire_plugins(panel_instance)
+    plugin.run_in_thread(plugin._initial_load_async)
+    return plugin
 
 
-def call_class_plugin():
+def get_plugin_class():
     import os
     from gi.repository import Gtk, Pango  # pyright: ignore
     from src.plugins.core._base import BasePlugin

@@ -1,28 +1,13 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "priority": 10,
+        "container": "top-panel",
+        "deps": ["event_manager"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    """
-    Initialize the plugin.
-    Args:
-        panel_instance: The main panel object from panel.py
-    """
-    position = "top-panel"
-    return position, 1, 1
-
-
-def initialize_plugin(panel_instance):
-    """
-    Initialize the plugin.
-    Args:
-        panel_instance: The main panel object from panel.py
-    """
-    if ENABLE_PLUGIN:
-        plugin = call_plugin_class()
-        return plugin(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     from src.plugins.core._base import BasePlugin
 
     class TopPanelPlugin(BasePlugin):

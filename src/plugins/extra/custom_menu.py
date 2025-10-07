@@ -1,19 +1,15 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 5,
+        "container": "top-panel-systray",
+        "deps": [
+            "top_panel",
+        ],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    """Define the plugin's position and order."""
-    return "top-panel-systray", 5
-
-
-def initialize_plugin(panel_instance):
-    """Initialize the plugin."""
-    if ENABLE_PLUGIN:
-        custom_menu = call_plugin_class()
-        return custom_menu(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     from src.plugins.core._base import BasePlugin
 
     class MenuSetupPlugin(BasePlugin):

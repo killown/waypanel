@@ -1,23 +1,15 @@
-ENABLE_PLUGIN = True
-DEPS = ["top_panel"]
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 1,
+        "container": "top-panel-after-systray",
+        "deps": [
+            "top_panel",
+        ],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    """Define the plugin's position and order."""
-    position = "top-panel-after-systray"
-    order = 1
-    priority = 1
-    return position, order, priority
-
-
-def initialize_plugin(panel_instance):
-    """Initialize the window controls plugin."""
-    if ENABLE_PLUGIN:
-        window_controls = call_plugin_class()
-        return window_controls(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     from src.plugins.core._base import BasePlugin
 
     class WindowControlsPlugin(BasePlugin):

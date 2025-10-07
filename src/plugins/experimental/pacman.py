@@ -1,22 +1,16 @@
-ENABLE_PLUGIN = True
-DEPS = ["top_panel"]
-
-
-def get_plugin_placement(panel_instance):
-    return "top-panel-center", 1
-
-
-def initialize_plugin(panel_instance):
+def get_plugin_metadata(_):
     import shutil
 
     ENABLE_PLUGIN = bool(shutil.which("pacman"))
+    return {
+        "enabled": ENABLE_PLUGIN,
+        "index": 3,
+        "container": "top-panel-center",
+        "deps": ["top_panel"],
+    }
 
-    if ENABLE_PLUGIN:
-        plugin = call_plugin_class()
-        return plugin(panel_instance)
 
-
-def call_plugin_class():
+def get_plugin_class():
     import shutil
     from src.plugins.core._base import BasePlugin
 

@@ -1,22 +1,15 @@
 # install https://codeberg.org/dnkl/fuzzel to enable the plugin
-DEPS = ["event_manager"]
-
-
-def get_plugin_placement(panel_instance):
-    """This is a background plugin with no UI."""
-    return "background"
-
-
-def initialize_plugin(panel_instance):
+def get_plugin_metadata(_):
     import shutil
 
     ENABLE_PLUGIN = shutil.which("fuzzel") is not None
-    if ENABLE_PLUGIN:
-        fuzzel = call_plugin_class()
-        return fuzzel(panel_instance)
+    return {
+        "enabled": ENABLE_PLUGIN,
+        "deps": ["event_manager"],
+    }
 
 
-def call_plugin_class():
+def get_plugin_class():
     from src.plugins.core._base import BasePlugin
 
     class FuzzelWatcher(BasePlugin):

@@ -1,24 +1,15 @@
 # FIX: Incorrect Behavior of Fullscreen Views During Cross-Monitor Drag-and-Drop
 # https://github.com/WayfireWM/wayfire/issues/2635https://github.com/WayfireWM/wayfire/issues/2635
 
-ENABLE_PLUGIN = True
 
-DEPS = ["event_manager"]
-
-
-def get_plugin_placement(panel_instance):
-    """This is a background plugin with no UI."""
-    return "background"
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "deps": ["event_manager"],
+    }
 
 
-def initialize_plugin(panel_instance):
-    """Initialize the plugin if enabled."""
-    if ENABLE_PLUGIN:
-        fs = call_plugin_class()
-        return fs(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     from src.plugins.core._base import BasePlugin
     from src.plugins.core.event_handler_decorator import subscribe_to_event
 

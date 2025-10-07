@@ -57,7 +57,7 @@ class PluginLoaderHelpers:
             position = "background"
             priority = 0
             order = 0
-            position_result = getattr(module, "get_plugin_placement")(
+            position_result = getattr(module, "get_plugin_metadata")(
                 self.panel_instance
             )
             if position_result != "background" and position_result:

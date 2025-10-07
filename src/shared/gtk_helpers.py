@@ -885,6 +885,7 @@ class GtkHelpers:
         has_arrow: bool = True,
         closed_handler=None,
         visible_handler=None,
+        offset=(0, 5),
     ):
         """
         Creates and configures a standard Gtk.Popover for use in plugins.
@@ -904,6 +905,8 @@ class GtkHelpers:
         popover = Gtk.Popover()
         popover.add_css_class(css_class)
         popover.set_has_arrow(has_arrow)
+        x, y = offset
+        popover.set_offset(x, y)
         if closed_handler:
             popover.connect("closed", closed_handler)
         if visible_handler:

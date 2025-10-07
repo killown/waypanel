@@ -1,7 +1,3 @@
-from src.plugins.core._base import BasePlugin
-
-ENABLE_PLUGIN = True
-
 # List of all known Wayfire IPC events to subscribe to
 ALL_EVENTS = [
     # Emitted when a view gains focus (e.g., user clicks or tabs into it)
@@ -116,65 +112,80 @@ ALL_EVENTS = [
 ]
 
 
-def get_plugin_placement(panel_instance):
-    """This is a background plugin with no UI"""
-    return "background"
+def get_plugin_metadata(_):
+    """
+    Define the plugin's properties and placement using the modern dictionary format.
+    """
+    return {
+        "enabled": True,
+        "container": "background",
+        "index": 0,
+        "deps": ["event_manager"],
+    }
 
 
-def initialize_plugin(panel_instance):
-    """Initialize the plugin if enabled"""
-    if ENABLE_PLUGIN:
-        return EventLoggerPlugin(panel_instance)
+def get_plugin_class():
+    """
+    Returns the main plugin class. All necessary imports are deferred here.
+    """
+    from src.plugins.core._base import BasePlugin
 
+    class EventLoggerPlugin(BasePlugin):
+        def __init__(self, panel_instance):
+            super().__init__(panel_instance)
 
-class EventLoggerPlugin(BasePlugin):
-    def __init__(self, panel_instance):
-        super().__init__(panel_instance)
-        self.subscribe_to_events()
+        async def on_start(self):
+            """
+            Called asynchronously when the plugin is loaded.
+            This replaces the deprecated initialize_plugin() function.
+            """
+            self.subscribe_to_events()
 
-    def subscribe_to_events(self):
-        """Subscribe to all Wayfire IPC events"""
-        if "event_manager" not in self.obj.plugin_loader.plugins:
-            self.logger.error(
-                "Event Manager Plugin is not loaded. Cannot subscribe to events."
-            )
-            return
+        def subscribe_to_events(self):
+            """Subscribe to all Wayfire IPC events"""
+            if "event_manager" not in self.obj.plugin_loader.plugins:
+                self.logger.error(
+                    "Event Manager Plugin is not loaded. Cannot subscribe to events."
+                )
+                return
 
-        event_manager = self.obj.plugin_loader.plugins["event_manager"]
+            event_manager = self.obj.plugin_loader.plugins["event_manager"]
 
-        for event in ALL_EVENTS:
-            try:
-                event_manager.subscribe_to_event(event, self.handle_event)
-                self.logger.info(f"Subscribed to event: {event}")
-            except Exception as e:
-                self.logger.error(f"Failed to subscribe to event {event}: {e}")
+            for event in ALL_EVENTS:
+                try:
+                    event_manager.subscribe_to_event(event, self.handle_event)
+                    self.logger.info(f"Subscribed to event: {event}")
+                except Exception as e:
+                    self.logger.error(f"Failed to subscribe to event {event}: {e}")
 
-    def handle_event(self, event_data):
-        """Handle incoming events from Wayfire IPC"""
-        self.logger.info(event_data)
+        def handle_event(self, event_data):
+            """Handle incoming events from Wayfire IPC"""
+            self.logger.info(event_data)
 
-    def about(self):
-        """Monitors and logs all Wayfire IPC events for debugging and tracking purposes."""
-        return self.about.__doc__
+        def about(self):
+            """Monitors and logs all Wayfire IPC events for debugging and tracking purposes."""
+            return self.about.__doc__
 
-    def code_explanation(self):
-        """
-        This plugin acts as a comprehensive event listener for the Wayfire compositor.
-        It subscribes to a predefined list of known Inter-Process Communication (IPC)
-        events and logs their data.
+        def code_explanation(self):
+            """
+            This plugin acts as a comprehensive event listener for the Wayfire compositor.
+            It subscribes to a predefined list of known Inter-Process Communication (IPC)
+            events and logs their data.
 
-        Its core logic is centered on **event subscription and passive monitoring**:
+            Its core logic is centered on **event subscription and passive monitoring**:
 
-        1.  **Event List**: It defines a static list, `ALL_EVENTS`, which contains
-            the names of all relevant Wayfire IPC events.
-        2.  **Subscription Loop**: In the `subscribe_to_events` method, it iterates
-            through this list and uses the `event_manager` to subscribe the
-            `handle_event` method as a callback for each event.
-        3.  **Event Handling**: The `handle_event` method is a simple but crucial
-            callback. When any of the subscribed events occur, the system sends
-            the event data to this method, which logs the entire payload.
-        4.  **Purpose**: This makes it a valuable background tool for debugging
-            and understanding the flow of events within the Wayfire environment,
-            without a visible UI.
-        """
-        return self.code_explanation.__doc__
+            1.  **Event List**: It defines a static list, `ALL_EVENTS`, which contains
+                the names of all relevant Wayfire IPC events.
+            2.  **Subscription Loop**: In the `subscribe_to_events` method, it iterates
+                through this list and uses the `event_manager` to subscribe the
+                `handle_event` method as a callback for each event.
+            3.  **Event Handling**: The `handle_event` method is a simple but crucial
+                callback. When any of the subscribed events occur, the system sends
+                the event data to this method, which logs the entire payload.
+            4.  **Purpose**: This makes it a valuable background tool for debugging
+                and understanding the flow of events within the Wayfire environment,
+                without a visible UI.
+            """
+            return self.code_explanation.__doc__
+
+    return EventLoggerPlugin

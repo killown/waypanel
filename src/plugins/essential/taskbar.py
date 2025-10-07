@@ -1,30 +1,17 @@
-ENABLE_PLUGIN = True
-
-DEPS = [
-    "event_manager",
-    "gestures_setup",
-    "on_output_connect",
-    "bottom_panel",
-    "top_panel",
-    "left_panel",
-    "right_panel",
-]
-
-
-def get_plugin_placement(panel_instance):
-    position = "bottom-panel-center"
-    order = 1
-    priority = 10
-    return position, order, priority
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "container": "bottom-panel-center",
+        "deps": [
+            "event_manager",
+            "gestures_setup",
+            "on_output_connect",
+            "bottom_panel",
+        ],
+    }
 
 
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        taskbar = call_plugin_class()
-        return taskbar(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     from src.plugins.core._base import BasePlugin
 
     class TaskbarPlugin(BasePlugin):

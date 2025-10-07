@@ -1,17 +1,17 @@
 ENABLE_PLUGIN = True
 
 
-def get_plugin_placement(panel_instance):
+def get_plugin_metadata(panel_instance):
     return
 
 
 def initialize_plugin(panel_instance):
     if ENABLE_PLUGIN:
-        window_rules = call_plugin_class()
+        window_rules = get_plugin_class()
         return window_rules(panel_instance)
 
 
-def call_plugin_class():
+def get_plugin_class():
     from src.plugins.core.event_handler_decorator import subscribe_to_event
     from core._base import BasePlugin
 

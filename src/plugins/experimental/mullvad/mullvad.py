@@ -1,21 +1,13 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 8,
+        "container": "top-panel-systray",
+        "deps": ["top_panel"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    """Define the plugin's position and order."""
-    position = "top-panel-systray"
-    order = 5
-    return position, order
-
-
-def initialize_plugin(panel_instance):
-    """Initialize the Mullvad plugin."""
-    if ENABLE_PLUGIN:
-        mullvad = call_plugin_class()
-        return mullvad(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     import random
     import aiohttp
     from src.plugins.core._base import BasePlugin

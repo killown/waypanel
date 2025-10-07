@@ -651,7 +651,6 @@ default_config = {
             "Configuration for the custom menu plugin, used for running "
             "scripts or system commands."
         ),
-        "hide_in_systray": False,
         "Wayfire": {
             "_section_hint": (
                 "A custom submenu for Wayfire-related scripts and commands."

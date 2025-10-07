@@ -1,19 +1,13 @@
-ENABLE_PLUGIN = True
+def get_plugin_metadata(_):
+    return {
+        "enabled": True,
+        "index": 4,
+        "container": "top-panel-systray",
+        "deps": ["top_panel"],
+    }
 
 
-def get_plugin_placement(panel_instance):
-    position = "top-panel-systray"
-    order = 100
-    return position, order
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        screen_recorder = call_plugin_class()
-        return screen_recorder(panel_instance)
-
-
-def call_plugin_class():
+def get_plugin_class():
     from gi.repository import Gtk  # pyright: ignore
     from src.plugins.core._base import BasePlugin
     import shutil
