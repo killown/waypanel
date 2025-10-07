@@ -239,7 +239,7 @@ def load_panel(ipc_server):
         if len(sys.argv) > 1
         else get_monitor_name(panel_conf, compositor_sock)
     )
-    app_name = f"com.waypanel.{monitor_name}"
+    app_name = "org.waypanel"
     panel = Panel(application_id=app_name, ipc_server=ipc_server, logger=logger)
     panel.set_panel_instance(panel)
     append_to_env("output_name", monitor_name)
@@ -403,7 +403,7 @@ def main():
         check_config_path()
         ipc_server = start_ipc_server(logger)
         panel = load_panel(ipc_server)
-        panel.run(["waypanel"])
+        panel.run(["org.waypanel"])
     except Exception:
         logger.critical("Fatal error during initialization", exc_info=True)
         raise
