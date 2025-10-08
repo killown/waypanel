@@ -1,0 +1,123 @@
+/* =========================================================================
+ * 3. Category Grid and Category Widget Styling
+ * ========================================================================= */
+
+/* FlowBox container for the grid */
+.control-center-category-grid {
+  padding: 40px;
+}
+
+/* The Box containing the icon and label (the clickable element) */
+.control-center-category-widget {
+  /* Use the tertiary/raised background for the card base */
+  background-color: var(--theme-bg-view-tertiary);
+  border-radius: var(--radius-l); /* Larger radius for the card */
+  box-shadow: var(--shadow-elevated); /* Floating effect */
+  transition: all 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* Ensure no visible border in resting state */
+  border: 1px solid transparent;
+
+  /* These properties ensure the inner VBox is centered */
+  align-items: center; /* Vertical centering */
+  justify-content: center; /* Horizontal centering */
+}
+
+/* Style the icon inside the widget */
+.control-center-category-icon image {
+  color: var(--color-accent-blue); /* Color the icon blue */
+}
+
+/* Hover State - Lighter background, subtle border */
+.control-center-category-widget:hover {
+  background-color: var(--color-bg-raised); /* Keep the raised feel */
+  border-color: var(--theme-decoration-separator);
+  transform: scale(1.02); /* Subtle hover scale */
+  box-shadow: 0 6px 18px var(--color-shadow-medium);
+}
+
+/* Active/Pressed State */
+.control-center-category-widget:active {
+  background-color: var(--color-bg-surface); /* Darker/Pressed */
+  box-shadow: var(--shadow-neumorphic-press); /* Inset effect */
+  transform: scale(0.98);
+}
+
+/* =========================================================================
+ * 4. Settings Content Page Styling
+ * ========================================================================= */
+
+.control-center-content-area {
+  background-color: var(--theme-bg-view-primary); /* Primary view background */
+}
+
+/* Adw.PreferencesGroup (The section header) */
+.control-center-config-group {
+  background-color: var(
+    --theme-bg-view-secondary
+  ); /* Secondary surface background */
+  border-radius: var(--radius-xl);
+  padding: 1px; /* Required to make border-radius visible on the group */
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-elevated);
+}
+
+/* Adw.ActionRow (Individual Setting Row) */
+.control-center-setting-row {
+  background-color: transparent;
+  color: var(--theme-fg-label-primary);
+  padding: 10px 15px;
+  margin: 0;
+}
+
+/* Separators in Adw.PreferencesGroup */
+.control-center-config-group .list-row:not(:last-child) {
+  border-bottom: 1px solid var(--theme-decoration-separator);
+}
+
+/* Gtk.Expander Title */
+.control-center-config-expander {
+  font-weight: var(--font-weight-medium);
+  padding: 10px 0;
+}
+
+/* Gtk.Switch (Toggle Switch) */
+switch {
+  border-radius: 999px;
+  background-color: var(--color-fg-muted); /* Inactive color */
+  box-shadow: var(--shadow-neumorphic-inset-medium); /* Inset border */
+}
+
+switch:checked {
+  background-color: var(--color-accent-blue); /* Accent color when active */
+}
+
+switch slider {
+  background-color: var(
+    --color-fg-primary
+  ); /* White/primary color for the knob */
+  box-shadow: 0 1px 2px var(--color-shadow-dark); /* Subtle shadow on the knob */
+}
+
+/* Gtk.Entry and Gtk.SpinButton (Text and Numeric Input) */
+.control-center-text-input,
+.control-center-numeric-input {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-s);
+  background-color: var(
+    --color-bg-base
+  ); /* Deeper background for input fields */
+  border: 1px solid var(--color-separator-line);
+  color: var(--theme-fg-label-primary);
+  box-shadow: var(--shadow-neumorphic-inset-medium);
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.control-center-text-input:focus,
+.control-center-numeric-input:focus {
+  border-color: var(--color-accent-blue);
+  box-shadow: 0 0 0 1px var(--color-accent-blue);
+  background-color: var(--color-bg-base);
+}

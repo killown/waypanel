@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.overflow_indicator",
+        "name": "Overflow Indicator",
+        "version": "1.0.0",
         "enabled": True,
         "index": 1,
         "container": "top-panel-systray",

@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.mullvad",
+        "name": "Mullvad VPN",
+        "version": "1.0.0",
         "enabled": True,
         "index": 8,
         "container": "top-panel-systray",

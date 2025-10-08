@@ -27,6 +27,9 @@ def get_plugin_metadata(_):
         dict: Plugin configuration metadata.
     """
     return {
+        "id": "org.waypanel.plugin.example_communicator_plugin",
+        "name": "Example Communicator Plugin",
+        "version": "1.0.0",
         "enabled": True,
         "container": "top-panel-center",
         "index": 5,

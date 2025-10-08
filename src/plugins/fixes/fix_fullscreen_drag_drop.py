@@ -4,6 +4,9 @@
 
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.fullscreen_drag_drop",
+        "name": "Fullscreen drag and drop fix",
+        "version": "1.0.0",
         "enabled": True,
         "deps": ["event_manager"],
     }

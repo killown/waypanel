@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.dockbar",
+        "name": "Dockbar",
+        "version": "1.0.0",
         "enabled": True,
         "container": "left-panel-center",
         "priority": 1,
@@ -67,9 +70,7 @@ def get_plugin_class():
             """
             Retrieves the GTK panel object based on the configuration.
             """
-            position = self.get_config(
-                ["dockbar", "panel", "name"], "left-panel"
-            ).lower()
+            position = self.get_config("name", "left-panel").lower()
             valid_panels = {
                 "left": self.obj.left_panel,
                 "right": self.obj.right_panel,
@@ -138,7 +139,7 @@ def get_plugin_class():
             while child:
                 self.dockbar.remove(child)
                 child = self.dockbar.get_first_child()
-            config_data = self.get_config(["dockbar", "app"], {})
+            config_data = self.get_config(["app"], {})
             for app_name, app_data in config_data.items():
                 button = self._create_dockbar_button(
                     app_name, app_data, class_style, use_label
@@ -221,7 +222,9 @@ def get_plugin_class():
                     child = child.get_next_sibling()
                 if "dockbar" not in self.config_handler.config_data:  # pyright: ignore
                     self.config_handler.config_data["dockbar"] = {}  # pyright: ignore
-                self.config_handler.config_data["dockbar"]["app"] = new_dockbar_config  # pyright: ignore
+                self.config_handler.config_data[self.plugin_id]["app"] = (
+                    new_dockbar_config  # pyright: ignore
+                )
                 self.config_handler.save_config()
                 self.logger.info("Dockbar order saved to config file.")
             except Exception as e:
@@ -274,10 +277,8 @@ def get_plugin_class():
             """
             Configures the dockbar based on the loaded settings.
             """
-            orientation = self.get_config(["dockbar", "panel", "orientation"], "v")
-            class_style = self.get_config(
-                ["dockbar", "panel", "class_style"], "dockbar-buttons"
-            )
+            orientation = self.get_config(["panel", "orientation"], "v")
+            class_style = self.get_config(["panel", "class_style"], "dockbar-buttons")
             self.run_in_thread(
                 self._load_and_populate_dockbar, orientation, class_style
             )

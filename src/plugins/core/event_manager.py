@@ -1,9 +1,11 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.event_manager",
+        "name": "Event Manager",
+        "version": "1.0.0",
         "enabled": True,
         "priority": 1,
     }
-
 
 def get_plugin_class():
     from src.plugins.core._base import BasePlugin

@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.top_panel",
+        "name": "Top Panel",
+        "version": "1.0.0",
         "enabled": True,
         "priority": 10,
         "container": "top-panel",

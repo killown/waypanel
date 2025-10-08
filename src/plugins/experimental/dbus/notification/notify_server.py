@@ -23,6 +23,9 @@
 
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.notify_server",
+        "name": "Notify Server",
+        "version": "1.0.0",
         "enabled": True,
         "deps": ["top_panel"],
     }

@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.global_shortcuts",
+        "name": "Global Shortcuts",
+        "version": "1.0.0",
         "enabled": True,
     }
 

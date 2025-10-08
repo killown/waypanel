@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.example_menu",
+        "name": "Example Menu",
+        "version": "1.0.0",
         "enabled": True,
         "container": "top-panel-right",
         "index": 6,

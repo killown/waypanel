@@ -1,10 +1,11 @@
 def get_plugin_metadata(_):
     return {
-        "enabled": True,
-        "index": 1,
+        "id": "org.waypanel.plugin.volume_scroll",
+        "name": "Volume Scroll",
+        "version": "1.0.0",
         "deps": ["top_panel"],
+        "enabled": True,
     }
-
 
 def get_plugin_class():
     from src.plugins.core._base import BasePlugin

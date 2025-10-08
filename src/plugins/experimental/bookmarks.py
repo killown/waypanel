@@ -11,6 +11,9 @@ container = "dev"
 
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.browser_bookmarks",
+        "name": "Browser Bookmarks",
+        "version": "1.0.0",
         "enabled": True,
         "index": 2,
         "container": "top-panel-box-widgets-left",

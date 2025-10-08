@@ -10,6 +10,9 @@ from src.plugins.core._base import BasePlugin
 
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.clipboard_server",
+        "name": "Clipboard Server",
+        "version": "1.0.0",
         "enabled": True,
     }
 
@@ -120,14 +123,9 @@ def get_plugin_class():
             self.db_path = self.path_handler.get_data_path(
                 "db/clipboard/clipboard_server.db"
             )
-            self.config_data_server = self.config_data.get("plugins", "").get(
-                "clipboard", ""
-            )
-            self.log_enabled = self.config_data_server.get("server_log_enabled", False)
-            self.max_items = self.config_data_server.get("server_max_items", 100)
-            self.monitor_interval = self.config_data_server.get(
-                "server_monitor_interval", 0.5
-            )
+            self.log_enabled = self.get_config("server_log_enabled", False)
+            self.max_items = self.get_config("server_max_items", 100)
+            self.monitor_interval = self.get_config("server_monitor_interval", 0.5)
 
         async def _init_db(self, panel_instance, db_path):
             """

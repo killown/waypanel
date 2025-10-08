@@ -8,15 +8,15 @@
 
 ## Quick start (for most users)
 
-1\. Clone & run (developer / source install):
+1.  Clone & run (developer / source install):
 
-    git clone https://github.com/killown/waypanel.git
-    cd waypanel
-    python run.py      # creates venv, copies defaults, installs deps, and starts the app
+        git clone https://github.com/killown/waypanel.git
+        cd waypanel
+        python run.py      # creates venv, copies defaults, installs deps, and starts the app
 
 `run.py` will detect or copy default configs, look for the GTK4 Layer Shell library (preloads `libgtk4-layer-shell.so` if found), create a per-user venv (`~/.local/share/waypanel/venv`) and install `requirements.txt` there before launching `main.py`.
 
-Restarting / stopping:
+### Restarting / stopping:
 
     # stop running panel processes (dev)
     pkill -f waypanel/main.py
@@ -35,8 +35,8 @@ If you installed via packages (AUR, distro packages) follow the package instruct
 - `Panel` (`src/panel.py`), the central GTK application (inherits from `Adw.Application`). It:
   - Loads and watches `config.toml` (single source of truth).
   - Sets monitor/display dimensions and creates panel windows (top/bottom/left/right) using `CreatePanel`.
-  - Initializes `PluginLoader` and loads plugins asynchronously (keeps UI responsive via `GLib.idle_add`).
-- `PluginLoader`, discovers, validates and initializes plugins (both bundled and user plugins). It respects the config to enable/disable plugins and uses plugin metadata (placement, priority) to place widgets into panels. User plugins live under a user plugin path (e.g. `~/.local/share/waypanel/plugins`).
+  - Initializes `PluginLoader` and loads plugins asynchronously (keeps UI responsive).
+- `PluginLoader`, discovers, validates and initializes plugins. It requires plugins to expose \*\*`get_plugin_metadata()`\*\* and \*\*`get_plugin_class()`\*\*. It respects the config to enable/disable plugins and uses plugin metadata (placement, priority) to place widgets into panels. User plugins live under a user plugin path (e.g. `~/.local/share/waypanel/plugins`).
 - `Control Center`, a small GTK/Adwaita GUI tool to edit `config.toml` without manually editing the file. It loads TOML, generates category pages and saves changes back to the config. (Useful for non-developers.)
 
 ---
@@ -44,23 +44,18 @@ If you installed via packages (AUR, distro packages) follow the package instruct
 ## Where Waypanel stores / finds configuration & defaults
 
 - **User config:** `~/.config/waypanel/config.toml` (the primary location). The project prefers this location for user data.
-- **System/default config:** typical system paths (e.g. `/usr/lib/waypanel/...` or distro-specific locations). On NixOS there are additional fallback paths (`/run/current-system/...`). If no user config exists, Waypanel will try to copy default config from system or development locations. You can also allow automatic git clone of defaults by setting `WAYPANEL_ALLOW_GIT_INIT=1`.
-
-The code contains a robust `find_config_path() + create_first_config()` logic so first-run setups are automatic on most systems. If the config file is absent or empty it will insert a minimal `[panel]` header and/or copy defaults.
-
----
+- **System/default config:** typical system paths (e.g. `/usr/lib/waypanel/...` or distro-specific locations). On NixOS there are additional fallback paths (`/run/current-system/...`). If no user config exists, Waypanel will try to copy default config from system or development locations.
 
 ## Logs & troubleshooting basics
 
 - **Log file:** Waypanel writes a rotating log to:
 
-      ~/.config/waypanel/waypanel.log
+      ~/.local/state/waypanel/waypanel.log
 
   with small rotation (1 MB, 2 backups) and console output using Rich. Use this file as the first step when diagnosing crashes or plugin load errors.
 
 - **When things don't start:**
   - Check `run.py` stdout/stderr, it explicitly errors out if `libgtk4-layer-shell.so` cannot be found and exits. Make sure `gtk4-layer-shell` is installed or LD_PRELOAD path set.
-  - If plugin import errors appear in logs, open the plugin's `.py` and ensure the required methods (`get_plugin_placement`, `initialize_plugin`, `set_widget`) and `ENABLE_PLUGIN = True` are present. See the plugin template below.
 
 ---
 
@@ -69,59 +64,6 @@ The code contains a robust `find_config_path() + create_first_config()` logic so
 Panel windows are created using `CreatePanel` which uses `Gtk4LayerShell` to anchor panels to screen edges. The layer shell namespace, monitor selection and exclusive zone behavior (making a panel reserve space) are set there. This is how Waypanel integrates with Wayland compositors to place top/bottom/left/right bars and optionally reserve screen space.
 
 - **Monitor selection:** Waypanel reads `panel.primary_output` (or `monitor.name` in config) and has a helper to choose a monitor (with fallbacks to compositor-reported outputs). You can pass a monitor name on the command line or let Waypanel auto-detect.
-
----
-
-## Plugins, how they work (for users & plugin authors)
-
-Plugins are small Python modules that return an instance implementing a known plugin interface. The loader ensures:
-
-- Plugin discovery in bundled & user plugin paths.
-- Structural validation: plugin must provide placement and initialization helpers.
-- Non-blocking initialization so the panel stays responsive.
-
-**User plugin location (common):**
-
-    ~/.local/share/waypanel/plugins
-
-Place your plugin module there and enable it via `config.toml`.
-
-### Minimal plugin template (boilerplate)
-
-(derived from the project's docs, adapt and save under `~/.local/share/waypanel/plugins/myplugin.py`)
-
-    from gi.repository import Gtk
-    from waypanel.src.plugins.core._base import BasePlugin
-
-    ENABLE_PLUGIN = True
-
-    def get_plugin_placement(panel_instance):
-        # placement example: "top-panel-right" and order/priority number
-        return "top-panel-right", 10
-
-    def initialize_plugin(panel_instance):
-        if ENABLE_PLUGIN:
-            return MyPlugin(panel_instance)
-        return None
-
-    class MyPlugin(BasePlugin):
-        def __init__(self, panel_instance):
-            super().__init__(panel_instance)
-            self.button = None
-
-        def create_widget(self):
-            self.button = Gtk.Button(label="Click Me!")
-            self.button.connect("clicked", self.on_click)
-            return self.button
-
-        def on_click(self, _):
-            print("Button clicked!")
-
-        def set_widget(self):
-            # return (widget, "append") or (widget, "set_content")
-            return self.create_widget(), "append"
-
-See the docs for more advanced examples (background services, event subscriptions, keybindings).
 
 **Event system:** The project includes a central `event_manager` plugin that other plugins can use to subscribe to compositor events (view focus, mapping, title change, etc.), it dispatches events to subscribers safely on the GTK main thread using `GLib.idle_add`. This is how plugins can react to workspace/window changes in real time.
 
@@ -173,15 +115,14 @@ The `ControlCenter` app (a GTK4/Adwaita GUI) reads `~/.config/waypanel/config.to
 
   The project uses `structlog` + a `RotatingFileHandler`; change the log level in `src/core/log_setup.py` if you need more verbosity. The default file path is `~/.config/waypanel/waypanel.log`.
 
-- **Plugin lifecycle:**
+- **Plugin lifecycle: (Updated for Asynchronous API)**
 
-  Use `BasePlugin` as a superclass for common helpers (ipc, notifier, gtk helpers). It provides `enable()`, `disable()`, and safe widget removal helpers. See the plugin core docs for event subscriptions and threading details.
+  Use `BasePlugin` as a superclass for common helpers (`logger`, `gtk`, `ipc_server`). The modern lifecycle is \*\*asynchronous\*\* and requires three key components:
+  1.  **`def get_plugin_metadata()`:** Defines placement and dependencies.
+  2.  **`def get_plugin_class()`:** The main entry point where \*\*ALL imports\*\* (e.g., `gi.repository.Gtk`, `BasePlugin`) \*\*must be deferred\*\*.
+  3.  **`async def on_start()`:** The primary activation method (replaces `enable()`).
+  4.  **`async def on_stop()`:** The primary deactivation method (replaces `disable()`).
+
+  The BasePlugin still provides safe widget removal helpers.
 
 ---
-
-## Summary / TL;DR
-
-- `python run.py` bootstraps Waypanel (copies defaults, creates venv, installs deps, preloads GTK layer shell). If you just want to try Waypanel, cloning and running `run.py` is the simplest path.
-- `~/.config/waypanel/config.toml` is your main control. Use the Control Center GUI to edit it if you prefer not to hand-edit TOML.
-- For plugin authors, follow the small template (provide `get_plugin_placement`, `initialize_plugin`, `set_widget`) and place plugins under `~/.local/share/waypanel/plugins`.
-- Check `~/.config/waypanel/waypanel.log` first when debugging; logs are rotated automatically.

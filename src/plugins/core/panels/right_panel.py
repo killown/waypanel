@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.right_panel",
+        "name": "Right Panel",
+        "version": "1.0.0",
         "enabled": True,
         "priority": 10,
         "container": "right-panel",

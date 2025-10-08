@@ -1,11 +1,13 @@
 def get_plugin_metadata(_):
     return {
+        "id": "com.waypanel.clock",
+        "name": "Clock",
+        "version": "1.0.0",
         "enabled": True,
         "container": "top-panel-center",
         "index": 5,
         "deps": ["top_panel"],
     }
-
 
 def get_plugin_class():
     from src.plugins.core._base import BasePlugin

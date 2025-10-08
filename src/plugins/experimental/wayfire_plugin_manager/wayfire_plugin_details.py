@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.wayfire_plugin_details",
+        "name": "Wayfire Plugin Details",
+        "version": "1.0.0",
         "enabled": True,
         "index": 6,
         "deps": ["top_panel", "event_manager"],

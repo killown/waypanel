@@ -1,16 +1,19 @@
 def get_plugin_metadata(_):
     return {
-        "enabled": True,
-        "index": 2,
-        "container": "top-panel-systray",
+        "id": "org.waypanel.plugin.sound_card_switcher",
+        "name": "Sound Card Switcher",
+        "version": "1.0.0",
         "deps": ["top_panel"],
+        "container": "top-panel-systray",
+        "index": 2,
+        "enabled": True,
     }
 
 
 def get_plugin_class():
     from src.plugins.core._base import BasePlugin
 
-    class SoundCardDashboard(BasePlugin):
+    class SoundCardSwitcher(BasePlugin):
         """
         A plugin for managing sound cards and microphones via a dashboard popover.
         """
@@ -451,4 +454,4 @@ def get_plugin_class():
             """
             return self.code_explanation.__doc__
 
-    return SoundCardDashboard
+    return SoundCardSwitcher

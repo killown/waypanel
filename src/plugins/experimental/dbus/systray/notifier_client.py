@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.systray",
+        "name": "Systray",
+        "version": "1.0.0",
         "enabled": True,
         "container": "top-panel-center",
         "index": 5,

@@ -32,6 +32,9 @@ def get_plugin_metadata(_):
         dict: Plugin configuration metadata.
     """
     return {
+        "id": "org.waypanel.plugin.example_background",
+        "name": "Example Background Plugin",
+        "version": "1.0.0",
         "enabled": True,
         "container": "top-panel-right",
         "index": 5,

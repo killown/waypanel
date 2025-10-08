@@ -41,6 +41,7 @@ class PluginLoader:
         self.position_mapping = {}
         self.valid_plugins = []
         self.plugin_metadata = []
+        self.plugin_metadata_map = {}
         self.plugins_to_process = []
         self.plugins_to_process_index = 0
         self.plugins_to_initialize = []
@@ -193,6 +194,15 @@ class PluginLoader:
                     if module_path in sys.modules:
                         del sys.modules[module_path]
                     continue
+                required_fields = ["id", "name", "version"]
+                missing_fields = [f for f in required_fields if f not in metadata]
+                if missing_fields:
+                    self.logger.error(
+                        f"Plugin {module_name} is missing required metadata fields: {', '.join(missing_fields)}. Skipping."
+                    )
+                    if module_path in sys.modules:
+                        del sys.modules[module_path]
+                    continue
                 if not metadata.get("enabled", True):
                     self.data_helper.get_current_time_with_ms(
                         f"Skipping disabled plugin (metadata 'enabled' is False): {module_name}"
@@ -215,6 +225,7 @@ class PluginLoader:
                 index = metadata.get("index", 0)
                 if container == "background":
                     self.logger.debug(f"Plugin {module_name} is a background service.")
+                self.plugin_metadata_map[module_name] = metadata
                 self.plugins_import[module_name] = module_path
                 self.logger.debug(f"Registered plugin: {module_name} -> {module_path}")
                 self.valid_plugins.append(module_name)
@@ -275,16 +286,18 @@ class PluginLoader:
         """
         Handles the placement of a plugin's widget on the panel.
         """
-        icon_name = self.config_handler.check_and_get_config(
-            ["plugins", module_name, "main_icon"]
+        plugin_id = self.plugin_metadata_map.get(module_name, {}).get("id", module_name)
+        main_widget = (
+            widget_to_append[0]
+            if isinstance(widget_to_append, list) and widget_to_append
+            else widget_to_append
         )
-        if icon_name:
-            self.gtk_helpers.set_plugin_main_icon(
-                widget_to_append, module_name, icon_name
-            )
+        icon_name = self.config_handler.check_and_get_config([plugin_id, "main_icon"])
+        if icon_name and main_widget:
+            self.gtk_helpers.set_plugin_main_icon(main_widget, module_name, icon_name)
         if not hide_in_systray:
             hide_in_systray = self.config_handler.check_and_get_config(
-                ["plugins", module_name, "hide_in_systray"]
+                [plugin_id, "hide_in_systray"]
             )
         if hide_in_systray:
             if not hasattr(self, "overflow_container") or not self.overflow_container:

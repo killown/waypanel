@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.exit_dashboard",
+        "name": "Exit Dashboard",
+        "version": "1.0.0",
         "enabled": True,
         "index": 10,
         "container": "top-panel-systray",
@@ -11,7 +14,6 @@ def get_plugin_metadata(_):
 
 def get_plugin_class():
     import psutil
-    from src.tools.control_center import ControlCenter
     from src.plugins.core._base import BasePlugin
 
     SYSTEM_BUTTON_CONFIG = {
@@ -56,7 +58,7 @@ def get_plugin_class():
         },
     }
 
-    class SystemDashboard(BasePlugin):
+    class ExitDashboard(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
             self.popover_dashboard = None
@@ -79,8 +81,8 @@ def get_plugin_class():
             dialog.show()
 
         def launch_settings(self):
-            app = ControlCenter(self.panel_instance)
-            app.run(None)
+            control_center = self.plugins["control_center"]
+            control_center.do_activate()
 
         def get_system_list(self):
             devices = (
@@ -227,4 +229,4 @@ def get_plugin_class():
             """
             return self.code_explanation.__doc__
 
-    return SystemDashboard
+    return ExitDashboard

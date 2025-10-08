@@ -29,145 +29,6 @@ default_config = {
         "custom_path_hint": (
             "Absolute path to search for user-defined or custom plugins."
         ),
-        "bluetooth": {
-            "_section_hint": (
-                "Settings for the Bluetooth plugin, used to manage connections to local devices."
-            ),
-            "hide_in_systray": True,
-            "main_icon": "bluetooth-symbolic",
-            "fallback_main_icons": [
-                "org.gnome.Settings-bluetooth-symbolic",
-                "bluetooth",
-            ],
-        },
-        "global_shortcuts": {
-            "_section_hint": (
-                "Provides system-wide D-Bus actions to link keyboard shortcuts directly to commands in active plugins"
-            ),
-            "open_editor": "open_with_editor.open_popover_folders",
-        },
-        "open_with_editor": {
-            "_section_hint": (
-                "A plugin to quickly search and open files from a configured directory, using a specified editor based on file extension"
-            ),
-            "directories": ["~/.config/nvim"],
-        },
-        "wayfire_plugins": {
-            "_section_hint": (
-                "Settings for Wayfire-specific plugin integration and status updates."
-            ),
-            "hide_in_systray": True,
-        },
-        "screen_recorder": {
-            "_section_hint": (
-                "A plugin to quickly search and open files from a configured directory, using a specified editor based on file extension"
-            ),
-            "hide_in_systray": False,
-        },
-        "system_dashboard": {
-            "hide_in_systray": False,
-        },
-        "system_monitor": {"hide_in_systray": False},
-        "mullvad": {
-            "hide_in_systray": False,
-        },
-        "notes": {
-            "_section_hint": (
-                "Configuration for the Quick Notes plugin, allowing users to save and view short text entries."
-            ),
-            "main_icon": "stock_notes",
-            "fallback_main_icons": [
-                "accessories-notes-symbolic",
-                "xapp-annotations-text-symbolic",
-                "accessories-notes",
-            ],
-            "icon_delete": "edit-delete",
-            "hide_in_systray": False,
-        },
-        "overflow_indicator": {
-            "_section_hint": (
-                "Settings for the Overflow Indicator plugin, which shows a button when other panel items are hidden due to lack of space."
-            )
-        },
-        "clock": {
-            "_section_hint": (
-                "Configuration for the Clock plugin, defining time and date display formats."
-            ),
-            "format": "%H:%M",
-            "tooltip_format": "%A, %B %d, %Y",
-        },
-        "network_manager": {
-            "_section_hint": (
-                "Settings for the Network Manager plugin, which controls and displays network connection status."
-            ),
-            "hide_in_systray": False,
-            "scan_interval": 5,
-        },
-        "volume": {
-            "_section_hint": (
-                "Configuration for the Volume plugin, which provides sound level control and display."
-            ),
-            "polling_interval": 0.5,
-        },
-        "appmenu": {
-            "_section_hint": (
-                "Configuration for the Application Menu (Start Menu) button and associated settings."
-            ),
-            "main_icon": "start-here-symbolic",
-            "fallback_main_icons": ["applications-all-symbolic"],
-        },
-        "clipboard": {
-            "_section_hint": (
-                "Settings for the Clipboard Manager plugin, which tracks "
-                "copy/paste history."
-            ),
-            "server_log_enabled": False,
-            "server_log_enabled_hint": (
-                "If **True**, enables logging of clipboard activity for **debugging only**."
-            ),
-            "server_max_items": 100,
-            "server_max_items_hint": (
-                "Maximum number of items to keep in the clipboard history cache."
-            ),
-            "server_monitor_interval": 0.5,
-            "server_monitor_interval_hint": (
-                "The time interval (in seconds) the clipboard manager waits "
-                "before checking for new content."
-            ),
-            "client_popover_min_width": 500,
-            "client_popover_min_width_hint": (
-                "The minimum width (in pixels) for the clipboard "
-                "history popover window."
-            ),
-            "client_popover_max_height": 600,
-            "client_popover_max_height_hint": (
-                "The maximum height (in pixels) for the clipboard "
-                "history popover window."
-            ),
-            "client_thumbnail_size": 128,
-            "client_thumbnail_size_hint": (
-                "Size (in pixels) for image thumbnails displayed in the history list."
-            ),
-            "client_preview_text_length": 50,
-            "client_preview_text_length_hint": (
-                "Maximum number of characters to show for a plain text item preview."
-            ),
-            "client_image_row_height": 60,
-            "client_image_row_height_hint": (
-                "The fixed height (in pixels) for history rows that contain image data."
-            ),
-            "client_text_row_height": 38,
-            "client_text_row_height_hint": (
-                "The fixed height (in pixels) for history rows that contain plain text."
-            ),
-            "client_item_spacing": 5,
-            "client_item_spacing_hint": (
-                "Spacing (in pixels) between clipboard items in the popover's list."
-            ),
-            "main_icon": "clipboard",
-            "fallback_main_icons": ["edit-paste-symbolic", "edit-paste"],
-            "hide_in_systray": False,
-        },
     },
     "hardware": {
         "_section_hint": "Configuration for core system hardware and peripherals.",
@@ -226,7 +87,261 @@ default_config = {
             ),
         },
     },
-    "taskbar": {
+    "panel": {
+        "_section_hint": (
+            "Global settings for Waypanel's layer-shell panels "
+            "(top, bottom, left, right)."
+        ),
+        "bottom": {
+            "_section_hint": (
+                "Bottom panel configuration. Often used for the Taskbar plugin."
+            ),
+            "enabled": 1.0,
+            "enabled_hint": (
+                "Set to **1.0 (enabled)** or **0.0 (disabled)** to show "
+                "or hide this entire panel layer."
+            ),
+            "layer_position": "BACKGROUND",
+            "layer_position_hint": (
+                "The **stacking order layer** this panel will be placed on. "
+                "Use 'BACKGROUND' (behind windows) or 'TOP' (above windows)."
+            ),
+            "Exclusive": 0,
+            "Exclusive_hint": (
+                "Set to **1.0 (exclusive)** if the panel should permanently "
+                "reserve screen space, preventing maximized windows "
+                "from covering it and resizing the available desktop area."
+            ),
+            "width": screen_width,
+            "width_hint": "The width (in pixels) of this horizontal panel, matched to the primary output width.",
+            "height": FIXED_DIMENSION,
+            "height_hint": "The fixed height (in pixels) of this horizontal panel.",
+        },
+        "left": {
+            "_section_hint": (
+                "Left panel configuration. Often used for the Dockbar plugin."
+            ),
+            "enabled": 1.0,
+            "enabled_hint": (
+                "Set to **1.0 (enabled)** or **0.0 (disabled)** to show "
+                "or hide this entire panel layer."
+            ),
+            "layer_position": "BACKGROUND",
+            "layer_position_hint": (
+                "The **stacking order layer** this panel will be placed on. "
+                "Use 'BACKGROUND' (behind windows) or 'TOP' (above windows)."
+            ),
+            "Exclusive": 0,
+            "Exclusive_hint": (
+                "Set to **1.0 (exclusive)** if the panel should permanently "
+                "reserve screen space."
+            ),
+            "height": 0.0,
+            "height_hint": "The height (in pixels) of this vertical panel. Set to 0.0 to allow the dockbar to center vertically.",
+            "width": FIXED_DIMENSION,
+            "width_hint": "The fixed width (in pixels) of this vertical panel.",
+        },
+        "right": {
+            "_section_hint": (
+                "Right panel configuration. Reserved for future plugins."
+            ),
+            "enabled": 1.0,
+            "enabled_hint": (
+                "Set to **1.0 (enabled)** or **0.0 (disabled)** to show "
+                "or hide this entire panel layer."
+            ),
+            "layer_position": "BACKGROUND",
+            "layer_position_hint": (
+                "The **stacking order layer** this panel will be placed on. "
+                "Use 'BACKGROUND' (behind windows) or 'TOP' (above windows)."
+            ),
+            "Exclusive": 0,
+            "Exclusive_hint": (
+                "Set to **1.0 (exclusive)** if the panel should permanently "
+                "reserve screen space."
+            ),
+            "height": 0.0,
+            "height_hint": "The height (in pixels) of this vertical panel. Set to 0.0 to allow the dockbar to center vertically.",
+            "width": FIXED_DIMENSION,
+            "width_hint": "The fixed width (in pixels) of this vertical panel.",
+        },
+        "top": {
+            "_section_hint": (
+                "Top panel configuration. Often used for status indicators and menus."
+            ),
+            "menu_icon": "archlinux-logo",
+            "menu_icon_hint": "Icon for the main application menu button.",
+            "folder_icon": "folder",
+            "folder_icon_hint": "Icon for the quick folder access button.",
+            "bookmarks_icon": "internet-web-browser",
+            "bookmarks_icon_hint": ("Icon for the web browser bookmarks button."),
+            "clipboard_icon": "edit-paste",
+            "clipboard_icon_hint": ("Icon for the clipboard manager button."),
+            "soundcard_icon": "audio-volume-high",
+            "soundcard_icon_hint": ("Icon for the soundcard/volume control button."),
+            "system_icon": "system-shutdown",
+            "system_icon_hint": (
+                "Icon for the system/power menu (shutdown, restart, etc.) button."
+            ),
+            "bluetooth_icon": "bluetooth",
+            "bluetooth_icon_hint": ("Icon for the bluetooth manager button."),
+            "notes_icon": "stock_notes",
+            "notes_icon_hint": "Icon for the quick notes button.",
+            "notes_icon_delete": "delete",
+            "notes_icon_delete_hint": "Icon for the delete note button.",
+            "layer_position": "TOP",
+            "layer_position_hint": (
+                "The **stacking order layer** this panel will be placed on. "
+                "Use 'BACKGROUND' (behind windows) or 'TOP' (above windows)."
+            ),
+            "Exclusive": 1.0,
+            "Exclusive_hint": (
+                "Set to **1.0 (exclusive)** if the panel should permanently "
+                "reserve screen space."
+            ),
+            "height": 32.0,
+            "height_hint": ("The fixed height (in pixels) of the top panel area."),
+            "width": screen_width,
+            "width_hint": "The width (in pixels) of this horizontal panel, matched to the primary output width.",
+            "max_note_lenght": 100.0,
+            "max_note_lenght_hint": (
+                "Maximum number of characters allowed for a single quick note entry."
+            ),
+        },
+    },
+    "org.waypanel.plugin.bluetooth": {
+        "_section_hint": (
+            "Settings for the Bluetooth plugin, used to manage connections to local devices."
+        ),
+        "hide_in_systray": True,
+        "main_icon": "bluetooth-symbolic",
+        "fallback_main_icons": [
+            "org.gnome.Settings-bluetooth-symbolic",
+            "bluetooth",
+        ],
+    },
+    "org.waypanel.plugin.global_shortcuts": {
+        "_section_hint": (
+            "Provides system-wide D-Bus actions to link keyboard shortcuts directly to commands in active plugins"
+        ),
+        "open_editor": "open_with_editor.open_popover_folders",
+    },
+    "org.waypanel.plugin.open_with_editor": {
+        "_section_hint": (
+            "A plugin to quickly search and open files from a configured directory, using a specified editor based on file extension"
+        ),
+        "directories": ["~/.config/nvim"],
+    },
+    "org.waypanel.plugin.wayfire_plugins": {
+        "_section_hint": (
+            "Settings for Wayfire-specific plugin integration and status updates."
+        ),
+        "hide_in_systray": True,
+    },
+    "org.waypanel.plugin.notes": {
+        "_section_hint": (
+            "Configuration for the Quick Notes plugin, allowing users to save and view short text entries."
+        ),
+        "main_icon": "stock_notes",
+        "fallback_main_icons": [
+            "accessories-notes-symbolic",
+            "xapp-annotations-text-symbolic",
+            "accessories-notes",
+        ],
+        "icon_delete": "edit-delete",
+        "hide_in_systray": False,
+    },
+    "org.waypanel.plugin.overflow_indicator": {
+        "_section_hint": (
+            "Settings for the Overflow Indicator plugin, which shows a button when other panel items are hidden due to lack of space."
+        )
+    },
+    "org.waypanel.plugin.clock": {
+        "_section_hint": (
+            "Configuration for the Clock plugin, defining time and date display formats."
+        ),
+        "format": "%H:%M",
+        "tooltip_format": "%A, %B %d, %Y",
+    },
+    "org.waypanel.plugin.network_manager": {
+        "_section_hint": (
+            "Settings for the Network Manager plugin, which controls and displays network connection status."
+        ),
+        "hide_in_systray": False,
+        "scan_interval": 5,
+    },
+    "org.waypanel.plugin.volume_scroll": {
+        "_section_hint": (
+            "Configuration for the Volume plugin, which provides sound level control and display."
+        ),
+        "polling_interval": 0.5,
+    },
+    "org.waypanel.plugin.app_launcher": {
+        "_section_hint": (
+            "Configuration for the Application Menu (Start Menu) button and associated settings."
+        ),
+        "main_icon": "start-here-symbolic",
+        "fallback_main_icons": ["applications-all-symbolic"],
+    },
+    "org.waypanel.plugin.clipboard": {
+        "_section_hint": (
+            "Settings for the Clipboard Manager plugin, which tracks "
+            "copy/paste history."
+        ),
+        "server_log_enabled": False,
+        "server_log_enabled_hint": (
+            "If **True**, enables logging of clipboard activity for **debugging only**."
+        ),
+        "server_max_items": 100,
+        "server_max_items_hint": (
+            "Maximum number of items to keep in the clipboard history cache."
+        ),
+        "server_monitor_interval": 0.5,
+        "server_monitor_interval_hint": (
+            "The time interval (in seconds) the clipboard manager waits "
+            "before checking for new content."
+        ),
+        "client_popover_min_width": 500,
+        "client_popover_min_width_hint": (
+            "The minimum width (in pixels) for the clipboard history popover window."
+        ),
+        "client_popover_max_height": 600,
+        "client_popover_max_height_hint": (
+            "The maximum height (in pixels) for the clipboard history popover window."
+        ),
+        "client_thumbnail_size": 128,
+        "client_thumbnail_size_hint": (
+            "Size (in pixels) for image thumbnails displayed in the history list."
+        ),
+        "client_preview_text_length": 50,
+        "client_preview_text_length_hint": (
+            "Maximum number of characters to show for a plain text item preview."
+        ),
+        "client_image_row_height": 60,
+        "client_image_row_height_hint": (
+            "The fixed height (in pixels) for history rows that contain image data."
+        ),
+        "client_text_row_height": 38,
+        "client_text_row_height_hint": (
+            "The fixed height (in pixels) for history rows that contain plain text."
+        ),
+        "client_item_spacing": 5,
+        "client_item_spacing_hint": (
+            "Spacing (in pixels) between clipboard items in the popover's list."
+        ),
+        "main_icon": "clipboard",
+        "fallback_main_icons": ["edit-paste-symbolic", "edit-paste"],
+        "hide_in_systray": False,
+    },
+    "org.waypanel.plugin.screen_recorder": {"hide_in_systray": False},
+    "org.waypanel.plugin.exit_dashboard": {
+        "hide_in_systray": False,
+    },
+    "org.waypanel.plugin.system_monitor": {"hide_in_systray": False},
+    "org.waypanel.plugin.mullvad": {
+        "hide_in_systray": False,
+    },
+    "org.waypanel.plugin.taskbar": {
         "_section_hint": (
             "Configuration for the Taskbar plugin (shows running applications)."
         ),
@@ -269,7 +384,7 @@ default_config = {
             ),
         },
     },
-    "dockbar": {
+    "org.waypanel.plugin.dockbar": {
         "_section_hint": (
             "Configuration for the Dockbar plugin (for favorite/pinned applications)."
         ),
@@ -467,7 +582,7 @@ default_config = {
             },
         },
     },
-    "calendar": {
+    "org.waypanel.plugin.calendar": {
         "_section_hint": (
             "Configuration for the Calendar plugin, which displays the date/time "
             "and serves as a host for other widgets (like weather) within its popover."
@@ -483,7 +598,7 @@ default_config = {
             ),
         },
     },
-    "notify": {
+    "org.waypanel.plugin.notify": {
         "_section_hint": (
             "Settings for the Notification Daemon, which handles system notifications."
         ),
@@ -524,133 +639,12 @@ default_config = {
             ),
         },
     },
-    "panel": {
-        "_section_hint": (
-            "Global settings for Waypanel's layer-shell panels "
-            "(top, bottom, left, right)."
-        ),
-        "bottom": {
-            "_section_hint": (
-                "Bottom panel configuration. Often used for the Taskbar plugin."
-            ),
-            "enabled": 1.0,
-            "enabled_hint": (
-                "Set to **1.0 (enabled)** or **0.0 (disabled)** to show "
-                "or hide this entire panel layer."
-            ),
-            "layer_position": "BACKGROUND",
-            "layer_position_hint": (
-                "The **stacking order layer** this panel will be placed on. "
-                "Use 'BACKGROUND' (behind windows) or 'TOP' (above windows)."
-            ),
-            "Exclusive": 0,
-            "Exclusive_hint": (
-                "Set to **1.0 (exclusive)** if the panel should permanently "
-                "reserve screen space, preventing maximized windows "
-                "from covering it."
-            ),
-            "width": screen_width,
-            "width_hint": "The width (in pixels) of this horizontal panel, matched to the primary output width.",
-            "height": FIXED_DIMENSION,
-            "height_hint": "The fixed height (in pixels) of this horizontal panel.",
-        },
-        "left": {
-            "_section_hint": (
-                "Left panel configuration. Often used for the Dockbar plugin."
-            ),
-            "enabled": 1.0,
-            "enabled_hint": (
-                "Set to **1.0 (enabled)** or **0.0 (disabled)** to show "
-                "or hide this entire panel layer."
-            ),
-            "layer_position": "BACKGROUND",
-            "layer_position_hint": (
-                "The **stacking order layer** this panel will be placed on. "
-                "Use 'BACKGROUND' (behind windows) or 'TOP' (above windows)."
-            ),
-            "Exclusive": 0,
-            "Exclusive_hint": (
-                "Set to **1.0 (exclusive)** if the panel should permanently "
-                "reserve screen space."
-            ),
-            "height": 0.0,
-            "height_hint": "The height (in pixels) of this vertical panel. Set to 0.0 to allow the dockbar to center vertically.",
-            "width": FIXED_DIMENSION,
-            "width_hint": "The fixed width (in pixels) of this vertical panel.",
-        },
-        "right": {
-            "_section_hint": (
-                "Right panel configuration. Reserved for future plugins."
-            ),
-            "enabled": 1.0,
-            "enabled_hint": (
-                "Set to **1.0 (enabled)** or **0.0 (disabled)** to show "
-                "or hide this entire panel layer."
-            ),
-            "layer_position": "BACKGROUND",
-            "layer_position_hint": (
-                "The **stacking order layer** this panel will be placed on. "
-                "Use 'BACKGROUND' (behind windows) or 'TOP' (above windows)."
-            ),
-            "Exclusive": 0,
-            "Exclusive_hint": (
-                "Set to **1.0 (exclusive)** if the panel should permanently "
-                "reserve screen space."
-            ),
-            "height": 0.0,
-            "height_hint": "The height (in pixels) of this vertical panel. Set to 0.0 to allow the dockbar to center vertically.",
-            "width": FIXED_DIMENSION,
-            "width_hint": "The fixed width (in pixels) of this vertical panel.",
-        },
-        "top": {
-            "_section_hint": (
-                "Top panel configuration. Often used for status indicators and menus."
-            ),
-            "menu_icon": "archlinux-logo",
-            "menu_icon_hint": "Icon for the main application menu button.",
-            "folder_icon": "folder",
-            "folder_icon_hint": "Icon for the quick folder access button.",
-            "bookmarks_icon": "internet-web-browser",
-            "bookmarks_icon_hint": ("Icon for the web browser bookmarks button."),
-            "clipboard_icon": "edit-paste",
-            "clipboard_icon_hint": ("Icon for the clipboard manager button."),
-            "soundcard_icon": "audio-volume-high",
-            "soundcard_icon_hint": ("Icon for the soundcard/volume control button."),
-            "system_icon": "system-shutdown",
-            "system_icon_hint": (
-                "Icon for the system/power menu (shutdown, restart, etc.) button."
-            ),
-            "bluetooth_icon": "bluetooth",
-            "bluetooth_icon_hint": ("Icon for the bluetooth manager button."),
-            "notes_icon": "stock_notes",
-            "notes_icon_hint": "Icon for the quick notes button.",
-            "notes_icon_delete": "delete",
-            "notes_icon_delete_hint": "Icon for the delete note button.",
-            "layer_position": "TOP",
-            "layer_position_hint": (
-                "The **stacking order layer** this panel will be placed on. "
-                "Use 'BACKGROUND' (behind windows) or 'TOP' (above windows)."
-            ),
-            "Exclusive": 1.0,
-            "Exclusive_hint": (
-                "Set to **1.0 (exclusive)** if the panel should permanently "
-                "reserve screen space."
-            ),
-            "height": 32.0,
-            "height_hint": ("The fixed height (in pixels) of the top panel area."),
-            "width": screen_width,
-            "width_hint": "The width (in pixels) of this horizontal panel, matched to the primary output width.",
-            "max_note_lenght": 100.0,
-            "max_note_lenght_hint": (
-                "Maximum number of characters allowed for a single quick note entry."
-            ),
-        },
-    },
-    "menu": {
+    "org.waypanel.plugin.custom_menu": {
         "_section_hint": (
             "Configuration for the custom menu plugin, used for running "
             "scripts or system commands."
         ),
+        "hide_in_systray": False,
         "Wayfire": {
             "_section_hint": (
                 "A custom submenu for Wayfire-related scripts and commands."
@@ -714,26 +708,12 @@ default_config = {
             ),
         },
     },
-    "folders": {
+    "org.waypanel.plugin.folders": {
         "_section_hint": (
             "Configuration for the quick access folders/directories menu."
         ),
         "Imagens": {
             "_section_hint": "A custom folder entry definition.",
-            "name": "Wallpapers",
-            "name_hint": "The display name for the folder in the menu.",
-            "path": "/home/neo/Imagens/Wallpapers/",
-            "path_hint": (
-                "The **absolute path** (starting from `/`) to the directory "
-                "that will be opened."
-            ),
-            "filemanager": "thunar",
-            "filemanager_hint": (
-                "The command for the file manager to use when opening "
-                "the folder (e.g., `nautilus`, `thunar`, `dolphin`)."
-            ),
-            "icon": "folder-symbolic",
-            "icon_hint": "Icon name for the folder entry.",
         },
     },
 }

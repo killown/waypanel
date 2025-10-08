@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.app_launcher",
+        "name": "App Launcher",
+        "version": "1.0.0",
         "enabled": True,
         "index": 1,
         "container": "top-panel-box-widgets-left",
@@ -13,7 +16,7 @@ def get_plugin_class():
     import sqlite3
     from src.plugins.core._base import BasePlugin
 
-    class AppMenu(BasePlugin):
+    class AppLauncher(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
             self.popover_launcher = None
@@ -700,4 +703,4 @@ def get_plugin_class():
             """
             return self.code_explanation.__doc__
 
-    return AppMenu
+    return AppLauncher

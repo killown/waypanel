@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.folders",
+        "name": "Folders",
+        "version": "1.0.0",
         "enabled": True,
         "index": 2,
         "container": "top-panel-box-widgets-left",

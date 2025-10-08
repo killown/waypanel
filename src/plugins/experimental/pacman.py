@@ -3,6 +3,9 @@ def get_plugin_metadata(_):
 
     ENABLE_PLUGIN = bool(shutil.which("pacman"))
     return {
+        "id": "org.waypanel.plugin.pacman",
+        "name": "Pacman Manager",
+        "version": "1.0.0",
         "enabled": ENABLE_PLUGIN,
         "index": 3,
         "container": "top-panel-center",

@@ -39,11 +39,13 @@ class Panel(Adw.Application):
         self.config_handler._start_watcher()
         self.plugins = None
         self.plugin_loader = None
+        self.plugin_metadata = None
         GLib.idle_add(self.start_plugin_loader)
 
     def start_plugin_loader(self):
         self.plugin_loader = PLUGIN_LOADER_MODULE.PluginLoader(self)  # pyright: ignore
         self.plugins = self.plugin_loader.plugins
+        self.plugin_metadata = self.plugin_loader.plugin_metadata_map
         return False
 
     def get_config(self, key_path, default=None):

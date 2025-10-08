@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.scale_exclusive",
+        "name": "Panel Scale Exclusive",
+        "version": "1.0.0",
         "enabled": True,
         "priority": 99,
         "deps": [
@@ -28,7 +31,6 @@ def get_plugin_class():
                 "right": False,
             }
             self.on_output_plugin = self.plugins["on_output_connect"]
-            print("asdf" * 1000)
 
         def set_panels_exclusive(self, exclusive=True, size=49):
             """Helper method to set/unset exclusive mode on all four panels."""

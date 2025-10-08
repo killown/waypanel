@@ -1,5 +1,10 @@
 def get_plugin_metadata(_):
-    return {"enabled": True, "priority": 1, "deps": ["event_manager"]}
+    return {        
+        "id": "org.waypanel.plugin.on_output_connect",
+        "name": "Panel Output Mover",
+        "version": "1.0.0",
+        "enabled": True, "priority": 1, "deps": ["event_manager"]
+        }
 
 
 def get_plugin_class():

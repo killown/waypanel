@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.example_quick_actions",
+        "name": "Example Quick Actions",
+        "version": "1.0.0",
         "enabled": True,
         "container": "top-panel-center",
         "index": 900,

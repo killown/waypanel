@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.next_workspace_with_views",
+        "name": "Next Workspace",
+        "version": "1.0.0",
         "enabled": True,
     }
 

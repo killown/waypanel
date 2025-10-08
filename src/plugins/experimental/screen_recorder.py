@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.screen_recorder",
+        "name": "Screen Recorder",
+        "version": "1.0.0",
         "enabled": True,
         "index": 4,
         "container": "top-panel-systray",

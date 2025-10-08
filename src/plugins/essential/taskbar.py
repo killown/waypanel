@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.taskbar",
+        "name": "Taskbar",
+        "version": "1.0.0",
         "enabled": True,
         "container": "bottom-panel-center",
         "deps": [
@@ -31,22 +34,22 @@ def get_plugin_class():
             self.button_pool = []
             self.in_use_buttons = {}
             self.icon_size = self.get_config(
-                ["taskbar", "layout", "icon_size"],
+                ["layout", "icon_size"],
             )
             self.spacing = self.get_config(
-                ["taskbar", "layout", "spacing"],
+                ["layout", "spacing"],
             )
             self.show_label = self.get_config(
-                ["taskbar", "layout", "show_label"],
+                ["layout", "show_label"],
             )
             self.max_title_lenght = self.get_config(
-                ["taskbar", "layout", "max_title_lenght"],
+                ["layout", "max_title_lenght"],
             )
             self.exclusive_zone = self.get_config(
-                ["taskbar", "panel", "exclusive_zone"],
+                ["panel", "exclusive_zone"],
             )
             self.panel_name = self.config_handler.check_and_get_config(
-                ["taskbar", "panel", "name"],
+                ["panel", "name"],
             )
             self.run_in_thread(self._setup_taskbar)
             self.run_in_thread(self._initialize_button_pool, 10)
@@ -100,7 +103,7 @@ def get_plugin_class():
                 monitor_width = geometry["width"]
                 self.scrolled_window.set_size_request(
                     monitor_width,
-                    self.get_config(["taskbar", "panel", "exclusive_zone"]),
+                    self.get_config(["panel", "exclusive_zone"]),
                 )
             self.taskbar.set_halign(self.gtk.Align.CENTER)
             self.taskbar.set_valign(self.gtk.Align.END)

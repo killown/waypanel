@@ -4,6 +4,9 @@ def get_plugin_metadata(_):
 
     ENABLE_PLUGIN = shutil.which("fuzzel") is not None
     return {
+        "id": "org.waypanel.plugin.scale_search",
+        "name": "Scale Search",
+        "version": "1.0.0",
         "enabled": ENABLE_PLUGIN,
         "deps": ["event_manager"],
     }

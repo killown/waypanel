@@ -1,5 +1,10 @@
 def get_plugin_metadata(_):
-    return {"enabled": True, "priority": 1}
+    return {
+        "id": "org.waypanel.plugin.gestures",
+        "name": "Gestures",
+        "version": "1.0.0",
+        "enabled": True,
+    }
 
 
 def get_plugin_class():

@@ -1,274 +1,214 @@
-# 🧩 Creating Your First Plugin in 5 Minutes (All-in-One Guide)
+# ✅ Creating Your First Waypanel Plugin (Complete Guide)
 
-This guide walks you through everything you need to create a simple plugin for **waypanel**. By the end, you'll have a working plugin that shows a button and displays a random number when clicked.
-
----
-
-## 📌 Table of Contents
-1. [Prerequisites](#prerequisites)
-2. [Step 1: Create the Plugin File](#step-1-create-the-plugin-file)
-3. [Step 2: Reload or Restart waypanel](#step-2-reload-or-restart-waypanel)
-4. [Understanding the Code](#understanding-the-code)
-5. [Customization Ideas](#customization-ideas)
-6. [Tips & Troubleshooting](#tips--troubleshooting)
-7. [Next Steps](#next-steps)
+This guide explains the \*\*mandatory structure\*\* for a modern Waypanel plugin, strictly adhering to the rule of importing modules inside `get_plugin_class()` and using the modern \*\*asynchronous API\*\* (`on_start`).
 
 ---
 
-## ✅ Prerequisites
+## 1\. The Core Plugin Structure & Deferred Imports
 
-Before starting:
-- Ensure `waypanel` is installed and running
-- You should be using a Wayland compositor like **Wayfire**, **Sway**, or similar
-- Basic Python knowledge is helpful but not required
+A Waypanel plugin relies on three mandatory top-level components. The most critical rule is that ALL imports MUST be deferred.
+
+### 1.1. Mandatory Top-Level Components
+
+- **`def get_plugin_metadata(_):`:** Plugin Configuration. Must be the first function. Defines placement, dependencies, and load order. Returns a `dict`.
+- **`def get_plugin_class():`:** Class Definition & Imports. The module loader's entry point. \*\*ALL necessary standard and internal imports MUST happen inside this function.\*\*
+- **The Plugin Class (Inheriting `BasePlugin`):** Contains the logic and lifecycle methods.
+
+### 1.2. Minimal Working Plugin Code
+
+Save this code as `~/.local/share/waypanel/plugins/minimal_random_plugin.py`:
+
+    # NOTE: No top-level imports are allowed here.
+
+    def get_plugin_metadata(_):
+        """
+        MANDATORY: Defines the plugin's properties and placement.
+        We place a simple button on the right side of the top panel.
+        """
+        return {
+            "id": "com.waypanel.plugin.example",
+            "name": "Example Background Plugin",
+            "version": "1.0.0",
+            "enabled": True,
+            "container": "top-panel-right",
+            "index": 1,
+            "deps": ["top_panel"], # Requires the top panel to exist
+        }
+
+
+    def get_plugin_class():
+        """
+        MANDATORY: Returns the main plugin class.
+        ALL necessary standard and internal imports are deferred here.
+        """
+        import random
+        import asyncio # Needed for BasePlugin's async methods
+        import gi
+        gi.require_version("Gtk", "4.0") # Ensure correct GTK version
+
+        # Core Waypanel and GTK imports
+        from gi.repository import Gtk, GLib
+        from src.plugins.core._base import BasePlugin # This path is required
+
+        class MinimalButtonPlugin(BasePlugin):
+            def __init__(self, panel_instance):
+                """Initializes the plugin by calling the BasePlugin constructor."""
+                super().__init__(panel_instance)
+                self.button = None
+
+            async def on_start(self):
+                """
+                Activation Lifecycle: Creates the UI and sets it as the main widget.
+                """
+                # Create a simple button widget
+                self.button = Gtk.Button(label="Get Random")
+
+                # Connect the click signal to a method in the class
+                self.button.connect("clicked", self.on_button_clicked)
+
+                # Set the main widget for the panel to append.
+                # self.main_widget is the required property: (widget, instruction)
+                self.main_widget = (self.button, "append")
+
+                self.logger.info("MinimalButtonPlugin started successfully.")
+
+            def on_button_clicked(self, widget):
+                """Handles the button click event (synchronous context)."""
+                # Use self.logger (provided by BasePlugin) instead of print()
+                rand_num = random.randint(100, 999)
+                self.button.set_label(f"Random: {rand_num}")
+
+                self.logger.info(f"Button clicked. New random number: {rand_num}")
+
+            async def on_stop(self):
+                """Deactivation Point: Performs cleanup."""
+                # self.remove_main_widget() is provided by BasePlugin for safety
+                self.logger.info("MinimalButtonPlugin stopping.")
+
+        return MinimalButtonPlugin
 
 ---
 
-## 🛠️ Step 1: Create the Plugin File
+## 2\. BasePlugin and Asynchronous Lifecycle
 
-Create a new file in your plugins directory:
+By inheriting from `BasePlugin`, your class gains essential resources and lifecycle methods:
 
-```bash
-mkdir -p ~/.config/waypanel/plugins
-nano ~/.config/waypanel/plugins/random_plugin.py
-```
+- **`self.logger`:** The structured logger. Use `self.logger.info()`, `.error()`, etc.
+- **`self.ipc_server`:** The object for subscribing to Wayfire events and handling inter-plugin communication.
+- **`self.run_in_async_task(coro)`:** Crucial helper. Use this to call asynchronous methods (which contain `await`) from a synchronous GTK callback (like `on_button_clicked`).
+- **`async def on_start()`:** The required activation method.
+- **`async def on_stop()`:** The required deactivation/cleanup method.
 
-## 🔧 Paste this complete plugin code:
+---
 
-```python
+## 3\. Valid Widget Positions (The `container` Key)
 
-def get_plugin_metadata(_):
-    return {
-        "enabled": True,
-        "container": "top-panel-center",
-        "index": 10,
-        "deps": ["top_panel"],
-    }
+This table lists all valid values for the `"container"` key in your plugin's metadata, defining where the widget will be rendered.
 
-def get_plugin_class()
-    from gi.repository import Gtk, GLib
-    import random
-    from waypanel.src.plugins.core._base import BasePlugin
-    class RandomNumberPlugin(BasePlugin):
-        def __init__(self, panel_instance):
-            super().__init__(panel_instance)
-            self.popover = None
-            self.button = None
-    
-        def create_widget(self):
-            """Create the main widget for the plugin."""
-            self.button = Gtk.Button()
-            self.button.set_icon_name("dialog-information-symbolic")
-            self.button.connect("clicked", self.on_button_clicked)
-            self.button.set_tooltip_text("Show random number")
-            return self.button
-    
-        def on_button_clicked(self, widget):
-            """Handle button click to show a random number."""
-            if not self.popover:
-                self.popover = Gtk.Popover()
-                self.popover.set_parent(self.button)
-                self.popover.set_autohide(True)
-    
-                box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-                box.set_margin_top(10)
-                box.set_margin_bottom(10)
-                box.set_margin_start(10)
-                box.set_margin_end(10)
-    
-                label = Gtk.Label.new(f"🎲 Random Number: {random.randint(1, 100)}")
-                box.append(label)
-    
-                refresh_btn = Gtk.Button(label="Generate Again")
-                refresh_btn.connect("clicked", self.refresh_random_number, label)
-                box.append(refresh_btn)
-    
-                self.popover.set_child(box)
-    
-            self.popover.popup()
-    
-        def refresh_random_number(self, button, label):
-            """Refresh the random number in the popover."""
-            label.set_text(f"🎲 Random Number: {random.randint(1, 100)}")
-    
-        def set_widget(self):
-            """Return the widget and append mode."""
-            return self.create_widget(), "append"
-```
+Panel Type
 
-## 🔄 Step 2: Reload or Restart waypanel
+Position Key
 
-After saving the file, reload or restart waypanel to load the plugin:
-bash
+Description
 
-pkill -f waypanel/main.py  
-python run.py
+**Top Panel**
 
-## 🛠️ Tips & Troubleshooting
+`"top-panel-left"`
 
+Far left of the top panel.
 
-### ❗ Common Issues
-Problem	Solution
-Button appears but nothing happens	Ensure Gtk.Popover is properly initialized
-No logs visible	Add self.logger.info("Debug message")
-Import errors	Confirm path matches waypanel/src/plugins/core/_base.py
-🚀 Next Steps
+`"top-panel-center"`
 
-Once you've created your first plugin, try these advanced steps:
+Center section.
 
-    🎯 Create a background service plugin (e.g., clock or battery monitor)
+`"top-panel-right"`
 
-    🧬 Subscribe to events using event_manager.subscribe_to_event("view-focused", callback)
+Far right section.
 
-    🧪 Test different placements (bottom-panel, left-panel, etc.)
+`"top-panel-systray"`
 
-## 📘 Bonus: Minimal Template
+Reserved for the System Tray area.
 
-Use this as a boilerplate for future plugins:
-```python
+`"top-panel-after-systray"`
 
-def get_plugin_metadata(_):
-    """
-    Define the plugin's properties and placement using the modern dictionary format.
+Immediately following the System Tray.
 
-    Valid Positions:
-        - Top Panel:
-            "top-panel-left"
-            "top-panel-center"
-            "top-panel-right"
-            "top-panel-systray"
-            "top-panel-after-systray"
+**Bottom Panel**
 
-        - Bottom Panel:
-            "bottom-panel-left"
-            "bottom-panel-center"
-            "bottom-panel-right"
+`"bottom-panel-left"`
 
-        - Left Panel:
-            "left-panel-top"
-            "left-panel-center"
-            "left-panel-bottom"
+Far left of the bottom panel.
 
-        - Right Panel:
-            "right-panel-top"
-            "right-panel-center"
-            "right-panel-bottom"
+`"bottom-panel-center"`
 
-        - Background:
-            "background"  # For plugins that don't have a UI
+Center section.
 
-    Returns:
-        dict: Plugin configuration metadata.
-    """
-    return {
-        "enabled": True,
-        "container": "top-panel-right",
-        "index": 5,
-        "deps": ["event_manager"],
-    }
+`"bottom-panel-right"`
 
+Far right section.
 
-def get_plugin_class():
-    """
-    Returns the main plugin class. All necessary imports are deferred here.
-    """
-    import asyncio
-    from src.plugins.core._base import BasePlugin
+**Left Panel (Vertical)**
 
-    class ExampleBroadcastPlugin(BasePlugin):
-        def __init__(self, panel_instance):
-            super().__init__(panel_instance)
-            self.button = None
+`"left-panel-top"`
 
-        async def on_start(self):
-            """
-            Asynchronous entry point, replacing the deprecated initialize_plugin().
-            """
-            self.logger.info("Setting up ExampleBroadcastPlugin...")
-            self._setup_plugin_ui()
-            self.logger.info("ExampleBroadcastPlugin has started.")
+Top section.
 
-        def _setup_plugin_ui(self):
-            """
-            Set up the plugin's UI and functionality.
-            """
-            self.button = self.create_broadcast_button()
-            self.main_widget = (self.button, "append")
+`"left-panel-center"`
 
-        def create_broadcast_button(self):
-            """
-            Create a button that triggers an IPC broadcast when clicked.
-            """
-            # Use self.gtk helper for widget creation
-            button = self.gtk.Button()
-            button.connect("clicked", self.on_button_clicked)
-            button.set_tooltip_text("Click to broadcast a message!")
-            return button
+Center section.
 
-        def on_button_clicked(self, widget):
-            """
-            Handle button click event by correctly scheduling the async broadcast.
-            """
-            self.logger.info("ExampleBroadcastPlugin button clicked!")
+`"left-panel-bottom"`
 
-            message = {
-                "event": "custom_message",
-                "data": "Hello from ExampleBroadcastPlugin!",
-            }
+Bottom section.
 
-            asyncio.create_task(self.broadcast_message(message))
+**Right Panel (Vertical)**
 
-        async def broadcast_message(self, message):
-            """
-            Broadcast a custom message to all connected clients via the IPC server.
-            """
-            try:
-                self.logger.info(f"Broadcasting message: {message}")
-                await self.ipc_server.broadcast_message(message)
-            except Exception as e:
-                self.logger.error(f"Failed to broadcast message: {e}")
+`"right-panel-top"`
 
-        async def on_stop(self):
-            """
-            Called when the plugin is stopped or unloaded.
-            """
-            self.logger.info("ExampleBroadcastPlugin has stopped.")
+Top section.
 
-        async def on_reload(self):
-            """
-            Called when the plugin is reloaded dynamically.
-            """
-            self.logger.info("ExampleBroadcastPlugin has been reloaded.")
+`"right-panel-center"`
 
-        async def on_cleanup(self):
-            """
-            Called before the plugin is completely removed.
-            """
-            self.logger.info("ExampleBroadcastPlugin is cleaning up resources.")
+Center section.
 
-        def about(self):
-            """An example plugin that demonstrates how to create a UI widget and broadcast a message via the IPC server."""
-            return self.about.__doc__
+`"right-panel-bottom"`
 
-        def code_explanation(self):
-            """
-            This plugin is an example demonstrating how to create a simple user
-            interface (UI) element and use the Inter-Process Communication (IPC)
-            system to broadcast a message to other components.
+Bottom section.
 
-            The core logic is centered on **event-driven UI and IPC broadcasting**:
+**Background**
 
-            1.  **UI Creation**: It creates a Gtk.Button and sets it as the main
-                widget, specifying its placement on the top-right of the panel.
-            2.  **Event Handling**: It connects the button's "clicked" signal to the
-                `on_button_clicked` method, which correctly schedules the
-                asynchronous `broadcast_message` using `asyncio.create_task`.
-            3.  **IPC Broadcasting**: The `broadcast_message` method then uses the
-                `ipc_server` to send a predefined message to any other plugin or
-                client that is listening for the "custom_message" event.
-            """
-            return self.code_explanation.__doc__
+`"background"`
 
-    return ExampleBroadcastPlugin
-```
+For plugins that run logic/services only (no visible UI).
 
+---
+
+## 4\. Wayfire IPC Events (Compositor State Monitoring)
+
+Plugins subscribe to these events via `self.ipc_server` to monitor changes in the Wayfire compositor state (windows, workspaces, monitors).
+
+### 4.1. View-Related Events (Window Management)
+
+    "view-focused"          # A window gained input focus.
+    "view-unmapped"         # A window was hidden or closed.
+    "view-mapped"           # A window became visible.
+    "view-title-changed"    # The window's title was updated.
+    "view-app-id-changed"   # The window's application ID changed.
+    "view-set-output"       # The window was moved to a different monitor.
+    "view-workspace-changed"# The window moved to a different workspace.
+    "view-geometry-changed" # The position or size changed.
+    "view-tiled"            # The window was snapped to a side.
+    "view-minimized"        # The window was minimized.
+    "view-fullscreen"       # The window entered/exited fullscreen mode.
+    "view-sticky"           # The window became visible on all workspaces.
+    "view-wset-changed"     # The view's assigned workspace set changed.
+
+### 4.2. Output and Workspace Events (Desktop Management)
+
+    "wset-workspace-changed"        # The active workspace set of an output changed.
+    "workspace-activated"           # User switched to a new workspace.
+    "output-wset-changed"           # An output's workspace set (wset) changed.
+    "plugin-activation-state-changed" # A Wayfire plugin was activated/deactivated.
+    "output-gain-focus"             # An output (monitor) gained input focus.
+    "output-layout-changed"         # Monitor configuration changed.
+    "output-removed"                # A monitor was disconnected.

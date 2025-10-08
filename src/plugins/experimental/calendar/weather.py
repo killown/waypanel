@@ -1,5 +1,10 @@
 def get_plugin_metadata(_):
-    return {"enabled": True, "priority": 99, "deps": ["calendar"]}
+    return {
+        "id": "org.waypanel.plugin.weather",
+        "name": "Weather",
+        "version": "1.0.0",
+        "enabled": True, "priority": 99, "deps": ["calendar"]
+        }
 
 
 def get_plugin_class():

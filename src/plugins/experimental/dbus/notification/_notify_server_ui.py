@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.notify_server_ui",
+        "name": "Notify Server UI",
+        "version": "1.0.0",
         "enabled": True,
         "deps": ["top_panel"],
     }

@@ -17,8 +17,10 @@ def subscribe_to_event(event_type):
 
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.event_handler",
+        "name": "Event Handler",
+        "version": "1.0.0",
         "enabled": True,
-        "priority": 1,
         "deps": ["event_manager"],
     }
 

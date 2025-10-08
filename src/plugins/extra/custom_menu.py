@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.custom_menu",
+        "name": "Custom Menus",
+        "version": "1.0.0",
         "enabled": True,
         "index": 5,
         "container": "top-panel-systray",

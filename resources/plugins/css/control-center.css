@@ -4,6 +4,28 @@
   box-shadow: 0 1px 3px var(--shadow-dark);
 }
 
+/* Beautiful Group Title (Centering must be done via GTK HAlign) */
+.control-center-group-title {
+  color: var(--accent-blue);
+  font-size: 1.2em;
+  font-weight: bold;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--tertiary-bg);
+}
+
+/* Beautiful Text Hint (Centering must be done via GTK HAlign) */
+.control-center-hint {
+  color: var(--soft-text);
+  font-style: italic;
+  font-size: 0.9em;
+  padding: 8px 15px;
+  margin-top: 5px;
+  border-radius: 4px;
+  background-color: var(--tertiary-bg);
+  box-shadow: inset 0 0 3px var(--shadow-dark);
+}
+
 .control-center-save-button {
   color: var(--main-text);
   background-color: var(--success-green);
@@ -30,27 +52,36 @@
   border: none;
 }
 
+/* App-Launcher style applied to category items */
 .control-center-category-item {
   margin: 3px 8px;
   padding: 8px 15px;
-  border-radius: 6px;
-  background-color: transparent;
-  box-shadow: none;
-  transition: all 0.15s ease-out;
+  border-radius: 10px;
+  background-color: var(--secondary-bg);
+  border: none;
+  box-shadow: var(--shadow-elevated);
+  transition: all 0.2s ease-in-out;
   color: var(--main-text);
 }
 
 .control-center-category-item:hover {
   background-color: var(--tertiary-bg);
-  box-shadow: none;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-neumorphic-outset-large);
+}
+
+.control-center-category-item:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-neumorphic-press);
+  background-color: var(--primary-bg);
 }
 
 .control-center-category-item:checked {
   background-color: var(--accent-blue);
   color: var(--main-text);
   font-weight: bold;
-  box-shadow: none;
-  transform: none;
+  box-shadow: var(--shadow-neumorphic-press);
+  transform: translateY(0);
 }
 
 .control-center-content-area {
@@ -60,13 +91,35 @@
 
 .control-center-config-group {
   background-color: var(--secondary-bg);
-  border-radius: 10px;
+  border-radius: 12px;
   margin: 15px 0;
   padding: 15px;
+  /* Prominent widget shadow */
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 1px 0 rgba(0, 0, 0, 0.5);
+    0 0 0 1px var(--macos-bg-3),
+    0 8px 16px var(--shadow-dark); 
 }
+
+/*
+ * UPDATED: Stylish VBox Item with Elevation and Hover Effect
+ */
+.control-center-vbox-item {
+  background-color: var(--secondary-bg);
+  border-radius: 10px; /* Modern, slightly larger radius */
+  padding: 15px;      /* More internal space for content */
+  margin: 8px 0;      /* Increased separation */
+  border: 1px solid var(--tertiary-bg);
+  box-shadow: var(--shadow-elevated); /* Lifts the item visually */
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1); /* Smooth animation */
+}
+
+.control-center-vbox-item:hover {
+  background-color: var(--tertiary-bg);
+  border-color: var(--accent-blue); /* Highlights the item's border */
+  box-shadow: 0 4px 12px var(--shadow-dark); /* More pronounced hover shadow */
+  transform: translateY(-1px); /* Subtly lifts the item */
+}
+
 
 .control-center-setting-row {
   color: var(--main-text);

@@ -1,5 +1,9 @@
 def get_plugin_metadata(_):
-    return {"enabled": True, "priority": 1, "deps": ["clock"]}
+    return {        
+        "id": "org.waypanel.plugin.calendar",
+        "name": "Calendar",
+        "version": "1.0.0",
+        "enabled": True, "priority": 1, "deps": ["clock"]}
 
 
 def get_plugin_class():

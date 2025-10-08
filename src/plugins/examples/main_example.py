@@ -8,6 +8,9 @@ def get_plugin_metadata(panel_instance):
     )
 
     return {
+        "id": "org.waypanel.plugin.main_example",
+        "name": "Main Example",
+        "version": "1.0.0",
         "enabled": True,
         "container": position,
         "index": order,

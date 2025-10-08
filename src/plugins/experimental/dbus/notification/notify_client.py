@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.notify_client",
+        "name": "Notify Client",
+        "version": "1.0.0",
         "enabled": True,
         "index": 7,
         "container": "top-panel-center",

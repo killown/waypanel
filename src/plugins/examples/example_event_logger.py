@@ -117,6 +117,9 @@ def get_plugin_metadata(_):
     Define the plugin's properties and placement using the modern dictionary format.
     """
     return {
+        "id": "org.waypanel.plugin.example_event_logger",
+        "name": "Example Event Logger",
+        "version": "1.0.0",
         "enabled": True,
         "container": "background",
         "index": 0,

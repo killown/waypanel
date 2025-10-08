@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.clipboard",
+        "name": "Clipboard Client",
+        "version": "1.0.0",
         "enabled": True,
         "container": "top-panel-systray",
         "index": 6,
@@ -98,22 +101,13 @@ def get_plugin_class():
             self.find_text_using_button = {}
             self.row_content = None
             self.listbox = None
-            self.client_config = self.config_data.get("plugins", "").get("clipboard")
-            self.popover_min_width = self.client_config.get(
-                "client_popover_min_width", 500
-            )
-            self.popover_max_height = self.client_config.get(
-                "client_popover_max_height", 600
-            )
-            self.thumbnail_size = self.client_config.get("client_thumbnail_size", 128)
-            self.preview_text_length = self.client_config.get(
-                "client_preview_text_length", 50
-            )
-            self.image_row_height = self.client_config.get(
-                "client_image_row_height", 60
-            )
-            self.text_row_height = self.client_config.get("client_text_row_height", 38)
-            self.item_spacing = self.client_config.get("client_item_spacing", 5)
+            self.popover_min_width = self.get_config("client_popover_min_width", 500)
+            self.popover_max_height = self.get_config("client_popover_max_height", 600)
+            self.thumbnail_size = self.get_config("client_thumbnail_size", 128)
+            self.preview_text_length = self.get_config("client_preview_text_length", 50)
+            self.image_row_height = self.get_config("client_image_row_height", 60)
+            self.text_row_height = self.get_config("client_text_row_height", 38)
+            self.item_spacing = self.get_config("client_item_spacing", 5)
 
         def on_start(self):
             self.create_popover_menu_clipboard()

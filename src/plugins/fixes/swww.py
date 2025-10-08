@@ -1,5 +1,9 @@
 def get_plugin_metadata(_):
-    return {"enabled": True, "deps": ["event_manager"]}
+    return {        
+        "id": "org.waypanel.plugin.swww_fixer",
+        "name": "Fix swww",
+        "version": "1.0.0",
+        "enabled": True, "deps": ["event_manager"]}
 
 
 def get_plugin_class():

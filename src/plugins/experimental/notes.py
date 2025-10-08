@@ -1,5 +1,8 @@
 def get_plugin_metadata(_):
     return {
+        "id": "org.waypanel.plugin.notes",
+        "name": "Notes",
+        "version": "1.0.0",
         "enabled": True,
         "index": 6,
         "container": "top-panel-systray",

@@ -1,18 +1,11 @@
 import gi
 import os
 import gc
+import sys
 import inspect
 import lazy_loader as lazy
-
-# ----------------------------------------------------------------------
-# IMMEDIATE IMPORTS
-# These are required for gi.require_version, PluginLogAdapter init,
-# BasePlugin init, or for the core concurrency helpers.
-# ----------------------------------------------------------------------
 from gi.repository import Gtk, GLib, Gdk, Gio, Pango, GdkPixbuf, Adw  # pyright: ignore
 from src.core import create_panel
-
-# Classes instantiated in __init__ must be imported immediately
 from src.shared.path_handler import PathHandler
 from src.shared.notify_send import Notifier
 from src.shared.wayfire_helpers import WayfireHelpers
@@ -21,18 +14,9 @@ from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
 from src.shared.command_runner import CommandRunner
 from src.shared.concurrency_helper import ConcurrencyHelper
-
-# Type hints are not lazy-loaded
 from typing import Any, List, ClassVar, Optional, Union, Dict, Set
-import asyncio  # Keep asyncio for type hint asyncio.Task
+import asyncio
 
-# ----------------------------------------------------------------------
-# LAZY MODULE DEFINITIONS
-# These are only imported when their corresponding @property is accessed.
-# The concurrency module is now loaded as a module, not extracting classes.
-# ----------------------------------------------------------------------
-
-# Standard Library Modules
 TIME_MODULE = lazy.load("time")
 DATETIME_MODULE = lazy.load("datetime")
 ASYNCI_MODULE = lazy.load("asyncio")
@@ -40,15 +24,10 @@ SUBPROCESS_MODULE = lazy.load("subprocess")
 SQLITE3_MODULE = lazy.load("sqlite3")
 IMPORTLIB_MODULE = lazy.load("importlib")
 CONCURRENCY_FUTURES_MODULE = lazy.load("concurrent.futures")
-
-# Third-Party / External Modules
 ORJSON_MODULE = lazy.load("orjson")
 REQUESTS_MODULE = lazy.load("requests")
 AIOSQLITE_MODULE = lazy.load("aiosqlite")
 TOML_MODULE = lazy.load("toml")
-
-
-# Required gi versions (cannot be lazy)
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 gi.require_version("GLib", "2.0")
@@ -146,8 +125,8 @@ class BasePlugin:
     _config_handler: ConfigHandler
     _cmd: CommandRunner
     global_loop: asyncio.AbstractEventLoop
-    global_executor: Any  # Cannot use ThreadPoolExecutor until imported
-    _running_futures: Set[Any]  # Cannot use Future until imported
+    global_executor: Any
+    _running_futures: Set[Any]
     _running_tasks: Set[asyncio.Task]
 
     def __init__(self, panel_instance: Any):
@@ -187,16 +166,31 @@ class BasePlugin:
         self.gio = Gio
         self.pango = Pango
         self._loaded_modules: Dict[str, Any] = {}
+
+        metadata = self.get_plugin_metadata()
+        self.plugin_id = None
+        if metadata is not None:
+            if "id" in metadata:
+                self.plugin_id = metadata["id"]
+
         GLib.timeout_add_seconds(10, self.run_gc_cleanup)
+
+    def get_plugin_metadata(self):
+        module_name = self.__module__
+        try:
+            module_object = sys.modules[module_name]
+        except KeyError:
+            return None
+        if hasattr(module_object, "get_plugin_metadata"):
+            metadata = module_object.get_plugin_metadata(self._panel_instance)
+            return metadata
 
     def _periodic_gc(self):
         """
         Manually forces Python's garbage collector (GC) to run.
-
         Crucial for GObject/GTK applications, this reclaims memory
         stuck in uncollectable reference cycles that frequently form
         between Python objects and the C-level library bindings.
-
         Returns:
             bool: True, signaling GLib to repeat the timer.
         """
@@ -206,12 +200,10 @@ class BasePlugin:
     def run_gc_cleanup(self):
         """
         Initializes the entire memory cleanup lifecycle.
-
         1. Runs `_periodic_gc` immediately to clear memory leaks
            accumulated during startup initialization.
         2. Sets up the long-running timer (5 minutes) for continuous
            memory maintenance throughout the application's lifespan.
-
         Returns:
             bool: False, to ensure this setup function runs only once.
         """
@@ -225,7 +217,6 @@ class BasePlugin:
             self._layer_shell.set_keyboard_mode(
                 self._panel_instance.top_panel, self._layer_shell.KeyboardMode.ON_DEMAND
             )
-
         if mode is False:
             self._layer_shell.set_keyboard_mode(
                 self.obj.top_panel, self._layer_shell.KeyboardMode.NONE
@@ -240,19 +231,15 @@ class BasePlugin:
         Lazily and dynamically imports a module by name.
         It caches the imported module in the instance to prevent re-importing
         on subsequent calls, which is faster and avoids potential side effects.
-
         Args:
             module_name (str): The full path of the module to import (e.g., 'gi.repository.Notify').
-
         Returns:
             Optional[Any]: The imported module object if successful, None otherwise.
         """
         if module_name in self._loaded_modules:
             self.logger.debug(f"Module '{module_name}' retrieved from cache.")
             return self._loaded_modules[module_name]
-
         try:
-            # Use the lazy-loaded importlib for dynamic loading
             module = IMPORTLIB_MODULE.import_module(module_name)  # pyright: ignore
             self._loaded_modules[module_name] = module
             self.logger.debug(
@@ -270,16 +257,21 @@ class BasePlugin:
             )
             return None
 
-    def get_config(self, keys: List[str], default: Any = None):
+    def get_config(self, key: Union[str, List[str]], default_value: Any = None) -> Any:
         """
-        Retrieves a configuration value by traversing nested keys.
-        Args:
-            keys: A list of strings representing the path to the config value (e.g., ["section", "subsection", "key"]).
-            default: The value to return if the configuration path is not found.
-        Returns:
-            The config value or the specified default value.
+        Retrieves a configuration value for this specific plugin's section.
         """
-        return self.config_handler.check_and_get_config(keys, default)
+        if not self.plugin_id:
+            return default_value
+        key_path = [self.plugin_id]
+        if isinstance(key, str):
+            key_path.append(key)
+        elif isinstance(key, list):
+            key_path.extend(key)
+        else:
+            self.logger.error("Config key must be a string or a list of strings.")
+            return default_value
+        return self.config_handler.check_and_get_config(key_path, default_value)
 
     def update_config(self, key_path: List[str], new_value: Any):
         """
@@ -301,7 +293,6 @@ class BasePlugin:
             return False
 
     def run_cmd(self, cmd: str) -> Any:
-        # NOTE: Using 'Any' for Future type hint to avoid import error
         return self.run_in_thread(self.cmd.run, cmd)
 
     def _cleanup_future(self, future: Any):
@@ -365,13 +356,11 @@ class BasePlugin:
     @property
     def thread_pool_executor(self) -> Any:
         """Read-only access to the ThreadPoolExecutor class."""
-        # FIX: Access the class from the lazy-loaded module
         return CONCURRENCY_FUTURES_MODULE.ThreadPoolExecutor  # pyright: ignore
 
     @property
     def future(self) -> Any:
         """Read-only access to the Future class."""
-        # FIX: Access the class from the lazy-loaded module
         return CONCURRENCY_FUTURES_MODULE.Future  # pyright: ignore
 
     @property
