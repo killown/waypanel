@@ -4,7 +4,10 @@
   box-shadow: 0 1px 3px var(--shadow-dark);
 }
 
-/* Beautiful Group Title (Centering must be done via GTK HAlign) */
+.control-center-window {
+  background-color: var(--primary-bg);
+}
+
 .control-center-group-title {
   color: var(--accent-blue);
   font-size: 1.2em;
@@ -14,7 +17,6 @@
   border-bottom: 1px solid var(--tertiary-bg);
 }
 
-/* Beautiful Text Hint (Centering must be done via GTK HAlign) */
 .control-center-hint {
   color: var(--soft-text);
   font-style: italic;
@@ -52,7 +54,6 @@
   border: none;
 }
 
-/* App-Launcher style applied to category items */
 .control-center-category-item {
   margin: 3px 8px;
   padding: 8px 15px;
@@ -94,20 +95,16 @@
   border-radius: 12px;
   margin: 15px 0;
   padding: 15px;
-  /* Prominent widget shadow */
   box-shadow:
     0 0 0 1px var(--macos-bg-3),
-    0 8px 16px var(--shadow-dark); 
+    0 8px 16px var(--shadow-dark);
 }
 
-/*
- * UPDATED: Stylish VBox Item with Elevation and Hover Effect
- */
 .control-center-vbox-item {
   background-color: var(--secondary-bg);
   border-radius: 10px; /* Modern, slightly larger radius */
-  padding: 15px;      /* More internal space for content */
-  margin: 8px 0;      /* Increased separation */
+  padding: 15px; /* More internal space for content */
+  margin: 8px 0; /* Increased separation */
   border: 1px solid var(--tertiary-bg);
   box-shadow: var(--shadow-elevated); /* Lifts the item visually */
   transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1); /* Smooth animation */
@@ -119,7 +116,6 @@
   box-shadow: 0 4px 12px var(--shadow-dark); /* More pronounced hover shadow */
   transform: translateY(-1px); /* Subtly lifts the item */
 }
-
 
 .control-center-setting-row {
   color: var(--main-text);
@@ -184,3 +180,4 @@
 
 .control-center-toggle-switch {
 }
+

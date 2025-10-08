@@ -7,6 +7,7 @@ def get_plugin_metadata(_):
         "deps": ["event_manager"],
     }
 
+
 def get_plugin_class():
     import os
     from pathlib import Path
@@ -27,7 +28,9 @@ def get_plugin_class():
             self.theme = None
 
         def _get_current_theme(self):
-            theme = self.get_config(["panel", "theme", "default"], DEFAULT_THEME)
+            theme = self._config_handler.check_and_get_config(
+                ["panel", "theme", "default"], DEFAULT_THEME
+            )
             return theme
 
         def _get_css_files_to_import(self):

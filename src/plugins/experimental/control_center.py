@@ -384,6 +384,7 @@ def get_plugin_class():
         def do_activate(self):
             if not self.win:
                 self.win = Adw.ApplicationWindow()
+                self.win.add_css_class("control-center-window")
                 self.win.connect("close-request", self.on_close_request)
                 self.win.set_title("Waypanel Control Center")
                 self.win.set_default_size(800, 600)
