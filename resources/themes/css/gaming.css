@@ -1,84 +1,75 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - gaming DARK (Steam Style) ==== */
+  /* ==== CORE PALETTE (Theme Specific) - gaming DARK (Steam Style) (REFINED) ==== */
   /* ================================================= */
 
-  /* Steam Colors */
-  --color-steam-dark-blue: #1b2838;    /* Primary Background */
-  --color-steam-deep-blue: #171a21;    /* Deepest Background/Window */
-  --color-steam-light-blue: #66c0f4;   /* Primary Accent/Highlight */
-  --color-steam-blue-dark: #417a9b;    /* Secondary Accent/Button Hover */
-  --color-steam-green: #598e3b;        /* Success/Purchase Green */
+  --color-steam-dark-blue: #1b2838;
+  --color-steam-deep-blue: #171a21;
+  --color-steam-light-blue: #66c0f4;
+  --color-steam-light-blue-functional: #7AC9FF;
+  --color-steam-blue-dark: #417a9b;
+  --color-steam-green: #598e3b;
 
-  /* Core Backgrounds - Mapping to Steam Tiers */
   --color-bg-deep: var(--color-steam-deep-blue);
-  --color-bg-base: var(--color-steam-dark-blue);        /* View Primary (Content Area) */
-  --color-bg-window: var(--color-steam-deep-blue);      /* Window/Base Background */
-  --color-bg-panel: var(--color-steam-dark-blue); 
-  --color-bg-popover: #213042;     /* Slightly lighter dark blue for elevated menus */
-  --color-bg-searchbar: #33445c;   /* Desaturated Blue/Gray for inputs */
-  --color-bg-button: var(--color-steam-blue-dark); /* Primary Button Default */
-  --color-bg-button-hover: var(--color-steam-light-blue); /* Primary Button Hover */
-  --color-bg-button-active: #171a21; /* Pressed state (Deep Blue) */
-  --color-bg-surface: var(--color-steam-dark-blue);     /* Secondary Panel BG */
-  --color-bg-raised: var(--color-bg-popover);      /* Cards/Elevated Elements */
-  --color-bg-alt-row: #14202d;     /* Subtle variation for stripes */
-  --color-bg-transparent-active: rgba(102, 192, 244, 0.2); /* Steam Blue transparent */
+  --color-bg-base: var(--color-steam-dark-blue);
+  --color-bg-window: var(--color-steam-deep-blue);
+  --color-bg-panel: var(--color-steam-dark-blue);
+  --color-bg-popover: #213042;
+  --color-bg-searchbar: #33445c;
+  --color-bg-box-primary: var(--color-bg-popover);
+  --color-bg-box-secondary: var(--color-bg-raised);
+  --color-bg-button: var(--color-steam-blue-dark);
+  --color-bg-button-hover: #5d91b3;
+  --color-bg-button-active: #171a21;
+  --color-bg-surface: var(--color-steam-dark-blue);
+  --color-bg-raised: var(--color-bg-popover);
+  --color-bg-alt-row: #14202d;
+  --color-bg-transparent-active: rgba(102, 192, 244, 0.2);
 
-  /* Core Foregrounds - Bright & Muted White/Gray */
+  --color-vibrancy-dark-blur: var(--color-bg-window);
+  --color-vibrancy-light-blur: var(--color-bg-popover);
+  --opacity-vibrancy-bar: 1.0;
+
   --color-fg-primary: #ffffff;
   --color-fg-secondary: #e5e5e5;
-  --color-fg-muted: #8899a6;       /* Gray-blue muted text */
-  --color-fg-subtle: #4b6678;      /* Deep gray-blue subtle text/icons */
-  --color-fg-inverse: #000000;     /* For text on light accent backgrounds */
+  --color-fg-muted: #8899a6;
+  --color-fg-subtle: #4b6678;
+  --color-fg-inverse: #000000;
 
-  /* Accent Colors (Steam Style) */
-  --color-accent-blue: var(--color-steam-light-blue);    /* Primary Accent */
+  --color-accent-blue-base: var(--color-steam-light-blue);
+  --color-accent-blue: var(--color-steam-light-blue-functional);
   --color-accent-blue-dark: var(--color-steam-blue-dark);
-  --color-accent-gray: #4b6678;    /* Inactive Accent */
-  --color-status-success: var(--color-steam-green);  /* Success Green */
-  --color-status-danger: #d01919;  /* Steam-compatible Red */
-  --color-status-warning: #ff9800;  /* Standard Warning Orange */
-  --color-separator-line: #33445c; /* Separator/Border */
+  --color-accent-gray: #4b6678;
+  --color-status-success: var(--color-steam-green);
+  --color-status-danger: #d01919;
+  --color-status-warning: #ff9800;
+  --color-separator-line: #33445c;
 
-  /* Status Color Backgrounds */
-  --color-status-success-bg: rgba(89, 142, 59, 0.2); 
+  --color-status-success-bg: rgba(89, 142, 59, 0.2);
   --color-status-danger-bg: rgba(208, 25, 25, 0.2);
   --color-status-warning-bg: rgba(255, 152, 0, 0.2);
 
-  /* Shadow Primitives (Reintroduced subtle shadows) */
-  --color-shadow-dark: rgba(0, 0, 0, 0.5); 
+  --color-shadow-dark: rgba(0, 0, 0, 0.5);
   --color-shadow-medium: rgba(0, 0, 0, 0.3);
   --color-shadow-lighter: rgba(0, 0, 0, 0.15);
-
-
-  /* ================================================= */
-  /* ========= TRANSPARENCY AND VIBRANCY (Advanced UI Structure) ===== */
-  /* ================================================= */
-  
-  --color-vibrancy-dark-blur: var(--color-bg-window);   
-  --color-vibrancy-light-blur: var(--color-bg-popover);   
-  --opacity-vibrancy-bar: 1.0;                         
 
 
   /* ================================================= */
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
   /* ================================================= */
 
-  --theme-bg-view-primary: var(--color-bg-base); 
-  --theme-bg-view-secondary: var(--color-bg-surface); 
-  --theme-bg-view-tertiary: var(--color-bg-raised); 
-  --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); 
+  --theme-bg-view-primary: var(--color-bg-base);
+  --theme-bg-view-secondary: var(--color-bg-surface);
+  --theme-bg-view-tertiary: var(--color-bg-raised);
+  --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur);
 
-  /* Interactive/State Backgrounds */
   --theme-bg-control-base: var(--color-bg-button);
-  --theme-bg-selected-primary: var(--color-steam-light-blue);
+  --theme-bg-selected-primary: var(--color-steam-light-blue-functional);
   --theme-bg-selected-inactive: var(--color-accent-gray);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
-  --theme-bg-text-selection: #66c0f460;   
+  --theme-bg-text-selection: #66c0f460;
   
-  /* Specialized Backgrounds */
-  --theme-bg-under-page: var(--color-bg-deep); 
+  --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
   --theme-bg-find-highlight: #ff980060;
 
@@ -88,17 +79,17 @@
   /* ================================================= */
   
   --color-bg-entry-base: var(--color-bg-searchbar);         
-  --color-bg-entry-focus: #213042;         
+  --color-bg-entry-focus: var(--color-bg-popover);         
   --color-bg-entry-disabled: var(--color-bg-alt-row);    
   --color-bg-textview: var(--color-bg-entry-base);           
   
-  --color-bg-button-flat: transparent;                    
+  --color-bg-button-flat: transparent;                      
   --color-bg-button-flat-hover: var(--color-bg-transparent-active);
   --color-bg-button-flat-active: var(--color-bg-transparent-active);
-  --color-bg-button-normal: var(--color-bg-button);       
+  --color-bg-button-normal: var(--color-bg-button);        
   --color-bg-button-normal-hover: var(--color-bg-button-hover); 
   --color-bg-button-normal-active: var(--color-bg-button-active); 
-  --color-bg-button-suggested: var(--color-steam-green);  /* Green button for primary actions */
+  --color-bg-button-suggested: var(--color-steam-green);
   --color-bg-button-suggested-hover: #72a955;
   
   --color-bg-menu-bar: var(--color-bg-window);           
@@ -114,7 +105,7 @@
   --color-bg-treeview-header: var(--color-bg-raised);    
 
   --color-bg-toggle-off: var(--color-fg-subtle);           
-  --color-bg-toggle-on: var(--color-accent-blue);          
+  --color-bg-toggle-on: var(--color-steam-light-blue-functional);          
   --color-bg-check-radio-box: var(--color-bg-raised);    
   
   --color-bg-scrollbar-track: transparent;                
@@ -151,17 +142,17 @@
 
   --theme-decoration-separator: var(--color-separator-line);
   --theme-decoration-grid-line: #33445c; 
-  --theme-decoration-keyboard-focus: var(--color-accent-blue);
+  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-accent-blue-base);
   --theme-decoration-border-control: var(--color-separator-line); 
   --color-border-entry-base: var(--color-separator-line);
-  --color-border-entry-focus: var(--color-accent-blue);
+  --color-border-entry-focus: var(--color-steam-light-blue-functional);
 
 
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
   /* ================================================= */
   
-  --theme-status-accent: var(--color-accent-blue);
+  --theme-status-accent: var(--color-steam-light-blue-functional);
   --theme-status-accent-inactive: var(--color-accent-gray);
   --theme-status-success: var(--color-status-success);
   --theme-status-danger: var(--color-status-danger);
@@ -211,15 +202,14 @@
   --opacity-50: 0.5;
   --opacity-60: 0.6;
 
-  /* Shadow Styles (Subtle and defined for panel separation) */
   --shadow-subtle: 0 1px 3px var(--shadow-medium);
-  --shadow-elevated: 0 4px 10px var(--shadow-dark); 
+  --shadow-elevated: 0 4px 10px var(--shadow-dark), 0 0 8px rgba(102, 192, 244, 0.1); 
   --shadow-button-flat: none;
-  --shadow-control-small: inset 0 0 0 1px #4b6678; /* Subtle border for controls */
-  --shadow-control-small-hover: 0 0 0 1px var(--color-accent-blue); 
+  --shadow-control-small: inset 0 0 0 1px #4b6678;
+  --shadow-control-small-hover: 0 0 0 1px var(--color-accent-blue-base); 
   --shadow-element-minimal: 0 1px 1px var(--shadow-medium);
 
-  --shadow-window-float: 0 6px 15px var(--shadow-dark); 
+  --shadow-window-float: 0 6px 15px var(--shadow-dark), 0 0 10px rgba(102, 192, 244, 0.15); 
   --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line); 
   
   --shadow-neumorphic-inset-medium: inset 0 1px 4px var(--shadow-dark);
@@ -230,17 +220,17 @@
   /* ============= GEOMETRY & RADIUS ================= */
   /* ================================================= */
   
-  --radius-xs: 2px;     /* Tighter radius for a desktop feel */
+  --radius-xs: 2px;     
   --radius-s: 3px;      
   --radius-m: 4px;      
-  --radius-l: 6px;     
-  --radius-xl: 8px;    
+  --radius-l: 6px;      
+  --radius-xl: 8px;     
 
   /* ================================================= */
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
-  --font-family-default: "Motiva Sans", "Arial", sans-serif; /* Motiva is Steam's brand font, Arial/system is a good fallback */
+  --font-family-default: "Motiva Sans", "Arial", sans-serif;
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400; 
   --font-weight-medium: 500;  

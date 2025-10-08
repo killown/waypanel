@@ -8,6 +8,8 @@
   --color-bg-panel: #1C1E26cb;     
   --color-bg-popover: #21242D;
   --color-bg-searchbar: #21242D;
+  --color-bg-box-primary: var(--color-bg-surface);
+  --color-bg-box-secondary: var(--color-bg-raised);
   --color-bg-button: #282B36;
   --color-bg-button-hover: #373A46;
   --color-bg-button-active: #21242D;

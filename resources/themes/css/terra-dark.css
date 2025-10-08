@@ -8,6 +8,8 @@
   --color-bg-panel: #242931cb;
   --color-bg-popover: #2C333D;
   --color-bg-searchbar: #2C333D;
+  --color-bg-box-primary: var(--color-bg-surface);
+  --color-bg-box-secondary: var(--color-bg-raised);
   --color-bg-button: #343D48;
   --color-bg-button-hover: #3E444E;
   --color-bg-button-active: #2C333D;
@@ -175,14 +177,14 @@
   --dseg-shadow-dark: none;
 
   /* ================================================= */
-  /* =============== SHADOWS AND OPACITY (Soft Focus) ====== */
+  /* =============== SHADOWS AND OPACITY ====== */
   /* ================================================= */
 
   --shadow-dark: var(--color-shadow-dark);
   --shadow-medium: var(--color-shadow-medium);
   --shadow-subtle-white: none;
 
-  /* Opacity (Standardized - ADDED MISSING) */
+  /* Opacity (Standardized) */
   --opacity-0: 0.0;
   --opacity-08: 0.08;
   --opacity-507: 0.507;
@@ -207,7 +209,7 @@
   --shadow-neumorphic-press: inset 0 1px 3px var(--color-shadow-dark);
 
   /* ================================================= */
-  /* ============= GEOMETRY & RADIUS (Natural) ============= */
+  /* ============= GEOMETRY & RADIUS ============= */
   /* ================================================= */
   
   --radius-xs: 3px;     
@@ -220,7 +222,7 @@
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
-  --font-family-default: "Lora", "Merriweather", serif; 
+  --font-family-default: "Lora", "Merriweather", serif;
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400; 
   --font-weight-medium: 500;  

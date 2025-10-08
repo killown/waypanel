@@ -1,63 +1,65 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - Crimson Candy (PERFECTED) ==== */
-  /* ================================================= */
-
-  /* Thematic Tonal Palette Base */
-  --color-shade-void: #300000;
-  --color-shade-stone: #400000;
-  --color-shade-pale: #ffffff;
-  --color-shade-soul: #d62828;
-
-  /* Core Backgrounds - Mapping to Dark Tiers */
-  --color-bg-deep: var(--color-shade-void);
-  --color-bg-base: var(--color-shade-stone);
-  --color-bg-window: #550505;
-  --color-bg-panel: var(--color-bg-window);
-  --color-bg-popover: #6e0a0a;
-  --color-bg-searchbar: #831010;
-  --color-bg-button: #831010;
-  --color-bg-button-hover: #9c1515;
-  --color-bg-button-active: #6e0a0a;
-  --color-bg-surface: var(--color-bg-window);
-  --color-bg-raised: var(--color-bg-popover);
-  --color-bg-alt-row: #3A0000;
-  --color-bg-transparent-active: rgba(255, 105, 180, 0.5);
-
-  /* Core Foregrounds - Pale and Ghostly */
-  --color-fg-primary: var(--color-shade-pale);
-  --color-fg-secondary: #ffc9d6;
-  --color-fg-muted: #ff88a8;
-  --color-fg-subtle: #d65c7c;
-  --color-fg-inverse: #400000;
-
-  /* Accent Colors (Red, Pink, Yellow) */
-  --color-accent-blue: var(--color-shade-soul);
-  --color-accent-blue-dark: #b82323;
-  --color-accent-gray: #757575;
-  --color-status-success: #50ff33;
-  --color-status-danger: #ff74bb;
-  --color-status-warning: #ffd157;
-  --color-separator-line: #6e0a0a;
-
-  /* Status Color Backgrounds (Ensuring visibility) */
-  --color-status-success-bg: rgba(80, 255, 51, 0.35);
-  --color-status-danger-bg: rgba(255, 116, 187, 0.4);
-  --color-status-warning-bg: rgba(255, 209, 87, 0.35);
-
-  /* Shadow Primitives (Subtle, dark shadows for definition) */
-  --color-shadow-dark: rgba(0, 0, 0, 0.9);
-  --color-shadow-medium: rgba(0, 0, 0, 0.7);
-  --color-shadow-lighter: rgba(0, 0, 0, 0.4);
-
-
-  /* ================================================= */
-  /* ========= TRANSPARENCY AND VIBRANCY (Advanced UI Structure) ===== */
+  /* ==== CORE PALETTE (Theme Specific) - FUTURE ORANGE (PERFECTED) ==== */
   /* ================================================= */
   
-  --color-vibrancy-dark-blur: var(--color-bg-window);
-  --color-vibrancy-light-blur: var(--color-bg-popover);
-  --opacity-vibrancy-bar: 1.0;
+  --color-acc-orange: #FF7043;
+  --color-acc-orange-link: #FF8E63;
+  --color-acc-orange-dark: #D4542B;
+  --color-bg-charcoal-blue: #101418;
+  --color-fg-light-blue: #E0E5EA;
+
+  /* Core Backgrounds */
+  --color-bg-base: var(--color-bg-charcoal-blue);
+  --color-bg-window: var(--color-bg-charcoal-blue);
+  --color-bg-panel: #202933;
+  --color-bg-popover: #283440;
+  --color-bg-searchbar: #283440;
+  --color-bg-box-primary: var(--color-bg-popover);
+  --color-bg-box-secondary: var(--color-bg-raised);
+  --color-bg-button: #202933;
+  --color-bg-button-hover: #283440;
+  --color-bg-button-active: #1B222B;
+  --color-bg-surface: #202933;
+  --color-bg-raised: #283440;
+  --color-bg-deep: #070A0D;
+  --color-bg-alt-row: #1B222B;
+  --color-bg-transparent-active: rgba(255, 112, 67, 0.15);
+
+  /* Core Foregrounds */
+  --color-fg-primary: var(--color-fg-light-blue);
+  --color-fg-secondary: #C3CCD4;
+  --color-fg-muted: #8E9BA8;
+  --color-fg-subtle: #6D7E8F;
+  --color-fg-inverse: #000000;
+
+  /* Accent Colors */
+  --color-accent-blue: var(--color-acc-orange);
+  --color-accent-blue-dark: var(--color-acc-orange-dark);
+  --color-accent-gray: #475B70;
+  --color-status-success: #4CAF50;
+  --color-status-danger: #D32F2F;
+  --color-status-warning: #FFC107;
+  --color-separator-line: #475B70;
+  
+  /* Status Color Backgrounds */
+  --color-status-success-bg: rgba(76, 175, 80, 0.2);
+  --color-status-danger-bg: rgba(211, 47, 47, 0.2);
+  --color-status-warning-bg: rgba(255, 193, 7, 0.2);
+
+  /* Shadow Primitives (Orange Hue Bleed for Glow) */
+  --color-shadow-dark: rgba(0, 0, 0, 0.7);
+  --color-shadow-medium: rgba(255, 112, 67, 0.4);
+  --color-shadow-lighter: rgba(255, 112, 67, 0.2);
+
+
+  /* ================================================= */
+  /* ========= TRANSPARENCY AND VIBRANCY (Dark) ===== */
+  /* ================================================= */
+  
+  --color-vibrancy-dark-blur: rgba(16, 20, 24, 0.9);
+  --color-vibrancy-light-blur: rgba(32, 41, 51, 0.9);
+  --opacity-vibrancy-bar: 0.96;
 
 
   /* ================================================= */
@@ -67,61 +69,60 @@
   --theme-bg-view-primary: var(--color-bg-base);
   --theme-bg-view-secondary: var(--color-bg-surface);
   --theme-bg-view-tertiary: var(--color-bg-raised);
-  --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur);
+  --theme-bg-view-vibrant: var(--color-vibrancy-light-blur);
 
   /* Interactive/State Backgrounds */
   --theme-bg-control-base: var(--color-bg-raised);
-  --theme-bg-selected-primary: var(--color-accent-blue);
+  --theme-bg-selected-primary: var(--color-acc-orange);
   --theme-bg-selected-inactive: var(--color-accent-gray);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
-  --theme-bg-text-selection: #ff74bb70;
+  --theme-bg-text-selection: #FF704360;
   
   /* Specialized Backgrounds */
   --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
-  --theme-bg-find-highlight: #ffd15760;
-
+  --theme-bg-find-highlight: #FFC10760;
 
   /* ================================================= */
-  /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
+  /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (Dark) ==== */
   /* ================================================= */
   
-  --color-bg-entry-base: #6e0a0a;
-  --color-bg-entry-focus: #831010;
+  --color-bg-entry-base: #1B222B;
+  --color-bg-entry-focus: #202933;
   --color-bg-entry-disabled: var(--color-bg-alt-row);
   --color-bg-textview: var(--color-bg-entry-base);
   
   --color-bg-button-flat: transparent;
-  --color-bg-button-flat-hover: rgba(255, 105, 180, 0.4);
-  --color-bg-button-flat-active: rgba(255, 105, 180, 0.5);
-  --color-bg-button-normal: var(--color-bg-raised);
+  --color-bg-button-flat-hover: var(--color-bg-transparent-active);
+  --color-bg-button-flat-active: var(--color-bg-button-active);
+  --color-bg-button-normal: var(--color-bg-button);
   --color-bg-button-normal-hover: var(--color-bg-button-hover);
   --color-bg-button-normal-active: var(--color-bg-button-active);
-  --color-bg-button-suggested: var(--color-accent-blue);
-  --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
+  --color-bg-button-suggested: var(--color-acc-orange);
+  --color-bg-button-suggested-hover: var(--color-acc-orange-dark);
   
-  --color-bg-menu-bar: var(--color-bg-window);
+  --color-bg-menu-bar: var(--color-bg-surface);
   --color-bg-menu-popup: var(--color-bg-popover);
-  --color-bg-menu-item-hover: rgba(255, 105, 180, 0.4);
+  --color-bg-menu-item-hover: var(--color-bg-transparent-active);
   --color-bg-popover-content: var(--color-bg-popover);
 
   --color-bg-list-header: var(--color-bg-raised);
   --color-bg-tab-bar: var(--color-bg-surface);
-  --color-bg-tab-active: var(--color-bg-popover);
+  --color-bg-tab-active: var(--color-bg-base);
   --color-bg-tab-inactive: var(--color-bg-surface);
   --color-bg-tab-hover: var(--color-bg-raised);
   --color-bg-treeview-header: var(--color-bg-raised);
 
   --color-bg-toggle-off: var(--color-fg-muted);
-  --color-bg-toggle-on: var(--color-accent-blue);
+  --color-bg-toggle-on: var(--color-acc-orange);
   --color-bg-check-radio-box: var(--color-bg-raised);
   
   --color-bg-scrollbar-track: transparent;
-  --color-bg-scrollbar-slider: #9c151580;
-  --color-bg-scrollbar-slider-hover: #b8232390;
+  --color-bg-scrollbar-slider: #6D7E8FCC;
+  --color-bg-scrollbar-slider-hover: #8E9BA8CC;
   
-  --color-bg-status-bar: var(--color-bg-window);
-  --color-bg-tooltip: var(--color-bg-popover);
+  --color-bg-status-bar: var(--color-bg-surface);
+  --color-bg-tooltip: var(--color-bg-raised);
 
 
   /* ================================================= */
@@ -134,12 +135,14 @@
   --theme-fg-label-quaternary: var(--color-fg-subtle);
   --theme-fg-label-inverse: var(--color-fg-inverse);
   
+  /* Interactive Foreground */
   --theme-fg-control-text: var(--color-fg-primary);
-  --theme-fg-control-text-disabled: var(--color-fg-subtle);
-  --theme-fg-link: var(--color-status-danger);
+  --theme-fg-control-text-disabled: var(--color-fg-muted);
+  --theme-fg-link: var(--color-acc-orange-link);
   --theme-fg-placeholder: var(--color-fg-muted);
-  --theme-fg-header-text: var(--color-fg-primary);
+  --theme-fg-header-text: var(--color-fg-secondary);
   
+  /* State Foreground */
   --theme-fg-text-selected: var(--color-fg-inverse);
   --theme-fg-text-alternate-selected: var(--color-fg-primary);
 
@@ -149,18 +152,17 @@
   /* ================================================= */
 
   --theme-decoration-separator: var(--color-separator-line);
-  --theme-decoration-grid-line: #6e0a0a;
-  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-bg-base), 0 0 0 4px var(--color-status-danger), 0 0 8px var(--color-status-danger);
+  --theme-decoration-grid-line: #354558;
+  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-bg-base), 0 0 0 4px var(--color-acc-orange), 0 0 10px rgba(255, 112, 67, 0.8);
   --theme-decoration-border-control: var(--color-separator-line);
   --color-border-entry-base: var(--color-separator-line);
-  --color-border-entry-focus: var(--color-accent-blue);
-
+  --color-border-entry-focus: var(--color-acc-orange);
 
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
   /* ================================================= */
   
-  --theme-status-accent: var(--color-accent-blue);
+  --theme-status-accent: var(--color-acc-orange);
   --theme-status-accent-inactive: var(--color-accent-gray);
   --theme-status-success: var(--color-status-success);
   --theme-status-danger: var(--color-status-danger);
@@ -169,40 +171,45 @@
 
 
   /* ================================================= */
-  /* ====== SEMANTIC MAPPING (Used by Base CSS) ====== */
+  /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
   /* ================================================= */
 
+  /* Backgrounds */
   --primary-bg: var(--theme-bg-view-primary);
   --secondary-bg: var(--theme-bg-view-secondary);
   --tertiary-bg: var(--theme-bg-view-tertiary);
   --header-border: var(--theme-decoration-separator);
 
+  /* Foreground/Text */
   --main-text: var(--theme-fg-label-primary);
   --soft-text: var(--theme-fg-label-secondary);
   --calendar-other-month: var(--theme-fg-label-tertiary);
 
+  /* Functional Colors */
   --accent-blue: var(--theme-status-accent);
   --success-green: var(--theme-status-success);
-  --danger-red: var(--color-status-danger);
+  --danger-red: var(--theme-status-danger);
   
+  /* Specific Color Variants */
   --success-green-light: var(--color-status-success-bg);
   --window-control-hover-bg: var(--color-bg-transparent-active);
   --window-control-border-color: var(--primary-bg);
 
+  /* DSEG Font Shadows */
   --dseg-shadow-soft: rgba(255, 255, 255, 0.1);
-  --dseg-shadow-dark: rgba(0, 0, 0, 0.5);
-
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
 
   /* ================================================= */
   /* =============== SHADOWS AND OPACITY ============== */
   /* ================================================= */
 
+  /* Raw Shadow Primitives */
   --shadow-dark: var(--color-shadow-dark);
   --shadow-medium: var(--color-shadow-medium);
-  --shadow-subtle-white: 0 0 0 rgba(255, 255, 255, 0.0);
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.15);
 
-  /* Opacity (Kept for compatibility) */
-  --opacity-0: 0;
+  /* Opacity (Standardized) */
+  --opacity-0: 0.0;
   --opacity-08: 0.08;
   --opacity-507: 0.507;
   --opacity-555: 0.555;
@@ -211,40 +218,40 @@
   --opacity-50: 0.5;
   --opacity-60: 0.6;
 
-  /* Shadow Styles (Pink Glow) */
-  --shadow-subtle: 0 1px 3px var(--color-shadow-lighter);
-  --shadow-elevated: 0 4px 10px rgba(255, 116, 187, 0.35), 0 1px 3px rgba(0, 0, 0, 0.4);
+  /* Shadow Styles (Heightened Orange Glow) */
+  --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
+  --shadow-elevated: 0 4px 15px var(--color-shadow-medium), 0 0 15px rgba(255, 112, 67, 0.3);
   --shadow-button-flat: none;
   --shadow-control-small: none;
   --shadow-control-small-hover: none;
-  --shadow-element-minimal: none;
+  --shadow-element-minimal: 0 1px 3px rgba(255, 112, 67, 0.3);
 
-  /* Specialized Shadow Variables (Stronger Pink Glow) */
-  --shadow-window-float: 0 6px 15px rgba(255, 116, 187, 0.6), 0 0 5px rgba(0, 0, 0, 0.7);
-  --shadow-menubar-separator: inset 0 -1px 0 #550505;
+  /* Specialized Shadow Variables (Strong Orange Glow) */
+  --shadow-window-float: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(255, 112, 67, 0.6);
+  --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line);
   
   /* Inset/Outset Styles */
-  --shadow-neumorphic-inset-medium: inset 0 1px 4px var(--color-shadow-medium);
-  --shadow-neumorphic-outset-large: 0 2px 4px var(--color-shadow-lighter);
-  --shadow-neumorphic-press: inset 0 1px 3px var(--color-shadow-dark);
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--color-separator-line);
+  --shadow-neumorphic-outset-large: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.6);
 
   /* ================================================= */
-  /* ============= GEOMETRY & RADIUS ================= */
+  /* ============= GEOMETRY & RADIUS ============= */
   /* ================================================= */
   
-  --radius-xs: 2px;
-  --radius-s: 3px;
-  --radius-m: 4px;
-  --radius-l: 6px;
-  --radius-xl: 8px;
+  --radius-xs: 4px;
+  --radius-s: 6px;
+  --radius-m: 8px;
+  --radius-l: 10px;
+  --radius-xl: 12px;
 
   /* ================================================= */
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
-  --font-family-default: "Impact", "Arial Black", sans-serif;
+  --font-family-default: "Inter", "Roboto", sans-serif;
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400;
   --font-weight-medium: 500;
-  --font-weight-bold: 900;
+  --font-weight-bold: 600;
 }

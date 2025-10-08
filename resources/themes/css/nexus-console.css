@@ -1,39 +1,42 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - NEXUS CONSOLE ==== */
+  /* ==== CORE PALETTE (Theme Specific) - NEXUS CONSOLE (REFINED) ==== */
   /* ================================================= */
   
-  --color-bg-base: #101010;          /* Deepest Background (Desktop/Dashboard) */
-  --color-bg-window: var(--color-bg-base); 
-  --color-bg-panel: rgba(25, 25, 25, 0.95); /* Mica/Acrylic Simulation */
-  --color-bg-popover: #252525;       /* Raised Popover/Menu */
-  --color-bg-searchbar: #303030;     /* Search/Input Field */
-  --color-bg-button: #383838;        /* Default Control Background */
+  --color-bg-base: #141414;
+  --color-bg-window: var(--color-bg-base);
+  --color-bg-panel: rgba(20, 20, 20, 0.95);
+  --color-bg-popover: #282828;
+  --color-bg-searchbar: #333333;
+  --color-bg-box-primary: var(--color-bg-popover);
+  --color-bg-box-secondary: var(--color-bg-button);
+  --color-bg-button: #3A3A3A;
   --color-bg-button-hover: #484848;
   --color-bg-button-active: #282828;
-  --color-bg-surface: #1B1B1B;       /* Primary Card/Tile Background */
-  --color-bg-raised: #252525;        /* Secondary Raised Card */
-  --color-bg-deep: #0A0A0A;          /* Footer/Taskbar */
-  --color-bg-alt-row: #181818;       /* Subtle row striping */
-  --color-bg-transparent-active: #107C1040; /* Semi-transparent Accent for hover/selection */
+  --color-bg-surface: #1F1F1F;
+  --color-bg-raised: #282828;
+  --color-bg-deep: #0A0A0A;
+  --color-bg-alt-row: #181818;
+  --color-bg-transparent-active: #4CE44C40;
   
-  --color-vibrancy-dark-blur: rgba(16, 16, 16, 0.9);
+  --color-vibrancy-dark-blur: rgba(20, 20, 20, 0.95);
+  --color-vibrancy-light-blur: rgba(31, 31, 31, 0.95);
   
-  --color-fg-primary: #FFFFFF;       /* Pure White Text */
-  --color-fg-secondary: #E0E0E0;     /* Secondary Text */
-  --color-fg-muted: #A0A0A0;         /* Disabled/Placeholder Text */
-  --color-fg-subtle: #808080;        /* Infolabel/Hint */
-  --color-fg-inverse: #000000;       /* Text on bright accents */
+  --color-fg-primary: #FFFFFF;
+  --color-fg-secondary: #E0E0E0;
+  --color-fg-muted: #A0A0A0;
+  --color-fg-subtle: #808080;
+  --color-fg-inverse: #000000;
 
-  --color-accent-green: #107C10;     /* Signature Nexus Green */
+  --color-accent-green: #4CE44C;
   --color-accent-green-dark: #005A00;
   --color-accent-gray: #404040;
   --color-status-success: var(--color-accent-green);
-  --color-status-danger: #E81123;    /* Status Red */
-  --color-status-warning: #F7AA12;    /* Status Yellow/Orange */
+  --color-status-danger: #E81123;
+  --color-status-warning: #F7AA12;
   
-  --color-separator-line: #303030;   /* Subtle divider */
-  --color-highlight-line: #107C10;   /* Accent border */
+  --color-separator-line: #303030;
+  --color-highlight-line: var(--color-accent-green);
   
   --color-3d-dark-shadow: transparent;
   --color-3d-light-highlight: transparent;
@@ -50,10 +53,10 @@
   --theme-bg-view-vibrant: var(--color-bg-panel); 
 
   --theme-bg-control-base: var(--color-bg-button);
-  --theme-bg-selected-primary: var(--color-accent-green);
+  --theme-bg-selected-primary: var(--color-accent-green-dark);
   --theme-bg-selected-inactive: var(--color-bg-raised);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
-  --theme-bg-text-selection: #107C1080;
+  --theme-bg-text-selection: #4CE44C80;
   
   --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
@@ -95,12 +98,12 @@
   --color-bg-toggle-on: var(--color-accent-green);          
   --color-bg-check-radio-box: var(--color-bg-searchbar);    
   
-  --color-bg-scrollbar-track: transparent;                
+  --color-bg-scrollbar-track: var(--color-bg-surface);                
   --color-bg-scrollbar-slider: #505050;                 
   --color-bg-scrollbar-slider-hover: #707070;           
   
   --color-bg-status-bar: var(--color-bg-surface);         
-  --color-bg-tooltip: #252525;             
+  --color-bg-tooltip: #282828;             
 
 
   /* ================================================= */
@@ -160,11 +163,11 @@
   --soft-text: var(--theme-fg-label-secondary);
   --calendar-other-month: var(--theme-fg-label-tertiary);
 
-  --accent-blue: var(--theme-status-accent); /* Mapped to Nexus Green */
+  --accent-blue: var(--theme-status-accent);
   --success-green: var(--theme-status-success);
   --danger-red: var(--theme-status-danger);
   
-  --success-green-light: #107C1040; 
+  --success-green-light: #4CE44C40; 
   --window-control-hover-bg: var(--color-bg-button-hover);
   --window-control-border-color: var(--color-bg-deep);
 
@@ -175,16 +178,15 @@
   /* =============== SHADOWS AND OPACITY ============== */
   /* ================================================= */
 
-  /* Modern, soft, dark shadows */
   --shadow-dark: rgba(0, 0, 0, 0.4); 
   --shadow-medium: rgba(0, 0, 0, 0.2);
   --shadow-subtle-white: none; 
 
-  --shadow-elevated: 0 8px 16px var(--shadow-dark); 
+  --shadow-elevated: 0 8px 16px var(--shadow-dark), 0 0 10px rgba(76, 228, 76, 0.15); 
   --shadow-subtle: 0 2px 4px var(--shadow-medium);
   --shadow-button-flat: 0 1px 2px var(--shadow-medium);
   --shadow-control-small: var(--shadow-subtle); 
-  --shadow-control-small-hover: var(--shadow-elevated); 
+  --shadow-control-small-hover: 0 0 8px rgba(76, 228, 76, 0.25); 
   --shadow-element-minimal: var(--shadow-subtle); 
   
   --shadow-raised-outer: none; 
@@ -193,6 +195,8 @@
   --shadow-neumorphic-inset-medium: inset 0 0 0 1px #404040;
   --shadow-neumorphic-outset-large: var(--shadow-elevated);
   --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.8);
+  --shadow-window-float: 0 12px 24px rgba(0, 0, 0, 0.8), 0 0 15px rgba(76, 228, 76, 0.2);
+
 
   /* ================================================= */
   /* ============= GEOMETRY & RADIUS ============= */

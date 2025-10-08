@@ -1,51 +1,47 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - Midnight Aqua (Dark Blue & Light Blue) ==== */
+  /* ==== CORE PALETTE (Theme Specific) - Midnight Aqua (Refined) ==== */
   /* ================================================= */
 
-  /* Thematic Tonal Palette Base */
-  --color-midnight-dark: #001f40;      /* Primary Deep/Dark Blue (Midnight) */
-  --color-midnight-light: #5b9edc;     /* Primary Accent (Light/Aqua Blue) */
-  --color-midnight-base: #02315a;      /* Secondary Dark Blue */
-  --color-midnight-pale: #e0f2ff;      /* Pale Blue/Off-White for Text */
+  --color-midnight-dark: #002244;
+  --color-midnight-light: #7AC3FF;
+  --color-midnight-base: #053660;
+  --color-midnight-pale: #e0f2ff;
 
-  /* Core Backgrounds - Deep and Immersive */
-  --color-bg-deep: #001830;        /* Near Black-Blue/Deepest Void */
-  --color-bg-base: var(--color-midnight-dark); /* View Primary (Content Area) */
-  --color-bg-window: var(--color-midnight-base);      /* Window/Panel Background */
+  --color-bg-deep: #001830;
+  --color-bg-base: var(--color-midnight-dark);
+  --color-bg-window: var(--color-midnight-base);
   --color-bg-panel: var(--color-bg-window); 
-  --color-bg-popover: #0a4675;     /* Popovers/Menus (Elevated Dark Blue) */
-  --color-bg-searchbar: #14598d;
-  --color-bg-button: #14598d;      /* Normal buttons */
-  --color-bg-button-hover: #1e69a0; /* Slight lift on hover */
-  --color-bg-button-active: #0a4675; /* Pressed state */
-  --color-bg-surface: var(--color-midnight-base);     /* View Secondary (Sidebar) */
-  --color-bg-raised: var(--color-bg-popover);      /* View Tertiary (Cards/Elevated Elements) */
-  --color-bg-alt-row: #00284f;     /* Subtle alternating row difference */
-  --color-bg-transparent-active: rgba(91, 158, 220, 0.25); /* Light Blue transparent */
+  --color-bg-popover: #0E497A;
+  --color-bg-searchbar: #165992;
+  --color-bg-box-primary: var(--color-bg-popover);
+  --color-bg-box-secondary: var(--color-bg-raised);
+  --color-bg-button: #165992;
+  --color-bg-button-hover: #1e69a0;
+  --color-bg-button-active: #0E497A;
+  --color-bg-surface: var(--color-midnight-base);
+  --color-bg-raised: #165992;
+  --color-bg-alt-row: #00284f;
+  --color-bg-transparent-active: rgba(122, 195, 255, 0.25);
 
-  /* Core Foregrounds - Clear and Glowing */
-  --color-fg-primary: var(--color-midnight-pale);     /* Label Primary (Pale Blue) */
-  --color-fg-secondary: #a0c3e6;   /* Label Secondary (Soft Blue-Gray) */
-  --color-fg-muted: #6a95c3;       /* Label Tertiary/Disabled (Muted Blue) */
-  --color-fg-subtle: #406a96;      /* Label Quaternary (Deep Muted) */
-  --color-fg-inverse: #001f40;     /* For text on bright/accent backgrounds */
+  --color-fg-primary: var(--color-midnight-pale);
+  --color-fg-secondary: #a0c3e6;
+  --color-fg-muted: #6a95c3;
+  --color-fg-subtle: #406a96;
+  --color-fg-inverse: #002244;
 
-  /* Accent Colors (Aqua Glow) */
-  --color-accent-blue: var(--color-midnight-light);    /* Primary Accent Light Blue/Aqua */
+  --color-accent-blue: var(--color-midnight-light);
   --color-accent-blue-dark: #3a85c8;
-  --color-accent-gray: #406a96;    /* Inactive Accent */
-  --color-status-success: #3abf77;  /* Clear Green for success */
-  --color-status-danger: #ff6384;  /* Vibrant Rose for danger */
-  --color-status-warning: #ffb14f;  /* Soft Orange for warning */
-  --color-separator-line: #14598d; /* Separator/Border */
+  --color-accent-gray: #406a96;
+  --color-status-success: #3abf77;
+  --color-status-danger: #ff6384;
+  --color-status-warning: #ffb14f;
+  --color-separator-line: #165992;
 
-  /* Status Color Backgrounds */
   --color-status-success-bg: rgba(58, 191, 119, 0.2); 
   --color-status-danger-bg: rgba(255, 99, 132, 0.2);
   --color-status-warning-bg: rgba(255, 177, 79, 0.2);
 
-  /* Shadow Primitives (Subtle dark shadows for definition) */
   --color-shadow-dark: rgba(0, 0, 0, 0.8); 
   --color-shadow-medium: rgba(0, 0, 0, 0.6);
   --color-shadow-lighter: rgba(0, 0, 0, 0.3);
@@ -69,14 +65,12 @@
   --theme-bg-view-tertiary: var(--color-bg-raised); 
   --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); 
 
-  /* Interactive/State Backgrounds */
   --theme-bg-control-base: var(--color-bg-raised);
-  --theme-bg-selected-primary: var(--color-accent-blue);
+  --theme-bg-selected-primary: var(--color-accent-blue-dark);
   --theme-bg-selected-inactive: var(--color-accent-gray);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
-  --theme-bg-text-selection: #5b9edc80;   
+  --theme-bg-text-selection: #7AC3FF80;   
   
-  /* Specialized Backgrounds */
   --theme-bg-under-page: var(--color-bg-deep); 
   --theme-bg-alternating-row: var(--color-bg-alt-row);
   --theme-bg-find-highlight: #ffb14f60;
@@ -86,8 +80,8 @@
   /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
   /* ================================================= */
   
-  --color-bg-entry-base: #0a4675;         
-  --color-bg-entry-focus: #14598d;         
+  --color-bg-entry-base: #0E497A;         
+  --color-bg-entry-focus: #165992;         
   --color-bg-entry-disabled: var(--color-bg-alt-row);    
   --color-bg-textview: var(--color-bg-entry-base);           
   
@@ -97,7 +91,7 @@
   --color-bg-button-normal: var(--color-bg-raised);       
   --color-bg-button-normal-hover: var(--color-bg-button-hover); 
   --color-bg-button-normal-active: var(--color-bg-button-active); 
-  --color-bg-button-suggested: var(--color-midnight-light);  
+  --color-bg-button-suggested: var(--color-accent-blue);  
   --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
   
   --color-bg-menu-bar: var(--color-bg-window);           
@@ -116,7 +110,7 @@
   --color-bg-toggle-on: var(--color-accent-blue);          
   --color-bg-check-radio-box: var(--color-bg-raised);    
   
-  --color-bg-scrollbar-track: transparent;                
+  --color-bg-scrollbar-track: var(--color-bg-surface);                
   --color-bg-scrollbar-slider: #6a95c360;                 
   --color-bg-scrollbar-slider-hover: #a0c3e680;           
   
@@ -134,7 +128,7 @@
   --theme-fg-label-quaternary: var(--color-fg-subtle);
   --theme-fg-label-inverse: var(--color-fg-inverse); 
   
-  --theme-fg-control-text: var(--color-fg-inverse); 
+  --theme-fg-control-text: var(--color-fg-primary);
   --theme-fg-control-text-disabled: var(--color-fg-subtle);
   --theme-fg-link: var(--color-accent-blue);
   --theme-fg-placeholder: var(--color-fg-muted);
@@ -149,7 +143,7 @@
   /* ================================================= */
 
   --theme-decoration-separator: var(--color-separator-line);
-  --theme-decoration-grid-line: #0a4675; 
+  --theme-decoration-grid-line: #0E497A; 
   --theme-decoration-keyboard-focus: var(--color-accent-blue);
   --theme-decoration-border-control: var(--color-separator-line); 
   --color-border-entry-base: var(--color-separator-line);
@@ -201,7 +195,6 @@
   --shadow-medium: var(--color-shadow-medium);
   --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.05);
 
-  /* Opacity (Kept for compatibility) */
   --opacity-0: 0;
   --opacity-08: 0.08;
   --opacity-507: 0.507;
@@ -211,19 +204,16 @@
   --opacity-50: 0.5;
   --opacity-60: 0.6;
 
-  /* Shadow Styles (Defined, subtle depth) */
   --shadow-subtle: 0 1px 3px var(--color-shadow-lighter);
-  --shadow-elevated: 0 4px 10px var(--color-shadow-medium); 
+  --shadow-elevated: 0 4px 10px var(--color-shadow-medium), 0 0 8px rgba(122, 195, 255, 0.2);
   --shadow-button-flat: none;
   --shadow-control-small: none;
   --shadow-control-small-hover: none;
   --shadow-element-minimal: none;
 
-  /* Specialized Shadow Variables */
-  --shadow-window-float: 0 6px 15px var(--color-shadow-dark); 
-  --shadow-menubar-separator: inset 0 -1px 0 #14598d; 
+  --shadow-window-float: 0 6px 15px var(--color-shadow-dark), 0 0 15px rgba(122, 195, 255, 0.3);
+  --shadow-menubar-separator: inset 0 -1px 0 #0E497A; 
   
-  /* Inset/Outset Styles (Slightly tactile) */
   --shadow-neumorphic-inset-medium: inset 0 1px 4px var(--color-shadow-medium);
   --shadow-neumorphic-outset-large: 0 2px 4px var(--color-shadow-lighter);
   --shadow-neumorphic-press: inset 0 1px 3px var(--color-shadow-dark);

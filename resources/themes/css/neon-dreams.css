@@ -1,53 +1,49 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - Neon Dreams ==== */
+  /* ==== CORE PALETTE (Theme Specific) - NEON DREAMS ==== */
   /* ================================================= */
   
-  /* Core Backgrounds */
-  --color-bg-base: #0A0A10;        /* View Primary (Deep Ink Black) */
+  --color-bg-base: #0B0B11;
   --color-bg-window: var(--color-bg-base);
-  --color-bg-panel: #0A0A10cb;     /* Panel with transparency (Base + cb) */
-  --color-bg-popover: #14141C;     /* View Secondary/Dark Indigo Surface */
-  --color-bg-searchbar: #14141C;
-  --color-bg-button: #1C1C28;      /* View Tertiary (Raised/Cards) */
-  --color-bg-button-hover: #2D2D40; /* Separator color used for prominent hover */
-  --color-bg-button-active: #14141C; /* Pressed state (recede to secondary) */
-  --color-bg-surface: #14141C;     /* View Secondary (Dark Indigo Surface) */
-  --color-bg-raised: #1C1C28;      /* View Tertiary (Slightly Lighter Panels/Cards) */
-  --color-bg-deep: #000000;        /* Under Page (Pure Black/Deepest) */
-  --color-bg-alt-row: #101017;     /* Alternating List Rows */
-  --color-bg-transparent-active: rgba(200, 200, 255, 0.08); /* Subtle hover/active transparency */
+  --color-bg-panel: #0B0B11e6;
+  --color-bg-popover: #191925;
+  --color-bg-searchbar: #212130;
+  --color-bg-box-primary: var(--color-bg-popover);
+  --color-bg-box-secondary: var(--color-bg-raised);
+  --color-bg-button: #212130;
+  --color-bg-button-hover: #35354A;
+  --color-bg-button-active: #191925;
+  --color-bg-surface: #191925;
+  --color-bg-raised: #212130;
+  --color-bg-deep: #000000;
+  --color-bg-alt-row: #13131A;
+  --color-bg-transparent-active: rgba(255, 77, 155, 0.15);
 
-  /* Transparency and Vibrancy (Neon) */
-  --color-vibrancy-dark-blur: rgba(10, 10, 16, 0.96);
-  --color-vibrancy-light-blur: rgba(20, 20, 28, 0.9);
-  --opacity-vibrancy-bar: 0.96;                         
+  --color-vibrancy-dark-blur: rgba(11, 11, 17, 0.98);
+  --color-vibrancy-light-blur: rgba(25, 25, 37, 0.95);
+  --opacity-vibrancy-bar: 0.98;                         
 
-  /* Core Foregrounds */
-  --color-fg-primary: #EAEAF4;     /* Label Primary (Near White) */
-  --color-fg-secondary: #B0B0C4;   /* Label Secondary/Header Text (Soft Gray-Blue) */
-  --color-fg-muted: #6A6A80;       /* Label Tertiary/Disabled (Muted Indigo Gray) */
-  --color-fg-subtle: #454558;      /* Label Quaternary (Deepest Subtlety) */
-  --color-fg-inverse: #000000;     /* For text on bright/accent backgrounds */
+  --color-fg-primary: #EAEAF4;
+  --color-fg-secondary: #B0B0C4;
+  --color-fg-muted: #6A6A80;
+  --color-fg-subtle: #454558;
+  --color-fg-inverse: #000000;
 
-  /* Accent Colors (Neon Dreams) */
-  --color-accent-blue: #FF0077;    /* Primary Accent: Electric Magenta */
-  --color-accent-blue-dark: #CC0060; /* Pressed State Magenta */
-  --color-accent-gray: #00FFFF;    /* Secondary Accent: Electric Cyan */
+  --color-accent-blue: #FF4D9B;
+  --color-accent-blue-dark: #CC0060;
+  --color-accent-cyan: #00FFFF;
   --color-status-success: #33FFC0;
   --color-status-danger: #FF3366;
   --color-status-warning: #FFCC33;
-  --color-separator-line: #2D2D40;
+  --color-separator-line: #35354A;
   
-  /* Status Color Backgrounds */
   --color-status-success-bg: rgba(51, 255, 192, 0.2);
   --color-status-danger-bg: rgba(255, 51, 102, 0.2);
   --color-status-warning-bg: rgba(255, 204, 51, 0.2);
 
-  /* Shadow Primitives - Focus on a subtle 'glow' effect */
-  --color-shadow-dark: rgba(0, 0, 0, 0.7);
-  --color-shadow-medium: rgba(0, 0, 0, 0.5);
-  --color-shadow-lighter: rgba(0, 0, 0, 0.3);
+  --color-shadow-dark: rgba(0, 0, 0, 0.8);
+  --color-shadow-medium: rgba(0, 0, 0, 0.6);
+  --color-shadow-lighter: rgba(0, 0, 0, 0.4);
 
 
   /* ================================================= */
@@ -59,14 +55,12 @@
   --theme-bg-view-tertiary: var(--color-bg-raised);
   --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); 
 
-  /* Interactive/State Backgrounds */
   --theme-bg-control-base: var(--color-bg-raised);
-  --theme-bg-selected-primary: var(--color-accent-blue);
+  --theme-bg-selected-primary: var(--color-accent-blue-dark);
   --theme-bg-selected-inactive: var(--color-bg-alt-row);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
-  --theme-bg-text-selection: #FF007780;   
+  --theme-bg-text-selection: #FF4D9B80;   
   
-  /* Specialized Backgrounds */
   --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
   --theme-bg-find-highlight: #00FFFF60;
@@ -106,7 +100,7 @@
   --color-bg-toggle-on: var(--color-accent-blue);          
   --color-bg-check-radio-box: var(--color-bg-surface);    
   
-  --color-bg-scrollbar-track: transparent;                
+  --color-bg-scrollbar-track: var(--color-bg-surface);                
   --color-bg-scrollbar-slider: #6A6A80CC;                 
   --color-bg-scrollbar-slider-hover: #B0B0C4CC;           
   
@@ -124,14 +118,12 @@
   --theme-fg-label-quaternary: var(--color-fg-subtle);
   --theme-fg-label-inverse: var(--color-fg-inverse); 
   
-  /* Interactive Foreground */
   --theme-fg-control-text: var(--color-fg-primary);
   --theme-fg-control-text-disabled: var(--color-fg-muted);
   --theme-fg-link: var(--color-accent-blue);
   --theme-fg-placeholder: var(--color-fg-muted);
-  --theme-fg-header-text: var(--color-fg-secondary);
+  --theme-fg-header-text: var(--color-fg-primary);
   
-  /* State Foreground */
   --theme-fg-text-selected: var(--color-fg-primary); 
   --theme-fg-text-alternate-selected: var(--color-fg-primary); 
 
@@ -141,11 +133,11 @@
   /* ================================================= */
 
   --theme-decoration-separator: var(--color-separator-line);
-  --theme-decoration-grid-line: #35354A; 
-  --theme-decoration-keyboard-focus: var(--color-accent-gray);
+  --theme-decoration-grid-line: #212130; 
+  --theme-decoration-keyboard-focus: var(--color-accent-cyan);
   --theme-decoration-border-control: var(--color-separator-line); 
   --color-border-entry-base: var(--color-separator-line);   
-  --color-border-entry-focus: var(--color-accent-gray);    
+  --color-border-entry-focus: var(--color-accent-cyan);    
 
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
@@ -163,41 +155,34 @@
   /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
   /* ================================================= */
 
-  /* Backgrounds */
   --primary-bg: var(--theme-bg-view-primary);
   --secondary-bg: var(--theme-bg-view-secondary);
   --tertiary-bg: var(--theme-bg-view-tertiary);
   --header-border: var(--theme-decoration-separator);
 
-  /* Foreground/Text */
   --main-text: var(--theme-fg-label-primary);
   --soft-text: var(--theme-fg-label-secondary);
   --calendar-other-month: var(--theme-fg-label-tertiary);
 
-  /* Functional Colors */
   --accent-blue: var(--theme-status-accent);
   --success-green: var(--theme-status-success);
   --danger-red: var(--theme-status-danger);
   
-  /* Specific Color Variants */
   --success-green-light: var(--color-status-success-bg); 
   --window-control-hover-bg: var(--color-bg-transparent-active);
   --window-control-border-color: var(--primary-bg);
 
-  /* DSEG Font Shadows - Adjusted for neon look */
-  --dseg-shadow-soft: rgba(255, 0, 119, 0.15);
+  --dseg-shadow-soft: rgba(255, 77, 155, 0.15);
   --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
 
   /* ================================================= */
   /* =============== SHADOWS AND OPACITY (Neon) ====== */
   /* ================================================= */
 
-  /* Raw Shadow Primitives */
   --shadow-dark: var(--color-shadow-dark);
   --shadow-medium: var(--color-shadow-medium);
   --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.05);
 
-  /* Opacity - Inherited from original */
   --opacity-0: 0.0;
   --opacity-08: 0.08;
   --opacity-507: 0.507;
@@ -207,20 +192,17 @@
   --opacity-50: 0.5;
   --opacity-60: 0.6;
 
-  /* Shadow Styles (Generalised by prominence/function) */
   --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
-  --shadow-elevated: 0 0 10px rgba(255, 0, 119, 0.3);
+  --shadow-elevated: 0 4px 12px var(--shadow-dark), 0 0 10px rgba(255, 77, 155, 0.3);
   --shadow-button-flat: none;
   --shadow-control-small: none;
   --shadow-control-small-hover: none;
   --shadow-element-minimal: none;
 
-  /* Neon-Specific Shadows */
-  --shadow-window-float: 0 0 20px rgba(0, 255, 255, 0.15), 0 0 0 1px rgba(0, 255, 255, 0.05);
-  --shadow-menubar-separator: inset 0 -1px 0 rgba(255, 0, 119, 0.1);
+  --shadow-window-float: 0 8px 24px var(--shadow-dark), 0 0 20px rgba(255, 77, 155, 0.25);
+  --shadow-menubar-separator: inset 0 -1px 0 rgba(255, 77, 155, 0.15);
   
-  /* Neumorphic/Inset Inversion */
-  --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 0, 119, 0.15);
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 77, 155, 0.15);
   --shadow-neumorphic-outset-large: 0 2px 4px rgba(0, 0, 0, 0.3);
   --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.8);
 

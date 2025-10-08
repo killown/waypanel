@@ -8,6 +8,8 @@
   --color-bg-panel: #FFF5E4cb;
   --color-bg-popover: #FFE3E1;
   --color-bg-searchbar: #FFE3E1;
+  --color-bg-box-primary: var(--color-bg-surface);
+  --color-bg-box-secondary: var(--color-bg-raised);
   --color-bg-button: #FFD1D1;
   --color-bg-button-hover: #FDC6C6;
   --color-bg-button-active: #FFE3E1;
@@ -175,7 +177,7 @@
   --dseg-shadow-dark: rgba(255, 255, 255, 0.5);
 
   /* ================================================= */
-  /* =============== SHADOWS AND OPACITY (Soft Focus) ====== */
+  /* =============== SHADOWS AND OPACITY ====== */
   /* ================================================= */
 
   --shadow-dark: var(--color-shadow-dark);
@@ -206,7 +208,7 @@
   --shadow-neumorphic-press: inset 0 1px 3px var(--color-shadow-dark);
 
   /* ================================================= */
-  /* ============= GEOMETRY & RADIUS (Rosy Dawn) ============= */
+  /* ============= GEOMETRY & RADIUS ============= */
   /* ================================================= */
   
   --radius-xs: 5px;     

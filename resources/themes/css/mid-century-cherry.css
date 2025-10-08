@@ -1,52 +1,50 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - Mid-Century Cherry (Off-White & Red) ==== */
+  /* ==== CORE PALETTE (Theme Specific) - Mid-Century Cherry (REFINED) ==== */
   /* ================================================= */
 
-  /* Thematic Tonal Palette Base */
-  --color-cherry-red: #d62828;      /* Primary Accent (Vibrant Cherry Red) */
-  --color-cherry-red-dark: #b82323;
-  --color-off-white: #f8f8f8;       /* Primary Background (Soft Off-White) */
-  --color-mid-gray: #e8e8e8;        /* Secondary Background (Very Light Gray) */
-  --color-charcoal: #1f1f1f;        /* Deep Foreground/Text */
+  --color-cherry-red: #d62828;
+  --color-cherry-red-functional: #B40000;
+  --color-cherry-red-dark: #820000;
+  --color-off-white: #f7f7f7;
+  --color-mid-gray: #ededed;
+  --color-charcoal: #1f1f1f;
+  --color-separator-light: #d4d4d4;
 
-  /* Core Backgrounds - Light, Clean, and Contrasting */
-  --color-bg-deep: #ffffff;        /* Purest White/Under Page */
-  --color-bg-base: var(--color-off-white); /* View Primary (Content Area - Off-White) */
-  --color-bg-window: var(--color-mid-gray);      /* Window/Panel Background */
+  --color-bg-deep: #ffffff;
+  --color-bg-base: var(--color-off-white);
+  --color-bg-window: var(--color-mid-gray);
   --color-bg-panel: var(--color-bg-window); 
-  --color-bg-popover: #ffffff;     /* Popovers/Menus (Elevated White) */
+  --color-bg-popover: #fcfcfc;
   --color-bg-searchbar: #f0f0f0;
-  --color-bg-button: #e8e8e8;      /* Normal buttons */
-  --color-bg-button-hover: #dcdcdc; /* Subtle depression on hover */
-  --color-bg-button-active: #c8c8c8; /* Pressed state */
-  --color-bg-surface: var(--color-mid-gray);     /* View Secondary (Sidebar) */
-  --color-bg-raised: var(--color-bg-popover);      /* View Tertiary (Cards/Elevated Elements) */
-  --color-bg-alt-row: #f4f4f4;     /* Subtle alternating row difference */
-  --color-bg-transparent-active: rgba(214, 40, 40, 0.1); /* Cherry Red transparent */
+  --color-bg-box-primary: var(--color-bg-popover);
+  --color-bg-box-secondary: var(--color-bg-button);
+  --color-bg-button: var(--color-mid-gray);
+  --color-bg-button-hover: #e3e3e3;
+  --color-bg-button-active: #dcdcdc;
+  --color-bg-surface: var(--color-mid-gray);
+  --color-bg-raised: var(--color-bg-popover);
+  --color-bg-alt-row: #f4f4f4;
+  --color-bg-transparent-active: rgba(214, 40, 40, 0.1);
 
-  /* Core Foregrounds - Dark and Readable */
-  --color-fg-primary: var(--color-charcoal);     /* Label Primary (Dark Charcoal) */
-  --color-fg-secondary: #555555;   /* Label Secondary (Medium Gray) */
-  --color-fg-muted: #999999;       /* Label Tertiary/Disabled (Soft Gray) */
-  --color-fg-subtle: #b5b5b5;      /* Label Quaternary (Light Muted) */
-  --color-fg-inverse: var(--color-off-white);     /* For text on bright/accent backgrounds */
+  --color-fg-primary: var(--color-charcoal);
+  --color-fg-secondary: #555555;
+  --color-fg-muted: #999999;
+  --color-fg-subtle: #b5b5b5;
+  --color-fg-inverse: var(--color-bg-raised);
 
-  /* Accent Colors (Cherry Pop) */
-  --color-accent-blue: var(--color-cherry-red);    /* Primary Accent Cherry Red */
-  --color-accent-blue-dark: var(--color-cherry-red-dark);
-  --color-accent-gray: #999999;    /* Inactive Accent */
-  --color-status-success: #38a838;  /* Standard Green for success */
-  --color-status-danger: var(--color-cherry-red);  /* Cherry Red for danger/alert */
-  --color-status-warning: #ffb833;  /* Bright Amber for warning */
-  --color-separator-line: #cccccc; /* Separator/Border */
+  --color-accent-red: var(--color-cherry-red-functional);
+  --color-accent-red-bright: var(--color-cherry-red);
+  --color-accent-gray: #999999;
+  --color-status-success: #1C8A1C;
+  --color-status-danger: var(--color-cherry-red-functional);
+  --color-status-warning: #b37300;
+  --color-separator-line: var(--color-separator-light);
 
-  /* Status Color Backgrounds (Light and Clean) */
-  --color-status-success-bg: rgba(56, 168, 56, 0.1); 
-  --color-status-danger-bg: rgba(214, 40, 40, 0.15);
+  --color-status-success-bg: rgba(28, 138, 28, 0.1); 
+  --color-status-danger-bg: rgba(180, 0, 0, 0.15);
   --color-status-warning-bg: rgba(255, 184, 51, 0.1);
 
-  /* Shadow Primitives (Subtle, clean shadows) */
   --color-shadow-dark: rgba(0, 0, 0, 0.2); 
   --color-shadow-medium: rgba(0, 0, 0, 0.15);
   --color-shadow-lighter: rgba(0, 0, 0, 0.05);
@@ -70,14 +68,12 @@
   --theme-bg-view-tertiary: var(--color-bg-raised); 
   --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); 
 
-  /* Interactive/State Backgrounds */
   --theme-bg-control-base: var(--color-bg-raised);
-  --theme-bg-selected-primary: var(--color-cherry-red);
+  --theme-bg-selected-primary: var(--color-accent-red-bright);
   --theme-bg-selected-inactive: var(--color-mid-gray);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
   --theme-bg-text-selection: #d6282840;   
   
-  /* Specialized Backgrounds */
   --theme-bg-under-page: var(--color-bg-deep); 
   --theme-bg-alternating-row: var(--color-bg-alt-row);
   --theme-bg-find-highlight: #ffb83340;
@@ -88,17 +84,17 @@
   /* ================================================= */
   
   --color-bg-entry-base: #ffffff;         
-  --color-bg-entry-focus: #f0f0f0;         
+  --color-bg-entry-focus: var(--color-bg-searchbar);         
   --color-bg-entry-disabled: var(--color-bg-alt-row);    
   --color-bg-textview: var(--color-bg-entry-base);           
   
   --color-bg-button-flat: transparent;                    
   --color-bg-button-flat-hover: var(--color-bg-transparent-active);
-  --color-bg-button-flat-active: var(--color-bg-transparent-active);
+  --color-bg-button-flat-active: var(--color-bg-button-active);
   --color-bg-button-normal: var(--color-bg-raised);       
   --color-bg-button-normal-hover: var(--color-bg-button-hover); 
   --color-bg-button-normal-active: var(--color-bg-button-active); 
-  --color-bg-button-suggested: var(--color-cherry-red);  
+  --color-bg-button-suggested: var(--color-accent-red-bright);  
   --color-bg-button-suggested-hover: var(--color-cherry-red-dark);
   
   --color-bg-menu-bar: var(--color-bg-window);           
@@ -114,10 +110,10 @@
   --color-bg-treeview-header: var(--color-bg-raised);    
 
   --color-bg-toggle-off: var(--color-fg-muted);           
-  --color-bg-toggle-on: var(--color-cherry-red);          
+  --color-bg-toggle-on: var(--color-accent-red-bright);          
   --color-bg-check-radio-box: var(--color-bg-raised);    
   
-  --color-bg-scrollbar-track: transparent;                
+  --color-bg-scrollbar-track: var(--color-bg-raised);                
   --color-bg-scrollbar-slider: #99999960;                 
   --color-bg-scrollbar-slider-hover: #55555570;           
   
@@ -135,9 +131,9 @@
   --theme-fg-label-quaternary: var(--color-fg-subtle);
   --theme-fg-label-inverse: var(--color-fg-inverse); 
   
-  --theme-fg-control-text: var(--color-fg-inverse); 
+  --theme-fg-control-text: var(--color-fg-primary);
   --theme-fg-control-text-disabled: var(--color-fg-subtle);
-  --theme-fg-link: var(--color-cherry-red);
+  --theme-fg-link: var(--color-accent-red);
   --theme-fg-placeholder: var(--color-fg-muted);
   --theme-fg-header-text: var(--color-fg-primary);
   
@@ -150,18 +146,18 @@
   /* ================================================= */
 
   --theme-decoration-separator: var(--color-separator-line);
-  --theme-decoration-grid-line: #e8e8e8; 
-  --theme-decoration-keyboard-focus: var(--color-cherry-red);
+  --theme-decoration-grid-line: #ededed; 
+  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-accent-red-bright);
   --theme-decoration-border-control: var(--color-separator-line); 
   --color-border-entry-base: var(--color-separator-line);
-  --color-border-entry-focus: var(--color-cherry-red);
+  --color-border-entry-focus: var(--color-accent-red-bright);
 
 
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
   /* ================================================= */
   
-  --theme-status-accent: var(--color-cherry-red);
+  --theme-status-accent: var(--color-accent-red);
   --theme-status-accent-inactive: var(--color-accent-gray);
   --theme-status-success: var(--color-status-success);
   --theme-status-danger: var(--color-status-danger);
@@ -202,7 +198,6 @@
   --shadow-medium: var(--color-shadow-medium);
   --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.0);
 
-  /* Opacity (Kept for compatibility) */
   --opacity-0: 0;
   --opacity-08: 0.08;
   --opacity-507: 0.507;
@@ -212,21 +207,18 @@
   --opacity-50: 0.5;
   --opacity-60: 0.6;
 
-  /* Shadow Styles (Very light and clean) */
   --shadow-subtle: 0 1px 2px var(--color-shadow-lighter);
-  --shadow-elevated: 0 4px 10px var(--color-shadow-medium); 
+  --shadow-elevated: 0 4px 10px var(--color-shadow-medium);
   --shadow-button-flat: none;
-  --shadow-control-small: none;
-  --shadow-control-small-hover: none;
-  --shadow-element-minimal: none;
+  --shadow-control-small: var(--shadow-subtle);
+  --shadow-control-small-hover: 0 0 0 1px var(--color-cherry-red);
+  --shadow-element-minimal: var(--shadow-subtle);
 
-  /* Specialized Shadow Variables */
-  --shadow-window-float: 0 8px 20px var(--color-shadow-dark); 
-  --shadow-menubar-separator: inset 0 -1px 0 #cccccc; 
+  --shadow-window-float: 0 8px 20px var(--color-shadow-dark);
+  --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-light);
   
-  /* Inset/Outset Styles (Flat/Modern) */
-  --shadow-neumorphic-inset-medium: inset 0 0 0 1px #d62828; /* Thin red border on focus */
-  --shadow-neumorphic-outset-large: 0 0 0 1px #cccccc; /* Subtle light gray border */
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--color-cherry-red-functional);
+  --shadow-neumorphic-outset-large: 0 0 0 1px var(--color-separator-line);
   --shadow-neumorphic-press: inset 0 1px 3px var(--color-shadow-medium);
 
   /* ================================================= */
@@ -243,7 +235,7 @@
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
-  --font-family-default: "Helvetica Neue", "Arial", sans-serif; /* Clean, modern sans-serif */
+  --font-family-default: "Helvetica Neue", "Arial", sans-serif;
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400; 
   --font-weight-medium: 500;  

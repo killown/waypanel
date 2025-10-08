@@ -1,57 +1,51 @@
-/* ================================================= */
-/* ========= GRUVBOX DARK MEDIUM (ROOT) ========== */
-/* ================================================= */
-
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - GRUVBOX ==== */
+  /* ==== CORE PALETTE (Theme Specific) - GRUVBOX (REFINED) ==== */
   /* ================================================= */
   
-  /* Gruvbox Core Backgrounds */
-  --color-bg-base: #282828;        /* BG0 Medium (View Primary/Window) */
-  --color-bg-window: #282828;
+  --color-bg-base: #282828;
+  --color-bg-window: var(--color-bg-base);
   --color-bg-panel: #282828CB;
-  --color-bg-popover: #3c3836;     /* BG1 (Popovers) */
+  --color-bg-popover: #3c3836;
   --color-bg-searchbar: #3c3836;
-  --color-bg-button: #504945;      /* BG2 (Normal buttons) */
-  --color-bg-button-hover: #665c54; /* BG3 (Hover state) */
-  --color-bg-button-active: #3c3836; /* BG1 (Pressed state) */
-  --color-bg-surface: #3c3836;     /* BG1 (View Secondary/Sidebar) */
-  --color-bg-raised: #504945;      /* BG2 (View Tertiary/Cards) */
-  --color-bg-deep: #1d2021;        /* BG0 Hard (Under Page/Deepest) */
-  --color-bg-alt-row: #32302f;     /* Derived for subtle contrast */
-  --color-bg-transparent-active: rgba(69, 133, 136, 0.2); /* Muted Blue hover transparency */
+  --color-bg-box-primary: var(--color-bg-popover);
+  --color-bg-box-secondary: var(--color-bg-raised);
+  --color-bg-button: #504945;
+  --color-bg-button-hover: #665c54;
+  --color-bg-button-active: #3c3836;
+  --color-bg-surface: #3c3836;
+  --color-bg-raised: #504945;
+  --color-bg-deep: #1d2021;
+  --color-bg-alt-row: #32302f;
+  --color-bg-transparent-active: rgba(155, 212, 201, 0.2);
 
-  /* Gruvbox Transparency & Vibrancy (Set to be opaque Gruvbox colors) */
   --color-vibrancy-dark-blur: var(--color-bg-base); 
   --color-vibrancy-light-blur: var(--color-bg-surface);
   --opacity-vibrancy-bar: 1.0; 
 
-  /* Gruvbox Core Foregrounds */
-  --color-fg-primary: #ebdbb2;     /* FG1 (Primary Text/Light1) */
-  --color-fg-secondary: #a89984;   /* FG3 (Secondary Text/Light3) */
-  --color-fg-muted: #928374;       /* Gray (Muted/Placeholder) */
-  --color-fg-subtle: #665c54;      /* BG3 (Darker muted text) */
-  --color-fg-inverse: #282828;     /* FG on bright/accent backgrounds (BG0) */
+  --color-fg-primary: #ebdbb2;
+  --color-fg-secondary: #a89984;
+  --color-fg-muted: #928374;
+  --color-fg-subtle: #665c54;
+  --color-fg-inverse: #282828;
 
-  /* Gruvbox Accent Colors (Strong) */
-  --color-accent-blue: #83a598;    /* Primary Accent (Aqua/Blue) */
-  --color-accent-blue-dark: #458588; /* Darker Aqua (Blue Muted) */
-  --color-accent-gray: #928374;    /* Inactive Accent (Gray) */
-  --color-status-success: #b8bb26;  /* Green */
-  --color-status-danger: #fb4934;    /* Red */
-  --color-status-warning: #fabd2f;  /* Yellow */
-  --color-separator-line: #504945; /* BG2 (Separator/Border) */
+  --color-accent-blue-base: #83a598;
+  --color-accent-blue: #9BD4C9;
+  --color-accent-blue-dark: #458588;
+  --color-accent-gray: #928374;
+  --color-status-success: #b8bb26;
+  --color-status-danger: #fb4934;
+  --color-status-warning: #fabd2f;
+  --color-separator-line: #504945;
   
-  /* Status Color Backgrounds */
   --color-status-success-bg: rgba(184, 187, 38, 0.2);
   --color-status-danger-bg: rgba(251, 73, 52, 0.2);
   --color-status-warning-bg: rgba(250, 189, 47, 0.2);
 
-  /* Shadow Primitives (Soft, dark shadows common in Gruvbox) */
   --color-shadow-dark: rgba(0, 0, 0, 0.6);
   --color-shadow-medium: rgba(0, 0, 0, 0.4);
   --color-shadow-lighter: rgba(0, 0, 0, 0.2); 
+
 
   /* ================================================= */
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
@@ -62,45 +56,40 @@
   --theme-bg-view-tertiary: var(--color-bg-raised);
   --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); 
 
-  /* Interactive/State Backgrounds */
-  --theme-bg-control-base: var(--color-bg-button-hover);
+  --theme-bg-control-base: var(--color-bg-raised);
   --theme-bg-selected-primary: var(--color-accent-blue-dark);
-  --theme-bg-selected-inactive: var(--color-bg-light); /* Using BG2 for inactive selection */
+  --theme-bg-selected-inactive: var(--color-bg-button-hover);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
   --theme-bg-text-selection: #45858840;   
   
-  /* Specialized Backgrounds */
   --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
-  --theme-bg-find-highlight: #d7992160; /* Orange/Yellow Muted with transparency */
+  --theme-bg-find-highlight: #d7992160;
+
 
   /* ================================================= */
   /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (Gruvbox) ==== */
   /* ================================================= */
   
-  /* Inputs, Text Views, and Fields */
-  --color-bg-entry-base: var(--color-bg-base);           
-  --color-bg-entry-focus: var(--color-bg-surface);        
+  --color-bg-entry-base: var(--color-bg-base);         
+  --color-bg-entry-focus: var(--color-bg-surface);         
   --color-bg-entry-disabled: var(--color-bg-alt-row);    
   --color-bg-textview: var(--color-bg-base);           
   
-  /* Buttons and Interaction */
   --color-bg-button-flat: transparent;                    
   --color-bg-button-flat-hover: var(--color-bg-transparent-active);
   --color-bg-button-flat-active: var(--color-bg-transparent-active);
   --color-bg-button-normal: var(--color-bg-raised);       
   --color-bg-button-normal-hover: var(--color-bg-button-hover); 
   --color-bg-button-normal-active: var(--color-bg-button-active); 
-  --color-bg-button-suggested: var(--color-accent-blue);  
+  --color-bg-button-suggested: var(--color-accent-blue-base);  
   --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
   
-  /* Menus and Popovers */
   --color-bg-menu-bar: var(--color-bg-base);   
   --color-bg-menu-popup: var(--color-bg-popover);         
   --color-bg-menu-item-hover: var(--color-bg-transparent-active); 
   --color-bg-popover-content: var(--color-bg-popover);    
 
-  /* Lists, Trees, and Tabs */
   --color-bg-list-header: var(--color-bg-raised);        
   --color-bg-tab-bar: var(--color-bg-surface);            
   --color-bg-tab-active: var(--color-bg-base);            
@@ -108,13 +97,11 @@
   --color-bg-tab-hover: var(--color-bg-raised);           
   --color-bg-treeview-header: var(--color-bg-raised);    
 
-  /* Check/Radio/Switches */
   --color-bg-toggle-off: var(--color-fg-muted);           
-  --color-bg-toggle-on: var(--color-accent-blue);          
+  --color-bg-toggle-on: var(--color-accent-blue-base);          
   --color-bg-check-radio-box: var(--color-bg-raised);    
   
-  /* Scrollbars */
-  --color-bg-scrollbar-track: var(--color-bg-surface);    /* Solid track for visibility */
+  --color-bg-scrollbar-track: var(--color-bg-raised);
   --color-bg-scrollbar-slider: #92837460;                 
   --color-bg-scrollbar-slider-hover: #a8998480;           
   
@@ -132,15 +119,13 @@
   --theme-fg-label-quaternary: var(--color-fg-subtle);
   --theme-fg-label-inverse: var(--color-fg-inverse); 
   
-  /* Interactive Foreground */
   --theme-fg-control-text: var(--color-fg-primary);
   --theme-fg-control-text-disabled: var(--color-fg-muted);
-  --theme-fg-link: var(--color-accent-blue-dark);
+  --theme-fg-link: var(--color-accent-blue);
   --theme-fg-placeholder: var(--color-fg-muted);
   --theme-fg-header-text: var(--color-fg-primary);
   
-  /* State Foreground */
-  --theme-fg-text-selected: var(--color-fg-inverse); /* BG0 text on Blue selection */
+  --theme-fg-text-selected: var(--color-fg-inverse);
   --theme-fg-text-alternate-selected: var(--color-fg-primary); 
 
 
@@ -149,11 +134,12 @@
   /* ================================================= */
 
   --theme-decoration-separator: var(--color-separator-line);
-  --theme-decoration-grid-line: #504945; /* BG2 */
-  --theme-decoration-keyboard-focus: var(--color-warning); /* Yellow focus ring */
+  --theme-decoration-grid-line: #504945;
+  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-accent-blue-base);
   --theme-decoration-border-control: var(--color-separator-line); 
-  --color-border-entry-base: var(--color-separator-line);   
-  --color-border-entry-focus: var(--color-accent-blue);    
+  --color-border-entry-base: var(--color-separator-line);    
+  --color-border-entry-focus: var(--color-accent-blue-base);    
+
 
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
@@ -171,41 +157,34 @@
   /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
   /* ================================================= */
 
-  /* Backgrounds */
   --primary-bg: var(--theme-bg-view-primary);
   --secondary-bg: var(--theme-bg-view-secondary);
   --tertiary-bg: var(--theme-bg-view-tertiary);
   --header-border: var(--theme-decoration-separator);
 
-  /* Foreground/Text */
   --main-text: var(--theme-fg-label-primary);
   --soft-text: var(--theme-fg-label-secondary);
   --calendar-other-month: var(--theme-fg-label-tertiary);
 
-  /* Functional Colors */
   --accent-blue: var(--theme-status-accent);
   --success-green: var(--theme-status-success);
   --danger-red: var(--theme-status-danger);
   
-  /* Specific Color Variants */
   --success-green-light: var(--color-status-success-bg); 
   --window-control-hover-bg: var(--color-bg-transparent-active);
   --window-control-border-color: var(--primary-bg);
 
-  /* DSEG Font Shadows */
-  --dseg-shadow-soft: rgba(235, 219, 178, 0.15); /* FG1 with opacity */
+  --dseg-shadow-soft: rgba(235, 219, 178, 0.15);
   --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
 
   /* ================================================= */
   /* =============== SHADOWS AND OPACITY ============== */
   /* ================================================= */
 
-  /* Raw Shadow Primitives */
   --shadow-dark: var(--color-shadow-dark);
   --shadow-medium: var(--color-shadow-medium);
-  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.08); /* Faint highlight for separation */
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.08);
 
-  /* Opacity (Standardized) */
   --opacity-0: 0.0;
   --opacity-08: 0.08;
   --opacity-507: 0.507;
@@ -215,26 +194,22 @@
   --opacity-50: 0.5;
   --opacity-60: 0.6;
 
-  /* Shadow Styles (Gruvbox Soft/Subtle) */
   --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
-  --shadow-elevated: 0 4px 12px var(--shadow-dark);
+  --shadow-elevated: 0 4px 12px var(--shadow-dark), 0 0 8px rgba(155, 212, 201, 0.05);
   --shadow-button-flat: none;
-  --shadow-control-small: inset 0 0 0 1px var(--color-shadow-lighter); /* Subtle border for definition */
+  --shadow-control-small: inset 0 0 0 1px var(--color-shadow-lighter);
   --shadow-control-small-hover: 0 1px 2px var(--shadow-medium);
   --shadow-element-minimal: 0 1px 0 rgba(0, 0, 0, 0.2);
 
-  /* Specialized Shadows */
-  --shadow-window-float: 0 8px 20px var(--shadow-dark);
-  --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line); 
+  --shadow-window-float: 0 8px 20px var(--shadow-dark), 0 0 12px rgba(155, 212, 201, 0.1);
+  --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line);
   
-  /* Neumorphic/Inset Inversion */
-  --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--color-bg-highlight); /* BG3 border */
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--color-bg-button-hover);
   --shadow-neumorphic-outset-large: 0 3px 6px var(--shadow-medium);
   --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.8);
 
   /* ================================================= */
   /* ============= GEOMETRY & RADIUS ================= */
-  /* (Subtle, professional radii) */
   /* ================================================= */
   
   --radius-xs: 3px;     
@@ -245,7 +220,6 @@
 
   /* ================================================= */
   /* ================== FONT VARIABLES ================ */
-  /* (Assuming a common default monospace font) */
   /* ================================================= */
 
   --font-family-default: "Fira Code", "Roboto Mono", monospace; 

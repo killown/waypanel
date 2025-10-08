@@ -1,46 +1,43 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - Pure Black == */
-  /* (Lowest-level variables for robustness) */
+  /* ==== CORE PALETTE (Theme Specific) - Pure Black (REFINED) == */
   /* ================================================= */
 
-  /* Core Backgrounds - Mapping Pure Black Tiers */
-  --color-bg-base: #000000;        /* View Primary (Pure Black) */
-  --color-bg-window: #000000;      /* Window/Panel Background (Pure Black) */
+  --color-bg-base: #000000;
+  --color-bg-window: #000000;
   --color-bg-panel: #000000CB;
-  --color-bg-popover: #121212;     /* Popovers/Menus (Secondary Surface) */
+  --color-bg-popover: #121212;
   --color-bg-searchbar: #121212;
-  --color-bg-button: #252525;      /* Normal buttons (Tertiary Surface) */
-  --color-bg-button-hover: #404040; /* Higher Contrast Hover/Active BG from original */
-  --color-bg-button-active: #121212; /* Pressed state (Recede to secondary) */
-  --color-bg-surface: #121212;     /* View Secondary (Sidebar/Input Base) */
-  --color-bg-raised: #252525;      /* View Tertiary (Cards/Elevated Elements) */
-  --color-bg-deep: #000000;        /* Purest Black/Under Page */
-  --color-bg-alt-row: #1E1E1E;     /* Derived for slight alternating row difference */
-  --color-bg-transparent-active: rgba(255, 255, 255, 0.15); /* Subtle hover/active transparency */
+  --color-bg-box-primary: var(--color-bg-popover);
+  --color-bg-box-secondary: var(--color-bg-raised);
+  --color-bg-button: #252525;
+  --color-bg-button-hover: #333333;
+  --color-bg-button-active: #121212;
+  --color-bg-surface: #121212;
+  --color-bg-raised: #252525;
+  --color-bg-deep: #000000;
+  --color-bg-alt-row: #1E1E1E;
+  --color-bg-transparent-active: rgba(255, 255, 255, 0.15);
 
-  /* Core Foregrounds - Mapping Bright Text */
-  --color-fg-primary: #FFFFFF;     /* Label Primary (Pure White) */
-  --color-fg-secondary: #F0F0F0;   /* Label Secondary (Almost White) */
-  --color-fg-muted: #808080;       /* Label Tertiary/Disabled */
-  --color-fg-subtle: #606060;      /* Label Quaternary (Derived) */
-  --color-fg-inverse: #000000;     /* For text on bright/accent backgrounds */
+  --color-fg-primary: #FFFFFF;
+  --color-fg-secondary: #F0F0F0;
+  --color-fg-muted: #808080;
+  --color-fg-subtle: #606060;
+  --color-fg-inverse: #000000;
 
-  /* Accent Colors (Official GNOME Adwaita Colors) */
-  --color-accent-blue: #3584E4;    /* Primary Accent Blue */
-  --color-accent-blue-dark: #2A73C4; /* Derived darker blue */
-  --color-accent-gray: #404040;    /* Inactive Accent (Used as highlight) */
-  --color-status-success: #2EC27E;  /* Success Green */
-  --color-status-danger: #E01B24;    /* Danger Red */
-  --color-status-warning: #E5A50A;  /* Warning Yellow */
-  --color-separator-line: #424242; /* Separator/Border */
+  --color-accent-blue-base: #3584E4;
+  --color-accent-blue-functional: #519FF5;
+  --color-accent-blue-dark: #2A73C4;
+  --color-accent-gray: #404040;
+  --color-status-success: #2EC27E;
+  --color-status-danger: #E01B24;
+  --color-status-warning: #E5A50A;
+  --color-separator-line: #424242;
 
-  /* Status Color Backgrounds */
-  --color-status-success-bg: rgba(46, 194, 126, 0.2); 
+  --color-status-success-bg: rgba(46, 194, 126, 0.2);
   --color-status-danger-bg: rgba(224, 27, 36, 0.2);
   --color-status-warning-bg: rgba(229, 165, 10, 0.2);
 
-  /* Shadow Primitives (Using original values) */
   --color-shadow-dark: rgba(0, 0, 0, 0.9);
   --color-shadow-medium: rgba(0, 0, 0, 0.6);
   --color-shadow-lighter: rgba(0, 0, 0, 0.3);
@@ -50,8 +47,8 @@
   /* ========= TRANSPARENCY AND VIBRANCY ============= */
   /* ================================================= */
   
-  --color-vibrancy-dark-blur: var(--color-bg-window);   /* Map to solid window BG */
-  --color-vibrancy-light-blur: var(--color-bg-popover);   /* Map to solid popover BG */
+  --color-vibrancy-dark-blur: var(--color-bg-window);   
+  --color-vibrancy-light-blur: var(--color-bg-popover);   
   --opacity-vibrancy-bar: 1.0;                         
 
 
@@ -59,52 +56,45 @@
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
   /* ================================================= */
 
-  /* Primary Background Hierarchy (GNOME PURE BLACK) */
-  --theme-bg-view-primary: #000000;   /* Deepest Black (Shell BG, Overview) */
-  --theme-bg-view-secondary: #121212; /* Main Surface (Panel, Popover Base) */
-  --theme-bg-view-tertiary: #252525;  /* Hover/Active BG */
+  --theme-bg-view-primary: var(--color-bg-base);
+  --theme-bg-view-secondary: var(--color-bg-surface);
+  --theme-bg-view-tertiary: var(--color-bg-raised);
   --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); 
 
-  /* Interactive/State Backgrounds */
-  --theme-bg-control-base: #252525;
-  --theme-bg-selected-primary: #3584E4; /* Official GNOME Blue */
-  --theme-bg-selected-inactive: #404040; /* Mapped from original secondary selection */
-  --theme-bg-selected-secondary: #404040;
+  --theme-bg-control-base: var(--color-bg-raised);
+  --theme-bg-selected-primary: var(--color-accent-blue-base);
+  --theme-bg-selected-inactive: var(--color-bg-button-hover);
+  --theme-bg-selected-secondary: var(--color-bg-button-hover);
   --theme-bg-text-selection: #3584E480;
   
-  /* Specialized Backgrounds */
-  --theme-bg-under-page: #000000;
-  --theme-bg-alternating-row: #1E1E1E;
-  --theme-bg-find-highlight: #E5A50A60; /* GNOME Yellow with transparency */
+  --theme-bg-under-page: var(--color-bg-deep);
+  --theme-bg-alternating-row: var(--color-bg-alt-row);
+  --theme-bg-find-highlight: #E5A50A60;
 
 
   /* ================================================= */
   /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
   /* ================================================= */
   
-  /* Inputs, Text Views, and Fields */
-  --color-bg-entry-base: var(--color-bg-surface);         /* Text Input Field background (Secondary) */
-  --color-bg-entry-focus: var(--color-bg-raised);         /* Text Input Field when focused (Tertiary/Raised) */
-  --color-bg-entry-disabled: var(--color-bg-alt-row);    /* Text Input Field when disabled (Alt row) */
-  --color-bg-textview: var(--color-bg-surface);           /* Multi-line TextView/Code Editor */
+  --color-bg-entry-base: var(--color-bg-surface);         
+  --color-bg-entry-focus: var(--color-bg-raised);         
+  --color-bg-entry-disabled: var(--color-bg-alt-row);    
+  --color-bg-textview: var(--color-bg-surface);           
   
-  /* Buttons and Interaction */
-  --color-bg-button-flat: transparent;                    /* Button with no background */
+  --color-bg-button-flat: transparent;                    
   --color-bg-button-flat-hover: var(--color-bg-transparent-active);
   --color-bg-button-flat-active: var(--color-bg-transparent-active);
-  --color-bg-button-normal: var(--color-bg-raised);       /* Button with standard background (Tertiary) */
+  --color-bg-button-normal: var(--color-bg-raised);       
   --color-bg-button-normal-hover: var(--color-bg-button-hover); 
   --color-bg-button-normal-active: var(--color-bg-button-active); 
-  --color-bg-button-suggested: var(--color-accent-blue);  /* Suggested/Primary Action Button */
+  --color-bg-button-suggested: var(--color-accent-blue-base);
   --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
   
-  /* Menus and Popovers */
-  --color-bg-menu-bar: var(--color-bg-window);           /* Mapped to window/base */
+  --color-bg-menu-bar: var(--color-bg-window);           
   --color-bg-menu-popup: var(--color-bg-popover);         
   --color-bg-menu-item-hover: var(--color-bg-transparent-active); 
   --color-bg-popover-content: var(--color-bg-popover);    
 
-  /* Lists, Trees, and Tabs */
   --color-bg-list-header: var(--color-bg-raised);        
   --color-bg-tab-bar: var(--color-bg-surface);            
   --color-bg-tab-active: var(--color-bg-base);            
@@ -112,17 +102,14 @@
   --color-bg-tab-hover: var(--color-bg-raised);           
   --color-bg-treeview-header: var(--color-bg-raised);    
 
-  /* Check/Radio/Switches */
   --color-bg-toggle-off: var(--color-fg-muted);           
-  --color-bg-toggle-on: var(--color-accent-blue);          
+  --color-bg-toggle-on: var(--color-accent-blue-base);          
   --color-bg-check-radio-box: var(--color-bg-raised);    
   
-  /* Scrollbars */
   --color-bg-scrollbar-track: transparent;                
-  --color-bg-scrollbar-slider: #80808060;                 /* Muted text with transparency */
-  --color-bg-scrollbar-slider-hover: #F0F0F080;           /* Secondary text with transparency */
+  --color-bg-scrollbar-slider: #80808060;                 
+  --color-bg-scrollbar-slider-hover: #F0F0F080;           
   
-  /* Status Bars and Notifications */
   --color-bg-status-bar: var(--color-bg-surface);         
   --color-bg-tooltip: var(--color-bg-popover);             
 
@@ -131,88 +118,78 @@
   /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
   /* ================================================= */
 
-  --theme-fg-label-primary: #FFFFFF;    /* Pure White */
-  --theme-fg-label-secondary: #F0F0F0;  /* Secondary/Dim Text */
-  --theme-fg-label-tertiary: #808080;   /* Disabled Text/Placeholder */
-  --theme-fg-label-quaternary: #606060;
+  --theme-fg-label-primary: var(--color-fg-primary);
+  --theme-fg-label-secondary: var(--color-fg-secondary);
+  --theme-fg-label-tertiary: var(--color-fg-muted);
+  --theme-fg-label-quaternary: var(--color-fg-subtle);
   --theme-fg-label-inverse: var(--color-fg-inverse); 
   
-  /* Interactive Foreground */
-  --theme-fg-control-text: #FFFFFF;
-  --theme-fg-control-text-disabled: #808080;
-  --theme-fg-link: #3584E4;
-  --theme-fg-placeholder: #808080;
-  --theme-fg-header-text: #F0F0F0;
+  --theme-fg-control-text: var(--color-fg-primary);
+  --theme-fg-control-text-disabled: var(--color-fg-muted);
+  --theme-fg-link: var(--color-accent-blue-functional);
+  --theme-fg-placeholder: var(--color-fg-muted);
+  --theme-fg-header-text: var(--color-fg-secondary);
   
-  /* State Foreground */
-  --theme-fg-text-selected: #FFFFFF;
-  --theme-fg-text-alternate-selected: #FFFFFF;
+  --theme-fg-text-selected: var(--color-fg-primary);
+  --theme-fg-text-alternate-selected: var(--color-fg-primary);
 
 
   /* ================================================= */
   /* ============= DECORATION & SEPARATORS ============= */
   /* ================================================= */
 
-  --theme-decoration-separator: #424242; /* Stronger divider line */
+  --theme-decoration-separator: var(--color-separator-line);
   --theme-decoration-grid-line: #303030;
-  --theme-decoration-keyboard-focus: #3584E4;
+  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-accent-blue-base);
   --theme-decoration-border-control: var(--theme-decoration-separator); 
-  --color-border-entry-base: var(--theme-decoration-separator); /* ADDED */
-  --color-border-entry-focus: var(--theme-status-accent);     /* ADDED */
+  --color-border-entry-base: var(--theme-decoration-separator); 
+  --color-border-entry-focus: var(--color-accent-blue-base); 
 
 
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
   /* ================================================= */
   
-  --theme-status-accent: #3584E4;  /* Official GNOME Blue */
-  --theme-status-accent-inactive: var(--color-accent-gray); /* ADDED */
-  --theme-status-success: #2EC27E; /* Official GNOME Green */
-  --theme-status-danger: #E01B24;  /* Official GNOME Red */
-  --theme-status-warning: #E5A50A; /* Official GNOME Yellow */
-  --theme-status-highlight-virtual: #121212;
+  --theme-status-accent: var(--color-accent-blue-functional);
+  --theme-status-accent-inactive: var(--color-accent-gray); 
+  --theme-status-success: var(--color-status-success);
+  --theme-status-danger: var(--color-status-danger); 
+  --theme-status-warning: var(--color-status-warning); 
+  --theme-status-highlight-virtual: var(--color-bg-popover);
 
 
   /* ================================================= */
   /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
   /* ================================================= */
 
-  /* Backgrounds */
-  --primary-bg: var(--theme-bg-view-primary);    /* #000000 */
-  --secondary-bg: var(--theme-bg-view-secondary); /* #121212 */
-  --tertiary-bg: var(--theme-bg-view-tertiary);  /* #252525 */
+  --primary-bg: var(--theme-bg-view-primary);
+  --secondary-bg: var(--theme-bg-view-secondary);
+  --tertiary-bg: var(--theme-bg-view-tertiary);
   --header-border: var(--theme-decoration-separator);
 
-  /* Foreground/Text */
   --main-text: var(--theme-fg-label-primary);
   --soft-text: var(--theme-fg-label-secondary);
   --calendar-other-month: var(--theme-fg-label-tertiary);
 
-  /* Functional Colors */
   --accent-blue: var(--theme-status-accent);
   --success-green: var(--theme-status-success);
   --danger-red: var(--theme-status-danger);
   
-  /* Specific Color Variants */
   --success-green-light: rgba(46, 194, 126, 0.2);
   --window-control-hover-bg: var(--theme-bg-control-base);
   --window-control-border-color: var(--primary-bg);
 
-  /* DSEG Font Shadows */
   --dseg-shadow-soft: rgba(255, 255, 255, 0.1);
-  --dseg-shadow-dark: rgba(0, 0, 0, 0.9); /* Harder shadow for visibility on black */
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.9);
 
   /* ================================================= */
   /* =============== SHADOWS AND OPACITY ============== */
-  /* (ADJUSTED FOR PURE BLACK) */
   /* ================================================= */
 
-  /* Raw Shadow Primitives */
-  --shadow-dark: rgba(0, 0, 0, 0.9); /* Very opaque black for shadows on black */
-  --shadow-medium: rgba(0, 0, 0, 0.6);
-  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.05); /* Faint separator/highlight */
+  --shadow-dark: var(--color-shadow-dark);
+  --shadow-medium: var(--color-shadow-medium);
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.05);
 
-  /* Opacity */
   --opacity-0: 0.0;
   --opacity-08: 0.08;
   --opacity-507: 0.507;
@@ -222,22 +199,22 @@
   --opacity-50: 0.5;
   --opacity-60: 0.6;
 
-  /* Shadow Styles (Generalised by prominence/function) */
   --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
-  --shadow-elevated: 0 8px 20px var(--shadow-medium); /* Deeper shadow for popovers on black */
+  --shadow-elevated: 0 8px 20px var(--shadow-medium), 0 0 10px rgba(81, 159, 245, 0.15);
   --shadow-button-flat: none; 
   --shadow-control-small: none; 
   --shadow-control-small-hover: none; 
   --shadow-element-minimal: none; 
+
+  --shadow-window-float: 0 8px 20px var(--shadow-dark), 0 0 15px rgba(81, 159, 245, 0.25);
+  --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line); 
   
-  /* Neumorphic/Inset Inversion */
   --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   --shadow-neumorphic-outset-large: 0 2px 5px rgba(0, 0, 0, 0.5);
   --shadow-neumorphic-press: inset 0 1px 4px rgba(0, 0, 0, 0.8);
 
   /* ================================================= */
   /* ============= GEOMETRY & RADIUS ================= */
-  /* (Added missing standard radius variables) */
   /* ================================================= */
   
   --radius-xs: 4px;     
@@ -252,7 +229,7 @@
 
   --font-family-default: "Cantarell", "Roboto", sans-serif; 
   --font-family-system: var(--font-family-default);
-  --font-weight-regular: 400; /* ADDED */
-  --font-weight-medium: 500;  /* ADDED */
-  --font-weight-bold: 600;    /* ADDED */
+  --font-weight-regular: 400; 
+  --font-weight-medium: 500;  
+  --font-weight-bold: 600;    
 }

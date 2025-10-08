@@ -1,12 +1,12 @@
 .top-panel {
   background-color: var(--color-bg-panel);
   color: var(--main-text);
-  font-weight: 400;
+  font-weight: var(--font-weight-medium);
   box-shadow:
     inset 3px 3px 5px rgba(255, 255, 255, 0.08),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
     2px 2px 5px var(--shadow-medium);
-  font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
+  font-family: var(--font-family-default); 
   font-size: 22px;
   text-decoration: none;
   text-shadow:
@@ -15,13 +15,16 @@
 }
 
 .top-panel-box-widgets-left {
-  background: var(--secondary-bg);
+  background: var(--color-bg-box-primary);
   border-top-right-radius: 10px;
+  border-top-right-radius: 15px;
+  border-bottom-right-radius: 15px;
+  padding-right: 10px;
   box-shadow:
     inset 3px 3px 5px rgba(255, 255, 255, 0.08),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
     2px 2px 5px var(--shadow-medium);
-  font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
+  font-family: var(--font-family-default);
   font-size: 20px;
   color: var(--main-text);
   text-decoration: none;
@@ -31,7 +34,7 @@
 }
 
 .top-panel-box-systray {
-  background: var(--secondary-bg);
+  background: var(--color-bg-deep);
   border-radius: 7px;
   margin-left: 5px;
   margin-top: 3px;
@@ -39,7 +42,7 @@
     inset 3px 3px 5px rgba(255, 255, 255, 0.08),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
     2px 2px 5px var(--shadow-medium);
-  font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
+  font-family: var(--font-family-default);
   font-size: 22px;
   color: var(--main-text);
   text-decoration: none;
@@ -53,7 +56,7 @@
 }
 
 .top-panel-box-left {
-
+  /* Empty, preserved */
 }
 
 .top_panel_box_center {

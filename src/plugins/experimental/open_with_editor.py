@@ -146,7 +146,7 @@ def get_plugin_class():
             self.menubutton_folders.connect("clicked", self.open_popover_folders)
             icon_name = self.gtk_helper.set_widget_icon_name(
                 "code-exploration",
-                ["code"],
+                ["code", "com.visualstudio.code.oss"],
             )
             self.menubutton_folders.set_icon_name(icon_name)
             self.menubutton_folders.add_css_class("places-menu-button")

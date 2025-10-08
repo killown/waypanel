@@ -9,6 +9,8 @@
   --color-bg-panel: #282C34cb;     /* Panel with transparency (Base + cb) */
   --color-bg-popover: #2C313A;     /* View Secondary/Slightly Lighter Surface */
   --color-bg-searchbar: #2C313A;
+  --color-bg-box-primary: var(--color-bg-popover);
+  --color-bg-box-secondary: var(--color-bg-raised);
   --color-bg-button: #3A404F;      /* View Tertiary (Raised/Elevated) */
   --color-bg-button-hover: #4B5263; /* Subtle/Quaternary for hover */
   --color-bg-button-active: #2C313A; /* Pressed state (recede to secondary) */

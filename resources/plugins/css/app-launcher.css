@@ -1,19 +1,28 @@
 .app-launcher-menu-button {
   -gtk-icon-size: 29px;
 }
+
+.app-launcher-popover.background > contents {
+  background-color: var(--color-bg-deep);
+}
+
+.app-launcher-popover.background > arrow {
+  background-color: var(--color-bg-deep);
+}
+
 .app-launcher-popover {
   background: transparent;
   background-color: transparent;
 }
 
 .app-launcher-searchbar {
-  background-color: var(--primary-bg);
+  background-color: var(--color-bg-searchbar);
   border-width: 0px;
   border-radius: 10px;
   padding: 5px 10px;
   color: var(--main-text);
   font-size: 18px;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   font-family: var(--font-family-default);
 }
 
@@ -26,13 +35,15 @@
   background-color: transparent;
 }
 
+
+
 .app-launcher-scrolled-window {
   background: transparent;
   background-color: transparent;
 }
 
 .app-launcher-main-box {
-  background-color: var(--primary-bg);
+  background-color: var(--color-bg-deep);
 }
 
 .app-launcher-icon-from-popover {

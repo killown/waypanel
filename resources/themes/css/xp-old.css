@@ -1,42 +1,52 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - WINDOWS 95 ==== */
+  /* ==== CORE PALETTE (Theme Specific) - Xp Old 95 ==== */
   /* ================================================= */
   
-  --color-bg-base: #C0C0C0;          
+  --color-bg-base: #C0C0C0;
   --color-bg-window: var(--color-bg-base); 
   --color-bg-panel: var(--color-bg-base);
   --color-bg-popover: var(--color-bg-base);
-  --color-bg-searchbar: #FFFFFF;     
+  --color-bg-searchbar: #FFFFFF;
+  --color-bg-box-primary: #bfbfbf;
+  --color-bg-box-secondary: #808080;
   --color-bg-button: var(--color-bg-base);
   --color-bg-button-hover: #D0D0D0;
   --color-bg-button-active: #B0B0B0;
   --color-bg-surface: var(--color-bg-base);
   --color-bg-raised: var(--color-bg-base);
-  --color-bg-deep: #008080;          
-  --color-bg-alt-row: #F0F0F0;       
+  --color-bg-deep: #808080;
+  --color-bg-alt-row: #F0F0F0;
   --color-bg-transparent-active: #000080; 
   
-  --color-fg-primary: #000000;       
+  --color-fg-primary: #000000;
   --color-fg-secondary: #000000;
-  --color-fg-muted: #808080;         
+  --color-fg-muted: #808080;
   --color-fg-subtle: #808080;
-  --color-fg-inverse: #FFFFFF;       
+  --color-fg-inverse: #FFFFFF;
 
-  --color-accent-blue: #000080;      
+  --color-accent-blue: #0000ff;
   --color-accent-blue-dark: #000050;
   --color-accent-gray: #808080;
   --color-status-success: #008000;
   --color-status-danger: #FF0000;
   --color-status-warning: #FFFF00;
   
-  --color-separator-line: #808080;   
-  --color-highlight-line: #FFFFFF;   
+  --color-separator-line: #808080;
+  --color-highlight-line: #FFFFFF;
   
   --color-3d-dark-shadow: #808080;
   --color-3d-light-highlight: #FFFFFF;
   --color-3d-border-dark: #000000;
   --color-3d-border-light: #C0C0C0;
+
+  /* ================================================= */
+  /* ========= TRANSPARENCY AND VIBRANCY (Advanced UI Structure) ===== */
+  /* ================================================= */
+  
+  --color-vibrancy-dark-blur: var(--color-bg-window);   
+  --color-vibrancy-light-blur: var(--color-bg-popover);   
+  --opacity-vibrancy-bar: 1.0; 
 
   /* ================================================= */
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
@@ -63,42 +73,42 @@
   /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
   /* ================================================= */
   
-  --color-bg-entry-base: #FFFFFF;                  
-  --color-bg-entry-focus: #FFFFFF;                 
-  --color-bg-entry-disabled: #C0C0C0;             
-  --color-bg-textview: #FFFFFF;                    
+  --color-bg-entry-base: #FFFFFF;
+  --color-bg-entry-focus: #FFFFFF;
+  --color-bg-entry-disabled: #C0C0C0;
+  --color-bg-textview: #FFFFFF;
   
-  --color-bg-button-flat: transparent;                    
+  --color-bg-button-flat: transparent;
   --color-bg-button-flat-hover: var(--color-bg-button-hover);
   --color-bg-button-flat-active: var(--color-bg-button-active);
-  --color-bg-button-normal: var(--color-bg-button);       
+  --color-bg-button-normal: var(--color-bg-button);
   --color-bg-button-normal-hover: var(--color-bg-button-hover); 
   --color-bg-button-normal-active: var(--color-bg-button-active); 
-  --color-bg-button-suggested: var(--color-accent-blue);  
+  --color-bg-button-suggested: var(--color-accent-blue);
   --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
   
-  --color-bg-menu-bar: var(--color-bg-surface);   
-  --color-bg-menu-popup: var(--color-bg-popover);         
+  --color-bg-menu-bar: var(--color-bg-surface);
+  --color-bg-menu-popup: var(--color-bg-popover);
   --color-bg-menu-item-hover: var(--color-accent-blue); 
   --color-bg-popover-content: var(--color-bg-popover);    
 
-  --color-bg-list-header: var(--color-bg-raised);        
-  --color-bg-tab-bar: var(--color-bg-surface);            
-  --color-bg-tab-active: var(--color-bg-raised);            
-  --color-bg-tab-inactive: var(--color-bg-surface);       
-  --color-bg-tab-hover: var(--color-bg-raised);           
+  --color-bg-list-header: var(--color-bg-raised);
+  --color-bg-tab-bar: var(--color-bg-surface);
+  --color-bg-tab-active: var(--color-bg-raised);
+  --color-bg-tab-inactive: var(--color-bg-surface);
+  --color-bg-tab-hover: var(--color-bg-raised);
   --color-bg-treeview-header: var(--color-bg-raised);    
 
-  --color-bg-toggle-off: var(--color-fg-muted);           
-  --color-bg-toggle-on: var(--color-accent-blue);          
-  --color-bg-check-radio-box: #FFFFFF;    
+  --color-bg-toggle-off: var(--color-fg-muted);
+  --color-bg-toggle-on: var(--color-accent-blue);
+  --color-bg-check-radio-box: #FFFFFF;
   
-  --color-bg-scrollbar-track: var(--color-bg-base);                
-  --color-bg-scrollbar-slider: #808080;                 
-  --color-bg-scrollbar-slider-hover: #404040;           
+  --color-bg-scrollbar-track: var(--color-bg-base);
+  --color-bg-scrollbar-slider: #808080;
+  --color-bg-scrollbar-slider-hover: #404040;
   
-  --color-bg-status-bar: var(--color-bg-surface);         
-  --color-bg-tooltip: #FFFFE1;             
+  --color-bg-status-bar: var(--color-bg-surface);
+  --color-bg-tooltip: #FFFFE1;
 
 
   /* ================================================= */
@@ -166,10 +176,8 @@
   --window-control-hover-bg: #808080;
   --window-control-border-color: #000000;
 
-  /* --- FIXED: REMOVING UGLY FONT SHADOWS --- */
   --dseg-shadow-soft: none;
   --dseg-shadow-dark: none;
-  /* ------------------------------------------ */
 
   /* ================================================= */
   /* =============== SHADOWS (3D BEVEL) ============== */

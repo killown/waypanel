@@ -4,41 +4,43 @@
   /* ================================================= */
 
   /* Thematic Tonal Palette Base */
-  --color-ember-red: #c25c5c;      /* Primary Light Red/Terracotta */
-  --color-ember-yellow: #ffc740;    /* Primary Warm Yellow/Gold Accent */
-  --color-ember-deep: #964747;     /* Secondary Deep Burnt Red */
-  --color-ember-pale: #fff8f0;      /* Creamy White for Text */
+  --color-ember-red: #c25c5c;
+  --color-ember-yellow: #ffc740;
+  --color-ember-deep: #964747;
+  --color-ember-pale: #fff8f0;
 
   /* Core Backgrounds - Warm and Earthy */
-  --color-bg-deep: var(--color-ember-deep);        /* Deepest Red/Under Page */
-  --color-bg-base: var(--color-ember-red);         /* View Primary (Content Area - Light Red) */
-  --color-bg-window: #d97878;      /* Window/Panel Background (Slightly Lighter Red) */
+  --color-bg-deep: var(--color-ember-deep);
+  --color-bg-base: var(--color-ember-red);
+  --color-bg-window: #d97878;
   --color-bg-panel: var(--color-bg-window); 
-  --color-bg-popover: #f09a9a;     /* Popovers/Menus (Elevated Soft Red) */
+  --color-bg-popover: #f09a9a;
   --color-bg-searchbar: #e57878;
-  --color-bg-button: #e57878;      /* Normal buttons */
-  --color-bg-button-hover: #f09a9a; /* Slight lift on hover */
-  --color-bg-button-active: #d97878; /* Pressed state */
-  --color-bg-surface: var(--color-bg-window);     /* View Secondary (Sidebar) */
-  --color-bg-raised: var(--color-bg-popover);      /* View Tertiary (Cards/Elevated Elements) */
-  --color-bg-alt-row: #a85151;     /* Subtle alternating row difference (Deeper tone) */
-  --color-bg-transparent-active: rgba(255, 199, 64, 0.3); /* Yellow transparent */
+  --color-bg-box-primary: var(--color-bg-surface);
+  --color-bg-box-secondary: var(--color-bg-raised);
+  --color-bg-button: #e57878;
+  --color-bg-button-hover: #f09a9a;
+  --color-bg-button-active: #d97878;
+  --color-bg-surface: var(--color-bg-window);
+  --color-bg-raised: var(--color-bg-popover);
+  --color-bg-alt-row: #a85151;
+  --color-bg-transparent-active: rgba(255, 199, 64, 0.3);
 
   /* Core Foregrounds - Creamy and Contrasting */
-  --color-fg-primary: var(--color-ember-pale);     /* Label Primary (Creamy White) */
-  --color-fg-secondary: #ffead0;   /* Label Secondary (Pale Gold) */
-  --color-fg-muted: #e0b4b4;       /* Label Tertiary/Disabled (Muted Pink-Red) */
-  --color-fg-subtle: #b38989;      /* Label Quaternary (Deep Muted) */
-  --color-fg-inverse: #333333;     /* For text on bright/accent backgrounds (Dark Gray) */
+  --color-fg-primary: var(--color-ember-pale);
+  --color-fg-secondary: #ffead0;
+  --color-fg-muted: #e0b4b4;
+  --color-fg-subtle: #b38989;
+  --color-fg-inverse: #333333;
 
   /* Accent Colors (Sun/Fire) */
-  --color-accent-blue: var(--color-ember-yellow);    /* Primary Accent Yellow */
+  --color-accent-blue: var(--color-ember-yellow);
   --color-accent-blue-dark: #cc9f33;
-  --color-accent-gray: #b38989;    /* Inactive Accent */
-  --color-status-success: #8cd47e;  /* Soft Green for success */
-  --color-status-danger: #ff5e6c;  /* Bright Red/Coral for danger */
-  --color-status-warning: var(--color-ember-yellow);  /* Yellow for warning/alert */
-  --color-separator-line: #e57878; /* Separator/Border */
+  --color-accent-gray: #b38989;
+  --color-status-success: #8cd47e;
+  --color-status-danger: #ff5e6c;
+  --color-status-warning: var(--color-ember-yellow);
+  --color-separator-line: #e57878;
 
   /* Status Color Backgrounds */
   --color-status-success-bg: rgba(140, 212, 126, 0.2); 
@@ -242,7 +244,7 @@
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
-  --font-family-default: "Merriweather", "Georgia", serif; /* Serif for warm, classic feel */
+  --font-family-default: "Merriweather", "Georgia", serif;
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400; 
   --font-weight-medium: 500;  

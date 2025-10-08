@@ -1,13 +1,15 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - WINDOWS 11 DARK ==== */
+  /* ==== CORE PALETTE (Theme Specific) - XP NEW DARK ==== */
   /* ================================================= */
   
   --color-bg-base: #202020;
   --color-bg-window: var(--color-bg-base);
-  --color-bg-panel: rgba(32, 32, 32, 0.9); /* Acrylic/Mica Simulation */
+  --color-bg-panel: rgba(32, 32, 32, 0.9);
   --color-bg-popover: #3a3a3a;
   --color-bg-searchbar: #2d2d2d;
+  --color-bg-box-primary: var(--color-bg-surface);
+  --color-bg-box-secondary: var(--color-bg-raised);
   --color-bg-button: #3a3a3a;
   --color-bg-button-hover: #4d4d4d;
   --color-bg-button-active: #404040;
@@ -199,15 +201,15 @@
   --shadow-control-small-hover: none; 
   --shadow-element-minimal: none; 
   
-  --shadow-window-float: 0 8px 16px var(--shadow-dark); /* ADDED */
-  --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line); /* ADDED */
+  --shadow-window-float: 0 8px 16px var(--shadow-dark);
+  --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line);
   
   --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   --shadow-neumorphic-outset-large: 0 2px 5px rgba(0, 0, 0, 0.5);
   --shadow-neumorphic-press: inset 0 1px 4px rgba(0, 0, 0, 0.6);
 
   /* ================================================= */
-  /* ============= GEOMETRY & RADIUS (ADDED) ============= */
+  /* ============= GEOMETRY & RADIUS ============= */
   /* ================================================= */
   
   --radius-xs: 3px;     

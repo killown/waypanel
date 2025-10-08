@@ -1,74 +1,72 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - Catppuccin Mocha ==== */
-  /* (Completing the lowest-level variables for robustness) */
+  /* ==== CORE PALETTE (Theme Specific) - Catppuccin Mocha (PERFECTED) ==== */
   /* ================================================= */
   
   /* Core Backgrounds - Mapped from Hierarchical Surfaces */
-  --color-bg-base: #1E1E2E;        /* View Primary (Mapped from --theme-bg-view-primary) */
-  --color-bg-window: #1E1E2E;      /* Window/Panel Background */
-  --color-bg-panel: #45475Acb; 
-  --color-bg-popover: #030303;     /* Popovers (Mapped from --theme-bg-view-tertiary) */
+  --color-bg-base: #1E1E2E;
+  --color-bg-window: #1E1E2E;
+  --color-bg-panel: #45475A;
+  --color-bg-popover: #585B70;
   --color-bg-searchbar: #313244;
-  --color-bg-button: #45475A;      /* Normal buttons (Surface 1) */
-  --color-bg-button-hover: #585B70; /* Surface 2 (Control Base) */
-  --color-bg-button-active: #313244; /* Surface 0 */
-  --color-bg-surface: #313244;     /* View Secondary (Mapped from --theme-bg-view-secondary) */
-  --color-bg-raised: #313244;      /* View Tertiary (Cards - Mapped from --theme-bg-view-secondary) */
-  --color-bg-deep: #11111B;        /* Under Page (Mapped from --theme-bg-under-page) */
-  --color-bg-alt-row: #24243A;     /* Alternating List Rows */
-  --color-bg-transparent-active: rgba(137, 180, 250, 0.2); /* Derived from Blue accent */
-  --color-vibrancy-dark-blur: var(--color-bg-base); /* Opacity set below */
+  --color-bg-button: #45475A;
+  --color-bg-button-hover: #585B70;
+  --color-bg-button-active: #313244;
+  --color-bg-surface: #313244;
+  --color-bg-raised: #45475A;
+  --color-bg-deep: #11111B;
+  --color-bg-alt-row: #24243A;
+  --color-bg-transparent-active: rgba(137, 180, 250, 0.2);
+  --color-vibrancy-dark-blur: var(--color-bg-base);
   --color-vibrancy-light-blur: var(--color-bg-surface);
-  --opacity-vibrancy-bar: 1.0; 
-
+  --opacity-vibrancy-bar: 1.0;
+  
   /* Core Foregrounds - Mapped from Hierarchical Labels */
-  --color-fg-primary: #CDD6F4;     /* Label Primary */
-  --color-fg-secondary: #BAC2DE;   /* Label Secondary */
-  --color-fg-muted: #A6ADC8;       /* Label Tertiary/Disabled */
-  --color-fg-subtle: #7F849C;      /* Label Quaternary */
-  --color-fg-inverse: #1E1E2E;     /* Dark text on bright/accent backgrounds */
-
+  --color-fg-primary: #CDD6F4;
+  --color-fg-secondary: #BAC2DE;
+  --color-fg-muted: #A6ADC8;
+  --color-fg-subtle: #7F849C;
+  --color-fg-inverse: #1E1E2E;
+  
   /* Accent Colors (Catppuccin Pastel Colors) */
-  --color-accent-blue: #89B4FA;    /* Blue (Primary Accent) */
-  --color-accent-blue-dark: #7499D1; /* Derived darker blue */
-  --color-accent-gray: #7F849C;    /* Overlay 1 (Used as Inactive Accent) */
-  --color-status-success: #A6E3A1;  /* Green */
-  --color-status-danger: #F38BA8;    /* Red */
-  --color-status-warning: #F9E2AF;  /* Yellow */
-  --color-separator-line: #585B70; /* Separator/Border (Surface 2) */
-
+  --color-accent-blue: #89B4FA;
+  --color-accent-blue-dark: #7499D1;
+  --color-accent-gray: #7F849C;
+  --color-status-success: #A6E3A1;
+  --color-status-danger: #F38BA8;
+  --color-status-warning: #F9E2AF;
+  --color-separator-line: #585B70;
+  
   /* Status Color Backgrounds */
-  --color-status-success-bg: rgba(166, 227, 161, 0.2); 
+  --color-status-success-bg: rgba(166, 227, 161, 0.2);
   --color-status-danger-bg: rgba(243, 139, 168, 0.2);
   --color-status-warning-bg: rgba(249, 226, 175, 0.2);
-
-  /* Shadow Primitives */
-  --color-shadow-dark: rgba(0, 0, 0, 0.3);
-  --color-shadow-medium: rgba(0, 0, 0, 0.15);
+  
+  /* Shadow Primitives (Adjusted for Blue Hue Bleed) */
+  --color-shadow-dark: rgba(0, 0, 0, 0.8);
+  --color-shadow-medium: rgba(137, 180, 250, 0.2);
   --color-shadow-lighter: rgba(0, 0, 0, 0.05);
 
 
   /* ================================================= */
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
-  /* (Preserving original Catppuccin semantic mapping) */
   /* ================================================= */
 
   /* Primary Background Hierarchy */
-  --theme-bg-view-primary: #1E1E2E;   
-  --theme-bg-view-secondary: #313244; 
-  --theme-bg-view-tertiary: #45475A;  
-
+  --theme-bg-view-primary: #1E1E2E;
+  --theme-bg-view-secondary: #313244;
+  --theme-bg-view-tertiary: #45475A;
+  
   /* Interactive/State Backgrounds */
-  --theme-bg-control-base: #585B70;   
-  --theme-bg-selected-primary: #89B4FA; 
-  --theme-bg-selected-secondary: #45475A; 
-  --theme-bg-text-selection: #89B4FA60; 
+  --theme-bg-control-base: #585B70;
+  --theme-bg-selected-primary: #89B4FA;
+  --theme-bg-selected-secondary: #45475A;
+  --theme-bg-text-selection: #89B4FA60;
   
   /* Specialized Backgrounds */
-  --theme-bg-under-page: #11111B; 
+  --theme-bg-under-page: #11111B;
   --theme-bg-alternating-row: #24243A;
-  --theme-bg-find-highlight: #F9E2AF40; 
+  --theme-bg-find-highlight: #F9E2AF40;
 
 
   /* ================================================= */
@@ -76,87 +74,85 @@
   /* ================================================= */
   
   /* Inputs, Text Views, and Fields */
-  --color-bg-entry-base: var(--color-bg-surface);         /* Text Input Field background (Secondary/Surface 0) */
-  --color-bg-entry-focus: var(--color-bg-popover);         /* Text Input Field when focused (Tertiary/Surface 1) */
-  --color-bg-entry-disabled: var(--color-bg-alt-row);    /* Text Input Field when disabled (Alt row) */
-  --color-bg-textview: var(--color-bg-surface);           /* Multi-line TextView/Code Editor */
+  --color-bg-entry-base: var(--color-bg-surface);
+  --color-bg-entry-focus: var(--color-bg-raised);
+  --color-bg-entry-disabled: var(--color-bg-alt-row);
+  --color-bg-textview: var(--color-bg-surface);
   
   /* Buttons and Interaction */
-  --color-bg-button-flat: transparent;                    /* Button with no background */
+  --color-bg-button-flat: transparent;
   --color-bg-button-flat-hover: var(--color-bg-transparent-active);
   --color-bg-button-flat-active: var(--color-bg-transparent-active);
-  --color-bg-button-normal: var(--color-bg-popover);       /* Button with standard background (Surface 1) */
-  --color-bg-button-normal-hover: var(--color-bg-button-hover); 
-  --color-bg-button-normal-active: var(--color-bg-button-active); 
-  --color-bg-button-suggested: var(--color-accent-blue);  /* Suggested/Primary Action Button */
+  --color-bg-button-normal: var(--color-bg-raised);
+  --color-bg-button-normal-hover: var(--color-bg-button-hover);
+  --color-bg-button-normal-active: var(--color-bg-button-active);
+  --color-bg-button-suggested: var(--color-accent-blue);
   --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
   
   /* Menus and Popovers */
-  --color-bg-menu-bar: var(--color-bg-base);             /* Mapped to window/base */
-  --color-bg-menu-popup: var(--color-bg-popover);         
-  --color-bg-menu-item-hover: var(--color-bg-transparent-active); 
-  --color-bg-popover-content: var(--color-bg-popover);    
+  --color-bg-menu-bar: var(--color-bg-base);
+  --color-bg-menu-popup: var(--color-bg-popover);
+  --color-bg-menu-item-hover: var(--color-bg-transparent-active);
+  --color-bg-popover-content: var(--color-bg-popover);
 
   /* Lists, Trees, and Tabs */
-  --color-bg-list-header: var(--color-bg-popover);        /* Use Tertiary/Surface 1 */
-  --color-bg-tab-bar: var(--color-bg-surface);            
-  --color-bg-tab-active: var(--color-bg-base);            
-  --color-bg-tab-inactive: var(--color-bg-surface);       
-  --color-bg-tab-hover: var(--color-bg-popover);           
-  --color-bg-treeview-header: var(--color-bg-popover);    
+  --color-bg-list-header: var(--color-bg-raised);
+  --color-bg-tab-bar: var(--color-bg-surface);
+  --color-bg-tab-active: var(--color-bg-base);
+  --color-bg-tab-inactive: var(--color-bg-surface);
+  --color-bg-tab-hover: var(--color-bg-raised);
+  --color-bg-treeview-header: var(--color-bg-raised);
 
   /* Check/Radio/Switches */
-  --color-bg-toggle-off: var(--color-fg-muted);           
-  --color-bg-toggle-on: var(--color-accent-blue);          
-  --color-bg-check-radio-box: var(--color-bg-popover);    
+  --color-bg-toggle-off: var(--color-fg-muted);
+  --color-bg-toggle-on: var(--color-accent-blue);
+  --color-bg-check-radio-box: var(--color-bg-raised);
   
   /* Scrollbars */
-  --color-bg-scrollbar-track: transparent;                
-  --color-bg-scrollbar-slider: #A6ADC860;                 /* Muted text with transparency */
-  --color-bg-scrollbar-slider-hover: #CDD6F480;           /* Primary text with transparency */
+  --color-bg-scrollbar-track: transparent;
+  --color-bg-scrollbar-slider: #A6ADC860;
+  --color-bg-scrollbar-slider-hover: #CDD6F480;
   
   /* Status Bars and Notifications */
-  --color-bg-status-bar: var(--color-bg-surface);         
-  --color-bg-tooltip: var(--color-bg-popover);             
+  --color-bg-status-bar: var(--color-bg-surface);
+  --color-bg-tooltip: var(--color-bg-popover);
 
 
   /* ================================================= */
   /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
-  /* (Preserving original Catppuccin semantic mapping) */
   /* ================================================= */
 
   --theme-fg-label-primary: #CDD6F4;
   --theme-fg-label-secondary: #BAC2DE;
   --theme-fg-label-tertiary: #A6ADC8;
   --theme-fg-label-quaternary: #7F849C;
+  --theme-fg-label-inverse: var(--color-fg-inverse);
   
   /* Interactive Foreground */
   --theme-fg-control-text: #CDD6F4;
   --theme-fg-control-text-disabled: #A6ADC8;
-  --theme-fg-link: #89B4FA; 
+  --theme-fg-link: #6F9DD3;
   --theme-fg-placeholder: #7F849C;
   --theme-fg-header-text: #CDD6F4;
   
   /* State Foreground */
   --theme-fg-text-selected: #1E1E2E;
-  --theme-fg-text-alternate-selected: #CDD6F4; 
+  --theme-fg-text-alternate-selected: #CDD6F4;
 
 
   /* ================================================= */
   /* ============= DECORATION & SEPARATORS ============= */
-  /* (Preserving original Catppuccin values) */
   /* ================================================= */
 
-  --theme-decoration-separator: #585B70; 
+  --theme-decoration-separator: #585B70;
   --theme-decoration-grid-line: #313244;
-  --theme-decoration-keyboard-focus: #CBA6F7; 
-  --theme-decoration-border-control: var(--color-separator-line); 
+  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-bg-base), 0 0 0 4px #CBA6F7, 0 0 8px #CBA6F740;
+  --theme-decoration-border-control: var(--color-separator-line);
   --color-border-entry-base: var(--color-separator-line);
   --color-border-entry-focus: var(--color-accent-blue);
 
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
-  /* (Preserving original Catppuccin values) */
   /* ================================================= */
   
   --theme-status-accent: #89B4FA;
@@ -169,7 +165,6 @@
 
   /* ================================================= */
   /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
-  /* (Maintaining compatibility with original generic names) */
   /* ================================================= */
 
   /* Backgrounds */
@@ -200,7 +195,6 @@
 
   /* ================================================= */
   /* =============== SHADOWS AND OPACITY ============== */
-  /* (Using the structure with Catppuccin values) */
   /* ================================================= */
 
   --shadow-dark: var(--color-shadow-dark);
@@ -217,17 +211,17 @@
   --opacity-50: 0.5;
   --opacity-60: 0.6;
 
-  /* Shadow Styles */
+  /* Shadow Styles (Blue Hue Bleed) */
   --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
-  --shadow-elevated: 0 4px 12px var(--shadow-dark); 
-  --shadow-button-flat: none; 
-  --shadow-control-small: none; 
-  --shadow-control-small-hover: none; 
-  --shadow-element-minimal: none; 
+  --shadow-elevated: 0 4px 12px rgba(137, 180, 250, 0.25), 0 0 5px rgba(0, 0, 0, 0.4);
+  --shadow-button-flat: none;
+  --shadow-control-small: none;
+  --shadow-control-small-hover: none;
+  --shadow-element-minimal: none;
 
-  /* Specialized Shadow Variables */
-  --shadow-window-float: 0 6px 15px var(--shadow-dark); /* Derived floating shadow */
-  --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line); 
+  /* Specialized Shadow Variables (Stronger Blue Glow) */
+  --shadow-window-float: 0 8px 25px rgba(137, 180, 250, 0.5), 0 0 10px rgba(0, 0, 0, 0.7);
+  --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line);
   
   /* Inset/Outset Styles */
   --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
@@ -238,19 +232,19 @@
   /* ============= GEOMETRY & RADIUS ============= */
   /* ================================================= */
   
-  --radius-xs: 4px;     
-  --radius-s: 6px;      
-  --radius-m: 8px;      
-  --radius-l: 10px;     
-  --radius-xl: 12px;    
+  --radius-xs: 4px;
+  --radius-s: 6px;
+  --radius-m: 8px;
+  --radius-l: 10px;
+  --radius-xl: 12px;
 
   /* ================================================= */
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
-  --font-family-default: "Cantarell", "Roboto", sans-serif; 
+  --font-family-default: "Cantarell", "Roboto", sans-serif;
   --font-family-system: var(--font-family-default);
-  --font-weight-regular: 400; 
-  --font-weight-medium: 500;  
-  --font-weight-bold: 600;    
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
 }

@@ -26,7 +26,10 @@ def get_plugin_class():
             self.popover_box = None
             self.menu_button = self.gtk.MenuButton()
             self.button.connect("clicked", self._on_button_click)
-            self.menu_button.set_icon_name("software-update-available-symbolic")
+            icon_name = self.icon_exist(
+                "software-update-available-symbolic", ["software-update-available"]
+            )
+            self.menu_button.set_icon_name(icon_name)
             self.menu_button.add_css_class("update-checker-button")
             self.gtk_helper.add_cursor_effect(self.menu_button)
             self.main_widget = (self.menu_button, "append")

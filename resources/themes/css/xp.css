@@ -3,15 +3,17 @@
   /* ==== CORE PALETTE (Theme Specific) - XP Blue ==== */
   /* ================================================= */
   
-  --color-bg-base: #0057DC;
+  --color-bg-base: #0760e4;
   --color-bg-window: #000000;
   --color-bg-panel: #0057DCcb; /* Used for light, semi-transparent overlays */
   --color-bg-popover: #FFFFFF;
-  --color-bg-searchbar: #FFFFFF;
+  --color-bg-searchbar: #968351;
+  --color-bg-box-primary: #00a401;
+  --color-bg-box-secondary: #00a2f6;
   --color-bg-button: #FFFFFF;
   --color-bg-button-hover: #D8E4F1;
-  --color-bg-button-active: #B9D1EA;
-  --color-bg-surface: #edead7;
+  --color-bg-button-active: #00a2f6;
+  --color-bg-surface: #0057DC;
   --color-bg-raised: #030101;
   --color-bg-deep: #003083;
   --color-bg-alt-row: #F5F4EE;
@@ -30,7 +32,7 @@
   --color-accent-blue: #6988b6;
   --color-accent-blue-dark: #003083;
   --color-accent-gray: #B9D1EA;
-  --color-status-success: #81C046;
+  --color-status-success: #208b1a;
   --color-status-danger: #DE482B;
   --color-status-warning: #FCCF03;
   --color-separator-line: #99AEC6;

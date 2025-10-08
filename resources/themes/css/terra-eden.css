@@ -1,60 +1,48 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - OS (Dark) (PERFECTED) ==== */
+  /* ==== CORE PALETTE (Theme Specific) - Terra Eden (PERFECTED) ==== */
   /* ================================================= */
   
-  /* Core Backgrounds */
-  --color-bg-base: #1C1C1E;
-  --color-bg-window: #1C1C1E;
-  --color-bg-panel: #1C1C1E;
-  --color-bg-popover: #3A3A3C;
-  --color-bg-searchbar: #2C2C2E;
-  --color-bg-box-primary: var(--color-bg-popover);
-  --color-bg-box-secondary: var(--color-bg-raised);
-  --color-bg-button: #3A3A3C;
-  --color-bg-button-hover: #424244;
-  --color-bg-button-active: #2C2C2E;
-  --color-bg-surface: #2C2C2E;
-  --color-bg-raised: #3A3A3C;
-  --color-bg-deep: #0D0D0D;
-  --color-bg-alt-row: #222224;
-  --color-bg-transparent-active: rgba(255, 255, 255, 0.1);
-
-  /* Core Foregrounds */
-  --color-fg-primary: #FFFFFF;
-  --color-fg-secondary: #C7C7CC;
-  --color-fg-muted: #8E8E93;
-  --color-fg-subtle: #6D6D70;
-  --color-fg-inverse: #000000;
-
-  /* Accent Colors (Os System Colors) */
-  --color-accent-blue: #0A84FF;
-  --color-accent-blue-link: #51A0FF;
-  --color-accent-blue-dark: #007AFF;
-  --color-accent-gray: #636366;
-  --color-status-success: #32D74B;
-  --color-status-danger: #FF453A;
-  --color-status-warning: #FFD60A;
-  --color-separator-line: #545458;
+  --color-bg-base: #EAE8DA;
+  --color-bg-window: #EAE8DA;
+  --color-bg-panel: #EAE8DACB;
+  --color-bg-popover: #DACCCF;
+  --color-bg-searchbar: #E1D0B8;
+  --color-bg-button: #DACCCF;
+  --color-bg-button-hover: #D0C6BB;
+  --color-bg-button-active: #E1D0B8;
+  --color-bg-surface: #E1D0B8;
+  --color-bg-raised: #DACCCF;
+  --color-bg-deep: #D4C3BA;
+  --color-bg-alt-row: #F4F2EE;
+  --color-bg-transparent-active: rgba(121, 131, 110, 0.15);
   
-  /* Status Color Backgrounds */
-  --color-status-success-bg: rgba(50, 215, 75, 0.2);
-  --color-status-danger-bg: rgba(255, 69, 58, 0.2);
-  --color-status-warning-bg: rgba(255, 214, 10, 0.2);
-
-  /* Shadow Primitives (Adjusted for Blue Hue Bleed) */
-  --color-shadow-dark: rgba(0, 0, 0, 0.5);
-  --color-shadow-medium: rgba(10, 132, 255, 0.15);
-  --color-shadow-lighter: rgba(10, 132, 255, 0.1);
-
-
-  /* ================================================= */
-  /* ========= TRANSPARENCY AND VIBRANCY (Os) ===== */
-  /* ================================================= */
+  --color-vibrancy-dark-blur: var(--color-bg-base);
+  --color-vibrancy-light-blur: var(--color-bg-surface);
+  --opacity-vibrancy-bar: 1.0;
   
-  --color-vibrancy-dark-blur: rgba(28, 28, 30, 0.96);
-  --color-vibrancy-light-blur: rgba(44, 44, 46, 0.9);
-  --opacity-vibrancy-bar: 0.96;
+  --color-fg-primary: #323B47;
+  --color-fg-secondary: #5F6873;
+  --color-fg-muted: #79836E;
+  --color-fg-subtle: #9AA0A6;
+  --color-fg-inverse: #FFFFFF;
+
+  --color-accent-base: #79836E;
+  --color-accent-blue: #79836E;
+  --color-accent-blue-dark: #515A45;
+  --color-accent-gray: #A0A9B4;
+  --color-status-success: #6E9B56;
+  --color-status-danger: #D45A5A;
+  --color-status-warning: #E0A444;
+  --color-separator-line: #D0C6BB;
+  
+  --color-status-success-bg: rgba(110, 155, 86, 0.2);
+  --color-status-danger-bg: rgba(212, 90, 90, 0.2);
+  --color-status-warning-bg: rgba(224, 164, 68, 0.2);
+
+  --color-shadow-dark: rgba(0, 0, 0, 0.15);
+  --color-shadow-medium: rgba(0, 0, 0, 0.1);
+  --color-shadow-lighter: rgba(0, 0, 0, 0.05);
 
 
   /* ================================================= */
@@ -64,39 +52,40 @@
   --theme-bg-view-primary: var(--color-bg-base);
   --theme-bg-view-secondary: var(--color-bg-surface);
   --theme-bg-view-tertiary: var(--color-bg-raised);
-  --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur);
+  --theme-bg-view-vibrant: var(--color-bg-base);
 
-  /* Interactive/State Backgrounds */
   --theme-bg-control-base: var(--color-bg-raised);
-  --theme-bg-selected-primary: var(--color-accent-blue);
-  --theme-bg-selected-inactive: var(--color-accent-gray);
+  --theme-bg-selected-primary: var(--color-accent-base);
+  --theme-bg-selected-inactive: var(--color-bg-raised);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
-  --theme-bg-text-selection: #0A84FF80;
+  --theme-bg-text-selection: #79836E40;
   
-  /* Specialized Backgrounds */
   --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
-  --theme-bg-find-highlight: #FFD60A60;
+  --theme-bg-find-highlight: #E0A44460;
+  
+  --color-bg-box-primary: var(--color-bg-raised); 
+
 
   /* ================================================= */
-  /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (New) ==== */
+  /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
   /* ================================================= */
   
-  --color-bg-entry-base: var(--color-bg-surface);
-  --color-bg-entry-focus: var(--color-bg-surface);
+  --color-bg-entry-base: var(--color-bg-base);
+  --color-bg-entry-focus: var(--color-bg-base);
   --color-bg-entry-disabled: var(--color-bg-alt-row);
-  --color-bg-textview: var(--color-bg-surface);
+  --color-bg-textview: var(--color-bg-base);
   
   --color-bg-button-flat: transparent;
   --color-bg-button-flat-hover: var(--color-bg-transparent-active);
-  --color-bg-button-flat-active: var(--color-bg-button-active);
+  --color-bg-button-flat-active: var(--color-bg-transparent-active);
   --color-bg-button-normal: var(--color-bg-raised);
   --color-bg-button-normal-hover: var(--color-bg-button-hover);
   --color-bg-button-normal-active: var(--color-bg-button-active);
-  --color-bg-button-suggested: var(--color-accent-blue);
+  --color-bg-button-suggested: var(--color-accent-base);
   --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
   
-  --color-bg-menu-bar: var(--color-vibrancy-dark-blur);
+  --color-bg-menu-bar: var(--color-bg-surface);
   --color-bg-menu-popup: var(--color-bg-popover);
   --color-bg-menu-item-hover: var(--color-bg-transparent-active);
   --color-bg-popover-content: var(--color-bg-popover);
@@ -108,13 +97,13 @@
   --color-bg-tab-hover: var(--color-bg-raised);
   --color-bg-treeview-header: var(--color-bg-surface);
 
-  --color-bg-toggle-off: var(--color-fg-muted);
-  --color-bg-toggle-on: var(--color-accent-blue);
-  --color-bg-check-radio-box: var(--color-bg-surface);
+  --color-bg-toggle-off: var(--color-fg-subtle);
+  --color-bg-toggle-on: var(--color-accent-base);
+  --color-bg-check-radio-box: var(--color-bg-raised);
   
   --color-bg-scrollbar-track: transparent;
-  --color-bg-scrollbar-slider: #6D6D70CC;
-  --color-bg-scrollbar-slider-hover: #8E8E93CC;
+  --color-bg-scrollbar-slider: #9AA0A680;
+  --color-bg-scrollbar-slider-hover: #79836E90;
   
   --color-bg-status-bar: var(--color-bg-surface);
   --color-bg-tooltip: var(--color-bg-raised);
@@ -130,14 +119,12 @@
   --theme-fg-label-quaternary: var(--color-fg-subtle);
   --theme-fg-label-inverse: var(--color-fg-inverse);
   
-  /* Interactive Foreground */
   --theme-fg-control-text: var(--color-fg-primary);
   --theme-fg-control-text-disabled: var(--color-fg-muted);
-  --theme-fg-link: var(--color-accent-blue-link);
+  --theme-fg-link: var(--color-accent-blue-dark);
   --theme-fg-placeholder: var(--color-fg-muted);
-  --theme-fg-header-text: var(--color-fg-secondary);
+  --theme-fg-header-text: var(--color-fg-primary);
   
-  /* State Foreground */
   --theme-fg-text-selected: var(--color-fg-inverse);
   --theme-fg-text-alternate-selected: var(--color-fg-primary);
 
@@ -147,17 +134,20 @@
   /* ================================================= */
 
   --theme-decoration-separator: var(--color-separator-line);
-  --theme-decoration-grid-line: #4D4D50;
-  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-bg-base), 0 0 0 4px var(--color-accent-blue), 0 0 8px rgba(10, 132, 255, 0.4);
+  --theme-decoration-grid-line: #DDD6CF;
+  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-accent-base);
   --theme-decoration-border-control: var(--color-separator-line);
   --color-border-entry-base: var(--color-separator-line);
-  --color-border-entry-focus: var(--color-accent-blue);
+  --color-border-entry-focus: var(--color-accent-base);
+  --color-bg-entry-base: var(--color-bg-base);
+  --color-bg-entry-focus: var(--color-bg-base);
+
 
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
   /* ================================================= */
   
-  --theme-status-accent: var(--color-accent-blue);
+  --theme-status-accent: var(--color-accent-base);
   --theme-status-accent-inactive: var(--color-accent-gray);
   --theme-status-success: var(--color-status-success);
   --theme-status-danger: var(--color-status-danger);
@@ -169,41 +159,30 @@
   /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
   /* ================================================= */
 
-  /* Backgrounds */
   --primary-bg: var(--theme-bg-view-primary);
   --secondary-bg: var(--theme-bg-view-secondary);
   --tertiary-bg: var(--theme-bg-view-tertiary);
   --header-border: var(--theme-decoration-separator);
 
-  /* Foreground/Text */
   --main-text: var(--theme-fg-label-primary);
   --soft-text: var(--theme-fg-label-secondary);
   --calendar-other-month: var(--theme-fg-label-tertiary);
 
-  /* Functional Colors */
   --accent-blue: var(--theme-status-accent);
   --success-green: var(--theme-status-success);
   --danger-red: var(--theme-status-danger);
   
-  /* Specific Color Variants */
   --success-green-light: var(--color-status-success-bg);
   --window-control-hover-bg: var(--color-bg-transparent-active);
   --window-control-border-color: var(--primary-bg);
 
-  /* DSEG Font Shadows */
-  --dseg-shadow-soft: rgba(255, 255, 255, 0.1);
-  --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
+  --dseg-shadow-soft: none;
+  --dseg-shadow-dark: none;
 
   /* ================================================= */
-  /* =============== SHADOWS AND OPACITY (Os) ====== */
+  /* =============== SHADOWS AND OPACITY (Soft Focus) ====== */
   /* ================================================= */
-
-  /* Raw Shadow Primitives */
-  --shadow-dark: var(--color-shadow-dark);
-  --shadow-medium: var(--color-shadow-medium);
-  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.08);
-
-  /* Opacity (FIX: Added standard set of opacity primitives) */
+  
   --opacity-0: 0.0;
   --opacity-08: 0.08;
   --opacity-507: 0.507;
@@ -213,40 +192,42 @@
   --opacity-50: 0.5;
   --opacity-60: 0.6;
 
-  /* Shadow Styles (Applied Blue Hue Bleed) */
-  --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
-  --shadow-elevated: 0 4px 12px var(--color-shadow-medium), 0 0 5px rgba(10, 132, 255, 0.05);
+
+  --shadow-dark: var(--color-shadow-dark);
+  --shadow-medium: var(--color-shadow-medium);
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.5);
+
+  --shadow-subtle: 0 1px 1px var(--color-shadow-lighter);
+  --shadow-elevated: 0 3px 6px var(--color-shadow-medium);
   --shadow-button-flat: none;
-  --shadow-control-small: none;
-  --shadow-control-small-hover: none;
-  --shadow-element-minimal: none;
+  --shadow-control-small: 0 1px 1px var(--color-shadow-lighter);
+  --shadow-control-small-hover: 0 2px 4px var(--color-shadow-medium);
+  --shadow-element-minimal: 0 1px 1px var(--color-shadow-lighter);
 
-  /* Os-Specific Shadows (Applied Blue Hue Bleed) */
-  --shadow-window-float: 0 10px 30px rgba(10, 132, 255, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  --shadow-menubar-separator: inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-window-float: 0 8px 20px var(--color-shadow-medium);
+  --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line);
   
-  /* Neumorphic/Inset Inversion */
-  --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-  --shadow-neumorphic-outset-large: 0 2px 4px rgba(0, 0, 0, 0.2);
-  --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--color-separator-line), inset 0 1px 2px var(--color-shadow-medium);
+  --shadow-neumorphic-outset-large: 0 2px 4px var(--color-shadow-medium);
+  --shadow-neumorphic-press: inset 0 1px 3px var(--color-shadow-dark);
 
   /* ================================================= */
-  /* ============= GEOMETRY & RADIUS (New) ============= */
+  /* ============= GEOMETRY & RADIUS (Natural) ============= */
   /* ================================================= */
   
-  --radius-xs: 4px;
+  --radius-xs: 3px;
   --radius-s: 6px;
-  --radius-m: 8px;
-  --radius-l: 10px;
-  --radius-xl: 12px;
+  --radius-m: 10px;
+  --radius-l: 14px;
+  --radius-xl: 18px;
 
   /* ================================================= */
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
-  --font-family-default: "SF Pro Text", "Helvetica Neue", "Roboto", sans-serif;
+  --font-family-default: "Lora", "Merriweather", serif;
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400;
   --font-weight-medium: 500;
-  --font-weight-bold: 600;
+  --font-weight-bold: 700;
 }

@@ -4,41 +4,43 @@
   /* ================================================= */
 
   /* Thematic Tonal Palette Base */
-  --color-shade-void: #020d01;      /* Deepest Black-Green/Near Black */
-  --color-shade-stone: #041a06;     /* Deep Forest Green Background */
-  --color-shade-pale: #e8ffe8;      /* Pale White/Lichen Text */
-  --color-shade-soul: #588157;      /* Primary Accent (Moss Green) */
+  --color-shade-void: #020d01;
+  --color-shade-stone: #041a06;
+  --color-shade-pale: #e8ffe8;
+  --color-shade-soul: #588157;
 
   /* Core Backgrounds - Mapping to Dark Tiers */
-  --color-bg-deep: var(--color-shade-void);  /* Purest Deep Green */
-  --color-bg-base: var(--color-shade-stone); /* View Primary (Content Area) */
-  --color-bg-window: #0b330e;        /* Window/Panel Background (Darker Forest Green) */
+  --color-bg-deep: var(--color-shade-void);
+  --color-bg-base: var(--color-shade-stone);
+  --color-bg-window: #0b330e;
   --color-bg-panel: var(--color-bg-window); 
-  --color-bg-popover: #154c19;       /* Popovers/Menus (Elevated Dark Green) */
+  --color-bg-popover: #154c19;
   --color-bg-searchbar: #236628;
-  --color-bg-button: #236628;        /* Normal buttons */
-  --color-bg-button-hover: #317d36;  /* Slight lift on hover */
-  --color-bg-button-active: #154c19; /* Pressed state */
-  --color-bg-surface: var(--color-bg-window);     /* View Secondary (Sidebar) */
-  --color-bg-raised: var(--color-bg-popover);      /* View Tertiary (Cards/Elevated Elements) */
-  --color-bg-alt-row: #07260a;       /* Subtle alternating row difference */
-  --color-bg-transparent-active: rgba(88, 129, 87, 0.4); /* Moss Green transparent (40%) */
+  --color-bg-box-primary: var(--color-bg-window);
+  --color-bg-box-secondary: var(--color-bg-popover);
+  --color-bg-button: #236628;
+  --color-bg-button-hover: #317d36;
+  --color-bg-button-active: #154c19;
+  --color-bg-surface: var(--color-bg-window);
+  --color-bg-raised: var(--color-bg-popover);
+  --color-bg-alt-row: #07260a;
+  --color-bg-transparent-active: rgba(88, 129, 87, 0.4);
 
   /* Core Foregrounds - Pale and Ghostly */
-  --color-fg-primary: var(--color-shade-pale);     /* Label Primary (Lichen White) */
-  --color-fg-secondary: #a0c4a0;   /* Label Secondary (Soft Green-Gray) */
-  --color-fg-muted: #759c75;       /* Label Tertiary/Disabled (Muted Green) */
-  --color-fg-subtle: #4e6e4e;      /* Label Quaternary (Deep Muted) */
-  --color-fg-inverse: #041a06;     /* For text on bright/accent backgrounds (Dark Green) */
+  --color-fg-primary: var(--color-shade-pale);
+  --color-fg-secondary: #a0c4a0;
+  --color-fg-muted: #759c75;
+  --color-fg-subtle: #4e6e4e;
+  --color-fg-inverse: #041a06;
 
   /* Accent Colors (Moss, Bright Green, Yellow) */
-  --color-accent-blue: var(--color-shade-soul);    /* Primary Accent Moss Green */
-  --color-accent-blue-dark: #4a6c49; /* Darker Moss Green */
-  --color-accent-gray: #759c75;    /* Inactive Accent */
-  --color-status-success: #70c745;  /* Bright Lime/Fresh Growth */
-  --color-status-danger: #d94e4e;  /* Autumnal Red/Danger */
-  --color-status-warning: #ffcc66;  /* Sunlight Yellow/Warning */
-  --color-separator-line: #236628; /* Separator/Border */
+  --color-accent-blue: var(--color-shade-soul);
+  --color-accent-blue-dark: #4a6c49;
+  --color-accent-gray: #759c75;
+  --color-status-success: #70c745;
+  --color-status-danger: #d94e4e;
+  --color-status-warning: #ffcc66;
+  --color-separator-line: #236628;
 
   /* Status Color Backgrounds (Ensuring visibility) */
   --color-status-success-bg: rgba(112, 199, 69, 0.35); 
@@ -71,10 +73,10 @@
 
   /* Interactive/State Backgrounds */
   --theme-bg-control-base: var(--color-bg-raised);
-  --theme-bg-selected-primary: var(--color-accent-blue); /* Moss Green selection */
+  --theme-bg-selected-primary: var(--color-accent-blue);
   --theme-bg-selected-inactive: var(--color-accent-gray);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
-  --theme-bg-text-selection: #58815770;   /* Moss Green text selection */
+  --theme-bg-text-selection: #58815770;
   
   /* Specialized Backgrounds */
   --theme-bg-under-page: var(--color-bg-deep); 
@@ -136,7 +138,7 @@
   
   --theme-fg-control-text: var(--color-fg-primary); 
   --theme-fg-control-text-disabled: var(--color-fg-subtle);
-  --theme-fg-link: var(--color-accent-blue); /* Moss Green link color */
+  --theme-fg-link: var(--color-accent-blue);
   --theme-fg-placeholder: var(--color-fg-muted);
   --theme-fg-header-text: var(--color-fg-primary);
   
@@ -242,7 +244,7 @@
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
-  --font-family-default: "Georgia", serif; /* Classic, earthy feel */
+  --font-family-default: "Georgia", serif;
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400; 
   --font-weight-medium: 500;  

@@ -3,43 +3,45 @@
   /* ==== CORE PALETTE (Theme Specific) - VERIDIAN DUSK ==== */
   /* ================================================= */
   
-  --color-midnight-blue: #372772;   /* Deepest Background */
-  --color-dark-purple: #3a2449;     /* Secondary/Panel Background */
-  --color-slate-gray: #747c92;      /* Primary Surface/Raised Elements */
-  --color-celadon-light: #a1e8af;   /* Primary Accent/Success */
-  --color-celadon-dark: #94c595;    /* Secondary Accent/Hover */
+  --color-midnight-blue: #372772;
+  --color-dark-purple: #3a2449;
+  --color-slate-gray: #747c92;
+  --color-celadon-light: #a1e8af;
+  --color-celadon-dark: #94c595;
   
   --color-bg-base: var(--color-midnight-blue);
   --color-bg-window: var(--color-bg-base);
   --color-bg-panel: var(--color-dark-purple);
   --color-bg-popover: var(--color-slate-gray);
-  --color-bg-searchbar: #8f95a7;    /* Slate Gray 600 from Tailwind data */
+  --color-bg-searchbar: #8f95a7;
+  --color-bg-box-primary: var(--color-bg-panel);
+  --color-bg-box-secondary: var(--color-bg-raised);
   --color-bg-button: var(--color-dark-purple);
-  --color-bg-button-hover: #4e345f; /* Slightly lighter dark purple */
-  --color-bg-button-active: #2e1c39; /* Dark Purple 400 */
+  --color-bg-button-hover: #4e345f;
+  --color-bg-button-active: #2e1c39;
   --color-bg-surface: var(--color-slate-gray);
   --color-bg-raised: var(--color-slate-gray);
-  --color-bg-deep: #16102e;        /* Midnight Blue 200 */
-  --color-bg-alt-row: #454a57;     /* Slate Gray 300 for stripes */
-  --color-bg-transparent-active: #a1e8af30; /* Celadon Light transparent */
+  --color-bg-deep: #16102e;
+  --color-bg-alt-row: #454a57;
+  --color-bg-transparent-active: #a1e8af30;
 
-  --color-vibrancy-dark-blur: #372772E0; /* Semi-transparent Midnight Blue */
-  --color-vibrancy-light-blur: #747c92A0; /* Semi-transparent Slate Gray */
+  --color-vibrancy-dark-blur: #372772E0;
+  --color-vibrancy-light-blur: #747c92A0;
   --opacity-vibrancy-bar: 0.9;
 
   --color-fg-primary: #FFFFFF;
   --color-fg-secondary: var(--color-celadon-light);
-  --color-fg-muted: #c7cad3;      /* Slate Gray 800 for muted text */
-  --color-fg-subtle: #d1caed;     /* Midnight Blue 900 */
+  --color-fg-muted: #c7cad3;
+  --color-fg-subtle: #d1caed;
   --color-fg-inverse: #000000;
 
-  --color-accent-blue: var(--color-celadon-light); /* Green is the primary accent */
+  --color-accent-blue: var(--color-celadon-light);
   --color-accent-blue-dark: var(--color-celadon-dark);
   --color-accent-gray: var(--color-slate-gray);
   --color-status-success: var(--color-celadon-light);
   --color-status-danger: #DE482B;
   --color-status-warning: #FCCF03;
-  --color-separator-line: #454a57; /* Slate Gray 300 */
+  --color-separator-line: #454a57;
   
   --color-status-success-bg: #a1e8af30;
   --color-status-danger-bg: #DE482B30;
@@ -63,7 +65,7 @@
   --theme-bg-selected-primary: var(--color-accent-blue);
   --theme-bg-selected-inactive: var(--color-bg-alt-row);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
-  --theme-bg-text-selection: #61d97960;   
+  --theme-bg-text-selection: #61d97960;
   
   --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
@@ -137,7 +139,7 @@
   /* ================================================= */
 
   --theme-decoration-separator: var(--color-separator-line);
-  --theme-decoration-grid-line: #2e313a; /* Slate Gray 200 */
+  --theme-decoration-grid-line: #2e313a;
   --theme-decoration-keyboard-focus: var(--color-accent-blue);
   --theme-decoration-border-control: var(--color-separator-line);
   --color-border-entry-base: var(--color-separator-line);

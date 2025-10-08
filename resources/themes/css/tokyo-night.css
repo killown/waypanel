@@ -3,12 +3,13 @@
   /* ==== CORE PALETTE (Theme Specific) - TOKYO NIGHT ==== */
   /* ================================================= */
   
-  /* Core Backgrounds */
   --color-bg-base: #222436;
   --color-bg-window: var(--color-bg-base);
   --color-bg-panel: #222436cb;
   --color-bg-popover: #414868;
   --color-bg-searchbar: #292E42;
+  --color-bg-box-primary: var(--color-bg-base);
+  --color-bg-box-secondary: var(--color-bg-surface);
   --color-bg-button: #414868;
   --color-bg-button-hover: #565F89;
   --color-bg-button-active: #292E42;
@@ -22,14 +23,12 @@
   --color-vibrancy-light-blur: var(--color-bg-surface);
   --opacity-vibrancy-bar: 1.0;                         
 
-  /* Core Foregrounds */
   --color-fg-primary: #C0CAF5;
   --color-fg-secondary: #A9B1D6;
   --color-fg-muted: #9AA5CE;
   --color-fg-subtle: #565F89;
   --color-fg-inverse: #24283B;
 
-  /* Accent Colors */
   --color-accent-blue: #7AA2F7;
   --color-accent-blue-dark: #7AA2F7;
   --color-accent-gray: #565F89;
@@ -38,12 +37,10 @@
   --color-status-warning: #E0AF68;
   --color-separator-line: #414868;
   
-  /* Status Color Backgrounds (ADDED) */
   --color-status-success-bg: rgba(158, 206, 106, 0.2);
   --color-status-danger-bg: rgba(247, 118, 142, 0.2);
   --color-status-warning-bg: rgba(224, 175, 104, 0.2);
 
-  /* Shadow Primitives (ADDED) */
   --color-shadow-dark: rgba(0, 0, 0, 0.4);
   --color-shadow-medium: rgba(0, 0, 0, 0.2);
   --color-shadow-lighter: rgba(0, 0, 0, 0.1);
@@ -203,15 +200,15 @@
   --shadow-control-small-hover: none; 
   --shadow-element-minimal: none; 
   
-  --shadow-window-float: 0 8px 20px var(--shadow-dark); /* ADDED */
-  --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line); /* ADDED */
+  --shadow-window-float: 0 8px 20px var(--shadow-dark); 
+  --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line); 
 
   --shadow-neumorphic-inset-medium: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   --shadow-neumorphic-outset-large: 0 2px 5px rgba(0, 0, 0, 0.5);
   --shadow-neumorphic-press: inset 0 1px 4px rgba(0, 0, 0, 0.7);
 
   /* ================================================= */
-  /* ============= GEOMETRY & RADIUS (ADDED) ============= */
+  /* ============= GEOMETRY & RADIUS ============= */
   /* ================================================= */
 
   --radius-xs: 3px;     
@@ -228,5 +225,5 @@
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400; 
   --font-weight-medium: 500;
-  --font-weight-bold: 700; /* Added missing weights */
+  --font-weight-bold: 700;
 }
