@@ -1,52 +1,52 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - GitHub Light ==== */
+  /* ==== CORE PALETTE (Theme Specific) - Terra Eden ==== */
   /* (Completing the lowest-level variables for robustness) */
   /* ================================================= */
   
-  /* Core Backgrounds - Mapped from Hierarchical Surfaces */
-  --color-bg-base: #FFFFFF;        /* View Primary (Pure White) */
-  --color-bg-window: #FFFFFF;      /* Explicit window base */
-  --color-bg-panel: #FFFFFFCB;
-  --color-bg-popover: #FFFFFF;     /* Popovers */
-  --color-bg-searchbar: #F6F8FA;
-  --color-bg-button: #F6F8FA;      /* Normal buttons */
-  --color-bg-button-hover: #D0D7DE; /* Hover state (Subtle Separator) */
-  --color-bg-button-active: #EAECEF; /* Pressed state (Slightly darker than hover) */
-  --color-bg-surface: #F6F8FA;     /* View Secondary (Sidebars/Panels) */
-  --color-bg-raised: #FFFFFF;      /* View Tertiary (Cards/Modals) */
-  --color-bg-deep: #F6F8FA;        /* Under Page */
-  --color-bg-alt-row: #F6F8FA;     /* Alternating List Rows (Same as surface) */
-  --color-bg-transparent-active: rgba(208, 215, 222, 0.6); /* Subtle Hover */
+  /* Core Backgrounds */
+  --color-bg-base: #EAE8DA;        /* View Primary (Creamy Off-White) */
+  --color-bg-window: #EAE8DA;      /* Explicit window base */
+  --color-bg-panel: #EAE8DACB;
+  --color-bg-popover: #DACCCF;     /* Popovers */
+  --color-bg-searchbar: #E1D0B8;
+  --color-bg-button: #DACCCF;      /* Normal buttons */
+  --color-bg-button-hover: #D0C6BB; /* Hover state (Soft Separator) */
+  --color-bg-button-active: #E1D0B8; /* Pressed state */
+  --color-bg-surface: #E1D0B8;     /* View Secondary (Soft Taupe Surface) */
+  --color-bg-raised: #DACCCF;      /* View Tertiary (Soft Pink/Gray Cards) */
+  --color-bg-deep: #D4C3BA;        /* Under Page (Deeper warm gray) */
+  --color-bg-alt-row: #F4F2EE;     /* Alternating List Rows (Very subtle contrast) */
+  --color-bg-transparent-active: rgba(121, 131, 110, 0.15); /* Subtle green hover transparency */
   --color-vibrancy-dark-blur: var(--color-bg-base); 
   --color-vibrancy-light-blur: var(--color-bg-surface);
   --opacity-vibrancy-bar: 1.0; 
 
-  /* Core Foregrounds - Mapped from Hierarchical Labels */
-  --color-fg-primary: #1F2328;     /* Label Primary */
-  --color-fg-secondary: #57606A;   /* Label Secondary */
-  --color-fg-muted: #6E7781;       /* Label Tertiary/Disabled */
-  --color-fg-subtle: #6E7781;      /* Label Quaternary */
+  /* Core Foregrounds */
+  --color-fg-primary: #475464;     /* Label Primary (Deep Muted Blue-Gray) */
+  --color-fg-secondary: #5F6873;   /* Label Secondary/Header Text (Medium Gray) */
+  --color-fg-muted: #79836E;       /* Label Tertiary/Disabled (Muted Green) */
+  --color-fg-subtle: #9AA0A6;      /* Label Quaternary (Light Gray) */
   --color-fg-inverse: #FFFFFF;     /* Text on bright/accent backgrounds */
 
-  /* Accent Colors */
-  --color-accent-blue: #0969DA;    /* Primary Accent Blue */
-  --color-accent-blue-dark: #005CC5; /* Darker Blue for pressed state */
-  --color-accent-gray: #D0D7DE;    /* Inactive Accent (Separator) */
-  --color-status-success: #1A7F37;  /* Green */
-  --color-status-danger: #CF222E;    /* Red */
-  --color-status-warning: #9A6700;  /* Yellow/Orange */
-  --color-separator-line: #D0D7DE; /* Separator/Border */
+  /* Accent Colors (Earthy Tones) */
+  --color-accent-blue: #79836E;    /* Primary Accent (Muted Green) */
+  --color-accent-blue-dark: #646E5C; /* Darker Green for pressed state */
+  --color-accent-gray: #A0A9B4;    /* Inactive Accent (Dusty Blue Gray) */
+  --color-status-success: #6E9B56; /* Richer Olive Green */
+  --color-status-danger: #D45A5A;  /* Deep Rose Red */
+  --color-status-warning: #E0A444; /* Muted Gold/Mustard */
+  --color-separator-line: #D0C6BB; /* Soft Separator Line */
   
   /* Status Color Backgrounds */
-  --color-status-success-bg: rgba(26, 127, 55, 0.1);
-  --color-status-danger-bg: rgba(207, 34, 46, 0.1);
-  --color-status-warning-bg: rgba(154, 103, 0, 0.1);
+  --color-status-success-bg: rgba(110, 155, 86, 0.2);
+  --color-status-danger-bg: rgba(212, 90, 90, 0.2);
+  --color-status-warning-bg: rgba(224, 164, 68, 0.2);
 
-  /* Shadow Primitives - Light theme shadows must be darker than BG */
-  --color-shadow-dark: rgba(0, 0, 0, 0.1); 
-  --color-shadow-medium: rgba(0, 0, 0, 0.08);
-  --color-shadow-lighter: rgba(0, 0, 0, 0.04);
+  /* Shadow Primitives - Soft, natural shadows */
+  --color-shadow-dark: rgba(0, 0, 0, 0.15);
+  --color-shadow-medium: rgba(0, 0, 0, 0.1);
+  --color-shadow-lighter: rgba(0, 0, 0, 0.05);
 
 
   /* ================================================= */
@@ -56,19 +56,19 @@
   --theme-bg-view-primary: var(--color-bg-base);
   --theme-bg-view-secondary: var(--color-bg-surface);
   --theme-bg-view-tertiary: var(--color-bg-raised);
-  --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); 
+  --theme-bg-view-vibrant: var(--color-bg-base); 
 
   /* Interactive/State Backgrounds */
-  --theme-bg-control-base: var(--color-bg-button-hover);
+  --theme-bg-control-base: var(--color-bg-raised);
   --theme-bg-selected-primary: var(--color-accent-blue);
-  --theme-bg-selected-inactive: var(--color-accent-gray);
-  --theme-bg-selected-secondary: var(--color-bg-button-hover);
-  --theme-bg-text-selection: #B6E3FF;
+  --theme-bg-selected-inactive: var(--color-bg-raised);
+  --theme-bg-selected-secondary: var(--color-bg-transparent-active);
+  --theme-bg-text-selection: #79836E40;   
   
   /* Specialized Backgrounds */
   --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
-  --theme-bg-find-highlight: #FCD94C40;
+  --theme-bg-find-highlight: #E0A44460; 
 
 
   /* ================================================= */
@@ -76,44 +76,44 @@
   /* ================================================= */
   
   /* Inputs, Text Views, and Fields */
-  --color-bg-entry-base: var(--color-bg-base);         /* Text Input Field background (White) */
-  --color-bg-entry-focus: var(--color-bg-base);         /* Text Input Field when focused */
-  --color-bg-entry-disabled: var(--color-bg-surface);    /* Text Input Field when disabled (Light Gray) */
-  --color-bg-textview: var(--color-bg-base);           /* Multi-line TextView/Code Editor */
+  --color-bg-entry-base: var(--color-bg-base);            /* Text Input Field background (Primary/Base for a clean look) */
+  --color-bg-entry-focus: var(--color-bg-base);           /* Text Input Field when focused (Same as base) */
+  --color-bg-entry-disabled: var(--color-bg-alt-row);     /* Text Input Field when disabled (Alt row for lightness) */
+  --color-bg-textview: var(--color-bg-base);              /* Multi-line TextView/Code Editor */
   
   /* Buttons and Interaction */
   --color-bg-button-flat: transparent;                    /* Button with no background */
   --color-bg-button-flat-hover: var(--color-bg-transparent-active);
   --color-bg-button-flat-active: var(--color-bg-transparent-active);
-  --color-bg-button-normal: var(--color-bg-raised);       /* Button with standard background */
+  --color-bg-button-normal: var(--color-bg-raised);       /* Button with standard background (Tertiary) */
   --color-bg-button-normal-hover: var(--color-bg-button-hover); 
   --color-bg-button-normal-active: var(--color-bg-button-active); 
   --color-bg-button-suggested: var(--color-accent-blue);  /* Suggested/Primary Action Button */
   --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
   
   /* Menus and Popovers */
-  --color-bg-menu-bar: var(--color-bg-base);   
+  --color-bg-menu-bar: var(--color-bg-surface);           /* Mapped to secondary/surface */
   --color-bg-menu-popup: var(--color-bg-popover);         
   --color-bg-menu-item-hover: var(--color-bg-transparent-active); 
   --color-bg-popover-content: var(--color-bg-popover);    
 
   /* Lists, Trees, and Tabs */
-  --color-bg-list-header: var(--color-bg-surface);        
+  --color-bg-list-header: var(--color-bg-surface);        /* Use Secondary/Surface */
   --color-bg-tab-bar: var(--color-bg-surface);            
   --color-bg-tab-active: var(--color-bg-base);            
   --color-bg-tab-inactive: var(--color-bg-surface);       
-  --color-bg-tab-hover: var(--color-bg-button-hover);           
+  --color-bg-tab-hover: var(--color-bg-raised);           
   --color-bg-treeview-header: var(--color-bg-surface);    
 
   /* Check/Radio/Switches */
-  --color-bg-toggle-off: var(--color-fg-muted);           
+  --color-bg-toggle-off: var(--color-fg-subtle);          
   --color-bg-toggle-on: var(--color-accent-blue);          
-  --color-bg-check-radio-box: var(--color-bg-base);    
+  --color-bg-check-radio-box: var(--color-bg-raised);    
   
   /* Scrollbars */
   --color-bg-scrollbar-track: transparent;                
-  --color-bg-scrollbar-slider: #57606A60;                 /* Secondary text with transparency */
-  --color-bg-scrollbar-slider-hover: #1F232880;           /* Primary text with transparency */
+  --color-bg-scrollbar-slider: #9AA0A680;                 /* Subtle text with transparency */
+  --color-bg-scrollbar-slider-hover: #79836E90;           /* Muted green text with transparency */
   
   /* Status Bars and Notifications */
   --color-bg-status-bar: var(--color-bg-surface);         
@@ -133,7 +133,7 @@
   /* Interactive Foreground */
   --theme-fg-control-text: var(--color-fg-primary);
   --theme-fg-control-text-disabled: var(--color-fg-muted);
-  --theme-fg-link: var(--color-accent-blue);
+  --theme-fg-link: var(--color-accent-blue-dark);
   --theme-fg-placeholder: var(--color-fg-muted);
   --theme-fg-header-text: var(--color-fg-primary);
   
@@ -147,11 +147,13 @@
   /* ================================================= */
 
   --theme-decoration-separator: var(--color-separator-line);
-  --theme-decoration-grid-line: var(--color-separator-line); 
+  --theme-decoration-grid-line: #DDD6CF; 
   --theme-decoration-keyboard-focus: var(--color-accent-blue);
   --theme-decoration-border-control: var(--color-separator-line); 
-  --color-border-entry-base: var(--color-separator-line);
-  --color-border-entry-focus: var(--color-accent-blue);
+  --color-border-entry-base: var(--color-separator-line);       
+  --color-border-entry-focus: var(--color-accent-blue);        
+  --color-bg-entry-base: var(--color-bg-base);                 
+  --color-bg-entry-focus: var(--color-bg-base);                
 
 
   /* ================================================= */
@@ -163,7 +165,7 @@
   --theme-status-success: var(--color-status-success);
   --theme-status-danger: var(--color-status-danger);
   --theme-status-warning: var(--color-status-warning);
-  --theme-status-highlight-virtual: var(--color-bg-button-hover);
+  --theme-status-highlight-virtual: var(--color-bg-raised);
 
 
   /* ================================================= */
@@ -187,24 +189,20 @@
   --danger-red: var(--theme-status-danger);
   
   /* Specific Color Variants */
-  --success-green-light: var(--color-status-success-bg);
-  --window-control-hover-bg: var(--theme-bg-control-base); 
-  --window-control-border-color: var(--primary-bg); 
+  --success-green-light: var(--color-status-success-bg); 
+  --window-control-hover-bg: var(--color-bg-transparent-active);
+  --window-control-border-color: var(--primary-bg);
 
-  /* DSEG Font Shadows - None for this style */
+  /* DSEG Font Shadows - N/A for this natural theme */
   --dseg-shadow-soft: none;
   --dseg-shadow-dark: none;
 
   /* ================================================= */
-  /* =============== SHADOWS AND OPACITY ============== */
+  /* =============== SHADOWS AND OPACITY (Soft Focus) ====== */
+  /* (Standardizing Opacity Primitives) */
   /* ================================================= */
-
-  /* Raw Shadow Primitives */
-  --shadow-dark: var(--color-shadow-dark);
-  --shadow-medium: var(--color-shadow-medium);
-  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.8);
-
-  /* Opacity (Common variables) */
+  
+  /* Raw Opacity Primitives (Added for completeness) */
   --opacity-0: 0.0;
   --opacity-08: 0.08;
   --opacity-507: 0.507;
@@ -214,40 +212,46 @@
   --opacity-50: 0.5;
   --opacity-60: 0.6;
 
-  /* Shadow Styles (Generalised by prominence/function) */
+
+  /* Raw Shadow Primitives */
+  --shadow-dark: var(--color-shadow-dark);
+  --shadow-medium: var(--color-shadow-medium);
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.5);
+
+  /* Shadow Styles (Soft, diffused for a natural paper-like feel) */
   --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
-  --shadow-elevated: 0 4px 12px var(--shadow-dark); 
-  --shadow-button-flat: none; 
-  --shadow-control-small: none; 
-  --shadow-control-small-hover: 0 1px 3px var(--color-shadow-medium); 
-  --shadow-element-minimal: 0 1px 1px var(--color-shadow-lighter); 
-  
-  /* Specialized Shadow Variables */
-  --shadow-window-float: 0 8px 16px var(--shadow-dark); 
+  --shadow-elevated: 0 3px 6px var(--color-shadow-medium);
+  --shadow-button-flat: none;
+  --shadow-control-small: 0 1px 1px var(--color-shadow-lighter);
+  --shadow-control-small-hover: 0 2px 4px var(--color-shadow-medium);
+  --shadow-element-minimal: 0 1px 1px var(--color-shadow-lighter);
+
+  /* Eden Shadows */
+  --shadow-window-float: 0 8px 20px var(--color-shadow-medium);
   --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line); 
   
-  /* Neumorphic/Inset Inversion */
-  --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--color-separator-line);
-  --shadow-neumorphic-outset-large: 0 2px 4px var(--shadow-medium);
-  --shadow-neumorphic-press: inset 0 1px 3px var(--shadow-dark);
+  /* Neumorphic/Inset Inversion - Enhanced for a softer, matte feel */
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--color-separator-line), inset 0 1px 2px var(--color-shadow-medium);
+  --shadow-neumorphic-outset-large: 0 2px 4px var(--color-shadow-medium);
+  --shadow-neumorphic-press: inset 0 1px 3px var(--color-shadow-dark);
 
   /* ================================================= */
-  /* ============= GEOMETRY & RADIUS ============= */
+  /* ============= GEOMETRY & RADIUS (Natural) ============= */
   /* ================================================= */
   
   --radius-xs: 3px;     
   --radius-s: 6px;      
-  --radius-m: 8px;      
-  --radius-l: 12px;     
-  --radius-xl: 16px;    
+  --radius-m: 10px;     
+  --radius-l: 14px;     
+  --radius-xl: 18px;    
 
   /* ================================================= */
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
-  --font-family-default: "Segoe UI", "Tahoma", "Cantarell", sans-serif; 
+  --font-family-default: "Lora", "Merriweather", serif; 
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400; 
   --font-weight-medium: 500;  
-  --font-weight-bold: 600;    
+  --font-weight-bold: 700;    
 }

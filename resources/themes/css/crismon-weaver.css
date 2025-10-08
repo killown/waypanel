@@ -1,57 +1,62 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - Deep Black == */
-  /* (Preserving original GNOME colors and black levels) */
+  /* ==== CORE PALETTE (Theme Specific) - Crimson Weaver (Silksong) ==== */
   /* ================================================= */
 
-  /* Core Backgrounds - Mapping Deep Black Tiers */
-  --color-bg-base: #111111;        /* View Primary (Content Area/Deepest Black) */
-  --color-bg-window: #1a1a1a;      /* Window/Panel Background (Slightly Lighter) */
-  --color-bg-popover: #282828;     /* Popovers/Menus (Tertiary Surface) */
-  --color-bg-searchbar: #282828;
-  --color-bg-button: #282828;      /* Normal buttons (Tertiary Surface) */
-  --color-bg-button-hover: #404040; /* Higher Contrast Hover */
-  --color-bg-button-active: #1a1a1a; /* Pressed state (Recede to window color) */
-  --color-bg-surface: #1a1a1a;     /* View Secondary (Sidebar/Input Base - Same as Window) */
-  --color-bg-raised: #282828;      /* View Tertiary (Cards/Elevated Elements) */
-  --color-bg-deep: #000000;        /* Purest Black/Under Page */
-  --color-bg-alt-row: #141414;     /* Derived for slight alternating row difference */
-  --color-bg-transparent-active: rgba(255, 255, 255, 0.15); /* Subtle hover/active transparency */
+  /* Silksong Core Tonal Palette */
+  --color-silk-red: #f41d69;        /* Hornet's Crimson/Magenta (Primary Accent) */
+  --color-silk-red-dark: #c41754;   
+  --color-silk-deep-blue: #180f56;  /* Deepest game world color */
+  --color-silk-shadow-purple: #330055; /* Shadowy Purple for raised elements */
 
-  /* Core Foregrounds - Mapping Bright Text */
-  --color-fg-primary: #ffffff;     /* Label Primary (Pure White) */
-  --color-fg-secondary: #f0f0f0;   /* Label Secondary (Almost White) */
-  --color-fg-muted: #9a9a9a;       /* Label Tertiary/Disabled */
-  --color-fg-subtle: #707070;      /* Label Quaternary (Derived) */
+  /* Core Backgrounds - Deep and Shadowed */
+  --color-bg-deep: #0f0f1b;        /* Near Black Base */
+  --color-bg-base: var(--color-silk-deep-blue); /* View Primary (Content Area) */
+  --color-bg-window: #130c45;      /* Window/Panel Background (Slightly lighter than base) */
+  --color-bg-panel: var(--color-bg-window); 
+  --color-bg-popover: var(--color-silk-shadow-purple); /* Popovers/Menus (Elevated surface) */
+  --color-bg-searchbar: #410078;   /* Dark input field, distinct from background */
+  --color-bg-button: #281d66;      /* Normal buttons (Dark blue/purple) */
+  --color-bg-button-hover: #4a3c7c; /* Higher Contrast Hover */
+  --color-bg-button-active: var(--color-bg-window); /* Pressed state */
+  --color-bg-surface: var(--color-bg-window);     /* View Secondary (Sidebar/Input Base) */
+  --color-bg-raised: var(--color-bg-popover);      /* Cards/Elevated Elements */
+  --color-bg-alt-row: #11093a;     /* Derived for slight alternating row difference */
+  --color-bg-transparent-active: rgba(244, 29, 105, 0.25); /* Silk Red transparent */
+
+  /* Core Foregrounds - Creamy and Pale */
+  --color-fg-primary: #f8f8f8;     /* Label Primary (Near White) */
+  --color-fg-secondary: #c6b7be;   /* Label Secondary (Creamy Gray, matching Hornet's mask) */
+  --color-fg-muted: #847a8a;       /* Label Tertiary/Disabled */
+  --color-fg-subtle: #565a75;      /* Label Quaternary (Deep Gray-Blue) */
   --color-fg-inverse: #000000;     /* For text on bright/accent backgrounds */
 
-  /* Accent Colors (Official GNOME Adwaita Colors) */
-  --color-accent-blue: #3584e4;    /* Primary Accent Blue */
-  --color-accent-blue-dark: #2A73C4; /* Derived darker blue */
-  --color-accent-gray: #404040;    /* Inactive Accent (Used as highlight) */
-  --color-status-success: #2ec27e;  /* Success Green */
-  --color-status-danger: #e01b24;    /* Danger Red */
-  --color-status-warning: #e5a50a;  /* Warning Yellow */
-  --color-separator-line: #404040; /* Separator/Border (Highlight color) */
+  /* Accent Colors (Silksong Style) */
+  --color-accent-blue: var(--color-silk-red);    /* Primary Accent (Crimson) */
+  --color-accent-blue-dark: var(--color-silk-red-dark);
+  --color-accent-gray: #4a3c7c;    /* Inactive Accent */
+  --color-status-success: #5cbe00;  /* A dark teal/lime green for bright contrast (Moss) */
+  --color-status-danger: #9f0606;  /* Deep Red for danger */
+  --color-status-warning: #ff9f5f;  /* Light Orange (Infection/Fire) */
+  --color-separator-line: #410078; /* Separator/Border */
 
   /* Status Color Backgrounds */
-  --color-status-success-bg: rgba(46, 194, 126, 0.2); 
-  --color-status-danger-bg: rgba(224, 27, 36, 0.2);
-  --color-status-warning-bg: rgba(229, 165, 10, 0.2);
+  --color-status-success-bg: rgba(92, 190, 0, 0.2); 
+  --color-status-danger-bg: rgba(159, 6, 6, 0.2);
+  --color-status-warning-bg: rgba(255, 159, 95, 0.2);
 
-  /* Shadow Primitives (Using original values) */
-  --color-shadow-dark: rgba(0, 0, 0, 0.8);
+  /* Shadow Primitives (Subtle, dark, desktop-style shadows) */
+  --color-shadow-dark: rgba(0, 0, 0, 0.8); 
   --color-shadow-medium: rgba(0, 0, 0, 0.5);
   --color-shadow-lighter: rgba(0, 0, 0, 0.3);
 
 
   /* ================================================= */
   /* ========= TRANSPARENCY AND VIBRANCY (Advanced UI Structure) ===== */
-  /* (Mapped to solid colors as GNOME style is typically opaque) */
   /* ================================================= */
   
-  --color-vibrancy-dark-blur: var(--color-bg-window);   /* Map to solid window BG */
-  --color-vibrancy-light-blur: var(--color-bg-popover);   /* Map to solid popover BG */
+  --color-vibrancy-dark-blur: var(--color-bg-window);   
+  --color-vibrancy-light-blur: var(--color-bg-popover);   
   --opacity-vibrancy-bar: 1.0;                         
 
 
@@ -59,9 +64,9 @@
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
   /* ================================================= */
 
-  --theme-bg-view-primary: var(--color-bg-base); /* Deepest black content area */
-  --theme-bg-view-secondary: var(--color-bg-surface); /* Window/Sidebar BG */
-  --theme-bg-view-tertiary: var(--color-bg-raised); /* Card/Button BG */
+  --theme-bg-view-primary: var(--color-bg-base); 
+  --theme-bg-view-secondary: var(--color-bg-surface); 
+  --theme-bg-view-tertiary: var(--color-bg-raised); 
   --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); 
 
   /* Interactive/State Backgrounds */
@@ -69,12 +74,62 @@
   --theme-bg-selected-primary: var(--color-accent-blue);
   --theme-bg-selected-inactive: var(--color-accent-gray);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
-  --theme-bg-text-selection: #3584e480;   
+  --theme-bg-text-selection: #f41d6980;   
   
   /* Specialized Backgrounds */
-  --theme-bg-under-page: var(--color-bg-deep);
+  --theme-bg-under-page: var(--color-bg-deep); 
   --theme-bg-alternating-row: var(--color-bg-alt-row);
-  --theme-bg-find-highlight: #e5a50a60;
+  --theme-bg-find-highlight: #ff9f5f80;
+
+
+  /* ================================================= */
+  /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
+  /* ================================================= */
+  
+  /* Inputs, Text Views, and Fields */
+  --color-bg-entry-base: var(--color-bg-searchbar);         
+  --color-bg-entry-focus: #4a3c7c;         
+  --color-bg-entry-disabled: var(--color-bg-alt-row);    
+  --color-bg-textview: var(--color-bg-entry-base);           
+  
+  /* Buttons and Interaction */
+  --color-bg-button-flat: transparent;                    
+  --color-bg-button-flat-hover: var(--color-bg-transparent-active);
+  --color-bg-button-flat-active: var(--color-bg-transparent-active);
+  --color-bg-button-normal: var(--color-bg-button);       
+  --color-bg-button-normal-hover: #4a3c7c; 
+  --color-bg-button-normal-active: var(--color-bg-button-active); 
+  --color-bg-button-suggested: var(--color-accent-blue);  
+  --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
+  
+  /* Menus and Popovers */
+  --color-bg-menu-bar: var(--color-bg-window);           
+  --color-bg-menu-popup: var(--color-bg-popover);         
+  --color-bg-menu-item-hover: var(--color-bg-transparent-active); 
+  --color-bg-popover-content: var(--color-bg-popover);    
+
+  /* Lists, Trees, and Tabs */
+  --color-bg-list-header: var(--color-bg-raised);        
+  --color-bg-tab-bar: var(--color-bg-surface);            
+  --color-bg-tab-active: var(--color-bg-popover);            
+  --color-bg-tab-inactive: var(--color-bg-surface);       
+  --color-bg-tab-hover: var(--color-bg-raised);           
+  --color-bg-treeview-header: var(--color-bg-raised);    
+
+  /* Check/Radio/Switches */
+  --color-bg-toggle-off: var(--color-fg-muted);           
+  --color-bg-toggle-on: var(--color-accent-blue);          
+  --color-bg-check-radio-box: var(--color-bg-raised);    
+  
+  /* Scrollbars */
+  --color-bg-scrollbar-track: transparent;                
+  --color-bg-scrollbar-slider: #847a8a60;                 
+  --color-bg-scrollbar-slider-hover: #c6b7be80;           
+  
+  /* Status Bars and Notifications */
+  --color-bg-status-bar: var(--color-bg-window);         
+  --color-bg-tooltip: var(--color-bg-popover);             
+
 
   /* ================================================= */
   /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
@@ -87,8 +142,8 @@
   --theme-fg-label-inverse: var(--color-fg-inverse); 
   
   /* Interactive Foreground */
-  --theme-fg-control-text: var(--color-fg-primary);
-  --theme-fg-control-text-disabled: var(--color-fg-muted);
+  --theme-fg-control-text: var(--color-fg-primary); 
+  --theme-fg-control-text-disabled: var(--color-fg-subtle);
   --theme-fg-link: var(--color-accent-blue);
   --theme-fg-placeholder: var(--color-fg-muted);
   --theme-fg-header-text: var(--color-fg-secondary);
@@ -103,11 +158,12 @@
   /* ================================================= */
 
   --theme-decoration-separator: var(--color-separator-line);
-  --theme-decoration-grid-line: #303030; 
+  --theme-decoration-grid-line: #330055; 
   --theme-decoration-keyboard-focus: var(--color-accent-blue);
   --theme-decoration-border-control: var(--color-separator-line); 
   --color-border-entry-base: var(--color-separator-line);
   --color-border-entry-focus: var(--color-accent-blue);
+
 
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
@@ -123,38 +179,31 @@
 
   /* ================================================= */
   /* ====== SEMANTIC MAPPING (Used by Base CSS) ====== */
-  /* (Maintaining compatibility with original generic names) */
   /* ================================================= */
 
-  /* Backgrounds */
   --primary-bg: var(--theme-bg-view-primary);
   --secondary-bg: var(--theme-bg-view-secondary);
   --tertiary-bg: var(--theme-bg-view-tertiary);
   --header-border: var(--theme-decoration-separator);
 
-  /* Foreground/Text */
   --main-text: var(--theme-fg-label-primary);
   --soft-text: var(--theme-fg-label-secondary);
   --calendar-other-month: var(--theme-fg-label-tertiary);
 
-  /* Functional Colors */
   --accent-blue: var(--theme-status-accent);
   --success-green: var(--theme-status-success);
   --danger-red: var(--theme-status-danger);
   
-  /* Specific Color Variants */
   --success-green-light: var(--color-status-success-bg); 
   --window-control-hover-bg: var(--color-bg-transparent-active);
   --window-control-border-color: var(--primary-bg);
 
-  /* DSEG Font Shadows */
   --dseg-shadow-soft: rgba(255, 255, 255, 0.1);
   --dseg-shadow-dark: rgba(0, 0, 0, 0.5);
 
 
   /* ================================================= */
   /* =============== SHADOWS AND OPACITY ============== */
-  /* (Using the structure with Deep Black values) */
   /* ================================================= */
 
   --shadow-dark: var(--color-shadow-dark);
@@ -190,12 +239,11 @@
 
   /* ================================================= */
   /* ============= GEOMETRY & RADIUS ================= */
-  /* (Re-establishing common radius sizes) */
   /* ================================================= */
   
-  --radius-xs: 4px;     
-  --radius-s: 6px;      
-  --radius-m: 8px;      
+  --radius-xs: 3px;     
+  --radius-s: 5px;      
+  --radius-m: 7px;      
   --radius-l: 10px;     
   --radius-xl: 12px;    
 
@@ -203,7 +251,7 @@
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
-  --font-family-default: "Cantarell", "Roboto", sans-serif; 
+  --font-family-default: "Arial", "Roboto", sans-serif; /* Using standard sans-serif for clean readability */
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400; 
   --font-weight-medium: 500;  

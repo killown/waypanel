@@ -1,0 +1,251 @@
+:root {
+  /* ================================================= */
+  /* ==== CORE PALETTE (Theme Specific) - Mid-Century Cherry (Off-White & Red) ==== */
+  /* ================================================= */
+
+  /* Thematic Tonal Palette Base */
+  --color-cherry-red: #d62828;      /* Primary Accent (Vibrant Cherry Red) */
+  --color-cherry-red-dark: #b82323;
+  --color-off-white: #f8f8f8;       /* Primary Background (Soft Off-White) */
+  --color-mid-gray: #e8e8e8;        /* Secondary Background (Very Light Gray) */
+  --color-charcoal: #1f1f1f;        /* Deep Foreground/Text */
+
+  /* Core Backgrounds - Light, Clean, and Contrasting */
+  --color-bg-deep: #ffffff;        /* Purest White/Under Page */
+  --color-bg-base: var(--color-off-white); /* View Primary (Content Area - Off-White) */
+  --color-bg-window: var(--color-mid-gray);      /* Window/Panel Background */
+  --color-bg-panel: var(--color-bg-window); 
+  --color-bg-popover: #ffffff;     /* Popovers/Menus (Elevated White) */
+  --color-bg-searchbar: #f0f0f0;
+  --color-bg-button: #e8e8e8;      /* Normal buttons */
+  --color-bg-button-hover: #dcdcdc; /* Subtle depression on hover */
+  --color-bg-button-active: #c8c8c8; /* Pressed state */
+  --color-bg-surface: var(--color-mid-gray);     /* View Secondary (Sidebar) */
+  --color-bg-raised: var(--color-bg-popover);      /* View Tertiary (Cards/Elevated Elements) */
+  --color-bg-alt-row: #f4f4f4;     /* Subtle alternating row difference */
+  --color-bg-transparent-active: rgba(214, 40, 40, 0.1); /* Cherry Red transparent */
+
+  /* Core Foregrounds - Dark and Readable */
+  --color-fg-primary: var(--color-charcoal);     /* Label Primary (Dark Charcoal) */
+  --color-fg-secondary: #555555;   /* Label Secondary (Medium Gray) */
+  --color-fg-muted: #999999;       /* Label Tertiary/Disabled (Soft Gray) */
+  --color-fg-subtle: #b5b5b5;      /* Label Quaternary (Light Muted) */
+  --color-fg-inverse: var(--color-off-white);     /* For text on bright/accent backgrounds */
+
+  /* Accent Colors (Cherry Pop) */
+  --color-accent-blue: var(--color-cherry-red);    /* Primary Accent Cherry Red */
+  --color-accent-blue-dark: var(--color-cherry-red-dark);
+  --color-accent-gray: #999999;    /* Inactive Accent */
+  --color-status-success: #38a838;  /* Standard Green for success */
+  --color-status-danger: var(--color-cherry-red);  /* Cherry Red for danger/alert */
+  --color-status-warning: #ffb833;  /* Bright Amber for warning */
+  --color-separator-line: #cccccc; /* Separator/Border */
+
+  /* Status Color Backgrounds (Light and Clean) */
+  --color-status-success-bg: rgba(56, 168, 56, 0.1); 
+  --color-status-danger-bg: rgba(214, 40, 40, 0.15);
+  --color-status-warning-bg: rgba(255, 184, 51, 0.1);
+
+  /* Shadow Primitives (Subtle, clean shadows) */
+  --color-shadow-dark: rgba(0, 0, 0, 0.2); 
+  --color-shadow-medium: rgba(0, 0, 0, 0.15);
+  --color-shadow-lighter: rgba(0, 0, 0, 0.05);
+
+
+  /* ================================================= */
+  /* ========= TRANSPARENCY AND VIBRANCY (Advanced UI Structure) ===== */
+  /* ================================================= */
+  
+  --color-vibrancy-dark-blur: var(--color-bg-window);   
+  --color-vibrancy-light-blur: var(--color-bg-popover);   
+  --opacity-vibrancy-bar: 1.0;                         
+
+
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+
+  --theme-bg-view-primary: var(--color-bg-base); 
+  --theme-bg-view-secondary: var(--color-bg-surface); 
+  --theme-bg-view-tertiary: var(--color-bg-raised); 
+  --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); 
+
+  /* Interactive/State Backgrounds */
+  --theme-bg-control-base: var(--color-bg-raised);
+  --theme-bg-selected-primary: var(--color-cherry-red);
+  --theme-bg-selected-inactive: var(--color-mid-gray);
+  --theme-bg-selected-secondary: var(--color-bg-transparent-active);
+  --theme-bg-text-selection: #d6282840;   
+  
+  /* Specialized Backgrounds */
+  --theme-bg-under-page: var(--color-bg-deep); 
+  --theme-bg-alternating-row: var(--color-bg-alt-row);
+  --theme-bg-find-highlight: #ffb83340;
+
+
+  /* ================================================= */
+  /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
+  /* ================================================= */
+  
+  --color-bg-entry-base: #ffffff;         
+  --color-bg-entry-focus: #f0f0f0;         
+  --color-bg-entry-disabled: var(--color-bg-alt-row);    
+  --color-bg-textview: var(--color-bg-entry-base);           
+  
+  --color-bg-button-flat: transparent;                    
+  --color-bg-button-flat-hover: var(--color-bg-transparent-active);
+  --color-bg-button-flat-active: var(--color-bg-transparent-active);
+  --color-bg-button-normal: var(--color-bg-raised);       
+  --color-bg-button-normal-hover: var(--color-bg-button-hover); 
+  --color-bg-button-normal-active: var(--color-bg-button-active); 
+  --color-bg-button-suggested: var(--color-cherry-red);  
+  --color-bg-button-suggested-hover: var(--color-cherry-red-dark);
+  
+  --color-bg-menu-bar: var(--color-bg-window);           
+  --color-bg-menu-popup: var(--color-bg-popover);         
+  --color-bg-menu-item-hover: var(--color-bg-transparent-active); 
+  --color-bg-popover-content: var(--color-bg-popover);    
+
+  --color-bg-list-header: var(--color-bg-raised);        
+  --color-bg-tab-bar: var(--color-bg-surface);            
+  --color-bg-tab-active: var(--color-bg-popover);            
+  --color-bg-tab-inactive: var(--color-bg-surface);       
+  --color-bg-tab-hover: var(--color-bg-raised);           
+  --color-bg-treeview-header: var(--color-bg-raised);    
+
+  --color-bg-toggle-off: var(--color-fg-muted);           
+  --color-bg-toggle-on: var(--color-cherry-red);          
+  --color-bg-check-radio-box: var(--color-bg-raised);    
+  
+  --color-bg-scrollbar-track: transparent;                
+  --color-bg-scrollbar-slider: #99999960;                 
+  --color-bg-scrollbar-slider-hover: #55555570;           
+  
+  --color-bg-status-bar: var(--color-bg-window);         
+  --color-bg-tooltip: var(--color-bg-popover);             
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: var(--color-fg-primary);
+  --theme-fg-label-secondary: var(--color-fg-secondary);
+  --theme-fg-label-tertiary: var(--color-fg-muted);
+  --theme-fg-label-quaternary: var(--color-fg-subtle);
+  --theme-fg-label-inverse: var(--color-fg-inverse); 
+  
+  --theme-fg-control-text: var(--color-fg-inverse); 
+  --theme-fg-control-text-disabled: var(--color-fg-subtle);
+  --theme-fg-link: var(--color-cherry-red);
+  --theme-fg-placeholder: var(--color-fg-muted);
+  --theme-fg-header-text: var(--color-fg-primary);
+  
+  --theme-fg-text-selected: var(--color-fg-inverse); 
+  --theme-fg-text-alternate-selected: var(--color-fg-primary); 
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: var(--color-separator-line);
+  --theme-decoration-grid-line: #e8e8e8; 
+  --theme-decoration-keyboard-focus: var(--color-cherry-red);
+  --theme-decoration-border-control: var(--color-separator-line); 
+  --color-border-entry-base: var(--color-separator-line);
+  --color-border-entry-focus: var(--color-cherry-red);
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* ================================================= */
+  
+  --theme-status-accent: var(--color-cherry-red);
+  --theme-status-accent-inactive: var(--color-accent-gray);
+  --theme-status-success: var(--color-status-success);
+  --theme-status-danger: var(--color-status-danger);
+  --theme-status-warning: var(--color-status-warning);
+  --theme-status-highlight-virtual: var(--color-bg-raised);
+
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (Used by Base CSS) ====== */
+  /* ================================================= */
+
+  --primary-bg: var(--theme-bg-view-primary);
+  --secondary-bg: var(--theme-bg-view-secondary);
+  --tertiary-bg: var(--theme-bg-view-tertiary);
+  --header-border: var(--theme-decoration-separator);
+
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  
+  --success-green-light: var(--color-status-success-bg); 
+  --window-control-hover-bg: var(--color-bg-transparent-active);
+  --window-control-border-color: var(--primary-bg);
+
+  --dseg-shadow-soft: rgba(0, 0, 0, 0.1);
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.5);
+
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY ============== */
+  /* ================================================= */
+
+  --shadow-dark: var(--color-shadow-dark);
+  --shadow-medium: var(--color-shadow-medium);
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.0);
+
+  /* Opacity (Kept for compatibility) */
+  --opacity-0: 0;
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  /* Shadow Styles (Very light and clean) */
+  --shadow-subtle: 0 1px 2px var(--color-shadow-lighter);
+  --shadow-elevated: 0 4px 10px var(--color-shadow-medium); 
+  --shadow-button-flat: none;
+  --shadow-control-small: none;
+  --shadow-control-small-hover: none;
+  --shadow-element-minimal: none;
+
+  /* Specialized Shadow Variables */
+  --shadow-window-float: 0 8px 20px var(--color-shadow-dark); 
+  --shadow-menubar-separator: inset 0 -1px 0 #cccccc; 
+  
+  /* Inset/Outset Styles (Flat/Modern) */
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px #d62828; /* Thin red border on focus */
+  --shadow-neumorphic-outset-large: 0 0 0 1px #cccccc; /* Subtle light gray border */
+  --shadow-neumorphic-press: inset 0 1px 3px var(--color-shadow-medium);
+
+  /* ================================================= */
+  /* ============= GEOMETRY & RADIUS ================= */
+  /* ================================================= */
+  
+  --radius-xs: 2px;     
+  --radius-s: 4px;      
+  --radius-m: 6px;     
+  --radius-l: 8px;     
+  --radius-xl: 10px;    
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES ================ */
+  /* ================================================= */
+
+  --font-family-default: "Helvetica Neue", "Arial", sans-serif; /* Clean, modern sans-serif */
+  --font-family-system: var(--font-family-default);
+  --font-weight-regular: 400; 
+  --font-weight-medium: 500;  
+  --font-weight-bold: 600;    
+}

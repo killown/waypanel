@@ -37,15 +37,3 @@ menubutton > button.toggle {
 }
 /* GTK-box systray icons -- END */
 
-.text-button {
-  border-radius: 0px;
-  background-color: transparent;
-  font-size: 12px;
-  color: var(--soft-text);
-  border-style: solid;
-  border-color: var(--header-border);
-}
-
-
-
-

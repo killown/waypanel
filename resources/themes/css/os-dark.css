@@ -1,11 +1,16 @@
+/* ================================================= */
+/* ========= GITHUB DARK DEFAULT (ROOT) ========== */
+/* ================================================= */
+
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - macOS ==== */
+  /* ==== CORE PALETTE (Theme Specific) - OS (Dark) ==== */
   /* ================================================= */
   
   /* Core Backgrounds */
   --color-bg-base: #1C1C1E;        /* View Primary (Content Body/Window Background) */
   --color-bg-window: #1C1C1E;
+  --color-bg-panel: #000000CB;
   --color-bg-popover: #2C2C2E;     /* Popovers should often be one level up from the base window */
   --color-bg-searchbar: #2C2C2E;
   --color-bg-button: #3A3A3C;      /* Normal buttons should have a distinct, slightly raised background */
@@ -24,7 +29,7 @@
   --color-fg-subtle: #6D6D70;      /* Label Quaternary */
   --color-fg-inverse: #000000;     /* New: For text on bright/accent backgrounds */
 
-  /* Accent Colors (macOS System Colors) */
+  /* Accent Colors (Os System Colors) */
   --color-accent-blue: #0A84FF;    /* Primary Accent (Active Window) */
   --color-accent-blue-dark: #007AFF; /* New: Slightly darker for pressed state */
   --color-accent-gray: #636366;    /* Inactive Accent (Inactive Window) */
@@ -43,9 +48,8 @@
   --color-shadow-medium: rgba(0, 0, 0, 0.3);
   --color-shadow-lighter: rgba(0, 0, 0, 0.15); /* For subtle, wide shadows */
 
-
   /* ================================================= */
-  /* ========= TRANSPARENCY AND VIBRANCY (macOS) ===== */
+  /* ========= TRANSPARENCY AND VIBRANCY (Os) ===== */
   /* ================================================= */
   
   --color-vibrancy-dark-blur: rgba(28, 28, 30, 0.96);   
@@ -57,7 +61,6 @@
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
   /* ================================================= */
 
-  /* Primary Background Hierarchy */
   --theme-bg-view-primary: var(--color-bg-base);
   --theme-bg-view-secondary: var(--color-bg-surface);
   --theme-bg-view-tertiary: var(--color-bg-raised);
@@ -77,51 +80,45 @@
 
   /* ================================================= */
   /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (New) ==== */
+  /* (These are the variables you defined that make this theme robust) */
   /* ================================================= */
   
-  /* Inputs, Text Views, and Fields */
-  --color-bg-entry-base: var(--color-bg-surface);         /* Text Input Field background */
-  --color-bg-entry-focus: var(--color-bg-raised);         /* Text Input Field when focused */
-  --color-bg-entry-disabled: var(--color-bg-alt-row);    /* Text Input Field when disabled */
-  --color-bg-textview: var(--color-bg-surface);           /* Multi-line TextView/Code Editor */
+  --color-bg-entry-base: var(--color-bg-surface);         
+  --color-bg-entry-focus: var(--color-bg-raised);         
+  --color-bg-entry-disabled: var(--color-bg-alt-row);    
+  --color-bg-textview: var(--color-bg-surface);           
   
-  /* Buttons and Interaction */
-  --color-bg-button-flat: transparent;                    /* Button with no background */
+  --color-bg-button-flat: transparent;                    
   --color-bg-button-flat-hover: var(--color-bg-transparent-active);
   --color-bg-button-flat-active: var(--color-bg-transparent-active);
-  --color-bg-button-normal: var(--color-bg-raised);       /* Button with standard background */
-  --color-bg-button-normal-hover: #48484A;                /* Slightly lighter hover state */
-  --color-bg-button-normal-active: var(--color-bg-surface); /* Darker pressed state */
-  --color-bg-button-suggested: var(--color-accent-blue);  /* Suggested/Primary Action Button */
+  --color-bg-button-normal: var(--color-bg-raised);       
+  --color-bg-button-normal-hover: #48484A;                
+  --color-bg-button-normal-active: var(--color-bg-surface); 
+  --color-bg-button-suggested: var(--color-accent-blue);  
   --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
   
-  /* Menus and Popovers (Separate from window background for easier depth control) */
-  --color-bg-menu-bar: var(--color-vibrancy-dark-blur);   /* The main menu bar container */
-  --color-bg-menu-popup: var(--color-bg-popover);         /* Dropdown Menu background (using popover variable) */
+  --color-bg-menu-bar: var(--color-vibrancy-dark-blur);   
+  --color-bg-menu-popup: var(--color-bg-popover);         
   --color-bg-menu-item-hover: var(--color-bg-transparent-active); 
-  --color-bg-popover-content: var(--color-bg-popover);    /* Popover body/content */
+  --color-bg-popover-content: var(--color-bg-popover);    
 
-  /* Lists, Trees, and Tabs */
-  --color-bg-list-header: var(--color-bg-surface);        /* List/Tree View Column Header */
-  --color-bg-tab-bar: var(--color-bg-surface);            /* Container for the tab buttons */
-  --color-bg-tab-active: var(--color-bg-base);            /* The currently selected tab's background */
-  --color-bg-tab-inactive: var(--color-bg-surface);       /* Inactive tab background */
-  --color-bg-tab-hover: var(--color-bg-raised);           /* Tab hover state */
-  --color-bg-treeview-header: var(--color-bg-surface);    /* Tree View header background */
+  --color-bg-list-header: var(--color-bg-surface);        
+  --color-bg-tab-bar: var(--color-bg-surface);            
+  --color-bg-tab-active: var(--color-bg-base);            
+  --color-bg-tab-inactive: var(--color-bg-surface);       
+  --color-bg-tab-hover: var(--color-bg-raised);           
+  --color-bg-treeview-header: var(--color-bg-surface);    
 
-  /* Check/Radio/Switches */
-  --color-bg-toggle-off: var(--color-fg-muted);           /* Toggle/Switch Off state background */
-  --color-bg-toggle-on: var(--color-accent-blue);          /* Toggle/Switch On state background */
-  --color-bg-check-radio-box: var(--color-bg-surface);    /* Checkbox/Radio button unchecked box color */
+  --color-bg-toggle-off: var(--color-fg-muted);           
+  --color-bg-toggle-on: var(--color-accent-blue);          
+  --color-bg-check-radio-box: var(--color-bg-surface);    
   
-  /* Scrollbars */
-  --color-bg-scrollbar-track: transparent;                /* Scrollbar track area */
-  --color-bg-scrollbar-slider: #6D6D70CC;                 /* Scrollbar thumb (Semi-transparent subtle) */
-  --color-bg-scrollbar-slider-hover: #8E8E93CC;           /* Scrollbar thumb hover */
+  --color-bg-scrollbar-track: transparent;                
+  --color-bg-scrollbar-slider: #6D6D70CC;                 
+  --color-bg-scrollbar-slider-hover: #8E8E93CC;           
   
-  /* Status Bars and Notifications */
-  --color-bg-status-bar: var(--color-bg-surface);         /* Status bar at bottom of window */
-  --color-bg-tooltip: var(--color-bg-raised);             /* Tooltip background */
+  --color-bg-status-bar: var(--color-bg-surface);         
+  --color-bg-tooltip: var(--color-bg-raised);             
 
 
   /* ================================================= */
@@ -154,8 +151,8 @@
   --theme-decoration-grid-line: #4D4D50; 
   --theme-decoration-keyboard-focus: var(--color-accent-blue);
   --theme-decoration-border-control: var(--color-separator-line); 
-  --color-border-entry-base: var(--color-separator-line);   /* Border color for text entries */
-  --color-border-entry-focus: var(--color-accent-blue);    /* Focus ring for text entries */
+  --color-border-entry-base: var(--color-separator-line);   
+  --color-border-entry-focus: var(--color-accent-blue);    
 
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
@@ -199,7 +196,8 @@
   --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
 
   /* ================================================= */
-  /* =============== SHADOWS AND OPACITY (macOS) ====== */
+  /* =============== SHADOWS AND OPACITY (Os) ====== */
+  /* (Completed with the full set of opacity primitives) */
   /* ================================================= */
 
   /* Raw Shadow Primitives */
@@ -207,7 +205,7 @@
   --shadow-medium: var(--color-shadow-medium);
   --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.08);
 
-  /* Opacity */
+  /* Opacity (FIX: Added standard set of opacity primitives) */
   --opacity-0: 0.0;
   --opacity-08: 0.08;
   --opacity-507: 0.507;
@@ -225,7 +223,7 @@
   --shadow-control-small-hover: none;
   --shadow-element-minimal: none;
 
-  /* macOS-Specific Shadows */
+  /* Os-Specific Shadows */
   --shadow-window-float: 0 10px 30px var(--color-shadow-lighter), 0 0 0 1px rgba(255, 255, 255, 0.05);
   --shadow-menubar-separator: inset 0 -1px 0 rgba(255, 255, 255, 0.05); 
   

@@ -1,0 +1,216 @@
+:root {
+  /* ================================================= */
+  /* ==== CORE PALETTE (Theme Specific) - NEXUS CONSOLE ==== */
+  /* ================================================= */
+  
+  --color-bg-base: #101010;          /* Deepest Background (Desktop/Dashboard) */
+  --color-bg-window: var(--color-bg-base); 
+  --color-bg-panel: rgba(25, 25, 25, 0.95); /* Mica/Acrylic Simulation */
+  --color-bg-popover: #252525;       /* Raised Popover/Menu */
+  --color-bg-searchbar: #303030;     /* Search/Input Field */
+  --color-bg-button: #383838;        /* Default Control Background */
+  --color-bg-button-hover: #484848;
+  --color-bg-button-active: #282828;
+  --color-bg-surface: #1B1B1B;       /* Primary Card/Tile Background */
+  --color-bg-raised: #252525;        /* Secondary Raised Card */
+  --color-bg-deep: #0A0A0A;          /* Footer/Taskbar */
+  --color-bg-alt-row: #181818;       /* Subtle row striping */
+  --color-bg-transparent-active: #107C1040; /* Semi-transparent Accent for hover/selection */
+  
+  --color-vibrancy-dark-blur: rgba(16, 16, 16, 0.9);
+  
+  --color-fg-primary: #FFFFFF;       /* Pure White Text */
+  --color-fg-secondary: #E0E0E0;     /* Secondary Text */
+  --color-fg-muted: #A0A0A0;         /* Disabled/Placeholder Text */
+  --color-fg-subtle: #808080;        /* Infolabel/Hint */
+  --color-fg-inverse: #000000;       /* Text on bright accents */
+
+  --color-accent-green: #107C10;     /* Signature Nexus Green */
+  --color-accent-green-dark: #005A00;
+  --color-accent-gray: #404040;
+  --color-status-success: var(--color-accent-green);
+  --color-status-danger: #E81123;    /* Status Red */
+  --color-status-warning: #F7AA12;    /* Status Yellow/Orange */
+  
+  --color-separator-line: #303030;   /* Subtle divider */
+  --color-highlight-line: #107C10;   /* Accent border */
+  
+  --color-3d-dark-shadow: transparent;
+  --color-3d-light-highlight: transparent;
+  --color-3d-border-dark: transparent;
+  --color-3d-border-light: transparent;
+
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+
+  --theme-bg-view-primary: var(--color-bg-window);
+  --theme-bg-view-secondary: var(--color-bg-surface);
+  --theme-bg-view-tertiary: var(--color-bg-raised);
+  --theme-bg-view-vibrant: var(--color-bg-panel); 
+
+  --theme-bg-control-base: var(--color-bg-button);
+  --theme-bg-selected-primary: var(--color-accent-green);
+  --theme-bg-selected-inactive: var(--color-bg-raised);
+  --theme-bg-selected-secondary: var(--color-bg-transparent-active);
+  --theme-bg-text-selection: #107C1080;
+  
+  --theme-bg-under-page: var(--color-bg-deep);
+  --theme-bg-alternating-row: var(--color-bg-alt-row);
+  --theme-bg-find-highlight: #F7AA1260;
+  --theme-bg-acrylic-backdrop: var(--color-vibrancy-dark-blur); 
+
+
+  /* ================================================= */
+  /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
+  /* ================================================= */
+  
+  --color-bg-entry-base: var(--color-bg-searchbar);                  
+  --color-bg-entry-focus: var(--color-bg-searchbar);                 
+  --color-bg-entry-disabled: var(--color-bg-alt-row);             
+  --color-bg-textview: var(--color-bg-searchbar);                    
+  
+  --color-bg-button-flat: transparent;                    
+  --color-bg-button-flat-hover: var(--color-bg-transparent-active);
+  --color-bg-button-flat-active: var(--color-bg-button-active);
+  --color-bg-button-normal: var(--color-bg-button);       
+  --color-bg-button-normal-hover: var(--color-bg-button-hover); 
+  --color-bg-button-normal-active: var(--color-bg-button-active); 
+  --color-bg-button-suggested: var(--color-accent-green);  
+  --color-bg-button-suggested-hover: var(--color-accent-green-dark);
+  
+  --color-bg-menu-bar: var(--color-bg-surface);   
+  --color-bg-menu-popup: var(--color-bg-popover);         
+  --color-bg-menu-item-hover: var(--color-bg-transparent-active); 
+  --color-bg-popover-content: var(--color-bg-popover);    
+
+  --color-bg-list-header: var(--color-bg-raised);        
+  --color-bg-tab-bar: var(--color-bg-surface);            
+  --color-bg-tab-active: var(--color-bg-raised);            
+  --color-bg-tab-inactive: var(--color-bg-surface);       
+  --color-bg-tab-hover: var(--color-bg-raised);           
+  --color-bg-treeview-header: var(--color-bg-raised);    
+
+  --color-bg-toggle-off: var(--color-fg-subtle);           
+  --color-bg-toggle-on: var(--color-accent-green);          
+  --color-bg-check-radio-box: var(--color-bg-searchbar);    
+  
+  --color-bg-scrollbar-track: transparent;                
+  --color-bg-scrollbar-slider: #505050;                 
+  --color-bg-scrollbar-slider-hover: #707070;           
+  
+  --color-bg-status-bar: var(--color-bg-surface);         
+  --color-bg-tooltip: #252525;             
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: var(--color-fg-primary);
+  --theme-fg-label-secondary: var(--color-fg-secondary);
+  --theme-fg-label-tertiary: var(--color-fg-muted);
+  --theme-fg-label-quaternary: var(--color-fg-subtle);
+  --theme-fg-label-inverse: var(--color-fg-inverse); 
+  
+  --theme-fg-control-text: var(--color-fg-primary);
+  --theme-fg-control-text-disabled: var(--color-fg-muted);
+  --theme-fg-link: var(--color-accent-green); 
+  --theme-fg-placeholder: var(--color-fg-muted);
+  --theme-fg-header-text: var(--color-fg-primary); 
+  
+  --theme-fg-text-selected: var(--color-fg-primary);
+  --theme-fg-text-alternate-selected: var(--color-fg-primary);
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: var(--color-separator-line);
+  --theme-decoration-grid-line: #202020; 
+  --theme-decoration-keyboard-focus: var(--color-accent-green);
+  --theme-decoration-border-control: var(--color-separator-line);
+  --color-border-entry-base: var(--color-separator-line);   
+  --color-border-entry-focus: var(--color-accent-green);    
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* ================================================= */
+  
+  --theme-status-accent: var(--color-accent-green);
+  --theme-status-accent-inactive: var(--color-accent-gray);
+  --theme-status-success: var(--color-status-success);
+  --theme-status-danger: var(--color-status-danger);
+  --theme-status-warning: var(--color-status-warning);
+  --theme-status-highlight-virtual: var(--color-bg-raised);
+
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
+  /* ================================================= */
+
+  --primary-bg: var(--theme-bg-view-primary);
+  --secondary-bg: var(--theme-bg-view-secondary);
+  --tertiary-bg: var(--theme-bg-view-tertiary);
+  --header-border: var(--theme-decoration-separator);
+
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+
+  --accent-blue: var(--theme-status-accent); /* Mapped to Nexus Green */
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  
+  --success-green-light: #107C1040; 
+  --window-control-hover-bg: var(--color-bg-button-hover);
+  --window-control-border-color: var(--color-bg-deep);
+
+  --dseg-shadow-soft: none;
+  --dseg-shadow-dark: none;
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY ============== */
+  /* ================================================= */
+
+  /* Modern, soft, dark shadows */
+  --shadow-dark: rgba(0, 0, 0, 0.4); 
+  --shadow-medium: rgba(0, 0, 0, 0.2);
+  --shadow-subtle-white: none; 
+
+  --shadow-elevated: 0 8px 16px var(--shadow-dark); 
+  --shadow-subtle: 0 2px 4px var(--shadow-medium);
+  --shadow-button-flat: 0 1px 2px var(--shadow-medium);
+  --shadow-control-small: var(--shadow-subtle); 
+  --shadow-control-small-hover: var(--shadow-elevated); 
+  --shadow-element-minimal: var(--shadow-subtle); 
+  
+  --shadow-raised-outer: none; 
+  --shadow-inset-inner: none;
+
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px #404040;
+  --shadow-neumorphic-outset-large: var(--shadow-elevated);
+  --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.8);
+
+  /* ================================================= */
+  /* ============= GEOMETRY & RADIUS ============= */
+  /* ================================================= */
+  
+  --radius-xs: 2px;     
+  --radius-s: 4px;      
+  --radius-m: 8px;      
+  --radius-l: 12px;     
+  --radius-xl: 16px;    
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES ================ */
+  /* ================================================= */
+
+  --font-family-default: "Segoe UI", "Roboto", "Helvetica Neue", sans-serif; 
+  --font-family-system: var(--font-family-default);
+  --font-weight-regular: 400; 
+  --font-weight-medium: 600;  
+  --font-weight-bold: 700;    
+}

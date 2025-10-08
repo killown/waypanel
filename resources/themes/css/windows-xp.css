@@ -1,0 +1,201 @@
+:root {
+  /* ================================================= */
+  /* ==== CORE PALETTE (Theme Specific) - Windows XP Luna Blue (Color Fix) ==== */
+  /* ================================================= */
+  
+  /* Core Backgrounds - Blue is dominant in base/title, light on surface */
+  --color-bg-base: #0057DC;        /* View Primary (BASE IS FORCED XP BLUE - Titlebar/Taskbar) */
+  --color-bg-window: #edead7;      /* XP Window Client Area */
+  --color-bg-surface: #edead7;     /* View Secondary (Sidebar/Control Base - XP Light Gray/Off-White) */
+  --color-bg-raised: #FFFFFF;      /* View Tertiary (Cards/Raised Elements - Pure White) */
+  --color-bg-deep: #003083;        /* Under Page (Deepest Blue - Desktop/Taskbar base) */
+  --color-bg-alt-row: #F5F4EE;     /* Alternating List Rows (Slightly Lighter off-white) */
+  --color-bg-transparent-active: rgba(0, 87, 220, 0.2); /* XP Blue hover transparency on light surfaces */
+
+  /* Core Foregrounds - FIXED: Standard text is BLACK on light surface. Secondary/Muted is dark gray. */
+  --color-fg-primary: #202020;     /* <-- FIXED: Label Primary (Black text on light surfaces) */
+  --color-fg-secondary: #404040;   /* <-- FIXED: Label Secondary/Header Text (Dark Gray on light) */
+  --color-fg-muted: #808080;       /* Label Tertiary/Disabled (Standard Gray) */
+  --color-fg-subtle: #A0A0A0;      /* Label Quaternary (Lighter Gray) */
+  --color-fg-inverse: #FFFFFF;     /* <-- FIXED: For text on BLUE/accent backgrounds (White) */
+
+  /* Accent Colors (Iconic Windows XP Tones) */
+  --color-accent-blue: #0057DC;    /* <-- FIXED: Primary Accent (Used for highlighting/selection borders - XP Blue) */
+  --color-accent-blue-dark: #003083; /* <-- FIXED: Slightly darker for pressed state (Deep Blue) */
+  --color-accent-gray: #B9D1EA;    /* Inactive Accent (Light Blue) */
+  --color-status-success: #81C046; /* XP Bud Green */
+  --color-status-danger: #DE482B;  /* XP Cinnabar Red */
+  --color-status-warning: #FCCF03; /* XP Tangerine Yellow */
+  --color-separator-line: #99AEC6; /* <-- FIXED: Separator Line (Light Blue-Gray border) */
+  
+  /* Status Color Backgrounds (Opacity on the Light Base) */
+  --color-status-success-bg: rgba(129, 192, 70, 0.2);
+  --color-status-danger-bg: rgba(222, 72, 43, 0.2);
+  --color-status-warning-bg: rgba(252, 207, 3, 0.2);
+
+  /* Shadow Primitives (Adjusted for contrast between blue and light surfaces) */
+  --color-shadow-dark: rgba(0, 0, 0, 0.4);
+  --color-shadow-medium: rgba(0, 0, 0, 0.2);
+  --color-shadow-lighter: rgba(0, 0, 0, 0.1);
+
+
+  /* ================================================= */
+  /* ========= TRANSPARENCY AND VIBRANCY (macOS structure, but solid XP blue) ===== */
+  /* ================================================= */
+  
+  --color-vibrancy-dark-blur: #0057DC;   /* Standard window/menu bar (Solid Blue) */
+  --color-vibrancy-light-blur: #B9D1EA;   /* <-- FIXED: Sidebar/control panel (Lighter Solid Blue) */
+  --opacity-vibrancy-bar: 1.0;          /* FIXED: Ensures opacity is 1.0 (Solid) */
+
+
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+
+  --theme-bg-view-primary: var(--color-bg-base);
+  --theme-bg-view-secondary: var(--color-bg-surface);
+  --theme-bg-view-tertiary: var(--color-bg-raised);
+  --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); /* Blue Header/Menu */
+
+  /* Interactive/State Backgrounds */
+  --theme-bg-control-base: #FFFFFF; /* White control backgrounds for contrast on light background */
+  --theme-bg-selected-primary: var(--color-accent-blue); /* XP Blue selection highlight */
+  --theme-bg-selected-inactive: var(--color-accent-gray);
+  --theme-bg-selected-secondary: var(--color-bg-transparent-active);
+  --theme-bg-text-selection: #0057DC60;   
+  
+  /* Specialized Backgrounds */
+  --theme-bg-under-page: var(--color-bg-deep);
+  --theme-bg-alternating-row: var(--color-bg-alt-row);
+  --theme-bg-find-highlight: #FCCF0360;
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: var(--color-fg-primary); 
+  --theme-fg-label-secondary: var(--color-fg-secondary);
+  --theme-fg-label-tertiary: var(--color-fg-muted);
+  --theme-fg-label-quaternary: var(--color-fg-subtle);
+  --theme-fg-label-inverse: var(--color-fg-inverse); 
+  
+  /* Interactive Foreground */
+  --theme-fg-control-text: var(--color-fg-primary); /* Black text on white controls */
+  --theme-fg-control-text-disabled: var(--color-fg-muted);
+  --theme-fg-link: var(--color-accent-blue); /* XP Blue links on light background */
+  --theme-fg-placeholder: var(--color-fg-muted);
+  --theme-fg-header-text: var(--color-fg-inverse); /* White Header Text on Blue */
+  
+  /* State Foreground */
+  --theme-fg-text-selected: var(--color-fg-inverse); /* White text on blue selection */
+  --theme-fg-text-alternate-selected: var(--color-fg-primary); /* Black text on light selection */
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: var(--color-separator-line);
+  --theme-decoration-grid-line: #D9D9D9; /* <-- FIXED: Light grid line on light surface */
+  --theme-decoration-keyboard-focus: var(--color-accent-blue); /* XP Blue Focus Ring */
+  --theme-decoration-border-control: var(--color-separator-line); 
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* ================================================= */
+  
+  --theme-status-accent: var(--color-accent-blue);
+  --theme-status-accent-inactive: var(--color-accent-gray);
+  --theme-status-success: var(--color-status-success);
+  --theme-status-danger: var(--color-status-danger);
+  --theme-status-warning: var(--color-status-warning);
+  --theme-status-highlight-virtual: var(--color-bg-raised);
+
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
+  /* ================================================= */
+
+  /* Backgrounds */
+  --primary-bg: var(--color-bg-window); /* <-- Mapped to the light window body color */
+  --secondary-bg: var(--theme-bg-view-vibrant); 
+  --tertiary-bg: var(--theme-bg-view-tertiary);
+  --header-border: var(--theme-decoration-separator);
+
+  /* Foreground/Text */
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+
+  /* Functional Colors */
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  
+  /* Specific Color Variants */
+  --success-green-light: var(--color-status-success-bg); 
+  --window-control-hover-bg: var(--color-bg-transparent-active);
+  --window-control-border-color: var(--color-separator-line); /* <-- FIXED: Border color for controls */
+
+  /* DSEG Font Shadows - Updated for light backgrounds */
+  --dseg-shadow-soft: rgba(0, 0, 0, 0.1);
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY (macOS structure) ====== */
+  /* ================================================= */
+
+  /* Raw Shadow Primitives */
+  --shadow-dark: var(--color-shadow-dark);
+  --shadow-medium: var(--color-shadow-medium);
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.5); /* Lighter shadow for light BG */
+
+  /* Opacity variables remain unchanged, as per instruction */
+  --opacity-0: 0.0;
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  /* Shadow Styles (Adjusted for XP look) */
+  --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
+  --shadow-elevated: 0 2px 4px var(--shadow-medium); 
+  --shadow-button-flat: none;
+  --shadow-control-small: inset 0 0 0 1px var(--color-separator-line), inset 0 1px 0 var(--shadow-subtle-white); /* XP inset look */
+  --shadow-control-small-hover: 0 0 0 1px var(--color-accent-blue); 
+  --shadow-element-minimal: 0 1px 1px var(--color-shadow-medium);
+
+  /* macOS-Specific Shadows (Adjusted for XP look) */
+  --shadow-window-float: 0 6px 15px var(--color-shadow-dark); 
+  --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line); 
+  
+  /* Neumorphic/Inset Inversion (Used for recessed/pressed control look) */
+  --shadow-neumorphic-inset-medium: inset 0 1px 2px var(--color-shadow-medium), inset 0 -1px 0 var(--shadow-subtle-white);
+  --shadow-neumorphic-outset-large: 0 1px 2px var(--color-shadow-medium);
+  --shadow-neumorphic-press: inset 0 1px 2px var(--color-shadow-dark);
+
+  /* ================================================= */
+  /* ============= GEOMETRY & RADIUS (New) ============= */
+  /* ================================================= */
+  
+  --radius-xs: 2px;     
+  --radius-s: 4px;      
+  --radius-m: 4px;      
+  --radius-l: 6px;      
+  --radius-xl: 6px;    
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES ================ */
+  /* ================================================= */
+
+  --font-family-default: "Tahoma", "Segoe UI", sans-serif; 
+  --font-family-system: var(--font-family-default);
+  --font-weight-regular: 400; 
+  --font-weight-medium: 500;  
+  --font-weight-bold: 700;    
+}

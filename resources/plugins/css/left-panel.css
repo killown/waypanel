@@ -1,6 +1,6 @@
 .left-panel {
   -gtk-icon-size: 48px;
-  background: var(--shadow-dark);
+  background: var(--color-bg-base);
   border-top-right-radius: 10px;
   border-bottom-right-radius: 10px;
   box-shadow:

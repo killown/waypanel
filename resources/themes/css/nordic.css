@@ -1,68 +1,179 @@
-/* ================================================= */
-/* ========= NORD DARK AMBIENCE (ROOT) =========== */
-/* ================================================= */
-
 :root {
+  /* ================================================= */
+  /* ===== CORE PALETTE (Theme Specific) - NORD DARK ===== */
+  /* ================================================= */
+
+  /* Nord Color Definitions */
+  --nord0: #2E3440;
+  --nord1: #3B4252;
+  --nord2: #434C5E;
+  --nord3: #4C566A;
+  --nord4: #D8DEE9;
+  --nord5: #E5E9F0;
+  --nord6: #ECEFF4;
+  --nord7: #8FBCBB;
+  --nord8: #88C0D0;
+  --nord9: #81A1C1;
+  --nord10: #5E81AC;
+  --nord11: #BF616A;
+  --nord12: #D08770;
+  --nord13: #EBCB8B;
+  --nord14: #A3BE8C;
+  --nord15: #B48EAD;
+
+  /* Core Backgrounds (Filled In) */
+  --color-bg-base: var(--nord0);
+  --color-bg-window: var(--nord0);
+  --color-bg-panel: #2E3440cb;         /* Panel with transparency (nord0 + cb) */
+  --color-bg-popover: var(--nord1);     /* nord1 */
+  --color-bg-searchbar: var(--nord1);
+  --color-bg-button: var(--nord2);      /* nord2 */
+  --color-bg-button-hover: var(--nord3); /* nord3 */
+  --color-bg-button-active: var(--nord1); /* Recede to nord1 */
+  --color-bg-surface: var(--nord1);     /* View Secondary/Sidebar */
+  --color-bg-raised: var(--nord2);      /* View Tertiary/Cards */
+  --color-bg-deep: #242933;            /* Under Page */
+  --color-bg-alt-row: var(--nord1);
+  --color-bg-transparent-active: rgba(136, 192, 208, 0.15); /* nord8 transparency */
+
+  /* Transparency and Vibrancy (Using Nord colors) */
+  --color-vibrancy-dark-blur: rgba(46, 52, 64, 0.96);    /* Opaque nord0 */
+  --color-vibrancy-light-blur: rgba(59, 66, 82, 0.9);     /* Opaque nord1 */
+  --opacity-vibrancy-bar: 0.96;                         
+
+  /* Core Foregrounds */
+  --color-fg-primary: var(--nord4);
+  --color-fg-secondary: var(--nord5);
+  --color-fg-muted: var(--nord3);
+  --color-fg-subtle: #6E7781;
+  --color-fg-inverse: var(--nord0); /* Dark text on bright/accent backgrounds */
+
+  /* Accent Colors (Nord System Colors) */
+  --color-accent-blue: var(--nord8);
+  --color-accent-blue-dark: var(--nord10); /* Deep Blue for pressed */
+  --color-accent-gray: var(--nord3);
+  --color-status-success: var(--nord14);
+  --color-status-danger: var(--nord11);
+  --color-status-warning: var(--nord12);
+  --color-separator-line: var(--nord3);
+  
+  /* Status Color Backgrounds */
+  --color-status-success-bg: rgba(163, 190, 140, 0.2);
+  --color-status-danger-bg: rgba(191, 97, 106, 0.2);
+  --color-status-warning-bg: rgba(208, 135, 112, 0.2);
+
+  /* Shadow Primitives */
+  --color-shadow-dark: rgba(0, 0, 0, 0.7);
+  --color-shadow-medium: rgba(0, 0, 0, 0.5);
+  --color-shadow-lighter: rgba(0, 0, 0, 0.3);
+
+  
   /* ================================================= */
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
   /* ================================================= */
 
-  /* Primary Background Hierarchy (Used for main canvas/editor) */
-  --theme-bg-view-primary: #2E3440;   /* nord0: Deepest Dark (Main Body/Editor) */
-  --theme-bg-view-secondary: #3B4252; /* nord1: Mid Dark (Sidebars/Panels) */
-  --theme-bg-view-tertiary: #434C5E;  /* nord2: Less Dark (Raised Surfaces) */
+  --theme-bg-view-primary: var(--nord0);
+  --theme-bg-view-secondary: var(--nord1);
+  --theme-bg-view-tertiary: var(--nord2);
+  --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); 
 
   /* Interactive/State Backgrounds */
-  --theme-bg-control-base: #4C566A;   /* nord3: Control/Input Background */
-  --theme-bg-selected-primary: #88C0D0; /* nord8: Primary Blue Accent */
-  --theme-bg-selected-secondary: #4C566A; /* nord3: Hover/Subtle Selection */
-  --theme-bg-text-selection: #5E81AC60; /* nord10 with transparency */
+  --theme-bg-control-base: var(--nord3);
+  --theme-bg-selected-primary: var(--nord8);
+  --theme-bg-selected-inactive: var(--nord3);
+  --theme-bg-selected-secondary: var(--color-bg-transparent-active);
+  --theme-bg-text-selection: #5E81AC60;   
   
   /* Specialized Backgrounds */
-  --theme-bg-under-page: #242933;     /* Slightly deeper than nord0 */
-  --theme-bg-alternating-row: #3B4252;
-  --theme-bg-find-highlight: #EBCB8B40; /* nord13 (Info) with transparency */
+  --theme-bg-under-page: var(--color-bg-deep);
+  --theme-bg-alternating-row: var(--nord1);
+  --theme-bg-find-highlight: #EBCB8B40;
+
+  /* ================================================= */
+  /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
+  /* ================================================= */
+  
+  --color-bg-entry-base: var(--nord1);         
+  --color-bg-entry-focus: var(--nord2);         
+  --color-bg-entry-disabled: var(--nord1);    
+  --color-bg-textview: var(--nord1);           
+  
+  --color-bg-button-flat: transparent;                    
+  --color-bg-button-flat-hover: var(--color-bg-transparent-active);
+  --color-bg-button-flat-active: var(--color-bg-transparent-active);
+  --color-bg-button-normal: var(--nord2);       
+  --color-bg-button-normal-hover: var(--color-bg-button-hover); 
+  --color-bg-button-normal-active: var(--color-bg-button-active); 
+  --color-bg-button-suggested: var(--nord10);  
+  --color-bg-button-suggested-hover: var(--color-accent-blue);
+  
+  --color-bg-menu-bar: var(--color-vibrancy-dark-blur);   
+  --color-bg-menu-popup: var(--color-bg-popover);         
+  --color-bg-menu-item-hover: var(--color-bg-transparent-active); 
+  --color-bg-popover-content: var(--color-bg-popover);    
+
+  --color-bg-list-header: var(--nord2);        
+  --color-bg-tab-bar: var(--nord1);            
+  --color-bg-tab-active: var(--nord0);            
+  --color-bg-tab-inactive: var(--nord1);       
+  --color-bg-tab-hover: var(--nord2);           
+  --color-bg-treeview-header: var(--nord2);    
+
+  --color-bg-toggle-off: var(--nord3);           
+  --color-bg-toggle-on: var(--nord8);          
+  --color-bg-check-radio-box: var(--nord1);    
+  
+  --color-bg-scrollbar-track: transparent;                
+  --color-bg-scrollbar-slider: #4C566ACC;                 
+  --color-bg-scrollbar-slider-hover: #3B4252CC;           
+  
+  --color-bg-status-bar: var(--nord2);         
+  --color-bg-tooltip: var(--nord2);             
 
 
   /* ================================================= */
   /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
   /* ================================================= */
 
-  --theme-fg-label-primary: #D8DEE9;    /* nord4: Primary Text (Light) */
-  --theme-fg-label-secondary: #E5E9F0;  /* nord5: Secondary Text (Brighter) */
-  --theme-fg-label-tertiary: #4C566A;   /* nord3: Disabled Text/Comments/Punctuation */
-  --theme-fg-label-quaternary: #6E7781; /* Darker than nord3 for ultra-subtle */
+  --theme-fg-label-primary: var(--nord4);
+  --theme-fg-label-secondary: var(--nord5);
+  --theme-fg-label-tertiary: var(--nord3);
+  --theme-fg-label-quaternary: var(--color-fg-subtle);
+  --theme-fg-label-inverse: var(--color-fg-inverse); 
   
   /* Interactive Foreground */
-  --theme-fg-control-text: #D8DEE9;
-  --theme-fg-control-text-disabled: #4C566A;
-  --theme-fg-link: #88C0D0;           /* nord8: Primary Blue for links */
-  --theme-fg-placeholder: #4C566A;
-  --theme-fg-header-text: #ECEFF4;   /* nord6 */
+  --theme-fg-control-text: var(--nord4);
+  --theme-fg-control-text-disabled: var(--nord3);
+  --theme-fg-link: var(--nord8);
+  --theme-fg-placeholder: var(--nord3);
+  --theme-fg-header-text: var(--nord6);
   
   /* State Foreground */
-  --theme-fg-text-selected: #2E3440; /* nord0: Dark text on bright selection */
-  --theme-fg-text-alternate-selected: #D8DEE9;
+  --theme-fg-text-selected: var(--nord0); 
+  --theme-fg-text-alternate-selected: var(--nord4); 
 
 
   /* ================================================= */
   /* ============= DECORATION & SEPARATORS ============= */
   /* ================================================= */
 
-  --theme-decoration-separator: #4C566A; /* nord3: Separators/Borders */
-  --theme-decoration-grid-line: #4C566A;
-  --theme-decoration-keyboard-focus: #5E81AC; /* nord10: Deep Blue - Focus Ring */
-
+  --theme-decoration-separator: var(--nord3);
+  --theme-decoration-grid-line: var(--nord3);
+  --theme-decoration-keyboard-focus: var(--nord10);
+  --theme-decoration-border-control: var(--nord3); 
+  --color-border-entry-base: var(--nord3);   
+  --color-border-entry-focus: var(--nord10);    
 
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
   /* ================================================= */
   
-  --theme-status-accent: #88C0D0;  /* nord8: Blue (Primary Action Color) */
-  --theme-status-success: #A3BE8C; /* nord14: Green */
-  --theme-status-danger: #BF616A;  /* nord11: Red */
-  --theme-status-warning: #D08770; /* nord12: Orange */
-  --theme-status-highlight-virtual: #4C566A; /* nord3 */
+  --theme-status-accent: var(--nord8);
+  --theme-status-accent-inactive: var(--nord3);
+  --theme-status-success: var(--nord14);
+  --theme-status-danger: var(--nord11);
+  --theme-status-warning: var(--nord12);
+  --theme-status-highlight-virtual: var(--nord3);
 
 
   /* ================================================= */
@@ -86,10 +197,67 @@
   --danger-red: var(--theme-status-danger);
   
   /* Specific Color Variants */
-  --success-green-light: rgba(163, 190, 140, 0.2);
-  --window-control-hover-bg: #434C5E; /* nord2 */
-  --window-control-border-color: #2E3440; /* nord0 */
+  --success-green-light: var(--color-status-success-bg);
+  --window-control-hover-bg: var(--nord2);
+  --window-control-border-color: var(--nord0);
 
-  /* Shadows */
-  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.5); 
+  /* DSEG Font Shadows (Simplified) */
+  --dseg-shadow-soft: rgba(216, 222, 233, 0.1);
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY (ADDED) ====== */
+  /* ================================================= */
+
+  /* Raw Shadow Primitives */
+  --shadow-dark: var(--color-shadow-dark);
+  --shadow-medium: var(--color-shadow-medium);
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* Opacity (Standardized) */
+  --opacity-0: 0.0;
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  /* Shadow Styles (Generalised by prominence/function) */
+  --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
+  --shadow-elevated: 0 4px 12px var(--shadow-medium);
+  --shadow-button-flat: none;
+  --shadow-control-small: none;
+  --shadow-control-small-hover: none;
+  --shadow-element-minimal: none;
+
+  /* Specialized Shadows */
+  --shadow-window-float: 0 10px 30px var(--color-shadow-lighter), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-menubar-separator: inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  
+  /* Neumorphic/Inset Inversion */
+  --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--nord3);
+  --shadow-neumorphic-outset-large: 0 2px 4px var(--color-shadow-medium);
+  --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.8);
+
+  /* ================================================= */
+  /* ============= GEOMETRY & RADIUS (ADDED) ============= */
+  /* ================================================= */
+  
+  --radius-xs: 4px;     
+  --radius-s: 6px;      
+  --radius-m: 8px;      
+  --radius-l: 10px;     
+  --radius-xl: 12px;    
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES (ADDED) ================ */
+  /* ================================================= */
+
+  --font-family-default: "Fira Code", "Roboto Mono", sans-serif;
+  --font-family-system: var(--font-family-default);
+  --font-weight-regular: 400; 
+  --font-weight-medium: 500;  
+  --font-weight-bold: 700;    
 }

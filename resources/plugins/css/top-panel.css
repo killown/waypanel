@@ -1,5 +1,5 @@
 .top-panel {
-  background-color: var(--shadow-dark);
+  background-color: var(--color-bg-panel);
   color: var(--main-text);
   font-weight: 400;
   box-shadow:

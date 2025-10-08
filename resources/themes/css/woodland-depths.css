@@ -1,0 +1,250 @@
+:root {
+  /* ================================================= */
+  /* ==== CORE PALETTE (Theme Specific) - Woodland Depths (Forest Green & Moss Green) ==== */
+  /* ================================================= */
+
+  /* Thematic Tonal Palette Base */
+  --color-shade-void: #020d01;      /* Deepest Black-Green/Near Black */
+  --color-shade-stone: #041a06;     /* Deep Forest Green Background */
+  --color-shade-pale: #e8ffe8;      /* Pale White/Lichen Text */
+  --color-shade-soul: #588157;      /* Primary Accent (Moss Green) */
+
+  /* Core Backgrounds - Mapping to Dark Tiers */
+  --color-bg-deep: var(--color-shade-void);  /* Purest Deep Green */
+  --color-bg-base: var(--color-shade-stone); /* View Primary (Content Area) */
+  --color-bg-window: #0b330e;        /* Window/Panel Background (Darker Forest Green) */
+  --color-bg-panel: var(--color-bg-window); 
+  --color-bg-popover: #154c19;       /* Popovers/Menus (Elevated Dark Green) */
+  --color-bg-searchbar: #236628;
+  --color-bg-button: #236628;        /* Normal buttons */
+  --color-bg-button-hover: #317d36;  /* Slight lift on hover */
+  --color-bg-button-active: #154c19; /* Pressed state */
+  --color-bg-surface: var(--color-bg-window);     /* View Secondary (Sidebar) */
+  --color-bg-raised: var(--color-bg-popover);      /* View Tertiary (Cards/Elevated Elements) */
+  --color-bg-alt-row: #07260a;       /* Subtle alternating row difference */
+  --color-bg-transparent-active: rgba(88, 129, 87, 0.4); /* Moss Green transparent (40%) */
+
+  /* Core Foregrounds - Pale and Ghostly */
+  --color-fg-primary: var(--color-shade-pale);     /* Label Primary (Lichen White) */
+  --color-fg-secondary: #a0c4a0;   /* Label Secondary (Soft Green-Gray) */
+  --color-fg-muted: #759c75;       /* Label Tertiary/Disabled (Muted Green) */
+  --color-fg-subtle: #4e6e4e;      /* Label Quaternary (Deep Muted) */
+  --color-fg-inverse: #041a06;     /* For text on bright/accent backgrounds (Dark Green) */
+
+  /* Accent Colors (Moss, Bright Green, Yellow) */
+  --color-accent-blue: var(--color-shade-soul);    /* Primary Accent Moss Green */
+  --color-accent-blue-dark: #4a6c49; /* Darker Moss Green */
+  --color-accent-gray: #759c75;    /* Inactive Accent */
+  --color-status-success: #70c745;  /* Bright Lime/Fresh Growth */
+  --color-status-danger: #d94e4e;  /* Autumnal Red/Danger */
+  --color-status-warning: #ffcc66;  /* Sunlight Yellow/Warning */
+  --color-separator-line: #236628; /* Separator/Border */
+
+  /* Status Color Backgrounds (Ensuring visibility) */
+  --color-status-success-bg: rgba(112, 199, 69, 0.35); 
+  --color-status-danger-bg: rgba(217, 78, 78, 0.35); 
+  --color-status-warning-bg: rgba(255, 204, 102, 0.35);
+
+  /* Shadow Primitives (Subtle, dark shadows for definition) */
+  --color-shadow-dark: rgba(0, 0, 0, 0.9);
+  --color-shadow-medium: rgba(0, 0, 0, 0.7);
+  --color-shadow-lighter: rgba(0, 0, 0, 0.4);
+
+
+  /* ================================================= */
+  /* ========= TRANSPARENCY AND VIBRANCY (Advanced UI Structure) ===== */
+  /* ================================================= */
+  
+  --color-vibrancy-dark-blur: var(--color-bg-window);   
+  --color-vibrancy-light-blur: var(--color-bg-popover);   
+  --opacity-vibrancy-bar: 1.0;                         
+
+
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+
+  --theme-bg-view-primary: var(--color-bg-base); 
+  --theme-bg-view-secondary: var(--color-bg-surface); 
+  --theme-bg-view-tertiary: var(--color-bg-raised); 
+  --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); 
+
+  /* Interactive/State Backgrounds */
+  --theme-bg-control-base: var(--color-bg-raised);
+  --theme-bg-selected-primary: var(--color-accent-blue); /* Moss Green selection */
+  --theme-bg-selected-inactive: var(--color-accent-gray);
+  --theme-bg-selected-secondary: var(--color-bg-transparent-active);
+  --theme-bg-text-selection: #58815770;   /* Moss Green text selection */
+  
+  /* Specialized Backgrounds */
+  --theme-bg-under-page: var(--color-bg-deep); 
+  --theme-bg-alternating-row: var(--color-bg-alt-row);
+  --theme-bg-find-highlight: #ffcc6660;
+
+
+  /* ================================================= */
+  /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
+  /* ================================================= */
+  
+  --color-bg-entry-base: #154c19;         
+  --color-bg-entry-focus: #236628;         
+  --color-bg-entry-disabled: var(--color-bg-alt-row);    
+  --color-bg-textview: var(--color-bg-entry-base);           
+  
+  --color-bg-button-flat: transparent;                    
+  --color-bg-button-flat-hover: rgba(88, 129, 87, 0.4);
+  --color-bg-button-flat-active: rgba(88, 129, 87, 0.5);
+  --color-bg-button-normal: var(--color-bg-raised);       
+  --color-bg-button-normal-hover: var(--color-bg-button-hover); 
+  --color-bg-button-normal-active: var(--color-bg-button-active); 
+  --color-bg-button-suggested: var(--color-accent-blue);  
+  --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
+  
+  --color-bg-menu-bar: var(--color-bg-window);           
+  --color-bg-menu-popup: var(--color-bg-popover);         
+  --color-bg-menu-item-hover: rgba(88, 129, 87, 0.4); 
+  --color-bg-popover-content: var(--color-bg-popover);    
+
+  --color-bg-list-header: var(--color-bg-raised);        
+  --color-bg-tab-bar: var(--color-bg-surface);            
+  --color-bg-tab-active: var(--color-bg-popover);            
+  --color-bg-tab-inactive: var(--color-bg-surface);       
+  --color-bg-tab-hover: var(--color-bg-raised);           
+  --color-bg-treeview-header: var(--color-bg-raised);    
+
+  --color-bg-toggle-off: var(--color-fg-muted);           
+  --color-bg-toggle-on: var(--color-accent-blue);          
+  --color-bg-check-radio-box: var(--color-bg-raised);    
+  
+  --color-bg-scrollbar-track: transparent;                
+  --color-bg-scrollbar-slider: #759c7580;                 
+  --color-bg-scrollbar-slider-hover: #a0c4a090;           
+  
+  --color-bg-status-bar: var(--color-bg-window);         
+  --color-bg-tooltip: var(--color-bg-popover);             
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: var(--color-fg-primary);
+  --theme-fg-label-secondary: var(--color-fg-secondary);
+  --theme-fg-label-tertiary: var(--color-fg-muted);
+  --theme-fg-label-quaternary: var(--color-fg-subtle);
+  --theme-fg-label-inverse: var(--color-fg-inverse); 
+  
+  --theme-fg-control-text: var(--color-fg-primary); 
+  --theme-fg-control-text-disabled: var(--color-fg-subtle);
+  --theme-fg-link: var(--color-accent-blue); /* Moss Green link color */
+  --theme-fg-placeholder: var(--color-fg-muted);
+  --theme-fg-header-text: var(--color-fg-primary);
+  
+  --theme-fg-text-selected: var(--color-fg-inverse); 
+  --theme-fg-text-alternate-selected: var(--color-fg-primary); 
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: var(--color-separator-line);
+  --theme-decoration-grid-line: #154c19; 
+  --theme-decoration-keyboard-focus: var(--color-accent-blue); 
+  --theme-decoration-border-control: var(--color-separator-line); 
+  --color-border-entry-base: var(--color-separator-line);
+  --color-border-entry-focus: var(--color-accent-blue);
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* ================================================= */
+  
+  --theme-status-accent: var(--color-accent-blue);
+  --theme-status-accent-inactive: var(--color-accent-gray);
+  --theme-status-success: var(--color-status-success);
+  --theme-status-danger: var(--color-status-danger);
+  --theme-status-warning: var(--color-status-warning);
+  --theme-status-highlight-virtual: var(--color-bg-raised);
+
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (Used by Base CSS) ====== */
+  /* ================================================= */
+
+  --primary-bg: var(--theme-bg-view-primary);
+  --secondary-bg: var(--theme-bg-view-secondary);
+  --tertiary-bg: var(--theme-bg-view-tertiary);
+  --header-border: var(--theme-decoration-separator);
+
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--color-status-danger);
+  
+  --success-green-light: var(--color-status-success-bg); 
+  --window-control-hover-bg: var(--color-bg-transparent-active);
+  --window-control-border-color: var(--primary-bg);
+
+  --dseg-shadow-soft: rgba(255, 255, 255, 0.1);
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.5);
+
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY ============== */
+  /* ================================================= */
+
+  --shadow-dark: var(--color-shadow-dark);
+  --shadow-medium: var(--color-shadow-medium);
+  --shadow-subtle-white: 0 0 0 rgba(255, 255, 255, 0.0);
+
+  /* Opacity (Kept for compatibility) */
+  --opacity-0: 0;
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  /* Shadow Styles */
+  --shadow-subtle: 0 1px 3px var(--color-shadow-lighter);
+  --shadow-elevated: 0 4px 10px var(--color-shadow-medium); 
+  --shadow-button-flat: none;
+  --shadow-control-small: none;
+  --shadow-control-small-hover: none;
+  --shadow-element-minimal: none;
+
+  /* Specialized Shadow Variables */
+  --shadow-window-float: 0 6px 15px var(--color-shadow-dark); 
+  --shadow-menubar-separator: inset 0 -1px 0 #154c19; 
+  
+  /* Inset/Outset Styles */
+  --shadow-neumorphic-inset-medium: inset 0 1px 4px var(--color-shadow-medium);
+  --shadow-neumorphic-outset-large: 0 2px 4px var(--color-shadow-lighter);
+  --shadow-neumorphic-press: inset 0 1px 3px var(--color-shadow-dark);
+
+  /* ================================================= */
+  /* ============= GEOMETRY & RADIUS ================= */
+  /* ================================================= */
+  
+  --radius-xs: 2px;     
+  --radius-s: 3px;      
+  --radius-m: 4px;     
+  --radius-l: 6px;     
+  --radius-xl: 8px;    
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES ================ */
+  /* ================================================= */
+
+  --font-family-default: "Georgia", serif; /* Classic, earthy feel */
+  --font-family-system: var(--font-family-default);
+  --font-weight-regular: 400; 
+  --font-weight-medium: 500;  
+  --font-weight-bold: 600;    
+}
