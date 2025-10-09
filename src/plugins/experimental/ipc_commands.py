@@ -58,6 +58,7 @@ def get_plugin_class():
         def __init__(self, panel_instance: Any):
             super().__init__(panel_instance)
             self.data_store = _DevDataStore()
+            self._panel_instance = panel_instance
 
         def on_start(self):
             """Registers synchronous IPC commands when the panel starts."""
@@ -71,13 +72,14 @@ def get_plugin_class():
                 self.ipc_server.register_command(
                     "get_status_data", self._handle_get_status
                 )
-                # New command to list all available commands
                 self.ipc_server.register_command(
                     "list_commands", self._handle_list_commands
                 )
-
+                self.ipc_server.register_command(
+                    "plugin_control", self._handle_plugin_control
+                )
                 self.logger.info(
-                    "Dev IPC commands registered successfully: get_config_data, get_plugins_data, get_status_data, list_commands"
+                    "Dev IPC commands registered successfully: get_config_data, get_plugins_data, get_status_data, list_commands, plugin_control"
                 )
             else:
                 self.logger.error(
@@ -144,6 +146,47 @@ def get_plugin_class():
                 return {
                     "status": "error",
                     "command": "list_commands",
+                    "message": str(e),
+                }
+
+        def _handle_plugin_control(self, args):
+            """Handler for 'plugin_control' command: enables or disables a plugin."""
+            command_name = "plugin_control"
+            if len(args) < 2:
+                return {
+                    "status": "error",
+                    "command": command_name,
+                    "message": "Missing arguments. Usage: [plugin_name, 'enable'/'disable']",
+                }
+            plugin_name = args[0]
+            action = args[1].lower().strip()
+            print(action, plugin_name)
+            if action not in ["enable", "disable"]:
+                return {
+                    "status": "error",
+                    "command": command_name,
+                    "message": f"Invalid action '{action}'. Must be 'enable' or 'disable'.",
+                }
+            try:
+                plugin_loader = self._panel_instance.plugin_loader
+                metadata = plugin_loader.plugin_metadata_map[plugin_name]["metadata"]
+                print(metadata)
+                if action == "disable":
+                    plugin_loader.disable_plugin(plugin_name)
+                else:
+                    plugin_loader.enable_plugin(plugin_name, metadata)
+                return {
+                    "status": "ok",
+                    "command": command_name,
+                    "data": f"Plugin '{plugin_name}' successfully set to state '{action}'.",
+                }
+            except Exception as e:
+                self.logger.error(
+                    f"Error handling {command_name} for {plugin_name}: {e}"
+                )
+                return {
+                    "status": "error",
+                    "command": command_name,
                     "message": str(e),
                 }
 

@@ -383,6 +383,7 @@ class PluginLoader:
         for metadata in self.plugin_metadata:
             module_name = metadata[0].__name__.split(".")[-1]
             all_plugins[module_name] = metadata
+            self.plugin_metadata_map[module_name]["metadata"] = metadata
         in_degree = {name: 0 for name in all_plugins}
         adj_list = {name: [] for name in all_plugins}
         for name, metadata in all_plugins.items():
