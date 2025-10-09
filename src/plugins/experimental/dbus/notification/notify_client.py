@@ -25,7 +25,7 @@ def get_plugin_class():
             self.vbox.set_margin_bottom(10)
             self.vbox.set_margin_start(10)
             self.show_messages = None
-            self.max_notifications = self.get_config(
+            self.max_notifications = self.get_plugin_setting(
                 ["notify", "client", "max_notifications"], 5
             )
             self.vbox.set_margin_end(10)
@@ -49,7 +49,7 @@ def get_plugin_class():
         def update_dnd_switch_state(self):
             """Update the Do Not Disturb switch state based on the server setting."""
             try:
-                show_messages = self.get_config(
+                show_messages = self.get_plugin_setting(
                     ["notify", "server", "show_messages"], True
                 )
                 self.dnd_switch.set_active(not show_messages)
@@ -192,10 +192,10 @@ def get_plugin_class():
 
         def create_notification_box(self, notification):
             """Create a notification box. No explicit link button is added."""
-            body_max_width_chars = self.get_config(
+            body_max_width_chars = self.get_plugin_setting(
                 ["notify", "client", "body_max_width_chars"], 50
             )
-            notification_icon_size = self.get_config(
+            notification_icon_size = self.get_plugin_setting(
                 ["notify", "client", "notification_icon_size"], 64
             )
             hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 30)
@@ -333,10 +333,10 @@ def get_plugin_class():
         def open_popover_notifications(self, *_):
             if not hasattr(self, "popover") or not self.popover:
                 self.popover = self.gtk.Popover.new()
-                self.popover_width = self.get_config(
+                self.popover_width = self.get_plugin_setting(
                     ["notify", "client", "popover_width"], 500
                 )
-                self.popover_height = self.get_config(
+                self.popover_height = self.get_plugin_setting(
                     ["notify", "client", "popover_height"], 600
                 )
                 self.main_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)

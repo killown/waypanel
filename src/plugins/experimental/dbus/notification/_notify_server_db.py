@@ -95,9 +95,7 @@ class Database:
             data access object. It is responsible solely for managing
             the SQLite database file and the `notifications` table,
             decoupling the storage logic from the D-Bus communication
-            and UI components. The database file path is now dynamically
-            resolved using `PathHandler.get_config_dir()`, adhering to
-            XDG standards.
+            and UI components.
         2.  **Schema Definition**: The `_initialize_db` method defines
             a robust table schema for notifications, including a primary
             key, content fields (summary, body), and a JSON field for

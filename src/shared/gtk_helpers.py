@@ -112,7 +112,7 @@ class GtkHelpers:
             widget (Gtk.Widget): The widget instance to set the icon on.
             fallback_icons (list): A list of backup icon names to try.
         """
-        fallback_icons = self.config_handler.check_and_get_config(
+        fallback_icons = self.config_handler.get_root_setting(
             ["plugins", plugin_name, "fallback_main_icons"]
         )
         icon_name = self.icon_exist(icon_name)

@@ -33,22 +33,22 @@ def get_plugin_class():
             self.scrolled_window = self.gtk.ScrolledWindow()
             self.button_pool = []
             self.in_use_buttons = {}
-            self.icon_size = self.get_config(
+            self.icon_size = self.get_plugin_setting(
                 ["layout", "icon_size"],
             )
-            self.spacing = self.get_config(
+            self.spacing = self.get_plugin_setting(
                 ["layout", "spacing"],
             )
-            self.show_label = self.get_config(
+            self.show_label = self.get_plugin_setting(
                 ["layout", "show_label"],
             )
-            self.max_title_lenght = self.get_config(
+            self.max_title_lenght = self.get_plugin_setting(
                 ["layout", "max_title_lenght"],
             )
-            self.exclusive_zone = self.get_config(
+            self.exclusive_zone = self.get_plugin_setting(
                 ["panel", "exclusive_zone"],
             )
-            self.panel_name = self.config_handler.check_and_get_config(
+            self.panel_name = self.config_handler.get_root_setting(
                 ["panel", "name"],
             )
             self.run_in_thread(self._setup_taskbar)

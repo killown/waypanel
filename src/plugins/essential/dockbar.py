@@ -70,7 +70,7 @@ def get_plugin_class():
             """
             Retrieves the GTK panel object based on the configuration.
             """
-            position = self.get_config("name", "left-panel").lower()
+            position = self.get_plugin_setting("name", "left-panel").lower()
             valid_panels = {
                 "left": self.obj.left_panel,
                 "right": self.obj.right_panel,
@@ -139,7 +139,7 @@ def get_plugin_class():
             while child:
                 self.dockbar.remove(child)
                 child = self.dockbar.get_first_child()
-            config_data = self.get_config(["app"], {})
+            config_data = self.get_plugin_setting(["app"], {})
             for app_name, app_data in config_data.items():
                 button = self._create_dockbar_button(
                     app_name, app_data, class_style, use_label
@@ -277,8 +277,10 @@ def get_plugin_class():
             """
             Configures the dockbar based on the loaded settings.
             """
-            orientation = self.get_config(["panel", "orientation"], "v")
-            class_style = self.get_config(["panel", "class_style"], "dockbar-buttons")
+            orientation = self.get_plugin_setting(["panel", "orientation"], "v")
+            class_style = self.get_plugin_setting(
+                ["panel", "class_style"], "dockbar-buttons"
+            )
             self.run_in_thread(
                 self._load_and_populate_dockbar, orientation, class_style
             )
@@ -401,9 +403,9 @@ def get_plugin_class():
             **Refactoring Notes:**
             1.  **Configuration:** All configuration reading methods (like determining panel,
                 orientation, and app list) have been updated to use the correct `BasePlugin`
-                accessor: `self.get_config(["nested", "key", "path"], default_value)`.
+                accessor: `self.get_plugin_setting(["nested", "key", "path"], default_value)`.
                 Configuration writing (saving dockbar order) remains a direct operation on
-                `self.config_handler.config_data` as `self.get_config()` is for reading.
+                `self.config_handler.config_data` as `self.get_plugin_setting()` is for reading.
             Its core logic follows these principles:
             1.  **Configuration-Driven UI**: On startup, it reads a TOML config file
                 to determine which applications to display, their icons, and launch commands.

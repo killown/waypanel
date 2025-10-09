@@ -236,15 +236,13 @@ class ConfigHandler:
         except Exception as e:
             self.logger.error(f"Failed to start Gio.FileMonitor: {e}")
 
-    def check_and_get_config(
-        self, key_path: List[str], default_value: Any = None
-    ) -> Any:
+    def get_root_setting(self, key_path: List[str], default_value: Any = None) -> Any:
         current_data = self.config_data
         for i, key in enumerate(key_path):
             if isinstance(current_data, dict) and key in current_data:
                 current_data = current_data[key]
             else:
-                self.logger.warning(
+                self.logger.debug(
                     f"Missing configuration key at path: {' -> '.join(key_path[: i + 1])}. Using default value: {default_value}"
                 )
                 return default_value

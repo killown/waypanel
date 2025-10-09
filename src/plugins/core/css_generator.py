@@ -28,7 +28,7 @@ def get_plugin_class():
             self.theme = None
 
         def _get_current_theme(self):
-            theme = self._config_handler.check_and_get_config(
+            theme = self._config_handler.get_root_setting(
                 ["panel", "theme", "default"], DEFAULT_THEME
             )
             return theme

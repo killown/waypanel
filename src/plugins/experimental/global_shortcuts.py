@@ -14,7 +14,9 @@ def get_plugin_class():
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
             self.panel_instance = panel_instance
-            self.shortcuts = self.get_config(["plugins", "global_shortcuts"]) or {}
+            self.shortcuts = (
+                self.get_root_setting(["plugins", "global_shortcuts"]) or {}
+            )
             if not self.shortcuts:
                 self.logger.info(
                     "No global shortcuts configured for GlobalShortcuts plugin."

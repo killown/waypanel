@@ -3,8 +3,10 @@ def get_plugin_metadata(_):
         "id": "org.waypanel.plugin.weather",
         "name": "Weather",
         "version": "1.0.0",
-        "enabled": True, "priority": 99, "deps": ["calendar"]
-        }
+        "enabled": True,
+        "priority": 99,
+        "deps": ["calendar"],
+    }
 
 
 def get_plugin_class():
@@ -15,7 +17,9 @@ def get_plugin_class():
             super().__init__(panel_instance)
             self.weather_label = None
             self.update_task = None
-            config_coords = self.get_config(["calendar", "weather", "coordinates"])
+            config_coords = self.get_root_setting(
+                ["org.waypanel.plugin.calendar", "weather", "coordinates"]
+            )
             if isinstance(config_coords, tuple) and len(config_coords) == 2:
                 self.coordinates = config_coords
                 self.logger.info(f"Using coordinates from config: {self.coordinates}")
@@ -137,8 +141,8 @@ def get_plugin_class():
             The core logic of this plugin is to extend the functionality
             of a host plugin using asynchronous and thread-safe operations, now
             refactored to use BasePlugin helpers:
-            1.  **Configuration**: The coordinates (`self.coordinates`) are now
-                retrieved from `self.get_config(["calendar", "weather", "coordinates"])`
+            1.  **Configuration**: The coordinates (`self.coordinates`) are
+                retrieved from `self.get_plugin_setting(["weather", "coordinates"])`
                 in `__init__`, falling back to a default if the configuration is
                 missing or invalid.
             2.  **Concurrency Management**: Direct imports of global loop variables

@@ -14,7 +14,7 @@ from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
 from src.shared.command_runner import CommandRunner
 from src.shared.concurrency_helper import ConcurrencyHelper
-from typing import Any, List, ClassVar, Optional, Union, Dict, Set
+from typing import Any, List, ClassVar, Optional, Union, Dict, Set, assert_type
 import asyncio
 
 TIME_MODULE = lazy.load("time")
@@ -257,7 +257,7 @@ class BasePlugin:
             )
             return None
 
-    def get_config(
+    def get_plugin_setting(
         self, key: Optional[Union[str, List[str]]] = None, default_value: Any = None
     ) -> Any:
         """
@@ -276,11 +276,16 @@ class BasePlugin:
                 key_path.append(key)
             elif isinstance(key, list):
                 key_path.extend(key)
-            else:
-                self.logger.error("Config key must be a string or a list of strings.")
-                return default_value
 
-        return self.config_handler.check_and_get_config(key_path, default_value)
+        return self.config_handler.get_root_setting(key_path, default_value)
+
+    def get_root_setting(
+        self, key: Optional[List[str]] = None, default_value: Any = None
+    ):
+        if key:
+            return self.config_handler.get_root_setting(key, default_value)
+        else:
+            raise TypeError("The 'key' argument is mandatory for 'get_root_setting'.")
 
     def update_config(self, key_path: List[str], new_value: Any):
         """

@@ -34,10 +34,10 @@ def get_plugin_class():
             self.mic_handler_id = None
             self.soundcard_model = None
             self.mic_model = None
-            self.max_card_chars = self.get_config(
+            self.max_card_chars = self.get_plugin_setting(
                 ["hardware", "soundcard", "max_name_lenght"], 35
             )
-            self.max_mic_chars = self.get_config(
+            self.max_mic_chars = self.get_plugin_setting(
                 ["hardware", "microphone", "max_name_lenght"], 35
             )
 
@@ -97,7 +97,9 @@ def get_plugin_class():
             """
             Retrieves a list of sound card names, excluding blacklisted ones.
             """
-            blacklist = self.get_config(["hardware", "soundcard", "blacklist"], [])
+            blacklist = self._config_handler.get_root_setting(
+                ["hardware", "soundcard", "blacklist"], []
+            )
             if isinstance(blacklist, str):
                 blacklist = [blacklist]
             soundcard_list = []
@@ -118,7 +120,9 @@ def get_plugin_class():
             Retrieves a list of microphone names, excluding blacklisted ones.
             """
             mic_list = []
-            blacklist = self.get_config(["hardware", "microphone", "blacklist"], [])
+            blacklist = self.get_root_setting(
+                ["hardware", "microphone", "blacklist"], []
+            )
             if isinstance(blacklist, str):
                 blacklist = [blacklist]
             try:

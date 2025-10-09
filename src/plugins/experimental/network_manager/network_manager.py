@@ -59,7 +59,7 @@ def get_plugin_class():
             self.last_scan_time: float = 0.0
             self.scan_status_label = None
             self.wifi_list_revealer = None
-            self.ssids_to_auto_connect = self.config_handler.check_and_get_config(
+            self.ssids_to_auto_connect = self.config_handler.get_root_setting(
                 ["hardware", "network", "auto_connect_ssids"]
             )
 

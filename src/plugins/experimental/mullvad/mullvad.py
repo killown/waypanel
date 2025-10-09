@@ -49,7 +49,7 @@ def get_plugin_class():
 
         def get_city_code(self):
             """Get the city code from the plugin's config section in config.toml."""
-            plugin_config = self.get_config(["plugins", "mullvad", "city_code"])
+            plugin_config = self.get_plugin_setting(["plugins", "mullvad", "city_code"])
             if not plugin_config:
                 plugin_config = "sao"
             return plugin_config

@@ -46,7 +46,7 @@ def get_plugin_class():
 
         async def _auto_connect_devices(self):
             """Reads config and attempts to connect specified Bluetooth devices."""
-            connect_devices = self.get_config(
+            connect_devices = self.get_root_setting(
                 ["hardware", "bluetooth", "connect_devices"], []
             )
             if not connect_devices:

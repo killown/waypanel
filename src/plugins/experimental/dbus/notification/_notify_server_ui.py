@@ -29,10 +29,10 @@ def get_plugin_class():
             pass
 
         def notify_reload_config(self):
-            self.show_messages = self.get_config(
-                ["notify", "server", "show_messages"], True
+            self.show_messages = self.get_plugin_setting(
+                ["server", "show_messages"], True
             )
-            self.timeout = self.get_config(["notify", "server", "timeout"], 10)
+            self.timeout = self.get_plugin_setting(["server", "timeout"], 10)
 
         def _extract_first_uri_from_text(self, text: str) -> str | None:
             """
@@ -98,19 +98,19 @@ def get_plugin_class():
                     "Do Not Disturb mode is active. Notification suppressed."
                 )
                 return
-            popup_width = self.get_config(["notify", "server", "popup_width"], 399)
-            popup_height = self.get_config(["notify", "server", "popup_height"], 150)
+            popup_width = self.get_plugin_setting(["server", "popup_width"], 399)
+            popup_height = self.get_plugin_setting(["server", "popup_height"], 150)
             focused_output = self.ipc.get_focused_output()
             output_w = focused_output["geometry"]["width"]
             if "rect" in focused_output:
                 output_w = focused_output["rect"]["width"]
             center_popup_position = (output_w - popup_width) // 2
             top_popup_position = 32
-            new_width_position = self.get_config(
-                ["notify", "server", "popup_position_x"], False
+            new_width_position = self.get_plugin_setting(
+                ["server", "popup_position_x"], False
             )
-            new_height_position = self.get_config(
-                ["notify", "server", "popup_position_y"], False
+            new_height_position = self.get_plugin_setting(
+                ["server", "popup_position_y"], False
             )
             if new_width_position:
                 center_popup_position = new_width_position

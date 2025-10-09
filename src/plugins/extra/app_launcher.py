@@ -503,9 +503,9 @@ def get_plugin_class():
                 try:
                     self.settings.set_string("icon-theme", theme_name)
                     self.logger.info(f"Icon theme set to: {theme_name}")
-                    icon_name = self.get_config(["main_icon"])
+                    icon_name = self.get_plugin_setting(["main_icon"])
                     if icon_name:
-                        fallback_icons = self.get_config(["fallback_icons"])
+                        fallback_icons = self.get_plugin_setting(["fallback_icons"])
                         fallback_icons.append(distro.id())
                         icon_name = self._gtk_helper.icon_exist(
                             icon_name, fallback_icons

@@ -3,9 +3,6 @@
     border-radius: var(--radius-s);
     padding: var(--radius-xs) var(--radius-s);
     background-color: var(--color-bg-button-flat);
-    display: inline-flex;
-    align-items: center;
-    cursor: pointer;
     transition: background-color 0.2s, color 0.2s;
 }
 
@@ -26,28 +23,17 @@
 }
 
 .exit-dashboard-main-box {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--radius-s);
 }
 
 .exit-dashboard-icon-vbox {
-    flex-shrink: 0;
     color: var(--theme-fg-label-primary);
     background-color: var(--secondary-bg);
-    width: 28px;
-    height: 28px;
     padding: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     border-radius: var(--radius-xs);
 }
 
 .exit-dashboard-icon-vbox svg,
 .exit-dashboard-icon-vbox i {
-    width: 16px;
-    height: 16px;
 }
 
 .exit-dashboard-popover {
@@ -75,8 +61,5 @@
 
 .exit-dashboard-stack {
     padding: 0px;
-    display: flex;
-    flex-direction: column;
-    gap: var(--radius-s);
     margin-top: var(--radius-s);
 }

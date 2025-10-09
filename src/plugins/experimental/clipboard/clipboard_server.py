@@ -123,9 +123,11 @@ def get_plugin_class():
             self.db_path = self.path_handler.get_data_path(
                 "db/clipboard/clipboard_server.db"
             )
-            self.log_enabled = self.get_config("server_log_enabled", False)
-            self.max_items = self.get_config("server_max_items", 100)
-            self.monitor_interval = self.get_config("server_monitor_interval", 0.5)
+            self.log_enabled = self.get_plugin_setting("server_log_enabled", False)
+            self.max_items = self.get_plugin_setting("server_max_items", 100)
+            self.monitor_interval = self.get_plugin_setting(
+                "server_monitor_interval", 0.5
+            )
 
         async def _init_db(self, panel_instance, db_path):
             """

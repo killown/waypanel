@@ -40,16 +40,20 @@ def get_plugin_class():
                 self.minimize_view,
             )
 
-            self.cf_box.append(self.minimize_button)
-            self.cf_box.append(self.maximize_button)
-            self.cf_box.append(self.close_button)
+            self.cf_box.append(self.minimize_button)  # pyright: ignore
+            self.cf_box.append(self.maximize_button)  # pyright: ignore
+            self.cf_box.append(self.close_button)  # pyright: ignore
             self.gtk_helper.add_cursor_effect(self.cf_box)
 
             self.cf_box.add_css_class("window-controls-box")
 
         def create_control_button(self, icon_name, css_class, callback):
             button = self.gtk_helper.create_button(
-                icon_name, None, css_class, None, use_function=callback
+                icon_name,
+                "",
+                css_class,
+                False,
+                use_function=callback,  # pyright: ignore
             )
             return button
 

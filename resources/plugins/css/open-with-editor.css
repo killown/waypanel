@@ -59,7 +59,6 @@
 .openwitheditor-scrolled-window {
   min-width: 600px;
   min-height: 400px;
-  max-height: 800px;
   margin: 0 10px 10px 10px;
   border-radius: var(--radius-s);
   border: 1px solid var(--theme-decoration-separator);
@@ -89,7 +88,6 @@
 .openwitheditor-label-from-popover {
   color: var(--theme-fg-label-primary);
   font-size: 14px;
-  text-align: left;
 }
 
 .openwitheditor-icon-from-popover {

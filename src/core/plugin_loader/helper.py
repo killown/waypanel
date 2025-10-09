@@ -228,7 +228,7 @@ class PluginLoaderHelpers:
         if not self.panel_instance.plugins_startup_finished:
             return True
         try:
-            width = self.loader.config_handler.check_and_get_config(
+            width = self.loader.config_handler.get_root_setting(
                 ["panel", "top", "width"]
             )
             if width is None or width <= 0:

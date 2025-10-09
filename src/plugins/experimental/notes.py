@@ -171,15 +171,11 @@ def get_plugin_class():
             notes_count = len(notes)
             dynamic_height = min(notes_count * line_height + padding, 600)
             self.scrolled_window.set_min_content_height(dynamic_height)
-            delete_icon_name = self.get_config(
-                ["plugin", "notes", "delete_icon"], "edit-delete"
-            )
+            delete_icon_name = self.get_plugin_setting(["delete_icon"], "edit-delete")
             delete_button_icon = self.gtk_helper.icon_exist(
                 delete_icon_name, ["edit-delete"]
             )
-            edit_icon_name = self.get_config(
-                ["plugin", "notes", "edit_icon"], "document-edit"
-            )
+            edit_icon_name = self.get_plugin_setting(["edit_icon"], "document-edit")
             edit_button_icon = self.gtk_helper.icon_exist(
                 edit_icon_name, ["document-edit"]
             )

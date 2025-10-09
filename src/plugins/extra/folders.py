@@ -205,7 +205,7 @@ def get_plugin_class():
             box = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL)
             listbox_row = row_hbox.get_parent()
             listbox_row.add_css_class("folders-lisbox-row")
-            all_folders = self.config_handler.config_data.get("folders") or {}
+            all_folders = self.get_plugin_setting() or {}
             is_pinned = any(
                 data.get("path") == folder_path for data in all_folders.values()
             )

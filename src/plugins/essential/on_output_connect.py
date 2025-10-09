@@ -1,10 +1,12 @@
 def get_plugin_metadata(_):
-    return {        
+    return {
         "id": "org.waypanel.plugin.on_output_connect",
         "name": "Panel Output Mover",
         "version": "1.0.0",
-        "enabled": True, "priority": 1, "deps": ["event_manager"]
-        }
+        "enabled": True,
+        "priority": 1,
+        "deps": ["event_manager"],
+    }
 
 
 def get_plugin_class():
@@ -24,7 +26,7 @@ def get_plugin_class():
             self.current_output_name = None
             self._debounce_timeout_id = None
             self.current_output_name = None
-            self.primary_output_name = self.config_handler.check_and_get_config(
+            self.primary_output_name = self.config_handler.get_root_setting(
                 key_path=["hardware", "primary_output", "name"], default_value=None
             )
             if self.primary_output_name:
@@ -150,28 +152,28 @@ def get_plugin_class():
                 self.logger.error(f"Geometry for output '{monitor_name}' not found.")
                 return
             output_width = geo.get("width")
-            user_defined_height_top_panel = self.config_handler.check_and_get_config(
+            user_defined_height_top_panel = self.config_handler.get_root_setting(
                 key_path=["panel", "top", "height"], default_value=32
             )
-            user_defined_width_top_panel = self.config_handler.check_and_get_config(
+            user_defined_width_top_panel = self.config_handler.get_root_setting(
                 key_path=["panel", "top", "width"], default_value=output_width
             )
-            user_defined_height_left_panel = self.config_handler.check_and_get_config(
+            user_defined_height_left_panel = self.config_handler.get_root_setting(
                 key_path=["panel", "left", "height"], default_value=32
             )
-            user_defined_width_left_panel = self.config_handler.check_and_get_config(
+            user_defined_width_left_panel = self.config_handler.get_root_setting(
                 key_path=["panel", "left", "width"], default_value=32
             )
-            user_defined_height_right_panel = self.config_handler.check_and_get_config(
+            user_defined_height_right_panel = self.config_handler.get_root_setting(
                 key_path=["panel", "right", "height"], default_value=32
             )
-            user_defined_width_right_panel = self.config_handler.check_and_get_config(
+            user_defined_width_right_panel = self.config_handler.get_root_setting(
                 key_path=["panel", "right", "width"], default_value=32
             )
-            user_defined_height_bottom_panel = self.config_handler.check_and_get_config(
+            user_defined_height_bottom_panel = self.config_handler.get_root_setting(
                 key_path=["panel", "bottom", "height"], default_value=32
             )
-            user_defined_width_bottom_panel = self.config_handler.check_and_get_config(
+            user_defined_width_bottom_panel = self.config_handler.get_root_setting(
                 key_path=["panel", "bottom", "width"], default_value=output_width
             )
             LayerShell.set_monitor(self.top_panel, monitor_gdk_obj)

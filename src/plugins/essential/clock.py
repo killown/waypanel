@@ -9,6 +9,7 @@ def get_plugin_metadata(_):
         "deps": ["top_panel"],
     }
 
+
 def get_plugin_class():
     from src.plugins.core._base import BasePlugin
 

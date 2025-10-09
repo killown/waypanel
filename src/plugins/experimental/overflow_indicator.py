@@ -47,7 +47,7 @@ def get_plugin_class():
             self.glib.timeout_add_seconds(2, self.reveal)
 
         def reveal(self):
-            auto_reveal = self.get_config(["auto_reveal", "default"])
+            auto_reveal = self.get_plugin_setting(["auto_reveal", "default"])
             self.revealer.set_reveal_child(auto_reveal)
             return False
 

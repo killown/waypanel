@@ -71,7 +71,7 @@ def get_plugin_class():
 
         def setup_menus(self):
             """set up menus based on the configuration by using the enhanced gtk_helper."""
-            all_menus_config = self.get_config()
+            all_menus_config = self.get_plugin_setting()
             if not all_menus_config:
                 self.logger.warning("No configuration sections found for custom menus.")
                 return
@@ -113,7 +113,7 @@ def get_plugin_class():
         def code_explanation(self):
             """
             This plugin creates dynamic, user-configurable menus for the panel.
-            The `setup_menus` function has been adapted to use the new `self.get_config()`
+            The `setup_menus` function has been adapted to use the new `self.get_plugin_setting()`
             (called without arguments) to fetch the entire configuration dictionary
             for the plugin's section.
             It now iterates over the keys of this dictionary (e.g., 'Wayfire', 'Apps')

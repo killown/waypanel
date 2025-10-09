@@ -59,7 +59,7 @@ class PluginLoader:
             "waypanel",
             "plugins",
         )
-        self.disabled_plugins = self.config_handler.check_and_get_config(
+        self.disabled_plugins = self.config_handler.get_root_setting(
             ["plugins", "disabled"]
         )
         self.plugin_icons = {}
@@ -307,11 +307,11 @@ class PluginLoader:
             if isinstance(widget_to_append, list) and widget_to_append
             else widget_to_append
         )
-        icon_name = self.config_handler.check_and_get_config([plugin_id, "main_icon"])
+        icon_name = self.config_handler.get_root_setting([plugin_id, "main_icon"])
         if icon_name and main_widget:
             self.gtk_helpers.set_plugin_main_icon(main_widget, module_name, icon_name)
         if not hide_in_systray:
-            hide_in_systray = self.config_handler.check_and_get_config(
+            hide_in_systray = self.config_handler.get_root_setting(
                 [plugin_id, "hide_in_systray"]
             )
         if hide_in_systray:

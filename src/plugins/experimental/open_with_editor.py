@@ -24,10 +24,10 @@ def get_plugin_class():
 
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
-            raw_config_maps = self.get_config(["directories"])
+            raw_config_maps = self.get_plugin_setting(["directories"])
             self.config_maps = {}
             if not raw_config_maps:
-                single_config_dir = self.get_config(["config_dir"])
+                single_config_dir = self.get_plugin_setting(["config_dir"])
                 if not single_config_dir:
                     single_config_dir = self.os.path.join("~", ".config", "nvim")
                 raw_config_maps = {"Default Config": single_config_dir}
@@ -40,7 +40,7 @@ def get_plugin_class():
             self.cached_files = {}
             self.active_listbox = None
             self.active_searchbar = None
-            self.editor_extensions = self.get_config(["extensions"])
+            self.editor_extensions = self.get_plugin_setting(["extensions"])
             if not self.editor_extensions:
                 self.editor_extensions = {
                     "json": ["code", "nvim"],
