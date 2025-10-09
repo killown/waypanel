@@ -177,41 +177,19 @@ def main():
 
     if not os.path.isfile(CONFIG_FILE):
         print(
-            f"[INFO] Config not found at {CONFIG_FILE}. Attempting to copy defaults..."
+            f"[INFO] Config file not found at {CONFIG_FILE}. Creating an empty config file."
         )
 
-        config_search_paths = []
-
-        config_search_paths.append(
-            (os.path.join(SCRIPT_DIR, "config"), "dev path (flat - current dir)")
-        )
-        config_search_paths.append(
-            (os.path.join(SCRIPT_DIR, APP_NAME, "config"), "dev path (app)")
-        )
-
-        if INSTALLED_PATH:
-            config_search_paths.append(
-                (os.path.join(INSTALLED_PATH, "config"), "detected installed path")
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        try:
+            with open(CONFIG_FILE, "a") as f:
+                pass
+            print(f"[INFO] Empty config file created at {CONFIG_FILE}")
+        except Exception as e:
+            print(
+                f"[ERROR] Failed to create config file at {CONFIG_FILE}: {e}",
+                file=sys.stderr,
             )
-
-        config_search_paths.append(
-            (f"/usr/lib/{APP_NAME}/config", "hardcoded system path")
-        )
-
-        for src_dir, desc in config_search_paths:
-            if os.path.isdir(src_dir):
-                os.makedirs(CONFIG_DIR, exist_ok=True)
-                for item in os.listdir(src_dir):
-                    src = os.path.join(src_dir, item)
-                    dst = os.path.join(CONFIG_DIR, item)
-                    if os.path.isdir(src):
-                        shutil.copytree(src, dst, dirs_exist_ok=True)
-                    else:
-                        shutil.copy2(src, dst)
-                print(f"[INFO] Default config copied from {desc}: {src_dir}")
-                break
-        else:
-            print("[ERROR] No default config found.", file=sys.stderr)
             sys.exit(1)
 
     if not os.path.isdir(WAYPANEL_RESOURCES_DIR):

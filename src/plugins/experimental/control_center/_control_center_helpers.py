@@ -8,55 +8,64 @@ class ControlCenterHelpers:
 
     def _get_hint_for_path(self, *keys) -> str:
         resolved_keys = list(keys)
-        if keys:
+
+        center_has_map = (
+            hasattr(self, "center")
+            and hasattr(self.center, "short_to_full_key")
+            and isinstance(self.center.short_to_full_key, dict)
+        )
+
+        if keys and center_has_map:
             first_key = keys[0]
             plugin_resolved = False
-            if hasattr(self, "short_to_full_key"):
-                for short_name, full_name in self.center.short_to_full_key.items():
-                    if first_key.startswith(f"{short_name}_"):
-                        plugin_section_key = first_key[len(short_name) + 1 :]
-                        resolved_keys = [full_name, plugin_section_key] + list(keys[1:])
-                        plugin_resolved = True
-                        break
-                    if first_key == short_name and not plugin_resolved:
-                        resolved_keys[0] = self.center.short_to_full_key[first_key]
-                        plugin_resolved = True
-                        break
-            if (
-                not plugin_resolved
-                and hasattr(self, "short_to_full_key")
-                and first_key in self.center.short_to_full_key
-            ):
-                resolved_keys[0] = self.center.short_to_full_key[first_key]
+            short_to_full_key_map = self.center.short_to_full_key
+
+            for short_name, full_name in short_to_full_key_map.items():
+                if first_key.startswith(f"{short_name}_"):
+                    plugin_section_key = first_key[len(short_name) + 1 :]
+                    resolved_keys = [full_name, plugin_section_key] + list(keys[1:])
+                    plugin_resolved = True
+                    break
+
+            if not plugin_resolved and first_key in short_to_full_key_map:
+                resolved_keys[0] = short_to_full_key_map[first_key]
                 plugin_resolved = True
+
         keys = tuple(resolved_keys)
         current_dict = self.center.default_config
         parent_dict = None
         last_key = None
+
         for i, key in enumerate(keys):
             if not isinstance(current_dict, dict) or key not in current_dict:
                 key_name = key.replace("_", " ").capitalize()
                 context = ".".join(keys[:i]) if i > 0 else "Root"
                 return f"Hint missing for key: '{key_name}' (Context: {context})"
+
             parent_dict = current_dict
             last_key = key
             current_dict = current_dict[key]
+
         if isinstance(current_dict, dict):
             section_hint = current_dict.get("_section_hint")
             if isinstance(section_hint, str):
                 return section_hint
+
             key_name = keys[-1].replace("_", " ").capitalize() if keys else "Setting"
             return f"A configuration section for '{key_name}'."
+
         if parent_dict and last_key:
             value_hint = parent_dict.get(f"{last_key}_hint")
             if isinstance(value_hint, str):
                 return value_hint
+
             if isinstance(current_dict, list):
                 list_hint = parent_dict.get("list_hint") or parent_dict.get(
                     "_items_hint"
                 )
                 if isinstance(list_hint, str):
                     return list_hint
+
         key_name = keys[-1].replace("_", " ").capitalize() if keys else "Setting"
         return f"A configuration option for '{key_name}'."
 

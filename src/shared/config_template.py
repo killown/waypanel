@@ -179,26 +179,6 @@ default_config = {
             "_section_hint": (
                 "Top panel configuration. Often used for status indicators and menus."
             ),
-            "menu_icon": "archlinux-logo",
-            "menu_icon_hint": "Icon for the main application menu button.",
-            "folder_icon": "folder",
-            "folder_icon_hint": "Icon for the quick folder access button.",
-            "bookmarks_icon": "internet-web-browser",
-            "bookmarks_icon_hint": ("Icon for the web browser bookmarks button."),
-            "clipboard_icon": "edit-paste",
-            "clipboard_icon_hint": ("Icon for the clipboard manager button."),
-            "soundcard_icon": "audio-volume-high",
-            "soundcard_icon_hint": ("Icon for the soundcard/volume control button."),
-            "system_icon": "system-shutdown",
-            "system_icon_hint": (
-                "Icon for the system/power menu (shutdown, restart, etc.) button."
-            ),
-            "bluetooth_icon": "bluetooth",
-            "bluetooth_icon_hint": ("Icon for the bluetooth manager button."),
-            "notes_icon": "stock_notes",
-            "notes_icon_hint": "Icon for the quick notes button.",
-            "notes_icon_delete": "delete",
-            "notes_icon_delete_hint": "Icon for the delete note button.",
             "layer_position": "TOP",
             "layer_position_hint": (
                 "The **stacking order layer** this panel will be placed on. "
@@ -213,10 +193,6 @@ default_config = {
             "height_hint": ("The fixed height (in pixels) of the top panel area."),
             "width": screen_width,
             "width_hint": "The width (in pixels) of this horizontal panel, matched to the primary output width.",
-            "max_note_lenght": 100.0,
-            "max_note_lenght_hint": (
-                "Maximum number of characters allowed for a single quick note entry."
-            ),
         },
     },
     "org.waypanel.plugin.bluetooth": {
@@ -240,7 +216,6 @@ default_config = {
         "_section_hint": (
             "A plugin to quickly search and open files from a configured directory, using a specified editor based on file extension"
         ),
-        "directories": ["~/.config/nvim"],
     },
     "org.waypanel.plugin.wayfire_plugins": {
         "_section_hint": (
@@ -400,10 +375,6 @@ default_config = {
         ),
         "panel": {
             "_section_hint": "Layer-shell, size, and orientation configuration for the panel that hosts the Dockbar plugin.",
-            "name": "left-panel",
-            "name_hint": (
-                "The unique **Layer-shell name** for this panel (e.g., 'left-panel')."
-            ),
             "orientation": "v",
             "orientation_hint": (
                 "The display orientation for the dockbar: **'v'** for "
@@ -608,7 +579,7 @@ default_config = {
             ),
         },
     },
-    "org.waypanel.plugin.notify": {
+    "org.waypanel.plugin.notify_client": {
         "_section_hint": (
             "Settings for the Notification Daemon, which handles system notifications."
         ),
@@ -640,6 +611,8 @@ default_config = {
                 "The height (in pixels) of the notification popover window."
             ),
         },
+    },
+    "org.waypanel.plugin.notify_server": {
         "server": {
             "_section_hint": "Backend (server) settings.",
             "show_messages": True,

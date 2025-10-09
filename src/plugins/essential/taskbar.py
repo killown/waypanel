@@ -76,11 +76,16 @@ def get_plugin_class():
                 )
 
         def _setup_taskbar(self) -> None:
-            container = self.get_plugin_setting(
-                ["panel", "name"], "bottom-panel-center"
-            )
-            panel_vertical_width = self.get_plugin_setting(
-                ["panel", "vertical_width"], 150
+            position = self.get_plugin_setting(["panel", "position"], "bottom")
+            valid_panels = {
+                "left": "left-panel-center",
+                "right": "right-panel-center",
+                "top": "top-panel-center",
+                "bottom": "bottom-panel-center",
+            }
+            container = valid_panels[position]
+            vertical_layout_width = self.get_plugin_setting(
+                ["panel", "vertical_layout_width"], 150
             )
             orientation = self.gtk.Orientation.VERTICAL
             if "left-panel" in container or "right-panel" in container:
@@ -103,7 +108,7 @@ def get_plugin_class():
                 bottom_height_space = self._panel_instance.top_panel.get_height()
                 space = top_height_space + bottom_height_space + 100
                 self.scrolled_window.set_size_request(
-                    panel_vertical_width, self._panel_instance.monitor_height - space
+                    vertical_layout_width, self._panel_instance.monitor_height - space
                 )
                 self.scrolled_window.set_vexpand(True)
             else:

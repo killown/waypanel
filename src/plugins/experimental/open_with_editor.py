@@ -24,13 +24,14 @@ def get_plugin_class():
 
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
-            raw_config_maps = self.get_plugin_setting(["directories"])
-            self.config_maps = {}
+            raw_config_maps = self.get_plugin_setting()
             if not raw_config_maps:
-                single_config_dir = self.get_plugin_setting(["config_dir"])
-                if not single_config_dir:
-                    single_config_dir = self.os.path.join("~", ".config", "nvim")
-                raw_config_maps = {"Default Config": single_config_dir}
+                raw_config_maps = self.get_plugin_setting(
+                    ["directories", "nvim"], "~/.config/nvim"
+                )
+            else:
+                raw_config_maps = self.get_plugin_setting("directories")
+            self.config_maps = {}
             for dir_name, dir_path in raw_config_maps.items():
                 self.config_maps[dir_name] = self.os.path.expanduser(dir_path)
             self.active_dir_name = next(iter(self.config_maps))

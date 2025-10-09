@@ -1,10 +1,19 @@
-def get_plugin_metadata(_):
+def get_plugin_metadata(panel_instance):
+    container = panel_instance.config_handler.get_root_setting(
+        ["org.waypanel.plugin.dockbar", "panel", "position"], "left"
+    )
+    valid_panels = {
+        "left": "left-panel-center",
+        "right": "right-panel-center",
+        "top": "top-panel-center",
+        "bottom": "bottom-panel-center",
+    }
     return {
         "id": "org.waypanel.plugin.dockbar",
         "name": "Dockbar",
         "version": "1.0.0",
         "enabled": True,
-        "container": "left-panel-center",
+        "container": valid_panels[container],
         "priority": 1,
         "deps": ["event_manager", "gestures_setup", "left_panel"],
     }
@@ -14,7 +23,7 @@ def get_plugin_class():
     from core._base import BasePlugin
 
     class DockbarPlugin(BasePlugin):
-        from gi.repository import Gio
+        from gi.repository import Gio  # pyright: ignore
 
         """
         A plugin that creates a configurable dockbar for launching applications.
@@ -22,9 +31,7 @@ def get_plugin_class():
 
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
-            self.dockbar = self.gtk.Box(
-                spacing=10, orientation=self.gtk.Orientation.VERTICAL
-            )
+            self.dockbar = self.gtk.Box(spacing=10, orientation=self.get_orientation())
             self.create_gesture = self.plugins["gestures_setup"].create_gesture
             self._subscribe_to_events()
             self.layer_state = False
@@ -70,12 +77,12 @@ def get_plugin_class():
             """
             Retrieves the GTK panel object based on the configuration.
             """
-            position = self.get_plugin_setting("name", "left-panel").lower()
+            position = self.get_plugin_setting(["panel", "position"], "left").lower()
             valid_panels = {
-                "left": self.obj.left_panel,
-                "right": self.obj.right_panel,
-                "top": self.obj.top_panel,
-                "bottom": self.obj.bottom_panel,
+                "left": self._panel_instance.left_panel_box_center,
+                "right": self._panel_instance.right_panel_box_center,
+                "top": self._panel_instance.top_panel_box_center,
+                "bottom": self._panel_instance.bottom_panel_box_center,
             }
             panel_key = position.split("-")[0]
             if panel_key in valid_panels:
@@ -271,16 +278,25 @@ def get_plugin_class():
             else:
                 self.cmd.run(cmd)
 
+        def get_orientation(self):
+            container = get_plugin_metadata(self._panel_instance)["container"]
+            orientation = self.get_plugin_setting(["panel", "orientation"], "v")
+            if "top-panel" in container or "bottom-panel" in container:
+                orientation = self.gtk.Orientation.HORIZONTAL
+            else:
+                orientation = self.gtk.Orientation.VERTICAL
+            return orientation
+
         def _setup_dockbar(self):
             """
             Configures the dockbar based on the loaded settings.
             """
-            orientation = self.get_plugin_setting(["panel", "orientation"], "v")
+
             class_style = self.get_plugin_setting(
                 ["panel", "class_style"], "dockbar-buttons"
             )
             self.run_in_thread(
-                self._load_and_populate_dockbar, orientation, class_style
+                self._load_and_populate_dockbar, self.get_orientation(), class_style
             )
             self.main_widget = (self.dockbar, "append")
             self.logger.info("Dockbar setup completed.")
@@ -348,7 +364,8 @@ def get_plugin_class():
             initial_title = title.split(" ")[0].lower()
             icon_name = self.gtk_helper.get_icon(wm_class, initial_title, title)
             button = self.gtk.Button()
-            box = self.gtk.Box(orientation=self.gtk.Orientation.HORIZONTAL, spacing=4)
+            orientation = self.get_orientation()
+            box = self.gtk.Box(orientation, spacing=4)
             if icon_name:
                 icon = self.gtk.Image.new_from_icon_name(icon_name)
                 self.gtk_helper.update_widget_safely(box.append, icon)
