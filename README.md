@@ -1,9 +1,6 @@
 ## waypanel
-<img width="1920" height="1080" alt="1" src="https://github.com/user-attachments/assets/1b926381-4532-4903-b2ec-cf20f1c20d68" />
-<img width="1920" height="1080" alt="2" src="https://github.com/user-attachments/assets/868d8d82-2467-4384-a7dd-2bd780d1c773" />
-<img width="1920" height="1080" alt="3" src="https://github.com/user-attachments/assets/3626fef5-80f0-47c6-b3af-cfd21f5bb434" />
-<img width="1920" height="1080" alt="4" src="https://github.com/user-attachments/assets/96d569b5-9fd7-41e4-b068-806306040f0c" />
-<img width="1920" height="1080" alt="5" src="https://github.com/user-attachments/assets/893dd3f0-cec9-471f-b3ee-e3248dfd9c5d" />
+
+<img width="1920" height="1080" alt="1" src="https://github.com/user-attachments/assets/60951ef0-cbce-45f5-a983-0eb1dd486462" />
 
 ##### _GTK4 panel for sway and wayfire_
 
