@@ -1,15 +1,18 @@
-def get_plugin_metadata(_):
+def get_plugin_metadata(panel_instance):
+    container = panel_instance.config_handler.get_root_setting(
+        ["org.waypanel.plugin.taskbar", "panel", "name"], "bottom-panel-center"
+    )
     return {
         "id": "org.waypanel.plugin.taskbar",
         "name": "Taskbar",
         "version": "1.0.0",
         "enabled": True,
-        "container": "bottom-panel-center",
+        "container": container,
         "deps": [
             "event_manager",
             "gestures_setup",
             "on_output_connect",
-            "bottom_panel",
+            "right_panel",
         ],
     }
 
@@ -73,17 +76,52 @@ def get_plugin_class():
                 )
 
         def _setup_taskbar(self) -> None:
+            container = self.get_plugin_setting(
+                ["panel", "name"], "bottom-panel-center"
+            )
+            panel_vertical_width = self.get_plugin_setting(
+                ["panel", "vertical_width"], 150
+            )
+            orientation = self.gtk.Orientation.VERTICAL
+            if "left-panel" in container or "right-panel" in container:
+                orientation = self.gtk.Orientation.HORIZONTAL
             self.taskbar = self.gtk.FlowBox()
             self.taskbar.set_column_spacing(self.spacing)
             self.taskbar.set_row_spacing(self.spacing)
             self.taskbar.set_selection_mode(self.gtk.SelectionMode.NONE)
+            self.taskbar.set_orientation(orientation)
+            self.taskbar.set_max_children_per_line(1)
+            self.flowbox_container = self.gtk.Box(orientation=orientation)
+            self.flowbox_container.set_hexpand(True)
+            self.flowbox_container.set_halign(self.gtk.Align.FILL)
+            self.taskbar.set_halign(self.gtk.Align.CENTER)
+            self.taskbar.set_valign(self.gtk.Align.CENTER)
+            self.flowbox_container.append(self.taskbar)
+            if orientation is self.gtk.Orientation.HORIZONTAL:
+                self.scrolled_window.set_hexpand(True)
+                top_height_space = self._panel_instance.top_panel.get_height()
+                bottom_height_space = self._panel_instance.top_panel.get_height()
+                space = top_height_space + bottom_height_space + 100
+                self.scrolled_window.set_size_request(
+                    panel_vertical_width, self._panel_instance.monitor_height - space
+                )
+                self.scrolled_window.set_vexpand(True)
+            else:
+                self.scrolled_window.set_size_request(
+                    self._panel_instance.monitor_width, 0
+                )
+                self.scrolled_window.set_vexpand(True)
+            self.scrolled_window.set_halign(self.gtk.Align.FILL)
+            self.scrolled_window.set_policy(
+                self.gtk.PolicyType.AUTOMATIC,
+                self.gtk.PolicyType.NEVER,
+            )
+            self.scrolled_window.set_child(self.flowbox_container)
             self.logger.debug("Setting up bottom panel.")
             if self.layer_always_exclusive:
-                self.layer_shell.set_layer(
-                    self.bottom_panel, self.layer_shell.Layer.TOP
-                )
-                self.layer_shell.auto_exclusive_zone_enable(self.bottom_panel)
-                self.bottom_panel.set_size_request(10, 10)
+                self.layer_shell.set_layer(self.right_panel, self.layer_shell.Layer.TOP)
+                self.layer_shell.auto_exclusive_zone_enable(self.right_panel)
+                self.right_panel.set_size_request(60, 0)
             output = self.os.getenv("waypanel")
             output_name = None
             output_id = None
@@ -99,15 +137,6 @@ def get_plugin_class():
                 output_id = self.ipc.get_output_id_by_name(output_name)
                 if output_id:
                     geometry = self.ipc.get_output_geometry(output_id)
-            if geometry:
-                monitor_width = geometry["width"]
-                self.scrolled_window.set_size_request(
-                    monitor_width,
-                    0,
-                )
-            self.taskbar.set_halign(self.gtk.Align.CENTER)
-            self.taskbar.set_valign(self.gtk.Align.END)
-            self.scrolled_window.set_child(self.taskbar)
             self.taskbar.add_css_class("taskbar")
             self.Taskbar()
             self.logger.info("Taskbar setup completed.")
@@ -257,10 +286,8 @@ def get_plugin_class():
                     item["view_id"] = "available"
                     self.logger.debug(f"Button for view ID {view_id} returned to pool.")
                     break
-
             self.taskbar.remove(button)
             self.taskbar.append(button)
-
             self.taskbar.queue_draw()
             self.taskbar.queue_resize()
             self.refresh_all_buttons()

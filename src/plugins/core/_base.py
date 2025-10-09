@@ -265,7 +265,13 @@ class BasePlugin:
 
         If 'key' is not provided, the configuration for the entire plugin section
         (self.plugin_id) is returned.
+
+        If default_value is provided and the setting is not found, the setting
+        is added to the configuration.
         """
+        # Unique object to distinguish a missing key from a stored value of None.
+        _MISSING_SETTING_SENTINEL = object()
+
         if not self.plugin_id:
             return default_value
 
@@ -277,7 +283,25 @@ class BasePlugin:
             elif isinstance(key, list):
                 key_path.extend(key)
 
-        return self.config_handler.get_root_setting(key_path, default_value)
+        # 1. Try to retrieve the setting with the sentinel as the internal default.
+        # If the setting is missing, config_handler.get_root_setting should return the sentinel.
+        result = self.config_handler.get_root_setting(
+            key_path, _MISSING_SETTING_SENTINEL
+        )
+
+        # 2. Check if the setting was not found
+        if result is _MISSING_SETTING_SENTINEL:
+            # 3. If a default_value was provided (and it is not None)
+            # We assume the user 'passed' a default if it's not None, as None is the function's default.
+            if default_value is not None:
+                # 4. Add the setting to the config (assuming set_root_setting exists)
+                self.config_handler.set_root_setting(key_path, default_value)
+
+            # 5. Return the default value provided by the user.
+            return default_value
+
+        # 6. If the setting was found, return the result
+        return result
 
     def get_root_setting(
         self, key: Optional[List[str]] = None, default_value: Any = None

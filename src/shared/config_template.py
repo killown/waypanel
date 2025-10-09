@@ -357,10 +357,10 @@ default_config = {
         ),
         "panel": {
             "_section_hint": "Layer-shell and size configuration for the panel that hosts the Taskbar plugin.",
-            "name": "bottom-panel",
+            "name": "bottom-panel-center",
             "name_hint": (
                 "The unique **Layer-shell name** for this panel (e.g., "
-                "'bottom-panel'). Used by Wayland compositors to identify "
+                "'bottom-panel-center'). Used by Wayland compositors to identify "
                 "and manage the panel's layer."
             ),
             "exclusive_zone": True,

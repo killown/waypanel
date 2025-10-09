@@ -17,7 +17,7 @@ def get_plugin_class():
     CONFIG_DIR = Path.home() / ".config/waypanel"
     OUTPUT_CSS_FILE_NAME = "styles.css"
     OUTPUT_CSS_PATH = CONFIG_DIR / OUTPUT_CSS_FILE_NAME
-    DEFAULT_THEME = "macos-dark"
+    DEFAULT_THEME = "os-dark"
 
     class CSSGeneratorPlugin(BasePlugin):
         def __init__(self, panel_instance):

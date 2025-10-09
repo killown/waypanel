@@ -277,10 +277,8 @@ class PluginLoader:
     def count_plugins_with_containers(self) -> int:
         """
         Count the number of enabled plugins that have a 'container' key.
-
         Args:
             plugin_dict (dict): Dictionary of plugins.
-
         Returns:
             int: Number of plugins with a container.
         """
@@ -359,7 +357,6 @@ class PluginLoader:
             for widget in widgets:
                 if hasattr(widget, "get_icon_name"):
                     self.plugin_icons[module_name] = widget.get_icon_name()
-
                 self.update_widget_safely(flow_box.append, widget)
         elif widget_action == "set_content":
             widgets = (
@@ -531,6 +528,17 @@ class PluginLoader:
             widget_action = plugin_instance.set_widget()[1]
 
             def run_once():
+                """
+                dynamic timeout based on the amount of plugins which contains container
+                Remove this after find a solution for:
+                The 'top-panel-systray' target is treated specially to prevent a panel crash
+                caused by GTK layout thrashing during application startup. Rapidly and
+                sequentially adding multiple widgets to dynamic containers, such as the
+                systray's container box, forces repeated full panel layout recalculations.
+                This can lead to assertion crashes (e.g., self.gtkCountingBloomFilter).
+                we give 100 ms time for every plugin with container so it is more than enough
+                to not reach this crash
+                """
                 self.handle_set_widget(
                     widget_action,
                     widget_to_append,
@@ -543,19 +551,8 @@ class PluginLoader:
             if target_box != self.panel_instance.top_panel_box_systray:
                 run_once()
             else:
-                # FIXME: dynamic timeout based on the amount of plugins which contains container
-                # Remove this after find a solution for:
-                # The 'top-panel-systray' target is treated specially to prevent a panel crash
-                # caused by GTK layout thrashing during application startup. Rapidly and
-                # sequentially adding multiple widgets to dynamic containers, such as the
-                # systray's container box, forces repeated full panel layout recalculations.
-                # This can lead to assertion crashes (e.g., self.gtkCountingBloomFilter).
-                # we give 100 ms time for every plugin with container so it is more than enough
-                # to not reach this crash
                 timeout = self.count_plugins_with_containers() * 100
-                print(timeout)
                 GLib.timeout_add(timeout, run_once)
-
         except Exception as e:
             self.logger.error(f"Failed to initialize plugin '{plugin_name}': {e} ❌")
             print(traceback.format_exc())

@@ -211,6 +211,8 @@ def get_plugin_class():
         def save_dockbar_order(self):
             """
             Saves the current order of the dockbar icons to the configuration file.
+            FIXED: Now uses self.config_handler.set_root_setting for safe,
+            atomic update, creation of missing paths, saving, and reloading.
             """
             try:
                 new_dockbar_config = {}
@@ -220,12 +222,8 @@ def get_plugin_class():
                         app_name = child.app_name  # pyright: ignore
                         new_dockbar_config[app_name] = child.app_config  # pyright: ignore
                     child = child.get_next_sibling()
-                if "dockbar" not in self.config_handler.config_data:  # pyright: ignore
-                    self.config_handler.config_data["dockbar"] = {}  # pyright: ignore
-                self.config_handler.config_data[self.plugin_id]["app"] = (
-                    new_dockbar_config  # pyright: ignore
-                )
-                self.config_handler.save_config()
+                key_path = [self.plugin_id, "app"]
+                self.config_handler.set_root_setting(key_path, new_dockbar_config)
                 self.logger.info("Dockbar order saved to config file.")
             except Exception as e:
                 self.logger.error(f"Failed to save dockbar order: {e}")
@@ -404,8 +402,8 @@ def get_plugin_class():
             1.  **Configuration:** All configuration reading methods (like determining panel,
                 orientation, and app list) have been updated to use the correct `BasePlugin`
                 accessor: `self.get_plugin_setting(["nested", "key", "path"], default_value)`.
-                Configuration writing (saving dockbar order) remains a direct operation on
-                `self.config_handler.config_data` as `self.get_plugin_setting()` is for reading.
+                Configuration writing (saving dockbar order) now uses the new safe method:
+                `self.config_handler.set_root_setting([self.plugin_id, "app"], new_config)`.
             Its core logic follows these principles:
             1.  **Configuration-Driven UI**: On startup, it reads a TOML config file
                 to determine which applications to display, their icons, and launch commands.

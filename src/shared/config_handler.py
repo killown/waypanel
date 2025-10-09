@@ -236,6 +236,50 @@ class ConfigHandler:
         except Exception as e:
             self.logger.error(f"Failed to start Gio.FileMonitor: {e}")
 
+    def set_root_setting(self, key_path: List[str], new_value: Any) -> bool:
+        """
+        Sets a configuration value by traversing nested keys. It creates intermediate
+        dictionaries if they do not exist. It then saves and reloads the config.
+        """
+        if not key_path:
+            self.logger.error("Configuration key path cannot be empty.")
+            return False
+        if not self._load_successful:
+            self.logger.warning(
+                f"Update to key {' -> '.join(key_path)} skipped: Config file failed to load. Please fix config.toml manually."
+            )
+            return False
+        current_data = self.config_data
+        for i, key in enumerate(key_path[:-1]):
+            if not isinstance(current_data, dict):
+                self.logger.error(
+                    f"Configuration data corrupted: Expected dictionary at path {' -> '.join(key_path[:i])}, found {type(current_data)}."
+                )
+                return False
+            if key not in current_data:
+                current_data[key] = {}
+                current_data = current_data[key]
+            elif isinstance(current_data[key], dict):
+                current_data = current_data[key]
+            else:
+                self.logger.error(
+                    f"Cannot create section for key '{key}'. Path segment already holds a non-dictionary value. Full path: {' -> '.join(key_path)}"
+                )
+                return False
+        final_key = key_path[-1]
+        if not isinstance(current_data, dict):
+            self.logger.error(
+                f"Cannot set config key '{final_key}'. The parent element is not a dictionary. Path: {' -> '.join(key_path)}"
+            )
+            return False
+        current_data[final_key] = new_value
+        self.logger.info(
+            f"Set and saved config key {' -> '.join(key_path)} to {new_value}."
+        )
+        self.save_config()
+        self.reload_config()
+        return True
+
     def get_root_setting(self, key_path: List[str], default_value: Any = None) -> Any:
         current_data = self.config_data
         for i, key in enumerate(key_path):
