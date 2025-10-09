@@ -1,5 +1,141 @@
-.update-checker-button > button.toggle {
+/* ================================================= */
+/* =============== PACMAN UPDATE CHECKER ============ */
+/* ================================================= */
+
+.pacman-update-checker-button > button.toggle {
   -gtk-icon-size: 20px;
   margin-top: 4px;
+  padding: 6px 10px;
+  border-radius: var(--radius-m);
+  background: var(--color-bg-button);
+  color: var(--theme-fg-label-primary);
+  box-shadow: var(--shadow-control-small);
+  transition: all 120ms ease-in-out;
 }
 
+.pacman-update-checker-button > button.toggle:hover {
+  background: var(--color-bg-button-hover);
+  color: var(--theme-fg-label-primary);
+  box-shadow: var(--shadow-elevated);
+}
+
+.pacman-update-checker-button > button.toggle:active {
+  background: var(--color-bg-button-active);
+  box-shadow: var(--shadow-neumorphic-press);
+}
+
+
+/* ============================= */
+/* ===== Update Checker Btn ===== */
+/* ============================= */
+
+.update-checker-button {
+  background: transparent;
+  border-radius: var(--radius-m);
+  padding: 4px;
+  transition: all 100ms ease-in-out;
+}
+
+.update-checker-button:hover {
+  background: var(--color-bg-button-flat-hover);
+}
+
+.update-checker-button:checked {
+  background: var(--color-bg-button-active);
+}
+
+
+/* ============================= */
+/* ===== Popover + Box UI ===== */
+/* ============================= */
+
+.pacman-box {
+  background-color: var(--color-bg-popover-content);
+  border-radius: var(--radius-l);
+  padding: 12px;
+  box-shadow: var(--shadow-elevated);
+  border: 1px solid var(--theme-decoration-separator);
+}
+
+.update-checker-popover {
+  background-color: var(--color-bg-popover);
+  color: var(--theme-fg-label-primary);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-window-float);
+  border: 1px solid var(--theme-decoration-separator);
+}
+
+
+/* ============================= */
+/* ===== Heading Label ===== */
+/* ============================= */
+
+.pacman-heading {
+  font-family: var(--font-family-system);
+  font-weight: var(--font-weight-bold);
+  color: var(--theme-fg-header-text);
+  font-size: 1.1em;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+
+/* ============================= */
+/* ===== Refresh Button ===== */
+/* ============================= */
+
+.pacman-refresh-button {
+  background-color: var(--color-bg-button);
+  color: var(--theme-fg-label-primary);
+  border-radius: var(--radius-m);
+  padding: 6px 12px;
+  margin-top: 4px;
+  transition: background-color 120ms ease-in-out, box-shadow 120ms ease-in-out;
+}
+
+.pacman-refresh-button:hover {
+  background-color: var(--color-bg-button-hover);
+  box-shadow: var(--shadow-elevated);
+}
+
+.pacman-refresh-button:active {
+  background-color: var(--color-bg-button-active);
+  box-shadow: var(--shadow-neumorphic-press);
+}
+
+
+/* ============================= */
+/* ===== Update Button ===== */
+/* ============================= */
+
+.pacman-update-button {
+  background-color: var(--color-bg-button-suggested);
+  color: var(--theme-fg-label-inverse);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-m);
+  padding: 6px 12px;
+  margin-top: 8px;
+  transition: background-color 120ms ease-in-out, box-shadow 120ms ease-in-out;
+}
+
+.pacman-update-button:hover {
+  background-color: var(--color-bg-button-suggested-hover);
+  box-shadow: var(--shadow-elevated);
+}
+
+.pacman-update-button:active {
+  background-color: var(--color-bg-button-active);
+  box-shadow: var(--shadow-neumorphic-press);
+}
+
+
+/* ================================================= */
+/* ===== Optional focus / keyboard states ===== */
+/* ================================================= */
+
+.pacman-refresh-button:focus,
+.pacman-update-button:focus,
+.update-checker-button:focus {
+  outline: 2px solid var(--theme-decoration-keyboard-focus);
+  outline-offset: 1px;
+}

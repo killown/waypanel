@@ -3,6 +3,7 @@ import configparser
 import rapidfuzz
 import subprocess
 import os
+import inspect
 from rapidfuzz.fuzz import token_set_ratio
 from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
@@ -990,7 +991,7 @@ class GtkHelpers:
         popover_visible_handler,
         action_handler,
         button_config: dict,
-        css_class: str = "dashboard-popover",
+        module_name: str = "",
         max_children_per_line: int = 3,
     ):
         """
@@ -1006,15 +1007,27 @@ class GtkHelpers:
             action_handler: The callback function for button clicks (e.g., self.on_action).
             logger: The logger object.
             button_config (dict): A dict defining buttons:
-                                  { "Label": {"icons": ["name1", "name2"], "summary": "...", "category": "..."} }
+                                     { "Label": {"icons": ["name1", "name2"], "summary": "...", "category": "..."} }
             css_class (str): The CSS class for the popover (default: 'dashboard-popover').
             max_children_per_line (int): Max number of buttons per row in the FlowBox.
         Returns:
             Gtk.Popover: The fully configured dashboard popover.
         """
+        prefixed_css_class = f"{module_name}-popover"
+        prefixed_label_class = f"{module_name}-label"
+        prefixed_summary_class = f"{module_name}-summary"
+        prefixed_stack_class = f"{module_name}-stack"
+        prefixed_main_box = f"{module_name}-main-box"
+        prefixed_icon_vbox = f"{module_name}-icon-vbox"
+        print(
+            prefixed_summary_class,
+            prefixed_css_class,
+            prefixed_label_class,
+            prefixed_stack_class,
+        )
         popover_dashboard = self.create_popover(
             parent_widget=parent_widget,
-            css_class=css_class,
+            css_class=prefixed_css_class,
             has_arrow=True,
             closed_handler=popover_closed_handler,
             visible_handler=popover_visible_handler,
@@ -1057,6 +1070,7 @@ class GtkHelpers:
                 icon_vbox.append(icon)
             name_label = Gtk.Label.new(data[0])
             icon_vbox.append(name_label)
+            icon_vbox.add_css_class(prefixed_icon_vbox)
             summary_label = Gtk.Label.new(data[1])
             icon_vbox.append(summary_label)
             button = Gtk.Button.new()
@@ -1065,14 +1079,15 @@ class GtkHelpers:
                 button.set_child(icon_vbox)
             else:
                 self.logger.info("Error: Invalid icon_vbox provided")
-            flowbox.append(button)  # pyright: ignore
+            flowbox.append(button)
             button.connect("clicked", action_handler, data[0])
-            name_label.add_css_class("system_dash_label")
-            summary_label.add_css_class("system_dash_summary")
+            name_label.add_css_class(prefixed_label_class)
+            summary_label.add_css_class(prefixed_summary_class)
             self.add_cursor_effect(button)
         main_box.append(stack)
+        main_box.add_css_class(prefixed_main_box)
         popover_dashboard.set_child(main_box)
-        stack.add_css_class("system_dashboard_stack")
+        stack.add_css_class(prefixed_stack_class)
         popover_dashboard.popup()
         return popover_dashboard
 

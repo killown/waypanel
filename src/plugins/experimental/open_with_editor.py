@@ -24,14 +24,10 @@ def get_plugin_class():
 
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
-            raw_config_maps = self.get_config(
-                ["plugins", "open_with_editor", "directories"]
-            )
+            raw_config_maps = self.get_config(["directories"])
             self.config_maps = {}
             if not raw_config_maps:
-                single_config_dir = self.get_config(
-                    ["plugins", "open_with_editor", "config_dir"]
-                )
+                single_config_dir = self.get_config(["config_dir"])
                 if not single_config_dir:
                     single_config_dir = self.os.path.join("~", ".config", "nvim")
                 raw_config_maps = {"Default Config": single_config_dir}
@@ -44,9 +40,7 @@ def get_plugin_class():
             self.cached_files = {}
             self.active_listbox = None
             self.active_searchbar = None
-            self.editor_extensions = self.get_config(
-                ["plugins", "open_with_editor", "extensions"]
-            )
+            self.editor_extensions = self.get_config(["extensions"])
             if not self.editor_extensions:
                 self.editor_extensions = {
                     "json": ["code", "nvim"],
@@ -115,7 +109,7 @@ def get_plugin_class():
                 "csv": "text-csv-symbolic",
                 "data": "application-x-generic-symbolic",
             }
-            self.popover_folders = None
+            self.popover_openwitheditor = None
             self.terminal_emulators = [
                 "kitty",
                 "alacritty",
@@ -132,45 +126,47 @@ def get_plugin_class():
             ]
 
         def on_start(self):
-            self.create_menu_popover_folders()
+            self.create_menu_popover_openwitheditor()
             self.set_main_widget()
 
         def set_main_widget(self):
-            self.main_widget = (self.menubutton_folders, "append")
+            self.main_widget = (self.menubutton_openwitheditor, "append")
 
-        def create_menu_popover_folders(self):
+        def create_menu_popover_openwitheditor(self):
             self.layer_shell.set_keyboard_mode(
                 self.obj.top_panel, self.layer_shell.KeyboardMode.ON_DEMAND
             )
-            self.menubutton_folders = self.gtk.Button()
-            self.menubutton_folders.connect("clicked", self.open_popover_folders)
+            self.menubutton_openwitheditor = self.gtk.Button()
+            self.menubutton_openwitheditor.connect(
+                "clicked", self.open_popover_openwitheditor
+            )
             icon_name = self.gtk_helper.set_widget_icon_name(
                 "code-exploration",
                 ["code", "com.visualstudio.code.oss"],
             )
-            self.menubutton_folders.set_icon_name(icon_name)
-            self.menubutton_folders.add_css_class("places-menu-button")
-            self.gtk_helper.add_cursor_effect(self.menubutton_folders)
+            self.menubutton_openwitheditor.set_icon_name(icon_name)
+            self.menubutton_openwitheditor.add_css_class("openwitheditor-menu-button")
+            self.gtk_helper.add_cursor_effect(self.menubutton_openwitheditor)
 
-        def create_popover_folders(self):
+        def create_popover_openwitheditor(self):
             """
             Create and configure a popover for files, now with tabs.
             """
             self._setup_popover_base()
             main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
-            main_box.add_css_class("places-main-box")
+            main_box.add_css_class("openwitheditor-main-box")
             self.switcher, self.stack = self._setup_tabbed_ui()  # pyright: ignore
             main_box.append(self.switcher)
             main_box.append(self.stack)
-            self.popover_folders.set_child(main_box)  # pyright: ignore
+            self.popover_openwitheditor.set_child(main_box)  # pyright: ignore
             self.active_listbox = self.listbox_widgets[self.active_dir_name]
             self.active_searchbar = self.searchbar_widgets[self.active_dir_name]
             self._populate_listbox(
                 self.active_listbox, self.config_dir, self.active_searchbar
             )
             self.active_searchbar.grab_focus()
-            self.popover_folders.popup()  # pyright: ignore
-            return self.popover_folders
+            self.popover_openwitheditor.popup()  # pyright: ignore
+            return self.popover_openwitheditor
 
         def on_listbox_row_activated(self, listbox, row):
             """
@@ -194,10 +190,10 @@ def get_plugin_class():
             self.stack.set_transition_type(
                 self.gtk.StackTransitionType.SLIDE_LEFT_RIGHT
             )
-            self.stack.add_css_class("places-stack")
+            self.stack.add_css_class("openwitheditor-stack")
             self.switcher = self.gtk.StackSwitcher.new()
             self.switcher.set_stack(self.stack)
-            self.switcher.add_css_class("places-stack-switcher")
+            self.switcher.add_css_class("openwitheditor-stack-switcher")
             for dir_name, dir_path in self.config_maps.items():
                 page_box, searchbar, listbox = self._create_tab_page(dir_name)
                 self.stack.add_titled(page_box, dir_name, dir_name)
@@ -209,7 +205,7 @@ def get_plugin_class():
         def _create_tab_page(self, dir_name):
             """Creates the Gtk.Box content for a single tab (searchbar + listbox)."""
             page_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
-            page_box.add_css_class("places-page-box")
+            page_box.add_css_class("openwitheditor-page-box")
             page_box.props.hexpand = True
             page_box.props.vexpand = True
             searchbar = self.gtk.SearchEntry.new()
@@ -218,7 +214,7 @@ def get_plugin_class():
             searchbar.grab_focus()
             searchbar.props.hexpand = True
             searchbar.props.vexpand = False
-            searchbar.add_css_class("places-search-entry")
+            searchbar.add_css_class("openwitheditor-search-entry")
             page_box.append(searchbar)
             listbox = self.gtk.ListBox.new()
             listbox.connect("row-activated", self.on_listbox_row_activated)
@@ -228,11 +224,11 @@ def get_plugin_class():
             listbox.props.vexpand = True
             listbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
             listbox.set_show_separators(True)
-            listbox.add_css_class("places-listbox")
+            listbox.add_css_class("openwitheditor-listbox")
             self.scrolled_window = self.gtk.ScrolledWindow()
             self.scrolled_window.set_min_content_width(800)
             self.scrolled_window.set_min_content_height(600)
-            self.scrolled_window.add_css_class("places-scrolled-window")
+            self.scrolled_window.add_css_class("openwitheditor-scrolled-window")
             self.scrolled_window.set_child(listbox)
             page_box.append(self.scrolled_window)
             return page_box, searchbar, listbox
@@ -252,14 +248,14 @@ def get_plugin_class():
 
         def _setup_popover_base(self):
             """Creates and configures the main popover object and its GIO action."""
-            self.popover_folders = self.create_popover(
-                parent_widget=self.menubutton_folders,
-                css_class="places-popover",
+            self.popover_openwitheditor = self.create_popover(
+                parent_widget=self.menubutton_openwitheditor,
+                css_class="openwitheditor-popover",
                 has_arrow=False,
                 closed_handler=self.popover_is_closed,
                 visible_handler=self.popover_is_open,
             )
-            self.popover_folders.set_autohide(True)
+            self.popover_openwitheditor.set_autohide(True)
             show_searchbar_action = self.gio.SimpleAction.new("show_searchbar")
             show_searchbar_action.connect(
                 "activate", self.on_show_searchbar_action_actived
@@ -377,7 +373,7 @@ def get_plugin_class():
             icon_name = self._get_file_icon_name(full_file_path)
             display_path = self.os.path.relpath(full_file_path, root_dir)
             row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
-            row_hbox.add_css_class("places-row-hbox")
+            row_hbox.add_css_class("openwitheditor-row-hbox")
             row_hbox.MYTEXT = full_file_path  # pyright: ignore
             row_hbox.set_tooltip_text(full_file_path)
             line = self.gtk.Label.new()
@@ -385,9 +381,9 @@ def get_plugin_class():
             line.props.margin_start = 5
             line.props.hexpand = True
             line.set_halign(self.gtk.Align.START)
-            line.add_css_class("places-label-from-popover")
+            line.add_css_class("openwitheditor-label-from-popover")
             image = self.gtk.Image.new_from_icon_name(icon_name)
-            image.add_css_class("places-icon-from-popover")
+            image.add_css_class("openwitheditor-icon-from-popover")
             image.set_icon_size(self.gtk.IconSize.INHERIT)
             image.props.margin_end = 5
             image.set_halign(self.gtk.Align.END)
@@ -523,18 +519,21 @@ def get_plugin_class():
                     self.logger.error(
                         f"Failed to open file using GUI editor '{editor}': {e}"
                     )
-            if self.popover_folders and success:
-                self.popover_folders.popdown()
+            if self.popover_openwitheditor and success:
+                self.popover_openwitheditor.popdown()
 
-        def open_popover_folders(self, *_):
-            if self.popover_folders and self.popover_folders.is_visible():
-                self.popover_folders.popdown()
-            elif self.popover_folders and not self.popover_folders.is_visible():
+        def open_popover_openwitheditor(self, *_):
+            if self.popover_openwitheditor and self.popover_openwitheditor.is_visible():
+                self.popover_openwitheditor.popdown()
+            elif (
+                self.popover_openwitheditor
+                and not self.popover_openwitheditor.is_visible()
+            ):
                 if self.active_listbox:
                     self.active_listbox.unselect_all()
-                self.popover_folders.popup()
-            elif not self.popover_folders:
-                self.popover_folders = self.create_popover_folders()
+                self.popover_openwitheditor.popup()
+            elif not self.popover_openwitheditor:
+                self.popover_openwitheditor = self.create_popover_openwitheditor()
 
         def popover_is_open(self, *_):
             if self.active_searchbar:

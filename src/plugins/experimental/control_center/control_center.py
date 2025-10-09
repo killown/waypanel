@@ -15,9 +15,9 @@ def get_plugin_class():
     gi.require_version("Gtk", "4.0")
     gi.require_version("Adw", "1")
     gi.require_version("Gdk", "4.0")
-    from gi.repository import Gtk, Adw, Gdk
+    from gi.repository import Gtk, Adw, Gdk  # pyright: ignore
     from src.plugins.core._base import BasePlugin
-    from .control_center_helper import ControlCenterHelpers
+    from ._control_center_helpers import ControlCenterHelpers
 
     class ControlCenter(BasePlugin):
         def __init__(self, panel_instance):
@@ -29,15 +29,7 @@ def get_plugin_class():
             self.gtk = Gtk
             self.adw = Adw
             self.toast_overlay: Adw.ToastOverlay = None
-            self.category_widgets: Dict[str, Gtk.Widget] = {}
-            self.short_to_full_key: Dict[str, str] = {}
             self.win = None
-            self.main_stack = None
-            self.content_stack = None
-            self.search_entry = None
-            self.category_flowbox = None
-            self.save_button_stack = None
-            self.back_button_stack = None
             self.short_to_full_key = self._generate_plugin_map(self.default_config)
 
         def _generate_plugin_map(self, config):
@@ -46,6 +38,8 @@ def get_plugin_class():
                 if full_id.startswith("org.waypanel.plugin."):
                     short_name = full_id.split(".")[-1]
                     plugin_map[short_name] = full_id
+                else:
+                    plugin_map[full_id] = full_id
             return plugin_map
 
         def display_notify(self, title: str, icon_name: str):
@@ -192,16 +186,12 @@ def get_plugin_class():
                     return icon_name
             tmp_cat_name = category_name.split(".")[-1]
             norm_name_patterns = [
-                self._gtk_helper.icon_exist(
-                    tmp_cat_name
-                ),  # Re-enabled as requested by user. Using self.helper (ControlCenterHelpers)
+                self._gtk_helper.icon_exist(tmp_cat_name),
                 f"{norm_name}-symbolic",
                 f"preferences-{norm_name}-symbolic",
                 f"utilities-{norm_name}-symbolic",
             ]
             for icon_name in norm_name_patterns:
-                # Assuming 'self.helper.icon_exist' returns an icon name string
-                # and relying on the `has_icon` check here.
                 if icon_theme.has_icon(icon_name):
                     return icon_name
             fallback_map = {
@@ -321,20 +311,12 @@ def get_plugin_class():
                 return
             for child in self.category_flowbox:
                 self.category_flowbox.remove(child)
-
-            # --- CUSTOM: Add Theme Category (Injected) ---
             THEME_UI_KEY = "theme"
-
-            # 1. Create category widget and add to FlowBox
             category_widget = self.create_category_widget(THEME_UI_KEY)
-            self.category_flowbox.insert(category_widget, 0)  # Insert at the beginning
+            self.category_flowbox.insert(category_widget, 0)
             self.category_widgets[THEME_UI_KEY] = category_widget
-
-            # 2. Create content page and add to Stack
             content_page = self._create_theme_page(THEME_UI_KEY)
             self.content_stack.add_named(content_page, THEME_UI_KEY)
-            # ----------------------------------
-
             sorted_config_keys = sorted(self.config.keys())
             for full_config_key in sorted_config_keys:
                 category_data = self.config[full_config_key]
@@ -342,11 +324,8 @@ def get_plugin_class():
                     ui_key = full_config_key.split(".")[-1]
                 else:
                     ui_key = full_config_key
-
-                # Skip the theme key here, it's already added at the top
                 if ui_key == THEME_UI_KEY:
                     continue
-
                 category_widget = self.create_category_widget(ui_key)
                 self.category_flowbox.insert(category_widget, -1)
                 self.category_widgets[ui_key] = category_widget
@@ -357,7 +336,6 @@ def get_plugin_class():
             """Called when a category icon/widget is clicked. category_name is the UI key (short name)."""
             self.content_stack.set_visible_child_name(category_name)
             self.main_stack.set_visible_child_name("settings_pages")
-            # Only show save button for configurable pages, not the custom theme page which saves instantly
             if category_name != "theme":
                 self.save_button_stack.set_visible_child_name("save_button")
             else:
@@ -455,13 +433,14 @@ def get_plugin_class():
                             config_dict[key] = new_value
 
             if category_name in self.widget_map:
-                if full_config_key in self.config:
-                    update_config_from_widgets(
-                        self.config[full_config_key],
-                        self.widget_map[category_name],
-                    )
-                else:
-                    return
+                if self.config:
+                    if full_config_key in self.config:
+                        update_config_from_widgets(
+                            self.config[full_config_key],
+                            self.widget_map[category_name],
+                        )
+                    else:
+                        return
             try:
                 self.config_handler.save_config()
                 self.display_notify(
@@ -474,7 +453,93 @@ def get_plugin_class():
                     "dialog-error",
                 )
 
-        # --- Custom Theme Widget Implementation ---
+        def _list_fs_themes(self, dirs: list[str]) -> list[str]:
+            """
+            Scans directories for theme/icon folders. A theme must contain 'index.theme' or 'gtk-4.0'
+            for GTK/Icon themes to be included in the list.
+            """
+            themes = set()
+            for d in dirs:
+                full_dir = os.path.expanduser(d)
+                if os.path.isdir(full_dir):
+                    for item in os.listdir(full_dir):
+                        full_path = os.path.join(full_dir, item)
+                        if os.path.isdir(full_path) and not item.startswith("."):
+                            if os.path.exists(
+                                os.path.join(full_path, "index.theme")
+                            ) or os.path.exists(os.path.join(full_path, "gtk-4.0")):
+                                themes.add(item)
+            return sorted(list(themes))
+
+        def _get_current_gsettings_theme(self, schema: str, key: str) -> str:
+            """Reads the current theme setting using gsettings."""
+            try:
+                result = (
+                    os.popen(f"gsettings get {schema} {key} 2>/dev/null").read().strip()
+                )
+                if result and result.startswith("'") and result.endswith("'"):
+                    return result[1:-1]
+                return result
+            except Exception:
+                return ""
+
+        def _on_gsettings_theme_selected(
+            self, combobox: Gtk.ComboBoxText, schema: str, key: str
+        ):
+            """Applies the selected theme using gsettings set."""
+            selected_theme = combobox.get_active_text()
+            if not selected_theme or selected_theme == "(No themes found)":
+                return
+            try:
+                command = f"gsettings set {schema} {key} '{selected_theme}'"
+                os.system(command)
+                display_name = key.replace("-", " ").capitalize()
+                self.display_notify(
+                    f"{display_name} set to {selected_theme}.",
+                    "preferences-desktop-theme-symbolic",
+                )
+            except Exception as e:
+                self.display_notify(
+                    f"Error applying {key.replace('-', ' ')}: {e}",
+                    "dialog-error-symbolic",
+                )
+
+        def _create_gsettings_theme_row(
+            self,
+            title: str,
+            subtitle: str,
+            schema: str,
+            key: str,
+            theme_dirs: list[str],
+        ) -> Adw.ActionRow:
+            """Creates an Adw.ActionRow with a ComboBoxText for a gsettings theme."""
+            theme_names = self._list_fs_themes(theme_dirs)
+            current_theme = self._get_current_gsettings_theme(schema, key)
+            if not theme_names:
+                theme_names = ["(No themes found)"]
+                current_theme = theme_names[0]
+            combobox = self.gtk.ComboBoxText.new()
+            active_index = -1
+            for i, theme in enumerate(theme_names):
+                combobox.append_text(theme)
+                if theme == current_theme:
+                    active_index = i
+            if active_index != -1:
+                combobox.set_active(active_index)
+            elif theme_names and theme_names[0] != "(No themes found)":
+                combobox.set_active(0)
+            combobox.set_halign(self.gtk.Align.END)
+            combobox.connect("changed", self._on_gsettings_theme_selected, schema, key)
+            action_row = self.adw.ActionRow(
+                title=title,
+                subtitle=subtitle,
+            )
+            action_row.add_suffix(combobox)
+            action_row.set_activatable_widget(combobox)
+            action_row.add_css_class("control-center-setting-row")
+            if current_theme == "(No themes found)":
+                combobox.set_sensitive(False)
+            return action_row
 
         def _get_available_themes(self) -> list[str]:
             """
@@ -483,7 +548,6 @@ def get_plugin_class():
             css_dir = os.path.expanduser("~/.local/share/waypanel/resources/themes/css")
             if not os.path.isdir(css_dir):
                 return []
-
             return sorted(
                 [
                     f.split(".")[0]
@@ -500,29 +564,23 @@ def get_plugin_class():
             selected_theme = combobox.get_active_text()
             if not selected_theme:
                 return
-
-            # Update and save Waypanel config at the requested path: [panel.theme] default
             MAIN_CONFIG_KEY = "panel"
             NESTED_CONFIG_KEY = "theme"
             DEFAULT_KEY = "default"
-
-            # Ensure the nested configuration structure exists
-            if MAIN_CONFIG_KEY not in self.config:
-                self.config[MAIN_CONFIG_KEY] = {}
-            if NESTED_CONFIG_KEY not in self.config[MAIN_CONFIG_KEY]:
-                self.config[MAIN_CONFIG_KEY][NESTED_CONFIG_KEY] = {}
-
-            # Set the theme
-            self.config[MAIN_CONFIG_KEY][NESTED_CONFIG_KEY][DEFAULT_KEY] = (
-                selected_theme
-            )
-
+            if self.config:
+                if MAIN_CONFIG_KEY not in self.config:
+                    self.config[MAIN_CONFIG_KEY] = {}
+                if NESTED_CONFIG_KEY not in self.config[MAIN_CONFIG_KEY]:
+                    self.config[MAIN_CONFIG_KEY][NESTED_CONFIG_KEY] = {}
+                self.config[MAIN_CONFIG_KEY][NESTED_CONFIG_KEY][DEFAULT_KEY] = (
+                    selected_theme
+                )
+            else:
+                self.logger.warning("Cannot find the config for the theme selection.")
             try:
                 self.config_handler.save_config()
-                # The panel instance needs a method to apply the theme after config save.
-                if hasattr(self.panel_instance, "apply_theme"):
-                    self.panel_instance.apply_theme(selected_theme)
-
+                if hasattr(self._panel_instance, "apply_theme"):
+                    self._panel_instance.apply_theme(selected_theme)
                 self.display_notify(
                     f"Waypanel theme set to {selected_theme}. Panel may require restart to fully apply to all widgets.",
                     "preferences-desktop-theme-symbolic",
@@ -534,42 +592,30 @@ def get_plugin_class():
 
         def _create_theme_selector_widget(self) -> Adw.ActionRow:
             """
-            Creates the Adw.ActionRow with the Gtk.ComboBoxText for theme selection.
+            Creates the Adw.ActionRow with the Gtk.ComboBoxText for Waypanel theme selection.
             """
             theme_names = self._get_available_themes()
-
-            # Define the config key location
             MAIN_CONFIG_KEY = "panel"
             NESTED_CONFIG_KEY = "theme"
             DEFAULT_KEY = "default"
 
-            # Safely retrieve the current theme setting from the config
             current_theme = (
-                self.config.get(MAIN_CONFIG_KEY, {})
+                self.config.get(MAIN_CONFIG_KEY, {})  # pyright: ignore
                 .get(NESTED_CONFIG_KEY, {})
                 .get(DEFAULT_KEY, None)
             )
-
             if not current_theme or current_theme not in theme_names:
                 current_theme = theme_names[0] if theme_names else "default"
-
-            # Create the ComboBox
             combobox = self.gtk.ComboBoxText.new()
-
             active_index = -1
             for i, theme in enumerate(theme_names):
                 combobox.append_text(theme)
                 if theme == current_theme:
                     active_index = i
-
-            # Set the current theme as active
             if active_index != -1:
                 combobox.set_active(active_index)
-
             combobox.set_halign(self.gtk.Align.END)
             combobox.connect("changed", self._on_theme_selected)
-
-            # Create the ActionRow wrapper
             action_row = self.adw.ActionRow(
                 title="Waypanel CSS Theme",
                 subtitle="Select the theme for Waypanel's internal components.",
@@ -577,12 +623,11 @@ def get_plugin_class():
             action_row.add_suffix(combobox)
             action_row.set_activatable_widget(combobox)
             action_row.add_css_class("control-center-setting-row")
-
             return action_row
 
         def _create_theme_page(self, ui_key: str) -> Gtk.ScrolledWindow:
             """
-            Creates the dedicated settings page for theme selection.
+            Creates the dedicated settings page for theme selection with all three options.
             """
             scrolled_window = self.gtk.ScrolledWindow()
             scrolled_window.set_policy(
@@ -592,23 +637,35 @@ def get_plugin_class():
                 orientation=self.gtk.Orientation.VERTICAL, spacing=10
             )
             main_box.add_css_class("control-center-content-area")
-
-            # FIX: Correct GTK 4 margin setting methods
             main_box.set_margin_top(20)
             main_box.set_margin_bottom(20)
             main_box.set_margin_start(20)
             main_box.set_margin_end(20)
-
             preferences_group = self.adw.PreferencesGroup(
                 title="Appearance Settings",
-                description="Change the CSS theme for Waypanel.",
+                description="Change the look and feel of Waypanel and GTK applications.",
             )
             preferences_group.add_css_class("control-center-config-group")
-
-            # Add the custom theme selector widget
-            theme_row = self._create_theme_selector_widget()
-            preferences_group.add(theme_row)
-
+            waypanel_theme_row = self._create_theme_selector_widget()
+            preferences_group.add(waypanel_theme_row)
+            gtk_theme_dirs = ["/usr/share/themes", "~/.local/share/themes", "~/.themes"]
+            gtk_theme_row = self._create_gsettings_theme_row(
+                title="GTK Theme",
+                subtitle="Select the theme for GTK 4/3 applications (applied via gsettings).",
+                schema="org.gnome.desktop.interface",
+                key="gtk-theme",
+                theme_dirs=gtk_theme_dirs,
+            )
+            preferences_group.add(gtk_theme_row)
+            icon_theme_dirs = ["/usr/share/icons", "~/.local/share/icons", "~/.icons"]
+            icon_theme_row = self._create_gsettings_theme_row(
+                title="Icon Theme",
+                subtitle="Select the icon theme for applications (applied via gsettings).",
+                schema="org.gnome.desktop.interface",
+                key="icon-theme",
+                theme_dirs=icon_theme_dirs,
+            )
+            preferences_group.add(icon_theme_row)
             main_box.append(preferences_group)
             scrolled_window.set_child(main_box)
             return scrolled_window

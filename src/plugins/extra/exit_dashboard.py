@@ -64,9 +64,22 @@ def get_plugin_class():
             self.popover_dashboard = None
             self.panel_instance = panel_instance
             self.menubutton_dashboard = None
+            self.plugin_css_class = "exit-dashboard-widget"
+
+        def add_css_class_to_children(self, widget):
+            """Recursively add the plugin's CSS class to the widget and all its children."""
+            if hasattr(widget, "add_css_class"):
+                widget.add_css_class(self.plugin_css_class)
+            if hasattr(widget, "get_children"):
+                for child in widget.get_children():
+                    self.add_css_class_to_children(child)
+            elif hasattr(widget, "get_child") and widget.get_child():
+                self.add_css_class_to_children(widget.get_child())
 
         def on_start(self):
             self.create_menu_popover_system()
+            if self.menubutton_dashboard:
+                self.menubutton_dashboard.add_css_class(self.plugin_css_class)
 
         def message(self, msg):
             dialog = self.gtk.MessageDialog(
@@ -77,7 +90,8 @@ def get_plugin_class():
             )
             close_btn = self.gtk.Button(label="_Close", use_underline=True)
             close_btn.connect("clicked", lambda *_: dialog.close())
-            dialog.get_message_area().append(close_btn)
+            dialog.get_message_area().append(close_btn)  # pyright: ignore
+            self.add_css_class_to_children(dialog)
             dialog.show()
 
         def launch_settings(self):
@@ -106,7 +120,8 @@ def get_plugin_class():
             )
             self.menubutton_dashboard.set_icon_name(icon_name)
             self.gtk_helper.add_cursor_effect(self.menubutton_dashboard)
-            self.menubutton_dashboard.add_css_class("system-dashboard-button")
+            self.menubutton_dashboard.add_css_class("exit-dashboard-button")
+            self.menubutton_dashboard.add_css_class(self.plugin_css_class)
             return self.menubutton_dashboard
 
         def create_popover_system(self, *_):
@@ -123,9 +138,10 @@ def get_plugin_class():
                 popover_visible_handler=self.popover_is_open,
                 action_handler=self.on_action,
                 button_config=SYSTEM_BUTTON_CONFIG,
-                css_class="system-popover",
+                module_name="exit-dashboard",
                 max_children_per_line=3,
             )
+            self.add_css_class_to_children(self.popover_dashboard)
             return self.popover_dashboard
 
         def on_system_clicked(self, device, *_):
@@ -192,12 +208,12 @@ def get_plugin_class():
             if action == "Lock":
                 self.subprocess.Popen(
                     """swaylock --screenshots --clock --indicator
-                         --grace-no-mouse --indicator-radius 99
-                         --indicator-thickness 6 --effect-blur 7x5
-                         --effect-vignette -1.5:0.5  --ring-color ffffff
-                         --key-hl-color 880032 --line-color 00000000
-                         --inside-color 00000087 --separator-color 00000000
-                         --grace 1 --fade-in 4""".split()
+                        --grace-no-mouse --indicator-radius 99
+                        --indicator-thickness 6 --effect-blur 7x5
+                        --effect-vignette -1.5:0.5  --ring-color ffffff
+                        --key-hl-color 880032 --line-color 00000000
+                        --inside-color 00000087 --separator-color 00000000
+                        --grace 1 --fade-in 4""".split()
                 )
             if action == "Settings":
                 self.launch_settings()

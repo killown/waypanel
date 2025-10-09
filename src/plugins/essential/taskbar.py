@@ -103,14 +103,14 @@ def get_plugin_class():
                 monitor_width = geometry["width"]
                 self.scrolled_window.set_size_request(
                     monitor_width,
-                    self.get_config(["panel", "exclusive_zone"]),
+                    0,
                 )
             self.taskbar.set_halign(self.gtk.Align.CENTER)
             self.taskbar.set_valign(self.gtk.Align.END)
             self.scrolled_window.set_child(self.taskbar)
             self.taskbar.add_css_class("taskbar")
             self.Taskbar()
-            self.logger.info("Bottom panel setup completed.")
+            self.logger.info("Taskbar setup completed.")
 
         def _subscribe_to_events(self) -> bool:
             if "event_manager" not in self.obj.plugin_loader.plugins:
@@ -221,7 +221,7 @@ def get_plugin_class():
                     button = b["button"]
                     self.taskbar.remove(button)
                     self.taskbar.append(button)
-            self.logger.info("Taskbar reconciliation completed.")
+            self.logger.debug("Taskbar reconciliation completed.")
 
         def Taskbar(self):
             self.logger.debug("Reconciling taskbar views.")
@@ -257,6 +257,12 @@ def get_plugin_class():
                     item["view_id"] = "available"
                     self.logger.debug(f"Button for view ID {view_id} returned to pool.")
                     break
+
+            self.taskbar.remove(button)
+            self.taskbar.append(button)
+
+            self.taskbar.queue_draw()
+            self.taskbar.queue_resize()
             self.refresh_all_buttons()
 
         def update_button(self, button, view):
@@ -266,6 +272,7 @@ def get_plugin_class():
                 initial_title = title[0]
             app_id = view.get("app-id")
             if len(title) > self.max_title_lenght:
+                print(self.max_title_lenght)
                 truncated_title = title[: self.max_title_lenght] + "..."
             else:
                 truncated_title = title

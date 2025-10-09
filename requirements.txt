@@ -27,3 +27,4 @@ unidecode
 pygments
 rapidfuzz
 lazy-loader
+distro

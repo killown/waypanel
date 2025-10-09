@@ -19,6 +19,7 @@
   background-color: var(--color-bg-searchbar);
   border-width: 0px;
   border-radius: 10px;
+  border-color: var(--color-fg-primary);
   padding: 5px 10px;
   color: var(--main-text);
   font-size: 18px;

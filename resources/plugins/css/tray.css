@@ -1,5 +1,5 @@
 .tray_icon {
-  background-color: var(--primary-bg);
+  background-color: var(--secondary-bg);
   min-width: 24px;
   min-height: 24px;
   -gtk-icon-size: 16px;

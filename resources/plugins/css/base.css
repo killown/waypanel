@@ -16,8 +16,6 @@ popover.background > arrow {
   background-color: var(--primary-bg);
 }
 
-
-
 .box-widgets {
   margin: -7px;
   padding: 1px 3px 3px 1px;

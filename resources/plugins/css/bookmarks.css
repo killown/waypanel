@@ -5,3 +5,16 @@
 .bookmarks-icon-from-popover {
   -gtk-icon-size: 36px;
 }
+
+.bookmarks-hbox-row{
+    flex-shrink: 0;
+    color: var(--theme-fg-label-primary);
+    background-color: var(--secondary-bg);
+    width: 28px;
+    height: 28px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-xs);
+}

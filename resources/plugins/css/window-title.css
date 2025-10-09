@@ -1,15 +1,15 @@
 .window-title-content {
   background: var(--color-bg-deep);
   border-radius: 7px;
-  padding: 2px;
+  padding: 3px;
   margin-left: 10px;
   margin-top: 5px;
   box-shadow:
     inset 3px 3px 5px rgba(255, 255, 255, 0.08),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
     2px 2px 5px var(--shadow-medium);
-  font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
   font-size: 22px;
+  color: var(--main-text);
   color: var(--main-text);
   text-decoration: none;
   text-shadow:
@@ -19,12 +19,15 @@
 
 .window-title-label {
   margin-left: 8px;
-  font-size: 16px;
-  font-weight: 500;
-  font-family: var(--font-family-default);
+  font-size: 14px;
+  font-weight: var(--font-weight-bold);
+  font-family: var(--font-family-default), sans-serif;
   color: var(--main-text);
+  text-shadow:
+    0 0 2px var(--dseg-shadow-soft),
+    0 0 5px var(--dseg-shadow-soft);
 }
 
 .window-title-icon {
-  -gtk-icon-size: 28px;
+  -gtk-icon-size: 24px;
 }

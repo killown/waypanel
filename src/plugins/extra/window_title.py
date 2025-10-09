@@ -82,7 +82,7 @@ def get_plugin_class():
         def _load_config(self) -> None:
             """Loads configuration from config_handler with defaults."""
             config_data = self.config_handler.config_data.get("window_title", {})
-            self.title_length: int = config_data.get("title_length", 50)
+            self.title_length: int = config_data.get("title_length", 30)
             self.logger.debug(f"Loaded title_length: {self.title_length}")
 
         def on_disable(self) -> None:
@@ -192,7 +192,7 @@ def get_plugin_class():
             if not title:
                 return ""
             title = self.gtk_helper.filter_utf_for_gtk(title)
-            MAX_WORD_LENGTH = 30
+            MAX_WORD_LENGTH = 20
             MAX_TITLE_LENGTH = self.title_length
             if " — " in title:
                 title = title.split(" — ")[0].strip()

@@ -14,6 +14,7 @@ def get_plugin_metadata(_):
 
 def get_plugin_class():
     import sqlite3
+    import distro
     from src.plugins.core._base import BasePlugin
 
     class AppLauncher(BasePlugin):
@@ -395,7 +396,9 @@ def get_plugin_class():
                     "name": name,
                     "initial_title": name,
                 }
-                dockbar_config = self.config_handler.config_data.get("dockbar", {})  # pyright: ignore
+                dockbar_config = self.config_handler.config_data.get(
+                    "org.waypanel.plugin.dockbar", {}
+                )  # pyright: ignore
                 app_config = dockbar_config.get("app", {})
                 app_config[name] = new_entry
                 dockbar_config["app"] = app_config
@@ -499,14 +502,17 @@ def get_plugin_class():
                 theme_name = selected_item.get_string()
                 try:
                     self.settings.set_string("icon-theme", theme_name)
-                    if hasattr(self, "logger") and self.logger:
-                        self.logger.info(f"Icon theme set to: {theme_name}")
-                    if hasattr(self, "gtk_helper") and self.gtk_helper:
-                        icon_name = self.gtk_helper.set_widget_icon_name(
-                            "appmenu",
-                            ["archlinux-logo"],
+                    self.logger.info(f"Icon theme set to: {theme_name}")
+                    icon_name = self.get_config(["main_icon"])
+                    if icon_name:
+                        fallback_icons = self.get_config(["fallback_icons"])
+                        fallback_icons.append(distro.id())
+                        icon_name = self._gtk_helper.icon_exist(
+                            icon_name, fallback_icons
                         )
-                        self.appmenu.set_icon_name(icon_name)
+                    if not icon_name:
+                        icon_name = self.gtk_helper.icon_exist(distro.id())
+                    self.appmenu.set_icon_name(icon_name)
                     parent_popover = dropdown.get_root()
                     if isinstance(parent_popover, self.gtk.Popover):
                         parent_popover.popdown()

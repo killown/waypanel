@@ -1,0 +1,99 @@
+.openwitheditor-menu-button {
+    -gtk-icon-size: 29px;
+}
+.openwitheditor-menu-button:hover {
+  background-color: var(--color-bg-button-hover);
+}
+.openwitheditor-menu-button:active,
+.openwitheditor-menu-button:checked {
+  background-color: var(--color-bg-button-active);
+}
+
+.openwitheditor-popover {
+  border-radius: var(--radius-l);
+  background-color: var(--color-bg-popover-content);
+  box-shadow: var(--shadow-window-float);
+  border: 1px solid var(--theme-decoration-separator);
+  padding: 0;
+}
+
+.openwitheditor-main-box {
+  padding: 0;
+  min-width: 600px;
+}
+
+.openwitheditor-stack-switcher {
+  background-color: var(--color-bg-list-header);
+  border-bottom: 1px solid var(--theme-decoration-separator);
+  padding: 5px 0;
+}
+.openwitheditor-stack-switcher button {
+  font-weight: var(--font-weight-medium);
+  color: var(--theme-fg-label-secondary);
+}
+.openwitheditor-stack-switcher button:checked {
+  color: var(--theme-fg-label-primary);
+}
+
+.openwitheditor-stack {
+  background-color: var(--theme-bg-view-tertiary);
+}
+
+.openwitheditor-page-box {
+  padding: 0;
+}
+
+.openwitheditor-search-entry {
+  margin: 10px 10px 5px 10px;
+  border-radius: var(--radius-s);
+  background-color: var(--color-bg-entry-base);
+  color: var(--theme-fg-label-primary);
+  border: 1px solid var(--color-border-entry-base);
+}
+.openwitheditor-search-entry:focus {
+  background-color: var(--color-bg-entry-focus);
+  border-color: var(--color-border-entry-focus);
+  box-shadow: none;
+}
+
+.openwitheditor-scrolled-window {
+  min-width: 600px;
+  min-height: 400px;
+  max-height: 800px;
+  margin: 0 10px 10px 10px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--theme-decoration-separator);
+  background-color: var(--theme-bg-view-tertiary);
+}
+
+.openwitheditor-listbox {
+  background-color: var(--theme-bg-view-tertiary);
+}
+.openwitheditor-listbox listboxrow {
+  background-color: var(--theme-bg-view-tertiary);
+}
+.openwitheditor-listbox listboxrow:nth-child(even) {
+  background-color: var(--theme-bg-alternating-row);
+}
+.openwitheditor-listbox listboxrow:selected {
+  background-color: var(--theme-bg-selected-secondary);
+}
+
+.openwitheditor-row-hbox {
+  padding: 5px 10px;
+}
+.openwitheditor-row-hbox:hover {
+  background-color: var(--theme-bg-selected-secondary);
+}
+
+.openwitheditor-label-from-popover {
+  color: var(--theme-fg-label-primary);
+  font-size: 14px;
+  text-align: left;
+}
+
+.openwitheditor-icon-from-popover {
+  color: var(--theme-fg-label-secondary);
+  min-width: 24px;
+  padding-right: 5px;
+}

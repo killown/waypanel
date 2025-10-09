@@ -350,6 +350,7 @@ def get_plugin_class():
                 )
                 clear_button.set_tooltip_text("Clear All Notifications")
                 clear_button.set_margin_start(10)
+                clear_button.add_css_class("notify-clear-button")
                 self.gtk_helper.add_cursor_effect(clear_button)
                 self.update_widget_safely(self.main_vbox.append, clear_button)
                 self.vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)

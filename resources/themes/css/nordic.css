@@ -24,7 +24,7 @@
   --color-bg-window: var(--nord0);
   --color-bg-panel: #2E3440e6;
   --color-bg-popover: var(--nord1);
-  --color-bg-searchbar: var(--nord2);
+  --color-bg-searchbar: var(--nord3);
   --color-bg-box-primary: var(--color-bg-popover);
   --color-bg-box-secondary: var(--color-bg-raised);
   --color-bg-button: var(--nord2);
@@ -236,7 +236,7 @@
   /* ================== FONT VARIABLES (ADDED) ================ */
   /* ================================================= */
 
-  --font-family-default: "Fira Code", "Roboto Mono", sans-serif;
+  --font-family-default: "Fira Code", "Roboto Mono";
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400; 
   --font-weight-medium: 500;  

@@ -33,11 +33,11 @@ def get_plugin_class():
             self.menubutton_folders = self.gtk.Button()
             self.menubutton_folders.connect("clicked", self.open_popover_folders)
             icon_name = self.gtk_helper.set_widget_icon_name(
-                "places",
+                "folders",
                 ["folder"],
             )
             self.menubutton_folders.set_icon_name(icon_name)
-            self.menubutton_folders.add_css_class("places-menu-button")
+            self.menubutton_folders.add_css_class("folders-menu-button")
             self.gtk_helper.add_cursor_effect(self.menubutton_folders)
 
         def create_popover_folders(self):
@@ -55,7 +55,7 @@ def get_plugin_class():
             """Creates and configures the main popover object and its GIO action."""
             self.popover_folders = self.create_popover(
                 parent_widget=self.menubutton_folders,
-                css_class="places-popover",
+                css_class="folders-popover",
                 has_arrow=False,
                 closed_handler=self.popover_is_closed,
                 visible_handler=self.popover_is_open,
@@ -72,16 +72,16 @@ def get_plugin_class():
             self.scrolled_window = self.gtk.ScrolledWindow()
             self.scrolled_window.set_min_content_width(400)
             self.scrolled_window.set_min_content_height(600)
-            self.scrolled_window.add_css_class("places-scrolled-window")
+            self.scrolled_window.add_css_class("folders-scrolled-window")
             self.main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
-            self.main_box.add_css_class("places-main-box")
+            self.main_box.add_css_class("folders-main-box")
             self.searchbar = self.gtk.SearchEntry.new()
             self.searchbar.grab_focus()
             self.searchbar.connect("search_changed", self.on_search_entry_changed)
             self.searchbar.set_focus_on_click(True)
             self.searchbar.props.hexpand = True
             self.searchbar.props.vexpand = True
-            self.searchbar.add_css_class("places-search-entry")
+            self.searchbar.add_css_class("folders-search-entry")
             self.main_box.append(self.searchbar)
             self.listbox = self.gtk.ListBox.new()
             self.listbox.connect(
@@ -92,7 +92,7 @@ def get_plugin_class():
             self.listbox.props.vexpand = True
             self.listbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
             self.listbox.set_show_separators(True)
-            self.listbox.add_css_class("places-listbox")
+            self.listbox.add_css_class("folders-listbox")
             self.main_box.append(self.scrolled_window)
             self.scrolled_window.set_child(self.listbox)
             return self.main_box
@@ -102,16 +102,16 @@ def get_plugin_class():
         ):
             """Creates a single ListBox row (HBox) for a folder entry with an icon and label."""
             row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
-            row_hbox.add_css_class("places-row-hbox")
+            row_hbox.add_css_class("folders-row-hbox")
             row_hbox.MYTEXT = folders_path, filemanager
             line = self.gtk.Label.new()
             line.set_label(name)
             line.props.margin_start = 5
             line.props.hexpand = True
             line.set_halign(self.gtk.Align.START)
-            line.add_css_class("places-label-from-popover")
+            line.add_css_class("folders-label-from-popover")
             image = self.gtk.Image.new_from_icon_name(icon)
-            image.add_css_class("places-icon-from-popover")
+            image.add_css_class("folders-icon-from-popover")
             if icon_size == self.gtk.IconSize.LARGE:
                 image.set_icon_size(self.gtk.IconSize.LARGE)
             else:
@@ -192,19 +192,19 @@ def get_plugin_class():
             """Creates a button with a label and connects a clicked signal, then appends it to the provided box."""
             button = self.gtk.Button.new_with_label(label)
             button.connect("clicked", callback)
-            button.add_css_class("places-popover-menu-items")
+            button.add_css_class("folders-popover-menu-items")
             box.append(button)
             return button
 
         def create_right_click_menu(self, row_hbox, folder_path):
             popover = self.create_popover(
                 parent_widget=row_hbox,
-                css_class="places-right-click-popover",
+                css_class="folders-right-click-popover",
                 has_arrow=False,
             )
             box = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL)
             listbox_row = row_hbox.get_parent()
-            listbox_row.add_css_class("places-lisbox-row")
+            listbox_row.add_css_class("folders-lisbox-row")
             all_folders = self.config_handler.config_data.get("folders") or {}
             is_pinned = any(
                 data.get("path") == folder_path for data in all_folders.values()

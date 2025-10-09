@@ -1,3 +1,4 @@
+import distro
 from wayfire import WayfireSocket
 
 socket = WayfireSocket()
@@ -8,6 +9,15 @@ if outputs:
 else:
     screen_width = 1920
 FIXED_DIMENSION = 32.0
+d = distro.id()
+distributor_logo_fallback_icons = [
+    f"distributor-{d}",
+    f"{d}-logo",
+    f"{d}_logo",
+    f"distributor_{d}",
+    f"logo{d}",
+    f"{d}logo",
+]
 default_config = {
     "_section_hint": (
         "General configuration settings for Waypanel, a panel "
@@ -280,8 +290,8 @@ default_config = {
         "_section_hint": (
             "Configuration for the Application Menu (Start Menu) button and associated settings."
         ),
-        "main_icon": "start-here-symbolic",
-        "fallback_main_icons": ["applications-all-symbolic"],
+        "main_icon": distro.id(),
+        "fallback_main_icons": distributor_logo_fallback_icons,
     },
     "org.waypanel.plugin.clipboard": {
         "_section_hint": (

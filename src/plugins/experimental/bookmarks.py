@@ -1,11 +1,14 @@
-DEFAULT_BOOKMARKS_TEMPLATE = """
-[Google]
+"""[Google]
 url = "https://www.google.com"
 container = "personal"
 icon = "https://www.google.com/favicon.ico"
 [GitHub]
 url = "https://www.github.com"
 container = "dev"
+[Google Maps]
+url = "https://maps.google.com"
+container = "personal"
+icon = "https://maps.google.com/favicon.ico"
 """
 
 
@@ -154,21 +157,31 @@ def get_plugin_class():
             self.run_in_async_task(self._load_and_update_bookmarks())
 
         def _get_root_hostname(self, full_url: str) -> str:
+            parsed = urllib.parse.urlparse(full_url)
+            hostname = parsed.netloc
+            if not hostname:
+                return ""
+            hostname = hostname.split(":")[0]
             extracted = tldextract.extract(full_url)
-            if extracted.registered_domain:
-                return extracted.registered_domain
-            return extracted.domain
+            return extracted.fqdn if extracted.fqdn else hostname
 
         def _get_safe_icon_filename(self, url: str) -> str:
-            root_hostname = self._get_root_hostname(url)
-            safe_name = re.sub(r"[^\w\.\-]", "_", root_hostname)
+            full_hostname = self._get_root_hostname(url)
+            if not full_hostname:
+                parsed = urllib.parse.urlparse(url)
+                full_hostname = (
+                    parsed.netloc.split(":")[0] if parsed.netloc else "fallback_icon"
+                )
+            safe_name = re.sub(r"[^\w\.\-]", "_", full_hostname)
             return safe_name + ".png"
 
         def _get_root_domain_with_scheme(self, full_url: str) -> str:
             parsed = urllib.parse.urlparse(full_url)
             scheme = parsed.scheme if parsed.scheme else "https"
-            root_hostname = self._get_root_hostname(full_url)
-            return f"{scheme}://{root_hostname}"
+            full_hostname = self._get_root_hostname(full_url)
+            if not full_hostname:
+                return full_url
+            return f"{scheme}://{full_hostname}"
 
         def _find_largest_icon_url(self, soup, base_url):
             icon_candidates = []
@@ -227,41 +240,24 @@ def get_plugin_class():
                 download_type = "explicit"
             parsed_url = urllib.parse.urlparse(full_url)
             current_scheme = parsed_url.scheme if parsed_url.scheme else "https"
-            extracted = tldextract.extract(full_url)
-            full_hostname = extracted.fqdn
-            if not full_hostname:
-                full_hostname = parsed_url.netloc
+            full_hostname = self._get_root_hostname(full_url)
             current_netloc_url = f"{current_scheme}://{full_hostname}"
-            root_url = self._get_root_domain_with_scheme(full_url)
-            try:
-                if not final_image_url:
-                    try:
-                        response = self.requests.get(
-                            full_url, headers=headers, timeout=5
+            if not final_image_url:
+                root_url_for_favicon = self._get_root_domain_with_scheme(full_url)
+                try:
+                    response = self.requests.get(full_url, headers=headers, timeout=5)
+                    if response.status_code == 200:
+                        soup = BeautifulSoup(response.text, "html.parser")
+                        final_image_url = self._find_largest_icon_url(
+                            soup, current_netloc_url
                         )
-                        if response.status_code == 200:
-                            soup = BeautifulSoup(response.text, "html.parser")
-                            final_image_url = self._find_largest_icon_url(
-                                soup, current_netloc_url
-                            )
-                    except Exception:
-                        pass
-                    if not final_image_url and current_netloc_url != root_url:
-                        try:
-                            response = self.requests.get(
-                                root_url, headers=headers, timeout=5
-                            )
-                            if response.status_code == 200:
-                                soup = BeautifulSoup(response.text, "html.parser")
-                                final_image_url = self._find_largest_icon_url(
-                                    soup, root_url
-                                )
-                        except Exception:
-                            pass
-                    if not final_image_url:
-                        final_image_url = root_url + "/favicon.ico"
-                        download_type = "favicon"
-                if final_image_url:
+                except Exception:
+                    pass
+                if not final_image_url:
+                    final_image_url = current_netloc_url + "/favicon.ico"
+                    download_type = "favicon"
+            if final_image_url:
+                try:
                     image_response = self.requests.get(
                         final_image_url, headers=headers, timeout=5
                     )
@@ -283,10 +279,10 @@ def get_plugin_class():
                                 f"Image downloaded but could not read size for {save_path}: {e}"
                             )
                             return True, download_type
-            except Exception as e:
-                self.logger.warning(
-                    f"Error during image download for {url} from {final_image_url or full_url}: {e}"
-                )
+                except Exception as e:
+                    self.logger.warning(
+                        f"Error during image download for {url} from {final_image_url}: {e}"
+                    )
             self.logger.info(
                 "No suitable image found/download failed. Check if domain blocks scraping."
             )
@@ -351,6 +347,11 @@ def get_plugin_class():
                         should_download = False
                     else:
                         should_download = True
+                elif (
+                    self.os.path.exists(bookmark_image)
+                    and cached_download_type != "explicit"
+                ):
+                    should_download = False
                 prepared_tasks.append(
                     {
                         "name": name,
@@ -414,6 +415,10 @@ def get_plugin_class():
                         )
                 else:
                     download_type = "scraped"
+            elif not should_download and safe_filename in self.icon_cache:
+                download_type = self.icon_cache[safe_filename].get(
+                    "download_type", "scraped"
+                )
             thumbnail_success = False
             is_valid_image_file = (
                 self.os.path.exists(bookmark_image)
@@ -425,7 +430,9 @@ def get_plugin_class():
                     > self.os.path.getmtime(thumbnail_path)
                 )
                 if needs_thumbnail:
-                    is_round_icon = download_type == "favicon"
+                    is_round_icon = download_type == "favicon" or (
+                        download_type == "scraped" and explicit_icon_url == ""
+                    )
                     if is_round_icon:
                         thumbnail_success = self._create_round_thumbnail(
                             bookmark_image, thumbnail_path
@@ -527,6 +534,7 @@ def get_plugin_class():
                     )
                     row_hbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
                     row_hbox.MYTEXT = (url, container)
+                    row_hbox.add_css_class("bookmarks-hbox-row")
                     line = self.gtk.Label.new()
                     line.set_label(name)
                     line.set_halign(self.gtk.Align.CENTER)
@@ -603,7 +611,9 @@ def get_plugin_class():
             components. The image fetching logic has been updated to:
             1. **Scrape for Largest Favicon:** It now scrapes the HTML of the bookmark's URL for `<link>` tags with `rel` values like `icon`, `apple-touch-icon`, etc.
             2. **Prioritize by Size:** It parses the `sizes` attribute (e.g., "180x180") to determine the largest available icon and downloads that one, falling back to a standard `/favicon.ico` if none are explicitly linked.
-            3. **Content Caching:** The fully constructed GTK widget tree is still cached in `self.final_popover_content` for instant re-use after the first successful load, maintaining high performance.
+            3. **Subdomain-Specific Icons:** The filename generation has been corrected to use the **full hostname** (e.g., maps.google.com vs www.google.com) to ensure different subdomains use different cached icons, thus fixing the issue of all Google icons being the same.
+            4. **Explicit Icon Priority:** The configuration's `icon = "..."` field now explicitly forces that icon URL to be downloaded if present, overriding any scraping logic for that specific bookmark.
+            5. **Content Caching:** The fully constructed GTK widget tree is still cached in `self.final_popover_content` for instant re-use after the first successful load, maintaining high performance.
             """
             return self.code_explanation.__doc__
 

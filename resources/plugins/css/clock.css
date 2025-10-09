@@ -7,7 +7,7 @@
     inset 3px 3px 5px rgba(255, 255, 255, 0.08),
     inset -3px -3px 5px rgba(0, 0, 0, 0.5),
     2px 2px 5px var(--shadow-medium);
-  font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
+  font-family: var(--font-family-default), monospace;
   font-size: 16px;
   color: var(--main-text);
   text-decoration: none;

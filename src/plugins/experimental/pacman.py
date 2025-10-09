@@ -21,7 +21,7 @@ def get_plugin_class():
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
             self.button = self.gtk.Button(label="0")
-            self.button.add_css_class("update-checker-button")
+            self.button.add_css_class("pacman-update-checker-button")
             self.popover = None
             self.popover_box = None
             self.menu_button = self.gtk.MenuButton()
@@ -54,6 +54,7 @@ def get_plugin_class():
             self.popover_box = self.gtk.Box(
                 orientation=self.gtk.Orientation.VERTICAL, spacing=6
             )
+            self.popover_box.add_css_class("pacman-box")
             self.popover = self.create_popover(
                 parent_widget=self.menu_button,
                 css_class="update-checker-popover",
@@ -64,17 +65,19 @@ def get_plugin_class():
             self.popover.set_child(self.popover_box)
             self.menu_button.set_popover(self.popover)
             label = self.gtk.Label(label="System Updates")
-            label.add_css_class("heading")
+            label.add_css_class("pacman-heading")
             self.popover_box.append(label)
             self.count_label = self.gtk.Label(label="No updates found")
             self.popover_box.append(self.count_label)
             refresh_btn = self.gtk.Button(label="Refresh")
+            refresh_btn.add_css_class("pacman-refresh-button")
             refresh_btn.connect(
                 "clicked", lambda x: self.run_in_async_task(self._manual_refresh())
             )
             self.gtk_helper.add_cursor_effect(refresh_btn)
             self.popover_box.append(refresh_btn)
             update_btn = self.gtk.Button(label="Update Now")
+            update_btn.add_css_class("pacman-update-button")
             update_btn.connect("clicked", self._launch_terminal)
             self.popover_box.append(update_btn)
             self.gtk_helper.add_cursor_effect(update_btn)
