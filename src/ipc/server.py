@@ -12,6 +12,7 @@ class EventServer:
     """
     The goal of this additional IPC server:
     is to handle compositor IPC issues and prevent code from hanging.
+    MODIFICATION: Now supports bi-directional Request-Response IPC (RPC).
     """
 
     def __init__(self, logger):
@@ -23,11 +24,11 @@ class EventServer:
         self.ipc = IPC()
         self.ipc.watch()
         self.compositor = None
-
         self.executor = ThreadPoolExecutor()
         self.event_queue = asyncio.Queue()
         self.clients = []
         self.event_subscribers = {}
+        self.command_handlers = {}
         self.loop = global_loop
 
     def _cleanup_sockets(self) -> None:
@@ -60,11 +61,9 @@ class EventServer:
         while True:
             if not self.is_socket_active():
                 continue
-
             try:
                 event = self.ipc.read_next_event()
                 event = translate_ipc(event, self)
-
                 if self.loop and not self.loop.is_closed():
                     try:
                         asyncio.run_coroutine_threadsafe(
@@ -90,25 +89,28 @@ class EventServer:
                 time.sleep(1)
                 continue
 
+    def register_command(self, command_name: str, handler) -> None:
+        """
+        Register a handler for a specific synchronous IPC command.
+        This is the method the DevIpcPlugin uses.
+        """
+        if command_name in self.command_handlers:
+            self.logger.warning(f"Overwriting IPC command handler for: {command_name}")
+        self.command_handlers[command_name] = handler
+        self.logger.info(f"IPC command registered: {command_name}")
+
     def add_event_subscriber(self, event_type, callback) -> None:
-        """
-        Add a subscriber for a specific event type.
-        Args:
-            event_type (str): The type of event to subscribe to.
-            callback (function): The callback to invoke when the event occurs.
-        """
         if event_type not in self.event_subscribers:
             self.event_subscribers[event_type] = []
         self.event_subscribers[event_type].append(callback)
         self.logger.info(f"new event: {event_type}")
 
     def handle_msg(self, msg) -> None:
-        # Notify subscribers for the specific event type
         event_type = msg.get("event")
+        self.logger.warning(msg)
         if event_type in self.event_subscribers:
             for callback in self.event_subscribers[event_type]:
                 try:
-                    # Execute the callback asynchronously
                     asyncio.create_task(callback(msg))
                     self.logger.debug(f"Invoked callback for event: {event_type}")
                 except Exception as e:
@@ -121,32 +123,22 @@ class EventServer:
     async def handle_event(self) -> None:
         """
         Process and broadcast events to connected clients.
-        Also invoke callbacks for subscribed event types.
         """
         while True:
-            # Get the next event from the queue
             event = await self.event_queue.get()
-
-            # Serialize the event to JSON
             serialized_event = json.dumps(event) + b"\n"
-
-            # Broadcast the serialized event to all connected clients
-            for client in self.clients[:]:  # Iterate over a copy of the list
+            for client in self.clients[:]:
                 try:
                     client.write(serialized_event)
                     await client.drain()
                 except (ConnectionResetError, BrokenPipeError):
-                    # Remove disconnected clients
                     self.clients.remove(client)
                     self.logger.warning("Removed disconnected client during broadcast.")
-
-            # Notify subscribers for the specific event type
             if event:
                 event_type = event.get("event")
                 if event_type in self.event_subscribers:
                     for callback in self.event_subscribers[event_type]:
                         try:
-                            # Execute the callback asynchronously
                             asyncio.create_task(callback(event))
                             self.logger.debug(
                                 f"Invoked callback for event: {event_type}"
@@ -155,19 +147,73 @@ class EventServer:
                             self.logger.error(
                                 f"Error executing callback for event '{event_type}': {e}"
                             )
-            else:
-                self.logger.debug(f"No subscribers for event: {event}")
+                else:
+                    self.logger.debug(f"No subscribers for event: {event}")
 
     async def handle_client(self, reader, writer) -> None:
-        """Manage individual client connections"""
+        """
+        Manage individual client connections, listen for RPC requests, and send responses.
+        """
         self.clients.append(writer)
         try:
             while True:
-                await asyncio.sleep(3600)  # Keep connection alive
-        except (ConnectionResetError, BrokenPipeError):
+                message = {}
+                raw_data = await reader.readline()
+                if not raw_data:
+                    break
+                if not raw_data.strip():
+                    await asyncio.sleep(3600)
+                    continue
+                response = {}
+                try:
+                    message = json.loads(raw_data)
+                except Exception as e:
+                    self.logger.error(f"Failed to parse client IPC message: {e}")
+                    response = {"status": "error", "message": "Invalid JSON format."}
+                command = message.get("command")
+                args = message.get("args", [])
+                if command:
+                    if command in self.command_handlers:
+                        self.logger.debug(f"Handling IPC command: {command}")
+                        handler = self.command_handlers[command]
+                        try:
+                            response = handler(args)
+                        except Exception as e:
+                            self.logger.error(
+                                f"Error executing command '{command}': {e}"
+                            )
+                            response = {
+                                "status": "error",
+                                "command": command,
+                                "message": f"Handler error: {e}",
+                            }
+                    else:
+                        response = {
+                            "status": "error",
+                            "command": command,
+                            "message": f"Unknown command: {command}",
+                        }
+                if response:
+                    if isinstance(response, dict):
+                        response_bytes = json.dumps(response) + b"\n"
+                        writer.write(response_bytes)
+                        await writer.drain()
+                    else:
+                        self.logger.error(
+                            f"Handler for {command} did not return a dictionary."
+                        )
+                        error_resp = {
+                            "status": "error",
+                            "command": command,
+                            "message": "Server error: Handler did not return valid format.",
+                        }
+                        writer.write(json.dumps(error_resp) + b"\n")
+                        await writer.drain()
+        except (ConnectionResetError, BrokenPipeError, asyncio.IncompleteReadError):
             pass
         finally:
-            self.clients.remove(writer)
+            if writer in self.clients:
+                self.clients.remove(writer)
             writer.close()
             await writer.wait_closed()
 
@@ -184,23 +230,19 @@ class EventServer:
         servers = [self.start_server(path) for path in self.ipcet_paths]
         self.loop = asyncio.get_running_loop()
         self.executor.submit(self.read_events)
-
         try:
             await asyncio.gather(*servers, self.handle_event())
         finally:
-            # Cleanup logic if needed
             pass
 
     async def broadcast_message(self, message) -> None:
         """
         Broadcast a custom message to all connected clients.
-        Args:
-            message (dict): The message to broadcast.
         """
         serialized_message = json.dumps(message) + b"\n"
-        for client in self.clients[:]:  # Iterate over a copy of the list
+        for client in self.clients[:]:
             try:
-                await client.write(serialized_message)
+                client.write(serialized_message)
                 await client.drain()
             except (ConnectionResetError, BrokenPipeError):
                 self.clients.remove(client)

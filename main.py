@@ -12,8 +12,8 @@ import time
 import tempfile
 from pathlib import Path
 
-from gi.repository import Gio
-from src.ipc.ipc_async_server import EventServer
+from gi.repository import Gio  # pyright: ignore
+from src.ipc.server import EventServer
 from src.core.compositor.ipc import IPC
 from src.core.log_setup import setup_logging
 
@@ -403,7 +403,7 @@ def main():
         check_config_path()
         ipc_server = start_ipc_server(logger)
         panel = load_panel(ipc_server)
-        panel.run(["org.waypanel"])
+        return panel.run(["org.waypanel"])
     except Exception:
         logger.critical("Fatal error during initialization", exc_info=True)
         raise
