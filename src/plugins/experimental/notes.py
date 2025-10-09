@@ -4,7 +4,7 @@ def get_plugin_metadata(_):
         "name": "Notes",
         "version": "1.0.0",
         "enabled": True,
-        "index": 6,
+        "index": 1,
         "container": "top-panel-systray",
         "deps": ["top_panel"],
     }

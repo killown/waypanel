@@ -5,6 +5,7 @@ def get_plugin_metadata(_):
         "version": "1.0.0",
         "enabled": True,
         "index": 1,
+        "priority": 5,
         "container": "top-panel-systray",
         "deps": ["top_panel"],
     }
@@ -43,6 +44,12 @@ def get_plugin_class():
             self.main_widget = (self.widget, "append")
             self.plugin_loader.register_overflow_container(self)
             self.logger.info(f"{self.PLUGIN_ID} initialized")
+            self.glib.timeout_add_seconds(2, self.reveal)
+
+        def reveal(self):
+            auto_reveal = self.get_config(["auto_reveal", "default"])
+            self.revealer.set_reveal_child(auto_reveal)
+            return False
 
         def _on_toggle_clicked(self, *args):
             """Toggles the state of the self.gtk.Revealer."""

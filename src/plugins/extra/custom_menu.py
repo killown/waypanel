@@ -4,7 +4,7 @@ def get_plugin_metadata(_):
         "name": "Custom Menus",
         "version": "1.0.0",
         "enabled": True,
-        "index": 5,
+        "index": 4,
         "container": "top-panel-systray",
         "deps": [
             "top_panel",
@@ -19,21 +19,11 @@ def get_plugin_class():
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
             self.menu_button = None
-            self.config_path = self.os.path.expanduser("~/.config/waypanel/config.toml")
             self.widgets = []
             self.main_widget = (self.widgets, "append")
 
         def on_start(self):
             self.setup_menus()
-
-        def load_menu_config(self):
-            """Load menu configuration from config.toml."""
-            if not self.os.path.exists(self.config_path):
-                self.logger.error(f"Menu config file not found: {self.config_path}")
-                return {}
-            with open(self.config_path, "r") as f:
-                config = self.toml.load(f)
-                return config.get("menu", {})
 
         def menu_run_action(self, action, parameter, cmd):
             """Run the specified command when a menu item is activated."""
@@ -53,19 +43,26 @@ def get_plugin_class():
             """
             action_map = {}
             for item in toml_items:
+                if not item:
+                    continue
                 if "submenu" in item:
                     submenu_label = item["submenu"]
                     action_map[submenu_label] = {
                         "is_submenu": True,
                         "items": self._convert_toml_to_action_map(item["items"]),
                     }
-                else:
+                elif "name" in item:
                     action_name = self._sanitize_name(item["name"])
-                    cmd = item["cmd"]
+                    if action_name == "separator":
+                        action_map[action_name] = {"is_separator": True}
+                        continue
+                    cmd = item.get("cmd")
                     icon_name = item.get("icon")
                     action_entry = {
                         "label": item["name"],
-                        "callback": lambda a, p, c=cmd: self.menu_run_action(a, p, c),
+                        "callback": lambda a, p, c=cmd: self.menu_run_action(a, p, c)
+                        if cmd
+                        else None,
                     }
                     if icon_name:
                         action_entry["icon"] = icon_name
@@ -73,29 +70,40 @@ def get_plugin_class():
             return action_map
 
         def setup_menus(self):
-            """Set up menus based on the configuration by using the enhanced gtk_helper."""
-            menu_config = self.load_menu_config()
-            if not menu_config:
-                self.logger.warning("No menu configuration found.")
+            """set up menus based on the configuration by using the enhanced gtk_helper."""
+            all_menus_config = self.get_config()
+            if not all_menus_config:
+                self.logger.warning("No configuration sections found for custom menus.")
                 return
-            for menu_name, menu_data in menu_config.items():
-                action_map = self._convert_toml_to_action_map(
-                    menu_data.get("items", [])
-                )
+            for menu_name, menu_data in all_menus_config.items():
+                if not isinstance(menu_data, dict) or "items" not in menu_data:
+                    self.logger.warning(
+                        f"Skipping invalid menu section: '{menu_name}'. Missing 'items'."
+                    )
+                    continue
+                menu_items_list = menu_data.get("items", [])
+                if not menu_items_list:
+                    self.logger.warning(f"Menu '{menu_name}' has no items defined.")
+                    continue
+                action_map = self._convert_toml_to_action_map(menu_items_list)
+                action_prefix = self._sanitize_name(menu_name)
                 menu_button = self.gtk_helper.create_menu_with_actions(
-                    action_map=action_map, action_prefix="app"
+                    action_map=action_map, action_prefix=action_prefix
                 )
-                menu_button.set_label(menu_name)
+                menu_button.set_label(menu_name.replace("_", " ").title())
                 self.gtk_helper.add_cursor_effect(menu_button)
-                menu_button.set_icon_name(
-                    self.gtk_helper.icon_exist(
-                        "custom_menu",
+                configured_icon = menu_data.get("icon")
+                if configured_icon:
+                    icon_to_use = configured_icon
+                else:
+                    icon_to_use = self.gtk_helper.icon_exist(
+                        f"custom_menu_{menu_name}",
                         [
                             "utilities-terminal-symbolic",
                             "open-menu-symbolic",
                         ],
                     )
-                )
+                menu_button.set_icon_name(icon_to_use)
                 self.widgets.append(menu_button)
 
         def about(self):
@@ -105,21 +113,12 @@ def get_plugin_class():
         def code_explanation(self):
             """
             This plugin creates dynamic, user-configurable menus for the panel.
-            The refactored code now fully leverages the enhanced `self.gtk_helper.create_menu_with_actions`
-            utility, significantly simplifying the `MenuSetupPlugin` logic.
-            The key change is the introduction of `_convert_toml_to_action_map`, which is a recursive
-            method that transforms the TOML file's structure (which uses lists of dictionaries) into
-            the hierarchical dictionary structure (`action_map`) expected by the helper.
-            This method:
-            1.  **Handles Recursion**: It detects `submenu` items and recursively calls itself to build
-                the nested `items` dictionary.
-            2.  **Generates Actions**: For command items (leaf nodes), it creates a unique, safe action name
-                using `_sanitize_name` and generates a `callback` lambda. This lambda captures the shell
-                command (`cmd`) from the TOML file and passes it to the `menu_run_action` method when the
-                menu item is clicked. It now correctly includes the optional 'icon' field in the action map.
-            By providing this structured `action_map` to `self.gtk_helper.create_menu_with_actions`, the
-            plugin delegates all boilerplate Gtk/Gio setup—including recursive menu model construction,
-            action group creation, and callback wiring—making `setup_menus` much more concise and robust.
+            The `setup_menus` function has been adapted to use the new `self.get_config()`
+            (called without arguments) to fetch the entire configuration dictionary
+            for the plugin's section.
+            It now iterates over the keys of this dictionary (e.g., 'Wayfire', 'Apps')
+            to create multiple custom menu buttons, making the plugin fully flexible
+            for multi-menu configurations defined under the main plugin section.
             """
             return self.code_explanation.__doc__
 

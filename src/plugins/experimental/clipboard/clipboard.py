@@ -5,7 +5,7 @@ def get_plugin_metadata(_):
         "version": "1.0.0",
         "enabled": True,
         "container": "top-panel-systray",
-        "index": 6,
+        "index": 5,
         "deps": ["top_panel", "clipboard_server"],
     }
 

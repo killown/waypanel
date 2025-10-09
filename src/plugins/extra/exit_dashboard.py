@@ -4,7 +4,7 @@ def get_plugin_metadata(_):
         "name": "Exit Dashboard",
         "version": "1.0.0",
         "enabled": True,
-        "index": 10,
+        "index": 99,
         "container": "top-panel-systray",
         "deps": [
             "top_panel",

@@ -257,20 +257,29 @@ class BasePlugin:
             )
             return None
 
-    def get_config(self, key: Union[str, List[str]], default_value: Any = None) -> Any:
+    def get_config(
+        self, key: Optional[Union[str, List[str]]] = None, default_value: Any = None
+    ) -> Any:
         """
         Retrieves a configuration value for this specific plugin's section.
+
+        If 'key' is not provided, the configuration for the entire plugin section
+        (self.plugin_id) is returned.
         """
         if not self.plugin_id:
             return default_value
+
         key_path = [self.plugin_id]
-        if isinstance(key, str):
-            key_path.append(key)
-        elif isinstance(key, list):
-            key_path.extend(key)
-        else:
-            self.logger.error("Config key must be a string or a list of strings.")
-            return default_value
+
+        if key is not None:
+            if isinstance(key, str):
+                key_path.append(key)
+            elif isinstance(key, list):
+                key_path.extend(key)
+            else:
+                self.logger.error("Config key must be a string or a list of strings.")
+                return default_value
+
         return self.config_handler.check_and_get_config(key_path, default_value)
 
     def update_config(self, key_path: List[str], new_value: Any):

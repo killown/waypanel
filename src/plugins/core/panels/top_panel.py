@@ -72,69 +72,28 @@ def get_plugin_class():
             self.spacer.add_css_class("right-box-spacer")
             self.update_widget_safely(self.obj.top_panel_box_right.append, self.spacer)
             self.obj.top_panel_grid_right = self.gtk.Grid()
-            self.obj.top_panel_grid_right.get_allocated_width()
-            self.last_grid_width = self.obj.top_panel_grid_right.get_width()
-            self._attach_timer_id = None
 
-            def attach_deferred_widgets():
-                """
-                Defers the attachment of the top-panel systray and button boxes until
-                the main panel plugin startup process is finished.
-                This addresses the issue of GTK layout thrashing (which leads to
-                assertion crashes like self.gtkCountingBloomFilter) caused by rapidly
-                and sequentially adding multiple plugin widgets to these dynamic
-                containers during initial application launch, forcing repeated
-                full panel layout recalculations. The timeout periodically checks
-                the startup status and attaches the widgets only once ready.
-                """
-                self._attach_timer_id = None
-
-                # FIX: Exit early if already attached
-                if self._deferred_widgets_attached:
-                    return False
-
-                current_width = self.obj.top_panel_grid_right.get_width()
-                next_delay_ms = 500
-                if self.last_grid_width < current_width:
-                    self.last_grid_width = current_width
-                    self._attach_timer_id = self.glib.timeout_add(
-                        next_delay_ms, attach_deferred_widgets
-                    )
-                    return True
-
-                if self._panel_instance.plugins_startup_finished:
-                    # FIX: Check if widget is already attached before calling attach
-                    if self.obj.top_panel_box_right.get_parent() is None:
-                        self.obj.top_panel_grid_right.attach(
-                            self.obj.top_panel_box_right, 1, 0, 1, 2
-                        )
-
-                    self._attach_widget_to_grid_next_to(
-                        self.obj.top_panel_grid_right,
-                        self.obj.top_panel_box_systray,
-                        self.obj.top_panel_box_right,
-                        self.gtk.PositionType.RIGHT,
-                        1,
-                        2,
-                    )
-                    self._attach_widget_to_grid_next_to(
-                        self.obj.top_panel_grid_right,
-                        self.obj.top_panel_box_for_buttons,
-                        self.obj.top_panel_box_systray,
-                        self.gtk.PositionType.RIGHT,
-                        1,
-                        2,
-                    )
-                    # FIX: Set flag to prevent future re-attachments
-                    self._deferred_widgets_attached = True
-                    return False
-
-                self._attach_timer_id = self.glib.timeout_add(
-                    next_delay_ms, attach_deferred_widgets
+            if self.obj.top_panel_box_right.get_parent() is None:
+                self.obj.top_panel_grid_right.attach(
+                    self.obj.top_panel_box_right, 1, 0, 1, 2
                 )
-                return True
 
-            self._attach_timer_id = self.glib.idle_add(attach_deferred_widgets)
+            self._attach_widget_to_grid_next_to(
+                self.obj.top_panel_grid_right,
+                self.obj.top_panel_box_systray,
+                self.obj.top_panel_box_right,
+                self.gtk.PositionType.RIGHT,
+                1,
+                2,
+            )
+            self._attach_widget_to_grid_next_to(
+                self.obj.top_panel_grid_right,
+                self.obj.top_panel_box_for_buttons,
+                self.obj.top_panel_box_systray,
+                self.gtk.PositionType.RIGHT,
+                1,
+                2,
+            )
             self.obj.top_panel_box_center = self.gtk.Box()
             self.obj.top_panel_box_full = self.gtk.Grid()
             self.obj.top_panel_box_full.set_column_homogeneous(True)

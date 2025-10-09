@@ -4,7 +4,7 @@ def get_plugin_metadata(_):
         "name": "system Monitor",
         "version": "1.0.0",
         "enabled": True,
-        "index": 6,
+        "index": 9,
         "container": "top-panel-systray",
         "deps": ["top_panel", "gestures_setup"],
     }

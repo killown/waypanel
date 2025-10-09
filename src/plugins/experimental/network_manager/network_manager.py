@@ -4,7 +4,7 @@ def get_plugin_metadata(_):
         "name": "Network Manager",
         "version": "1.0.0",
         "enabled": True,
-        "index": 7,
+        "index": 10,
         "container": "top-panel-systray",
         "deps": ["top_panel"],
     }

@@ -285,6 +285,17 @@ class PluginLoader:
     ):
         """
         Handles the placement of a plugin's widget on the panel.
+
+        Note on 'top-panel-systray' target:
+        The 'top-panel-systray' target is treated specially to prevent a panel crash
+        caused by GTK layout thrashing during application startup. Rapidly and
+        sequentially adding multiple widgets to dynamic containers, such as the
+        systray's container box, forces repeated full panel layout recalculations.
+        This can lead to assertion crashes (e.g., self.gtkCountingBloomFilter).
+
+        Therefore, when a widget is targeted for 'top-panel-systray', its
+        attachment is deferred until the main panel plugin startup process is
+        finished (or after a fixed timeout) to ensure a stable initial layout.
         """
         plugin_id = self.plugin_metadata_map.get(module_name, {}).get("id", module_name)
         main_widget = (
@@ -337,13 +348,25 @@ class PluginLoader:
                 flow_box.set_selection_mode(Gtk.SelectionMode.NONE)
                 flow_box.add_css_class("box-widgets")
                 self.plugin_containers[box_name] = flow_box
-                self.update_widget_safely(target.append, flow_box)
+                container_name = self.plugin_metadata_map.get(module_name, {}).get(
+                    "container"
+                )
+                if container_name == "top-panel-systray":
+
+                    def run_later():
+                        self.update_widget_safely(target.append, flow_box)
+                        return False
+
+                    GLib.timeout_add(1500, run_later)
+                else:
+                    self.update_widget_safely(target.append, flow_box)
             else:
                 flow_box = self.plugin_containers[box_name]
             self.update_widget_safely(flow_box.remove_all)
             for widget in widgets:
                 if hasattr(widget, "get_icon_name"):
                     self.plugin_icons[module_name] = widget.get_icon_name()
+
                 self.update_widget_safely(flow_box.append, widget)
         elif widget_action == "set_content":
             widgets = (
