@@ -5,6 +5,7 @@ def get_plugin_metadata(_):
         "version": "1.0.0",
         "enabled": True,
         "index": 10,
+        "hidden": True,
         "container": "top-panel-systray",
         "deps": ["top_panel"],
     }
