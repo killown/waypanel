@@ -228,7 +228,7 @@ def get_plugin_class():
             scrolled_window.set_policy(
                 self.gtk.PolicyType.AUTOMATIC, self.gtk.PolicyType.AUTOMATIC
             )
-            scrolled_window.set_min_content_width(600)
+            scrolled_window.set_min_content_width(400)
             vbox = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL, spacing=10)
             output = await self.cli_backend.run_nmcli_device_show_async()
             devices = self.cli_backend.parse_nmcli_output(output)

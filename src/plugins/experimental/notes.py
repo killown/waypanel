@@ -84,12 +84,14 @@ def get_plugin_class():
             self.row_content = None
             self.listbox = None
             self.menubutton_notes = Gtk.Button.new()
+            self.menubutton_notes.add_css_class("notes-menubutton")
             self.main_widget = (self.menubutton_notes, "append")
             self.menubutton_notes.connect("clicked", self.open_popover_notes)
             self.gtk_helper.add_cursor_effect(self.menubutton_notes)
 
         def create_popover_notes(self):
             self.popover_notes = Gtk.Popover.new()
+            self.popover_notes.add_css_class("notes-popover")
             self.popover_notes.set_has_arrow(False)
             self.popover_notes.connect("closed", self.popover_is_closed)
             self.popover_notes.connect("notify::visible", self.popover_is_open)
@@ -99,22 +101,27 @@ def get_plugin_class():
             )
             self.obj.add_action(show_searchbar_action)
             self.scrolled_window = Gtk.ScrolledWindow()
+            self.scrolled_window.add_css_class("notes-scrolledwindow")
             self.scrolled_window.set_min_content_width(600)
             self.scrolled_window.set_min_content_height(600)
             self.main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 10)
+            self.main_box.add_css_class("notes-main-box")
             self.main_box.set_margin_top(10)
             self.main_box.set_margin_bottom(10)
             self.main_box.set_margin_start(10)
             self.main_box.set_margin_end(10)
             self.searchbar = Gtk.SearchEntry.new()
+            self.searchbar.add_css_class("notes-searchbar")
             self.searchbar.set_placeholder_text("Search notes...")
             self.searchbar.connect("search_changed", self.on_search_entry_changed)
             self.main_box.append(self.searchbar)
             self.entry_add_note = Gtk.Entry.new()
+            self.entry_add_note.add_css_class("notes-entry-add")
             self.entry_add_note.set_placeholder_text("Add new note...")
             self.entry_add_note.connect("activate", self.on_add_note)
             self.main_box.append(self.entry_add_note)
             buttons_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 5)
+            buttons_box.add_css_class("notes-buttons-box")
             self.button_add = Gtk.Button.new_with_label("Add")
             self.button_add.add_css_class("notes_button_add")
             self.button_add.connect("clicked", self.on_add_note)
@@ -127,13 +134,14 @@ def get_plugin_class():
             buttons_box.append(self.button_clear)
             self.main_box.append(buttons_box)
             self.listbox = Gtk.ListBox.new()
+            self.listbox.add_css_class("notes-listbox")
             self.listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
             self.listbox.set_show_separators(True)
             self.listbox.set_filter_func(self.on_filter_invalidate)
             self.scrolled_window.set_child(self.listbox)
             self.main_box.append(self.scrolled_window)
             self.popover_notes.set_child(self.main_box)
-            self.run_in_thread(self.update_notes_list)  # Initial list population
+            self.run_in_thread(self.update_notes_list)
             self.popover_notes.set_parent(self.menubutton_notes)
             return self.popover_notes
 
@@ -143,6 +151,7 @@ def get_plugin_class():
                 detail="This will permanently delete all your notes. Are you sure?",
                 buttons=["_Cancel", "_Clear All"],
             )
+            dialog.add_css_class("notes-alertdialog")
             dialog.set_default_button(1)
             dialog.set_cancel_button(0)
             dialog.choose(
@@ -162,7 +171,6 @@ def get_plugin_class():
         def update_notes_list(self):
             if self.listbox is not None:
                 self._gtk_helper.clear_listbox(self.listbox)
-
             self.is_editing = False
             self.note_row_widgets = {}
             notes = get_notes_sync(self.path_handler, self.db_path)
@@ -183,14 +191,18 @@ def get_plugin_class():
                 if not content:
                     continue
                 row = Gtk.ListBoxRow()
+                row.add_css_class("notes-listbox-row")
                 row_hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 5)
+                row_hbox.add_css_class("notes-row-hbox")
                 row_hbox.set_margin_start(10)
                 row_hbox.set_margin_end(10)
                 row_hbox.note_id = note_id  # pyright: ignore
                 row.set_child(row_hbox)
                 spacer = Gtk.Label(label="  ")
+                spacer.add_css_class("notes-spacer-label")
                 row_hbox.append(spacer)
                 note_label = Gtk.Label.new()
+                note_label.add_css_class("notes-note-label")
                 note_label.set_wrap(True)
                 parts = content.split()
                 if len(parts) >= 3:
@@ -247,12 +259,21 @@ def get_plugin_class():
             old_label = widgets["label"]
             initial_text = old_label.original_content
             edit_entry = Gtk.Entry.new()
+            edit_entry.add_css_class("notes-edit-entry")
             edit_entry.set_text(initial_text)
             edit_entry.set_hexpand(True)
             edit_entry.set_halign(Gtk.Align.FILL)
             edit_entry.connect("activate", self.on_finish_edit_note, note_id, widgets)
             hbox.remove(old_label)
-            hbox.insert_child_after(edit_entry, hbox.get_first_child())
+            first_child = hbox.get_first_child()
+            if (
+                first_child
+                and first_child.get_css_classes()
+                and "notes-spacer-label" in first_child.get_css_classes()
+            ):
+                hbox.insert_child_after(edit_entry, first_child)
+            else:
+                hbox.prepend(edit_entry)
             edit_entry.grab_focus()
             edit_entry.select_region(0, -1)
             widgets["edit_button"].set_sensitive(False)
@@ -312,8 +333,6 @@ def get_plugin_class():
             if self.popover_notes and self.popover_notes.is_visible():
                 self.popover_notes.popdown()
             elif self.popover_notes and not self.popover_notes.is_visible():
-                # Removed self.update_notes_list() to prevent clearing/reloading on every open.
-                # The list now persists between popover opens/closes.
                 self.popover_notes.popup()
             else:
                 self.popover_notes = self.create_popover_notes()

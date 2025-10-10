@@ -36,7 +36,7 @@
 
 .notify-clear-button {
   background-color: var(--color-bg-button-suggested);
-  color: var(--main-text)
+  color: var(--main-text);
 }
 
 .notify-server-vbox {

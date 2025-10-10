@@ -24,8 +24,5 @@
   background-color: transparent;
   border-radius: var(--radius-xs);
   box-shadow: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   transition: none;
 }

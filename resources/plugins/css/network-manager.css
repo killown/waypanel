@@ -1,54 +1,75 @@
-.network-manager-device-header {
-}
-
-.network-manager-device-details-grid {
-}
-
 .network-manager-container {
-  background-color: var(--primary-bg);
+  /* Main container background uses a deep blue for the recessed look */
+  background-color: var(--color-bg-deep); 
   color: var(--main-text);
-  border-radius: 12px;
-  box-shadow: var(--shadow-neumorphic-inset-medium);
+  border-radius: var(--radius-l);
+  
+  /* Strong inset for the main container, reinforcing the "recessed screen" */
+  box-shadow: 
+    inset 0 0 15px rgba(0, 0, 0, 0.7), /* Deep inner shadow */
+    0 4px 10px var(--color-shadow-medium); /* Soft outward shadow for lift */
+  padding: var(--radius-m);
 }
 
 .network-manager-scrolledwindow {
   border: none;
+  background-color: transparent; 
 }
 
+.network-manager-device-header {
+}
+
+.network-manager-device-details-grid {
+  /* Standard padding for grid items */
+  padding: 0 var(--radius-s);
+  margin-bottom: var(--radius-s);
+}
+
+/* === Separator Fix === */
+.network-manager-device-separator {
+  /* Thin, clean line using a muted color that blends without being ugly */
+  background-color: var(--color-separator-line);
+  min-height: 1px; /* Ensure it's a thin line */
+  margin: var(--radius-s) 0;
+  border-radius: 0;
+  box-shadow: none; /* Crucial: ensures no ugly shadow lines */
+}
+
+/* === Interactive Elements (Neumorphic) === */
 .network-manager-device-toggle-button,
 .network-manager-config-box {
   background-color: transparent;
   border: none;
   box-shadow: none;
   transition: all 0.2s ease-in-out;
+  padding: var(--radius-s);
+  border-radius: var(--radius-m);
 }
 
 .network-manager-device-toggle-button:hover,
 .network-manager-config-box:hover {
-  background-color: var(--secondary-bg);
-  border-radius: 8px;
-  box-shadow: var(--shadow-neumorphic-outset-large);
+  /* Hover: Soft embossed lift against the deep background */
+  background-color: var(--secondary-bg); /* Use the vibrant/light background variable */
+  box-shadow: 
+    var(--shadow-neumorphic-outset-small); /* Subtle outward shadow */
 }
 
 .network-manager-device-toggle-button:active,
 .network-manager-config-box:active {
-  background-color: var(--secondary-bg);
-  box-shadow: var(--shadow-neumorphic-press);
+  /* Active/Pressed: Deep inset press effect */
+  background-color: var(--color-bg-deep); 
+  box-shadow: var(--shadow-neumorphic-press); /* Use the defined inner shadow */
 }
 
-.network-manager-device-separator {
-  background-color: var(--secondary-bg);
-  min-height: 2px;
-  border-radius: 1px;
-}
-
+/* === Other Components === */
 .network-manager-config-button {
   background-color: transparent;
   border: none;
-  color: var(--main-text);
+  color: var(--accent-blue); /* Action button should use accent color */
+  font-weight: var(--font-weight-medium);
 }
 
 .network-manager-config-label {
-  color: var(--main-text);
-  font-weight: bold;
+  color: var(--soft-text); /* Use soft text for informational labels */
+  font-weight: var(--font-weight-regular);
 }

@@ -1,7 +1,7 @@
 .dockbar-buttons {
   border-radius: 10px;
   padding: 1px 10px 1px 10px;
-  -gtk-icon-size: px;
+  -gtk-icon-size: 52px;
   font-size: 16px;
   color: transparent;
 }

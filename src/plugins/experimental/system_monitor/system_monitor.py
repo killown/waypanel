@@ -69,6 +69,7 @@ def get_plugin_class():
 
         def create_menu_popover_system(self):
             self.menubutton_system = self.gtk.Button()
+            self.menubutton_system.add_css_class("system-monitor-menubutton")
             icon_name = self.gtk_helper.icon_exist(
                 "system-monitor-app-symbolic",
                 [
@@ -293,8 +294,10 @@ def get_plugin_class():
             POPOVER_HEIGHT_ROWS_TIMES_PIXELS = 19 * 26
             POPOVER_MIN_HEIGHT = 200
             self.popover_system = self.gtk.Popover.new()
+            self.popover_system.add_css_class("system-monitor-popover")
             self.popover_system.connect("closed", self.popover_is_closed)
             vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, spacing=10)
+            vbox.add_css_class("system-monitor-vbox")
             vbox.set_margin_top(10)
             vbox.set_margin_bottom(10)
             vbox.set_margin_start(10)
@@ -305,9 +308,11 @@ def get_plugin_class():
             row_factory.connect("setup", self._row_factory_setup)
             row_factory.connect("bind", self._row_factory_bind)
             self.list_view = self.gtk.ListView.new(selection_model, row_factory)
+            self.list_view.add_css_class("system-monitor-listview")
             self.list_view.set_single_click_activate(False)
             self.list_view.set_size_request(-1, POPOVER_MIN_HEIGHT)
             scrolled_window = self.gtk.ScrolledWindow()
+            scrolled_window.add_css_class("system-monitor-scrolledwindow")
             scrolled_window.set_child(self.list_view)
             scrolled_window.set_policy(
                 self.gtk.PolicyType.NEVER, self.gtk.PolicyType.AUTOMATIC
@@ -324,16 +329,19 @@ def get_plugin_class():
         def _row_factory_setup(self, factory, list_item):
             """Setup the row (ListItem) container and its children (the widgets inside)."""
             hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, spacing=20)
+            hbox.add_css_class("system-monitor-hbox")
             hbox.set_halign(self.gtk.Align.FILL)
             hbox.set_margin_top(3)
             hbox.set_margin_bottom(3)
             name_label = self.gtk.Label(label="Initializing...")
+            name_label.add_css_class("system-monitor-name-label")
             name_label.set_halign(self.gtk.Align.START)
             name_label.set_hexpand(True)
             name_label.set_xalign(0.0)
             name_label.set_justify(self.gtk.Justification.LEFT)
             name_label.set_width_chars(15)
             value_label = self.gtk.Label(label="...")
+            value_label.add_css_class("system-monitor-value-label")
             value_label.set_halign(self.gtk.Align.END)
             value_label.set_xalign(1.0)
             hbox.append(name_label)

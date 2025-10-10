@@ -1,20 +1,130 @@
-.notes_button_clear.text-button {
-  background-color: var(--danger-red);
-  color: var(--main-text);
-  border: none;
-  box-shadow: var(--shadow-element-minimal);
+.notes-menubutton {
+
 }
 
-.notes_button_add.text-button {
-  background-color: var(--success-green);
-  color: var(--main-text);
-  border: none;
-  box-shadow: var(--shadow-element-minimal);
+.notes-popover {
+  background-color: var(--color-bg-popover);
+  border: 1px solid var(--color-separator-line);
+  border-radius: var(--radius-xl);
+  padding: 10px;
+  box-shadow: var(--shadow-window-float);
+  min-width: 620px;
+  min-height: 600px;
 }
 
-.notes_button_delete.image-button {
-  background-color: var(--danger-red);
-  color: var(--main-text);
+.notes-main-box {
+  padding: 10px;
+}
+
+.notes-scrolledwindow {
+  min-width: 600px;
+  min-height: 600px;
+}
+
+.notes-searchbar {
+  padding: 4px 6px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--color-border-entry-base);
+  background-color: var(--color-bg-entry-base);
+  color: var(--theme-fg-control-text);
+}
+
+.notes-entry-add {
+  padding: 4px 6px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--color-border-entry-base);
+  background-color: var(--color-bg-entry-base);
+  color: var(--theme-fg-control-text);
+}
+
+.notes-buttons-box {
+}
+
+.notes_button_add {
+  padding: 4px 8px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--color-separator-line);
+  background-color: var(--color-bg-button-suggested);
+  color: var(--color-fg-button-suggested);
+  box-shadow: var(--shadow-neumorphic-outset-small);
+}
+
+.notes_button_add:hover {
+  background-color: var(--color-bg-button-suggested-hover);
+}
+
+.notes_button_clear {
+  background-color: var(--color-status-danger-bg);
+}
+
+.notes_button_clear:hover {
+  background-color: var(--theme-status-danger);
+  box-shadow: var(--shadow-neumorphic-outset-large);
+}
+
+.notes-listbox {
+  border: 1px solid var(--color-separator-line);
+  border-radius: var(--radius-m);
+  background-color: var(--color-bg-alt-row);
+}
+
+.notes-listbox-row {
+  border-bottom: 1px solid var(--color-separator-line);
+}
+
+.notes-row-hbox {
+  padding: 6px 10px;
+  border-radius: var(--radius-l);
+  background-color: var(--color-bg-button);
+  box-shadow: var(--shadow-neumorphic-outset-small);
+  margin-bottom: 6px;
+}
+
+.notes-row-hbox:hover {
+  background-color: var(--color-bg-button-hover);
+  box-shadow: var(--shadow-control-small-hover);
+}
+
+.notes-spacer-label {
+  min-width: 10px;
+}
+
+.notes-note-label {
+  color: var(--theme-fg-label-primary);
+  font-family: "DejaVu Sans Mono";
+  font-size: 12px;
+  padding: 2px 4px;
+}
+
+.notes_button_edit {
+  padding: 2px 4px;
+  border-radius: var(--radius-s);
   border: none;
-  box-shadow: var(--shadow-element-minimal);
+  background-color: var(--color-bg-button-flat);
+}
+
+.notes_button_edit:hover {
+  background-color: var(--color-bg-button-flat-hover);
+}
+
+.notes_button_delete {
+  box-shadow: var(--shadow-neumorphic-outset-large);
+}
+
+.notes_button_delete:hover {
+  padding: 2px 4px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--theme-status-danger);
+  background-color: var(--color-status-danger-bg);
+  color: var(--theme-status-danger);
+  box-shadow: 0 0 4px var(--color-status-danger-bg);
+  
+}
+
+.notes-edit-entry {
+  padding: 2px 4px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--color-border-entry-base);
+  background-color: var(--color-bg-entry-base);
+  color: var(--theme-fg-control-text);
 }

@@ -238,7 +238,6 @@ def get_plugin_class():
                 ],
             )
             self.menubutton_dashboard.set_icon_name(icon_name)
-            self.menubutton_dashboard.add_css_class("soundcard-selector")
             self.main_widget = (self.menubutton_dashboard, "append")
             self.gtk_helper.add_cursor_effect(self.menubutton_dashboard)
             return self.menubutton_dashboard
@@ -259,6 +258,7 @@ def get_plugin_class():
                 box = self.gtk.Box.new(
                     orientation=self.gtk.Orientation.VERTICAL, spacing=6
                 )
+                box.add_css_class("soundcard-box")
                 box.set_margin_start(12)
                 box.set_margin_end(12)
                 box.set_margin_top(12)
@@ -267,8 +267,10 @@ def get_plugin_class():
                 self.soundcard_dropdown = self.gtk.DropDown.new(
                     self.soundcard_model, None
                 )
+                self.soundcard_dropdown.add_css_class("soundcard-dropdown")
                 self.mic_model = self.gtk.StringList.new([])
                 self.mic_dropdown = self.gtk.DropDown.new(self.mic_model, None)
+                self.mic_dropdown.add_css_class("soundcard-dropdown")
                 self.soundcard_handler_id = self.soundcard_dropdown.connect(
                     "notify::selected-item", self.on_soundcard_changed
                 )
@@ -285,9 +287,11 @@ def get_plugin_class():
                 )
                 sc_hbox.append(sound_card_icon)
                 sc_hbox.append(self.soundcard_dropdown)
+                sc_hbox.add_css_class("soundcard-hbox")
                 mic_hbox = self.gtk.Box.new(
                     orientation=self.gtk.Orientation.HORIZONTAL, spacing=6
                 )
+                mic_hbox.add_css_class("soundcard-hbox")
                 mic_icon = self.gtk.Image.new_from_icon_name(
                     "audio-input-microphone-symbolic"
                 )

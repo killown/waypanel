@@ -14,8 +14,6 @@
   padding: 5px 8px;
   margin-left: 20px;
   margin-top: 5px;
-  display: flex;
-  align-items: center;
 }
 
 .window-title-label {
@@ -30,6 +28,6 @@
 }
 
 .window-title-icon {
-  -gtk-icon-size: 18px;
+  -gtk-icon-size: 24px;
   color: var(--nord8);
 }

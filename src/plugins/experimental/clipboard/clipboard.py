@@ -126,7 +126,9 @@ def get_plugin_class():
             """Helper to create a self.gtk.Button that visually guarantees both icon and label are shown.
             This fixes the issue of buttons in popovers only showing icons."""
             button = self.gtk.Button.new()
+            button.add_css_class("clipboard-menu-item-button")
             hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 10)
+            hbox.add_css_class("clipboard-hbox-item")
             hbox.set_margin_start(10)
             hbox.set_margin_end(10)
             icon = self.gtk.Image.new_from_icon_name(
@@ -134,6 +136,7 @@ def get_plugin_class():
             )
             hbox.append(icon)
             label = self.gtk.Label.new(label_text)
+            label.add_css_class("clipboard-label-item")
             label.set_halign(self.gtk.Align.START)
             hbox.append(label)
             button.set_child(hbox)
@@ -289,7 +292,8 @@ def get_plugin_class():
                     ) or self.is_image_content(content):
                         total_height += self.image_row_height
                     else:
-                        total_height += self.text_row_height
+                        css_height_space = 30
+                        total_height += self.text_row_height + css_height_space
                     total_height += self.item_spacing
                 total_height = max(total_height, 100)
                 total_height = min(total_height, self.popover_max_height)
@@ -325,13 +329,16 @@ def get_plugin_class():
                     if not item_content:
                         continue
                     row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 5)
+                    row_hbox.add_css_class("clipboard-row-hbox")
                     delete_button = self.gtk.Button()
+                    delete_button.add_css_class("clipboard-delete-button")
                     delete_button.set_icon_name(
                         self.gtk_helper.icon_exist("tag-delete")
                     )
                     delete_button.connect("clicked", self.on_delete_selected)
                     self.update_widget_safely(row_hbox.append, delete_button)
                     label_button = self.gtk.Button()
+                    label_button.add_css_class("clipboard-row-label")
                     label_icon = (
                         "document-edit-symbolic" if item_label else "list-add-symbolic"
                     )
@@ -349,6 +356,7 @@ def get_plugin_class():
                     row_hbox.IS_PINNED = is_pinned  # pyright: ignore
                     list_box_row = self.gtk.ListBoxRow()
                     list_box_row.set_child(row_hbox)
+                    list_box_row.add_css_class("clipboard-listbox")
                     gesture_right_click = self.gtk.GestureClick.new()
                     gesture_right_click.set_button(3)
                     gesture_right_click.connect("pressed", self.on_right_click_row)
@@ -497,18 +505,23 @@ def get_plugin_class():
             popover.set_has_arrow(True)
             button_to_anchor._label_editor_popover = popover  # pyright: ignore
             vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
+            vbox.add_css_class("clipboard-vbox-editor")
             vbox.set_margin_start(10)
             vbox.set_margin_end(10)
             vbox.set_margin_top(10)
             vbox.set_margin_bottom(10)
             vbox.set_size_request(300, -1)
             hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 5)
+            hbox.add_css_class("clipboard-hbox-editor")
             hbox.set_halign(self.gtk.Align.FILL)
             save_button = self.gtk.Button.new()
+            save_button.add_css_class("clipboard-save-button-editor")
             save_button.set_icon_name(self.gtk_helper.icon_exist("emblem-ok-symbolic"))
             save_button.set_tooltip_text("Save label (Enter)")
             save_button.set_valign(self.gtk.Align.CENTER)
             entry = self.gtk.Entry()
+            entry.add_css_class("clipboard-entry-editor")
+
             entry.set_text(current_label if current_label else "")
             entry.set_placeholder_text(f"Label for ID {item_id} (empty to clear)")
             entry.props.hexpand = True
@@ -615,8 +628,7 @@ def get_plugin_class():
             self.listbox.set_filter_func(self.on_filter_invalidate)
             self.popover_clipboard.set_parent(self.menubutton_clipboard)
             self.popover_clipboard.popup()
-            self.button_clear.add_css_class("clipboard_clear_button")
-            self.button_clear.add_css_class("button_clear_from_clipboard")
+            self.button_clear.add_css_class("clipboard-button-clear")
             return self.popover_clipboard
 
         def on_copy_clipboard(self, x, *_):
