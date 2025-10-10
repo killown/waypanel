@@ -1,14 +1,17 @@
 .taskbar {
-  margin-top: 10px;
+  margin: 4px 0; 
 }
 
 .taskbar-button {
   background: var(--color-bg-deep);
-  border-radius: 7px;
+  
+  border-radius: var(--radius-control-default); 
+  border: 1px solid rgba(0, 0, 0, 0.4); 
+  
   box-shadow:
-    inset 3px 3px 5px rgba(255, 255, 255, 0.08),
-    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
-    2px 2px 5px var(--shadow-medium);
+    inset 2px 2px 4px rgba(255, 255, 255, 0.08),
+    3px 3px 6px rgba(0, 0, 0, 0.7);
+    
   font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
   font-size: 13px;
   color: var(--soft-text);
@@ -16,26 +19,42 @@
   text-shadow:
     0 0 2px var(--dseg-shadow-soft),
     0 0 5px var(--dseg-shadow-soft);
-}
-
-.taskbar-button.focused {
-  background-color: var(--tertiary-bg);
-  color: var(--main-text);
-  font-weight: bold;
-  border: 1px solid var(--main-text);
-  box-shadow: 0 0 8px var(--accent-blue);
-}
-
-.taskbar-button.focused:hover {
-  background-color: var(--primary-bg);
-  transform: scale(1.05);
-  transition: all 0.1s ease;
-  color: var(--soft-text);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .taskbar-button:hover {
   color: var(--main-text);
-  background-color: var(--primary-bg);
-  text-shadow: 0.006em 0.006em 0.007em var(--dseg-shadow-dark);
+  background-color: var(--color-bg-raised);
+  border: 1px solid var(--accent-blue);
+  
+  box-shadow: 
+    5px 5px 10px rgba(0, 0, 0, 0.8),
+    -1px -1px 2px rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+  text-shadow: none;
 }
 
+.taskbar-button.focused {
+  background-color: var(--theme-bg-selected-primary);
+  color: var(--color-fg-inverse);
+  font-weight: bold;
+  border: 1px solid var(--accent-blue);
+  box-shadow: 0 0 10px var(--accent-blue);
+}
+
+.taskbar-button.focused:hover {
+  background-color: var(--color-accent-blue-dark);
+  transform: none;
+  transition: all 0.1s ease;
+  color: var(--color-fg-inverse);
+  box-shadow: 0 0 14px var(--accent-blue);
+}
+
+.taskbar-button:active {
+    background-color: var(--color-bg-deep);
+    border: 1px solid rgba(0, 0, 0, 0.6);
+    box-shadow:
+        inset 5px 5px 10px rgba(0, 0, 0, 0.8),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.05);
+    transform: translateY(1px);
+}

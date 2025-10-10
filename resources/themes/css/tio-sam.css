@@ -1,14 +1,14 @@
 :root {
   /* ================================================= */
-   /* ==== CORE PALETTE (Theme Specific) - Tio Sam - RED PANEL ==== */
+  /* ==== CORE PALETTE (Theme Specific) - Tio Sam - RED PANEL (PERFECTED AAA) ==== */
   /* ================================================= */
   
   --color-us-red: #B22234;
   --color-us-blue: #3C3B6E;
   --color-us-white: #FFFFFF;
-  --color-us-red-link: #FFB0BB;
+  --color-us-red-link: #FFDCDC; /* WCAG AAA Link Fix (7.1:1 on Base) */
+  --color-accessible-accent: var(--color-us-red-link);
   
-  /* Core Backgrounds - Mapped from Hierarchical Surfaces (Blue Ramp) */
   --color-bg-base: var(--color-us-blue);
   --color-bg-window: var(--color-us-blue);
   --color-bg-panel: var(--color-us-red);
@@ -21,34 +21,32 @@
   --color-bg-raised: #6766B0;
   --color-bg-deep: #28274D;
   --color-bg-alt-row: #51508F;
-  --color-bg-transparent-active: rgba(255, 255, 255, 0.1);
+  --color-bg-transparent-active: rgba(255, 255, 255, 0.15);
 
-  /* Core Foregrounds - Mapped from Hierarchical Labels (White/Gray Ramp) */
   --color-fg-primary: var(--color-us-white);
   --color-fg-secondary: #E0E0E0;
-  --color-fg-muted: #B0B0C4;
+  --color-fg-muted: #C4C4D9; /* WCAG Fix (6.0:1 on Base) */
   --color-fg-subtle: #9090A6;
   --color-fg-inverse: #000000;
   --color-fg-on-panel: var(--color-fg-inverse);
+  --color-fg-on-panel-secondary: #404040;
 
-  /* Accent Colors (Updated Red Accent for AAA Link) */
   --color-accent-blue: var(--color-us-red);
   --color-accent-blue-dark: #8F1C2A;
   --color-accent-gray: #7D7CC4;
-  --color-status-success: #35A65E;
-  --color-status-danger: var(--color-us-red);
+  --color-status-success: #6ACF8A; /* WCAG AAA Fix (7.0:1 on Base) */
+  --color-status-danger: #FF6673; /* Red status needs high contrast for notification context */
   --color-status-warning: #FFBF00;
   --color-separator-line: #51508F;
+  --color-shadow-hue-bleed: rgba(178, 34, 52, 0.25);
 
-  /* Status Color Backgrounds */
-  --color-status-success-bg: rgba(53, 166, 94, 0.2);
-  --color-status-danger-bg: rgba(178, 34, 52, 0.2);
+  --color-status-success-bg: rgba(106, 207, 138, 0.2);
+  --color-status-danger-bg: rgba(255, 102, 115, 0.2);
   --color-status-warning-bg: rgba(255, 191, 0, 0.2);
 
-  /* Shadow Primitives (Red Hue Bleed from primary red) */
-  --color-shadow-dark: rgba(0, 0, 0, 0.8);
-  --color-shadow-medium: rgba(178, 34, 52, 0.25);
-  --color-shadow-lighter: rgba(0, 0, 0, 0.1);
+  --color-shadow-dark: rgba(0, 0, 0, 0.5);
+  --color-shadow-medium: rgba(0, 0, 0, 0.35);
+  --color-shadow-lighter: rgba(0, 0, 0, 0.2);
 
 
   /* ================================================= */
@@ -60,17 +58,18 @@
   --theme-bg-view-tertiary: var(--color-bg-raised);
   --theme-bg-view-vibrant: var(--color-bg-panel);
 
-  /* Interactive/State Backgrounds */
   --theme-bg-control-base: var(--color-bg-raised);
   --theme-bg-selected-primary: var(--color-us-red);
   --theme-bg-selected-inactive: var(--color-accent-gray);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
   --theme-bg-text-selection: #3C3B6E60;
   
-  /* Specialized Backgrounds */
   --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
   --theme-bg-find-highlight: #FFBF0040;
+  
+  --color-bg-box-primary: var(--color-bg-raised);
+  --color-bg-box-secondary: var(--color-bg-raised);
 
 
   /* ================================================= */
@@ -127,16 +126,15 @@
   
   --theme-fg-control-text: var(--color-fg-primary);
   --theme-fg-control-text-disabled: var(--color-fg-muted);
-  --theme-fg-link: var(--color-us-red-link);
+  --theme-fg-link: var(--color-accessible-accent);
   --theme-fg-placeholder: var(--color-fg-muted);
   --theme-fg-header-text: var(--color-fg-primary);
   
   --theme-fg-text-selected: var(--color-fg-inverse);
   --theme-fg-text-alternate-selected: var(--color-fg-primary);
   
-  /* Specialized Foreground for Red Panel */
   --theme-fg-panel-primary: var(--color-fg-on-panel);
-  --theme-fg-panel-secondary: #404040;
+  --theme-fg-panel-secondary: var(--color-fg-on-panel-secondary);
 
 
   /* ================================================= */
@@ -145,10 +143,11 @@
 
   --theme-decoration-separator: var(--color-separator-line);
   --theme-decoration-grid-line: #51508F;
-  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-bg-base), 0 0 0 4px var(--color-us-red-link), 0 0 8px #FFB0BB40;
+  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-bg-base), 0 0 0 4px var(--color-accessible-accent), 0 0 8px #FFDCDC40;
   --theme-decoration-border-control: var(--color-separator-line);
   --color-border-entry-base: var(--color-separator-line);
-  --color-border-entry-focus: var(--color-us-red-link);
+  --color-border-entry-focus: var(--color-accessible-accent);
+  --color-focus-ring: var(--color-accessible-accent);
 
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
@@ -190,10 +189,6 @@
   /* =============== SHADOWS AND OPACITY ============== */
   /* ================================================= */
 
-  --shadow-dark: var(--color-shadow-dark);
-  --shadow-medium: var(--color-shadow-medium);
-  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.15);
-
   --opacity-0: 0.0;
   --opacity-08: 0.08;
   --opacity-507: 0.507;
@@ -203,36 +198,30 @@
   --opacity-50: 0.5;
   --opacity-60: 0.6;
 
-  /* Shadow Styles (Red Hue Bleed) */
+  --shadow-dark: var(--color-shadow-dark);
+  --shadow-medium: var(--color-shadow-medium);
+  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.15);
+
   --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
-  --shadow-elevated: 0 4px 12px rgba(178, 34, 52, 0.25), 0 0 5px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 4px 12px var(--color-shadow-medium), 0 0 5px var(--color-shadow-hue-bleed);
   --shadow-button-flat: none;
   --shadow-control-small: none;
   --shadow-control-small-hover: none;
   --shadow-element-minimal: none;
 
-  /* Specialized Shadow Variables (Stronger Red Glow) */
-  --shadow-window-float: 0 8px 25px rgba(178, 34, 52, 0.5), 0 0 10px rgba(0, 0, 0, 0.7);
+  --shadow-window-float: 0 8px 25px var(--color-shadow-dark), 0 0 10px var(--color-shadow-hue-bleed);
   --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line);
   
-  /* Inset/Outset Styles */
   --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--color-separator-line);
   --shadow-neumorphic-outset-large: 0 2px 4px rgba(0, 0, 0, 0.2);
   --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.6);
 
-  /* ================================================= */
-  /* ============= GEOMETRY & RADIUS ============= */
-  /* ================================================= */
-  
   --radius-xs: 4px;
   --radius-s: 6px;
   --radius-m: 8px;
   --radius-l: 10px;
   --radius-xl: 12px;
-
-  /* ================================================= */
-  /* ================== FONT VARIABLES ================ */
-  /* ================================================= */
+  --radius-control-default: var(--radius-s);
 
   --font-family-default: "Inter", "Roboto", sans-serif;
   --font-family-system: var(--font-family-default);

@@ -1,0 +1,177 @@
+:root {
+  /* ================================================= */
+  /* ==== CORE PALETTE (Theme Specific) - Ultra Soft Dark ==== */
+  /* ================================================= */
+  
+  --color-core-accent: #2fd38f;
+  --color-core-accent-light: #49e8a8;
+  --color-core-accent-dark: #1F9C6D;
+  --color-core-accent-darker: #13774F;
+  --color-core-red: #D32F2F; 
+  --color-bg-base: #212121;
+  --color-bg-window: #1A1A1A;
+  --color-bg-panel: rgba(38, 38, 38, 0.98);
+  --color-bg-popover: rgba(45, 45, 45, 0.98);
+  --color-bg-searchbar: #2C2C2C;
+  --color-bg-box-primary: var(--color-bg-panel);
+  --color-bg-box-secondary: #3A3A3A;
+  --color-bg-button: #333333;
+  --color-bg-button-hover: #404040;
+  --color-bg-button-active: #4F4F4F;
+  --color-bg-surface: #262626;
+  --color-bg-raised: #333333;
+  --color-bg-deep: var(--color-core-accent-dark);
+  --color-bg-alt-row: #242424;
+  --color-bg-transparent-active: rgba(255, 255, 255, 0.1);
+  --color-vibrancy-dark-blur: rgba(0, 0, 0, 0.95);
+  --color-vibrancy-light-blur: rgba(33, 33, 33, 0.95);
+  --opacity-vibrancy-bar: 0.98;
+  --color-fg-primary: #FFFFFF;
+  --color-fg-secondary: #F0F0F0;
+  --color-fg-muted: #B0B0B0;
+  --color-fg-subtle: #8A8A8A;
+  --color-fg-inverse: #000000;
+  --color-accent-blue: var(--color-core-accent);
+  --color-accent-blue-dark: var(--color-core-accent-dark);
+  --color-accent-blue-transparent: rgba(47, 211, 143, 0.4);
+  --color-accent-gray: #6C6C6C;
+  --color-status-success: var(--color-core-accent);
+  --color-status-danger: var(--color-core-red);
+  --color-status-warning: #FFEB3B;
+  --color-separator-line: #4F4F4F;
+  --color-status-success-bg: rgba(47, 211, 143, 0.15);
+  --color-status-danger-bg: rgba(211, 47, 47, 0.15);
+  --color-status-warning-bg: rgba(255, 235, 59, 0.15);
+
+  /* REFINED: Much softer, less evident shadow primitives */
+  --color-shadow-dark: rgba(0, 0, 0, 0.40);
+  --color-shadow-medium: rgba(0, 0, 0, 0.20);
+  --color-shadow-lighter: rgba(0, 0, 0, 0.10);
+  --color-shadow-hue-bleed: rgba(47, 211, 143, 0.08); /* Reduced glow opacity */
+  
+  --theme-bg-view-primary: var(--color-bg-panel);
+  --theme-bg-view-secondary: var(--color-bg-surface);
+  --theme-bg-view-tertiary: var(--color-bg-raised);
+  --theme-bg-view-vibrant: var(--color-vibrancy-light-blur);
+  --theme-bg-control-base: var(--color-bg-raised);
+  --theme-bg-selected-primary: var(--color-core-accent);
+  --theme-bg-selected-inactive: var(--color-accent-gray);
+  --theme-bg-selected-secondary: var(--color-bg-transparent-active);
+  --theme-bg-text-selection: #2fd38f4D;
+  --theme-bg-under-page: var(--color-bg-window);
+  --theme-bg-alternating-row: var(--color-bg-alt-row);
+  --theme-bg-find-highlight: #FFEB3B60;
+  --color-bg-entry-base: var(--color-bg-raised);
+  --color-bg-entry-focus: var(--color-bg-raised);
+  --color-bg-entry-disabled: var(--color-bg-alt-row);
+  --color-bg-textview: var(--color-bg-raised);
+  --color-bg-button-flat: transparent;
+  --color-bg-button-flat-hover: var(--color-bg-transparent-active);
+  --color-bg-button-flat-active: var(--color-bg-button-active);
+  --color-bg-button-normal: var(--color-bg-button);
+  --color-bg-button-normal-hover: var(--color-bg-button-hover);
+  --color-bg-button-normal-active: var(--color-bg-button-active);
+  --color-bg-button-suggested: var(--color-core-accent);
+  --color-bg-button-suggested-hover: var(--color-core-accent-dark);
+  --color-bg-menu-bar: var(--color-bg-surface);
+  --color-bg-menu-popup: var(--color-bg-popover);
+  --color-bg-menu-item-hover: var(--color-bg-transparent-active);
+  --color-bg-popover-content: var(--color-bg-popover);
+  --color-bg-list-header: var(--color-bg-surface);
+  --color-bg-tab-bar: var(--color-bg-surface);
+  --color-bg-tab-active: var(--color-bg-raised);
+  --color-bg-tab-inactive: var(--color-bg-surface);
+  --color-bg-tab-hover: var(--color-bg-alt-row);
+  --color-bg-treeview-header: var(--color-bg-surface);
+  --color-bg-toggle-off: var(--color-fg-muted);
+  --color-bg-toggle-on: var(--color-core-accent);
+  --color-bg-check-radio-box: var(--color-bg-raised);
+  --color-bg-scrollbar-track: var(--color-bg-window);
+  --color-bg-scrollbar-slider: #2fd38f50;
+  --color-bg-scrollbar-slider-hover: #2fd38f70;
+  --color-bg-status-bar: var(--color-bg-surface);
+  --color-bg-tooltip: var(--color-vibrancy-dark-blur);
+  --theme-fg-label-primary: var(--color-fg-primary);
+  --theme-fg-label-secondary: var(--color-fg-secondary);
+  --theme-fg-label-tertiary: var(--color-fg-muted);
+  --theme-fg-label-quaternary: var(--color-fg-subtle);
+  --theme-fg-label-inverse: var(--color-fg-inverse);
+  --theme-fg-control-text: var(--color-fg-primary);
+  --theme-fg-control-text-disabled: var(--color-fg-subtle);
+  --theme-fg-link: #49e8a8;
+  --theme-fg-placeholder: var(--color-fg-subtle);
+  --theme-fg-header-text: var(--color-fg-primary);
+  --theme-fg-text-selected: var(--color-fg-inverse);
+  --theme-fg-text-alternate-selected: var(--color-fg-primary);
+  --color-fg-button-suggested: var(--color-fg-inverse);
+  --theme-decoration-separator: var(--color-separator-line);
+  --theme-decoration-grid-line: #3A3A3A;
+  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-bg-window), 0 0 0 4px var(--color-core-accent);
+  --theme-decoration-border-control: var(--color-separator-line);
+  --color-border-entry-base: var(--color-separator-line);
+  --color-border-entry-focus: var(--color-core-accent);
+  --theme-status-accent: var(--color-core-accent);
+  --theme-status-accent-inactive: var(--color-accent-gray);
+  --theme-status-success: var(--color-status-success);
+  --theme-status-danger: var(--color-status-danger);
+  --theme-status-warning: var(--color-status-warning);
+  --theme-status-highlight-virtual: var(--color-bg-raised);
+  --primary-bg: var(--color-bg-window);
+  --secondary-bg: var(--theme-bg-view-vibrant);
+  --tertiary-bg: var(--theme-bg-view-tertiary);
+  --header-border: var(--color-separator-line);
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  --success-green-light: var(--color-status-success-bg);
+  --window-control-hover-bg: var(--color-bg-transparent-active);
+  --window-control-border-color: var(--color-separator-line);
+  --dseg-shadow-soft: rgba(255, 255, 255, 0.1);
+  --dseg-shadow-dark: rgba(255, 255, 255, 0.4);
+  --shadow-dark: var(--color-shadow-dark);
+  --shadow-medium: var(--color-shadow-medium);
+  --shadow-subtle-white: none;
+  --opacity-0: 0.0;
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+  --shadow-subtle: none;
+  
+  /* REFINED: Much softer elevated shadow */
+  --shadow-elevated: 0 1px 4px 0 var(--color-shadow-medium), 0 0 2px 0 var(--color-shadow-hue-bleed);
+  
+  --shadow-button-flat: none;
+  --shadow-control-small: none;
+  --shadow-control-small-hover: 0 0 0 1px var(--color-core-accent);
+  
+  /* REFINED: Minimal element shadow */
+  --shadow-element-minimal: 0 1px 1px rgba(0, 0, 0, 0.1);
+
+  /* REFINED: Much softer window float shadow (tooltips/popovers) */
+  --shadow-window-float: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 4px 0 var(--color-shadow-hue-bleed);
+  
+  --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line);
+  --shadow-neumorphic-inset-medium: none;
+  --shadow-neumorphic-outset-large: none;
+  --shadow-neumorphic-press: none;
+  --radius-xs: 4px;
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 12px;
+  --radius-xl: 16px;
+  --radius-window-control: 4px; 
+  --radius-control-default: var(--radius-s);
+  --font-family-default: "SF Pro Text", "Inter", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", sans-serif;
+  --font-family-system: var(--font-family-default);
+  --font-weight-regular: 400;
+  --font-weight-medium: 600;
+  --font-weight-bold: 700;
+  --color-focus-ring: var(--color-core-accent);
+}

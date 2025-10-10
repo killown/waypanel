@@ -6,13 +6,14 @@
   /* Silksong Core Tonal Palette */
   --color-silk-red: #f41d69;
   --color-silk-red-dark: #c41754;
-  --color-silk-deep-blue: #180f56;
+  --color-silk-deep-blue: #180F56;
   --color-silk-shadow-purple: #36005B;
+  --color-silk-off-white: #f8f8f8;
 
-  /* Core Backgrounds - Deep and Shadowed */
+  /* Core Backgrounds - Deep and Shadowed (Luminance Optimized) */
   --color-bg-deep: #0f0f1b;
   --color-bg-base: var(--color-silk-deep-blue);
-  --color-bg-window: #140E47;
+  --color-bg-window: #1C1260;
   --color-bg-panel: var(--color-bg-window);
   --color-bg-popover: var(--color-silk-shadow-purple);
   --color-bg-searchbar: #410078;
@@ -22,10 +23,10 @@
   --color-bg-surface: var(--color-bg-window);
   --color-bg-raised: var(--color-bg-popover);
   --color-bg-alt-row: #120B3B;
-  --color-bg-transparent-active: rgba(244, 29, 105, 0.25);
+  --color-bg-transparent-active: rgba(244, 29, 105, 0.2);
 
-  /* Core Foregrounds - Creamy and Pale */
-  --color-fg-primary: #f8f8f8;
+  /* Core Foregrounds - Creamy and Pale (Contrast AAA+) */
+  --color-fg-primary: var(--color-silk-off-white);
   --color-fg-secondary: #c6b7be;
   --color-fg-muted: #847a8a;
   --color-fg-subtle: #565a75;
@@ -39,6 +40,10 @@
   --color-status-danger: #9f0606;
   --color-status-warning: #ff9f5f;
   --color-separator-line: #410078;
+
+  /* ADDED: Missing XP Button Specific Colors (Adapted to Red Palette) */
+  --accent-blue-light: #FF689D;
+  --accent-blue-darker: #7E103E;
 
   /* Status Color Backgrounds */
   --color-status-success-bg: rgba(92, 190, 0, 0.2);
@@ -144,13 +149,16 @@
   /* Interactive Foreground */
   --theme-fg-control-text: var(--color-fg-primary);
   --theme-fg-control-text-disabled: var(--color-fg-subtle);
-  --theme-fg-link: var(--color-accent-blue);
+  --theme-fg-link: var(--color-fg-secondary);
   --theme-fg-placeholder: var(--color-fg-muted);
   --theme-fg-header-text: var(--color-fg-secondary);
   
   /* State Foreground */
   --theme-fg-text-selected: var(--color-fg-inverse);
   --theme-fg-text-alternate-selected: var(--color-fg-primary);
+
+  /* ADDED: Suggested Button Foreground (Contrast fix) */
+  --color-fg-button-suggested: var(--color-fg-inverse);
 
 
   /* ================================================= */
@@ -237,6 +245,9 @@
   --shadow-neumorphic-outset-large: 0 2px 5px rgba(0, 0, 0, 0.4);
   --shadow-neumorphic-press: inset 0 1px 4px rgba(0, 0, 0, 0.7);
 
+  /* ADDED: Missing Neumorphic Shadow */
+  --shadow-neumorphic-outset-small: 0 1px 3px rgba(0, 0, 0, 0.4);
+
   /* ================================================= */
   /* ============= GEOMETRY & RADIUS ================= */
   /* ================================================= */
@@ -246,6 +257,9 @@
   --radius-m: 7px;
   --radius-l: 10px;
   --radius-xl: 12px;
+
+  /* ADDED: Missing Control Radius (Set to default Medium) */
+  --radius-control-default: var(--radius-m);
 
   /* ================================================= */
   /* ================== FONT VARIABLES ================ */

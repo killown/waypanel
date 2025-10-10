@@ -39,6 +39,10 @@
   --color-status-danger: #D32F2F;
   --color-status-warning: #FFBF00;
   --color-separator-line: #134629;
+  
+  /* ADDED: Missing XP Button Specific Colors (Adapted to Blue/Green Palette) */
+  --accent-blue-light: #C7D7FF;
+  --accent-blue-darker: #133D8C;
 
   /* Status Color Backgrounds */
   --color-status-success-bg: rgba(79, 121, 66, 0.3);
@@ -213,6 +217,9 @@
   --shadow-neumorphic-outset-large: 0 2px 4px rgba(0, 0, 0, 0.2);
   --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.6);
 
+  /* ADDED: Missing Neumorphic Shadow */
+  --shadow-neumorphic-outset-small: 0 1px 3px rgba(0, 0, 0, 0.4);
+
   /* ================================================= */
   /* ============= GEOMETRY & RADIUS ============= */
   /* ================================================= */
@@ -222,6 +229,9 @@
   --radius-m: 8px;
   --radius-l: 10px;
   --radius-xl: 12px;
+
+  /* ADDED: Missing Control Radius */
+  --radius-control-default: 6px;
 
   /* ================================================= */
   /* ================== FONT VARIABLES ================ */

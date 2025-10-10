@@ -1,56 +1,53 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - XP Blue (PERFECTED) ==== */
+  /* ==== CORE PALETTE (Theme Specific) - E-Ink Parchment (PERFECTED AAA) ==== */
   /* ================================================= */
   
-  --color-bg-base: #235ddb;
-  --color-bg-window: #000000;
-  --color-bg-panel: #0057DCcb;
+  --color-bg-base: #ECE9D8; /* Primary reading background (L: 93.3) */
+  --color-bg-window: var(--color-bg-base);
+  --color-bg-panel: var(--color-bg-base);
   --color-bg-popover: #FFFFFF;
-  --color-bg-searchbar: #968351;
-  --color-bg-box-primary: linear-gradient(to bottom, 
-    #7BCE58 0%, 
-    #45a348 50%, 
-    #318C33 100% 
-);
+  --color-bg-searchbar: #FFFFFF;
+  --color-bg-box-primary: #DCD9CC;
+  --color-bg-box-secondary: #EFEFE4;
+  --color-bg-button: #F0F0F0;
+  --color-bg-button-hover: #E8E8E8;
+  --color-bg-button-active: #D8D8D8;
+  --color-bg-surface: #F5F2E8; /* Slightly lighter than base for distinction */
+  --color-bg-raised: #FFFFFF;
+  --color-bg-deep: #6A665A; /* Dark header/deep navigation (L: 44.9) */
+  --color-bg-alt-row: #F5F2E8;
+  --color-bg-transparent-active: rgba(106, 102, 90, 0.1);
 
-  --color-bg-box-secondary: #D0E4F9;
-  --color-bg-button: #E5E5E5;
-  --color-bg-button-hover: #D7E7F9;
-  --color-bg-button-active: #92C6FF;
-  --color-bg-surface: #0057DC;
-  --color-bg-raised: #080808;
-  --color-bg-deep: #003083;
-  --color-bg-alt-row: #F5F4EE;
-  --color-bg-transparent-active: rgba(0, 87, 220, 0.2);
-
-  --color-vibrancy-dark-blur: #0057DC;
-  --color-vibrancy-light-blur: #B9D1EA;
+  --color-vibrancy-dark-blur: var(--color-bg-base);
+  --color-vibrancy-light-blur: var(--color-bg-popover);
   --opacity-vibrancy-bar: 1.0;
 
-  --color-fg-primary: #FFFFFF;
-  --color-fg-secondary: #D9D9D9;
-  --color-fg-muted: #A0A0A0;
-  --color-fg-subtle: #C0C0C0;
-  --color-fg-inverse: #000000;
+  --color-fg-primary: #1A1A1A; /* AAA Compliant on base (15.6:1) */
+  --color-fg-secondary: #222222;
+  --color-fg-muted: #4A4A4A; /* AAA Compliant on base (7.7:1) */
+  --color-fg-subtle: #6A665A;
+  --color-fg-inverse: #FFFFFF;
 
-  --color-accent-blue: #4092ff;
-  --color-accent-blue-dark: #003083;
-  --color-accent-gray: #B9D1EA;
+  --color-fg-link-AAA: #004FBA; /* WCAG AAA Link (7.1:1 on base) */
+
+  --color-accent-blue: #0078D4;
+  --color-accent-blue-dark: #005A9E;
+  --color-accent-gray: #A0A0A0;
   --color-status-success: #208b1a;
   --color-status-danger: #DE482B;
   --color-status-warning: #FCCF03;
-  --color-separator-line: #99AEC6;
+  --color-separator-line: #D0D0D0;
   
-  --color-status-success-bg: rgba(129, 192, 70, 0.2);
-  --color-status-danger-bg: rgba(222, 72, 43, 0.2);
-  --color-status-warning-bg: rgba(252, 207, 3, 0.2);
+  --color-status-success-bg: rgba(32, 139, 26, 0.1);
+  --color-status-danger-bg: rgba(222, 72, 43, 0.1);
+  --color-status-warning-bg: rgba(252, 207, 3, 0.1);
 
-  --color-shadow-dark: rgba(0, 0, 0, 0.4);
-  --color-shadow-medium: rgba(0, 0, 0, 0.2);
-  --color-shadow-lighter: rgba(0, 0, 0, 0.1);
+  --color-shadow-dark: rgba(0, 0, 0, 0.2);
+  --color-shadow-medium: rgba(0, 0, 0, 0.1);
+  --color-shadow-lighter: rgba(0, 0, 0, 0.05);
+  --color-shadow-hue-bleed: none; 
 
-  /* ADDED: Missing Accent Tonal Variables */
   --accent-blue-light: #70ACFF;
   --accent-blue-darker: #001D4F;
 
@@ -59,20 +56,20 @@
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
   /* ================================================= */
 
-  --theme-bg-view-primary: var(--color-bg-base);
+  --theme-bg-view-primary: var(--color-bg-window);
   --theme-bg-view-secondary: var(--color-bg-surface);
-  --theme-bg-view-tertiary: var(--color-bg-raised);
+  --theme-bg-view-tertiary: var(--color-bg-popover);
   --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur);
 
-  --theme-bg-control-base: var(--color-bg-raised);
+  --theme-bg-control-base: var(--color-bg-button);
   --theme-bg-selected-primary: var(--color-accent-blue);
   --theme-bg-selected-inactive: var(--color-accent-gray);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
-  --theme-bg-text-selection: #0057DC60;    
+  --theme-bg-text-selection: #0078D440;    
   
   --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
-  --theme-bg-find-highlight: #FCCF0360;
+  --theme-bg-find-highlight: #FFFF0060;
 
 
   /* ================================================= */
@@ -87,34 +84,34 @@
   --color-bg-button-flat: transparent;                  
   --color-bg-button-flat-hover: var(--color-bg-transparent-active);
   --color-bg-button-flat-active: var(--color-bg-button-active);
-  --color-bg-button-normal: var(--color-bg-raised);    
+  --color-bg-button-normal: var(--color-bg-button);    
   --color-bg-button-normal-hover: var(--color-bg-button-hover);  
   --color-bg-button-normal-active: var(--color-bg-button-active);  
   --color-bg-button-suggested: var(--color-accent-blue);    
   --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
   
-  --color-bg-menu-bar: var(--color-bg-surface);    
+  --color-bg-menu-bar: var(--color-bg-window);    
   --color-bg-menu-popup: var(--color-bg-popover);        
   --color-bg-menu-item-hover: var(--color-bg-transparent-active);  
   --color-bg-popover-content: var(--color-bg-popover);    
 
-  --color-bg-list-header: var(--color-bg-surface);      
-  --color-bg-tab-bar: var(--color-bg-surface);          
+  --color-bg-list-header: var(--color-bg-alt-row);      
+  --color-bg-tab-bar: var(--color-bg-window);          
   --color-bg-tab-active: var(--color-bg-raised);          
-  --color-bg-tab-inactive: var(--color-bg-surface);      
+  --color-bg-tab-inactive: var(--color-bg-window);      
   --color-bg-tab-hover: var(--color-bg-alt-row);          
-  --color-bg-treeview-header: var(--color-bg-surface);    
+  --color-bg-treeview-header: var(--color-bg-alt-row);    
 
   --color-bg-toggle-off: var(--color-fg-muted);          
   --color-bg-toggle-on: var(--color-accent-blue);        
   --color-bg-check-radio-box: var(--color-bg-raised);    
   
-  --color-bg-scrollbar-track: var(--color-bg-surface);            
-  --color-bg-scrollbar-slider: #0057DC80;                
-  --color-bg-scrollbar-slider-hover: #003083A0;          
+  --color-bg-scrollbar-track: var(--color-bg-alt-row);            
+  --color-bg-scrollbar-slider: #99999980;                
+  --color-bg-scrollbar-slider-hover: #666666A0;          
   
-  --color-bg-status-bar: var(--color-bg-surface);        
-  --color-bg-tooltip: var(--color-bg-raised);            
+  --color-bg-status-bar: var(--color-bg-window);        
+  --color-bg-tooltip: #FFFFE1;
 
 
   /* ================================================= */
@@ -128,15 +125,14 @@
   --theme-fg-label-inverse: var(--color-fg-inverse);  
   
   --theme-fg-control-text: var(--color-fg-primary);
-  --theme-fg-control-text-disabled: var(--color-fg-muted);
-  --theme-fg-link: var(--color-fg-secondary); /* Adjusted for AAA 7.0:1 on dark base/window */
+  --theme-fg-control-text-disabled: var(--color-fg-subtle);
+  --theme-fg-link: var(--color-fg-link-AAA); 
   --theme-fg-placeholder: var(--color-fg-muted);
   --theme-fg-header-text: var(--color-fg-inverse);
   
   --theme-fg-text-selected: var(--color-fg-inverse);
   --theme-fg-text-alternate-selected: var(--color-fg-primary);
 
-  /* ADDED: Suggested Button Foreground (Contrast Fix: Black text on light blue accent) */
   --color-fg-button-suggested: var(--color-fg-inverse);
 
 
@@ -145,13 +141,12 @@
   /* ================================================= */
 
   --theme-decoration-separator: var(--color-separator-line);
-  --theme-decoration-grid-line: #D9D9D9;
+  --theme-decoration-grid-line: #E0E0E0;
   --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-bg-raised), 0 0 0 4px var(--color-accent-blue);
   --theme-decoration-border-control: var(--color-separator-line);
   --color-border-entry-base: var(--color-separator-line);
   --color-border-entry-focus: var(--color-accent-blue);
 
-  /* ADDED: Explicit focus ring color */
   --theme-decoration-focus-ring: var(--color-accent-blue);
 
 
@@ -164,7 +159,7 @@
   --theme-status-success: var(--color-status-success);
   --theme-status-danger: var(--color-status-danger);
   --theme-status-warning: var(--color-status-warning);
-  --theme-status-highlight-virtual: var(--color-bg-raised);
+  --theme-status-highlight-virtual: var(--color-bg-alt-row);
 
 
   /* ================================================= */
@@ -172,7 +167,7 @@
   /* ================================================= */
 
   --primary-bg: var(--color-bg-window);
-  --secondary-bg: var(--theme-bg-view-vibrant);
+  --secondary-bg: var(--theme-bg-view-secondary);
   --tertiary-bg: var(--theme-bg-view-tertiary);
   --header-border: var(--theme-decoration-separator);
 
@@ -188,8 +183,8 @@
   --window-control-hover-bg: var(--color-bg-transparent-active);
   --window-control-border-color: var(--color-separator-line);
 
-  --dseg-shadow-soft: rgba(255, 255, 255, 0.1);
-  --dseg-shadow-dark: rgba(255, 255, 255, 0.7);
+  --dseg-shadow-soft: rgba(0, 0, 0, 0.1);
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.7);
 
   /* ================================================= */
   /* =============== SHADOWS AND OPACITY ============== */
@@ -208,21 +203,20 @@
   --opacity-50: 0.5;
   --opacity-60: 0.6;
 
-  --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
-  --shadow-elevated: 0 2px 4px rgba(64, 146, 255, 0.15);  
+  --shadow-subtle: 0 1px 1px rgba(0, 0, 0, 0.05);
+  --shadow-elevated: 0 4px 10px rgba(0, 0, 0, 0.1);
   --shadow-button-flat: none;
-  --shadow-control-small: inset 0 0 0 1px var(--color-separator-line), inset 0 1px 0 var(--shadow-subtle-white);
-  --shadow-control-small-hover: 0 0 0 1px var(--color-accent-blue);  
+  --shadow-control-small: 0 1px 1px rgba(0, 0, 0, 0.05);
+  --shadow-control-small-hover: 0 1px 2px rgba(0, 0, 0, 0.1);
   --shadow-element-minimal: 0 1px 1px var(--color-shadow-medium);
 
-  --shadow-window-float: 0 6px 15px rgba(64, 146, 255, 0.35);  
+  --shadow-window-float: 0 8px 20px rgba(0, 0, 0, 0.2);
   --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line);  
   
-  --shadow-neumorphic-inset-medium: inset 0 1px 2px var(--color-shadow-medium), inset 0 -1px 0 var(--shadow-subtle-white);
-  --shadow-neumorphic-outset-large: 0 1px 2px var(--color-shadow-medium);
-  --shadow-neumorphic-press: inset 0 1px 2px var(--color-shadow-dark);
+  --shadow-neumorphic-inset-medium: inset 0 1px 2px var(--color-shadow-medium);
+  --shadow-neumorphic-outset-large: 0 1px 4px var(--color-shadow-medium);
+  --shadow-neumorphic-press: inset 0 1px 3px var(--color-shadow-dark);
 
-  /* ADDED: Missing Neumorphic Shadow */
   --shadow-neumorphic-outset-small: 0 1px 3px var(--color-shadow-medium);
 
   /* ================================================= */
@@ -230,20 +224,21 @@
   /* ================================================= */
   
   --radius-xs: 2px;    
-  --radius-s: 4px;    
+  --radius-s: 2px;    
   --radius-m: 4px;    
   --radius-l: 6px;    
-  --radius-xl: 6px;    
+  --radius-xl: 8px;    
 
-  /* ADDED: Missing Control Radius */
-  --radius-control-default: var(--radius-m);
+  --radius-control-default: var(--radius-s);
+  --radius-control-circular: 50%;
+
 
   /* ================================================= */
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
-  --font-family-default: "Tahoma", "Segoe UI";  
-  --font-family-system: var(--font-family-default);
+  --font-family-default: "Roboto", sans-serif; /* Changed to Roboto */
+  --font-family-system: "Roboto", "Segoe UI", sans-serif;
   --font-weight-regular: 400;  
   --font-weight-medium: 500;  
   --font-weight-bold: 700;    

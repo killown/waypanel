@@ -8,9 +8,11 @@
   --color-cyber-yellow: #ffcc00;
   --color-cyber-slate: #1f1f1f;
   --color-cyber-white: #ffffff;
+  --color-cyber-offwhite: #f8f8f8;
+  --color-cyber-deep: #0f0f0f;
 
-  /* Core Backgrounds - Dark and Industrial */
-  --color-bg-deep: #0f0f0f;
+  /* Core Backgrounds - Dark and Industrial (Luminance Optimized) */
+  --color-bg-deep: var(--color-cyber-deep);
   --color-bg-base: var(--color-cyber-charcoal);
   --color-bg-window: var(--color-cyber-slate);
   --color-bg-panel: var(--color-bg-window);
@@ -39,6 +41,10 @@
   --color-status-danger: #ff5555;
   --color-status-warning: var(--color-cyber-yellow);
   --color-separator-line: #333333;
+
+  /* ADDED: Missing XP Button Specific Colors */
+  --accent-blue-light: #FFDC66;
+  --accent-blue-darker: #997300;
 
   /* Status Color Backgrounds */
   --color-status-success-bg: rgba(51, 204, 102, 0.2);
@@ -80,6 +86,7 @@
   --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
   --theme-bg-find-highlight: #ffcc0060;
+  --color-bg-box-primary: var(--color-bg-popover);
 
 
   /* ================================================= */
@@ -134,7 +141,7 @@
   --theme-fg-label-quaternary: var(--color-fg-subtle);
   --theme-fg-label-inverse: var(--color-fg-inverse);
   
-  --theme-fg-control-text: var(--color-fg-inverse);
+  --theme-fg-control-text: var(--color-fg-primary);
   --theme-fg-control-text-disabled: var(--color-fg-subtle);
   --theme-fg-link: var(--color-accent-blue);
   --theme-fg-placeholder: var(--color-fg-muted);
@@ -142,6 +149,9 @@
   
   --theme-fg-text-selected: var(--color-fg-inverse);
   --theme-fg-text-alternate-selected: var(--color-fg-primary);
+  
+  /* ADDED: Suggested Button Foreground (Contrast fix: White text on Yellow) */
+  --color-fg-button-suggested: var(--color-fg-primary);
 
 
   /* ================================================= */
@@ -228,6 +238,9 @@
   --shadow-neumorphic-outset-large: 0 0 8px rgba(255, 204, 0, 0.3);
   --shadow-neumorphic-press: inset 0 1px 3px var(--color-shadow-dark);
 
+  /* ADDED: Missing Neumorphic Shadow */
+  --shadow-neumorphic-outset-small: 0 1px 3px rgba(0, 0, 0, 0.4);
+
   /* ================================================= */
   /* ============= GEOMETRY & RADIUS ================= */
   /* ================================================= */
@@ -237,6 +250,9 @@
   --radius-m: 4px;
   --radius-l: 6px;
   --radius-xl: 8px;
+
+  /* ADDED: Missing Control Radius (Set to default Medium) */
+  --radius-control-default: var(--radius-m);
 
   /* ================================================= */
   /* ================== FONT VARIABLES ================ */

@@ -1,17 +1,15 @@
 :root {
-  /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - Ocean Dusk (Blue & Pastel Pink) ==== */
-  /* ================================================= */
-
+  
   --color-dusk-blue: #1e3a5f;
   --color-dusk-pink: #f4a7b5;
   --color-dusk-slate: #2c4a73;
   --color-dusk-pale: #f7f7f7;
+  --color-accent-pink-functional-fg: #FFB6C4;
 
   --color-bg-deep: #12243e;
   --color-bg-base: var(--color-dusk-blue);
   --color-bg-window: var(--color-dusk-slate);
-  --color-bg-panel: var(--color-bg-window); 
+  --color-bg-panel: var(--color-bg-window);
   --color-bg-popover: #3d5a80;
   --color-bg-searchbar: #4a6fa8;
   --color-bg-box-primary: var(--color-bg-popover);
@@ -24,147 +22,116 @@
   --color-bg-alt-row: #24416a;
   --color-bg-transparent-active: rgba(244, 167, 181, 0.25);
 
+  --color-vibrancy-dark-blur: var(--color-bg-window);
+  --color-vibrancy-light-blur: var(--color-bg-popover);
+  --opacity-vibrancy-bar: 1.0;
+
   --color-fg-primary: var(--color-dusk-pale);
   --color-fg-secondary: #c8d3e6;
   --color-fg-muted: #9bb5d9;
   --color-fg-subtle: #758ca9;
   --color-fg-inverse: #000000;
+  --color-fg-button-suggested: var(--color-fg-inverse);
 
-  --color-accent-blue: var(--color-dusk-pink);
+  --color-accent-blue: var(--color-accent-pink-functional-fg);
   --color-accent-blue-dark: #cc8ba2;
   --color-accent-gray: #758ca9;
   --color-status-success: #70d6a2;
   --color-status-danger: #f77f98;
   --color-status-warning: #ffdc7d;
   --color-separator-line: #3d5a80;
-
-  --color-status-success-bg: rgba(112, 214, 162, 0.2); 
+  --color-shadow-hue-bleed: rgba(244, 167, 181, 0.25);
+  
+  --color-status-success-bg: rgba(112, 214, 162, 0.2);
   --color-status-danger-bg: rgba(247, 127, 152, 0.25);
   --color-status-warning-bg: rgba(255, 220, 125, 0.2);
 
-  --color-shadow-dark: rgba(0, 0, 0, 0.6); 
+  --color-shadow-dark: rgba(0, 0, 0, 0.6);
   --color-shadow-medium: rgba(0, 0, 0, 0.4);
   --color-shadow-lighter: rgba(0, 0, 0, 0.2);
 
-
-  /* ================================================= */
-  /* ========= TRANSPARENCY AND VIBRANCY (Advanced UI Structure) ===== */
-  /* ================================================= */
-  
-  --color-vibrancy-dark-blur: var(--color-bg-window);   
-  --color-vibrancy-light-blur: var(--color-bg-popover);   
-  --opacity-vibrancy-bar: 1.0;                         
-
-
-  /* ================================================= */
-  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
-  /* ================================================= */
-
-  --theme-bg-view-primary: var(--color-bg-base); 
-  --theme-bg-view-secondary: var(--color-bg-surface); 
-  --theme-bg-view-tertiary: var(--color-bg-raised); 
-  --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); 
+  --theme-bg-view-primary: var(--color-bg-base);
+  --theme-bg-view-secondary: var(--color-bg-surface);
+  --theme-bg-view-tertiary: var(--color-bg-raised);
+  --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur);
 
   --theme-bg-control-base: var(--color-bg-raised);
   --theme-bg-selected-primary: var(--color-accent-blue);
   --theme-bg-selected-inactive: var(--color-accent-gray);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
-  --theme-bg-text-selection: #f4a7b580;   
+  --theme-bg-text-selection: #f4a7b580;
   
-  --theme-bg-under-page: var(--color-bg-deep); 
+  --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
   --theme-bg-find-highlight: #ffdc7d60;
 
-
-  /* ================================================= */
-  /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
-  /* ================================================= */
+  --color-bg-entry-base: #3d5a80;
+  --color-bg-entry-focus: #4a6fa8;
+  --color-bg-entry-disabled: var(--color-bg-alt-row);
+  --color-bg-textview: var(--color-bg-entry-base);
   
-  --color-bg-entry-base: #3d5a80;         
-  --color-bg-entry-focus: #4a6fa8;         
-  --color-bg-entry-disabled: var(--color-bg-alt-row);    
-  --color-bg-textview: var(--color-bg-entry-base);           
-  
-  --color-bg-button-flat: transparent;                    
+  --color-bg-button-flat: transparent;
   --color-bg-button-flat-hover: var(--color-bg-transparent-active);
   --color-bg-button-flat-active: var(--color-bg-transparent-active);
-  --color-bg-button-normal: var(--color-bg-raised);       
-  --color-bg-button-normal-hover: var(--color-bg-button-hover); 
-  --color-bg-button-normal-active: var(--color-bg-button-active); 
-  --color-bg-button-suggested: var(--color-dusk-pink);  
-  --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
+  --color-bg-button-normal: var(--color-bg-raised);
+  --color-bg-button-normal-hover: var(--color-bg-button-hover);
+  --color-bg-button-normal-active: var(--color-bg-button-active);
+  --color-bg-button-suggested: var(--color-accent-pink-functional-fg);
+  --color-bg-button-suggested-hover: var(--color-dusk-pink);
   
-  --color-bg-menu-bar: var(--color-bg-window);           
-  --color-bg-menu-popup: var(--color-bg-popover);         
-  --color-bg-menu-item-hover: var(--color-bg-transparent-active); 
-  --color-bg-popover-content: var(--color-bg-popover);    
+  --color-bg-menu-bar: var(--color-bg-window);
+  --color-bg-menu-popup: var(--color-bg-popover);
+  --color-bg-menu-item-hover: var(--color-bg-transparent-active);
+  --color-bg-popover-content: var(--color-bg-popover);
 
-  --color-bg-list-header: var(--color-bg-raised);        
-  --color-bg-tab-bar: var(--color-bg-surface);            
-  --color-bg-tab-active: var(--color-bg-popover);            
-  --color-bg-tab-inactive: var(--color-bg-surface);       
-  --color-bg-tab-hover: var(--color-bg-raised);           
-  --color-bg-treeview-header: var(--color-bg-raised);    
+  --color-bg-list-header: var(--color-bg-raised);
+  --color-bg-tab-bar: var(--color-bg-surface);
+  --color-bg-tab-active: var(--color-bg-popover);
+  --color-bg-tab-inactive: var(--color-bg-surface);
+  --color-bg-tab-hover: var(--color-bg-raised);
+  --color-bg-treeview-header: var(--color-bg-raised);
 
-  --color-bg-toggle-off: var(--color-fg-muted);           
-  --color-bg-toggle-on: var(--color-accent-blue);          
-  --color-bg-check-radio-box: var(--color-bg-raised);    
+  --color-bg-toggle-off: var(--color-fg-muted);
+  --color-bg-toggle-on: var(--color-accent-blue);
+  --color-bg-check-radio-box: var(--color-bg-raised);
   
-  --color-bg-scrollbar-track: var(--color-bg-surface);                
-  --color-bg-scrollbar-slider: #9bb5d960;                 
-  --color-bg-scrollbar-slider-hover: #c8d3e680;           
+  --color-bg-scrollbar-track: var(--color-bg-surface);
+  --color-bg-scrollbar-slider: #9bb5d960;
+  --color-bg-scrollbar-slider-hover: #c8d3e680;
   
-  --color-bg-status-bar: var(--color-bg-window);         
-  --color-bg-tooltip: var(--color-bg-popover);             
-
-
-  /* ================================================= */
-  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
-  /* ================================================= */
+  --color-bg-status-bar: var(--color-bg-window);
+  --color-bg-tooltip: var(--color-bg-popover);
 
   --theme-fg-label-primary: var(--color-fg-primary);
   --theme-fg-label-secondary: var(--color-fg-secondary);
   --theme-fg-label-tertiary: var(--color-fg-muted);
   --theme-fg-label-quaternary: var(--color-fg-subtle);
-  --theme-fg-label-inverse: var(--color-fg-inverse); 
+  --theme-fg-label-inverse: var(--color-fg-inverse);
   
-  --theme-fg-control-text: var(--color-fg-inverse); 
+  --theme-fg-control-text: var(--color-fg-primary);
   --theme-fg-control-text-disabled: var(--color-fg-subtle);
-  --theme-fg-link: var(--color-accent-blue);
+  --theme-fg-link: var(--color-accent-pink-functional-fg);
   --theme-fg-placeholder: var(--color-fg-muted);
   --theme-fg-header-text: var(--color-fg-primary);
   
-  --theme-fg-text-selected: var(--color-fg-inverse); 
-  --theme-fg-text-alternate-selected: var(--color-fg-primary); 
-
-
-  /* ================================================= */
-  /* ============= DECORATION & SEPARATORS ============= */
-  /* ================================================= */
+  --theme-fg-text-selected: var(--color-fg-inverse);
+  --theme-fg-text-alternate-selected: var(--color-fg-primary);
+  --theme-fg-link-hover: var(--color-dusk-pink);
 
   --theme-decoration-separator: var(--color-separator-line);
-  --theme-decoration-grid-line: #3d5a80; 
-  --theme-decoration-keyboard-focus: var(--color-accent-blue);
-  --theme-decoration-border-control: var(--color-separator-line); 
+  --theme-decoration-grid-line: #3d5a80;
+  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-bg-deep), 0 0 0 4px var(--color-accent-pink-functional-fg);
+  --theme-decoration-border-control: var(--color-separator-line);
   --color-border-entry-base: var(--color-separator-line);
-  --color-border-entry-focus: var(--color-accent-blue);
+  --color-border-entry-focus: var(--color-accent-pink-functional-fg);
+  --color-focus-ring: var(--color-accent-pink-functional-fg);
 
-
-  /* ================================================= */
-  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
-  /* ================================================= */
-  
-  --theme-status-accent: var(--color-accent-blue);
+  --theme-status-accent: var(--color-accent-pink-functional-fg);
   --theme-status-accent-inactive: var(--color-accent-gray);
   --theme-status-success: var(--color-status-success);
   --theme-status-danger: var(--color-status-danger);
   --theme-status-warning: var(--color-status-warning);
   --theme-status-highlight-virtual: var(--color-bg-raised);
-
-
-  /* ================================================= */
-  /* ====== SEMANTIC MAPPING (Used by Base CSS) ====== */
-  /* ================================================= */
 
   --primary-bg: var(--theme-bg-view-primary);
   --secondary-bg: var(--theme-bg-view-secondary);
@@ -179,17 +146,12 @@
   --success-green: var(--theme-status-success);
   --danger-red: var(--theme-status-danger);
   
-  --success-green-light: var(--color-status-success-bg); 
+  --success-green-light: var(--color-status-success-bg);
   --window-control-hover-bg: var(--color-bg-transparent-active);
   --window-control-border-color: var(--primary-bg);
 
   --dseg-shadow-soft: rgba(255, 255, 255, 0.1);
   --dseg-shadow-dark: rgba(0, 0, 0, 0.5);
-
-
-  /* ================================================= */
-  /* =============== SHADOWS AND OPACITY ============== */
-  /* ================================================= */
 
   --shadow-dark: var(--color-shadow-dark);
   --shadow-medium: var(--color-shadow-medium);
@@ -205,36 +167,29 @@
   --opacity-60: 0.6;
 
   --shadow-subtle: 0 1px 2px var(--color-shadow-lighter);
-  --shadow-elevated: 0 5px 12px var(--color-shadow-medium);
+  --shadow-elevated: 0 5px 12px var(--color-shadow-medium), 0 0 8px var(--color-shadow-hue-bleed);
   --shadow-button-flat: none;
   --shadow-control-small: none;
   --shadow-control-small-hover: none;
   --shadow-element-minimal: none;
 
-  --shadow-window-float: 0 6px 15px var(--color-shadow-dark);
-  --shadow-menubar-separator: inset 0 -1px 0 #3d5a80; 
+  --shadow-window-float: 0 6px 15px var(--color-shadow-dark), 0 0 12px var(--color-shadow-hue-bleed);
+  --shadow-menubar-separator: inset 0 -1px 0 #3d5a80;
   
   --shadow-neumorphic-inset-medium: inset 0 1px 4px var(--color-shadow-medium);
   --shadow-neumorphic-outset-large: 0 0 8px rgba(244, 167, 181, 0.25), 0 5px 12px var(--color-shadow-medium);
   --shadow-neumorphic-press: inset 0 1px 3px var(--color-shadow-dark);
 
-  /* ================================================= */
-  /* ============= GEOMETRY & RADIUS ================= */
-  /* ================================================= */
-  
-  --radius-xs: 3px;     
-  --radius-s: 5px;      
-  --radius-m: 7px;     
-  --radius-l: 10px;     
-  --radius-xl: 12px;    
+  --radius-xs: 3px;
+  --radius-s: 5px;
+  --radius-m: 7px;
+  --radius-l: 10px;
+  --radius-xl: 12px;
+  --radius-control-default: var(--radius-s);
 
-  /* ================================================= */
-  /* ================== FONT VARIABLES ================ */
-  /* ================================================= */
-
-  --font-family-default: "Poppins", "Roboto", sans-serif; 
+  --font-family-default: "Poppins", "Roboto", sans-serif;
   --font-family-system: var(--font-family-default);
-  --font-weight-regular: 400; 
-  --font-weight-medium: 500;  
-  --font-weight-bold: 600;    
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
 }

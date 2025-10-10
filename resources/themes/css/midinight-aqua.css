@@ -1,17 +1,16 @@
 :root {
-  /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - Midnight Aqua (Refined) ==== */
-  /* ================================================= */
-
+  
   --color-midnight-dark: #002244;
   --color-midnight-light: #7AC3FF;
   --color-midnight-base: #053660;
   --color-midnight-pale: #e0f2ff;
+  --color-accent-blue-functional-fg: #8ED5FF;
+  --color-accent-blue-suggested-btn: #A2D7FF;
 
   --color-bg-deep: #001830;
   --color-bg-base: var(--color-midnight-dark);
   --color-bg-window: var(--color-midnight-base);
-  --color-bg-panel: var(--color-bg-window); 
+  --color-bg-panel: var(--color-bg-window);
   --color-bg-popover: #0E497A;
   --color-bg-searchbar: #165992;
   --color-bg-box-primary: var(--color-bg-popover);
@@ -24,11 +23,16 @@
   --color-bg-alt-row: #00284f;
   --color-bg-transparent-active: rgba(122, 195, 255, 0.25);
 
+  --color-vibrancy-dark-blur: var(--color-bg-window);
+  --color-vibrancy-light-blur: var(--color-bg-popover);
+  --opacity-vibrancy-bar: 1.0;
+
   --color-fg-primary: var(--color-midnight-pale);
   --color-fg-secondary: #a0c3e6;
   --color-fg-muted: #6a95c3;
   --color-fg-subtle: #406a96;
   --color-fg-inverse: #002244;
+  --color-fg-button-suggested: var(--color-fg-inverse);
 
   --color-accent-blue: var(--color-midnight-light);
   --color-accent-blue-dark: #3a85c8;
@@ -37,134 +41,97 @@
   --color-status-danger: #ff6384;
   --color-status-warning: #ffb14f;
   --color-separator-line: #165992;
+  --color-shadow-hue-bleed: rgba(122, 195, 255, 0.3);
 
-  --color-status-success-bg: rgba(58, 191, 119, 0.2); 
+  --color-status-success-bg: rgba(58, 191, 119, 0.2);
   --color-status-danger-bg: rgba(255, 99, 132, 0.2);
   --color-status-warning-bg: rgba(255, 177, 79, 0.2);
 
-  --color-shadow-dark: rgba(0, 0, 0, 0.8); 
+  --color-shadow-dark: rgba(0, 0, 0, 0.8);
   --color-shadow-medium: rgba(0, 0, 0, 0.6);
   --color-shadow-lighter: rgba(0, 0, 0, 0.3);
 
-
-  /* ================================================= */
-  /* ========= TRANSPARENCY AND VIBRANCY (Advanced UI Structure) ===== */
-  /* ================================================= */
-  
-  --color-vibrancy-dark-blur: var(--color-bg-window);   
-  --color-vibrancy-light-blur: var(--color-bg-popover);   
-  --opacity-vibrancy-bar: 1.0;                         
-
-
-  /* ================================================= */
-  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
-  /* ================================================= */
-
-  --theme-bg-view-primary: var(--color-bg-base); 
-  --theme-bg-view-secondary: var(--color-bg-surface); 
-  --theme-bg-view-tertiary: var(--color-bg-raised); 
-  --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur); 
+  --theme-bg-view-primary: var(--color-bg-base);
+  --theme-bg-view-secondary: var(--color-bg-surface);
+  --theme-bg-view-tertiary: var(--color-bg-raised);
+  --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur);
 
   --theme-bg-control-base: var(--color-bg-raised);
   --theme-bg-selected-primary: var(--color-accent-blue-dark);
   --theme-bg-selected-inactive: var(--color-accent-gray);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
-  --theme-bg-text-selection: #7AC3FF80;   
+  --theme-bg-text-selection: #7AC3FF80;
   
-  --theme-bg-under-page: var(--color-bg-deep); 
+  --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
   --theme-bg-find-highlight: #ffb14f60;
 
-
-  /* ================================================= */
-  /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
-  /* ================================================= */
+  --color-bg-entry-base: #0E497A;
+  --color-bg-entry-focus: #165992;
+  --color-bg-entry-disabled: var(--color-bg-alt-row);
+  --color-bg-textview: var(--color-bg-entry-base);
   
-  --color-bg-entry-base: #0E497A;         
-  --color-bg-entry-focus: #165992;         
-  --color-bg-entry-disabled: var(--color-bg-alt-row);    
-  --color-bg-textview: var(--color-bg-entry-base);           
-  
-  --color-bg-button-flat: transparent;                    
+  --color-bg-button-flat: transparent;
   --color-bg-button-flat-hover: var(--color-bg-transparent-active);
   --color-bg-button-flat-active: var(--color-bg-transparent-active);
-  --color-bg-button-normal: var(--color-bg-raised);       
-  --color-bg-button-normal-hover: var(--color-bg-button-hover); 
-  --color-bg-button-normal-active: var(--color-bg-button-active); 
-  --color-bg-button-suggested: var(--color-accent-blue);  
-  --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
+  --color-bg-button-normal: var(--color-bg-raised);
+  --color-bg-button-normal-hover: var(--color-bg-button-hover);
+  --color-bg-button-normal-active: var(--color-bg-button-active);
+  --color-bg-button-suggested: var(--color-accent-blue-suggested-btn);
+  --color-bg-button-suggested-hover: var(--color-accent-blue);
   
-  --color-bg-menu-bar: var(--color-bg-window);           
-  --color-bg-menu-popup: var(--color-bg-popover);         
-  --color-bg-menu-item-hover: var(--color-bg-transparent-active); 
-  --color-bg-popover-content: var(--color-bg-popover);    
+  --color-bg-menu-bar: var(--color-bg-window);
+  --color-bg-menu-popup: var(--color-bg-popover);
+  --color-bg-menu-item-hover: var(--color-bg-transparent-active);
+  --color-bg-popover-content: var(--color-bg-popover);
 
-  --color-bg-list-header: var(--color-bg-raised);        
-  --color-bg-tab-bar: var(--color-bg-surface);            
-  --color-bg-tab-active: var(--color-bg-popover);            
-  --color-bg-tab-inactive: var(--color-bg-surface);       
-  --color-bg-tab-hover: var(--color-bg-raised);           
-  --color-bg-treeview-header: var(--color-bg-raised);    
+  --color-bg-list-header: var(--color-bg-raised);
+  --color-bg-tab-bar: var(--color-bg-surface);
+  --color-bg-tab-active: var(--color-bg-popover);
+  --color-bg-tab-inactive: var(--color-bg-surface);
+  --color-bg-tab-hover: var(--color-bg-raised);
+  --color-bg-treeview-header: var(--color-bg-raised);
 
-  --color-bg-toggle-off: var(--color-fg-muted);           
-  --color-bg-toggle-on: var(--color-accent-blue);          
-  --color-bg-check-radio-box: var(--color-bg-raised);    
+  --color-bg-toggle-off: var(--color-fg-muted);
+  --color-bg-toggle-on: var(--color-accent-blue-functional-fg);
+  --color-bg-check-radio-box: var(--color-bg-raised);
   
-  --color-bg-scrollbar-track: var(--color-bg-surface);                
-  --color-bg-scrollbar-slider: #6a95c360;                 
-  --color-bg-scrollbar-slider-hover: #a0c3e680;           
+  --color-bg-scrollbar-track: var(--color-bg-surface);
+  --color-bg-scrollbar-slider: #6a95c360;
+  --color-bg-scrollbar-slider-hover: #a0c3e680;
   
-  --color-bg-status-bar: var(--color-bg-window);         
-  --color-bg-tooltip: var(--color-bg-popover);             
-
-
-  /* ================================================= */
-  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
-  /* ================================================= */
+  --color-bg-status-bar: var(--color-bg-window);
+  --color-bg-tooltip: var(--color-bg-popover);
 
   --theme-fg-label-primary: var(--color-fg-primary);
   --theme-fg-label-secondary: var(--color-fg-secondary);
   --theme-fg-label-tertiary: var(--color-fg-muted);
   --theme-fg-label-quaternary: var(--color-fg-subtle);
-  --theme-fg-label-inverse: var(--color-fg-inverse); 
+  --theme-fg-label-inverse: var(--color-fg-inverse);
   
   --theme-fg-control-text: var(--color-fg-primary);
   --theme-fg-control-text-disabled: var(--color-fg-subtle);
-  --theme-fg-link: var(--color-accent-blue);
+  --theme-fg-link: var(--color-accent-blue-functional-fg);
   --theme-fg-placeholder: var(--color-fg-muted);
   --theme-fg-header-text: var(--color-fg-primary);
   
-  --theme-fg-text-selected: var(--color-fg-inverse); 
-  --theme-fg-text-alternate-selected: var(--color-fg-primary); 
-
-
-  /* ================================================= */
-  /* ============= DECORATION & SEPARATORS ============= */
-  /* ================================================= */
+  --theme-fg-text-selected: var(--color-fg-inverse);
+  --theme-fg-text-alternate-selected: var(--color-fg-primary);
 
   --theme-decoration-separator: var(--color-separator-line);
-  --theme-decoration-grid-line: #0E497A; 
-  --theme-decoration-keyboard-focus: var(--color-accent-blue);
-  --theme-decoration-border-control: var(--color-separator-line); 
+  --theme-decoration-grid-line: #0E497A;
+  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-bg-deep), 0 0 0 4px var(--color-accent-blue-functional-fg);
+  --theme-decoration-border-control: var(--color-separator-line);
   --color-border-entry-base: var(--color-separator-line);
-  --color-border-entry-focus: var(--color-accent-blue);
+  --color-border-entry-focus: var(--color-accent-blue-functional-fg);
+  --color-focus-ring: var(--color-accent-blue-functional-fg);
 
-
-  /* ================================================= */
-  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
-  /* ================================================= */
-  
-  --theme-status-accent: var(--color-accent-blue);
+  --theme-status-accent: var(--color-accent-blue-functional-fg);
   --theme-status-accent-inactive: var(--color-accent-gray);
   --theme-status-success: var(--color-status-success);
   --theme-status-danger: var(--color-status-danger);
   --theme-status-warning: var(--color-status-warning);
   --theme-status-highlight-virtual: var(--color-bg-raised);
-
-
-  /* ================================================= */
-  /* ====== SEMANTIC MAPPING (Used by Base CSS) ====== */
-  /* ================================================= */
 
   --primary-bg: var(--theme-bg-view-primary);
   --secondary-bg: var(--theme-bg-view-secondary);
@@ -179,17 +146,12 @@
   --success-green: var(--theme-status-success);
   --danger-red: var(--theme-status-danger);
   
-  --success-green-light: var(--color-status-success-bg); 
+  --success-green-light: var(--color-status-success-bg);
   --window-control-hover-bg: var(--color-bg-transparent-active);
   --window-control-border-color: var(--primary-bg);
 
   --dseg-shadow-soft: rgba(255, 255, 255, 0.1);
   --dseg-shadow-dark: rgba(0, 0, 0, 0.5);
-
-
-  /* ================================================= */
-  /* =============== SHADOWS AND OPACITY ============== */
-  /* ================================================= */
 
   --shadow-dark: var(--color-shadow-dark);
   --shadow-medium: var(--color-shadow-medium);
@@ -205,36 +167,29 @@
   --opacity-60: 0.6;
 
   --shadow-subtle: 0 1px 3px var(--color-shadow-lighter);
-  --shadow-elevated: 0 4px 10px var(--color-shadow-medium), 0 0 8px rgba(122, 195, 255, 0.2);
+  --shadow-elevated: 0 4px 10px var(--color-shadow-medium), 0 0 8px var(--color-shadow-hue-bleed);
   --shadow-button-flat: none;
   --shadow-control-small: none;
   --shadow-control-small-hover: none;
   --shadow-element-minimal: none;
 
-  --shadow-window-float: 0 6px 15px var(--color-shadow-dark), 0 0 15px rgba(122, 195, 255, 0.3);
-  --shadow-menubar-separator: inset 0 -1px 0 #0E497A; 
+  --shadow-window-float: 0 6px 15px var(--color-shadow-dark), 0 0 15px var(--color-shadow-hue-bleed);
+  --shadow-menubar-separator: inset 0 -1px 0 #0E497A;
   
   --shadow-neumorphic-inset-medium: inset 0 1px 4px var(--color-shadow-medium);
   --shadow-neumorphic-outset-large: 0 2px 4px var(--color-shadow-lighter);
   --shadow-neumorphic-press: inset 0 1px 3px var(--color-shadow-dark);
 
-  /* ================================================= */
-  /* ============= GEOMETRY & RADIUS ================= */
-  /* ================================================= */
-  
-  --radius-xs: 2px;     
-  --radius-s: 4px;      
-  --radius-m: 6px;     
-  --radius-l: 8px;     
-  --radius-xl: 10px;    
+  --radius-xs: 2px;
+  --radius-s: 4px;
+  --radius-m: 6px;
+  --radius-l: 8px;
+  --radius-xl: 10px;
+  --radius-control-default: var(--radius-s);
 
-  /* ================================================= */
-  /* ================== FONT VARIABLES ================ */
-  /* ================================================= */
-
-  --font-family-default: "Roboto", sans-serif; 
+  --font-family-default: "Roboto", sans-serif;
   --font-family-system: var(--font-family-default);
-  --font-weight-regular: 400; 
-  --font-weight-medium: 500;  
-  --font-weight-bold: 600;    
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
 }

@@ -230,7 +230,7 @@ class Panel(Adw.Application):
         css_class = "bottom-panel"
         layer_position = config.get("layer_position", "BACKGROUND")
         width = self.get_config(["panel", "bottom", "width"], self.monitor_width)
-        height = self.get_config(["panel", "bottom", "height"], 32.0)
+        height = self.get_config(["panel", "bottom", "height"], 32)
         self.bottom_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,

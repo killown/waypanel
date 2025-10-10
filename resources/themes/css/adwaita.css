@@ -34,6 +34,10 @@
   --color-status-warning: #f6d326;
   --color-separator-line: #424242;
 
+  /* Added XP Button Specific Colors */
+  --accent-blue-light: #4d93e7;
+  --accent-blue-darker: #1c529a;
+  
   /* Status Color Backgrounds (Using Adwaita Opacities) */
   --color-status-success-bg: rgba(38, 162, 105, 0.2);
   --color-status-danger-bg: rgba(224, 27, 36, 0.2);
@@ -239,6 +243,10 @@
   --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--color-separator-line);
   --shadow-neumorphic-outset-large: 0 2px 4px rgba(0, 0, 0, 0.2);
   --shadow-neumorphic-press: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+  --shadow-neumorphic-outset-small: 0 1px 3px rgba(0, 0, 0, 0.4);
+
+  /* DSEG/Digital Text Glow */
+  --dseg-shadow-soft: rgba(47, 211, 143, 0.4);
 
   /* ================================================= */
   /* ============= GEOMETRY & RADIUS (Advanced UI Structure) ============= */
@@ -249,6 +257,7 @@
   --radius-m: 8px;
   --radius-l: 10px;
   --radius-xl: 12px;
+  --radius-control-default: 6px;
 
   /* ================================================= */
   /* ================== FONT VARIABLES ================ */

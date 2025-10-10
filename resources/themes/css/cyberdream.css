@@ -3,7 +3,6 @@
   /* ==== CORE PALETTE (Theme Specific) - Neon Dream (PERFECTED) ==== */
   /* ================================================= */
   
-  /* Core Backgrounds - Pure Black/Minimal Contrast for Cyber feel */
   --color-bg-base: #0D0E11;
   --color-bg-panel: #0D0E11CB;
   --color-bg-window: #0D0E11;
@@ -21,28 +20,26 @@
   --color-vibrancy-light-blur: var(--color-bg-surface);
   --opacity-vibrancy-bar: 1.0;
 
-  /* Core Foregrounds - Bright & High Contrast */
   --color-fg-primary: #ECEFF4;
   --color-fg-secondary: #BFC2C8;
   --color-fg-muted: #8F949F;
   --color-fg-subtle: #4A515E;
   --color-fg-inverse: #0D0E11;
 
-  /* Accent Colors (Futuristic & Vibrant Tones) */
   --color-accent-blue: #00BFFF;
+  --color-accent-blue-light: #33CCFF;
   --color-accent-blue-dark: #009FE5;
+  --color-accent-blue-darker: #007AAB;
   --color-accent-gray: #4A515E;
   --color-status-success: #6EE59C;
   --color-status-danger: #F05C72;
   --color-status-warning: #FFD700;
   --color-separator-line: #2A303A;
   
-  /* Status Color Backgrounds (Stronger Opacity) */
   --color-status-success-bg: rgba(110, 229, 156, 0.25);
   --color-status-danger-bg: rgba(240, 92, 114, 0.25);
   --color-status-warning-bg: rgba(255, 215, 0, 0.25);
 
-  /* Shadow Primitives (Sharp, focused glow-like shadows) */
   --color-shadow-dark: rgba(0, 0, 0, 0.7);
   --color-shadow-medium: rgba(0, 0, 0, 0.5);
   --color-shadow-lighter: rgba(0, 0, 0, 0.3);
@@ -57,14 +54,12 @@
   --theme-bg-view-tertiary: var(--color-bg-raised);
   --theme-bg-view-vibrant: var(--color-bg-base);
 
-  /* Interactive/State Backgrounds */
   --theme-bg-control-base: var(--color-bg-surface);
   --theme-bg-selected-primary: var(--color-accent-blue-dark);
   --theme-bg-selected-inactive: var(--color-bg-raised);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
   --theme-bg-text-selection: #00BFFF40;
   
-  /* Specialized Backgrounds */
   --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
   --theme-bg-find-highlight: #FFD70040;
@@ -74,13 +69,11 @@
   /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
   /* ================================================= */
   
-  /* Inputs, Text Views, and Fields */
   --color-bg-entry-base: var(--color-bg-surface);
   --color-bg-entry-focus: var(--color-bg-surface);
   --color-bg-entry-disabled: var(--color-bg-base);
   --color-bg-textview: var(--color-bg-surface);
   
-  /* Buttons and Interaction */
   --color-bg-button-flat: transparent;
   --color-bg-button-flat-hover: var(--color-bg-transparent-active);
   --color-bg-button-flat-active: var(--color-bg-transparent-active);
@@ -90,13 +83,11 @@
   --color-bg-button-suggested: var(--color-accent-blue);
   --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
   
-  /* Menus and Popovers */
   --color-bg-menu-bar: var(--color-bg-base);
   --color-bg-menu-popup: var(--color-bg-popover);
   --color-bg-menu-item-hover: var(--color-bg-transparent-active);
   --color-bg-popover-content: var(--color-bg-popover);
 
-  /* Lists, Trees, and Tabs */
   --color-bg-list-header: var(--color-bg-raised);
   --color-bg-tab-bar: var(--color-bg-surface);
   --color-bg-tab-active: var(--color-bg-base);
@@ -104,17 +95,14 @@
   --color-bg-tab-hover: var(--color-bg-raised);
   --color-bg-treeview-header: var(--color-bg-raised);
 
-  /* Check/Radio/Switches */
   --color-bg-toggle-off: var(--color-fg-muted);
   --color-bg-toggle-on: var(--color-accent-blue);
   --color-bg-check-radio-box: var(--color-bg-raised);
   
-  /* Scrollbars */
   --color-bg-scrollbar-track: transparent;
   --color-bg-scrollbar-slider: #8F949A60;
   --color-bg-scrollbar-slider-hover: #BFC2C880;
   
-  /* Status Bars and Notifications */
   --color-bg-status-bar: var(--color-bg-surface);
   --color-bg-tooltip: var(--color-bg-raised);
 
@@ -129,16 +117,16 @@
   --theme-fg-label-quaternary: var(--color-fg-subtle);
   --theme-fg-label-inverse: var(--color-fg-inverse);
   
-  /* Interactive Foreground */
   --theme-fg-control-text: var(--color-fg-primary);
   --theme-fg-control-text-disabled: var(--color-fg-muted);
   --theme-fg-link: var(--color-accent-blue);
   --theme-fg-placeholder: var(--color-fg-muted);
   --theme-fg-header-text: var(--color-fg-primary);
   
-  /* State Foreground */
   --theme-fg-text-selected: var(--color-fg-inverse);
   --theme-fg-text-alternate-selected: var(--color-fg-primary);
+
+  --color-fg-button-suggested: var(--color-fg-inverse);
 
 
   /* ================================================= */
@@ -153,6 +141,7 @@
   --color-border-entry-focus: var(--color-accent-blue);
   --color-bg-entry-base: var(--color-bg-surface);
   --color-bg-entry-focus: var(--color-bg-surface);
+  --color-focus-ring: var(--color-accent-blue);
 
 
   /* ================================================= */
@@ -171,36 +160,30 @@
   /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
   /* ================================================= */
 
-  /* Backgrounds */
   --primary-bg: var(--theme-bg-view-primary);
   --secondary-bg: var(--theme-bg-view-secondary);
   --tertiary-bg: var(--theme-bg-view-tertiary);
   --header-border: var(--theme-decoration-separator);
 
-  /* Foreground/Text */
   --main-text: var(--theme-fg-label-primary);
   --soft-text: var(--theme-fg-label-secondary);
   --calendar-other-month: var(--theme-fg-label-tertiary);
 
-  /* Functional Colors */
   --accent-blue: var(--theme-status-accent);
   --success-green: var(--theme-status-success);
   --danger-red: var(--color-status-danger);
   
-  /* Specific Color Variants */
   --success-green-light: var(--color-status-success-bg);
   --window-control-hover-bg: var(--color-bg-transparent-active);
   --window-control-border-color: var(--primary-bg);
 
-  /* DSEG Font Shadows - Used for the signature "neon glow" effect */
   --dseg-shadow-soft: 0 0 4px rgba(0, 191, 255, 0.5);
   --dseg-shadow-dark: 0 0 8px rgba(240, 92, 114, 0.8);
 
   /* ================================================= */
-  /* =============== SHADOWS AND OPACITY (Soft Focus) ====== */
+  /* =============== SHADOWS AND OPACITY (Glow Focus) ====== */
   /* ================================================= */
 
-  /* Raw Opacity Primitives (Added for completeness) */
   --opacity-0: 0.0;
   --opacity-08: 0.08;
   --opacity-507: 0.507;
@@ -214,7 +197,6 @@
   --shadow-medium: var(--color-shadow-medium);
   --shadow-subtle-white: none;
 
-  /* Shadow Styles (Replaced with Glows) */
   --shadow-subtle: none;
   --shadow-elevated: 0 0 10px rgba(0, 191, 255, 0.4), 0 0 2px rgba(0, 0, 0, 0.5);
   --shadow-button-flat: none;
@@ -222,14 +204,13 @@
   --shadow-control-small-hover: 0 0 4px rgba(0, 191, 255, 0.3);
   --shadow-element-minimal: 0 0 1px rgba(0, 191, 255, 0.2);
 
-  /* Specialized Shadow Variables (Replaced with Glows) */
   --shadow-window-float: 0 0 20px rgba(0, 191, 255, 0.6), 0 0 5px rgba(0, 0, 0, 0.7);
   --shadow-menubar-separator: inset 0 -1px 0 var(--color-separator-line);
   
-  /* Neumorphic/Inset Inversion (Adjusted for theme) */
   --shadow-neumorphic-inset-medium: inset 0 0 0 1px var(--color-accent-gray), inset 0 1px 2px var(--color-shadow-medium);
   --shadow-neumorphic-outset-large: 0 0 6px rgba(0, 191, 255, 0.3);
   --shadow-neumorphic-press: inset 0 1px 3px var(--color-shadow-dark);
+
 
   /* ================================================= */
   /* ============= GEOMETRY & RADIUS (Natural) ============= */
@@ -240,6 +221,8 @@
   --radius-m: 6px;
   --radius-l: 10px;
   --radius-xl: 14px;
+  --radius-control-default: var(--radius-s);
+
 
   /* ================================================= */
   /* ================== FONT VARIABLES ================ */

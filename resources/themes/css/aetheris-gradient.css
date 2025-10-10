@@ -49,6 +49,9 @@
   --color-shadow-medium: rgba(180, 227, 226, 0.2);
   --color-shadow-lighter: rgba(0, 0, 0, 0.2);
 
+  /* ADDED: Missing XP Button Specific Colors */
+  --accent-blue-light: #C7F7F6;
+  --accent-blue-darker: #425857;
 
   /* ================================================= */
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
@@ -211,6 +214,9 @@
   --shadow-neumorphic-inset-medium: inset 0 1px 3px var(--color-shadow-dark);
   --shadow-neumorphic-outset-large: 0 2px 4px var(--color-shadow-medium);
   --shadow-neumorphic-press: inset 0 1px 2px var(--color-shadow-dark);
+  
+  /* ADDED: Missing Neumorphic Shadow */
+  --shadow-neumorphic-outset-small: 0 1px 3px rgba(0, 0, 0, 0.4);
 
   /* ================================================= */
   /* ============= GEOMETRY & RADIUS ============= */
@@ -221,6 +227,9 @@
   --radius-m: 8px;
   --radius-l: 12px;
   --radius-xl: 16px;
+  
+  /* ADDED: Missing Control Radius */
+  --radius-control-default: 6px;
 
   /* ================================================= */
   /* ================== FONT VARIABLES ================ */

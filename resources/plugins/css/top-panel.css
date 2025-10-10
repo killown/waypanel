@@ -2,10 +2,11 @@
   background-color: var(--color-bg-panel);
   color: var(--main-text);
   font-weight: var(--font-weight-medium);
+  
   box-shadow:
-    inset 3px 3px 5px rgba(255, 255, 255, 0.08),
-    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
-    2px 2px 5px var(--shadow-medium);
+    0 1px 0 rgba(255, 255, 255, 0.05),
+    0 6px 18px rgba(0, 0, 0, 0.7);
+    
   font-family: var(--font-family-default); 
   font-size: 22px;
   text-decoration: none;
@@ -17,32 +18,45 @@
 .top-panel-box-widgets-left {
   -gtk-icon-size: 29px;
   background: var(--color-bg-box-primary);
-  border-top-right-radius: 12px;
-  border-bottom-right-radius: 12px;
+  
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  
+  /* BORDER FIX: Removed explicit border properties */
+  border: none;
+  
   padding-top: 2px;
   padding-right: 6px;
+  
+  /* HIGH-3D BEVEL EFFECT: Using shadows to define all edges */
   box-shadow:
-    inset -1px -1px 2px var(--color-shadow-dark),
-    inset 1px 1px 2px rgba(255, 255, 255, 0.5),
-    3px 3px 5px var(--color-shadow-medium);
+    /* Deep primary drop shadow (bottom/right edge definition) */
+    0 4px 8px rgba(0, 0, 0, 0.8),
+    /* Top-left strong highlight (Simulates the bright top border) */
+    inset 0 1px 0 rgba(134, 134, 134, 0.6), 
+    /* Bottom-right darker shadow (Simulates the dark bottom/right border) */
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    /* Outer light ring for the final, crisp highlight */
+    0 0 0 1px rgba(255, 255, 255, 0.1); 
+    
   font-family: var(--font-family-default);
   font-size: 20px;
-  color: var(--main-text);
+  color: var(--color-fg-inverse); 
   text-decoration: none;
-  text-shadow:
-    0 1px 1px var(--color-shadow-dark),
-    0 0 5px var(--color-fg-inverse);
+  text-shadow: none; 
 }
 
 .top-panel-box-systray {
   background: var(--color-bg-deep);
-  border-radius: 7px;
+  border-radius: var(--radius-s, 5px); 
   margin-left: 5px;
   margin-top: 3px;
+  
   box-shadow:
-    inset 3px 3px 5px rgba(255, 255, 255, 0.08),
-    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
-    2px 2px 5px var(--shadow-medium);
+    inset 2px 2px 6px rgba(0, 0, 0, 0.85),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.4);
+    
   font-family: var(--font-family-default);
   font-size: 22px;
   color: var(--main-text);
@@ -57,7 +71,6 @@
 }
 
 .top-panel-box-left {
-  /* Empty, preserved */
 }
 
 .top_panel_box_center {

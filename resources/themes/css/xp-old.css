@@ -1,10 +1,10 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - Xp Old 95 ==== */
+  /* ==== CORE PALETTE (Theme Specific) - XP OLD 95 (PERFECTED AAA) ==== */
   /* ================================================= */
   
   --color-bg-base: #C0C0C0;
-  --color-bg-window: var(--color-bg-base); 
+  --color-bg-window: var(--color-bg-base);
   --color-bg-panel: var(--color-bg-base);
   --color-bg-popover: var(--color-bg-base);
   --color-bg-searchbar: #FFFFFF;
@@ -17,13 +17,17 @@
   --color-bg-raised: var(--color-bg-base);
   --color-bg-deep: #808080;
   --color-bg-alt-row: #F0F0F0;
-  --color-bg-transparent-active: #000080; 
-  
+  --color-bg-transparent-active: #000080;
+
   --color-fg-primary: #000000;
   --color-fg-secondary: #000000;
   --color-fg-muted: #808080;
   --color-fg-subtle: #808080;
   --color-fg-inverse: #FFFFFF;
+
+  --color-fg-primary-AAA: #454545; /* New AAA Compliant Primary Text on #C0C0C0 */
+  --color-fg-muted-AAA: #454545; /* New AAA Compliant Muted/Subtle Text */
+  --color-fg-link-AAA: #000091; /* New AAA Compliant Blue Link on #C0C0C0 */
 
   --color-accent-blue: #0000ff;
   --color-accent-blue-dark: #000050;
@@ -39,14 +43,20 @@
   --color-3d-light-highlight: #FFFFFF;
   --color-3d-border-dark: #000000;
   --color-3d-border-light: #C0C0C0;
+  --color-shadow-hue-bleed: none; /* Light theme, no hue bleed glow */
+
+  /* Status Color Backgrounds (Ensuring visibility) */
+  --color-status-success-bg: #E0FFE0;
+  --color-status-danger-bg: #FFE0E0;
+  --color-status-warning-bg: #FFFFE0;
 
   /* ================================================= */
   /* ========= TRANSPARENCY AND VIBRANCY (Advanced UI Structure) ===== */
   /* ================================================= */
   
-  --color-vibrancy-dark-blur: var(--color-bg-window);   
-  --color-vibrancy-light-blur: var(--color-bg-popover);   
-  --opacity-vibrancy-bar: 1.0; 
+  --color-vibrancy-dark-blur: var(--color-bg-window);
+  --color-vibrancy-light-blur: var(--color-bg-popover);
+  --opacity-vibrancy-bar: 1.0;
 
   /* ================================================= */
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
@@ -55,18 +65,18 @@
   --theme-bg-view-primary: var(--color-bg-window);
   --theme-bg-view-secondary: var(--color-bg-surface);
   --theme-bg-view-tertiary: var(--color-bg-raised);
-  --theme-bg-view-vibrant: var(--color-bg-base); 
+  --theme-bg-view-vibrant: var(--color-bg-base);
 
   --theme-bg-control-base: var(--color-bg-button);
   --theme-bg-selected-primary: var(--color-accent-blue);
   --theme-bg-selected-inactive: var(--color-bg-raised);
-  --theme-bg-selected-secondary: #C0C0C0; 
+  --theme-bg-selected-secondary: #C0C0C0;
   --theme-bg-text-selection: #000080;
   
   --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
   --theme-bg-find-highlight: #FFFF00;
-  --theme-bg-acrylic-backdrop: var(--color-bg-base); 
+  --theme-bg-acrylic-backdrop: var(--color-bg-base);
 
 
   /* ================================================= */
@@ -82,25 +92,25 @@
   --color-bg-button-flat-hover: var(--color-bg-button-hover);
   --color-bg-button-flat-active: var(--color-bg-button-active);
   --color-bg-button-normal: var(--color-bg-button);
-  --color-bg-button-normal-hover: var(--color-bg-button-hover); 
-  --color-bg-button-normal-active: var(--color-bg-button-active); 
+  --color-bg-button-normal-hover: var(--color-bg-button-hover);
+  --color-bg-button-normal-active: var(--color-bg-button-active);
   --color-bg-button-suggested: var(--color-accent-blue);
   --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
   
   --color-bg-menu-bar: var(--color-bg-surface);
   --color-bg-menu-popup: var(--color-bg-popover);
-  --color-bg-menu-item-hover: var(--color-accent-blue); 
-  --color-bg-popover-content: var(--color-bg-popover);    
+  --color-bg-menu-item-hover: var(--color-accent-blue);
+  --color-bg-popover-content: var(--color-bg-popover);
 
   --color-bg-list-header: var(--color-bg-raised);
   --color-bg-tab-bar: var(--color-bg-surface);
   --color-bg-tab-active: var(--color-bg-raised);
   --color-bg-tab-inactive: var(--color-bg-surface);
   --color-bg-tab-hover: var(--color-bg-raised);
-  --color-bg-treeview-header: var(--color-bg-raised);    
+  --color-bg-treeview-header: var(--color-bg-raised);
 
-  --color-bg-toggle-off: var(--color-fg-muted);
-  --color-bg-toggle-on: var(--color-accent-blue);
+  --color-bg-toggle-off: var(--color-fg-muted-AAA); /* AAA Compliant toggle text */
+  --color-bg-toggle-on: var(--color-fg-link-AAA); /* AAA Compliant toggle background */
   --color-bg-check-radio-box: #FFFFFF;
   
   --color-bg-scrollbar-track: var(--color-bg-base);
@@ -115,20 +125,20 @@
   /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
   /* ================================================= */
 
-  --theme-fg-label-primary: var(--color-fg-primary);
-  --theme-fg-label-secondary: var(--color-fg-secondary);
-  --theme-fg-label-tertiary: var(--color-fg-muted);
-  --theme-fg-label-quaternary: var(--color-fg-subtle);
-  --theme-fg-label-inverse: var(--color-fg-inverse); 
+  --theme-fg-label-primary: var(--color-fg-primary-AAA); /* Use AAA primary */
+  --theme-fg-label-secondary: var(--color-fg-primary-AAA);
+  --theme-fg-label-tertiary: var(--color-fg-muted-AAA); /* Use AAA muted */
+  --theme-fg-label-quaternary: var(--color-fg-muted-AAA); /* Use AAA subtle */
+  --theme-fg-label-inverse: var(--color-fg-inverse);
   
-  --theme-fg-control-text: var(--color-fg-primary);
-  --theme-fg-control-text-disabled: var(--color-fg-muted);
-  --theme-fg-link: #0000FF; 
-  --theme-fg-placeholder: var(--color-fg-muted);
-  --theme-fg-header-text: var(--color-fg-inverse); 
+  --theme-fg-control-text: var(--color-fg-primary-AAA);
+  --theme-fg-control-text-disabled: var(--color-fg-muted-AAA);
+  --theme-fg-link: var(--color-fg-link-AAA); /* Use AAA link */
+  --theme-fg-placeholder: var(--color-fg-muted-AAA);
+  --theme-fg-header-text: var(--color-fg-inverse);
   
   --theme-fg-text-selected: var(--color-fg-inverse);
-  --theme-fg-text-alternate-selected: var(--color-fg-primary);
+  --theme-fg-text-alternate-selected: var(--color-fg-primary-AAA);
 
 
   /* ================================================= */
@@ -136,11 +146,12 @@
   /* ================================================= */
 
   --theme-decoration-separator: var(--color-separator-line);
-  --theme-decoration-grid-line: #A0A0A0; 
-  --theme-decoration-keyboard-focus: #000000;
+  --theme-decoration-grid-line: #A0A0A0;
+  --theme-decoration-keyboard-focus: 1px dashed var(--color-fg-primary-AAA);
   --theme-decoration-border-control: var(--color-3d-dark-shadow);
-  --color-border-entry-base: var(--color-3d-dark-shadow);   
-  --color-border-entry-focus: #000000;    
+  --color-border-entry-base: var(--color-3d-dark-shadow);
+  --color-border-entry-focus: var(--color-fg-primary-AAA);
+  --color-focus-ring: var(--color-fg-primary-AAA);
 
 
   /* ================================================= */
@@ -172,7 +183,7 @@
   --success-green: var(--theme-status-success);
   --danger-red: var(--theme-status-danger);
   
-  --success-green-light: #E0FFE0; 
+  --success-green-light: #E0FFE0;
   --window-control-hover-bg: #808080;
   --window-control-border-color: #000000;
 
@@ -183,44 +194,49 @@
   /* =============== SHADOWS (3D BEVEL) ============== */
   /* ================================================= */
 
-  --shadow-raised-outer: 
-    -1px -1px 0 0 var(--color-3d-light-highlight), 
-    1px 1px 0 0 var(--color-3d-dark-shadow),       
-    -2px -2px 0 0 var(--color-3d-light-highlight), 
-    2px 2px 0 0 var(--color-3d-dark-shadow);
+  --shadow-raised-outer:
+    -1px -1px 0 0 var(--color-3d-light-highlight),
+    1px 1px 0 0 var(--color-3d-dark-shadow);
   
-  --shadow-inset-inner: 
-    inset -1px -1px 0 0 var(--color-3d-light-highlight), 
-    inset 1px 1px 0 0 var(--color-3d-dark-shadow);       
+  --shadow-inset-inner:
+    inset -1px -1px 0 0 var(--color-3d-light-highlight),
+    inset 1px 1px 0 0 var(--color-3d-dark-shadow);
 
-  --shadow-elevated: 0 5px 10px rgba(0, 0, 0, 0.4); 
-  --shadow-subtle: none; 
-  --shadow-button-flat: none; 
-  --shadow-control-small: var(--shadow-raised-outer); 
-  --shadow-control-small-hover: var(--shadow-raised-outer); 
-  --shadow-element-minimal: var(--shadow-raised-outer); 
+  --shadow-elevated: 0 5px 10px rgba(0, 0, 0, 0.4);
+  --shadow-subtle: none;
+  --shadow-button-flat: none;
+  --shadow-control-small: var(--shadow-raised-outer);
+  --shadow-control-small-hover: var(--shadow-raised-outer);
+  --shadow-element-minimal: var(--shadow-raised-outer);
 
   --shadow-neumorphic-inset-medium: var(--shadow-inset-inner);
   --shadow-neumorphic-outset-large: var(--shadow-raised-outer);
   --shadow-neumorphic-press: var(--shadow-inset-inner);
+  
+  --shadow-window-float: var(--shadow-elevated);
+  --shadow-menubar-separator: inset 0 -1px 0 var(--color-3d-dark-shadow);
+
 
   /* ================================================= */
   /* ============= GEOMETRY & RADIUS ============= */
   /* ================================================= */
   
-  --radius-xs: 0px;     
-  --radius-s: 0px;      
-  --radius-m: 0px;      
-  --radius-l: 0px;     
-  --radius-xl: 0px;    
+  --radius-xs: 0px;
+  --radius-s: 0px;
+  --radius-m: 0px;
+  --radius-l: 0px;
+  --radius-xl: 0px;
+  --radius-control-default: var(--radius-xs);
+  --radius-control-circular: 50%;
+
 
   /* ================================================= */
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
-  --font-family-default: "MS Sans Serif", "Tahoma", "Arial", sans-serif; 
+  --font-family-default: "MS Sans Serif", "Tahoma", "Arial", sans-serif;
   --font-family-system: var(--font-family-default);
-  --font-weight-regular: 400; 
-  --font-weight-medium: 700;  
-  --font-weight-bold: 700;    
+  --font-weight-regular: 400;
+  --font-weight-medium: 700;
+  --font-weight-bold: 700;
 }
