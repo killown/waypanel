@@ -2,10 +2,9 @@
   background-color: var(--primary-bg);
 }
 
-
-
 .tray-menu-button {
-  border-radius: 8px;
+  border-radius: 2px;
   margin-left: 5px;
    background-color: var(--color-bg-deep);
+  margin-top: 1px;
 }
