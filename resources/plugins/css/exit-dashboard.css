@@ -76,7 +76,7 @@
 .exit-dashboard-summary {
     color: var(--theme-fg-label-tertiary);
     font-size: 0.9em;
-    line-height: 1.3;
+    line-height: 0.1;
 }
 
 .exit-dashboard-stack {

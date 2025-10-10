@@ -1,19 +1,21 @@
 .window-title-content {
-  background: var(--nord0);
+  background: var(--color-bg-deep);
   border-radius: var(--radius-xs);
-  box-shadow:
-    inset 4px 4px 12px rgba(0, 0, 0, 1.0),
-    inset -2px -2px 6px rgba(255, 255, 255, 0.08),
-    0 1px 4px rgba(0, 0, 0, 0.6);
+   box-shadow:
+    inset 0 1px 1px rgba(90, 90, 90, 0.4),  
+    inset 0 -2px 3px rgba(0, 0, 0, 0.25),       
+    -2px -2px 4px rgba(255, 255, 255, 0.1),   
+    3px 3px 6px var(--shadow-dark);
+    
   font-size: 18px;
-  color: var(--nord6);
+  color: var(--main-text); 
   text-decoration: none;
   text-shadow:
-    0 0 1px var(--nord8),
+    0 0 1px var(--dseg-shadow-soft), 
     0 0 2px rgba(136, 192, 208, 0.08);
-  padding: 5px 8px;
+  padding: 5px 5px;
   margin-left: 20px;
-  margin-top: 5px;
+  margin-top: 4px;
 }
 
 .window-title-label {
@@ -21,13 +23,13 @@
   font-size: 16px;
   font-weight: var(--font-weight-medium);
   font-family: var(--font-family-default), sans-serif;
-  color: var(--nord6);
+  color: var(--main-text); 
   text-shadow: 
-    0 0 0.5px var(--nord8),
+    0 0 0.5px var(--dseg-shadow-soft),
     0 0 1px rgba(136, 192, 208, 0.05);
 }
 
 .window-title-icon {
   -gtk-icon-size: 24px;
-  color: var(--nord8);
+  color: var(--main-text); 
 }

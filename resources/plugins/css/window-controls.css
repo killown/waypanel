@@ -1,7 +1,7 @@
 .window-controls-box {
   border-style: none;
   background: transparent;
-  margin-top: 7px;
+  margin-top: 5px;
   margin-left: 5px;
   margin-right: 5px;
 }
@@ -19,9 +19,8 @@
   margin-left: 2px;
   margin-right: 1px;
   background-size: 100% auto;
-  
   color: var(--color-fg-inverse); 
-  
+
   border-color: rgba(0, 0, 0, 0.5);
   border-radius: var(--radius-window-control, 4px);
   border-style: solid;
