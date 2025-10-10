@@ -47,6 +47,11 @@ def get_plugin_class():
                 ICON_WIFI_DISCONNECTED, ["network-wireless-disconnected-symbolic"]
             )
             self.icon = self.icon_wired_disconnected
+            self.stack = None
+            self.header_box = None
+            self.header_back_button = None
+            self.header_title = None
+            self.detail_container = None
             self.init_ui()
             self.global_loop.create_task(self.periodic_check_async())
             self.network_disconnected = None
@@ -151,13 +156,13 @@ def get_plugin_class():
 
         def on_popover_visibility_changed(self, popover, param):
             """Update content when popover becomes visible."""
-            if self.popover.get_property("visible"):  # pyright: ignore
+            if self.popover.get_property("visible"):
                 self.global_loop.create_task(self.update_popover_content_async())
 
         async def update_popover_content_async(self):
             """Update popover content without changing the icon."""
             content = await self.create_scrollable_grid_content_async()
-            self.glib.idle_add(self.popover.set_child, content)  # pyright: ignore
+            self.glib.idle_add(self.popover.set_child, content)
 
         async def is_internet_connected_async(self) -> bool:
             """
@@ -172,15 +177,88 @@ def get_plugin_class():
             self.notify_send_network_disconnected()
             return False
 
-        async def create_scrollable_grid_content_async(self):
-            main_box = self.gtk.Box(
+        def _create_device_detail_content(self, device: Dict[str, str]):
+            """Creates the Gtk.Grid with all details for a single network device."""
+            detail_box = self.gtk.Box(
                 orientation=self.gtk.Orientation.VERTICAL, spacing=10
             )
-            main_box.add_css_class("network-manager-container")
-            main_box.set_margin_top(10)
-            main_box.set_margin_bottom(10)
-            main_box.set_margin_start(10)
-            main_box.set_margin_end(10)
+            grid = self.gtk.Grid()
+            grid.add_css_class("network-manager-device-details-grid")
+            grid.set_row_spacing(6)
+            grid.set_column_spacing(12)
+            row = 0
+            for key, value in device.items():
+                label_key = self.gtk.Label(label=key.strip())
+                label_key.set_halign(self.gtk.Align.START)
+                label_key.add_css_class("dim-label")
+                label_value = self.gtk.Label(label=value.strip())
+                label_value.set_halign(self.gtk.Align.START)
+                label_value.set_selectable(True)
+                label_value.set_wrap(True)
+                grid.attach(label_key, 0, row, 1, 1)
+                grid.attach(label_value, 1, row, 1, 1)
+                row += 1
+            detail_box.append(grid)
+            return detail_box
+
+        def on_device_icon_clicked(self, button, device_data):
+            """Handles the click on a device icon to show its details (drill-down)."""
+            interface_name = device_data.get("GENERAL.DEVICE", "Unknown")
+
+            def switch_to_detail():
+                self.header_title.set_label(f"{interface_name} Details")
+                self.header_back_button.set_visible(True)
+                detail_content = self._create_device_detail_content(device_data)
+                while child := self.detail_container.get_first_child():
+                    self.detail_container.remove(child)
+                self.detail_container.append(detail_content)
+                self.stack.set_visible_child_name("detail_view")
+
+            self.glib.idle_add(switch_to_detail)
+
+        def on_back_button_clicked(self, button):
+            """Handles the back button click to return to the dashboard view."""
+
+            def switch_to_dashboard():
+                self.stack.set_visible_child_name("dashboard_view")
+
+            self.glib.idle_add(switch_to_dashboard)
+
+        async def create_scrollable_grid_content_async(self):
+            main_popover_box = self.gtk.Box(
+                orientation=self.gtk.Orientation.VERTICAL, spacing=0
+            )
+            main_popover_box.add_css_class("network-manager-popover-content")
+            self.header_box = self.gtk.Box(
+                orientation=self.gtk.Orientation.HORIZONTAL, spacing=6
+            )
+            self.header_box.set_margin_top(10)
+            self.header_box.set_margin_bottom(10)
+            self.header_box.set_margin_start(10)
+            self.header_box.set_margin_end(10)
+            self.header_box.add_css_class("network-manager-header")
+            self.header_back_button = self.gtk.Button.new_from_icon_name(
+                "go-previous-symbolic"
+            )
+            self.header_back_button.set_visible(False)
+            self.header_back_button.connect("clicked", self.on_back_button_clicked)
+            self.header_title = self.gtk.Label(label="Network Dashboard")
+            self.header_title.add_css_class("network-manager-heading")
+            self.header_title.set_halign(self.gtk.Align.START)
+            self.header_box.append(self.header_back_button)
+            self.header_box.append(self.header_title)
+            main_popover_box.append(self.header_box)
+            self.stack = self.gtk.Stack()
+            self.stack.set_transition_type(
+                self.gtk.StackTransitionType.SLIDE_LEFT_RIGHT
+            )
+            dashboard_vbox = self.gtk.Box(
+                orientation=self.gtk.Orientation.VERTICAL, spacing=10
+            )
+            dashboard_vbox.set_margin_start(10)
+            dashboard_vbox.set_margin_end(10)
+            dashboard_vbox.set_margin_bottom(10)
+            dashboard_vbox.add_css_class("network-dashboard-view")
             wifi_scan_box = self.gtk.Box(
                 orientation=self.gtk.Orientation.VERTICAL, spacing=10
             )
@@ -219,81 +297,63 @@ def get_plugin_class():
 
             wifi_toggle_button.connect("clicked", on_toggle_wifi_list)
             wifi_scan_box.append(self.wifi_list_revealer)
-            main_box.append(wifi_scan_box)
+            dashboard_vbox.append(wifi_scan_box)
             await self.populate_wifi_list_async()
-            separator = self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL)
-            main_box.append(separator)
-            scrolled_window = self.gtk.ScrolledWindow()
-            scrolled_window.add_css_class("network-manager-scrolledwindow")
-            scrolled_window.set_policy(
-                self.gtk.PolicyType.AUTOMATIC, self.gtk.PolicyType.AUTOMATIC
+            dashboard_vbox.append(
+                self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL)
             )
-            scrolled_window.set_min_content_width(400)
-            vbox = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL, spacing=10)
             output = await self.cli_backend.run_nmcli_device_show_async()
             devices = self.cli_backend.parse_nmcli_output(output)
-            revealers = []
-
-            def update_scrolled_window_height(*_):
-                """Update height based on whether any revealer is open."""
-                if any(r.get_reveal_child() for r in revealers):
-                    scrolled_window.set_min_content_height(500)
-                else:
-                    max_devices_height = 60 * len(devices)
-                    scrolled_window.set_min_content_height(min(500, max_devices_height))
-
-            for idx, device in enumerate(devices):
+            device_dashboard_label = self.gtk.Label(label="<b>Network Devices</b>")
+            device_dashboard_label.set_use_markup(True)
+            device_dashboard_label.set_halign(self.gtk.Align.START)
+            dashboard_vbox.append(device_dashboard_label)
+            device_flowbox = self.gtk.FlowBox()
+            device_flowbox.set_selection_mode(self.gtk.SelectionMode.NONE)
+            device_flowbox.set_max_children_per_line(2)
+            device_flowbox.set_row_spacing(10)
+            device_flowbox.set_column_spacing(10)
+            device_flowbox.set_homogeneous(True)
+            for device in devices:
                 interface_name = device.get("GENERAL.DEVICE", "Unknown")
-                header_box = self.gtk.Box(
-                    orientation=self.gtk.Orientation.HORIZONTAL, spacing=6
+                device_type = device.get("GENERAL.TYPE", "").lower()
+                state = device.get("GENERAL.STATE", "").lower()
+                if "wifi" in device_type or self._is_wireless_interface(interface_name):
+                    icon_name = "network-wireless-symbolic"
+                    if "connected" in state or "activated" in state:
+                        icon_name = "network-wireless-signal-good-symbolic"
+                elif "ethernet" in device_type or "wired" in device_type:
+                    icon_name = "network-wired-symbolic"
+                    if "connected" in state or "activated" in state:
+                        icon_name = "network-wired-activated-symbolic"
+                else:
+                    icon_name = "network-server-symbolic"
+                device_button_box = self.gtk.Box(
+                    orientation=self.gtk.Orientation.VERTICAL, spacing=5
                 )
-                header_box.add_css_class("network-manager-device-header")
-                header_label = self.gtk.Label(label=f"{interface_name}")
-                arrow_icon = self.gtk.Image.new_from_icon_name("pan-down-symbolic")
-                header_box.append(header_label)
-                header_box.append(arrow_icon)
-                toggle_button = self.gtk.Button()
-                toggle_button.add_css_class("network-manager-device-toggle-button")
-                toggle_button.set_child(header_box)
-                revealer = self.gtk.Revealer()
-                revealer.set_transition_type(self.gtk.RevealerTransitionType.SLIDE_DOWN)
-                revealer.set_reveal_child(False)
-                revealer.connect("notify::reveal-child", update_scrolled_window_height)
-                revealers.append(revealer)
-                grid = self.gtk.Grid()
-                grid.add_css_class("network-manager-device-details-grid")
-                grid.set_row_spacing(6)
-                grid.set_column_spacing(12)
-                row = 0
-                for key, value in device.items():
-                    label_key = self.gtk.Label(label=key.strip())
-                    label_key.set_halign(self.gtk.Align.START)
-                    label_key.add_css_class("dim-label")
-                    label_value = self.gtk.Label(label=value.strip())
-                    label_value.set_halign(self.gtk.Align.START)
-                    label_value.set_selectable(True)
-                    label_value.set_wrap(True)
-                    grid.attach(label_key, 0, row, 1, 1)
-                    grid.attach(label_value, 1, row, 1, 1)
-                    row += 1
-                revealer.set_child(grid)
-
-                def on_toggled(btn, r=revealer, icon=arrow_icon):
-                    revealed = r.get_reveal_child()
-                    r.set_reveal_child(not revealed)
-                    icon.set_from_icon_name(
-                        "pan-up-symbolic" if revealed else "pan-down-symbolic"
-                    )
-
-                toggle_button.connect("clicked", on_toggled)
-                vbox.append(toggle_button)
-                vbox.append(revealer)
-                if idx < len(devices) - 1:
-                    separator = self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL)
-                    separator.add_css_class("network-manager-device-separator")
-                    vbox.append(separator)
-            scrolled_window.set_child(vbox)
-            main_box.append(scrolled_window)
+                device_button_box.add_css_class("network-dashboard-device-icon")
+                icon = self.gtk.Image.new_from_icon_name(icon_name)
+                icon.set_pixel_size(32)
+                label = self.gtk.Label(label=interface_name)
+                label.set_wrap(True)
+                status_label = self.gtk.Label(
+                    label=device.get("GENERAL.STATE", "Unknown").split(" (")[0]
+                )
+                status_label.add_css_class("dim-label")
+                device_button_box.append(icon)
+                device_button_box.append(label)
+                device_button_box.append(status_label)
+                device_button = self.gtk.Button()
+                device_button.set_child(device_button_box)
+                device_button.add_css_class("network-dashboard-device-button")
+                device_button.connect("clicked", self.on_device_icon_clicked, device)
+                self.gtk_helper.add_cursor_effect(device_button)
+                flowbox_child = self.gtk.FlowBoxChild()
+                flowbox_child.set_child(device_button)
+                device_flowbox.append(flowbox_child)
+            dashboard_vbox.append(device_flowbox)
+            separator = self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL)
+            dashboard_vbox.append(separator)
             config_box = self.gtk.Box(
                 orientation=self.gtk.Orientation.HORIZONTAL, spacing=6
             )
@@ -317,14 +377,27 @@ def get_plugin_class():
                 lambda _: self.global_loop.create_task(self.on_config_clicked_async()),
             )
             self.gtk_helper.add_cursor_effect(config_box)
-            main_box.append(config_box)
-            update_scrolled_window_height()
-            return main_box
+            dashboard_vbox.append(config_box)
+            self.stack.add_titled(dashboard_vbox, "dashboard_view", "Dashboard")
+            self.detail_container = self.gtk.Box(
+                orientation=self.gtk.Orientation.VERTICAL, spacing=10
+            )
+            self.detail_container.set_margin_start(10)
+            self.detail_container.set_margin_end(10)
+            self.detail_container.set_margin_bottom(10)
+            detail_scroll_window = self.gtk.ScrolledWindow()
+            detail_scroll_window.set_policy(
+                self.gtk.PolicyType.NEVER, self.gtk.PolicyType.AUTOMATIC
+            )
+            detail_scroll_window.set_child(self.detail_container)
+            self.stack.add_titled(detail_scroll_window, "detail_view", "Device Details")
+            main_popover_box.append(self.stack)
+            return main_popover_box
 
         async def populate_wifi_list_async(self):
             """Populates the Wi-Fi list box with cached data or a status message."""
-            while child := self.wifi_list_box.get_first_child():  # pyright: ignore
-                self.glib.idle_add(self.wifi_list_box.remove, child)  # pyright: ignore
+            while child := self.wifi_list_box.get_first_child():
+                self.glib.idle_add(self.wifi_list_box.remove, child)
             connected_ssid = await self.cli_backend.get_connected_wifi_ssid_async()
             if connected_ssid and self.scan_status_label:
                 self.glib.idle_add(
@@ -398,7 +471,7 @@ def get_plugin_class():
             """Update icon and refresh popover content."""
             await self.update_icon_async()
             content = await self.create_scrollable_grid_content_async()
-            self.glib.idle_add(self.popover.set_child, content)  # pyright: ignore
+            self.glib.idle_add(self.popover.set_child, content)
 
         def on_connect_button_clicked(self, button, ssid):
             """UI event handler to connect to a specified Wi-Fi network."""
@@ -425,7 +498,7 @@ def get_plugin_class():
             if self.scanning_in_progress:
                 return
             self.scanning_in_progress = True
-            if self.popover.get_property("visible") and self.scan_status_label:  # pyright: ignore
+            if self.popover.get_property("visible") and self.scan_status_label:
                 self.glib.idle_add(self.scan_status_label.set_label, "Scanning...")
             return_code, raw_output = await self.cli_backend.scan_networks_async()
             self.scanning_in_progress = False
@@ -469,7 +542,7 @@ def get_plugin_class():
                         "bssid": bssid,
                     }
                 )
-            if self.popover.get_property("visible"):  # pyright: ignore
+            if self.popover.get_property("visible"):
                 self.global_loop.create_task(self.update_popover_async())
 
         async def _apply_config_autoconnect_settings_async(self):
@@ -482,7 +555,7 @@ def get_plugin_class():
         async def _connect_to_network_async(self, ssid: str):
             """UI-side wrapper for the connection attempt."""
             self.logger.info(f"UI: Attempting connection to {ssid}")
-            self.glib.idle_add(self.popover.popdown)  # pyright: ignore
+            self.glib.idle_add(self.popover.popdown)
             await self.cli_backend._connect_to_network_async(ssid)
             await self.update_icon_and_popover()
 
@@ -500,28 +573,21 @@ def get_plugin_class():
             This plugin manages network status display and control using asynchronous
             operations and the NetworkManager Command Line Interface (nmcli) via a
             dedicated backend. Key aspects include:
-
             1. Asynchronous Networking: All network checks (`is_internet_connected_async`,
-               `scan_networks_async`) are run non-blockingly using asyncio to ensure
-               the panel UI remains responsive.
-
+                `scan_networks_async`) are run non-blockingly using asyncio to ensure
+                the panel UI remains responsive.
             2. Dynamic Icon Status: The panel icon dynamically reflects the current
-               connection status (wired/Wi-Fi) and visually indicates Wi-Fi quality
-               using signal strength icons (excellent, good, ok, weak).
-
+                connection status (wired/Wi-Fi) and visually indicates Wi-Fi quality
+                using signal strength icons (excellent, good, ok, weak).
             3. Popover Management: The `Gtk.Popover` is set up using the
-               `self.create_popover` helper, which automatically connects the
-               `notify::visible` signal to refresh the popover content whenever it is opened.
-
-            4. Data Presentation: The popover content is built using a complex GTK
-               structure featuring:
-               - Detailed device information gathered from `nmcli device show` output,
-                 presented inside collapsible `Gtk.Revealer` widgets.
-               - A list of scannable Wi-Fi networks allowing direct connection attempts.
-
-            5. Thread Safety: All necessary GTK UI manipulations within asynchronous
-               methods (like updating icons or popover content) are safely delegated
-               to the main GTK thread using `self.glib.idle_add`.
+                `self.create_popover` helper, which automatically connects the
+                `notify::visible` signal to refresh the popover content whenever it is opened.
+            4. Data Presentation (Refactored): The popover now uses a **Gtk.Stack**
+                for drill-down navigation:
+                - A main **Dashboard View** uses a `Gtk.FlowBox` to display network
+                  devices as clickable icons, providing a visual overview.
+                - Clicking a device switches the stack to a **Detail View**, populated
+                  with the device's full `nmcli device show` output, enhancing user access to diagnostics.
             """
             return self.code_explanation.__doc__
 
