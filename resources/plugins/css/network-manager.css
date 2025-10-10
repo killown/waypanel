@@ -85,7 +85,7 @@
 }
 
 .network-dashboard-device-button {
-  background-color: var(--tertiary-bg);
+  background-color: var(--color-bg-base);
   color: var(--theme-fg-label-primary);
   border-radius: var(--radius-m);
   border: 1px solid transparent;
