@@ -2,11 +2,9 @@
   background-color: var(--color-bg-panel);
   color: var(--main-text);
   font-weight: var(--font-weight-medium);
-  
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.05),
     0 6px 18px rgba(0, 0, 0, 0.7);
-    
   font-family: var(--font-family-default); 
   font-size: 22px;
   text-decoration: none;
@@ -18,27 +16,16 @@
 .top-panel-box-widgets-left {
   -gtk-icon-size: 29px;
   background: var(--color-bg-box-primary);
-  
   border-top-right-radius: 10px;
   border-bottom-right-radius: 10px;
-  
-  /* BORDER FIX: Removed explicit border properties */
   border: none;
-  
   padding-top: 2px;
   padding-right: 6px;
-  
-  /* HIGH-3D BEVEL EFFECT: Using shadows to define all edges */
   box-shadow:
-    /* Deep primary drop shadow (bottom/right edge definition) */
-    0 4px 8px rgba(0, 0, 0, 0.8),
-    /* Top-left strong highlight (Simulates the bright top border) */
+    0 8px 15px rgba(0, 0, 0, 0.8),
     inset 0 1px 0 rgba(134, 134, 134, 0.6), 
-    /* Bottom-right darker shadow (Simulates the dark bottom/right border) */
     inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-    /* Outer light ring for the final, crisp highlight */
     0 0 0 1px rgba(255, 255, 255, 0.1); 
-    
   font-family: var(--font-family-default);
   font-size: 20px;
   color: var(--color-fg-inverse); 
@@ -50,6 +37,7 @@
   background: var(--color-bg-deep);
   border-radius: var(--radius-s, 5px); 
   margin-left: 5px;
+  margin-right: 10px;
   margin-top: 3px;
   
   box-shadow:
