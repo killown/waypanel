@@ -15,8 +15,7 @@
   background-color: transparent;
   border-bottom: 1px solid var(--theme-decoration-separator);
   padding-bottom: 5px;
-  /* Reduced margins for closer grouping */
-  margin: 5px 10px 5px 10px; 
+  margin: 5px 10px 5px 10px;
   align-items: center;
 }
 
@@ -34,16 +33,14 @@
 
 .network-dashboard-view {
   background-color: transparent;
-  /* Reduced padding for closer grouping */
-  padding: 0 0 5px 0; 
+  padding: 0 0 5px 0;
 }
 
 .network-manager-wifi-scan-box {
   background-color: var(--tertiary-bg);
   border-radius: var(--radius-m);
   padding: 5px;
-  /* Reduced margin for closer grouping */
-  margin-top: 0; 
+  margin-top: 0;
   border: 1px solid var(--theme-decoration-border-control);
 }
 
@@ -78,8 +75,7 @@
 
 .network-manager-device-details-grid {
   padding: 10px;
-  /* Reduced margin for closer grouping */
-  margin-top: 0; 
+  margin-top: 0;
   background-color: transparent;
 }
 
@@ -116,9 +112,7 @@
   padding: 10px;
   align-items: center;
   min-height: 35px;
-  /* Added margin-top to separate slightly from the element above, 
-     but keeping general spacing tight by not adding bottom margin */
-  margin-top: 5px; 
+  margin-top: 5px;
 }
 
 .network-manager-config-box:hover {

@@ -1,11 +1,10 @@
 .clipboard-listbox {
-  background-color: var(--color-bg-box-secondary);
+  background-color: var(--color-bg-deep);
   color: var(--theme-fg-label-primary);
   border: 1px solid var(--color-separator-line);
   box-shadow: var(--shadow-window-float);
-  padding: 6px;
   border-radius: var(--radius-l);
-  margin: 5px;
+  margin: 3px 7px 3px 7px;
 }
 
 .clipboard-row-hbox {
@@ -14,8 +13,7 @@
   border: 1px solid var(--color-separator-line);
   border-radius: var(--radius-l);
   box-shadow: var(--shadow-neumorphic-outset-small);
-  padding: 4px 8px;
-  margin-bottom: 4px;
+  margin-bottom: 1px;
 }
 
 .clipboard-row-hbox:hover {
