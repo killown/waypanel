@@ -3,7 +3,7 @@
 }
 
 .notes-popover {
-  background-color: var(--color-bg-popover);
+  background-color: var(--color-bg-base);
   border: 1px solid var(--color-separator-line);
   border-radius: var(--radius-xl);
   padding: 10px;
@@ -63,9 +63,9 @@
 }
 
 .notes-listbox {
-  border: 1px solid var(--color-separator-line);
+  border: 1px solid var(--color-bg-base);
   border-radius: var(--radius-m);
-  background-color: var(--color-bg-alt-row);
+  background-color: var(--color-bg-box-secondary);
 }
 
 .notes-listbox-row {
@@ -75,13 +75,13 @@
 .notes-row-hbox {
   padding: 6px 10px;
   border-radius: var(--radius-l);
-  background-color: var(--color-bg-button);
+  background-color: var(--color-bg-base);
   box-shadow: var(--shadow-neumorphic-outset-small);
   margin-bottom: 6px;
 }
 
 .notes-row-hbox:hover {
-  background-color: var(--color-bg-button-hover);
+  background-color: var(--color-bg-raised);
   box-shadow: var(--shadow-control-small-hover);
 }
 

@@ -7,5 +7,5 @@
 .tray-menu-button {
   border-radius: 8px;
   margin-left: 5px;
-   background-color: var(--color-bg-button-active);
+   background-color: var(--color-bg-deep);
 }

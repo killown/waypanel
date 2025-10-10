@@ -1,5 +1,5 @@
 .soundcard-dashboard-popover {
-  background-color: var(--color-bg-popover);
+  background-color: var(--color-bg-base);
   border: 1px solid var(--color-separator-line);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-window-float);
@@ -12,7 +12,7 @@
 }
 
 .soundcard-hbox {
-  background-color: var(--color-bg-button);
+  background-color: var(--color-bg-base);
   border: 1px solid var(--color-separator-line);
   border-radius: var(--radius-l);
   padding: 4px 8px;

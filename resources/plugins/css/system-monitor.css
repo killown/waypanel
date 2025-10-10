@@ -24,7 +24,7 @@
 
 .system-monitor-listview {
     border-radius: var(--radius-s);
-    background-color: var(--color-bg-alt-row);
+    background-color: var(--color-bg-base);
     padding: 4px;
 }
 

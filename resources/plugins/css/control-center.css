@@ -1,219 +1,191 @@
-/*
- * CORE STRUCTURE AND WINDOWS
- */
+/* ====================== CONTROL CENTER THEME ====================== */
+
+/* Main window */
 .control-center-window {
-  /* Use the base color, keeping it simple for a solid window */
-  background-color: var(--color-bg-window); 
-  border-radius: var(--radius-xl); 
-  box-shadow: var(--shadow-window-float); /* Keep the main window shadow */
+  background-color: var(--color-bg-window);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-window-float);
+  color: var(--theme-fg-label-inverse); /* black text */
 }
 
+/* Header */
 .control-center-header {
-  /* Simple header, often a solid secondary color in non-vibrant macOS windows */
-  background-color: var(--theme-bg-view-secondary); 
-  border-bottom: 1px solid var(--theme-decoration-separator); /* Clean separator line */
-  box-shadow: none; /* Keep the header clean */
-  color: var(--theme-fg-label-primary);
+  background-color: var(--color-bg-surface);
+  border-bottom: 1px solid var(--theme-decoration-separator);
+  box-shadow: none;
+  color: var(--theme-fg-label-primary); /* white text on dark header */
 }
 
-/*
- * TEXT AND HINTS
- */
+/* Group titles */
 .control-center-group-title {
   color: var(--theme-status-accent);
   font-size: 1.2em;
   font-weight: var(--font-weight-bold);
   padding-bottom: 10px;
   margin-bottom: 10px;
-  border-bottom: 1px solid var(--theme-decoration-separator); 
+  border-bottom: 1px solid var(--theme-decoration-separator);
 }
 
+/* Hints / tooltips */
 .control-center-hint {
-  color: var(--theme-fg-label-tertiary);
+  color: var(--theme-fg-label-inverse); /* black on light success bg */
   font-style: italic;
   font-size: 0.9em;
   padding: 8px 15px;
   margin-top: 5px;
   border-radius: var(--radius-xs);
-  /* Subtler background for hints */
-  background-color: var(--color-status-success-bg); 
-  box-shadow: none; 
+  background-color: var(--color-status-success-bg);
+  box-shadow: none;
 }
 
-/*
- * ACTION BUTTON (Save) - CORRECTED
- */
+/* Save button */
 .control-center-save-button {
-  color: var(--theme-fg-label-inverse);
-  /* Solid success color */
+  color: var(--color-fg-button-suggested); /* white text on green */
   background-color: var(--theme-status-success);
   font-weight: var(--font-weight-bold);
   border-radius: var(--radius-s);
-  box-shadow: var(--shadow-elevated);
+  box-shadow: var(--shadow-neumorphic-outset-small);
   transition: all 0.15s ease;
   border: none;
 }
 
 .control-center-save-button:hover {
-  /* Slightly darker solid color for hover (like button-suggested-hover) */
-  background-color: #2BA743; 
-  box-shadow: 0 4px 8px var(--color-shadow-medium); 
+  background-color: var(--color-bg-button-hover);
+  box-shadow: var(--shadow-neumorphic-outset-large);
 }
 
 .control-center-save-button:active {
-  /* Darker/pressed state */
-  background-color: #1A9233; 
+  background-color: var(--color-bg-button-active);
   box-shadow: var(--shadow-neumorphic-press);
-  transform: translateY(0);
 }
 
-
-/*
- * CATEGORY LIST & ITEMS (Cleaned up for flat sidebar look)
- */
+/* Category list */
 .control-center-category-list {
-  background-color: var(--theme-bg-view-secondary);
+  background-color: var(--color-bg-window);
   padding: 10px 0;
   border: none;
+  color: var(--theme-fg-label-inverse); /* black text */
 }
 
+/* Category items */
 .control-center-category-item {
   margin: 3px 8px;
   padding: 8px 15px;
   border-radius: var(--radius-s);
-  background-color: transparent; /* Always start transparent */
+  background-color: transparent;
   border: none;
   box-shadow: none;
   transition: background-color 0.1s;
-  color: var(--theme-fg-label-primary);
+  color: var(--theme-fg-label-inverse);
 }
 
 .control-center-category-item:hover {
-  /* Clean, subtle transparent hover */
-  background-color: var(--color-bg-transparent-active); 
-  transform: none;
-  box-shadow: none;
+  background-color: var(--color-bg-transparent-active);
 }
 
 .control-center-category-item:active {
-  /* Darker transparent press state */
-  background-color: rgba(255, 255, 255, 0.15); 
+  background-color: var(--color-bg-button-active);
 }
 
 .control-center-category-item:checked {
-  /* Solid accent blue for selection */
   background-color: var(--theme-bg-selected-primary);
   color: var(--theme-fg-text-selected);
   font-weight: var(--font-weight-medium);
-  box-shadow: none;
-  transform: none;
 }
 
-/*
- * CONTENT AREA AND CONFIG GROUPS
- */
+/* Content area */
 .control-center-content-area {
-  background-color: var(--theme-bg-view-primary);
+  background-color: var(--color-bg-window);
   padding: 15px;
+  color: var(--theme-fg-label-inverse);
 }
 
+/* Config group */
 .control-center-config-group {
-  /* Elevated card look */
-  background-color: var(--theme-bg-view-tertiary); 
-  border-radius: var(--radius-l); 
+  background-color: var(--color-bg-base);
+  border-radius: var(--radius-l);
   margin: 15px 0;
   padding: 15px;
-  /* Use the defined subtle card shadow */
-  box-shadow: var(--shadow-elevated); 
+  box-shadow: var(--shadow-neumorphic-outset-large);
+  color: var(--theme-fg-label-inverse);
 }
 
-/*
- * VBOX ITEMS (Used for list items within a group)
- */
 .control-center-vbox-item {
-  background-color: var(--theme-bg-view-secondary);
-  border-radius: var(--radius-m); 
+  background-color: var(--color-bg-base);
+  border-radius: var(--radius-m);
   padding: 15px;
   margin: 8px 0;
-  /* Use a subtle transparent border for definition */
-  border: 1px solid rgba(255, 255, 255, 0.05); 
-  box-shadow: none; 
+  border: 1px solid var(--color-separator-line);
+  box-shadow: none;
   transition: background-color 0.15s;
+  color: var(--theme-fg-label-inverse);
 }
 
 .control-center-vbox-item:hover {
-  /* Use the slightly lighter raised color for hover */
-  background-color: var(--color-bg-raised);
+  background-color: var(--color-bg-button-hover);
   border-color: var(--color-accent-blue);
-  box-shadow: none;
-  transform: none; 
 }
 
-
-.control-center-setting-row {
-  color: var(--theme-fg-label-primary);
+/* Setting rows */
+.control-center-setting-row,
+.control-center-config-expander {
+  color: var(--theme-fg-label-inverse);
   padding: 8px 0;
   margin: 2px 0;
-  border-bottom: none;
   background-color: transparent;
 }
 
 .control-center-setting-row:hover,
 .control-center-config-expander:hover {
-  background-color: var(--theme-bg-selected-secondary); 
+  background-color: var(--theme-bg-selected-secondary);
   border-radius: var(--radius-xs);
 }
 
-.control-center-config-expander {
-  color: var(--theme-fg-label-primary);
-  padding: 8px 0;
-  margin: 2px 0;
-}
-
+/* Nested group box */
 .control-center-nested-group-box {
-  background-color: var(--theme-bg-view-primary);
+  background-color: var(--color-bg-alt-row);
   border-radius: var(--radius-m);
   padding: 10px;
   margin-top: 10px;
-  box-shadow: var(--shadow-neumorphic-inset-medium); 
+  box-shadow: var(--shadow-neumorphic-inset-medium);
+  color: var(--theme-fg-label-inverse);
 }
 
+/* List editor override */
 .control-center-list-editor .control-center-config-group {
-  background-color: var(--theme-bg-view-primary); 
+  background-color: var(--color-bg-alt-row);
   border: 1px solid var(--theme-decoration-separator);
   box-shadow: none;
+  color: var(--theme-fg-label-inverse);
 }
 
+/* List item rows */
 .control-center-list-item-row {
   padding-left: 10px;
+  color: var(--theme-fg-label-inverse);
 }
 
-/*
- * INPUT FIELDS
- */
+/* Inputs */
 .control-center-text-input,
-.control-center-numeric-input {
-  background-color: var(--color-bg-entry-base);
-  color: var(--theme-fg-label-primary);
+.control-center-numeric-input,
+.control-center-value-display {
+  background-color: var(--color-bg-popover);
+  color: var(--theme-fg-label-inverse);
   border-radius: var(--radius-xs);
   padding: 5px 8px;
-  box-shadow: none;
+  box-shadow: var(--shadow-neumorphic-inset-medium);
   border: 1px solid var(--color-border-entry-base);
   min-height: 28px;
 }
 
 .control-center-text-input:focus,
 .control-center-numeric-input:focus {
-  box-shadow: 0 0 0 2px var(--theme-decoration-keyboard-focus);
+  box-shadow: 0 0 0 1px var(--color-accent-blue);
   border-color: var(--color-border-entry-focus);
-  background-color: var(--color-bg-entry-focus); 
+  background-color: var(--color-bg-popover);
 }
 
-.control-center-value-display {
-  color: var(--theme-fg-label-secondary);
-  font-style: italic;
-}
-
+/* Toggle switch - uses GTK default */
 .control-center-toggle-switch {
-  /* No direct style needed here, relying on GtkSwitch widget styles */
+  /* no extra style */
 }
