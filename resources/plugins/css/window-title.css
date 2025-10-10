@@ -1,35 +1,35 @@
 .window-title-content {
-  background: var(--color-bg-deep);
-  /* LESS ROUNDED: Switched to a smaller, sharper radius */
-  border-radius: var(--radius-control-default, 4px);
-  
+  background: var(--nord0);
+  border-radius: var(--radius-xs);
   box-shadow:
-    inset 4px 4px 8px rgba(0, 0, 0, 0.7),
-    inset -2px -2px 5px rgba(255, 255, 255, 0.05),
-    0 1px 3px rgba(0, 0, 0, 0.4);
-    
-  font-size: 22px;
-  color: var(--main-text);
+    inset 4px 4px 12px rgba(0, 0, 0, 1.0),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.08),
+    0 1px 4px rgba(0, 0, 0, 0.6);
+  font-size: 18px;
+  color: var(--nord6);
   text-decoration: none;
   text-shadow:
-    0 0 2px var(--dseg-shadow-soft),
-    0 0 5px var(--dseg-shadow-soft);
-  padding: 3px;
+    0 0 1px var(--nord8),
+    0 0 2px rgba(136, 192, 208, 0.08);
+  padding: 5px 8px;
   margin-left: 10px;
   margin-top: 7px;
+  display: flex;
+  align-items: center;
 }
 
 .window-title-label {
   margin-left: 8px;
-  font-size: 14px;
-  font-weight: var(--font-weight-bold);
+  font-size: 16px;
+  font-weight: var(--font-weight-medium);
   font-family: var(--font-family-default), sans-serif;
-  color: var(--main-text);
-  text-shadow:
-    0 0 2px var(--dseg-shadow-soft),
-    0 0 5px var(--dseg-shadow-soft);
+  color: var(--nord6);
+  text-shadow: 
+    0 0 0.5px var(--nord8),
+    0 0 1px rgba(136, 192, 208, 0.05);
 }
 
 .window-title-icon {
-  -gtk-icon-size: 24px;
+  -gtk-icon-size: 18px;
+  color: var(--nord8);
 }

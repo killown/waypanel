@@ -187,8 +187,8 @@
   --radius-xl: 8px;
   --radius-control-default: var(--radius-m);
 
-  --font-family-default: "Palatino", "Times New Roman", serif;
-  --font-family-system: var(--font-family-default);
+  --font-family-default: "Roboto", "Inter";
+  --font-family-system: "Roboto", "Segoe UI";
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-bold: 700;

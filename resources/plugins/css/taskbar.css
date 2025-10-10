@@ -13,8 +13,8 @@
     3px 3px 6px rgba(0, 0, 0, 0.7);
     
   font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
-  font-size: 13px;
-  color: var(--soft-text);
+  font-size: 15px;
+  color: var(--main-text);
   text-decoration: none;
   text-shadow:
     0 0 2px var(--dseg-shadow-soft),

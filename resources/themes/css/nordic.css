@@ -203,7 +203,7 @@
   --padding-window-control-vertical: 2px;
   --padding-window-control-horizontal: 8px;
 
-  --font-family-default: "Fira Code", "Roboto Mono", monospace;
+  --font-family-default: "Inter", "Roboto", "Segoe UI", sans-serif; /* Changed to Inter/Roboto/Sans-serif */
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400;
   --font-weight-medium: 500;

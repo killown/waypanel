@@ -1,33 +1,21 @@
 .clock-label {
   background: var(--color-bg-deep);
-  border-radius: var(--radius-s);
-  /* Adjusted margins for consistent alignment with other panel elements */
-  
-  padding: 4px;
-  /* Use a sharp, dark border to define the edge of the recessed screen */
-  border: 1px solid rgba(0, 0, 0, 0.7);
-  
-  /* 3D INSET EFFECT: Use strong, dark inset shadows to simulate a deeply recessed digital screen */
+  border-radius: var(--radius-xs);
+  padding: 4px 6px;
+  border: 1px solid var(--color-shade-stone);
   box-shadow:
-    /* Strong, dark shadow on top/left to push it down */
-    inset 2px 2px 5px rgba(0, 0, 0, 0.95),
-    /* Subtle highlight on bottom/right for realism */
-    inset -1px -1px 3px rgba(255, 255, 255, 0.05),
-    /* Minimal outward shadow to ensure visibility against the panel */
-    0 0 0 1px rgba(255, 255, 255, 0.05);
-    
+    inset 2px 2px 8px rgba(0, 0, 0, 0.95),
+    inset -2px -2px 6px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   font-family: 'Consolas', 'Courier New', monospace;
   font-size: 16px;
-  color: var(--soft-text);
+  color: var(--color-fg-secondary);
   text-decoration: none;
-  
-  text-shadow:
-    var(--shadow-clock-text-glow, 0 0 1px var(--soft-text)),
-    var(--shadow-clock-text-haze, 0 0 4px rgba(47, 211, 143, 0.2));
+  text-shadow: 0 0 4px rgba(136, 192, 208, 0.25);
+  line-height: 1.2;
 }
 
 .clock-box {
-  /* Add padding for internal structure */
   padding: 0 4px;
   background-color: transparent;
 }
@@ -36,10 +24,8 @@
   background-color: transparent;
   border-radius: var(--radius-xs);
   box-shadow: none;
-  transition: background-color 0.15s ease;
-}
-
-.clock-button:hover {
-  /* Use a slightly raised background for clear hover feedback */
-  background-color: var(--color-bg-raised);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: none;
 }
