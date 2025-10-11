@@ -613,14 +613,12 @@ default_config = {
         },
     },
     "org.waypanel.plugin.notify_server": {
-        "server": {
-            "_section_hint": "Backend (server) settings.",
-            "show_messages": True,
-            "show_messages_hint": (
-                "If **True**, prints incoming notification messages to the "
-                "console/log file for **debugging only**."
-            ),
-        },
+        "_section_hint": "Backend (server) settings.",
+        "show_messages": True,
+        "show_messages_hint": (
+            "If **True**, prints incoming notification messages to the "
+            "console/log file for **debugging only**."
+        ),
     },
     "org.waypanel.plugin.custom_menu": {
         "_section_hint": (
@@ -689,14 +687,6 @@ default_config = {
                 "List of custom menu entries. Each entry is a dictionary "
                 "with 'name' (display label) and 'cmd' (shell command)."
             ),
-        },
-    },
-    "org.waypanel.plugin.folders": {
-        "_section_hint": (
-            "Configuration for the quick access folders/directories menu."
-        ),
-        "Imagens": {
-            "_section_hint": "A custom folder entry definition.",
         },
     },
 }

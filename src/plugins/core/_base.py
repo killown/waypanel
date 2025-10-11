@@ -1,9 +1,9 @@
-import gi
 import os
 import gc
 import sys
 import inspect
 import lazy_loader as lazy
+import gi
 from gi.repository import Gtk, GLib, Gdk, Gio, Pango, GdkPixbuf, Adw  # pyright: ignore
 import pathlib
 from src.core import create_panel
@@ -173,7 +173,7 @@ class BasePlugin:
         if metadata is not None:
             if "id" in metadata:
                 self.plugin_id = metadata["id"]
-        GLib.timeout_add_seconds(10, self.run_gc_cleanup)
+        GLib.timeout_add_seconds(60, self.run_gc_cleanup)
 
     def get_plugin_metadata(self):
         module_name = self.__module__
@@ -284,6 +284,33 @@ class BasePlugin:
                 self.config_handler.set_root_setting(key_path, default_value)
             return default_value
         return result
+
+    def set_plugin_setting(self, key: Union[str, List[str]], value: Any) -> None:
+        """
+        Sets a configuration value for this specific plugin's section.
+
+        Args:
+            key (Union[str, List[str]]): The key or path of keys for the setting.
+            value (Any): The value to set.
+        """
+        if not self.plugin_id:
+            self.logger.error("Plugin ID is not set, cannot save setting.")
+            return
+        key_path = [self.plugin_id]
+        if isinstance(key, str):
+            key_path.append(key)
+        elif isinstance(key, list):
+            key_path.extend(key)
+        self.config_handler.set_root_setting(key_path, value)
+
+    def get_settings(self) -> Dict[str, Any]:
+        """
+        Retrieves the entire configuration data dictionary.
+
+        Returns:
+            Dict[str, Any]: The configuration data.
+        """
+        return self.config_data
 
     def get_root_setting(
         self, key: Optional[List[str]] = None, default_value: Any = None
@@ -688,14 +715,14 @@ class BasePlugin:
                 if w is None or not isinstance(w, Gtk.Widget):
                     self.logger.error(
                         f"Invalid widget in self.main_widget: {w}. "
-                        "The widget must be a valid Gtk.Widget instance. Plugin: {self.__class__.__name__}"
+                        f"The widget must be a valid Gtk.Widget instance. Plugin: {self.__class__.__name__}"
                     )
                     return None
         else:
             if widget is None or not isinstance(widget, Gtk.Widget):
                 self.logger.error(
                     f"Invalid widget in self.main_widget: {widget}. "
-                    "The widget must be a valid Gtk.Widget instance. Plugin: {self.__class__.__name__}"
+                    f"The widget must be a valid Gtk.Widget instance. Plugin: {self.__class__.__name__}"
                 )
                 return None
             if widget.get_parent() is not None:

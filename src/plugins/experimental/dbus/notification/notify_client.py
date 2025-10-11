@@ -55,8 +55,8 @@ def get_plugin_class():
         def update_dnd_switch_state(self):
             """Update the Do Not Disturb switch state based on the server setting."""
             try:
-                show_messages = self.get_plugin_setting(
-                    ["server", "show_messages"], True
+                show_messages = self.get_root_setting(
+                    ["org.waypanel.plugin.notify_server", "show_messages"], True
                 )
                 self.dnd_switch.set_active(not show_messages)
             except Exception as e:
@@ -66,8 +66,9 @@ def get_plugin_class():
             """Callback when the Do Not Disturb switch is toggled."""
             new_show_messages = not state
             try:
-                self.update_config(
-                    ["notify", "server", "show_messages"], new_show_messages
+                self.config_handler.set_root_setting(
+                    ["org.waypanel.plugin.notify_server", "show_messages"],
+                    new_show_messages,
                 )
                 self.logger.info(
                     f"Do Not Disturb mode {'enabled' if state else 'disabled'}"

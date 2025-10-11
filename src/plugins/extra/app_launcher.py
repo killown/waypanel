@@ -364,32 +364,24 @@ def get_plugin_class():
             self.searchbar.set_search_mode(True)  # pyright: ignore
 
         def add_to_dockbar(self, button, name, desktop_file, popover):
-            """
-            Adds the selected app to the dockbar configuration in waypanel.toml.
-            """
+            """Adds the selected app to the dockbar configuration."""
             wclass = self.os.path.splitext(desktop_file)[0]
-            if hasattr(self, "config_handler") and self.config_handler:
-                new_entry = {
-                    "cmd": f"gtk-launch {desktop_file.split('.desktop')[0]}",
-                    "icon": wclass,
-                    "wclass": wclass,
-                    "desktop_file": desktop_file,
-                    "name": name,
-                    "initial_title": name,
-                }
-                dockbar_config = self.config_handler.config_data.get(
-                    self.dockbar_id, {}
-                )
-                app_config = dockbar_config.get("app", {})
-                app_config[name] = new_entry
-                dockbar_config["app"] = app_config
-                self.config_handler.config_data[self.dockbar_id] = dockbar_config
-                self.config_handler.save_config()
-                self.config_handler.reload_config()
+            new_entry = {
+                "cmd": f"gtk-launch {desktop_file.split('.desktop')[0]}",
+                "icon": wclass,
+                "wclass": wclass,
+                "desktop_file": desktop_file,
+                "name": name,
+                "initial_title": name,
+            }
+            dockbar_config = self.get_plugin_setting(self.dockbar_id) or {}
+            app_config = dockbar_config.get("app", {})
+            app_config[name] = new_entry
+            dockbar_config["app"] = app_config
+            self.set_plugin_setting(self.dockbar_id, dockbar_config)
             popover.popdown()
             if self.popover_launcher:
                 self.popover_launcher.popdown()
-            self.update_flowbox()
 
         def open_desktop_file(self, button, desktop_file, popover):
             """
@@ -514,9 +506,6 @@ def get_plugin_class():
             menu_box.set_margin_end(10)
             menu_box.set_margin_top(10)
             menu_box.set_margin_bottom(10)
-            config_handler_exists = (
-                hasattr(self, "config_handler") and self.config_handler
-            )
             if self.settings:
                 current_theme = self.settings.get_string("icon-theme")
                 available_themes = self._get_available_icon_themes()
@@ -544,19 +533,22 @@ def get_plugin_class():
                 menu_box.prepend(theme_box)
             name, desktop_file, keywords = vbox.MYTEXT
             is_in_dockbar = False
-            if config_handler_exists:
-                dockbar_config = self.config_handler.config_data.get(
-                    self.dockbar_id, {}
-                )
-                is_in_dockbar = any(
-                    entry.get("desktop_file") == desktop_file
-                    for entry in dockbar_config.get("app", {}).values()
-                )
-            open_button = self.gtk.Button.new_with_label(f"Open {name}")
-            open_button.connect(
-                "clicked", self.run_app_from_menu, desktop_file, popover
+            dockbar_config = self.get_plugin_setting(self.dockbar_id) or {}
+            is_in_dockbar = any(
+                entry.get("desktop_file") == desktop_file
+                for entry in dockbar_config.get("app", {}).values()
             )
-            menu_box.append(open_button)
+            if is_in_dockbar:
+                dock_button = self.gtk.Button.new_with_label("Remove from dockbar")
+                dock_button.connect(
+                    "clicked", self.remove_from_dockbar, desktop_file, popover
+                )
+            else:
+                dock_button = self.gtk.Button.new_with_label("Add to dockbar")
+                dock_button.connect(
+                    "clicked", self.add_to_dockbar, name, desktop_file, popover
+                )
+            menu_box.append(dock_button)
             open_desktop_button = self.gtk.Button.new_with_label("Open .desktop File")
             open_desktop_button.connect(
                 "clicked", self.open_desktop_file, desktop_file, popover
@@ -567,21 +559,18 @@ def get_plugin_class():
                 "clicked", self.search_in_gnome_software, name, popover
             )
             menu_box.append(search_button)
-            if config_handler_exists:
-                if is_in_dockbar:
-                    remove_button = self.gtk.Button.new_with_label(
-                        "Remove from dockbar"
-                    )
-                    remove_button.connect(
-                        "clicked", self.remove_from_dockbar, desktop_file, popover
-                    )
-                    menu_box.append(remove_button)
-                else:
-                    add_button = self.gtk.Button.new_with_label("Add to dockbar")
-                    add_button.connect(
-                        "clicked", self.add_to_dockbar, name, desktop_file, popover
-                    )
-                    menu_box.append(add_button)
+            if is_in_dockbar:
+                remove_button = self.gtk.Button.new_with_label("Remove from dockbar")
+                remove_button.connect(
+                    "clicked", self.remove_from_dockbar, desktop_file, popover
+                )
+                menu_box.append(remove_button)
+            else:
+                add_button = self.gtk.Button.new_with_label("Add to dockbar")
+                add_button.connect(
+                    "clicked", self.add_to_dockbar, name, desktop_file, popover
+                )
+                menu_box.append(add_button)
             popover.set_child(menu_box)
             popover.set_parent(vbox)
             popover.set_has_arrow(False)
@@ -589,32 +578,24 @@ def get_plugin_class():
             gesture.set_state(self.gtk.EventSequenceState.CLAIMED)
 
         def remove_from_dockbar(self, button, desktop_file, popover):
-            """
-            Removes the selected app from the dockbar configuration.
-            """
-            if hasattr(self, "config_handler") and self.config_handler:
-                dockbar_config = self.config_handler.config_data.get(
-                    self.dockbar_id, {}
-                )
-                app_config = dockbar_config.get("app", {})
-                key_to_remove = next(
-                    (
-                        name
-                        for name, entry in app_config.items()
-                        if entry.get("desktop_file") == desktop_file
-                    ),
-                    None,
-                )
-                if key_to_remove:
-                    del app_config[key_to_remove]
-                    dockbar_config["app"] = app_config
-                    self.config_handler.config_data[self.dockbar_id] = dockbar_config
-                    self.config_handler.save_config()
-                    self.config_handler.reload_config()
+            """Removes the selected app from the dockbar configuration."""
+            dockbar_config = self.get_plugin_setting(self.dockbar_id) or {}
+            app_config = dockbar_config.get("app", {})
+            key_to_remove = next(
+                (
+                    name
+                    for name, entry in app_config.items()
+                    if entry.get("desktop_file") == desktop_file
+                ),
+                None,
+            )
+            if key_to_remove:
+                del app_config[key_to_remove]
+                dockbar_config["app"] = app_config
+                self.set_plugin_setting(self.dockbar_id, dockbar_config)
             popover.popdown()
             if self.popover_launcher:
                 self.popover_launcher.popdown()
-            self.update_flowbox()
 
         def search_in_gnome_software(self, button, name, popover):
             """

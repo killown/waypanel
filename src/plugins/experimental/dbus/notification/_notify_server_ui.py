@@ -35,8 +35,12 @@ def get_plugin_class():
             pass
 
         def notify_reload_config(self):
-            self.show_messages = self.get_plugin_setting(["show_messages"], True)
-            self.timeout = self.get_plugin_setting(["timeout"], 10)
+            self.show_messages = self.get_root_setting(
+                ["org.waypanel.plugin.notify_server", "show_messages"], True
+            )
+            self.timeout = self.get_root_setting(
+                ["org.waypanel.plugin.notify_server", "timeout"], 10
+            )
 
         def _extract_first_uri_from_text(self, text: str) -> str | None:
             """

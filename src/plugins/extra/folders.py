@@ -17,23 +17,35 @@ def get_plugin_metadata(_):
 
 
 def get_plugin_class():
+    """Provides the plugin's main class, deferring imports until runtime."""
+    import pathlib
     from src.plugins.core._base import BasePlugin
 
     class PopoverFolders(BasePlugin):
+        """
+        A plugin that provides a popover for quick access to filesystem folders.
+        This class manages the UI for displaying, searching, and interacting with
+        pinned and recently used folders. It leverages the BasePlugin for
+        accessing system-wide functionalities like configuration and gesture management.
+        """
+
         def __init__(self, panel_instance):
-            """
-            Initializes the plugin state using pathlib for robust home directory handling.
-            """
+            """Initializes the plugin state."""
             super().__init__(panel_instance)
-            self._home_path = self.pathlib.Path.home()
+            self._home_path = pathlib.Path.home()
             self.popover_folders = None
             self.plugin_id = get_plugin_metadata(panel_instance).get("id")
 
         def on_start(self):
+            """
+            Called when the plugin is started.
+            Initializes the UI components and sets the main widget for the panel.
+            """
             self.create_menu_popover_folders()
             self.main_widget = (self.menubutton_folders, "append")
 
         def create_menu_popover_folders(self):
+            """Creates the main menu button that triggers the folders popover."""
             self.layer_shell.set_keyboard_mode(
                 self.obj.top_panel, self.layer_shell.KeyboardMode.ON_DEMAND
             )
@@ -53,9 +65,9 @@ def get_plugin_class():
             """
             self._setup_popover_base()
             main_box = self._setup_search_and_listbox()
-            self.popover_folders.set_child(main_box)
+            self.popover_folders.set_child(main_box)  # pyright: ignore
             self._populate_folder_list()
-            self.popover_folders.popup()
+            self.popover_folders.popup()  # pyright: ignore
             return self.popover_folders
 
         def _setup_popover_base(self):
@@ -110,7 +122,7 @@ def get_plugin_class():
             """Creates a single ListBox row (HBox) for a folder entry with an icon and label."""
             row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
             row_hbox.add_css_class("folders-row-hbox")
-            row_hbox.MYTEXT = folders_path, filemanager
+            row_hbox.MYTEXT = folders_path, filemanager  # pyright: ignore
             line = self.gtk.Label.new()
             line.set_label(name)
             line.props.margin_start = 5
@@ -134,13 +146,12 @@ def get_plugin_class():
 
         def _populate_folder_list(self):
             """
-            Populates the listbox with configured folders and all directories from the home directory,
-            using pathlib for modern, on-demand directory checks and iteration.
+            Populates the listbox with configured folders and all directories from the home directory.
             """
             if not self.listbox:
                 return
             self.gtk_helper.clear_listbox(self.listbox)
-            all_folders = self.get_plugin_setting(["path"]) or {}
+            all_folders = self.get_plugin_setting("path") or {}
             pinned_paths = set()
             if all_folders:
                 for key, folder_data in all_folders.items():
@@ -217,7 +228,7 @@ def get_plugin_class():
             listbox_row = row_hbox.get_parent()
             if listbox_row:
                 listbox_row.add_css_class("folders-lisbox-row")
-            all_folders = self.get_plugin_setting(["path"]) or {}
+            all_folders = self.get_plugin_setting("path") or {}
             is_pinned = any(
                 data.get("path") == folder_path for data in all_folders.values()
             )
@@ -260,7 +271,7 @@ def get_plugin_class():
 
         def move_to_trash(self, folder_path, listbox_row, popover):
             popover.popdown()
-            folder_name = self.pathlib.Path(folder_path).name
+            folder_name = pathlib.Path(folder_path).name
             cmd = f"gio trash '{folder_path}'"
             self.run_cmd(cmd)
             self.logger.info(f"Moved to trash: {folder_name} at {folder_path}")
@@ -270,30 +281,23 @@ def get_plugin_class():
 
         def pin_to_top(self, folder_path, listbox_row):
             """
-            Pins a folder by updating the configuration (preserving insertion order)
-            and refreshing the UI listbox.
+            Pins a folder by updating the configuration and refreshing the UI.
             """
-            plugin_config = self.get_plugin_setting()
-            all_folders = plugin_config.get("path", {})
-            folder_name = self.pathlib.Path(folder_path).name
+            all_folders = self.get_plugin_setting("path") or {}
+            folder_name = pathlib.Path(folder_path).name
             new_folder_entry = {
                 "name": folder_name,
                 "path": folder_path,
                 "filemanager": "nautilus",
                 "icon": "folder-symbolic",
             }
-            keys_to_delete = [
-                key
+            updated_folders = {
+                key: data
                 for key, data in all_folders.items()
-                if data.get("path") == folder_path
-            ]
-            for key in keys_to_delete:
-                del all_folders[key]
-            temp_dict = {folder_name: new_folder_entry}
-            temp_dict.update(all_folders)
-            plugin_config["path"] = temp_dict
-            self.config_handler.config_data[self.plugin_id] = plugin_config
-            self.config_handler.save_config()
+                if data.get("path") != folder_path
+            }
+            final_folders = {folder_name: new_folder_entry, **updated_folders}
+            self.set_plugin_setting("path", final_folders)
             if self.listbox:
                 self.listbox.remove(listbox_row)
                 new_row_hbox = self._create_folder_row(
@@ -312,12 +316,10 @@ def get_plugin_class():
 
         def unpin_folder(self, folder_path, listbox_row):
             """
-            Unpins a folder by removing its entry from configuration and re-inserting
-            it into the correct alphabetical position in the unpinned section of the UI.
+            Unpins a folder from configuration and re-inserts it into the UI.
             """
-            plugin_config = self.get_plugin_setting()
-            all_folders = plugin_config.get("path", {})
-            folder_name = self.pathlib.Path(folder_path).name
+            all_folders = self.get_plugin_setting("path") or {}
+            folder_name = pathlib.Path(folder_path).name
             key_to_delete = None
             for key, data in all_folders.items():
                 if data.get("path") == folder_path:
@@ -325,9 +327,7 @@ def get_plugin_class():
                     break
             if key_to_delete:
                 del all_folders[key_to_delete]
-                plugin_config["path"] = all_folders
-                self.config_handler.config_data[self.plugin_id] = plugin_config
-                self.config_handler.save_config()
+                self.set_plugin_setting("path", all_folders)
                 self.logger.info(f"'{folder_name}' unpinned from config.")
             else:
                 self.logger.warning(
@@ -346,7 +346,7 @@ def get_plugin_class():
                 new_listbox_row = self.gtk.ListBoxRow.new()
                 new_listbox_row.set_child(new_unpinned_hbox)
                 pinned_count = len(all_folders)
-                children = list(self.listbox)
+                children = list(self.listbox)  # pyright: ignore
                 insert_index = len(children)
                 for i in range(pinned_count, len(children)):
                     child_row = children[i]
@@ -424,7 +424,7 @@ def get_plugin_class():
 
         def on_show_searchbar_action_actived(self, action, parameter):
             if self.searchbar:
-                self.searchbar.set_search_mode(True)
+                self.searchbar.set_search_mode(True)  # pyright: ignore
 
         def on_search_entry_changed(self, searchentry):
             searchentry.grab_focus()
@@ -441,9 +441,9 @@ def get_plugin_class():
                 child = row.get_child()
                 if not child or not hasattr(child, "MYTEXT"):
                     return False
-                row_text_data = child.MYTEXT
+                row_text_data = child.MYTEXT  # pyright: ignore
                 row_path = row_text_data[0]
-                folder_name = self.pathlib.Path(row_path).name
+                folder_name = pathlib.Path(row_path).name
                 text_to_search = self.searchbar.get_text().strip().lower()
                 return text_to_search in folder_name.lower()
             except Exception as e:

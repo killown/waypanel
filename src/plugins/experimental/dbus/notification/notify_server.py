@@ -73,16 +73,13 @@ def get_plugin_class():
             self.ui = ui(panel_instance)
             self.logger = self.ui.logger
             self.config_handler = panel_instance.config_handler
-            self.timeout = (
-                self.config_handler.config_data.get("notify", {})
-                .get("server", {})
-                .get("timeout", 10)
-            )
-            self.show_messages = (
-                self.config_handler.config_data.get("notify", {})
-                .get("server", {})
-                .get("show_messages", True)
-            )
+            self.timeout = self.config_handler.config_data.get(
+                "org.waypanel.plugin.notify_server"
+            ).get("timeout", 10)
+            self.show_messages = self.config_handler.config_data.get(
+                "org.waypanel.plugin.notify_server"
+            ).get("show_messages", True)
+            print("asdfasdf" * 100, self.show_messages)
 
             # Initialize the database
             self.db_path = self.db._initialize_db()
