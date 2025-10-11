@@ -497,9 +497,8 @@ class PluginLoader:
         Initializes a single plugin. Since plugins are loaded in dependency order
         (Topological Sort), the complex retry logic is no longer necessary.
         """
-        module_name = module.__name__.split(".")[-1]
-        plugin_name = module.__name__.split(".src.plugins.")[-1]
         metadata = module.get_plugin_metadata(self.panel_instance)
+        plugin_name = metadata.get("id").split(".")[-1]
         hide_in_systray = metadata.get("hidden", False)
         try:
             plugin_instance = None
@@ -511,7 +510,7 @@ class PluginLoader:
             if hasattr(plugin_instance, "on_start"):
                 plugin_instance.on_start()
             self.logger.info(f"Initialized plugin: {plugin_name}")
-            self.plugins[module_name] = plugin_instance
+            self.plugins[plugin_name] = plugin_instance
             target_box = self._get_target_panel_box(container, plugin_name)
             if target_box is None:
                 self.logger.error(
@@ -543,7 +542,7 @@ class PluginLoader:
                     widget_action,
                     widget_to_append,
                     target_box,
-                    module_name,
+                    plugin_name,
                     hide_in_systray,
                 )
                 return False

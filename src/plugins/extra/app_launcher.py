@@ -374,11 +374,11 @@ def get_plugin_class():
                 "name": name,
                 "initial_title": name,
             }
-            dockbar_config = self.get_plugin_setting(self.dockbar_id) or {}
+            dockbar_config = self.get_root_setting([self.dockbar_id]) or {}
             app_config = dockbar_config.get("app", {})
             app_config[name] = new_entry
             dockbar_config["app"] = app_config
-            self.set_plugin_setting(self.dockbar_id, dockbar_config)
+            self.config_handler.set_root_setting([self.dockbar_id], dockbar_config)
             popover.popdown()
             if self.popover_launcher:
                 self.popover_launcher.popdown()
