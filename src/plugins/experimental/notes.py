@@ -1,4 +1,5 @@
 def get_plugin_metadata(_):
+    about = """Notes plugin with quick-access, search, and inline edit/delete."""
     return {
         "id": "org.waypanel.plugin.notes",
         "name": "Notes",
@@ -7,6 +8,7 @@ def get_plugin_metadata(_):
         "index": 1,
         "container": "top-panel-systray",
         "deps": ["top_panel"],
+        "description": about,
     }
 
 

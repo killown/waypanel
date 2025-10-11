@@ -1,4 +1,6 @@
 def get_plugin_metadata(_):
+    about = """Provides a toggle button to reveal or hide an overflow container for other panel widgets."""
+
     return {
         "id": "org.waypanel.plugin.overflow_indicator",
         "name": "Overflow Indicator",
@@ -8,6 +10,7 @@ def get_plugin_metadata(_):
         "priority": 5,
         "container": "top-panel-systray",
         "deps": ["top_panel"],
+        "description": about,
     }
 
 
@@ -68,10 +71,6 @@ def get_plugin_class():
             widget.set_visible(True)
             self.hidden_widgets_box.append(widget)
             self.logger.info(f"Widget {widget.get_name()} added to overflow container.")
-
-        def about(self):
-            """Provides a toggle button to reveal or hide an overflow container for other panel widgets."""
-            return self.about.__doc__
 
         def code_explanation(self):
             """

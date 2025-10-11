@@ -1,110 +1,139 @@
 def get_plugin_metadata(_):
+    about = """
+            A background plugin designed for multi-monitor Wayland environments.
+            It ensures that the 'scale' view (window overview) automatically
+            deactivates on a monitor when focus shifts to a different monitor,
+            preventing stale scale views on unfocused outputs.
+            """
     return {
         "id": "org.waypanel.plugin.scale_output",
         "name": "Scale Output",
         "version": "1.0.0",
-        "enabled": True, "deps": ["event_manager"]
-        }
+        "enabled": True,
+        "container": "background",
+        "deps": ["event_manager"],
+        "description": about,
+    }
 
 
 def get_plugin_class():
+    """
+    The factory function for the ScaleFocusManagerPlugin class.
+    All necessary imports are deferred here to ensure fast top-level loading.
+    """
     from src.plugins.core._base import BasePlugin
     from src.plugins.core.event_handler_decorator import subscribe_to_event
+    from typing import Dict, Any, Optional
 
     class ScaleFocusManagerPlugin(BasePlugin):
-        def __init__(self, panel_instance):
+        """
+        A reactive background service that manages the scale view state across
+        multiple monitors by toggling the scale view off on the previously focused
+        output when focus shifts to a new one.
+        """
+
+        def __init__(self, panel_instance: Any):
+            """
+            Initializes the plugin state. Lifecycle methods on_start and on_stop
+            handle activation/deactivation logic.
+            Args:
+                panel_instance: The main panel instance.
+            """
             super().__init__(panel_instance)
-            self.logger.info("ScaleFocusManagerPlugin initialized.")
-            self.scale_active_outputs = {}  # Track which outputs have scale active
-            self.last_focused_output_id = None  # Track the last focused output
+            self.scale_active_outputs: Dict[str, bool] = {}
+            self.last_focused_output_id: Optional[str] = None
+
+        async def on_start(self) -> None:
+            """Logs plugin startup."""
+            self.logger.info("ScaleFocusManagerPlugin initialized and started.")
+
+        async def on_stop(self) -> None:
+            """
+            The primary deactivation method. Cleans up internal state.
+            Note: We do not attempt to forcibly deactivate any remaining scale views,
+            as the user may be relying on the compositor's own cleanup. We just clear state.
+            """
+            self.logger.info("ScaleFocusManagerPlugin stopping. Clearing state.")
+            self.scale_active_outputs.clear()
+            self.last_focused_output_id = None
 
         @subscribe_to_event("output-gain-focus")
-        def on_output_gain_focus(self, event_message):
-            """Handle when an output gains focus."""
+        def on_output_gain_focus(self, event_message: Dict[str, Any]) -> None:
+            """
+            Handles when an output gains focus. Checks if the previous output
+            had scale active and toggles it off if necessary.
+            """
             try:
-                if "output" not in event_message:
+                current_output: Optional[Dict[str, Any]] = event_message.get("output")
+                if not current_output:
                     return
-
-                current_output = event_message["output"]
-                current_output_id = current_output["id"]
-
-                # If we have a previous focused output and scale was active on it
+                current_output_id: Optional[str] = current_output.get("id")
                 if (
                     self.last_focused_output_id
                     and self.last_focused_output_id != current_output_id
                 ):
-                    if (
-                        self.last_focused_output_id in self.scale_active_outputs
-                        and self.scale_active_outputs[self.last_focused_output_id]
-                    ):
+                    prev_id = self.last_focused_output_id
+                    if self.scale_active_outputs.get(prev_id, False):
                         self.logger.info(
-                            f"Scale was active on output {self.last_focused_output_id}, toggling it off"
+                            f"Scale was active on output {prev_id}, toggling it off due to focus shift."
                         )
-                        # Toggle scale off on the previous output
-                        self.ipc.scale_toggle(self.last_focused_output_id)
 
-                        # Update our tracking
-                        self.scale_active_outputs[self.last_focused_output_id] = False
+                        def run_scale_toggle(output_id: str):
+                            try:
+                                self.ipc.scale_toggle(output_id)
+                            except Exception as e:
+                                self.logger.error(
+                                    f"Failed to toggle scale off on {output_id}: {e}"
+                                )
 
-                # Update last focused output
-                self.last_focused_output_id = current_output_id
-
+                        self.run_in_thread(run_scale_toggle, prev_id)
+                        self.scale_active_outputs[prev_id] = False
+                if current_output_id:
+                    self.last_focused_output_id = current_output_id
             except Exception as e:
                 self.logger.error(f"Error handling output-gain-focus event: {e}")
 
         @subscribe_to_event("plugin-activation-state-changed")
-        def on_plugin_activation_changed(self, event_message):
-            """Handle plugin activation state changes, specifically for scale plugin."""
+        def on_plugin_activation_changed(self, event_message: Dict[str, Any]) -> None:
+            """
+            Handles plugin activation state changes, specifically tracking the
+            scale plugin's state per output.
+            """
             try:
                 if event_message.get("plugin") != "scale":
                     return
-
-                output_id = event_message.get("output")
-                state = event_message.get("state")
-
-                if output_id is not None:
-                    # Track scale state for this output
+                output_id: Optional[str] = event_message.get("output")
+                state: Optional[bool] = event_message.get("state")
+                if output_id is not None and state is not None:
                     self.scale_active_outputs[output_id] = state
-
             except Exception as e:
                 self.logger.error(
                     f"Error handling plugin-activation-state-changed event: {e}"
                 )
-
-        def about(self):
-            """
-            A background plugin that manages the state of the scale view
-            in a multi-monitor environment, automatically deactivating it
-            on unfocused outputs.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """
             The core logic of this plugin is a reactive, event-driven
             architecture designed for multi-monitor window management.
             Its key principles are:
-
             1.  **Event Subscription**: The plugin operates as a background
                 service, subscribing to system events using the
                 `@subscribe_to_event` decorator. It specifically listens
                 for `output-gain-focus` to know when a monitor becomes
                 active and `plugin-activation-state-changed` to track
                 the state of the `scale` plugin on each output.
-
             2.  **Output State Management**: It maintains an internal
                 state dictionary, `self.scale_active_outputs`, which
-                acts as a simple state machine. By listening to `scale`
-                plugin events, it accurately tracks which outputs currently
-                have the scale view active.
-
-            3.  **Cross-Plugin Control**: When a monitor gains focus, the
-                plugin references its state tracker to determine if the
-                scale view was active on the *previously* focused monitor.
-                If it was, it uses an Inter-Process Communication (IPC)
-                method, `self.ipc.scale_toggle`, to programmatically
-                deactivate the scale view on that old output, ensuring
-                a clean user experience.
+                tracks the activation state of the scale feature for
+                each physical output (monitor). It also tracks the
+                `self.last_focused_output_id`.
+            3.  **Cross-Plugin Control**: When the focused output changes,
+                the `on_output_gain_focus` method checks if the previous
+                output had an active scale view. If so, it uses the IPC
+                method `self.ipc.scale_toggle` (run in a separate thread
+                via `self.run_in_thread` to avoid blocking the event loop)
+                to programmatically deactivate the scale view on that old
+                output, ensuring a clean user experience across monitors.
             """
             return self.code_explanation.__doc__
 

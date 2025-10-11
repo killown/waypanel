@@ -1,32 +1,80 @@
-ENABLE_PLUGIN = False
-DEPS = ["event_manager"]
-
-
-def get_plugin_metadata(panel_instance):
-    return "background"
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        auto_fs = get_plugin_class()
-        return auto_fs(panel_instance)
+def get_plugin_metadata(_):
+    about = """
+            A background plugin that automatically sets specific windows
+            to fullscreen based on their application ID and title, using
+            a user-defined configuration.
+            """
+    return {
+        "id": "org.waypanel.plugin.autofullscreen",
+        "name": "Auto Fullscreen App",
+        "version": "1.0.0",
+        "enabled": False,
+        "container": "background",
+        "deps": ["event_manager"],
+        "description": about,
+    }
 
 
 def get_plugin_class():
+    import asyncio
     from core._base import BasePlugin
     from src.plugins.core.event_handler_decorator import subscribe_to_event
+    from typing import Dict, List, Any
 
     class AutoFullscreenAppPlugin(BasePlugin):
-        def __init__(self, panel_instance):
+        """
+        A reactive background service that automatically toggles the fullscreen state
+        of windows based on user-defined application ID and title matching rules.
+        """
+
+        def __init__(self, panel_instance: Any):
+            """
+            Initializes the plugin state. Configuration fetching and asynchronous
+            setup is deferred to on_start().
+            Args:
+                panel_instance: The main panel instance.
+            """
             super().__init__(panel_instance)
-            self.logger.info("AutoFullscreenAppPlugin initialized")
-            self.app_ids = self.get_config(
+            self.app_ids: List[Dict[str, str]] = []
+            self.fullscreen_views: Dict[str, bool] = {}
+
+        async def on_start(self) -> None:
+            """
+            The primary activation method (replaces old initialization logic).
+            Fetches configuration and logs startup.
+            """
+            self.logger.info("AutoFullscreenAppPlugin initialized and starting up...")
+            self.app_ids = self.get_plugin_setting(
                 ["plugins", "auto_fullscreen_app", "app_ids"]
             )
-            self.fullscreen_views = {}
+
+        async def on_stop(self) -> None:
+            """
+            The primary deactivation method.
+            Ensures that any window we force-fullscreened is returned to a normal state.
+            """
+            self.logger.info(
+                "AutoFullscreenAppPlugin stopping. Reverting fullscreen views."
+            )
+            tasks = []
+            for view_id in self.fullscreen_views.keys():
+
+                def un_fullscreen(vid):
+                    try:
+                        self.ipc.set_view_fullscreen(vid, False)
+                    except Exception as e:
+                        self.logger.warning(
+                            f"Failed to un-fullscreen view {vid} on stop: {e}"
+                        )
+
+                tasks.append(self.run_in_thread(un_fullscreen, view_id))
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+            self.fullscreen_views.clear()
 
         @subscribe_to_event("view-focused")
-        def on_view_focused(self, msg):
+        def on_view_focused(self, msg: Dict[str, Any]) -> None:
+            """Schedules fullscreen check when a view gains focus."""
             view = msg.get("view")
             if not view:
                 return
@@ -36,7 +84,8 @@ def get_plugin_class():
             self.schedule_in_gtk_thread(self.fullscreen_if_match, view_id)
 
         @subscribe_to_event("view-title-changed")
-        def on_view_title_changed(self, msg):
+        def on_view_title_changed(self, msg: Dict[str, Any]) -> None:
+            """Schedules state update when a view's title changes."""
             view = msg.get("view")
             if not view:
                 return
@@ -48,18 +97,25 @@ def get_plugin_class():
             )
             self.schedule_in_gtk_thread(self.check_and_update_fullscreen_state, view_id)
 
-        def check_and_update_fullscreen_state(self, view_id):
+        def check_and_update_fullscreen_state(self, view_id: str) -> None:
+            """
+            Checks view against rules and restores or exits fullscreen based on title changes.
+            This function runs in the GTK thread.
+            """
             try:
                 view = self.ipc.get_view(view_id)
                 if not view:
-                    return False
-                app_id = view.get("app-id", "").lower()
+                    self.fullscreen_views.pop(view_id, None)
+                    return
+                app_id_raw = view.get("app-id", "").lower()
+                if not app_id_raw and view.get("window_properties"):
+                    app_id_raw = view["window_properties"].get("class", "").lower()
                 title = view.get("title", "").lower()
                 match_found = False
                 for item in self.app_ids:
                     item_app_id = item.get("app_id", "").lower()
                     item_title = item.get("title", "").lower()
-                    if item_app_id != app_id:
+                    if item_app_id != app_id_raw:
                         continue
                     if item_title and item_title not in title:
                         continue
@@ -70,7 +126,11 @@ def get_plugin_class():
                     self.logger.info(f"Restoring fullscreen for view {view_id}")
                     self.ipc.set_view_fullscreen(view_id, True)
                     self.fullscreen_views[view_id] = True
-                elif not match_found and current_fullscreen:
+                elif (
+                    not match_found
+                    and view_id in self.fullscreen_views
+                    and current_fullscreen
+                ):
                     self.logger.info(
                         f"Exiting fullscreen for view {view_id} (title no longer matches)"
                     )
@@ -79,43 +139,35 @@ def get_plugin_class():
             except Exception as e:
                 self.logger.error(f"Error handling title change: {e}")
 
-        def fullscreen_if_match(self, view_id):
+        def fullscreen_if_match(self, view_id: str):
+            """
+            Checks view against rules and forces fullscreen if a match is found.
+            This function runs in the GTK thread.
+            """
             try:
                 view = self.ipc.get_view(view_id)
                 if not view:
-                    return False
-                app_id = None
-                if "window_properties" in view:
-                    app_id = view["window_properties"].get("class", None)
-                else:
-                    app_id = view.get("app-id", "").lower()
+                    return
+                app_id_raw = view.get("app-id", "").lower()
+                if not app_id_raw and view.get("window_properties"):
+                    app_id_raw = view["window_properties"].get("class", "").lower()
                 title = view.get("title", "").lower()
                 for item in self.app_ids:
                     item_app_id = item.get("app_id", "").lower()
                     item_title = item.get("title", "").lower()
-                    if item_app_id != app_id:
+                    if item_app_id != app_id_raw:
                         continue
                     if item_title and item_title not in title:
                         continue
                     if not view.get("fullscreen"):
                         self.logger.info(
-                            f"Fullscreening view {view_id} ({app_id}) | Title: '{title}' matches '{item_title}'"
+                            f"Fullscreening view {view_id} ({app_id_raw}) | Title: '{title}' matches '{item_title}'"
                         )
                         self.ipc.set_view_fullscreen(view_id, True)
-                        self.fullscreen_views[view_id] = True
-                    else:
-                        self.fullscreen_views[view_id] = True
-                    break
+                    self.fullscreen_views[view_id] = True
+                    return
             except Exception as e:
                 self.logger.error(f"Error fullscreening view: {e}")
-
-        def about(self):
-            """
-            A background plugin that automatically sets specific windows
-            to fullscreen based on their application ID and title, using
-            a user-defined configuration.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

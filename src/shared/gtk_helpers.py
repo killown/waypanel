@@ -1120,14 +1120,11 @@ class GtkHelpers:
     def count_box_items(self, box: Gtk.Box) -> int:
         """
         Count the number of child widgets currently appended to a Gtk.Box.
-
         This function uses the GTK4 `observe_children()` API to safely
         iterate over the box's current children. It works with any
         Gtk.Box instance regardless of layout orientation.
-
         Args:
             box (Gtk.Box): The Gtk.Box widget whose children you want to count.
-
         Returns:
             int: The number of widgets currently appended to the box.
         """

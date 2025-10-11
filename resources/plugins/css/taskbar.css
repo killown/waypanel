@@ -1,5 +1,5 @@
 .taskbar {
-  margin: 4px 0; 
+  margin: 3px; 
 }
 
 .taskbar-button {
@@ -35,7 +35,7 @@
 }
 
 .taskbar-button.focused {
-  background-color: var(--theme-bg-selected-primary);
+  background-color: var(--color-bg-base);
   color: var(--color-fg-inverse);
   font-weight: bold;
   border: 1px solid var(--accent-blue);

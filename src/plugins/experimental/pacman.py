@@ -2,6 +2,12 @@ def get_plugin_metadata(_):
     import shutil
 
     ENABLE_PLUGIN = bool(shutil.which("pacman"))
+
+    about = """
+            A plugin that checks for available system updates on Arch Linux-based
+            systems using the `checkupdates` command and provides a quick way to
+            refresh the count or launch a terminal to run the update.
+            """
     return {
         "id": "org.waypanel.plugin.pacman",
         "name": "Pacman Manager",
@@ -10,6 +16,7 @@ def get_plugin_metadata(_):
         "index": 3,
         "container": "top-panel-center",
         "deps": ["top_panel"],
+        "description": about,
     }
 
 
@@ -194,14 +201,6 @@ def get_plugin_class():
 
         def on_stop(self):
             self.terminal_pid = None
-
-        def about(self):
-            """
-            A plugin that checks for available system updates on Arch Linux-based
-            systems using the `checkupdates` command and provides a quick way to
-            refresh the count or launch a terminal to run the update.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

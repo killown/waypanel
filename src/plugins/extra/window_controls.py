@@ -1,4 +1,8 @@
 def get_plugin_metadata(_):
+    about = """
+            A system dashboard for quick access to system actions,
+            power management, and settings.
+            """
     return {
         "id": "org.waypanel.plugin.window_controls",
         "name": "Window Controls",
@@ -9,6 +13,7 @@ def get_plugin_metadata(_):
         "deps": [
             "top_panel",
         ],
+        "description": about,
     }
 
 
@@ -94,13 +99,6 @@ def get_plugin_class():
         #         GLib.idle_add(lambda *_: self.utils.focus_view_when_ready(view))
         #         if self.utils.widget_exists(widget):
         #             self.update_widget_safely(self.top_panel_box_center.remove, widget)
-
-        def about(self):
-            """
-            A system dashboard for quick access to system actions,
-            power management, and settings.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

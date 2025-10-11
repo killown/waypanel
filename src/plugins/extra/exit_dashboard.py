@@ -1,4 +1,9 @@
 def get_plugin_metadata(_):
+    about = """
+            A system dashboard providing quick access to common system actions
+            like power management, session control, and settings.
+            """
+
     return {
         "id": "org.waypanel.plugin.exit_dashboard",
         "name": "Exit Dashboard",
@@ -9,6 +14,7 @@ def get_plugin_metadata(_):
         "deps": [
             "top_panel",
         ],
+        "description": about,
     }
 
 
@@ -227,10 +233,6 @@ def get_plugin_class():
 
         def on_show_searchbar_action_actived(self, action, parameter):
             self.searchbar.set_search_mode(True)  # pyright: ignore
-
-        def about(self):
-            """A system dashboard providing quick access to common system actions like power management, session control, and settings."""
-            return self.about.__doc__
 
         def code_explanation(self):
             """

@@ -1,4 +1,6 @@
 def get_plugin_metadata(_):
+    about = """A plugin that dynamically creates custom menus and submenus based on a TOML configuration file."""
+
     return {
         "id": "org.waypanel.plugin.custom_menu",
         "name": "Custom Menus",
@@ -9,6 +11,7 @@ def get_plugin_metadata(_):
         "deps": [
             "top_panel",
         ],
+        "description": about,
     }
 
 
@@ -105,10 +108,6 @@ def get_plugin_class():
                     )
                 menu_button.set_icon_name(icon_to_use)
                 self.widgets.append(menu_button)
-
-        def about(self):
-            """A plugin that dynamically creates custom menus and submenus based on a TOML configuration file."""
-            return self.about.__doc__
 
         def code_explanation(self):
             """

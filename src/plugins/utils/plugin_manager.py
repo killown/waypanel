@@ -1,213 +1,214 @@
-import os
-from src.plugins.core._base import BasePlugin
-from gi.repository import Gtk
+def get_plugin_metadata(_):
+    about = """
+            A graphical user interface (GUI) plugin that allows users to view,
+            enable, and disable other Waypanel plugins dynamically without
+            restarting the panel. It organizes plugins by their folder/category
+            using a Gtk.Stack and Gtk.StackSwitcher.
+            """
+    return {
+        "id": "org.waypanel.plugin.plugin_manager",
+        "name": "Plugin Manager",
+        "version": "1.0.0",
+        "enabled": False,
+        "container": "top-panel-systray",
+        "index": 99,
+        "deps": ["top_panel"],
+        "description": about,
+    }
 
-ENABLE_PLUGIN = False
-DEPS = ["top_panel"]
 
+def get_plugin_class():
+    """
+    The factory function for the PluginManagerPlugin class.
+    ALL necessary imports, including standard library modules and framework components,
+    are deferred here to ensure fast top-level loading as required by the plugin loader.
+    """
+    import os
+    from src.plugins.core._base import BasePlugin
+    from gi.repository import Gtk  # pyright: ignore
+    from typing import Dict, Any, List, Optional, Tuple
 
-def get_plugin_metadata(panel_instance):
-    position = "top-panel-systray"
-    order = 99
-    return position, order
-
-
-def initialize_plugin(panel_instance):
-    if ENABLE_PLUGIN:
-        instance = PluginManagerPlugin(panel_instance)
-        return instance
-
-
-class PluginManagerPlugin(BasePlugin):
-    def __init__(self, panel_instance):
-        """Initialize the Plugin Manager Plugin.
-
-        Sets up a menu button for accessing the plugin manager interface,
-        configures a stack and stack switcher for organizing plugins,
-        creates the popover UI for plugin management, and attaches gestures
-        for user interaction.
-
-        Args:
-            panel_instance: The main panel object providing access to shared resources
-                            such as logger, configuration, and UI containers.
+    class PluginManagerPlugin(BasePlugin):
         """
-        super().__init__(panel_instance)
-        # Create the main button to open the popover
-        self.menubutton_plugin_manager = Gtk.MenuButton()
-        self.menubutton_plugin_manager.set_icon_name("preferences-plugin-symbolic")
-        self.stack = Gtk.Stack()  # Create a stack for grouping plugins
-        self.stack_switcher = Gtk.StackSwitcher()  # Create a stack switcher
-        self.stack_switcher.set_stack(self.stack)
+        Manages the configuration state of other plugins through a graphical
+        popover interface accessible via the system tray.
+        """
 
-        self.create_popover_plugin_manager()
+        def __init__(self, panel_instance: Any):
+            """
+            Initializes the plugin state variables. Widget creation and setup
+            are deferred to the on_start asynchronous lifecycle method.
+            Args:
+                panel_instance: The main panel instance.
+            """
+            super().__init__(panel_instance)
+            self.menubutton_plugin_manager: Optional[Gtk.MenuButton] = None
+            self.popover_plugin_manager: Optional[Gtk.Popover] = None
+            self.stack: Optional[Gtk.Stack] = None
+            self.stack_switcher: Optional[Gtk.StackSwitcher] = None
+            self.main_widget: Optional[Tuple[Gtk.Widget, str]] = None
 
-        # Add gesture to handle interactions
-        self.add_gesture_to_menu_button()
+        async def on_start(self) -> None:
+            """
+            The primary activation method. Initializes all GUI components,
+            populates the plugin list, and registers the main widget with the panel.
+            """
+            self.logger.info("PluginManagerPlugin starting up...")
+            self.menubutton_plugin_manager = Gtk.MenuButton.new()
+            self.menubutton_plugin_manager.set_icon_name("preferences-plugin-symbolic")
+            self.stack = Gtk.Stack.new()
+            self.stack_switcher = Gtk.StackSwitcher.new()
+            self.stack_switcher.set_stack(self.stack)
+            self.create_popover_plugin_manager()
+            self.add_gesture_to_menu_button()
+            if self.menubutton_plugin_manager:
+                self.main_widget = (self.menubutton_plugin_manager, "append")
 
-    def create_popover_plugin_manager(self):
-        """Create and configure the popover for managing plugins."""
-        self.popover_plugin_manager = Gtk.Popover.new()
-        self.popover_plugin_manager.set_has_arrow(False)
-        self.popover_plugin_manager = Gtk.Popover.new()
-        self.menubutton_plugin_manager.set_popover(self.popover_plugin_manager)
-        self.main_widget = (self.menubutton_plugin_manager, "append")
-        hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=10)
-        hbox.set_margin_top(10)
-        hbox.set_margin_bottom(10)
-        hbox.set_margin_start(10)
-        hbox.set_margin_end(10)
-        hbox.set_size_request(350, 200)
+        async def on_stop(self) -> None:
+            """
+            The primary deactivation method. Destroys the main UI component to
+            release resources.
+            """
+            self.logger.info("PluginManagerPlugin stopping. Destroying UI.")
+            if self.menubutton_plugin_manager:
+                self.menubutton_plugin_manager.unparent()
+            self.popover_plugin_manager = None
+            self.stack = None
+            self.stack_switcher = None
+            self.main_widget = None  # pyright: ignore
 
-        self.stack_switcher = Gtk.StackSwitcher()
-        self.stack_switcher.set_stack(self.stack)
-        self.stack_switcher.set_orientation(
-            Gtk.Orientation.VERTICAL
-        )  # Set vertical orientation
-        self.stack_switcher.set_halign(Gtk.Align.START)  # Align to the left
-        self.stack_switcher.set_valign(
-            Gtk.Align.FILL
-        )  # Fill the height of the container
+        def create_popover_plugin_manager(self) -> None:
+            """Creates and configures the popover for managing plugins."""
+            if (
+                not self.menubutton_plugin_manager
+                or not self.stack
+                or not self.stack_switcher
+            ):
+                self.logger.error("UI components not initialized in on_start.")
+                return
+            self.popover_plugin_manager = Gtk.Popover.new()
+            self.popover_plugin_manager.set_has_arrow(False)
+            self.menubutton_plugin_manager.set_popover(self.popover_plugin_manager)
+            hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=10)
+            hbox.set_margin_top(10)
+            hbox.set_margin_bottom(10)
+            hbox.set_margin_start(10)
+            hbox.set_margin_end(10)
+            hbox.set_size_request(350, 200)
+            self.stack_switcher.set_orientation(Gtk.Orientation.VERTICAL)
+            self.stack_switcher.set_halign(Gtk.Align.START)
+            self.stack_switcher.set_valign(Gtk.Align.FILL)
+            hbox.append(self.stack_switcher)
+            self.populate_stack_with_plugins()
+            hbox.append(self.stack)
+            self.popover_plugin_manager.set_child(hbox)
+            self.popover_plugin_manager.connect("closed", self.popover_is_closed)
 
-        # Add the stack switcher to the horizontal box
-        hbox.append(self.stack_switcher)
+        def on_switch_toggled(
+            self, switch: Gtk.Switch, state: bool, plugin_name: str
+        ) -> bool:
+            """
+            Handles toggling the switch to enable/disable a plugin and updates
+            the configuration file.
+            Args:
+                switch: The Gtk.Switch widget.
+                state: The new state of the switch (True for On/Enabled).
+                plugin_name: The internal name of the plugin being toggled.
+            Returns:
+                False to stop other handlers from running (GTK convention for state-set).
+            """
+            try:
+                disabled_list_str = self.config.get("plugins", {}).get("disabled", "")
+                disabled_plugins = set(disabled_list_str.split())
+                if state:
+                    if plugin_name in disabled_plugins:
+                        disabled_plugins.remove(plugin_name)
+                    self.plugin_loader.reload_plugin(plugin_name)
+                    self.logger.info(f"Enabled plugin: {plugin_name}")
+                else:
+                    if plugin_name not in disabled_plugins:
+                        disabled_plugins.add(plugin_name)
+                    self.plugin_loader.disable_plugin(plugin_name)
+                    self.logger.info(f"Disabled plugin: {plugin_name}")
+                self.config["plugins"]["disabled"] = " ".join(  # pyright: ignore
+                    sorted(list(disabled_plugins))
+                )
+                self.obj.save_config()
+            except Exception as e:
+                self.logger.error(
+                    message=f"Error toggling plugin '{plugin_name}': {e}",
+                )
+            return False
 
-        # Populate the stack with plugins grouped by folder
-        self.populate_stack_with_plugins()
+        def populate_stack_with_plugins(self) -> None:
+            """Groups plugins by folder and populates the Gtk.Stack and Gtk.StackSwitcher."""
+            if not self.stack:
+                self.logger.error("Gtk.Stack not initialized.")
+                return
+            plugins: Dict[str, str] = self.plugin_loader.plugins_path
+            disabled_list_str: str = self.config.get("plugins", {}).get("disabled", "")  # pyright: ignore
+            disabled_plugins: List[str] = disabled_list_str.split()
+            excluded_folders: List[str] = ["clipboard"]
+            plugin_folders: Dict[str, List[str]] = {}
+            for plugin_name, plugin_path in plugins.items():
+                if plugin_name.startswith("_"):
+                    continue
+                folder: str = os.path.basename(os.path.dirname(plugin_path))
+                if folder not in plugin_folders:
+                    plugin_folders[folder] = []
+                plugin_folders[folder].append(plugin_name)
+            for folder, plugin_names in plugin_folders.items():
+                if folder in excluded_folders:
+                    continue
+                listbox = Gtk.ListBox.new()
+                listbox.set_selection_mode(Gtk.SelectionMode.NONE)
+                for plugin_name in sorted(plugin_names):
+                    row_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 10)
+                    row_box.set_margin_start(10)
+                    row_box.set_margin_end(10)
+                    name: str = plugin_name.replace("_", " ").capitalize()
+                    plugin_label = Gtk.Label.new(name)
+                    plugin_label.set_hexpand(True)
+                    plugin_label.set_halign(Gtk.Align.START)
+                    row_box.append(plugin_label)
+                    switch = Gtk.Switch.new()
+                    is_plugin_enabled: bool = plugin_name not in disabled_plugins
+                    switch.set_active(is_plugin_enabled)
+                    switch.connect("state-set", self.on_switch_toggled, plugin_name)
+                    row_box.append(switch)
+                    row = Gtk.ListBoxRow.new()
+                    row.set_child(row_box)
+                    listbox.append(row)
+                scrolled_window = Gtk.ScrolledWindow.new()
+                scrolled_window.set_child(listbox)
+                scrolled_window.set_size_request(300, 300)
+                self.stack.add_titled(scrolled_window, folder, folder.capitalize())
 
-        # Add the stack to the horizontal box
-        hbox.append(self.stack)
+        def add_gesture_to_menu_button(self) -> None:
+            """
+            Adds a click gesture to the menu button to handle toggling the popover.
+            """
+            if not self.menubutton_plugin_manager:
+                return
+            gesture = Gtk.GestureClick.new()
+            gesture.connect("released", self.on_menu_button_clicked)
+            gesture.set_button(1)
+            self.menubutton_plugin_manager.add_controller(gesture)
 
-        # Set the horizontal box as the child of the popover
-        self.popover_plugin_manager.set_child(hbox)
-
-        # Connect signals
-        self.popover_plugin_manager.connect("closed", self.popover_is_closed)
-        self.menubutton_plugin_manager.set_popover(self.popover_plugin_manager)
-
-    def on_switch_toggled(self, switch, state, plugin_name):
-        """Handle toggling the switch to enable/disable a plugin."""
-        try:
-            # Load the disabled plugins as a list (split by spaces)
-            disabled_plugins = (
-                self.config_handler.config_data.get("plugins", {})
-                .get("disabled", "")
-                .split()
-            )
-
-            if state:
-                # Add the plugin to the disabled list
-                # Enable the plugin: Remove it from the disabled list
-                self.plugin_loader.reload_plugin(plugin_name)
-                self.logger.info(f"Enabled plugin: {plugin_name}")
-                if plugin_name in disabled_plugins:
-                    disabled_plugins.remove(plugin_name)
+        def on_menu_button_clicked(self, gesture: Gtk.GestureClick, *args: Any) -> None:
+            """
+            Handles the menu button click to manually toggle the popover visibility.
+            This is used for the Gtk.GestureClick binding.
+            """
+            if not self.popover_plugin_manager:
+                return
+            if not self.popover_plugin_manager.is_visible():
+                self.popover_plugin_manager.popup()
             else:
-                self.plugin_loader.disable_plugin(plugin_name)
-                self.logger.info(f"Disabled plugin: {plugin_name}")
-                # Disable the plugin: Add it to the disabled list
-                if plugin_name not in disabled_plugins:
-                    disabled_plugins.append(plugin_name)
+                self.popover_plugin_manager.popdown()
 
-            # Update the configuration with the modified list
-            self.config["plugins"]["disabled"] = " ".join(disabled_plugins)
-            self.obj.save_config()
+        def popover_is_closed(self, *args: Any) -> None:
+            """Callback when the popover is closed (Placeholder for future logic)."""
+            pass
 
-        except Exception as e:
-            self.logger.error(
-                message=f"Error toggling plugin '{plugin_name}': {e}",
-            )
-
-    def populate_stack_with_plugins(self):
-        """Group plugins by folder and populate the stack."""
-        plugins = self.plugin_loader.plugins_path  # All available plugins
-        disabled_plugins = self.config.get("plugins", {}).get("disabled", [])
-        # FIXME: need a better way to handle plugin folders
-        excluded_folders = ["clipboard"]
-        # Temporary dictionary to group plugins by folder
-        plugin_folders = {}
-
-        # Group plugins by folder
-        for plugin_name, plugin_path in plugins.items():
-            if plugin_name.startswith("_"):
-                continue
-
-            # Determine the folder (e.g., essential, experimental)
-            folder = os.path.basename(os.path.dirname(plugin_path))
-            if folder not in plugin_folders:
-                plugin_folders[folder] = []
-
-            plugin_folders[folder].append(plugin_name)
-
-        # Update self.plugin_loader.plugins_path with the grouped plugins
-        self.plugin_loader.plugins_path.update(plugin_folders)
-
-        # Create a stack page for each folder
-        for folder, plugin_names in plugin_folders.items():
-            # Create a ListBox for the folder
-            listbox = Gtk.ListBox()
-            listbox.set_selection_mode(Gtk.SelectionMode.NONE)
-
-            if folder in excluded_folders:
-                continue
-
-            for plugin_name in sorted(plugin_names):
-                # Create a row for the plugin
-                row_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 10)
-                row_box.set_margin_start(10)
-                row_box.set_margin_end(10)
-
-                # Plugin name label
-                name = plugin_name.replace("_", " ").capitalize()
-                plugin_label = Gtk.Label.new(name)
-                plugin_label.set_hexpand(True)
-                plugin_label.set_halign(Gtk.Align.START)
-                row_box.append(plugin_label)
-
-                # Toggle switch for enabling/disabling the plugin
-                switch = Gtk.Switch()
-                is_plugin_enabled = plugin_name not in disabled_plugins
-                switch.set_active(is_plugin_enabled)
-                switch.connect("state-set", self.on_switch_toggled, plugin_name)
-                row_box.append(switch)
-
-                # Add the row to the ListBox
-                listbox.append(row_box)
-
-            # Add the ListBox to a ScrolledWindow
-            scrolled_window = Gtk.ScrolledWindow()
-            scrolled_window.set_child(listbox)
-            scrolled_window.set_size_request(300, 300)
-
-            # Add the ScrolledWindow to the stack
-            self.stack.add_titled(scrolled_window, folder, folder.capitalize())
-
-    def add_gesture_to_menu_button(self):
-        """
-        Add a gesture to the menu button to handle interactions.
-        """
-        # Create a click gesture for the menu button
-        gesture = Gtk.GestureClick.new()
-        gesture.connect("released", self.on_menu_button_clicked)
-        gesture.set_button(1)  # Left mouse button
-        self.menubutton_plugin_manager.add_controller(gesture)
-
-    def on_menu_button_clicked(self, gesture, *_):
-        """
-        Handle the menu button click to toggle the popover.
-        """
-        if not self.popover_plugin_manager.is_visible():
-            self.popover_plugin_manager.popup()
-        else:
-            self.popover_plugin_manager.popdown()
-
-    def popover_is_open(self, *_):
-        """
-        Callback when the popover is opened.
-        """
-        pass
-
-    def popover_is_closed(self, *_):
-        """
-        Callback when the popover is closed.
-        """
-        pass
+    return PluginManagerPlugin

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import os
 import sys
 import orjson as js
@@ -12,7 +10,6 @@ import time
 import dbus
 import requests
 import configparser
-
 from wayfire import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.extra.stipc import Stipc
@@ -27,78 +24,58 @@ wpe = WPE(sock)
 class ViewDropDown:
     def __init__(self, term, width, height) -> None:
         pass
-
         self.TERMINAL_CMD = term
         self.TERMINAL_WIDTH = width
         self.TERMINAL_HEIGHT = height
-        self.VIEW_STICKY = (
-            True  # show the terminal in all workspaces, set False to disable
-        )
-        self.VIEW_ALWAYS_ON_TOP = True  # always on top even if another view get the focus, Set False to disable
-
+        self.VIEW_STICKY = True
+        self.VIEW_ALWAYS_ON_TOP = True
         addr = os.getenv("WAYFIRE_SOCKET")
         self.sock = WayfireSocket(addr)
 
 
-# FIXME: need a huge refactor, lots of functions not being used
 class Wayctl:
     def __init__(self):
         self.ws_utils = WayfireUtils(sock)
-        # Create an ArgumentParser object to handle command-line arguments
         self.parser = argparse.ArgumentParser(
             description="wayctl script utility for controlling parts of the wayfire compositor through the command line interface or a script."
         )
-
         self.parser.add_argument(
             "--move_cursor",
             nargs="*",
             help="move mouse cursor position with <x-coordinate> <y-coordinate>",
         )
-
-        # --dpms option: Set DPMS (Display Power Management Signaling) on/off/toggle
         self.parser.add_argument(
             "--dpms",
             nargs="*",
             help="Set DPMS (Display Power Management Signaling) state. Usage: --dpms on/off/toggle <monitor-name> (to turn DPMS on, off, or toggle its state for the specified monitor).",
         )
-
-        # --screenshot option: Capture screenshots with various options
         self.parser.add_argument(
             "--screenshot",
             nargs="*",
             help="Capture screenshots with various options. Usage: --screenshot focused view (to capture a screenshot of the focused view), --screenshot slurp (to select a region to screenshot), --screenshot output all (to capture screenshots of all outputs).",
         )
-
         self.parser.add_argument(
             "--colorpicker",
             nargs="*",
             help="Color picker using slurp and grim",
         )
-
-        # --plugin option: manager plugins
         self.parser.add_argument(
             "--plugin",
             nargs="*",
             help="manage plugins with -> enable, disable, restart, status",
         )
-
         self.parser.add_argument(
             "--drop",
             nargs="*",
             help="start a view in guake mode",
         )
-
         self.parser.add_argument(
             "--move-view-to-empty-workspace",
             nargs="*",
             help="move the focused view to an empty workspace",
         )
-
-        # Parse the command-line arguments
         self.args = self.parser.parse_args()
-
         self.args = self.parser.parse_args()
-
         self.sock = sock
 
     def get_wayfire_ini_path(self):
@@ -128,51 +105,37 @@ class Wayctl:
         wayfire_ini_path = self.get_wayfire_ini_path()
         if not wayfire_ini_path:
             return
-
         config = ConfigParser()
         config.read(wayfire_ini_path)
-
         if "core" not in config:
             config["core"] = {}
-
         plugins = config["core"].get("plugins", "").split()
-
         if plugin_name in plugins:
             print(f"Plugin '{plugin_name}' is already enabled in wayfire.ini.")
             return
-
         plugins.append(plugin_name)
         config["core"]["plugins"] = " ".join(plugins)
-
         with open(wayfire_ini_path, "w") as configfile:
             config.write(configfile)
-
         print(f"Plugin '{plugin_name}' enabled successfully in wayfire.ini.")
 
     def disactivate_plugin(self, plugin_name):
         wayfire_ini_path = self.get_wayfire_ini_path()
         if not wayfire_ini_path:
             return
-
         config = ConfigParser()
         config.read(wayfire_ini_path)
-
         if "core" not in config:
             print("Error: 'core' section not found in wayfire.ini.")
             return
-
         plugins = config["core"].get("plugins", "").split()
-
         if plugin_name not in plugins:
             print(f"Plugin '{plugin_name}' is not enabled in wayfire.ini.")
             return
-
         plugins.remove(plugin_name)
         config["core"]["plugins"] = " ".join(plugins)
-
         with open(wayfire_ini_path, "w") as configfile:
             config.write(configfile)
-
         print(f"Plugin '{plugin_name}' disabled successfully in wayfire.ini.")
 
     def plugin_list(self):
@@ -180,29 +143,23 @@ class Wayctl:
         extra_url = (
             "https://github.com/WayfireWM/wayfire-plugins-extra/tree/master/metadata"
         )
-
         official_response = requests.get(official_url)
         extra_response = requests.get(extra_url)
-
         if official_response.status_code != 200 or extra_response.status_code != 200:
             print("Failed to fetch content from one or both repositories.")
             return {}
-
         official_html_content = official_response.text
         extra_html_content = extra_response.text
-
         official_start_index = official_html_content.find(
             '<script type="application/json" data-target="react-app.embeddedData">'
         )
         extra_start_index = extra_html_content.find(
             '<script type="application/json" data-target="react-app.embeddedData">'
         )
-
         official_end_index = official_html_content.find(
             "</script>", official_start_index
         )
         extra_end_index = extra_html_content.find("</script>", extra_start_index)
-
         official_json_data = official_html_content[
             official_start_index
             + len(
@@ -215,10 +172,8 @@ class Wayctl:
                 '<script type="application/json" data-target="react-app.embeddedData">'
             ) : extra_end_index
         ]
-
         official_data = js.loads(official_json_data)
         extra_data = js.loads(extra_json_data)
-
         official_plugin_names = [
             item["name"][:-4]
             for item in official_data["payload"]["tree"]["items"]
@@ -229,7 +184,6 @@ class Wayctl:
             for item in extra_data["payload"]["tree"]["items"]
             if item["contentType"] == "file" and item["name"].endswith(".xml")
         ]
-
         return {
             "official-plugins": official_plugin_names,
             "extra-plugins": extra_plugin_names,
@@ -239,14 +193,11 @@ class Wayctl:
         wayfire_ini_path = self.get_wayfire_ini_path()
         if not wayfire_ini_path:
             return []
-
         config = ConfigParser()
         config.read(wayfire_ini_path)
-
         if "core" not in config:
             print("Error: 'core' section not found in wayfire.ini.")
             return []
-
         plugins = config["core"].get("plugins", "").split()
         return plugins
 
@@ -254,25 +205,16 @@ class Wayctl:
         filename = self.get_wayfire_ini_path()
         if not filename:
             return
-
         config = configparser.ConfigParser()
         config.read(filename)
-
-        # Comment out the 'plugins' line
         config["core"]["plugins"] = "# " + config["core"]["plugins"]
-
-        # Save the modified configuration back to the file
         with open(filename, "w") as configfile:
             config.write(configfile)
-
-        # Uncomment the 'plugins' line
         config["core"]["plugins"] = (
             config["core"]["plugins"][2:]
             if config["core"]["plugins"].startswith("# ")
             else config["core"]["plugins"]
         )
-
-        # Save the modified configuration back to the file
         with open(filename, "w") as configfile:
             config.write(configfile)
 
@@ -310,7 +252,6 @@ class Wayctl:
         try:
             active_workspace_views = utils.get_views_from_active_workspace()
             all_views = sock.list_views()
-
             toplevel_mapped_views = [
                 view
                 for view in all_views
@@ -318,22 +259,18 @@ class Wayctl:
                 and view["role"] == "toplevel"
                 and view["mapped"]
             ]
-
             if not toplevel_mapped_views:
                 utils.go_next_workspace_with_views()
                 return
-
             workspaces_without_views = utils.get_workspaces_without_views()
             if not workspaces_without_views:
                 print("No empty workspace found.")
                 return
-
             target_workspace = workspaces_without_views[0]
             focused_view = sock.get_focused_view()
             if not focused_view:
                 print("No focused view found.")
                 return
-
             focused_view_id = focused_view["id"]
             sock.set_workspace(
                 target_workspace[0], target_workspace[1], focused_view_id
@@ -341,7 +278,6 @@ class Wayctl:
             print(
                 f"Moved view {focused_view_id} to workspace ({target_workspace[0]}, {target_workspace[1]})"
             )
-
         except Exception as e:
             print(f"Error moving view: {e}")
 
@@ -355,7 +291,6 @@ class Wayctl:
             {"handle_token": "my_token"},
             dbus_interface="org.freedesktop.portal.Screenshot",
         )
-        # lets wait save the file before try opening it
         time.sleep(1)
         self.xdg_open("/tmp/out.png")
 
@@ -391,10 +326,8 @@ class Wayctl:
         view_id = focused["id"]
         app_id = focused["app-id"]
         filename = f"/tmp/{app_id}-{view_id}.png"
-
         if os.path.exists(filename):
             os.remove(filename)
-
         self.screenshot_view_id(view_id, filename)
         stipc.run_cmd(f"xdg-open {filename}")
 
@@ -413,7 +346,6 @@ class Wayctl:
         if os.path.exists(filename):
             os.remove(filename)
         cmd = ["grim", "-g", f"{slurp}", filename]
-        # must use call because Popen will not hang while creating the file thus xdg-open may fail
         call(cmd)
         Popen(["xdg-open", filename])
 
@@ -456,10 +388,7 @@ class Wayctl:
         try:
             cursor_x, cursor_y = sock.get_cursor_position()
             color = get_color_at_position(cursor_x, cursor_y)
-
-            # Copy to clipboard
             run(["wl-copy"], input=color.encode(), check=True)
-
         except Exception as e:
             print(f"Error in color picker: {e}", file=sys.stderr)
 
@@ -510,11 +439,8 @@ class Wayctl:
         if "has_title" in self.args.view:
             has_title = self.args.view.split("has_title ")[-1].strip()
         for view in views:
-            # we do not need info about focused view
-            # in case you need, just use the right wayctl call
             if view["id"] == focused_view_id:
                 continue
-
             title = view["title"].lower()
             if has_title is not None:
                 if has_title not in title:
@@ -530,7 +456,6 @@ class Wayctl:
             print(plugin)
             print(plugins[plugin])
             print("\n")
-
         print("Enabled Plugins ")
         print(self.list_enabled_plugins())
 
@@ -546,44 +471,31 @@ class Wayctl:
 
 if __name__ == "__main__":
     wayctl = Wayctl()
-
     if wayctl.args.dpms is not None:
         wayctl.dpms()
-
     if wayctl.args.colorpicker is not None:
         wayctl.color_picker()
-
     if wayctl.args.move_view_to_empty_workspace is not None:
         wayctl.move_view_to_empty_workspace()
-
     if wayctl.args.screenshot is not None:
         if "focused" in wayctl.args.screenshot[0]:
             if "view" in wayctl.args.screenshot[1]:
                 wayctl.screenshot_view_focused()
-
         if "slurp" in wayctl.args.screenshot[0]:
             if len(wayctl.args.screenshot) == 1:
                 wayctl.screenshot_slurp()
             if "focused" in wayctl.args.screenshot[1]:
                 if "view" in wayctl.args.screenshot[2]:
-                    # this method is for gaming, in case you want slurp a game
-                    # will take screenshot of the whole game view, open the screenshot
-                    # and start slurp, after you select the area, it will give the final screenshot
-                    # you can't slurp while gaming right, because the game has the mouse focus
                     wayctl.screenshot_slurp_focused_view()
-
         if "focused" in wayctl.args.screenshot[0]:
             if "output" in wayctl.args.screenshot[1]:
                 wayctl.screenshot_focused_output()
-
         if "output" in wayctl.args.screenshot[0]:
             if "all" in wayctl.args.screenshot[1]:
                 wayctl.screenshot_all_outputs()
-
         if "view" in wayctl.args.screenshot[0]:
             if "all" in wayctl.args.screenshot[1]:
                 wayctl.screenshot_view_list()
-
     if wayctl.args.plugin is not None:
         if "reload" in wayctl.args.plugin:
             if wayctl.args.plugin[1] != "all":

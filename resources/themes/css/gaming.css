@@ -1,8 +1,8 @@
 :root {
   
-  --color-steam-dark-blue: #182636;
+  --color-steam-dark-blue: #1b2838;
   --color-steam-deep-blue: #171d25;
-  --color-steam-light-blue: #66c0f4;
+  --color-steam-light-blue: #45acff;
   --color-steam-light-blue-functional: #7AC9FF;
   --color-steam-blue-dark: #417a9b;
   --color-steam-green: #4E8133;
@@ -12,8 +12,8 @@
   --color-bg-base: var(--color-steam-dark-blue);
   --color-bg-window: var(--color-steam-deep-blue);
   --color-bg-panel: var(--color-steam-dark-blue);
-  --color-bg-popover: #213042;
-  --color-bg-searchbar: #33445c;
+  --color-bg-popover: #182434;
+  --color-bg-searchbar: #3f4a55;
   --color-bg-box-primary: var(--color-bg-popover);
   --color-bg-box-secondary: var(--color-bg-raised);
   --color-bg-button: var(--color-steam-blue-dark);
@@ -28,7 +28,7 @@
   --color-vibrancy-light-blur: var(--color-bg-popover);
   --opacity-vibrancy-bar: 1.0;
 
-  --color-fg-primary: #ffffff;
+  --color-fg-primary: #c5c3c0;
   --color-fg-secondary: #e5e5e5;
   --color-fg-muted: #8899a6;
   --color-fg-subtle: #4b6678;
@@ -190,7 +190,7 @@
   --radius-xl: 8px;
   --radius-control-default: var(--radius-m);
 
-  --font-family-default: "Motiva Sans", "Arial", sans-serif;
+  --font-family-default: "Motiva Sans";
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400;
   --font-weight-medium: 500;

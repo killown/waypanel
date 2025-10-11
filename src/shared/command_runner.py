@@ -20,7 +20,6 @@ class CommandRunner:
                     return False
 
                 GLib.idle_add(run)
-
             if os.getenv("SWAYSOCK"):
                 GLib.idle_add(
                     lambda: subprocess.Popen(
@@ -33,7 +32,6 @@ class CommandRunner:
                     )
                 )
                 self.logger.info("Command scheduled for execution.")
-
         except Exception as e:
             self.logger.error(
                 error=e, message=f"Error running command: {cmd}", level="error"
@@ -43,17 +41,7 @@ class CommandRunner:
         """
         Opens a URL in the default web browser without blocking the UI.
         """
-        # NOTE: The logic to determine the default browser is not implemented here.
-        # This will need to be added to find the appropriate browser command (e.g., 'xdg-open').
-        # For now, we will use a placeholder command.
-
-        # Example of how to use a determined browser command:
-        # browser_command = "firefox"  # Or another browser from a list
-        # self.run(f'{browser_command} "{url}"')
-
         try:
-            # Attempt to use a common tool to open the URL.
-            # This relies on the system having 'xdg-open', 'xdg-email' or a similar tool.
             self.run(f'xdg-open "{url}"')
             self.logger.info(f"Attempted to open URL: {url} with xdg-open.")
         except Exception as e:

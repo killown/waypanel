@@ -1,4 +1,5 @@
 def get_plugin_metadata(_):
+    about = """A dynamic application launcher with a search bar and a grid view of installed and recently used applications."""
     return {
         "id": "org.waypanel.plugin.app_launcher",
         "name": "App Launcher",
@@ -9,6 +10,7 @@ def get_plugin_metadata(_):
         "deps": [
             "top_panel",
         ],
+        "description": about,
     }
 
 
@@ -31,6 +33,7 @@ def get_plugin_class():
             self.db_path = self.path_handler.get_data_path("db/appmenu/recent_apps.db")
             self.conn = sqlite3.connect(self.db_path)
             self.cursor = self.conn.cursor()
+            self.dockbar_id = "org.waypanel.plugin.dockbar"
 
         def on_start(self):
             self.main_widget = (self.appmenu, "append")
@@ -49,7 +52,7 @@ def get_plugin_class():
             """Creates the SQLite table for recent apps if it doesn't exist."""
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS recent_apps (
-                    app_name TEXT PRIMARY KEY, 
+                    app_name TEXT PRIMARY KEY,
                     last_opened_at REAL
                 )
             """)
@@ -84,14 +87,12 @@ def get_plugin_class():
                 closed_handler=self.popover_is_closed,
                 visible_handler=self.popover_is_open,
             )
-
             show_searchbar_action = self.gio.SimpleAction.new("show_searchbar")
             show_searchbar_action.connect(
                 "activate", self.on_show_searchbar_action_actived
             )
             if hasattr(self, "obj") and self.obj:
                 self.obj.add_action(show_searchbar_action)
-
             return popover
 
         def _setup_scrolled_window_and_flowbox(self):
@@ -206,9 +207,6 @@ def get_plugin_class():
         def _add_app_to_flowbox(self, app, app_id):
             """
             Adds an application to the flowbox (and to the persistent self.icons cache).
-            Args:
-                app: The self.gio.AppInfo object representing the app.
-                app_id: The unique desktop file ID (e.g., 'firefox.desktop').
             """
             if hasattr(app, "get_keywords"):
                 keywords = " ".join(app.get_keywords())
@@ -345,7 +343,6 @@ def get_plugin_class():
         def popover_is_closed(self, *_):
             """
             Set the keyboard mode to NONE when the popover is closed.
-            FIX: No destruction or cache clearing is done here. The UI is simply hidden.
             """
             self.set_keyboard_on_demand(False)
             if hasattr(self, "listbox"):
@@ -366,22 +363,6 @@ def get_plugin_class():
             """Show the search bar when the show_searchbar action is activated."""
             self.searchbar.set_search_mode(True)  # pyright: ignore
 
-        def search_entry_grab_focus(self):
-            """Grab focus to the search entry."""
-            self.searchentry.grab_focus()  # pyright: ignore
-
-        def select_first_visible_child(self):
-            """Select the first visible child in the flowbox."""
-
-            def on_child(child):
-                if child.is_visible():
-                    self.flowbox.select_child(child)
-                    return True
-                return False
-
-            self.flowbox.selected_foreach(on_child)  # pyright: ignore
-            return False
-
         def add_to_dockbar(self, button, name, desktop_file, popover):
             """
             Adds the selected app to the dockbar configuration in waypanel.toml.
@@ -397,12 +378,12 @@ def get_plugin_class():
                     "initial_title": name,
                 }
                 dockbar_config = self.config_handler.config_data.get(
-                    "org.waypanel.plugin.dockbar", {}
-                )  # pyright: ignore
+                    self.dockbar_id, {}
+                )
                 app_config = dockbar_config.get("app", {})
                 app_config[name] = new_entry
                 dockbar_config["app"] = app_config
-                self.config_handler.config_data["dockbar"] = dockbar_config  # pyright: ignore
+                self.config_handler.config_data[self.dockbar_id] = dockbar_config
                 self.config_handler.save_config()
                 self.config_handler.reload_config()
             popover.popdown()
@@ -447,17 +428,17 @@ def get_plugin_class():
                             if hasattr(self, "logger") and self.logger:
                                 self.logger.error(f"Appmenu: No text editor found: {e}")
                             continue
-                for term in terminal_emulators:
-                    for editor in terminal_editors:
-                        try:
-                            cmd = f"{term} -e {editor} {file_path}"
-                            self.run_cmd(cmd)
-                            popover.popdown()
-                            if self.popover_launcher:
-                                self.popover_launcher.popdown()
-                            return
-                        except FileNotFoundError:
-                            continue
+                    for term in terminal_emulators:
+                        for editor in terminal_editors:
+                            try:
+                                cmd = f"{term} -e {editor} {file_path}"
+                                self.run_cmd(cmd)
+                                popover.popdown()
+                                if self.popover_launcher:
+                                    self.popover_launcher.popdown()
+                                return
+                            except FileNotFoundError:
+                                continue
                 if hasattr(self, "logger") and self.logger:
                     self.logger.error(
                         "Error: Could not find an editor to open the .desktop file."
@@ -564,8 +545,12 @@ def get_plugin_class():
             name, desktop_file, keywords = vbox.MYTEXT
             is_in_dockbar = False
             if config_handler_exists:
-                is_in_dockbar = desktop_file in self.config_handler.config_data.get(  # pyright: ignore
-                    "dockbar", {}
+                dockbar_config = self.config_handler.config_data.get(
+                    self.dockbar_id, {}
+                )
+                is_in_dockbar = any(
+                    entry.get("desktop_file") == desktop_file
+                    for entry in dockbar_config.get("app", {}).values()
                 )
             open_button = self.gtk.Button.new_with_label(f"Open {name}")
             open_button.connect(
@@ -608,7 +593,9 @@ def get_plugin_class():
             Removes the selected app from the dockbar configuration.
             """
             if hasattr(self, "config_handler") and self.config_handler:
-                dockbar_config = self.config_handler.config_data.get("dockbar", {})  # pyright: ignore
+                dockbar_config = self.config_handler.config_data.get(
+                    self.dockbar_id, {}
+                )
                 app_config = dockbar_config.get("app", {})
                 key_to_remove = next(
                     (
@@ -621,7 +608,7 @@ def get_plugin_class():
                 if key_to_remove:
                     del app_config[key_to_remove]
                     dockbar_config["app"] = app_config
-                    self.config_handler.config_data["dockbar"] = dockbar_config  # pyright: ignore
+                    self.config_handler.config_data[self.dockbar_id] = dockbar_config
                     self.config_handler.save_config()
                     self.config_handler.reload_config()
             popover.popdown()
@@ -659,9 +646,7 @@ def get_plugin_class():
             self.update_flowbox()
 
         def on_search_entry_changed(self, searchentry):
-            """The filter_func will be called for each row after the call,
-            and it will continue to be called each self.time a row changes (via [method`self.gtk`.ListBoxRow.changed])
-            or when [method`self.gtk`.ListBox.invalidate_filter] is called."""
+            """The filter_func will be called for each row after the call."""
             searchentry.grab_focus()
             self.flowbox.invalidate_filter()
 
@@ -682,10 +667,6 @@ def get_plugin_class():
             else:
                 return text_to_search in row.lower().strip()
 
-        def about(self):
-            """A dynamic application launcher with a search bar and a grid view of installed and recently used applications."""
-            return self.about.__doc__
-
         def code_explanation(self):
             """
             This plugin creates a full-featured application launcher integrated into the panel.
@@ -699,13 +680,6 @@ def get_plugin_class():
                 self.gtk.FlowBox to provide a fast, real-time search experience.
             4.  Popover and UI: The launcher is displayed in a self.gtk.Popover attached to a main button. Applications are in a grid-like self.gtk.FlowBox.
             5.  Icon Theme Selection: The right-click popover allows changing the system-wide icon theme using self.gio.Settings.
-            FIXED ERRORS:
-            1. 'not loading all apps' (Previous fix): The code was refactored to use the application's unique **Desktop File ID (app.get_id())** as the primary key for all internal logic (`self.icons`, `self.desired_app_order`, and `recent_apps` database), ensuring every app has a distinct identifier and is loaded.
-            2. 'unnecessary widget destruction/re-creation' (Current fix): The core UI elements (`self.gtk.Popover`, `self.gtk.FlowBox`, `Gtk.SearchEntry`) are now created **once** during plugin initialization. The app icon widgets (`self.icons`) are now a **truly persistent cache**. On every open, `self.update_flowbox()` is called to incrementally:
-               - Remove uninstalled app widgets from the `self.gtk.FlowBox` and `self.icons` cache.
-               - Add newly installed app widgets to the `self.gtk.FlowBox` and `self.icons` cache.
-               - Re-sort the existing widgets in the `self.gtk.FlowBox` based on recency.
-            This refactoring ensures maximum efficiency by reusing the UI components and only performing updates (add/remove) when necessary, satisfying the requested pattern of incremental updates.
             """
             return self.code_explanation.__doc__
 

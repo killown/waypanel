@@ -272,6 +272,13 @@ def get_plugin_class():
             self.update_metric("Watch events", "all")
             return self.popover_system and self.popover_system.is_visible()
 
+        def popover_is_closed(self, *args):
+            """
+            [FIX] Stops the periodic system data fetching when the popover is closed
+            by clicking outside or using the escape key.
+            """
+            self.stop_system_updates()
+
         def open_popover_system(self, *_):
             if self.popover_system and self.popover_system.is_visible():
                 self.popover_system.popdown()
@@ -281,7 +288,7 @@ def get_plugin_class():
                 self.start_system_updates()
             else:
                 self.create_popover_system()
-                self.popover_system.popup()
+                self.popover_system.popup()  # pyright: ignore
                 self.start_system_updates()
 
         def create_popover_system(self):
@@ -443,10 +450,6 @@ def get_plugin_class():
                 For example, clicking the 'APP PID' metric opens an `htop` instance focused on that PID,
                 exemplifying deep system integration via Wayland IPC and external tools.
             """
-            return (
-                self.code_explanation.__doc__
-                if self.code_explanation.__doc__ is not None
-                else ""
-            )
+            return self.code_explanation.__doc__
 
     return SystemMonitorPlugin

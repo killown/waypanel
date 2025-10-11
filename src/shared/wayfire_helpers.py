@@ -2,7 +2,7 @@ import os
 import psutil
 import sys
 from typing import Dict, Optional, Tuple, Union, Any
-from gi.repository import GLib
+from gi.repository import GLib  # pyright: ignore
 from pathlib import Path
 import operator
 

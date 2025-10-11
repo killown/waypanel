@@ -1,4 +1,8 @@
 def get_plugin_metadata(_):
+    about = """
+            A plugin that displays the title and icon of the currently
+            focused window on the panel.
+            """
     return {
         "id": "org.waypanel.plugin.window_title",
         "name": "Window Title",
@@ -7,6 +11,7 @@ def get_plugin_metadata(_):
         "index": 1,
         "container": "top-panel-left",
         "deps": ["top_panel", "event_manager"],
+        "description": about,
     }
 
 
@@ -233,13 +238,6 @@ def get_plugin_class():
             if self._last_view_data:
                 self.update_title_icon(self._last_view_data)
             return self.glib.SOURCE_REMOVE
-
-        def about(self):
-            """
-            A plugin that displays the title and icon of the currently
-            focused window on the panel.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

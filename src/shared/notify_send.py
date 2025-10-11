@@ -83,8 +83,8 @@ class Notifier:
         app_name: str = "Waypanel",
         replaces_id: int = 0,
         expire_timeout: int = 5000,
-        hints: dict = None,
-        actions: list = None,
+        hints: dict = None,  # pyright: ignore
+        actions: list = None,  # pyright: ignore
     ):
         """
         Sends a desktop notification with full support for DBus Notify arguments.

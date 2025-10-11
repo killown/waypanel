@@ -1,11 +1,17 @@
 def get_plugin_metadata(_):
+    about = """
+            A plugin that allows volume control via the scroll wheel and
+            displays a floating on-screen display (OSD).
+            """
     return {
         "id": "org.waypanel.plugin.volume_scroll",
         "name": "Volume Scroll",
         "version": "1.0.0",
         "deps": ["top_panel"],
         "enabled": True,
+        "description": about,
     }
+
 
 def get_plugin_class():
     from src.plugins.core._base import BasePlugin
@@ -155,13 +161,6 @@ def get_plugin_class():
                 volume = self.slider.get_value()
                 self.adjust_volume(f"{int(volume)}%")
                 self.set_volume(volume)
-
-        def about(self):
-            """
-            A plugin that allows volume control via the scroll wheel and
-            displays a floating on-screen display (OSD).
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

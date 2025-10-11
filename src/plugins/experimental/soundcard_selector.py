@@ -1,4 +1,8 @@
 def get_plugin_metadata(_):
+    about = """
+            A plugin that provides a quick dashboard to switch default sound
+            output and input devices (sound cards and microphones).
+            """
     return {
         "id": "org.waypanel.plugin.sound_card_switcher",
         "name": "Sound Card Switcher",
@@ -7,6 +11,7 @@ def get_plugin_metadata(_):
         "container": "top-panel-systray",
         "index": 2,
         "enabled": True,
+        "description": about,
     }
 
 
@@ -430,13 +435,6 @@ def get_plugin_class():
             audio_apps = self.get_active_audio_app_info()
             for app_info in audio_apps.values():
                 pass
-
-        def about(self):
-            """
-            A plugin that provides a quick dashboard to switch default sound
-            output and input devices (sound cards and microphones).
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

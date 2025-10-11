@@ -1,4 +1,8 @@
 def get_plugin_metadata(_):
+    about = """
+            A plugin that provides a simple screen and audio recording utility for Wayland,
+            using wf-recorder, slurp, and ffmpeg.
+            """
     return {
         "id": "org.waypanel.plugin.screen_recorder",
         "name": "Screen Recorder",
@@ -8,6 +12,7 @@ def get_plugin_metadata(_):
         "hidden": True,
         "container": "top-panel-systray",
         "deps": ["top_panel"],
+        "description": about,
     }
 
 
@@ -552,13 +557,6 @@ def get_plugin_class():
                     f"Failed to clean up temporary directory {self.video_dir}: {e}"
                 )
             self._setup_directories()
-
-        def about(self):
-            """
-            A plugin that provides a simple screen and audio recording utility for Wayland,
-            using wf-recorder, slurp, and ffmpeg.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

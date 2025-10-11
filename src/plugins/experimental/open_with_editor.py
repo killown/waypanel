@@ -3,7 +3,6 @@ def get_plugin_metadata(_):
             Provides a user interface for quickly finding and opening
             files from a configured directory, using an extension-based editor mapping.
             """
-
     return {
         "id": "org.waypanel.plugin.open_with_editor",
         "name": "Open with editor",
