@@ -15,7 +15,7 @@ from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
 from src.shared.command_runner import CommandRunner
 from src.shared.concurrency_helper import ConcurrencyHelper
-from typing import Any, List, ClassVar, Optional, Union, Dict, Set, assert_type
+from typing import Any, List, ClassVar, Optional, Union, Dict, Set, Callable
 import asyncio
 
 TIME_MODULE = lazy.load("time")
@@ -129,6 +129,8 @@ class BasePlugin:
     global_executor: Any
     _running_futures: Set[Any]
     _running_tasks: Set[asyncio.Task]
+    ConfigKeys = list[str]
+    PluginName = str
 
     def __init__(self, panel_instance: Any):
         """
@@ -145,7 +147,6 @@ class BasePlugin:
         self._wf_helper = WayfireHelpers(panel_instance)
         self._gtk_helper = GtkHelpers(panel_instance)
         self._data_helper = DataHelpers()
-        self._config_handler = ConfigHandler(panel_instance)
         self._cmd = CommandRunner(panel_instance)
         self._concurrency_helper = ConcurrencyHelper(panel_instance)
         self.global_loop = self._concurrency_helper.global_loop
@@ -174,6 +175,7 @@ class BasePlugin:
             if "id" in metadata:
                 self.plugin_id = metadata["id"]
         GLib.timeout_add_seconds(60, self.run_gc_cleanup)
+        self._config_handler = ConfigHandler(panel_instance, self.plugin_id)
 
     def get_plugin_metadata(self):
         module_name = self.__module__
@@ -257,110 +259,6 @@ class BasePlugin:
             )
             return None
 
-    def remove_root_setting(self, key: Union[str, List[str]]) -> None:
-        """
-        Removes a top-level section or a nested key from the configuration and saves the change.
-        Args:
-            key (Union[str, List[str]]): The key or path of keys to remove.
-        """
-        if not key:
-            self.logger.error("Cannot remove setting: key path cannot be empty.")
-            return
-        key_path = [key] if isinstance(key, str) else key
-        config_dict = self.config_handler.config_data
-        current_level = config_dict
-        for i, part in enumerate(key_path[:-1]):
-            if isinstance(current_level, dict) and part in current_level:
-                current_level = current_level[part]
-            else:
-                self.logger.warning(
-                    f"Attempted to remove non-existent config path: {key_path}"
-                )
-                return
-        final_key = key_path[-1]
-        if isinstance(current_level, dict) and final_key in current_level:
-            del current_level[final_key]
-            self.config_handler.save_config()
-            self.logger.info(
-                f"Removed setting '{'.'.join(key_path)}' from configuration."
-            )
-        else:
-            self.logger.warning(
-                f"Attempted to remove non-existent config key: '{final_key}'"
-            )
-
-    def remove_plugin_setting(self) -> None:
-        """
-        Removes the entire configuration section for the current plugin.
-        This action is irreversible and will delete all settings stored under
-        the plugin's unique ID from the configuration file.
-        """
-        if not self.plugin_id:
-            self.logger.error("Plugin ID is not set, cannot remove settings.")
-            return
-        self.remove_root_setting(self.plugin_id)
-
-    def get_plugin_setting(
-        self, key: Optional[Union[str, List[str]]] = None, default_value: Any = None
-    ) -> Any:
-        """
-        Retrieves a configuration value for this specific plugin's section.
-        If 'key' is not provided, the configuration for the entire plugin section
-        (self.plugin_id) is returned.
-        If default_value is provided and the setting is not found, the setting
-        is added to the configuration.
-        """
-        _MISSING_SETTING_SENTINEL = object()
-        if not self.plugin_id:
-            return default_value
-        key_path = [self.plugin_id]
-        if key is not None:
-            if isinstance(key, str):
-                key_path.append(key)
-            elif isinstance(key, list):
-                key_path.extend(key)
-        result = self.config_handler.get_root_setting(
-            key_path, _MISSING_SETTING_SENTINEL
-        )
-        if result is _MISSING_SETTING_SENTINEL:
-            if default_value is not None:
-                self.config_handler.set_root_setting(key_path, default_value)
-            return default_value
-        return result
-
-    def set_plugin_setting(self, key: Union[str, List[str]], value: Any) -> None:
-        """
-        Sets a configuration value for this specific plugin's section.
-        Args:
-            key (Union[str, List[str]]): The key or path of keys for the setting.
-            value (Any): The value to set.
-        """
-        if not self.plugin_id:
-            self.logger.error("Plugin ID is not set, cannot save setting.")
-            return
-        key_path = [self.plugin_id]
-        if isinstance(key, str):
-            key_path.append(key)
-        elif isinstance(key, list):
-            key_path.extend(key)
-        self.config_handler.set_root_setting(key_path, value)
-
-    def get_settings(self) -> Dict[str, Any]:
-        """
-        Retrieves the entire configuration data dictionary.
-        Returns:
-            Dict[str, Any]: The configuration data.
-        """
-        return self.config_data
-
-    def get_root_setting(
-        self, key: Optional[List[str]] = None, default_value: Any = None
-    ):
-        if key:
-            return self.config_handler.get_root_setting(key, default_value)
-        else:
-            raise TypeError("The 'key' argument is mandatory for 'get_root_setting'.")
-
     def update_config(self, key_path: List[str], new_value: Any):
         """
         Updates a configuration value by path, saves the config file, and reloads the configuration.
@@ -390,6 +288,77 @@ class BasePlugin:
                 self._running_futures.remove(future)
         except Exception as e:
             self.logger.error(f"Error cleaning up Future tracking: {e}")
+
+    @property
+    def set_plugin_setting(self) -> Callable[[PluginName, ConfigKeys, Any], None]:
+        """
+        Provides access to the ConfigHandler's method for setting a plugin-specific value.
+
+        The returned callable has the signature:
+        (plugin_name: str, keys: list[str], new_value: Any) -> None
+
+        This method updates the configuration in memory and persists the change to disk.
+
+        Returns
+        -------
+        Callable
+            The underlying `ConfigHandler.set_plugin_setting` method.
+        """
+        return self.config_handler.set_plugin_setting  # pyright: ignore
+
+    @property
+    def get_plugin_setting(self) -> Callable[[PluginName, ConfigKeys, Any], Any]:
+        """
+        Provides access to the ConfigHandler's method for retrieving a plugin-specific value.
+
+        The returned callable has the signature:
+        (plugin_name: str, keys: list[str], default: Any) -> Any
+
+        Safely retrieves a deeply-nested setting, returning the supplied
+        default value if the key path is invalid or the key is not found.
+
+        Returns
+        -------
+        Callable
+            The underlying `ConfigHandler.get_plugin_setting` method.
+        """
+        return self.config_handler.get_plugin_setting  # pyright: ignore
+
+    @property
+    def get_root_setting(self) -> Callable[[ConfigKeys, Any], Any]:
+        """
+        Provides access to the ConfigHandler's method for retrieving a root-level (global) value.
+
+        The returned callable has the signature:
+        (keys: list[str], default: Any) -> Any
+
+        Used for core application settings, supporting deep key traversal and
+        safe fallback using a default value.
+
+        Returns
+        -------
+        Callable
+            The underlying `ConfigHandler.get_root_setting` method.
+        """
+        return self.config_handler.get_root_setting
+
+    @property
+    def remove_plugin_setting(self) -> Callable[[PluginName, ConfigKeys], None]:
+        """
+        Provides access to the ConfigHandler's method for removing a plugin-specific setting.
+
+        The returned callable has the signature:
+        (plugin_name: str, keys: list[str]) -> None
+
+        This method handles the atomic deletion of the key from the in-memory
+        configuration and persists the change to the configuration file.
+
+        Returns
+        -------
+        Callable
+            The underlying `ConfigHandler.remove_plugin_setting` method.
+        """
+        return self.config_handler.remove_plugin_setting  # pyright: ignore
 
     @property
     def run_in_async_task(self):

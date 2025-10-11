@@ -2,15 +2,16 @@ import os
 import toml
 import time
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, List, Optional, Union, Dict
 from wayfire import WayfireSocket
 from gi.repository import Gio  # pyright: ignore
 from src.shared import config_template
 
 
 class ConfigHandler:
-    def __init__(self, panel_instance):
+    def __init__(self, panel_instance, plugin_id=None):
         self.logger = panel_instance.logger
+        self.plugin_id = plugin_id
         self.panel_instance = panel_instance
         self._cached_config = None
         self._last_mod_time = 0.0
@@ -331,3 +332,97 @@ class ConfigHandler:
                 f"Cannot set config key '{final_key}'. The parent element is not a dictionary."
             )
             return False
+
+    def remove_root_setting(self, key: Union[str, List[str]]) -> None:
+        """
+        Removes a top-level section or a nested key from the configuration and saves the change.
+        Args:
+            key (Union[str, List[str]]): The key or path of keys to remove.
+        """
+        if not key:
+            self.logger.error("Cannot remove setting: key path cannot be empty.")
+            return
+        key_path = [key] if isinstance(key, str) else key
+        config_dict = self.config_data
+        current_level = config_dict
+        for i, part in enumerate(key_path[:-1]):
+            if isinstance(current_level, dict) and part in current_level:
+                current_level = current_level[part]
+            else:
+                self.logger.warning(
+                    f"Attempted to remove non-existent config path: {key_path}"
+                )
+                return
+        final_key = key_path[-1]
+        if isinstance(current_level, dict) and final_key in current_level:
+            del current_level[final_key]
+            self.save_config()
+            self.logger.info(
+                f"Removed setting '{'.'.join(key_path)}' from configuration."
+            )
+        else:
+            self.logger.warning(
+                f"Attempted to remove non-existent config key: '{final_key}'"
+            )
+
+    def remove_plugin_setting(self) -> None:
+        """
+        Removes the entire configuration section for the current plugin.
+        This action is irreversible and will delete all settings stored under
+        the plugin's unique ID from the configuration file.
+        """
+        if not self.plugin_id:
+            self.logger.error("Plugin ID is not set, cannot remove settings.")
+            return
+        self.remove_root_setting(self.plugin_id)
+
+    def get_plugin_setting(
+        self, key: Optional[Union[str, List[str]]] = None, default_value: Any = None
+    ) -> Any:
+        """
+        Retrieves a configuration value for this specific plugin's section.
+        If 'key' is not provided, the configuration for the entire plugin section
+        (self.plugin_id) is returned.
+        If default_value is provided and the setting is not found, the setting
+        is added to the configuration.
+        """
+        _MISSING_SETTING_SENTINEL = object()
+        if not self.plugin_id:
+            return default_value
+        key_path = [self.plugin_id]
+        if key is not None:
+            if isinstance(key, str):
+                key_path.append(key)
+            elif isinstance(key, list):
+                key_path.extend(key)
+        result = self.get_root_setting(key_path, _MISSING_SETTING_SENTINEL)
+        if result is _MISSING_SETTING_SENTINEL:
+            if default_value is not None:
+                self.set_root_setting(key_path, default_value)
+            return default_value
+        return result
+
+    def set_plugin_setting(self, key: Union[str, List[str]], value: Any) -> None:
+        """
+        Sets a configuration value for this specific plugin's section.
+        Args:
+            key (Union[str, List[str]]): The key or path of keys for the setting.
+            value (Any): The value to set.
+        """
+        if not self.plugin_id:
+            self.logger.error("Plugin ID is not set, cannot save setting.")
+            return
+        key_path = [self.plugin_id]
+        if isinstance(key, str):
+            key_path.append(key)
+        elif isinstance(key, list):
+            key_path.extend(key)
+        self.set_root_setting(key_path, value)
+
+    def get_settings(self) -> Dict[str, Any]:
+        """
+        Retrieves the entire configuration data dictionary.
+        Returns:
+            Dict[str, Any]: The configuration data.
+        """
+        return self.config_data
