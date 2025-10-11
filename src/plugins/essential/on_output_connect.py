@@ -1,4 +1,5 @@
 def get_plugin_metadata(_):
+    about = """Automatically moves the panel to a valid monitor when the current one is disabled."""
     return {
         "id": "org.waypanel.plugin.on_output_connect",
         "name": "Panel Output Mover",
@@ -6,6 +7,7 @@ def get_plugin_metadata(_):
         "enabled": True,
         "priority": 1,
         "deps": ["event_manager"],
+        "description": about,
     }
 
 
@@ -192,10 +194,6 @@ def get_plugin_class():
             self.bottom_panel.set_default_size(
                 user_defined_width_bottom_panel, user_defined_height_bottom_panel
             )
-
-        def about(self):
-            """Automatically moves the panel to a valid monitor when the current one is disabled."""
-            return self.about.__doc__
 
         def code_explanation(self):
             """

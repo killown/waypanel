@@ -13,6 +13,12 @@ icon = "https://maps.google.com/favicon.ico"
 
 
 def get_plugin_metadata(_):
+    about = """
+            A plugin that provides quick access to a user's web bookmarks via a
+            popover menu. It reads bookmarks from a TOML file, downloads and
+            generates thumbnails for website icons, and launches the
+            corresponding URLs in a web browser.
+            """
     return {
         "id": "org.waypanel.plugin.browser_bookmarks",
         "name": "Browser Bookmarks",
@@ -21,6 +27,7 @@ def get_plugin_metadata(_):
         "index": 2,
         "container": "top-panel-box-widgets-left",
         "deps": ["top_panel"],
+        "description": about,
     }
 
 
@@ -594,15 +601,6 @@ def get_plugin_class():
             if not self.icons_loaded:
                 self.popover_bookmarks = None
             return
-
-        def about(self):
-            """
-            A plugin that provides quick access to a user's web bookmarks via a
-            popover menu. It reads bookmarks from a TOML file, downloads and
-            generates thumbnails for website icons, and launches the
-            corresponding URLs in a web browser.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

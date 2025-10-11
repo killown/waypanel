@@ -1,9 +1,14 @@
 def get_plugin_metadata(_):
+    about = """
+        A plugin that allows a user to cycle through workspaces that have
+        active windows (views) on them, skipping any empty workspaces.
+        """
     return {
         "id": "org.waypanel.plugin.next_workspace_with_views",
         "name": "Next Workspace",
         "version": "1.0.0",
         "enabled": True,
+        "description": about,
     }
 
 
@@ -136,13 +141,6 @@ def get_plugin_class():
                 f"Switching to workspace: x={next_workspace['x']}, y={next_workspace['y']}"
             )
             self.ipc.set_workspace(next_workspace["x"], next_workspace["y"])
-
-        def about(self):
-            """
-            A plugin that allows a user to cycle through workspaces that have
-            active windows (views) on them, skipping any empty workspaces.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

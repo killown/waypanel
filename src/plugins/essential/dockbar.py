@@ -8,6 +8,14 @@ def get_plugin_metadata(panel_instance):
         "top": "top-panel-center",
         "bottom": "bottom-panel-center",
     }
+    about = """
+            Dockbar Plugin — Launch apps.
+            • Left-click: Launch app + toggle scale.
+            • Middle-click: Launch on empty workspace.
+            • Right-click: Move cursor to next output & launch.
+            • Integrates with gestures and event_manager.
+            • Drag-and-drop to reorder icons, saving the new order.
+            """
     return {
         "id": "org.waypanel.plugin.dockbar",
         "name": "Dockbar",
@@ -16,6 +24,7 @@ def get_plugin_metadata(panel_instance):
         "container": valid_panels[container],
         "priority": 1,
         "deps": ["event_manager", "gestures_setup", "left_panel"],
+        "description": about,
     }
 
 
@@ -397,19 +406,6 @@ def get_plugin_class():
                     if msg["plugin"] == "scale":
                         pass
             return prevent_infinite_loop_from_event_manager_idle_add
-
-        def about(self):
-            """
-            Dockbar Plugin — Launch apps.
-            • Configurable via TOML (waypanel.toml).
-            • Supports left/right/top/bottom panels.
-            • Left-click: Launch app + toggle scale.
-            • Middle-click: Launch on empty workspace.
-            • Right-click: Move cursor to next output & launch.
-            • Integrates with gestures and event_manager.
-            • Drag-and-drop to reorder icons, saving the new order.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

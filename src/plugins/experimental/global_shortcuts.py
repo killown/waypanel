@@ -4,6 +4,7 @@ def get_plugin_metadata(_):
         "name": "Global Shortcuts",
         "version": "1.0.0",
         "enabled": True,
+        "description": "Registers global actions for user-defined keyboard shortcuts.",
     }
 
 

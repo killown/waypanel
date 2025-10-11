@@ -1,4 +1,7 @@
 def get_plugin_metadata(_):
+    about = """
+            • Displays current date and time in the top panel.
+            """
     return {
         "id": "com.waypanel.clock",
         "name": "Clock",
@@ -7,6 +10,7 @@ def get_plugin_metadata(_):
         "container": "top-panel-center",
         "index": 5,
         "deps": ["top_panel"],
+        "description": about,
     }
 
 
@@ -82,17 +86,6 @@ def get_plugin_class():
             if self.update_timeout_id:
                 self.glib.source_remove(self.update_timeout_id)
                 self.update_timeout_id = None
-
-        def about(self):
-            """
-            Clock Plugin for
-            • Displays current date and time in the top panel.
-            • Updates automatically every minute.
-            • Center-aligned with optional hover effects.
-            • Requires 'top_panel' plugin to be loaded first.
-            • Can be disabled by setting ENABLE_PLUGIN to False.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

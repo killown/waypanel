@@ -1,4 +1,9 @@
 def get_plugin_metadata(_):
+    about = """
+            This plugin serves as the graphical user interface (GUI) for the
+            asynchronous clipboard history server. It allows users to view,
+            search, and manage their clipboard history through a pop-up menu.
+            """
     return {
         "id": "org.waypanel.plugin.clipboard",
         "name": "Clipboard Client",
@@ -7,6 +12,7 @@ def get_plugin_metadata(_):
         "container": "top-panel-systray",
         "index": 5,
         "deps": ["top_panel", "clipboard_server"],
+        "description": about,
     }
 
 
@@ -794,14 +800,6 @@ def get_plugin_class():
                     f"Unexpected error occurred in on_filter_invalidate. {e}",
                 )
                 return False
-
-        def about(self):
-            """
-            This plugin serves as the graphical user interface (GUI) for the
-            asynchronous clipboard history server. It allows users to view,
-            search, and manage their clipboard history through a pop-up menu.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

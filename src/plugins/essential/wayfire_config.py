@@ -1,9 +1,14 @@
 def get_plugin_metadata(_):
+    about = """
+            Watches wayfire.toml configuration file to automatically apply settings
+            to the Wayfire compositor on the fly.
+            """
     return {
         "id": "org.waypanel.plugin.wayfire_config",
         "name": "Wayfire Config",
         "version": "1.0.0",
         "enabled": True,
+        "description": about,
     }
 
 
@@ -288,13 +293,6 @@ def get_plugin_class():
                 f"wayfire_config Watching config file: {self.wayfire_config_path}"
             )
             return monitor_handler
-
-        def about(self):
-            """
-            Watches wayfire.toml configuration file to automatically apply settings
-            to the Wayfire compositor on the fly.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

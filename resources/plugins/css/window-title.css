@@ -1,11 +1,7 @@
 .window-title-content {
   background: var(--color-bg-deep);
   border-radius: var(--radius-xs);
-   box-shadow:
-    inset 0 1px 1px rgba(90, 90, 90, 0.4),  
-    inset 0 -2px 3px rgba(0, 0, 0, 0.25),       
-    -2px -2px 4px rgba(255, 255, 255, 0.1),   
-    3px 3px 6px var(--shadow-dark);
+   box-shadow: rgba(0, 0, 0, 0.4) 0px 2px 4px, rgba(0, 0, 0, 0.3) 0px 7px 13px -3px, rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
     
   font-size: 18px;
   color: var(--main-text); 
@@ -21,7 +17,7 @@
 .window-title-label {
   margin-left: 8px;
   font-size: 16px;
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-bold);
   font-family: var(--font-family-default), sans-serif;
   color: var(--main-text); 
   text-shadow: 

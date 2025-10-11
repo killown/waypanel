@@ -1,4 +1,9 @@
 def get_plugin_metadata(_):
+    about = """
+            This plugin adds a weather display to another plugin's user
+            interface, fetching weather data asynchronously and updating the
+            display periodically.
+            """
     return {
         "id": "org.waypanel.plugin.weather",
         "name": "Weather",
@@ -6,6 +11,7 @@ def get_plugin_metadata(_):
         "enabled": True,
         "priority": 99,
         "deps": ["calendar"],
+        "description": about,
     }
 
 
@@ -127,14 +133,6 @@ def get_plugin_class():
             if self.update_task and not self.update_task.done():
                 self.update_task.cancel()
                 self.logger.info("Cancelled weather periodic update task.")
-
-        def about(self):
-            """
-            This plugin adds a weather display to another plugin's user
-            interface, fetching weather data asynchronously and updating the
-            display periodically.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

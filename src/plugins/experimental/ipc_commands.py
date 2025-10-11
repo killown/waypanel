@@ -2,6 +2,8 @@ def get_plugin_metadata(panel_instance):
     plugin_id = panel_instance.get_config(
         ["dev_ipc", "plugin_id"], "org.waypanel.plugin.ipc_commands"
     )
+    about = "Registers IPC commands for remote debugging and status inspection."
+
     return {
         "id": plugin_id,
         "name": "Developer IPC Data Exporter",
@@ -11,6 +13,7 @@ def get_plugin_metadata(panel_instance):
         "index": 99,
         "priority": 99,
         "deps": [],
+        "description": about,
     }
 
 
@@ -193,9 +196,5 @@ def get_plugin_class():
         async def on_stop(self):
             """Cleanup IPC handlers if needed (optional, depends on core design)."""
             self.logger.info("DevIpcPlugin stopping.")
-
-        def about(self):
-            """Brief description of the plugin."""
-            return "Registers IPC commands for remote debugging and status inspection."
 
     return DevIpcPlugin

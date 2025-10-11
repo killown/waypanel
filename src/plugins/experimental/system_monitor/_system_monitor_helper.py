@@ -1,12 +1,15 @@
+from __future__ import annotations
 import psutil
 import shutil
 import os
 import tempfile
 import shlex
+from typing import Any, Dict, List, Optional
+
 from gi.repository import Adw, Gtk, Pango  # pyright: ignore
 from src.shared.notify_send import Notifier
 
-ALL_EVENTS = [
+ALL_EVENTS: List[str] = [
     "view-focused",
     "view-unmapped",
     "view-mapped",
@@ -27,7 +30,7 @@ ALL_EVENTS = [
     "plugin-activation-state-changed",
     "output-gain-focus",
 ]
-SELECT_EVENT_WATCH_SCRIPT = f"""
+SELECT_EVENT_WATCH_SCRIPT: str = f"""
 import sys
 import os
 try:
@@ -75,7 +78,7 @@ except Exception as e:
 
 
 class SystemMonitorHelpers:
-    def __init__(self, panel_instance):
+    def __init__(self, panel_instance: Any) -> None:
         self.panel_instance = panel_instance
         self.logger = panel_instance.logger
         self.gtk = Gtk
@@ -84,28 +87,25 @@ class SystemMonitorHelpers:
         self.ipc = panel_instance.ipc
         self.run_cmd = panel_instance.ipc.run_cmd
         self.notifier = Notifier()
-        self.update_interval = 2
-        self.prev_net_io = psutil.net_io_counters()
+        self.update_interval: int = 2
+        self.prev_net_io: Any = psutil.net_io_counters()
 
-    def get_ram_info(self):
+    def get_ram_info(self) -> str:
         mem = psutil.virtual_memory()
         total_gb = mem.total / (1024**3)
         used_gb = mem.used / (1024**3)
         percent = mem.percent
         return f"({percent}%) {used_gb:.1f} / {total_gb:.0f}GB"
 
-    def get_cpu_usage(self):
-        """Get current CPU usage."""
+    def get_cpu_usage(self) -> float:
         return psutil.cpu_percent(interval=None)
 
-    def get_memory_usage(self):
-        """Get current memory usage."""
+    def get_memory_usage(self) -> float:
         mem = psutil.virtual_memory()
         return mem.percent
 
-    def get_disk_usages(self):
-        """Get disk usage for all mounted partitions with values in GB."""
-        disk_usages = []
+    def get_disk_usages(self) -> List[Dict[str, str | float]]:
+        disk_usages: List[Dict[str, str | float]] = []
         for part in psutil.disk_partitions(all=False):
             try:
                 usage = psutil.disk_usage(part.mountpoint)
@@ -122,8 +122,7 @@ class SystemMonitorHelpers:
                 continue
         return disk_usages
 
-    def get_network_usage(self):
-        """Get current network usage."""
+    def get_network_usage(self) -> str:
         current_net_io = psutil.net_io_counters()
         upload_speed = (
             current_net_io.bytes_sent - self.prev_net_io.bytes_sent
@@ -134,8 +133,7 @@ class SystemMonitorHelpers:
         self.prev_net_io = current_net_io
         return f"Up: {self.format_bytes(upload_speed)}/s, Down: {self.format_bytes(download_speed)}/s"
 
-    def get_battery_status(self):
-        """Get current battery status."""
+    def get_battery_status(self) -> Optional[str]:
         battery = psutil.sensors_battery()
         if battery:
             plugged = "Plugged" if battery.power_plugged else "Not Plugged"
@@ -143,23 +141,14 @@ class SystemMonitorHelpers:
             return f"{percent}% ({plugged})"
         return None
 
-    def get_process_disk_usage(self, pid):
-        """
-        Get the disk I/O usage for a given process PID using psutil.
-        Args:
-            pid (int): The process ID to monitor.
-        Returns:
-            dict: A dictionary containing 'read_bytes', 'write_bytes',
-                  'read_count', and 'write_count' for the given PID,
-                  or None if the PID is invalid or inaccessible.
-        """
+    def get_process_disk_usage(self, pid: int) -> Optional[Dict[str, str | int]]:
         try:
             if not psutil.pid_exists(pid):
                 self.logger.error(f"No process found with PID: {pid}")
                 return None
             process = psutil.Process(pid)
             io_counters = process.io_counters()
-            disk_usage = {
+            disk_usage: Dict[str, str | int] = {
                 "read_bytes": self.format_bytes(io_counters.read_bytes),
                 "write_bytes": self.format_bytes(io_counters.write_bytes),
                 "read_count": io_counters.read_count,
@@ -176,15 +165,7 @@ class SystemMonitorHelpers:
             self.logger.error(f"Error retrieving disk usage for PID {pid}: {e}")
             return None
 
-    def get_process_usage(self, pid):
-        """
-        Get the CPU and memory usage for a given process PID using psutil.
-        Args:
-            pid (int): The process ID to monitor.
-        Returns:
-            dict: A dictionary containing 'cpu_usage' and 'memory_usage' for the given PID,
-                  or None if the PID is invalid or inaccessible.
-        """
+    def get_process_usage(self, pid: int) -> Optional[Dict[str, str]]:
         try:
             if not psutil.pid_exists(pid):
                 self.logger.error(f"No process found with PID: {pid}")
@@ -202,15 +183,10 @@ class SystemMonitorHelpers:
             self.logger.error(f"Error retrieving process usage for PID {pid}: {e}")
             return None
 
-    def open_system_monitor(self):
+    def open_system_monitor(self) -> None:
         self.run_cmd("gnome-system-monitor")
 
-    def open_terminal_with_amdgpu_top(self, *__):
-        """
-        Open a terminal (kitty or alacritty) with amdgpu_top for GPU monitoring.
-        Returns:
-            bool: True if the terminal was successfully opened, False otherwise.
-        """
+    def open_terminal_with_amdgpu_top(self, *_: Any) -> bool:
         if shutil.which("kitty"):
             terminal_command = "kitty"
         elif shutil.which("alacritty"):
@@ -228,14 +204,7 @@ class SystemMonitorHelpers:
             self.logger.error(f"Error launching terminal: {e}")
             return False
 
-    def open_terminal_with_htop(self, pid):
-        """
-        Open a terminal (kitty or alacritty) with htop monitoring the specified PID.
-        Args:
-            pid (int): The process ID to monitor with htop.
-        Returns:
-            bool: True if the terminal was successfully opened, False otherwise.
-        """
+    def open_terminal_with_htop(self, pid: int) -> bool:
         if shutil.which("kitty"):
             terminal_command = "kitty"
         elif shutil.which("alacritty"):
@@ -252,14 +221,7 @@ class SystemMonitorHelpers:
             self.logger.error(f"Error launching terminal: {e}")
             return False
 
-    def open_terminal_with_iotop(self, pid):
-        """
-        Open a terminal (kitty or alacritty) with iotop monitoring the specified PID.
-        Args:
-            pid (int): The process ID to monitor with iotop.
-        Returns:
-            bool: True if the terminal was successfully opened, False otherwise.
-        """
+    def open_terminal_with_iotop(self, pid: int) -> bool:
         if shutil.which("kitty"):
             terminal_command = "kitty"
         elif shutil.which("alacritty"):
@@ -281,8 +243,8 @@ class SystemMonitorHelpers:
             self.logger.error(f"Error launching terminal: {e}")
             return False
 
-    def open_kitty_with_prompt_and_watch_selected_event(self, *__):
-        def is_installed(cmd):
+    def open_kitty_with_prompt_and_watch_selected_event(self, *_: Any) -> None:
+        def is_installed(cmd: str) -> bool:
             return shutil.which(cmd) is not None
 
         if not is_installed("kitty"):
@@ -304,14 +266,14 @@ class SystemMonitorHelpers:
         except Exception as e:
             self.logger.error(f"Failed to create or run script: {e}")
 
-    def open_kitty_with_rich_events_view(self, *__):
-        def is_installed(cmd):
+    def open_kitty_with_rich_events_view(self, *_: Any) -> None:
+        def is_installed(cmd: str) -> bool:
             return shutil.which(cmd) is not None
 
         if not is_installed("python3"):
             self.logger.info("python3 is not installed.")
             return
-        terminal = None
+        terminal: Optional[str] = None
         if is_installed("kitty"):
             terminal = "kitty"
         elif is_installed("alacritty"):
@@ -339,14 +301,14 @@ class SystemMonitorHelpers:
         else:
             self.run_cmd(f"{terminal}  -e {full_cmd}")
 
-    def open_kitty_with_ipython_view(self, view):
-        def is_installed(cmd):
+    def open_kitty_with_ipython_view(self, view: Dict[str, Any]) -> None:
+        def is_installed(cmd: str) -> bool:
             return shutil.which(cmd) is not None
 
         if not is_installed("ipython"):
             self.logger.info("ipython is not installed.")
             return
-        terminal = None
+        terminal: Optional[str] = None
         if is_installed("kitty"):
             terminal = "kitty"
         elif is_installed("alacritty"):
@@ -370,12 +332,12 @@ class SystemMonitorHelpers:
         else:
             self.run_cmd(f"{terminal} -e {cmd}")
 
-    def open_view_info_window(self, id):
+    def open_view_info_window(self, view_id: int) -> None:
         try:
-            view = self.ipc.get_view(id)
+            view = self.ipc.get_view(view_id)
             if not view:
-                raise ValueError(f"No view found with ID: {id}")
-            window = self.gtk.Window(title=f"View Information (ID: {id})")
+                raise ValueError(f"No view found with ID: {view_id}")
+            window = self.gtk.Window(title=f"View Information (ID: {view_id})")
             window.set_default_size(600, 400)
             window.set_resizable(True)
             scrolled_window = self.gtk.ScrolledWindow()
@@ -419,14 +381,7 @@ class SystemMonitorHelpers:
             error_dialog.set_close_response("close")
             error_dialog.present()
 
-    def get_process_executable(self, pid):
-        """
-        Get the executable path of a process by its PID.
-        Args:
-            pid (int): The process ID.
-        Returns:
-            str: The absolute path to the process executable, or None if the process doesn't exist or access is denied.
-        """
+    def get_process_executable(self, pid: int) -> Optional[str]:
         try:
             process = psutil.Process(pid)
             executable_path = process.exe()
@@ -441,7 +396,7 @@ class SystemMonitorHelpers:
             self.logger.error(f"Error retrieving executable path for PID {pid}: {e}")
             return None
 
-    def kill_process(self, pid):
+    def kill_process(self, pid: int) -> None:
         try:
             p = psutil.Process(pid)
             p.terminate()
@@ -449,14 +404,7 @@ class SystemMonitorHelpers:
         except psutil.NoSuchProcess:
             pass
 
-    def format_value(self, value):
-        """
-        Format nested dictionaries and other complex values for display.
-        Args:
-            value: The value to format.
-        Returns:
-            str: A formatted string representation of the value.
-        """
+    def format_value(self, value: Any) -> str:
         if isinstance(value, dict):
             return "\n".join(f"{k}: {v}" for k, v in value.items())
         elif isinstance(value, bool):
@@ -465,8 +413,7 @@ class SystemMonitorHelpers:
             return "N/A"
         return str(value)
 
-    def format_bytes(self, bytes_count):
-        """Format bytes into a human-readable string."""
+    def format_bytes(self, bytes_count: float) -> str:
         for unit in ["B", "KB", "MB", "GB", "TB"]:
             if bytes_count < 1024:
                 return f"{bytes_count:.1f} {unit}"

@@ -112,15 +112,6 @@ class MullvadStatusDialog(Gtk.Dialog):
             grid.attach(lbl, 1, i, 1, 1)
             grid.attach(val, 2, i, 1, 1)
 
-    def about(self):
-        """
-        This class is a Gtk.Dialog window that displays detailed Mullvad VPN
-        status. It fetches information from the official Mullvad API to show
-        the user's IP address, server location, and connection status in a
-        formatted pop-up window.
-        """
-        return self.about.__doc__
-
     def code_explanation(self):
         """
         The `MullvadStatusDialog` class is a Gtk window that fetches and

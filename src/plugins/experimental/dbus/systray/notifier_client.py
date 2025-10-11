@@ -1,4 +1,10 @@
 def get_plugin_metadata(_):
+    about = """
+            This plugin acts as a system tray client for the Wayfire panel.
+            It uses D-Bus to communicate with applications that implement the
+            StatusNotifierItem specification, allowing it to display their icons,
+            tooltips, and context menus.
+            """
     return {
         "id": "org.waypanel.plugin.systray",
         "name": "Systray",
@@ -7,6 +13,7 @@ def get_plugin_metadata(_):
         "container": "top-panel-center",
         "index": 5,
         "deps": ["event_manager", "top_panel"],
+        "description": about,
     }
 
 
@@ -454,15 +461,6 @@ def get_plugin_class():
             Called before the plugin is completely removed.
             """
             self.logger.info("SystrayClientPlugin is cleaning up resources.")
-
-        def about(self):
-            """
-            This plugin acts as a system tray client for the Wayfire panel.
-            It uses D-Bus to communicate with applications that implement the
-            StatusNotifierItem specification, allowing it to display their icons,
-            tooltips, and context menus.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

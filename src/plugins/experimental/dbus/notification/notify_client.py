@@ -1,4 +1,9 @@
 def get_plugin_metadata(_):
+    about = """
+            This plugin provides a graphical user interface (GUI) on a panel
+            for viewing and managing recent desktop notifications, acting as
+            a client to the D-Bus notification server plugin.
+            """
     return {
         "id": "org.waypanel.plugin.notify_client",
         "name": "Notify Client",
@@ -7,6 +12,7 @@ def get_plugin_metadata(_):
         "index": 7,
         "container": "top-panel-center",
         "deps": ["top_panel", "notify_server"],
+        "description": about,
     }
 
 
@@ -396,14 +402,6 @@ def get_plugin_class():
             self.update_dnd_switch_state()
             self.popover.set_parent(self.notification_button)
             self.popover.popup()
-
-        def about(self):
-            """
-            This plugin provides a graphical user interface (GUI) on a panel
-            for viewing and managing recent desktop notifications, acting as
-            a client to the D-Bus notification server plugin.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

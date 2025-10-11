@@ -22,12 +22,19 @@
 
 
 def get_plugin_metadata(_):
+    about = """
+            This plugin is a D-Bus service that acts as a notification
+            daemon, implementing the FreeDesktop.org Notifications
+            Specification. It receives, stores, and displays desktop
+            notifications from other applications.
+            """
     return {
         "id": "org.waypanel.plugin.notify_server",
         "name": "Notify Server",
         "version": "1.0.0",
         "enabled": True,
         "deps": ["top_panel"],
+        "description": about,
     }
 
 
@@ -190,15 +197,6 @@ def get_plugin_class():
                 await asyncio.Future()
             except Exception as e:
                 self.logger.error(f"Error starting notification daemon: {e}")
-
-        def about(self):
-            """
-            This plugin is a D-Bus service that acts as a notification
-            daemon, implementing the FreeDesktop.org Notifications
-            Specification. It receives, stores, and displays desktop
-            notifications from other applications.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

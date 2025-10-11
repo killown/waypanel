@@ -1,21 +1,25 @@
 def get_plugin_metadata(_):
+    about = """
+    Provides a real-time, comprehensive view of system and application resource utilization
+    (CPU, RAM, Disk, Network, GPU, and Focused View Stats) via a GTK popover.
+    """
     return {
         "id": "org.waypanel.plugin.system_monitor",
-        "name": "system Monitor",
+        "name": "System Monitor",
         "version": "1.0.0",
         "enabled": True,
         "index": 9,
         "container": "top-panel-systray",
         "deps": ["top_panel", "gestures_setup"],
+        "description": about,
     }
 
 
 def get_plugin_class():
     import gi
 
-    gi.require_version("Gtk", "4.0")
     gi.require_version("Gio", "2.0")
-    from gi.repository import Gio, GObject  # pyright: ignore
+    from gi.repository import GObject  # pyright: ignore
 
     class ProperMetricItem(GObject.Object):
         def __init__(self, name, value, tooltip=""):
@@ -62,7 +66,7 @@ def get_plugin_class():
             self.update_timeout_id = None
             self.helper = SystemMonitorHelpers(panel_instance)
             self.list_view = None
-            self.list_store = Gio.ListStore.new(ProperMetricItem)
+            self.list_store = self.gio.ListStore.new(ProperMetricItem)
             self.metric_items = {}
             self.create_gesture = self.plugins["gestures_setup"].create_gesture
             self.create_menu_popover_system()
@@ -83,14 +87,12 @@ def get_plugin_class():
             self.main_widget = (self.menubutton_system, "append")
 
         def start_system_updates(self):
-            """Start periodic updates for system data."""
             self.glib.timeout_add(1000, self.fetch_and_update_system_data)
             self.update_timeout_id = self.glib.timeout_add_seconds(
                 self.helper.update_interval, self.fetch_and_update_system_data
             )
 
         def stop_system_updates(self):
-            """Stop periodic updates for system data."""
             if self.update_timeout_id:
                 self.glib.source_remove(self.update_timeout_id)
                 self.update_timeout_id = None
@@ -131,7 +133,6 @@ def get_plugin_class():
             return item
 
         def add_initial_rows(self):
-            """Add static rows on popover creation."""
             self.list_store.remove_all()
             self.metric_items.clear()
 
@@ -158,7 +159,6 @@ def get_plugin_class():
             _add("APP Disk Write Count")
 
         def add_gpu(self):
-            """Add/Update GPU information."""
             gpu_rows = ["GPU", "VRAM", "GPU Load"]
             try:
                 import pyamdgpuinfo
@@ -187,7 +187,6 @@ def get_plugin_class():
             return False
 
         def fetch_and_update_system_data(self):
-            """Fetch system data and update the list store's existing items."""
             cpu_usage = self.helper.get_cpu_usage()
             memory_usage = self.helper.get_ram_info()
             disk_usages = self.helper.get_disk_usages()
@@ -286,13 +285,6 @@ def get_plugin_class():
                 self.start_system_updates()
 
         def create_popover_system(self):
-            """
-            Create the system monitor popover and populate it with a GtkListView.
-            Height is now dynamic, up to POPOVER_MAX_HEIGHT, with a fixed minimum.
-            """
-            POPOVER_WIDTH = 380
-            POPOVER_HEIGHT_ROWS_TIMES_PIXELS = 19 * 26
-            POPOVER_MIN_HEIGHT = 200
             self.popover_system = self.gtk.Popover.new()
             self.popover_system.add_css_class("system-monitor-popover")
             self.popover_system.connect("closed", self.popover_is_closed)
@@ -302,7 +294,6 @@ def get_plugin_class():
             vbox.set_margin_bottom(10)
             vbox.set_margin_start(10)
             vbox.set_margin_end(10)
-            vbox.set_size_request(POPOVER_WIDTH, -1)
             selection_model = self.gtk.SingleSelection.new(self.list_store)
             row_factory = self.gtk.SignalListItemFactory()
             row_factory.connect("setup", self._row_factory_setup)
@@ -310,24 +301,13 @@ def get_plugin_class():
             self.list_view = self.gtk.ListView.new(selection_model, row_factory)
             self.list_view.add_css_class("system-monitor-listview")
             self.list_view.set_single_click_activate(False)
-            self.list_view.set_size_request(-1, POPOVER_MIN_HEIGHT)
-            scrolled_window = self.gtk.ScrolledWindow()
-            scrolled_window.add_css_class("system-monitor-scrolledwindow")
-            scrolled_window.set_child(self.list_view)
-            scrolled_window.set_policy(
-                self.gtk.PolicyType.NEVER, self.gtk.PolicyType.AUTOMATIC
-            )
-            scrolled_window.set_size_request(
-                POPOVER_WIDTH, POPOVER_HEIGHT_ROWS_TIMES_PIXELS
-            )
-            vbox.append(scrolled_window)
+            vbox.append(self.list_view)
             self.popover_system.set_child(vbox)
             self.popover_system.set_parent(self.menubutton_system)
             self.add_initial_rows()
             self.list_view.show()
 
         def _row_factory_setup(self, factory, list_item):
-            """Setup the row (ListItem) container and its children (the widgets inside)."""
             hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, spacing=20)
             hbox.add_css_class("system-monitor-hbox")
             hbox.set_halign(self.gtk.Align.FILL)
@@ -352,7 +332,6 @@ def get_plugin_class():
             list_item._bindings = []
 
         def _row_factory_bind(self, factory, list_item):
-            """Bind the MetricItem data to the row widgets and attach gestures."""
             metric_item = list_item.get_item()
             hbox = list_item.get_child()
             for binding in list_item._bindings:
@@ -404,11 +383,6 @@ def get_plugin_class():
             self.create_gesture(hbox, 1, view_callback)
 
         def create_gesture_for_focused_view_pid(self, hbox):
-            """
-            Create gestures for the APP PID row.
-            The PID is fetched dynamically on click (via the lambda) to ensure it's current.
-            """
-
             def htop_callback(_):
                 focused_view = self.last_toplevel_focused_view()
                 if focused_view is not None:
@@ -427,11 +401,6 @@ def get_plugin_class():
             self.create_gesture(hbox, 3, kill_callback)
 
         def create_iotop_gesture_for_focused_view_pid(self, hbox):
-            """
-            Create gestures for disk rows.
-            The PID is fetched dynamically on click (via the lambda) to ensure it's current.
-            """
-
             def iotop_callback(_):
                 focused_view = self.last_toplevel_focused_view()
                 if focused_view is not None:
@@ -450,13 +419,34 @@ def get_plugin_class():
                 hbox, 3, self.helper.open_kitty_with_prompt_and_watch_selected_event
             )
 
-        def popover_is_closed(self, *_):
-            self.stop_system_updates()
+        def code_explanation(self) -> str:
+            """
+            This plugin utilizes a high-performance data-binding architecture based on the GObject
+            Introspection (GI) ecosystem to ensure smooth, low-overhead UI updates.
 
-        def about(self):
-            return "System Monitor Plugin for Waypanel."
-
-        def code_explanation(self):
-            return "Uses GtkListView, Gio.ListStore, and GObject bindings for efficient, flicker-free system monitoring."
+            **Core Architectural Components:**
+            1.  **ProperMetricItem (GObject.Object):** This class encapsulates a single metric (Name, Value, Tooltip).
+                By inheriting from `GObject.Object` and using `@GObject.Property`, it implements the
+                Observer Pattern. Changes to an item's value automatically trigger a notification
+                via the GI system.
+            2.  **Gio.ListStore & Gtk.ListView:** The `Gio.ListStore` holds the `ProperMetricItem` objects.
+                The `Gtk.ListView` displays the metrics using a `Gtk.SignalListItemFactory`.
+            3.  **GObject.BindingFlags.DEFAULT:** In `_row_factory_bind`, GObject bindings are established
+                between the `ProperMetricItem.value` property and the `Gtk.Label.label` property of the
+                list item. This is the **key architectural element**: the UI (Label) is bound directly
+                to the data model (ProperMetricItem), eliminating the need for manual widget updates
+                and minimizing flickering.
+            4.  **Modular Monitoring:** The `fetch_and_update_system_data` method offloads complex metric
+                gathering to the `SystemMonitorHelpers` module, ensuring separation of concerns
+                (UI logic vs. system polling).
+            5.  **Dynamic Gestures:** Gestures are dynamically added to list items based on the metric name.
+                For example, clicking the 'APP PID' metric opens an `htop` instance focused on that PID,
+                exemplifying deep system integration via Wayland IPC and external tools.
+            """
+            return (
+                self.code_explanation.__doc__
+                if self.code_explanation.__doc__ is not None
+                else ""
+            )
 
     return SystemMonitorPlugin

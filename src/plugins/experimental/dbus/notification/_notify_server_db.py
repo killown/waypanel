@@ -84,7 +84,6 @@ class Database:
         notification system, using an SQLite database to store
         and manage a history of all received notifications.
         """
-        return self.about.__doc__
 
     def code_explanation(self):
         """

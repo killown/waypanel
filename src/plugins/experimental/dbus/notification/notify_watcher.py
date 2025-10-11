@@ -1,10 +1,16 @@
 def get_plugin_metadata(_):
+    about = """
+            This plugin monitors a local notifications database file and
+            automatically shows or hides a notification button based on
+            whether new notifications are available.
+            """
     return {
         "id": "org.waypanel.plugin.notify_watcher",
         "name": "Notify Watcher",
         "version": "1.0.0",
         "enabled": True,
         "deps": ["notify_client"],
+        "description": about,
     }
 
 
@@ -107,14 +113,6 @@ def get_plugin_class():
         def log_error(self, message):
             """Log an error message."""
             self.logger.error(message)
-
-        def about(self):
-            """
-            This plugin monitors a local notifications database file and
-            automatically shows or hides a notification button based on
-            whether new notifications are available.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

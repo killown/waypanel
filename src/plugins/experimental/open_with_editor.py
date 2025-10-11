@@ -1,4 +1,9 @@
 def get_plugin_metadata(_):
+    about = """
+            Provides a user interface for quickly finding and opening
+            files from a configured directory, using an extension-based editor mapping.
+            """
+
     return {
         "id": "org.waypanel.plugin.open_with_editor",
         "name": "Open with editor",
@@ -7,6 +12,7 @@ def get_plugin_metadata(_):
         "index": 3,
         "container": "top-panel-box-widgets-left",
         "deps": ["top_panel"],
+        "description": about,
     }
 
 
@@ -577,10 +583,6 @@ def get_plugin_class():
             except Exception as e:
                 self.logger.error(f"Unexpected error occurred in filter logic: {e}")
                 return True
-
-        def about(self):
-            """Provides a user interface for quickly finding and opening files from a configured directory, using an extension-based editor mapping."""
-            return self.about.__doc__
 
         def code_explanation(self):
             """

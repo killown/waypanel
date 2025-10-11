@@ -1,9 +1,17 @@
 def get_plugin_metadata(_):
-    return {        
+    about = """
+            This plugin adds a calendar popover to the panel, which is
+            displayed when the user clicks on the clock widget.
+            """
+    return {
         "id": "org.waypanel.plugin.calendar",
         "name": "Calendar",
         "version": "1.0.0",
-        "enabled": True, "priority": 1, "deps": ["clock"]}
+        "enabled": True,
+        "priority": 1,
+        "deps": ["clock"],
+        "description": about,
+    }
 
 
 def get_plugin_class():
@@ -47,13 +55,6 @@ def get_plugin_class():
                 self.popover_calendar.popdown()
             else:
                 self.popover_calendar.popup()  # pyright: ignore
-
-        def about(self):
-            """
-            This plugin adds a calendar popover to the panel, which is
-            displayed when the user clicks on the clock widget.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

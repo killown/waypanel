@@ -28,8 +28,6 @@ os.makedirs(os.path.dirname(LOG_FILE_PATH), exist_ok=True)
 
 
 class SpamFilter(logging.Filter):
-    """Filters out repetitive log messages and works before structlog processing."""
-
     _config_reload_count = 0
 
     def filter(self, record):
@@ -52,28 +50,17 @@ class SpamFilter(logging.Filter):
 
 
 def setup_logging(level: int = logging.DEBUG) -> BoundLogger:
-    """
-    Configures logging using structlog with separate handlers:
-    - Console (RichHandler, no logger name)
-    - File (JSON, with logger name)
-    """
-    new_time_format = "%Y-%m-%d %H:%M:%S"
-    json_processors = [
+    shared_processors = [
         add_log_level,
-        add_logger_name,
-        TimeStamper(fmt=new_time_format, utc=False),
+        TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
         StackInfoRenderer(),
         format_exc_info,
     ]
-    console_pre_chain = [
-        add_log_level,
-        TimeStamper(fmt=new_time_format, utc=False),
-        StackInfoRenderer(),
-        format_exc_info,
-    ]
+
     structlog.configure(
-        processors=console_pre_chain
+        processors=shared_processors
         + [
+            add_logger_name,
             ProcessorFormatter.wrap_for_formatter,
         ],
         context_class=dict,
@@ -96,7 +83,7 @@ def setup_logging(level: int = logging.DEBUG) -> BoundLogger:
     file_handler.setLevel(level)
     file_handler.addFilter(spam_filter)
     json_formatter = ProcessorFormatter(
-        foreign_pre_chain=json_processors,
+        foreign_pre_chain=shared_processors + [add_logger_name],
         processor=JSONRenderer(),
     )
     file_handler.setFormatter(json_formatter)
@@ -110,7 +97,7 @@ def setup_logging(level: int = logging.DEBUG) -> BoundLogger:
     console_handler.setLevel(level)
     console_handler.addFilter(spam_filter)
     console_formatter_final = ProcessorFormatter(
-        foreign_pre_chain=console_pre_chain,
+        foreign_pre_chain=shared_processors,
         processor=ConsoleRenderer(colors=False),
         fmt="%(message)s",
     )

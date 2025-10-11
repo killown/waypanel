@@ -1,10 +1,16 @@
 def get_plugin_metadata(_):
+    about = """
+            This module provides the user-facing graphical interface (UI)
+            for the notification server, responsible for rendering ephemeral
+            pop-up notifications on the desktop.
+            """
     return {
         "id": "org.waypanel.plugin.notify_server_ui",
         "name": "Notify Server UI",
         "version": "1.0.0",
         "enabled": True,
         "deps": ["top_panel"],
+        "description": about,
     }
 
 
@@ -163,14 +169,6 @@ def get_plugin_class():
             self.glib.timeout_add_seconds(
                 self.timeout, lambda: window.close() if window.is_visible() else False
             )
-
-        def about(self):
-            """
-            This module provides the user-facing graphical interface (UI)
-            for the notification server, responsible for rendering ephemeral
-            pop-up notifications on the desktop.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

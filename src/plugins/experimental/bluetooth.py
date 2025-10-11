@@ -1,4 +1,9 @@
 def get_plugin_metadata(_):
+    about = """
+            A plugin that provides a dashboard for managing Bluetooth devices.
+            It displays a list of paired devices, indicates their connection status,
+            and allows the user to connect or disconnect them with a single click.
+            """
     return {
         "id": "org.waypanel.plugin.bluetooth",
         "name": "Bluetooth Manager",
@@ -7,6 +12,7 @@ def get_plugin_metadata(_):
         "index": 6,
         "container": "top-panel-systray",
         "deps": ["top_panel"],
+        "description": about,
     }
 
 
@@ -371,19 +377,6 @@ def get_plugin_class():
         def popover_is_closed(self, *_):
             self.popover_dashboard = None
             return
-
-        def about(self):
-            """
-            A plugin that provides a dashboard for managing Bluetooth devices.
-            It displays a list of paired devices, indicates their connection status,
-            and allows the user to connect or disconnect them with a single click.
-            It also automatically connects devices listed in the `[hardware.bluetooth]`
-            section of the configuration upon startup.
-            When an audio device is connected, it is automatically set as the
-            system's default sound output device using the robust 'pulsectl' library
-            with a retry mechanism to handle PulseAudio sink creation delays.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

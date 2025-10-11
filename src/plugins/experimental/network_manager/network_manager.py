@@ -1,4 +1,10 @@
 def get_plugin_metadata(_):
+    about = """
+            A plugin that monitors and displays system network status (wired and Wi-Fi)
+            in the panel. It provides a Gtk.Popover with detailed device information,
+            a list of available Wi-Fi networks for easy connection via nmcli, and
+            direct access to network settings.
+            """
     return {
         "id": "org.waypanel.plugin.network_manager",
         "name": "Network Manager",
@@ -7,6 +13,7 @@ def get_plugin_metadata(_):
         "index": 10,
         "container": "top-panel-systray",
         "deps": ["top_panel"],
+        "description": about,
     }
 
 
@@ -558,15 +565,6 @@ def get_plugin_class():
             self.glib.idle_add(self.popover.popdown)
             await self.cli_backend._connect_to_network_async(ssid)
             await self.update_icon_and_popover()
-
-        def about(self):
-            """
-            A plugin that monitors and displays system network status (wired and Wi-Fi)
-            in the panel. It provides a Gtk.Popover with detailed device information,
-            a list of available Wi-Fi networks for easy connection via nmcli, and
-            direct access to network settings.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

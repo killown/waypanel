@@ -2,6 +2,11 @@ def get_plugin_metadata(panel_instance):
     container = panel_instance.config_handler.get_root_setting(
         ["org.waypanel.plugin.taskbar", "panel", "name"], "bottom-panel-center"
     )
+    about = """
+            Provides a dynamic, scrollable taskbar for Wayfire/Waypanel desktops.
+            It displays a button for every mapped (visible) toplevel window, allowing
+            quick focus, movement, and management of running applications.
+            """
     return {
         "id": "org.waypanel.plugin.taskbar",
         "name": "Taskbar",
@@ -14,6 +19,7 @@ def get_plugin_metadata(panel_instance):
             "on_output_connect",
             "right_panel",
         ],
+        "description": about,
     }
 
 
@@ -706,18 +712,6 @@ def get_plugin_class():
                 return
             if event == "view-mapped":
                 self.on_view_created(view)
-
-        def about(self):
-            """
-            Taskbar Plugin
-            ==============
-            Purpose
-            -------
-            Provides a dynamic, scrollable taskbar for Wayfire/Waypanel desktops.
-            It displays a button for every mapped (visible) toplevel window, allowing
-            quick focus, movement, and management of running applications.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

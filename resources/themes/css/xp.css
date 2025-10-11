@@ -1,17 +1,17 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - XP Blue (PERFECTED) ==== */
+  /* ==== CORE PALETTE (Theme Specific) - XP Blue ==== */
   /* ================================================= */
   
   --color-bg-base: #235ddb;
   --color-bg-window: #000000;
   --color-bg-panel: #0057DCcb;
   --color-bg-popover: #FFFFFF;
-  --color-bg-searchbar: #968351;
+  --color-bg-searchbar: var(--color-bg-panel);
   --color-bg-box-primary: linear-gradient(to bottom, 
-    #7BCE58 0%, 
-    #45a348 50%, 
-    #318C33 100% 
+    #5fb938 0%, 
+    #18661b 50%, 
+    #09520a 100% 
 );
 
   --color-bg-box-secondary: #D0E4F9;
@@ -222,7 +222,6 @@
   --shadow-neumorphic-outset-large: 0 1px 2px var(--color-shadow-medium);
   --shadow-neumorphic-press: inset 0 1px 2px var(--color-shadow-dark);
 
-  /* ADDED: Missing Neumorphic Shadow */
   --shadow-neumorphic-outset-small: 0 1px 3px var(--color-shadow-medium);
 
   /* ================================================= */
@@ -235,7 +234,6 @@
   --radius-l: 6px;    
   --radius-xl: 6px;    
 
-  /* ADDED: Missing Control Radius */
   --radius-control-default: var(--radius-m);
 
   /* ================================================= */

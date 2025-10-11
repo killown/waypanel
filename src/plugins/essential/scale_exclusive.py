@@ -1,4 +1,5 @@
 def get_plugin_metadata(_):
+    about = """Monitors the 'scale' plugin to enable or disable exclusive layer mode on panels."""
     return {
         "id": "org.waypanel.plugin.scale_exclusive",
         "name": "Panel Scale Exclusive",
@@ -13,6 +14,7 @@ def get_plugin_metadata(_):
             "left_panel",
             "right_panel",
         ],
+        "description": about,
     }
 
 
@@ -106,10 +108,6 @@ def get_plugin_class():
                         self.logger.warning(
                             f"Unknown state value for scale plugin: {msg['state']}"
                         )
-
-        def about(self):
-            """Monitors the 'scale' plugin to enable or disable exclusive layer mode on panels."""
-            return self.about.__doc__
 
         def code_explanation(self):
             """

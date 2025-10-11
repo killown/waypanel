@@ -515,13 +515,6 @@ class StatusNotifierItem(BasePlugin):
                     return False
         return False
 
-    def about(self):
-        """
-        This plugin is a D-Bus service that acts as a
-        StatusNotifierHost to manage system tray icons.
-        """
-        return self.about.__doc__
-
     def code_explanation(self):
         """
         This Python code is a D-Bus service that acts as a

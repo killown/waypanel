@@ -9,11 +9,17 @@ from src.plugins.core._base import BasePlugin
 
 
 def get_plugin_metadata(_):
+    about = """
+            This plugin implements an asynchronous clipboard history server
+            that monitors the system clipboard, stores its contents in a
+            persistent database, and provides methods to manage that history.
+            """
     return {
         "id": "org.waypanel.plugin.clipboard_server",
         "name": "Clipboard Server",
         "version": "1.0.0",
         "enabled": True,
+        "description": about,
     }
 
 
@@ -280,14 +286,6 @@ def get_plugin_class():
             self.executor.shutdown()
             if self.log_enabled:
                 self.logger.info("Clipboard monitor stopped.")
-
-        def about(self):
-            """
-            This plugin implements an asynchronous clipboard history server
-            that monitors the system clipboard, stores its contents in a
-            persistent database, and provides methods to manage that history.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """

@@ -1,4 +1,8 @@
 def get_plugin_metadata(_):
+    about = """
+            This plugin provides a graphical user interface for managing the
+            Mullvad VPN client directly from the Wayfire panel.
+            """
     return {
         "id": "org.waypanel.plugin.mullvad",
         "name": "Mullvad VPN",
@@ -7,6 +11,7 @@ def get_plugin_metadata(_):
         "index": 8,
         "container": "top-panel-systray",
         "deps": ["top_panel"],
+        "description": about,
     }
 
 
@@ -300,17 +305,6 @@ def get_plugin_class():
                 return "Mullvad not installed"
             except Exception as e:
                 return f"Error: {e}"
-
-        def about(self):
-            """
-            This plugin provides a graphical user interface for managing the
-            Mullvad VPN client directly from the Wayfire panel. It leverages
-            asynchronous programming to interact with both the `mullvad`
-            command-line tool and the Mullvad public API, allowing users to
-            connect, disconnect, check status, and change relays without
-            leaving their desktop environment.
-            """
-            return self.about.__doc__
 
         def code_explanation(self):
             """
