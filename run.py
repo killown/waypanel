@@ -1,313 +1,389 @@
-import os
-import sys
-import shutil
-import glob
-import subprocess
-from datetime import datetime
-import threading
+"""
+A robust application launcher for Waypanel.
+This script prepares the runtime environment by setting up necessary
+directories, managing a virtual environment with custom dependencies,
+and then executing the main application.
+"""
+
 import compileall
+import contextlib
+import glob
+import logging
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import threading
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional
+
+APP_NAME = "waypanel"
+PYWAYFIRE_REPO_URL = "https://github.com/WayfireWM/pywayfire.git"
 
 
-def _enforce_retention_policy(backup_base_dir, max_copies):
-    """Removes the oldest backup folders if the maximum limit is exceeded."""
+@dataclass(frozen=True)
+class AppConfig:
+    """Encapsulates all configuration and path details for the application."""
+
+    app_name: str
+    xdg_data_home: Path = Path(
+        os.getenv("XDG_DATA_HOME", "~/.local/share")
+    ).expanduser()
+    xdg_config_home: Path = Path(os.getenv("XDG_CONFIG_HOME", "~/.config")).expanduser()
+    xdg_cache_home: Path = Path(os.getenv("XDG_CACHE_HOME", "~/.cache")).expanduser()
+
+    @property
+    def data_dir(self) -> Path:
+        """The main data directory for the application."""
+        return self.xdg_data_home / self.app_name
+
+    @property
+    def config_dir(self) -> Path:
+        """The configuration directory for the application."""
+        return self.xdg_config_home / self.app_name
+
+    @property
+    def backup_base_dir(self) -> Path:
+        """The base directory for all backups."""
+        return self.xdg_cache_home / self.app_name / "backups"
+
+    @property
+    def venv_dir(self) -> Path:
+        """The path to the application's virtual environment."""
+        return self.data_dir / "venv"
+
+    @property
+    def config_file(self) -> Path:
+        """The path to the main configuration file."""
+        return self.config_dir / "config.toml"
+
+    @property
+    def resources_dir(self) -> Path:
+        """The path where user-facing resources are stored."""
+        return self.data_dir / "resources"
+
+    @property
+    def venv_bin_dir(self) -> Path:
+        """The 'bin' directory within the virtual environment."""
+        return self.venv_dir / "bin"
+
+    @property
+    def venv_pip(self) -> Path:
+        """The path to the 'pip' executable in the venv."""
+        return self.venv_bin_dir / "pip"
+
+    @property
+    def venv_python(self) -> Path:
+        """The path to the 'python' executable in the venv."""
+        return self.venv_bin_dir / "python"
+
+    @property
+    def requirements_flag(self) -> Path:
+        """A flag file to indicate that dependencies are installed."""
+        return self.venv_dir / ".requirements_installed"
+
+
+def setup_logging():
+    """Configures a basic logger to print info to stdout and errors to stderr."""
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(levelname)s] %(message)s",
+        stream=sys.stdout,
+    )
+    stderr_handler = logging.StreamHandler(sys.stderr)
+    stderr_handler.setLevel(logging.ERROR)
+    formatter = logging.Formatter("[%(levelname)s] %(message)s")
+    stderr_handler.setFormatter(formatter)
+    logging.getLogger().addHandler(stderr_handler)
+
+
+def _enforce_backup_retention(backup_dir: Path, max_copies: int):
+    """
+    Removes the oldest backup folders if the maximum limit is exceeded.
+    Args:
+        backup_dir: The directory containing backups.
+        max_copies: The maximum number of backups to retain.
+    """
     try:
-        all_backups = sorted(
-            glob.glob(os.path.join(backup_base_dir, "backup_*")), key=os.path.basename
-        )
+        all_backups = sorted(backup_dir.glob("backup_*"), key=lambda p: p.name)
         if len(all_backups) > max_copies:
             to_remove = all_backups[: len(all_backups) - max_copies]
-            print(
-                f"[INFO] Backup limit ({max_copies}) exceeded. Removing {len(to_remove)} oldest backup(s)."
+            logging.info(
+                "Backup limit (%d) exceeded. Removing %d oldest backup(s).",
+                max_copies,
+                len(to_remove),
             )
             for old_backup in to_remove:
-                print(f"[INFO] Removing old backup: {os.path.basename(old_backup)}")
+                logging.info("Removing old backup: %s", old_backup.name)
                 shutil.rmtree(old_backup)
     except Exception as e:
-        print(f"[ERROR] Failed to manage backup retention: {e}", file=sys.stderr)
+        logging.error("Failed to manage backup retention: %s", e)
 
 
-def backup_waypanel_data(source_dirs, backup_base_dir, max_copies=10):
+def run_backup(config: AppConfig, max_copies: int = 10):
     """
-    Copies multiple source directories (data and config) to a single timestamped backup folder.
-    Excludes 'venv' from the 'data' directory.
-    source_dirs: A dictionary mapping descriptive names (e.g., 'data', 'config') to source paths.
+    Performs a comprehensive backup of data and config directories.
+    This function is designed to be run in a separate thread.
+    Args:
+        config: The application configuration object.
+        max_copies: The maximum number of backups to retain.
     """
+    logging.info("Starting asynchronous data and config backup...")
+    source_dirs = {"data": config.data_dir, "config": config.config_dir}
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_target_root = os.path.join(backup_base_dir, f"backup_{timestamp}")
-    print(f"[INFO] Creating comprehensive backup in {backup_target_root}")
+    backup_target_root = config.backup_base_dir / f"backup_{timestamp}"
     success = True
-
-    ignore_venv = shutil.ignore_patterns("venv")
-
     try:
-        os.makedirs(backup_target_root, exist_ok=True)
-        os.makedirs(backup_base_dir, exist_ok=True)
-
+        backup_target_root.mkdir(parents=True, exist_ok=True)
         for name, source_path in source_dirs.items():
-            if not os.path.isdir(source_path):
-                print(
-                    f"[WARN] Backup source '{name}' directory not found: {source_path}. Skipping this path."
+            if not source_path.is_dir():
+                logging.warning(
+                    "Backup source '%s' directory not found: %s. Skipping.",
+                    name,
+                    source_path,
                 )
                 continue
-
-            target_path = os.path.join(backup_target_root, name)
-
-            ignore_arg = ignore_venv if name == "data" else None
-
+            target_path = backup_target_root / name
+            ignore = shutil.ignore_patterns("venv") if name == "data" else None
             try:
-                shutil.copytree(
-                    source_path, target_path, symlinks=False, ignore=ignore_arg
-                )
-
+                shutil.copytree(source_path, target_path, symlinks=False, ignore=ignore)
                 status_msg = " (venv excluded)" if name == "data" else ""
-                print(f"[INFO] Backed up {name} to {target_path}{status_msg}")
+                logging.info("Backed up %s to %s%s", name, target_path, status_msg)
             except Exception as e:
-                print(
-                    f"[ERROR] Failed to backup '{name}' ({source_path}): {e}",
-                    file=sys.stderr,
-                )
+                logging.error("Failed to backup '%s' (%s): %s", name, source_path, e)
                 success = False
-
         if success:
-            print("[INFO] Comprehensive backup complete.")
-            _enforce_retention_policy(backup_base_dir, max_copies)
+            logging.info("Comprehensive backup complete.")
+            _enforce_backup_retention(config.backup_base_dir, max_copies)
         else:
-            print(
-                "[ERROR] Backup completed with errors. Retention management skipped.",
-                file=sys.stderr,
-            )
-
+            logging.error("Backup completed with errors. Retention management skipped.")
     except Exception as e:
-        print(f"[FATAL] Failed to create backup root directory: {e}", file=sys.stderr)
+        logging.critical("Failed to create backup root directory: %s", e)
 
 
-def main():
-    APP_NAME = "waypanel"
-
-    XDG_DATA_HOME = os.getenv("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
-    XDG_CONFIG_HOME = os.getenv("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
-    XDG_CACHE_HOME = os.getenv("XDG_CACHE_HOME", os.path.expanduser("~/.cache"))
-
-    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-    WAYPANEL_DATA_DIR = os.path.join(XDG_DATA_HOME, APP_NAME)
-    CONFIG_DIR = os.path.join(XDG_CONFIG_HOME, APP_NAME)
-    BACKUP_BASE_DIR = os.path.join(XDG_CACHE_HOME, APP_NAME, "backups")
-    VENV_DIR = os.path.join(WAYPANEL_DATA_DIR, "venv")
-    CONFIG_FILE = os.path.join(CONFIG_DIR, "config.toml")
-
-    RESOURCES_SUBDIR_NAME = "resources"
-    WAYPANEL_RESOURCES_DIR = os.path.join(WAYPANEL_DATA_DIR, RESOURCES_SUBDIR_NAME)
-
-    SOURCE_DIRS_TO_BACKUP = {"data": WAYPANEL_DATA_DIR, "config": CONFIG_DIR}
-    print("[INFO] Starting asynchronous data and config backup...")
-    backup_thread = threading.Thread(
-        target=backup_waypanel_data,
-        args=(SOURCE_DIRS_TO_BACKUP, BACKUP_BASE_DIR, 10),
-        daemon=True,
-    )
-    backup_thread.start()
-
-    def find_package_files():
-        """Finds the installed Waypanel package path or falls back to development path."""
-        candidate_patterns = [
-            os.path.join(XDG_DATA_HOME, "lib/python*/site-packages"),
-            os.path.expanduser("~/.local/lib/python*/site-packages"),
-            "/usr/lib/python*/dist-packages",
-            "/usr/lib/python*/site-packages",
-            "/usr/local/lib/python*/dist-packages",
-            "/usr/local/lib/python*/site-packages",
-        ]
-        for pattern in candidate_patterns:
-            for path in glob.glob(pattern):
-                pkg_path = os.path.join(path, APP_NAME)
-                if os.path.isdir(pkg_path):
-                    return pkg_path
-        return None
-
-    INSTALLED_PATH = find_package_files()
-    if INSTALLED_PATH:
-        REQ_FILE = os.path.join(INSTALLED_PATH, "requirements.txt")
-        MAIN_PY_DIR = INSTALLED_PATH
-        MAIN_PY = os.path.join(INSTALLED_PATH, "main.py")
-        print(f"[INFO] Using installed package from: {INSTALLED_PATH}")
-        os.environ["PYTHONPATH"] = INSTALLED_PATH
-    else:
-        REQ_FILE = os.path.join(SCRIPT_DIR, "requirements.txt")
-        MAIN_PY_DIR = SCRIPT_DIR
-        MAIN_PY = os.path.join(SCRIPT_DIR, "main.py")
-        print(f"[INFO] Using development path: {SCRIPT_DIR}")
-        os.environ["PYTHONPATH"] = SCRIPT_DIR
-
-    def find_gtk_layer_shell():
-        """Locates the required libgtk4-layer-shell.so file."""
-        LOCAL_LIB_PATH = os.path.join(
-            XDG_DATA_HOME, "lib", "gtk4-layer-shell", "lib", "libgtk4-layer-shell.so"
-        )
-
-        candidates = [
-            "/usr/lib/libgtk4-layer-shell.so",
-            "/usr/lib/x86_64-linux-gnu/libgtk4-layer-shell.so",
-            "/usr/lib64/libgtk4-layer-shell.so",
-            LOCAL_LIB_PATH,
-        ]
-
-        for lib in candidates:
-            if os.path.isfile(lib):
-                return lib
-
-        if os.path.isdir("/nix/store"):
-            try:
-                nix_libs = glob.glob(
-                    "/nix/store/**/libgtk4-layer-shell.so", recursive=True
-                )
-                if nix_libs:
-                    return nix_libs[0]
-            except Exception:
-                pass
-
-        return None
-
-    GTK_LIB = find_gtk_layer_shell()
-    if GTK_LIB is None:
-        print("[ERROR] libgtk4-layer-shell.so not found.", file=sys.stderr)
-        sys.exit(1)
-    os.environ["LD_PRELOAD"] = GTK_LIB
-    print(f"[INFO] Using GTK4 Layer Shell: {GTK_LIB}")
-
-    if not os.path.isfile(CONFIG_FILE):
-        print(
-            f"[INFO] Config file not found at {CONFIG_FILE}. Creating an empty config file."
-        )
-
-        os.makedirs(CONFIG_DIR, exist_ok=True)
+def _find_system_library(lib_name: str, search_paths: List[str]) -> Optional[Path]:
+    """Finds a library file in a list of predefined paths, including Nix store."""
+    candidates = [Path(p) for p in search_paths]
+    for lib_path in candidates:
+        if lib_path.is_file():
+            return lib_path
+    nix_store = Path("/nix/store")
+    if nix_store.is_dir():
         try:
-            with open(CONFIG_FILE, "a") as f:
-                pass
-            print(f"[INFO] Empty config file created at {CONFIG_FILE}")
-        except Exception as e:
-            print(
-                f"[ERROR] Failed to create config file at {CONFIG_FILE}: {e}",
-                file=sys.stderr,
-            )
-            sys.exit(1)
+            nix_libs = nix_store.glob(f"**/{lib_name}")
+            return next(nix_libs, None)
+        except Exception:
+            pass
+    return None
 
-    if not os.path.isdir(WAYPANEL_RESOURCES_DIR):
-        print(
-            f"[INFO] Resources not found at {WAYPANEL_RESOURCES_DIR}. Attempting to copy defaults..."
-        )
 
-        resource_search_paths = []
+def _find_package_path(app_name: str, xdg_data_home: Path) -> Optional[Path]:
+    """
+    Finds the installed package path using absolute glob patterns.
+    This is the corrected version of the function.
+    """
+    home = Path.home()
+    candidate_patterns = [
+        f"{xdg_data_home}/lib/python*/site-packages",
+        f"{home}/.local/lib/python*/site-packages",
+        "/usr/lib/python*/dist-packages",
+        "/usr/lib/python*/site-packages",
+        "/usr/local/lib/python*/dist-packages",
+        "/usr/local/lib/python*/site-packages",
+    ]
+    for pattern in candidate_patterns:
+        for path_str in glob.glob(pattern):
+            path = Path(path_str)
+            pkg_path = path / app_name
+            if pkg_path.is_dir():
+                return pkg_path
+    return None
 
-        resource_search_paths.append(
-            (
-                os.path.join(SCRIPT_DIR, RESOURCES_SUBDIR_NAME),
-                "dev path (flat - current dir)",
-            )
-        )
-        resource_search_paths.append(
-            (
-                os.path.join(SCRIPT_DIR, APP_NAME, RESOURCES_SUBDIR_NAME),
-                "dev path (app)",
-            )
-        )
 
-        if INSTALLED_PATH:
-            resource_search_paths.append(
-                (
-                    os.path.join(INSTALLED_PATH, RESOURCES_SUBDIR_NAME),
-                    "detected installed path",
-                )
-            )
-
-        resource_search_paths.append(
-            (f"/usr/lib/{APP_NAME}/{RESOURCES_SUBDIR_NAME}", "hardcoded system path")
-        )
-
-        for src_dir, desc in resource_search_paths:
-            if os.path.isdir(src_dir):
-                try:
-                    os.makedirs(WAYPANEL_DATA_DIR, exist_ok=True)
-
-                    shutil.copytree(src_dir, WAYPANEL_RESOURCES_DIR)
-                    print(f"[INFO] Default resources copied from {desc}: {src_dir}")
-                    break
-                except Exception as e:
-                    print(
-                        f"[ERROR] Failed to copy resources from {src_dir}: {e}",
-                        file=sys.stderr,
-                    )
-                    sys.exit(1)
-        else:
-            print(
-                "[WARN] No default resources found. Proceeding without user resources.",
-                file=sys.stderr,
-            )
-
-    if not os.path.isdir(VENV_DIR):
-        print("[INFO] Creating virtual environment...")
-        os.makedirs(VENV_DIR, exist_ok=True)
+def _install_pywayfire_from_source(config: AppConfig) -> None:
+    """
+    Uninstalls wayfire and installs pywayfire from its GitHub repository.
+    Args:
+        config: The application configuration object.
+    Raises:
+        subprocess.CalledProcessError: If any command fails.
+        FileNotFoundError: If 'git' command is not found.
+    """
+    logging.info("Performing custom pywayfire installation...")
+    logging.info("Uninstalling any existing 'wayfire' package...")
+    subprocess.run(
+        [str(config.venv_pip), "uninstall", "-y", "wayfire"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    with tempfile.TemporaryDirectory() as tmpdir:
+        clone_dir = Path(tmpdir) / "pywayfire"
+        logging.info("Cloning %s into temporary directory...", PYWAYFIRE_REPO_URL)
         subprocess.run(
-            [sys.executable, "-m", "venv", "--system-site-packages", VENV_DIR],
+            [
+                "git",
+                "clone",
+                "--depth",
+                "1",
+                PYWAYFIRE_REPO_URL,
+                str(clone_dir),
+            ],
             check=True,
         )
+        logging.info("Installing pywayfire from source...")
+        subprocess.run(
+            [str(config.venv_python), "-m", "pip", "install", "."],
+            cwd=clone_dir,
+            check=True,
+        )
+    logging.info("Custom pywayfire installation successful.")
 
-    VENV_BIN = os.path.join(VENV_DIR, "bin")
-    os.environ["PATH"] = f"{VENV_BIN}:{os.environ['PATH']}"
 
-    REQUIREMENTS_INSTALLED_FLAG = os.path.join(VENV_DIR, ".requirements_installed")
-    if not os.path.isfile(REQUIREMENTS_INSTALLED_FLAG):
-        print("[INFO] Installing dependencies...")
+def manage_virtual_environment(config: AppConfig, req_file: Path):
+    """
+    Ensures the venv exists and all dependencies are installed.
+    Args:
+        config: The application configuration object.
+        req_file: Path to the requirements.txt file.
+    """
+    if not config.venv_dir.is_dir():
+        logging.info("Creating virtual environment...")
+        config.venv_dir.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "venv",
+                "--system-site-packages",
+                str(config.venv_dir),
+            ],
+            check=True,
+        )
+    os.environ["PATH"] = f"{config.venv_bin_dir}{os.pathsep}{os.environ['PATH']}"
+    if not config.requirements_flag.is_file():
+        logging.info("Installing dependencies...")
         try:
+            _install_pywayfire_from_source(config)
+            logging.info("Installing dependencies from %s...", req_file)
             subprocess.run(
                 [
-                    os.path.join(VENV_BIN, "pip"),
+                    str(config.venv_pip),
                     "install",
                     "--no-cache-dir",
                     "-r",
-                    REQ_FILE,
+                    str(req_file),
                 ],
                 check=True,
             )
-            with open(REQUIREMENTS_INSTALLED_FLAG, "w") as f:
-                f.write("Dependencies installed.")
-        except subprocess.CalledProcessError:
-            print("[ERROR] Failed to install dependencies.", file=sys.stderr)
-            sys.exit(1)
-        except FileNotFoundError:
-            print(
-                f"[ERROR] 'pip' not found in virtual environment at {os.path.join(VENV_BIN, 'pip')}.",
-                file=sys.stderr,
-            )
+            config.requirements_flag.touch()
+            logging.info("All dependencies installed successfully.")
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            logging.critical("Failed to install dependencies: %s", e)
+            if isinstance(e, FileNotFoundError):
+                logging.critical(
+                    "Ensure 'git' and 'pip' are installed and in your PATH."
+                )
             sys.exit(1)
 
-    print("[INFO] Compiling Python source files to bytecode (.pyc) if necessary...")
 
-    try:
-        compileall.compile_dir(MAIN_PY_DIR, quiet=1)
-
-        compileall.compile_file(MAIN_PY, quiet=1)
-        print("[INFO] Compilation complete (skipped if already up-to-date).")
-
-    except Exception as e:
-        print(
-            f"[WARN] Non-critical error during Python file compilation: {e}",
-            file=sys.stderr,
+def ensure_initial_setup(config: AppConfig, installed_path: Optional[Path]):
+    """Ensures config files and resources exist before launch."""
+    if not config.config_file.is_file():
+        logging.info(
+            "Config file not found. Creating empty config at %s", config.config_file
         )
+        config.config_dir.mkdir(parents=True, exist_ok=True)
+        config.config_file.touch()
+    if not config.resources_dir.is_dir():
+        logging.info(
+            "Resources not found at %s. Attempting to copy defaults...",
+            config.resources_dir,
+        )
+        script_dir = Path(__file__).parent.resolve()
+        search_paths = [
+            (script_dir / "resources", "dev path (flat)"),
+            (script_dir / APP_NAME / "resources", "dev path (nested)"),
+            (Path(f"/usr/lib/{APP_NAME}/resources"), "system path"),
+        ]
+        if installed_path:
+            search_paths.insert(2, (installed_path / "resources", "installed path"))
+        for src, desc in search_paths:
+            if src.is_dir():
+                try:
+                    shutil.copytree(src, config.resources_dir)
+                    logging.info("Default resources copied from %s: %s", desc, src)
+                    return
+                except Exception as e:
+                    logging.critical("Failed to copy resources from %s: %s", src, e)
+                    sys.exit(1)
+        logging.warning("No default resources found. Proceeding without them.")
 
-    print("[INFO] Starting application...")
-    cmd = [os.path.join(VENV_BIN, "python"), "-O", MAIN_PY]
 
-    subprocess.run(cmd, check=True)
-
-
-if __name__ == "__main__":
-    try:
+def main():
+    """Main execution flow for the Waypanel launcher."""
+    setup_logging()
+    config = AppConfig(app_name=APP_NAME)
+    script_dir = Path(__file__).parent.resolve()
+    with contextlib.suppress(Exception):
         subprocess.run(
-            "pkill -f waypanel/main.py".split(),
+            ["pkill", "-f", f"{APP_NAME}/main.py"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-    except Exception as e:
-        print(f"[WARN] Failed to run pkill (may be missing or harmless): {e}")
+    threading.Thread(target=run_backup, args=(config,), daemon=True).start()
+    installed_path = _find_package_path(config.app_name, config.xdg_data_home)
+    if installed_path and installed_path.is_dir():
+        main_py_dir = installed_path
+        logging.info("Using installed package from: %s", main_py_dir)
+    else:
+        main_py_dir = script_dir
+        logging.info("Using development path: %s", main_py_dir)
+    req_file = main_py_dir / "requirements.txt"
+    main_py_file = main_py_dir / "main.py"
+    os.environ["PYTHONPATH"] = str(main_py_dir)
+    gtk_lib = _find_system_library(
+        lib_name="libgtk4-layer-shell.so",
+        search_paths=[
+            "/usr/lib/libgtk4-layer-shell.so",
+            "/usr/lib/x86_64-linux-gnu/libgtk4-layer-shell.so",
+            "/usr/lib64/libgtk4-layer-shell.so",
+            str(
+                config.xdg_data_home / "lib/gtk4-layer-shell/lib/libgtk4-layer-shell.so"
+            ),
+        ],
+    )
+    if not gtk_lib:
+        logging.critical("libgtk4-layer-shell.so not found. Cannot start.")
+        sys.exit(1)
+    os.environ["LD_PRELOAD"] = str(gtk_lib)
+    logging.info("Using GTK4 Layer Shell: %s", gtk_lib)
+    ensure_initial_setup(config, installed_path)
+    manage_virtual_environment(config, req_file)
+    logging.info("Compiling Python source files to bytecode (.pyc)...")
+    with contextlib.suppress(Exception):
+        compileall.compile_dir(main_py_dir, quiet=1, force=False)
+        logging.info("Compilation complete (skipped if up-to-date).")
+    logging.info("Starting %s application...", APP_NAME)
+    try:
+        cmd = [str(config.venv_python), "-O", str(main_py_file)]
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError as e:
+        logging.critical(
+            "Application exited with a non-zero status code: %d", e.returncode
+        )
+        sys.exit(e.returncode)
+    except FileNotFoundError:
+        logging.critical(
+            "Could not find the main application script at %s.", main_py_file
+        )
+        sys.exit(1)
+
+
+if __name__ == "__main__":
     main()

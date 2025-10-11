@@ -290,12 +290,12 @@ class BasePlugin:
             self.logger.error(f"Error cleaning up Future tracking: {e}")
 
     @property
-    def set_plugin_setting(self) -> Callable[[PluginName, ConfigKeys, Any], None]:
+    def set_plugin_setting(self) -> Callable[[ConfigKeys, Any], None]:
         """
         Provides access to the ConfigHandler's method for setting a plugin-specific value.
 
         The returned callable has the signature:
-        (plugin_name: str, keys: list[str], new_value: Any) -> None
+        (list[str], new_value: Any) -> None
 
         This method updates the configuration in memory and persists the change to disk.
 
@@ -307,25 +307,20 @@ class BasePlugin:
         return self.config_handler.set_plugin_setting  # pyright: ignore
 
     @property
-    def get_plugin_setting(self) -> Callable[[PluginName, ConfigKeys, Any], Any]:
-        """
-        Provides access to the ConfigHandler's method for retrieving a plugin-specific value.
+    def get_plugin_setting(self) -> Callable[[ConfigKeys, Any]]:
+        """Provides access to the ConfigHandler's method for retrieving a value.
 
-        The returned callable has the signature:
-        (plugin_name: str, keys: list[str], default: Any) -> Any
-
-        Safely retrieves a deeply-nested setting, returning the supplied
-        default value if the key path is invalid or the key is not found.
+        This property returns the underlying `ConfigHandler.get_plugin_setting`
+        method, which can be used to query the configuration system directly.
 
         Returns
         -------
-        Callable
-            The underlying `ConfigHandler.get_plugin_setting` method.
+        Callable[[list[str], Any | None], Any]
         """
-        return self.config_handler.get_plugin_setting  # pyright: ignore
+        return self.config_handler.get_plugin_setting
 
     @property
-    def get_root_setting(self) -> Callable[[ConfigKeys, Any], Any]:
+    def get_root_setting(self) -> Callable[[List[str], Any]]:
         """
         Provides access to the ConfigHandler's method for retrieving a root-level (global) value.
 
@@ -343,12 +338,12 @@ class BasePlugin:
         return self.config_handler.get_root_setting
 
     @property
-    def remove_plugin_setting(self) -> Callable[[PluginName, ConfigKeys], None]:
+    def remove_plugin_setting(self) -> Callable[[ConfigKeys], None]:
         """
         Provides access to the ConfigHandler's method for removing a plugin-specific setting.
 
         The returned callable has the signature:
-        (plugin_name: str, keys: list[str]) -> None
+        (keys: list[str]) -> None
 
         This method handles the atomic deletion of the key from the in-memory
         configuration and persists the change to the configuration file.

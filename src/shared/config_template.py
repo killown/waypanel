@@ -265,7 +265,7 @@ default_config = {
         "_section_hint": (
             "Configuration for the Application Menu (Start Menu) button and associated settings."
         ),
-        "main_icon": distro.id(),
+        "main_icon": "start-here",
         "fallback_main_icons": distributor_logo_fallback_icons,
     },
     "org.waypanel.plugin.clipboard": {

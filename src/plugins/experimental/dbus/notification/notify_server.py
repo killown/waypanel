@@ -79,7 +79,6 @@ def get_plugin_class():
             self.show_messages = self.config_handler.config_data.get(
                 "org.waypanel.plugin.notify_server"
             ).get("show_messages", True)
-            print("asdfasdf" * 100, self.show_messages)
 
             # Initialize the database
             self.db_path = self.db._initialize_db()
