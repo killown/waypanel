@@ -257,6 +257,49 @@ class BasePlugin:
             )
             return None
 
+    def remove_root_setting(self, key: Union[str, List[str]]) -> None:
+        """
+        Removes a top-level section or a nested key from the configuration and saves the change.
+        Args:
+            key (Union[str, List[str]]): The key or path of keys to remove.
+        """
+        if not key:
+            self.logger.error("Cannot remove setting: key path cannot be empty.")
+            return
+        key_path = [key] if isinstance(key, str) else key
+        config_dict = self.config_handler.config_data
+        current_level = config_dict
+        for i, part in enumerate(key_path[:-1]):
+            if isinstance(current_level, dict) and part in current_level:
+                current_level = current_level[part]
+            else:
+                self.logger.warning(
+                    f"Attempted to remove non-existent config path: {key_path}"
+                )
+                return
+        final_key = key_path[-1]
+        if isinstance(current_level, dict) and final_key in current_level:
+            del current_level[final_key]
+            self.config_handler.save_config()
+            self.logger.info(
+                f"Removed setting '{'.'.join(key_path)}' from configuration."
+            )
+        else:
+            self.logger.warning(
+                f"Attempted to remove non-existent config key: '{final_key}'"
+            )
+
+    def remove_plugin_setting(self) -> None:
+        """
+        Removes the entire configuration section for the current plugin.
+        This action is irreversible and will delete all settings stored under
+        the plugin's unique ID from the configuration file.
+        """
+        if not self.plugin_id:
+            self.logger.error("Plugin ID is not set, cannot remove settings.")
+            return
+        self.remove_root_setting(self.plugin_id)
+
     def get_plugin_setting(
         self, key: Optional[Union[str, List[str]]] = None, default_value: Any = None
     ) -> Any:
@@ -288,7 +331,6 @@ class BasePlugin:
     def set_plugin_setting(self, key: Union[str, List[str]], value: Any) -> None:
         """
         Sets a configuration value for this specific plugin's section.
-
         Args:
             key (Union[str, List[str]]): The key or path of keys for the setting.
             value (Any): The value to set.
@@ -306,7 +348,6 @@ class BasePlugin:
     def get_settings(self) -> Dict[str, Any]:
         """
         Retrieves the entire configuration data dictionary.
-
         Returns:
             Dict[str, Any]: The configuration data.
         """
