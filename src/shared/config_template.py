@@ -1,23 +1,15 @@
-import distro
-from wayfire import WayfireSocket
-
-socket = WayfireSocket()
-outputs = socket.list_outputs()
-if outputs:
-    first_output_geometry = outputs[0]["geometry"]
-    screen_width = first_output_geometry["width"]
-else:
-    screen_width = 1920
-FIXED_DIMENSION = 32.0
-d = distro.id()
+screen_width = 1920  # Fallback width when WayfireSocket cannot be used
+FIXED_DIMENSION = 32.0  # Fixed value
+distributor_id = "linux"  # Fallback distributor ID when 'distro' is not imported
 distributor_logo_fallback_icons = [
-    f"distributor-{d}",
-    f"{d}-logo",
-    f"{d}_logo",
-    f"distributor_{d}",
-    f"logo{d}",
-    f"{d}logo",
+    f"distributor-{distributor_id}",
+    f"{distributor_id}-logo",
+    f"{distributor_id}_logo",
+    f"distributor_{distributor_id}",
+    f"logo{distributor_id}",
+    f"{distributor_id}logo",
 ]
+
 default_config = {
     "_section_hint": (
         "General configuration settings for Waypanel, a panel "
@@ -80,8 +72,8 @@ default_config = {
         },
         "bluetooth": {
             "_section_hint": "Bluetooth device connection settings.",
-            "connect_devices": ["", "", ""],
-            "connect_devices_hint": (
+            "auto_connect": ["", "", ""],
+            "auto_connect_hint": (
                 "A list of **Bluetooth MAC addresses** (e.g., "
                 "['00:1A:7D:XX:XX:XX']) for devices Waypanel should "
                 "automatically attempt to connect to when it starts."
@@ -240,20 +232,6 @@ default_config = {
         "_section_hint": (
             "Settings for the Overflow Indicator plugin, which shows a button when other panel items are hidden due to lack of space."
         )
-    },
-    "org.waypanel.plugin.clock": {
-        "_section_hint": (
-            "Configuration for the Clock plugin, defining time and date display formats."
-        ),
-        "format": "%H:%M",
-        "tooltip_format": "%A, %B %d, %Y",
-    },
-    "org.waypanel.plugin.network_manager": {
-        "_section_hint": (
-            "Settings for the Network Manager plugin, which controls and displays network connection status."
-        ),
-        "hide_in_systray": False,
-        "scan_interval": 5,
     },
     "org.waypanel.plugin.volume_scroll": {
         "_section_hint": (

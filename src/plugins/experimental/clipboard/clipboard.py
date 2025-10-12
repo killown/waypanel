@@ -108,20 +108,25 @@ def get_plugin_class():
             self.row_content = None
             self.listbox = None
             self.popover_min_width = self.get_plugin_setting(
-                "client_popover_min_width", 500
+                ["client_popover_min_width"], 500
             )
             self.popover_max_height = self.get_plugin_setting(
-                "client_popover_max_height", 600
+                ["client_popover_max_height"], 600
             )
-            self.thumbnail_size = self.get_plugin_setting("client_thumbnail_size", 128)
+            self.thumbnail_size = self.get_plugin_setting(
+                ["client_thumbnail_size"], 128
+            )
             self.preview_text_length = self.get_plugin_setting(
-                "client_preview_text_length", 50
+                ["client_preview_text_length"], 50
             )
             self.image_row_height = self.get_plugin_setting(
-                "client_image_row_height", 60
+                ["client_image_row_height"], 60
             )
-            self.text_row_height = self.get_plugin_setting("client_text_row_height", 38)
-            self.item_spacing = self.get_plugin_setting("client_item_spacing", 5)
+            self.text_row_height = self.get_plugin_setting(
+                ["client_text_row_height"], 38
+            )
+            self.item_spacing = self.get_plugin_setting(["client_item_spacing"], 5)
+            self.set_additional_hints()
 
         def on_start(self):
             self.create_popover_menu_clipboard()
@@ -175,7 +180,7 @@ def get_plugin_class():
                     b"RIFF....WEBP": "WEBP",
                 }
                 return any(content.startswith(magic) for magic in magic_numbers.keys())
-            elif isinstance(content, str) and self.data_helper.validate_string(
+            elif isinstance(  # pyright: ignorecontent, str) and self.data_helper.validate_string(
                 content, "content from is_image_content"
             ):
                 if (

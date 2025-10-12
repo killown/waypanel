@@ -24,7 +24,11 @@ def get_plugin_class():
             self.weather_label = None
             self.update_task = None
             config_coords = self.get_root_setting(
-                ["org.waypanel.plugin.calendar", "weather", "coordinates"]
+                ["org.waypanel.plugin.calendar", "weather", "coordinates"],
+                [
+                    "-23.5505",
+                    "-46.6333",
+                ],
             )
             if isinstance(config_coords, tuple) and len(config_coords) == 2:
                 self.coordinates = config_coords

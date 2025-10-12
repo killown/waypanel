@@ -28,7 +28,6 @@ def get_plugin_class():
     ICON_WIFI_GOOD = "network-wireless-signal-good-symbolic"
     ICON_WIFI_OK = "network-wireless-signal-ok-symbolic"
     ICON_WIFI_WEAK = "network-wireless-signal-weak-symbolic"
-    WIFI_SCAN_INTERVAL = 300
 
     class NetworkManager(BasePlugin):
         def __init__(self, panel_instance):
@@ -74,6 +73,14 @@ def get_plugin_class():
             self.ssids_to_auto_connect = self.config_handler.get_root_setting(
                 ["hardware", "network", "auto_connect_ssids"]
             )
+            self.scan_interval = self.get_plugin_setting(["scan_interval"], 300)
+            self.add_hint(
+                "Settings for the Network Manager plugin, which controls and displays network connection status."
+            )
+            self.set_additional_hints()
+            self.add_hint(
+                "Time in (minutes) to scan for Wi-Fi networks.", "scan_interval"
+            )
 
         def on_start(self):
             self.global_loop.create_task(self.start_periodic_wifi_scan_async())
@@ -85,7 +92,7 @@ def get_plugin_class():
             """Starts a periodic background scan for Wi-Fi networks using self.asyncio."""
             await self.scan_networks_and_update_cache()
             while True:
-                await self.asyncio.sleep(WIFI_SCAN_INTERVAL)
+                await self.asyncio.sleep(self.scan_interval)
                 await self.scan_networks_and_update_cache()
 
         def notify_send_network_disconnected(self):

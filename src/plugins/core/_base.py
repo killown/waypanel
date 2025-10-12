@@ -15,7 +15,7 @@ from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
 from src.shared.command_runner import CommandRunner
 from src.shared.concurrency_helper import ConcurrencyHelper
-from typing import Any, List, ClassVar, Optional, Union, Dict, Set, Callable
+from typing import Any, List, ClassVar, Optional, Union, Dict, Set, Callable, Tuple
 import asyncio
 
 TIME_MODULE = lazy.load("time")
@@ -187,6 +187,30 @@ class BasePlugin:
             metadata = module_object.get_plugin_metadata(self._panel_instance)
             return metadata
 
+    def add_hint(self, hint, section=None):
+        metadata = self.get_plugin_metadata()
+        if metadata:
+            plugin_id = metadata["id"]
+            return self.config_handler.set_setting_hint(plugin_id, section, hint)
+        return None
+
+    def set_additional_hints(self):
+        self.add_hint(
+            "Waypanel will use the main icon as the default if it finds one.",
+            "main_icon",
+        )
+        self.add_hint(
+            "If waypanel can't find the main icon, it will search through fallback icons.",
+            "fallback_main_icons",
+        )
+        self.add_hint(
+            "If True, the icon will be moved for the overflow indicator.",
+            "hide_in_systray",
+        )
+        metadata = self.get_plugin_metadata()
+        if "description" in metadata:  # pyright: ignore
+            self.add_hint(metadata["description"])  # pyright: ignore
+
     def _periodic_gc(self):
         """
         Manually forces Python's garbage collector (GC) to run.
@@ -288,6 +312,22 @@ class BasePlugin:
                 self._running_futures.remove(future)
         except Exception as e:
             self.logger.error(f"Error cleaning up Future tracking: {e}")
+
+    @property
+    def set_section_hint(
+        self,
+    ) -> Callable[[Union[str, List[str]], str | Tuple[str, ...]], bool]:
+        """
+        Provides direct access to the underlying ConfigHandler's set_section_hint method.
+
+        This property allows a plugin to set the documentation hint for its
+        configuration section using an idiomatic plugin API:
+        'self.set_section_hint(path, hint_text)'.
+
+        Returns:
+            Callable: The bound set_section_hint method of the ConfigHandler.
+        """
+        return self.config_handler.set_section_hint
 
     @property
     def set_plugin_setting(self) -> Callable[[ConfigKeys, Any], None]:
@@ -466,7 +506,17 @@ class BasePlugin:
         return self._plugin_loader
 
     @property
-    def config_data(self) -> dict:
+    def default_config(self) -> Dict:
+        """
+        Provides the LIVE, authoritative copy of the default configuration
+        (metadata source) from the ConfigHandler.
+        This ensures ControlCenterHelpers always sees hints dynamically
+        injected by other plugins (e.g., get_plugin_setting).
+        """
+        return self.config_handler.default_config
+
+    @property
+    def config_data(self):
         """All configuration data from config.toml."""
         return self._config_handler.config_data  # pyright: ignore
 

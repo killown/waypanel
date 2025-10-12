@@ -3,7 +3,7 @@ def get_plugin_metadata(_):
             • Displays current date and time in the top panel.
             """
     return {
-        "id": "com.waypanel.clock",
+        "id": "org.waypanel.plugin.clock",
         "name": "Clock",
         "version": "1.0.0",
         "enabled": True,
@@ -24,6 +24,10 @@ def get_plugin_class():
             self.clock_box = None
             self.clock_label = None
             self.update_timeout_id = None
+            self.add_hint(
+                "Configuration for the Clock plugin, defining time and date display formats."
+            )
+            self.add_hint("Format %A, %B %d, %Y", "format")
 
         def on_start(self):
             self.create_clock_widget()
@@ -55,7 +59,8 @@ def get_plugin_class():
                 bool: Always returns True to continue the self.glib timeout.
             """
             try:
-                current_time = self.datetime.datetime.now().strftime("%d %b %H:%M")
+                format = self.get_plugin_setting(["format"], "%d %b %H:%M")
+                current_time = self.datetime.datetime.now().strftime(format)
                 self.clock_label.set_label(current_time)  # pyright: ignore
             except Exception as e:
                 self.logger.error(f"Error updating clock: {e}")

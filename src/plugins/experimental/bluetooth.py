@@ -29,6 +29,19 @@ def get_plugin_class():
             self.bluetooth_button_popover = self.gtk.Button()
             self.add_cursor_effect(self.bluetooth_button_popover)
             self.main_widget = (self.bluetooth_button_popover, "append")
+            self.add_hint(
+                "Settings for the Bluetooth plugin, used to manage connections to local devices."
+            )
+
+            self.add_hint(
+                (
+                    "A list of **Bluetooth MAC addresses** (e.g., "
+                    "['00:1A:7D:XX:XX:XX']) for devices Waypanel should "
+                    "automatically attempt to connect to when it starts."
+                ),
+                "auto_connect",
+            )
+            self.set_additional_hints()
 
         def on_start(self):
             """Hook called by BasePlugin after successful initialization."""
@@ -52,9 +65,11 @@ def get_plugin_class():
 
         async def _auto_connect_devices(self):
             """Reads config and attempts to connect specified Bluetooth devices."""
-            connect_devices = self.get_root_setting(
-                ["hardware", "bluetooth", "connect_devices"], []
+            connect_devices = self.get_plugin_setting(
+                ["auto_connect"],
+                ["B4:B7:42:F7:9B:AD"],
             )
+
             if not connect_devices:
                 self.logger.info("No devices configured for auto-connect.")
                 return
