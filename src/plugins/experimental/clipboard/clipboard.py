@@ -126,7 +126,6 @@ def get_plugin_class():
                 ["client_text_row_height"], 38
             )
             self.item_spacing = self.get_plugin_setting(["client_item_spacing"], 5)
-            self.set_additional_hints()
 
         def on_start(self):
             self.create_popover_menu_clipboard()

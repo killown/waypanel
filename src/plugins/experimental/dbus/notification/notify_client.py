@@ -31,7 +31,6 @@ def get_plugin_class():
             self.vbox.set_margin_bottom(10)
             self.vbox.set_margin_start(10)
             self.show_messages = None
-            self.set_additional_hints()
             self.max_notifications = self.get_plugin_setting(
                 ["client", "max_notifications"], 5
             )

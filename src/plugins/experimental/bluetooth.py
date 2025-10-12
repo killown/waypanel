@@ -1,9 +1,9 @@
 def get_plugin_metadata(_):
-    about = """
-            A plugin that provides a dashboard for managing Bluetooth devices.
-            It displays a list of paired devices, indicates their connection status,
-            and allows the user to connect or disconnect them with a single click.
-            """
+    about = (
+        "A plugin that provides a dashboard for managing Bluetooth devices.",
+        "It displays a list of paired devices, indicates their connection status",
+        "and allows the user to connect or disconnect them with a single click.",
+    )
     return {
         "id": "org.waypanel.plugin.bluetooth",
         "name": "Bluetooth Manager",
@@ -30,10 +30,6 @@ def get_plugin_class():
             self.add_cursor_effect(self.bluetooth_button_popover)
             self.main_widget = (self.bluetooth_button_popover, "append")
             self.add_hint(
-                "Settings for the Bluetooth plugin, used to manage connections to local devices."
-            )
-
-            self.add_hint(
                 (
                     "A list of **Bluetooth MAC addresses** (e.g., "
                     "['00:1A:7D:XX:XX:XX']) for devices Waypanel should "
@@ -41,7 +37,6 @@ def get_plugin_class():
                 ),
                 "auto_connect",
             )
-            self.set_additional_hints()
 
         def on_start(self):
             """Hook called by BasePlugin after successful initialization."""

@@ -77,7 +77,6 @@ def get_plugin_class():
             self.add_hint(
                 "Settings for the Network Manager plugin, which controls and displays network connection status."
             )
-            self.set_additional_hints()
             self.add_hint(
                 "Time in (minutes) to scan for Wi-Fi networks.", "scan_interval"
             )

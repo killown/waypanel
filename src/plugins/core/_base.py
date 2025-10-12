@@ -187,29 +187,37 @@ class BasePlugin:
             metadata = module_object.get_plugin_metadata(self._panel_instance)
             return metadata
 
+    def set_hint(self, hint="", section=[], plugin_id=""):
+        return self.config_handler.set_setting_hint(plugin_id, section, hint)
+
     def add_hint(self, hint, section=None):
         metadata = self.get_plugin_metadata()
         if metadata:
             plugin_id = metadata["id"]
-            return self.config_handler.set_setting_hint(plugin_id, section, hint)
-        return None
+            self.set_hint(hint, section, plugin_id)
+            self.set_additional_hints(plugin_id, metadata)
 
-    def set_additional_hints(self):
-        self.add_hint(
+    def set_additional_hints(self, plugin_id, metadata):
+        self.set_hint(
             "Waypanel will use the main icon as the default if it finds one.",
             "main_icon",
+            plugin_id,
         )
-        self.add_hint(
+        self.set_hint(
             "If waypanel can't find the main icon, it will search through fallback icons.",
             "fallback_main_icons",
+            plugin_id,
         )
-        self.add_hint(
+        self.set_hint(
             "If True, the icon will be moved for the overflow indicator.",
             "hide_in_systray",
+            plugin_id,
         )
-        metadata = self.get_plugin_metadata()
-        if "description" in metadata:  # pyright: ignore
-            self.add_hint(metadata["description"])  # pyright: ignore
+        try:
+            if "description" in metadata:
+                self.set_hint(metadata["description"])
+        except Exception as e:
+            self.logger.debug(f"Failed to set additional hint with metadata {e}")
 
     def _periodic_gc(self):
         """

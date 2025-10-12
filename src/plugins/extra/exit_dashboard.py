@@ -71,7 +71,6 @@ def get_plugin_class():
             self.panel_instance = panel_instance
             self.menubutton_dashboard = None
             self.plugin_css_class = "exit-dashboard-widget"
-            self.set_additional_hints()
 
         def add_css_class_to_children(self, widget):
             """Recursively add the plugin's CSS class to the widget and all its children."""
