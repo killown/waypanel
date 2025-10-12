@@ -169,7 +169,7 @@ class ConfigHandler:
         try:
             new_config = self.load_config(force_reload=True)
             self.config_data.update(new_config)
-            self.logger.info("Configuration reloaded from file.")
+            self.logger.debug("Configuration reloaded from file.")
         except Exception as e:
             self.logger.error(f"Error reloading configuration: {e}")
 
@@ -497,13 +497,10 @@ class ConfigHandler:
             True if the hint was successfully injected, False otherwise.
         """
         if key_path not in self.default_config:
-            self.default_config[key_path] = {}
+            self.default_config[key_path] = {"_section_hint": hint}
         if section:
             self.default_config[key_path][f"{section}_hint"] = hint
         else:
-            if "_section_hint" not in hint:
-                section_hint = self.default_config[key_path]
-                self.default_config[key_path] = {"_section_hint": section_hint}
             self.default_config[key_path]["_section_hint"] = hint
 
     def get_plugin_setting(

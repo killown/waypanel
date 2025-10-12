@@ -561,39 +561,31 @@ default_config = {
         "_section_hint": (
             "Settings for the Notification Daemon, which handles system notifications."
         ),
-        "client": {
-            "_section_hint": (
-                "Client (popover/display) settings for how notifications are shown."
-            ),
-            "max_notifications": 5.0,
-            "max_notifications_hint": (
-                "Maximum number of concurrent pop-up notifications that "
-                "will be displayed on the screen at one time."
-            ),
-            "body_max_width_chars": 80.0,
-            "body_max_width_chars_hint": (
-                "Maximum number of characters allowed per line before the "
-                "notification body text wraps."
-            ),
-            "notification_icon_size": 64.0,
-            "notification_icon_size_hint": (
-                "Size (in pixels) of the application icon shown within "
-                "the notification pop-up."
-            ),
-            "popover_width": 500.0,
-            "popover_width_hint": (
-                "The width (in pixels) of the notification popover window."
-            ),
-            "popover_height": 600.0,
-            "popover_height_hint": (
-                "The height (in pixels) of the notification popover window."
-            ),
-        },
-    },
-    "org.waypanel.plugin.notify_server": {
-        "_section_hint": "Backend (server) settings.",
-        "show_messages": True,
-        "show_messages_hint": (
+        "max_notifications": 5.0,
+        "max_notifications_hint": (
+            "Maximum number of concurrent pop-up notifications that "
+            "will be displayed on the screen at one time."
+        ),
+        "body_max_width_chars": 80.0,
+        "body_max_width_chars_hint": (
+            "Maximum number of characters allowed per line before the "
+            "notification body text wraps."
+        ),
+        "notification_icon_size": 64.0,
+        "notification_icon_size_hint": (
+            "Size (in pixels) of the application icon shown within "
+            "the notification pop-up."
+        ),
+        "popover_width": 500.0,
+        "popover_width_hint": (
+            "The width (in pixels) of the notification popover window."
+        ),
+        "popover_height": 600.0,
+        "popover_height_hint": (
+            "The height (in pixels) of the notification popover window."
+        ),
+        "server_show_messages": True,
+        "server_show_messages_hint": (
             "If **True**, prints incoming notification messages to the "
             "console/log file for **debugging only**."
         ),

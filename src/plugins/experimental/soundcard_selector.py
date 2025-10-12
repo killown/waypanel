@@ -1,11 +1,8 @@
 def get_plugin_metadata(_):
-    about = """
-            A plugin that provides a quick dashboard to switch default sound
-            output and input devices (sound cards and microphones).
-            """
+    about = "A plugin that provides a quick way to switch default sound device"
     return {
-        "id": "org.waypanel.plugin.sound_card_switcher",
-        "name": "Sound Card Switcher",
+        "id": "org.waypanel.plugin.soundcard_selector",
+        "name": "Sound Card Selector",
         "version": "1.0.0",
         "deps": ["top_panel"],
         "container": "top-panel-systray",
@@ -19,14 +16,7 @@ def get_plugin_class():
     from src.plugins.core._base import BasePlugin
 
     class SoundCardSwitcher(BasePlugin):
-        """
-        A plugin for managing sound cards and microphones via a dashboard popover.
-        """
-
         def __init__(self, panel_instance):
-            """
-            Initializes the SoundCardDashboard plugin.
-            """
             super().__init__(panel_instance)
             import soundcard as sc
 
@@ -39,11 +29,17 @@ def get_plugin_class():
             self.mic_handler_id = None
             self.soundcard_model = None
             self.mic_model = None
-            self.max_card_chars = self.get_plugin_setting(
-                ["hardware", "soundcard", "max_name_lenght"], 35
+            self.max_name_lenght = self.get_plugin_setting(["name_lenght"], 35)
+            self.soundcard_blacklist = self._config_handler.get_plugin_setting(
+                ["soundcard", "blacklist"], []
             )
-            self.max_mic_chars = self.get_plugin_setting(
-                ["hardware", "microphone", "max_name_lenght"], 35
+            self.mic_blacklist = self.get_plugin_setting(
+                ["microphone", "blacklist"], []
+            )
+
+            self.add_hint(
+                "Increase the maximum card/mic name length allowed in the selector.",
+                ["name_lenght"],
             )
 
         def on_start(self):
@@ -102,21 +98,21 @@ def get_plugin_class():
             """
             Retrieves a list of sound card names, excluding blacklisted ones.
             """
-            blacklist = self._config_handler.get_root_setting(
-                ["hardware", "soundcard", "blacklist"], []
-            )
-            if isinstance(blacklist, str):
-                blacklist = [blacklist]
+
+            if isinstance(self.soundcard_blacklist, str):
+                self.soundcard_blacklist = [self.soundcard_blacklist]
             soundcard_list = []
             try:
                 default_name = self.get_default_soundcard_name()
-                if not any(b in default_name for b in blacklist):
+                if not any(b in default_name for b in self.soundcard_blacklist):
                     soundcard_list.append(default_name)
             except Exception as e:
                 self.logger.exception(f"Could not get default speaker: {e}")
             for soundcard in self.get_soundcard_list():
                 name = soundcard.name
-                if name not in soundcard_list and not any(b in name for b in blacklist):
+                if name not in soundcard_list and not any(
+                    b in name for b in self.soundcard_blacklist
+                ):
                     soundcard_list.append(name)
             return soundcard_list
 
@@ -125,25 +121,22 @@ def get_plugin_class():
             Retrieves a list of microphone names, excluding blacklisted ones.
             """
             mic_list = []
-            blacklist = self.get_root_setting(
-                ["hardware", "microphone", "blacklist"], []
-            )
-            if isinstance(blacklist, str):
-                blacklist = [blacklist]
+            if isinstance(self.mic_blacklist, str):
+                self.mic_blacklist = [self.mic_blacklist]
             try:
                 default_mic = self.get_default_mic_name()
                 mic_list_names = [mic.name for mic in self.get_mic_list()]
                 if (
                     default_mic
                     and default_mic in mic_list_names
-                    and not any(b in default_mic for b in blacklist)
+                    and not any(b in default_mic for b in self.mic_blacklist)
                 ):
                     mic_list.append(default_mic)
             except Exception as e:
                 self.logger.exception(f"Could not get default microphone: {e}")
             for mic in self.get_mic_list():
                 if mic.name not in mic_list and not any(
-                    b in mic.name for b in blacklist
+                    b in mic.name for b in self.mic_blacklist
                 ):
                     mic_list.append(mic.name)
             return mic_list
@@ -327,8 +320,8 @@ def get_plugin_class():
             self.soundcard_model.splice(0, self.soundcard_model.get_n_items(), [])  # pyright: ignore
             for name in soundcards:
                 display_name = (
-                    (name[: self.max_card_chars] + "...")
-                    if len(name) > self.max_card_chars
+                    (name[: self.max_name_lenght] + "...")
+                    if len(name) > self.max_name_lenght
                     else name
                 )
                 self.soundcard_model.append(display_name)  # pyright: ignore
@@ -355,8 +348,8 @@ def get_plugin_class():
             self.mic_model.splice(0, self.mic_model.get_n_items(), [])  # pyright: ignore
             for name in mics:
                 display_name = (
-                    (name[: self.max_mic_chars] + "...")
-                    if len(name) > self.max_mic_chars
+                    (name[: self.max_name_lenght] + "...")
+                    if len(name) > self.max_name_lenght
                     else name
                 )
                 self.mic_model.append(display_name)  # pyright: ignore

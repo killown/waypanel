@@ -400,9 +400,12 @@ class NetworkCLI:
                 self.logger.warning(
                     f"CLI: Failed to reliably retrieve SSID for connection {conn_name}: {e}"
                 )
-            autoconnect_state: str = (
-                "yes" if profile_ssid in ssids_to_autoconnect else "no"
-            )
+
+            autoconnect_state = ""
+            if profile_ssid and ssids_to_autoconnect:
+                autoconnect_state: str = (
+                    "yes" if profile_ssid in ssids_to_autoconnect else "no"
+                )
             try:
                 modify_command: List[str] = [
                     "nmcli",

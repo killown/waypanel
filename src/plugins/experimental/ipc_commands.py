@@ -1,18 +1,13 @@
 def get_plugin_metadata(panel_instance):
-    plugin_id = panel_instance.get_config(
-        ["dev_ipc", "plugin_id"], "org.waypanel.plugin.ipc_commands"
-    )
     about = "Registers IPC commands for remote debugging and status inspection."
 
     return {
-        "id": plugin_id,
+        "id": "org.waypanel.plugin.ipc_commands",
         "name": "Developer IPC Data Exporter",
         "version": "1.0.0",
         "enabled": True,
-        "container": None,
         "index": 99,
         "priority": 99,
-        "deps": [],
         "description": about,
     }
 

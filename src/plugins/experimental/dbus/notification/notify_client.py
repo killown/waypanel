@@ -31,9 +31,9 @@ def get_plugin_class():
             self.vbox.set_margin_bottom(10)
             self.vbox.set_margin_start(10)
             self.show_messages = None
-            self.max_notifications = self.get_plugin_setting(
-                ["client", "max_notifications"], 5
-            )
+            self.max_notifications = self.get_plugin_setting(["max_notifications"], 5)
+            self.get_plugin_setting(["server_timeout"], 10)
+            self.get_plugin_setting(["server_show_messages"], True)
             self.vbox.set_margin_end(10)
             self.notification_on_popover = {}
             self.notification_button = self.gtk.Button.new_from_icon_name(
@@ -199,11 +199,9 @@ def get_plugin_class():
 
         def create_notification_box(self, notification):
             """Create a notification box. No explicit link button is added."""
-            body_max_width_chars = self.get_plugin_setting(
-                ["client", "body_max_width_chars"], 50
-            )
+            body_max_width_chars = self.get_plugin_setting(["body_max_width_chars"], 50)
             notification_icon_size = self.get_plugin_setting(
-                ["client", "notification_icon_size"], 64
+                ["notification_icon_size"], 64
             )
             hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 30)
             hbox.add_css_class("notify-client-box")
@@ -340,12 +338,8 @@ def get_plugin_class():
         def open_popover_notifications(self, *_):
             if not hasattr(self, "popover") or not self.popover:
                 self.popover = self.gtk.Popover.new()
-                self.popover_width = self.get_plugin_setting(
-                    ["client", "popover_width"], 500
-                )
-                self.popover_height = self.get_plugin_setting(
-                    ["client", "popover_height"], 600
-                )
+                self.popover_width = self.get_plugin_setting(["popover_width"], 500)
+                self.popover_height = self.get_plugin_setting(["popover_height"], 600)
                 self.main_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
                 self.main_vbox.set_margin_top(10)
                 self.main_vbox.set_margin_bottom(10)

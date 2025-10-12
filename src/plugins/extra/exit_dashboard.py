@@ -1,8 +1,5 @@
 def get_plugin_metadata(_):
-    about = (
-        "A system dashboard providing quick access to common system actions",
-        "like power management, session control, and settings.",
-    )
+    about = ("A system dashboard providing quick access to common system actions",)
 
     return {
         "id": "org.waypanel.plugin.exit_dashboard",

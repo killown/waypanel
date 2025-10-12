@@ -1,10 +1,7 @@
 def get_plugin_metadata(_):
-    about = """
-            A plugin that monitors and displays system network status (wired and Wi-Fi)
-            in the panel. It provides a Gtk.Popover with detailed device information,
-            a list of available Wi-Fi networks for easy connection via nmcli, and
-            direct access to network settings.
-            """
+    about = (
+        "A plugin that monitors and displays system network status (wired and Wi-Fi)",
+    )
     return {
         "id": "org.waypanel.plugin.network_manager",
         "name": "Network Manager",
