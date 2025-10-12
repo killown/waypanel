@@ -496,11 +496,11 @@ class ConfigHandler:
         Returns:
             True if the hint was successfully injected, False otherwise.
         """
+        if key_path not in self.default_config:
+            self.default_config[key_path] = {}
         if section:
             self.default_config[key_path][f"{section}_hint"] = hint
         else:
-            if key_path not in self.default_config:
-                self.default_config[key_path] = {}
             if "_section_hint" not in hint:
                 section_hint = self.default_config[key_path]
                 self.default_config[key_path] = {"_section_hint": section_hint}
