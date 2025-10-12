@@ -194,8 +194,9 @@ class BasePlugin:
         metadata = self.get_plugin_metadata()
         if metadata:
             plugin_id = metadata["id"]
-            self.set_hint(hint, section, plugin_id)
-            self.set_additional_hints(plugin_id, metadata)
+            if plugin_id:
+                self.set_hint(hint, section, plugin_id)
+                self.set_additional_hints(plugin_id, metadata)
 
     def set_additional_hints(self, plugin_id, metadata):
         self.set_hint(
@@ -213,11 +214,12 @@ class BasePlugin:
             "hide_in_systray",
             plugin_id,
         )
-        try:
-            if "description" in metadata:
-                self.set_hint(metadata["description"])
-        except Exception as e:
-            self.logger.debug(f"Failed to set additional hint with metadata {e}")
+        # try:
+        #     if "description" in metadata:
+        #         description = metadata["description"]
+        #         self.set_hint(description)
+        # except Exception as e:
+        #     self.logger.debug(f"Failed to set additional hint with metadata {e}")
 
     def _periodic_gc(self):
         """

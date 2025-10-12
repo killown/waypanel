@@ -34,7 +34,6 @@ def get_plugin_class():
             self.conn = sqlite3.connect(self.db_path)
             self.cursor = self.conn.cursor()
             self.dockbar_id = "org.waypanel.plugin.dockbar"
-            self.set_additional_hints()
 
         def on_start(self):
             self.main_widget = (self.appmenu, "append")

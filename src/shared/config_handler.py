@@ -497,7 +497,6 @@ class ConfigHandler:
             True if the hint was successfully injected, False otherwise.
         """
         if section:
-            print(key_path, section, type(self.default_config))
             self.default_config[key_path][f"{section}_hint"] = hint
         else:
             if key_path not in self.default_config:
@@ -506,8 +505,6 @@ class ConfigHandler:
                 section_hint = self.default_config[key_path]
                 self.default_config[key_path] = {"_section_hint": section_hint}
             self.default_config[key_path]["_section_hint"] = hint
-            print(self.default_config)
-        print(key_path, self.default_config[key_path])
 
     def get_plugin_setting(
         self, key: Optional[Union[str, List[str]]] = None, default_value: Any = None
