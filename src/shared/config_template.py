@@ -1,14 +1,13 @@
-screen_width = 1920  # Fallback width when WayfireSocket cannot be used
-FIXED_DIMENSION = 32.0  # Fixed value
-distributor_id = "linux"  # Fallback distributor ID when 'distro' is not imported
-distributor_logo_fallback_icons = [
-    f"distributor-{distributor_id}",
-    f"{distributor_id}-logo",
-    f"{distributor_id}_logo",
-    f"distributor_{distributor_id}",
-    f"logo{distributor_id}",
-    f"{distributor_id}logo",
-]
+from wayfire import WayfireSocket
+
+socket = WayfireSocket()
+outputs = socket.list_outputs()
+if outputs:
+    first_output_geometry = outputs[0]["geometry"]
+    screen_width = first_output_geometry["width"]
+else:
+    screen_width = 1920
+FIXED_DIMENSION = 32.0
 
 default_config = {
     "_section_hint": (
@@ -41,51 +40,6 @@ default_config = {
                 "The name of your main display output, as recognized "
                 "by the Wayland compositor (e.g., DP-1, HDMI-A-1). "
                 "This output determines where Waypanel is placed by default."
-            ),
-        },
-        "soundcard": {
-            "_section_hint": "Soundcard and system volume control settings.",
-            "blacklist": "Navi",
-            "blacklist_hint": (
-                "A comma-separated list of keywords (e.g., 'HDMI', 'Navi') "
-                "used to filter out specific audio devices from the "
-                "volume control/selector."
-            ),
-            "max_name_lenght": 35,
-            "max_name_lenght_hint": (
-                "Maximum number of characters to display for the audio "
-                "device's name in the panel widget."
-            ),
-        },
-        "microphone": {
-            "_section_hint": "Microphone input device settings.",
-            "blacklist": "Navi",
-            "blacklist_hint": (
-                "A comma-separated list of keywords used to filter out "
-                "specific microphone devices from the input selector."
-            ),
-            "max_name_lenght": 35,
-            "max_name_lenght_hint": (
-                "Maximum number of characters to display for the microphone "
-                "device's name in the panel widget."
-            ),
-        },
-        "bluetooth": {
-            "_section_hint": "Bluetooth device connection settings.",
-            "auto_connect": ["", "", ""],
-            "auto_connect_hint": (
-                "A list of **Bluetooth MAC addresses** (e.g., "
-                "['00:1A:7D:XX:XX:XX']) for devices Waypanel should "
-                "automatically attempt to connect to when it starts."
-            ),
-        },
-        "network": {
-            "_section_hint": "Settings related to network connection management, including Wi-Fi auto-connection behavior.",
-            "auto_connect_ssid": [""],
-            "auto_connect_ssid_hint": (
-                "List of Wi-Fi SSIDs to automatically connect to on "
-                "startup (whitelist). All other saved Wi-Fi connections "
-                "will be set to manual connect (autoconnect=no)."
             ),
         },
     },
@@ -187,17 +141,6 @@ default_config = {
             "width_hint": "The width (in pixels) of this horizontal panel, matched to the primary output width.",
         },
     },
-    "org.waypanel.plugin.bluetooth": {
-        "_section_hint": (
-            "Settings for the Bluetooth plugin, used to manage connections to local devices."
-        ),
-        "hide_in_systray": True,
-        "main_icon": "bluetooth-symbolic",
-        "fallback_main_icons": [
-            "org.gnome.Settings-bluetooth-symbolic",
-            "bluetooth",
-        ],
-    },
     "org.waypanel.plugin.global_shortcuts": {
         "_section_hint": (
             "Provides system-wide D-Bus actions to link keyboard shortcuts directly to commands in active plugins"
@@ -232,13 +175,6 @@ default_config = {
         "_section_hint": (
             "Settings for the Overflow Indicator plugin, which shows a button when other panel items are hidden due to lack of space."
         )
-    },
-    "org.waypanel.plugin.app_launcher": {
-        "_section_hint": (
-            "Configuration for the Application Menu (Start Menu) button and associated settings."
-        ),
-        "main_icon": "start-here",
-        "fallback_main_icons": distributor_logo_fallback_icons,
     },
     "org.waypanel.plugin.screen_recorder": {"hide_in_systray": False},
     "org.waypanel.plugin.exit_dashboard": {

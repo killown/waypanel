@@ -368,7 +368,7 @@ class BasePlugin:
         return self.config_handler.get_root_setting
 
     @property
-    def remove_plugin_setting(self) -> Callable[[ConfigKeys], None]:
+    def remove_plugin_setting(self):
         """
         Provides access to the ConfigHandler's method for removing a plugin-specific setting.
 

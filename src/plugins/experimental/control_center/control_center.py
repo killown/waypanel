@@ -215,6 +215,27 @@ def get_plugin_class():
         def load_config(self):
             self.config = self.config_handler.config_data
 
+        def _on_add_field_clicked(self, button, group, category_name):
+            """Handler to add a new key-value row with an optional path to the UI."""
+            path_entry = Gtk.Entry(placeholder_text="Sub-path (optional, e.g., 'a.b')")
+            key_entry = Gtk.Entry(placeholder_text="Key")
+            value_entry = Gtk.Entry(placeholder_text="Value")
+            if "_dynamic_fields" not in self.widget_map[category_name]:
+                self.widget_map[category_name]["_dynamic_fields"] = []
+            self.widget_map[category_name]["_dynamic_fields"].append(
+                (path_entry, key_entry, value_entry)
+            )
+            action_row = Adw.ActionRow()
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            box.append(path_entry)
+            box.append(key_entry)
+            box.append(value_entry)
+            action_row.set_child(box)
+            parent = button.get_parent()
+            parent.remove(button)
+            group.add(action_row)
+            parent.append(button)
+
         def create_content_page(
             self, category_name: str, data: Dict[str, Any]
         ) -> Gtk.ScrolledWindow:
@@ -249,7 +270,7 @@ def get_plugin_class():
             for key, value in data.items():
                 current_path: List[str] = [full_config_key, key]
                 if key.endswith(("_hint", "_section_hint", "_items_hint")):
-                    continue
+                    continue  # pyright: ignore
                 if isinstance(value, dict):
                     expander = Gtk.Expander.new(
                         f"<b>{key.replace('_', ' ').capitalize()}</b>"
@@ -296,6 +317,11 @@ def get_plugin_class():
                         action_row.set_child(widget)
                     preferences_group.add(action_row)
                     self.widget_map[category_name][key] = widget
+            add_button = Gtk.Button(label="Add New Field")
+            add_button.connect(
+                "clicked", self._on_add_field_clicked, preferences_group, category_name
+            )
+            main_box.append(add_button)
             scrolled_window.set_child(main_box)
             return scrolled_window
 
@@ -407,8 +433,11 @@ def get_plugin_class():
                         try:
                             return float(text)
                         except (ValueError, TypeError):
+                            if text.lower() == "true":
+                                return True
+                            if text.lower() == "false":
+                                return False
                             return text
-                    return text
                 elif isinstance(widget, Gtk.SpinButton):
                     val = widget.get_value()
                     if val == int(val):
@@ -420,6 +449,8 @@ def get_plugin_class():
 
             def update_config_from_widgets(config_dict, widget_dict):
                 for key, value in widget_dict.items():
+                    if key == "_dynamic_fields":
+                        continue
                     if isinstance(value, dict):
                         if key in config_dict:
                             update_config_from_widgets(config_dict[key], value)
@@ -449,6 +480,24 @@ def get_plugin_class():
                             self.config[full_config_key],
                             self.widget_map[category_name],
                         )
+                        if "_dynamic_fields" in self.widget_map[category_name]:
+                            dynamic_fields = self.widget_map[category_name][
+                                "_dynamic_fields"
+                            ]
+                            for path_widget, key_widget, value_widget in dynamic_fields:
+                                key = key_widget.get_text().strip()
+                                path_str = path_widget.get_text().strip()
+                                if not key:
+                                    continue
+                                value = get_value_from_widget(value_widget)
+                                current_level = self.config[full_config_key]
+                                if path_str:
+                                    path_parts = path_str.split(".")
+                                    for part in path_parts:
+                                        current_level = current_level.setdefault(
+                                            part, {}
+                                        )
+                                current_level[key] = value
                     else:
                         return
             try:

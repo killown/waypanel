@@ -34,6 +34,23 @@ def get_plugin_class():
             self.conn = sqlite3.connect(self.db_path)
             self.cursor = self.conn.cursor()
             self.dockbar_id = "org.waypanel.plugin.dockbar"
+            distributor_id = distro.id()
+            distributor_logo_fallback_icons = [
+                f"distributor-{distributor_id}",
+                f"{distributor_id}-logo",
+                f"{distributor_id}_logo",
+                f"distributor_{distributor_id}",
+                f"logo{distributor_id}",
+                f"{distributor_id}logo",
+            ]
+            self.main_icon = self.get_plugin_setting(["main_icon"], "start-here")
+            self.fallback_main_icons = self.get_plugin_setting(
+                ["fallback_main_icons"], distributor_logo_fallback_icons
+            )
+            icon_name = self._gtk_helper.icon_exist(
+                self.main_icon, self.fallback_main_icons
+            )
+            self.appmenu.set_icon_name(icon_name)
 
         def on_start(self):
             self.main_widget = (self.appmenu, "append")

@@ -31,10 +31,10 @@ def get_plugin_class():
             self.mic_model = None
             self.max_name_lenght = self.get_plugin_setting(["name_lenght"], 35)
             self.soundcard_blacklist = self._config_handler.get_plugin_setting(
-                ["soundcard", "blacklist"], []
+                ["soundcard", "blacklist"], ["Navi"]
             )
             self.mic_blacklist = self.get_plugin_setting(
-                ["microphone", "blacklist"], []
+                ["microphone", "blacklist"], ["Navi"]
             )
 
             self.add_hint(

@@ -38,6 +38,14 @@ def get_plugin_class():
                 "auto_connect",
             )
 
+            self.main_icon = self.get_plugin_setting(
+                ["main_icon"], ["bluetooth-symbolic"]
+            )
+            self.fallback_main_icons = self.get_plugin_setting(
+                ["fallback_main_icons"],
+                ["org.gnome.Settings-bluetooth-symbolic", "bluetooth"],
+            )
+
         def on_start(self):
             """Hook called by BasePlugin after successful initialization."""
             self.bluetooth_button_popover.connect(

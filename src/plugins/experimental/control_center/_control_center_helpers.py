@@ -133,6 +133,16 @@ class ControlCenterHelpers:
                 expander.set_child(list_content_box)
                 preferences_group.add(expander)
             else:
+                if isinstance(value, int) and value in (0, 1):
+                    try:
+                        default_val_container = self.parent.default_config
+                        for k in new_path:
+                            default_val_container = default_val_container[k]
+                        if isinstance(default_val_container, bool):
+                            value = bool(value)
+                    except (KeyError, TypeError):
+                        pass
+                    print(value)
                 widget = self.create_widget_for_value(value)
                 if not widget:
                     continue
@@ -233,6 +243,11 @@ class ControlCenterHelpers:
             entry.set_width_chars(5)
             entry.set_max_width_chars(50)
             return entry
+        elif isinstance(value, bool):
+            switch = Gtk.Switch()
+            switch.add_css_class("control-center-toggle-switch")
+            switch.set_active(value)
+            return switch
         elif isinstance(value, int) or isinstance(value, float):
             entry = Gtk.SpinButton()
             entry.add_css_class("control-center-numeric-input")
@@ -250,11 +265,6 @@ class ControlCenterHelpers:
             if isinstance(value, float):
                 entry.set_digits(max(1, len(str(value).split(".")[-1])))
             return entry
-        elif isinstance(value, bool):
-            switch = Gtk.Switch()
-            switch.add_css_class("control-center-toggle-switch")
-            switch.set_active(value)
-            return switch
         elif isinstance(value, list):
             entry = Gtk.Entry()
             entry.add_css_class("control-center-text-input")
