@@ -1,8 +1,8 @@
 def get_plugin_metadata(_):
-    about = """
-            Provides a user interface for quickly finding and opening
-            files from a configured directory, using an extension-based editor mapping.
-            """
+    about = (
+        "Provides a user interface for quickly finding and opening"
+        "files from a configured directory, using an extension-based editor mapping."
+    )
     return {
         "id": "org.waypanel.plugin.open_with_editor",
         "name": "Open with editor",
@@ -29,13 +29,21 @@ def get_plugin_class():
 
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
-            raw_config_maps = self.get_plugin_setting()
-            if not raw_config_maps:
-                raw_config_maps = self.get_plugin_setting(
-                    ["directories", "nvim"], "~/.config/nvim"
-                )
-            else:
-                raw_config_maps = self.get_plugin_setting("directories")
+            self.add_hint(
+                [
+                    "Provides a searchable UI for files in configured directories, with multi-editor launch support."
+                ],
+                None,
+            )
+            raw_config_maps = self.get_plugin_setting(
+                ["directories"], {"nvim": "~/.config/nvim"}
+            )
+            self.add_hint(
+                [
+                    'A dictionary mapping a user-friendly tab name (key) to the absolute or relative path of the directory (value) to recursively search for files. Example: {"Config": "~/.config", "Projects": "~/code/"}'
+                ],
+                "directories",
+            )
             self.config_maps = {}
             for dir_name, dir_path in raw_config_maps.items():
                 self.config_maps[dir_name] = self.os.path.expanduser(dir_path)
@@ -46,40 +54,47 @@ def get_plugin_class():
             self.cached_files = {}
             self.active_listbox = None
             self.active_searchbar = None
-            self.editor_extensions = self.get_plugin_setting(["extensions"])
-            if not self.editor_extensions:
-                self.editor_extensions = {
-                    "json": ["code", "nvim"],
-                    "toml": ["code", "nvim"],
-                    "yml": ["code", "nvim"],
-                    "yaml": ["code", "nvim"],
-                    "conf": ["code", "gedit"],
-                    "ini": ["code", "gedit"],
-                    "cfg": ["code", "gedit"],
-                    "xml": ["code", "nvim"],
-                    "txt": ["gedit", "code"],
-                    "log": ["gedit", "nvim"],
-                    "md": ["code", "gedit"],
-                    "css": ["code", "nvim"],
-                    "scss": ["code", "nvim"],
-                    "html": ["code", "nvim"],
-                    "js": ["code", "nvim"],
-                    "ts": ["code", "nvim"],
-                    "py": ["nvim", "code"],
-                    "lua": ["nvim", "code"],
-                    "sh": ["nvim", "code"],
-                    "go": ["nvim", "code"],
-                    "rs": ["nvim", "code"],
-                    "rb": ["nvim", "code"],
-                    "php": ["nvim", "code"],
-                    "java": ["nvim", "code"],
-                    "c": ["nvim", "code"],
-                    "cpp": ["nvim", "code"],
-                    "h": ["nvim", "code"],
-                }
-                self.logger.info(
-                    "Using default recommended editor mappings as none were configured by the user."
-                )
+            self.editor_extensions = {
+                "json": ["code", "nvim"],
+                "toml": ["code", "nvim"],
+                "yml": ["code", "nvim"],
+                "yaml": ["code", "nvim"],
+                "conf": ["code", "gedit"],
+                "ini": ["code", "gedit"],
+                "cfg": ["code", "gedit"],
+                "xml": ["code", "nvim"],
+                "txt": ["gedit", "code"],
+                "log": ["gedit", "nvim"],
+                "md": ["code", "gedit"],
+                "css": ["code", "nvim"],
+                "scss": ["code", "nvim"],
+                "html": ["code", "nvim"],
+                "js": ["code", "nvim"],
+                "ts": ["code", "nvim"],
+                "py": ["nvim", "code"],
+                "lua": ["nvim", "code"],
+                "sh": ["nvim", "code"],
+                "go": ["nvim", "code"],
+                "rs": ["nvim", "code"],
+                "rb": ["nvim", "code"],
+                "php": ["nvim", "code"],
+                "java": ["nvim", "code"],
+                "c": ["nvim", "code"],
+                "cpp": ["nvim", "code"],
+                "h": ["nvim", "code"],
+            }
+            self.editor_extensions = self.get_plugin_setting(
+                ["extensions"], self.editor_extensions
+            )
+            self.add_hint(
+                [
+                    'A dictionary mapping file extensions (without the dot) to a prioritized list of editors (CLI commands) to open the file with. The editor index (Left=0, Middle=1, Right=2) is determined by the mouse button click. Example: {"py": ["nvim", "code"], "json": ["code", "gedit"]}'
+                ],
+                "extensions",
+            )
+            self.logger.info(
+                "Using default recommended editor mappings as none were configured by the user."
+            )
             self.default_editors = ["nvim", "code", "gedit", "subl", "vscode", "nano"]
             self.extension_to_icon = {
                 "py": "text-x-python-symbolic",
@@ -130,6 +145,12 @@ def get_plugin_class():
                 "st",
                 "rxvt",
             ]
+            self.add_hint(
+                [
+                    "A list of preferred terminal emulators to use when launching TUI editors (like 'nvim' or 'nano'). The plugin will try them in order."
+                ],
+                "terminal_emulators",
+            )
 
         def on_start(self):
             self.create_menu_popover_openwitheditor()
@@ -161,17 +182,17 @@ def get_plugin_class():
             self._setup_popover_base()
             main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
             main_box.add_css_class("openwitheditor-main-box")
-            self.switcher, self.stack = self._setup_tabbed_ui()  # pyright: ignore
+            self.switcher, self.stack = self._setup_tabbed_ui()
             main_box.append(self.switcher)
             main_box.append(self.stack)
-            self.popover_openwitheditor.set_child(main_box)  # pyright: ignore
+            self.popover_openwitheditor.set_child(main_box)
             self.active_listbox = self.listbox_widgets[self.active_dir_name]
             self.active_searchbar = self.searchbar_widgets[self.active_dir_name]
             self._populate_listbox(
                 self.active_listbox, self.config_dir, self.active_searchbar
             )
             self.active_searchbar.grab_focus()
-            self.popover_openwitheditor.popup()  # pyright: ignore
+            self.popover_openwitheditor.popup()
             return self.popover_openwitheditor
 
         def on_listbox_row_activated(self, listbox, row):
@@ -367,7 +388,7 @@ def get_plugin_class():
             editor_index = button - 1
             file_path = row_hbox.MYTEXT
             self.open_file_in_editor(file_path=file_path, editor_index=editor_index)
-            gesture.set_state(self.gtk.EventSequenceState.STOPPED)  # pyright: ignore
+            gesture.set_state(self.gtk.EventSequenceState.STOPPED)
 
         def _create_file_row(self, full_file_path, root_dir):
             """
@@ -380,7 +401,7 @@ def get_plugin_class():
             display_path = self.os.path.relpath(full_file_path, root_dir)
             row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
             row_hbox.add_css_class("openwitheditor-row-hbox")
-            row_hbox.MYTEXT = full_file_path  # pyright: ignore
+            row_hbox.MYTEXT = full_file_path
             row_hbox.set_tooltip_text(full_file_path)
             line = self.gtk.Label.new()
             line.set_label(display_path)
@@ -528,7 +549,7 @@ def get_plugin_class():
             if self.popover_openwitheditor and success:
                 self.popover_openwitheditor.popdown()
 
-        def open_popover_openwitheditor(self, *_):
+        def open_popover_openwitheditor(self, *_) -> None:
             if self.popover_openwitheditor and self.popover_openwitheditor.is_visible():
                 self.popover_openwitheditor.popdown()
             elif (
@@ -541,7 +562,7 @@ def get_plugin_class():
             elif not self.popover_openwitheditor:
                 self.popover_openwitheditor = self.create_popover_openwitheditor()
 
-        def popover_is_open(self, *_):
+        def popover_is_open(self, *_) -> None:
             if self.active_searchbar:
                 self.active_searchbar.grab_focus()
             self.set_keyboard_on_demand()
@@ -549,7 +570,7 @@ def get_plugin_class():
             vadjustment = self.scrolled_window.get_vadjustment()
             vadjustment.set_value(0)
 
-        def popover_is_closed(self, *_):
+        def popover_is_closed(self, *_) -> None:
             self.set_keyboard_on_demand(False)
             if hasattr(self, "listbox"):
                 self.listbox.invalidate_filter()

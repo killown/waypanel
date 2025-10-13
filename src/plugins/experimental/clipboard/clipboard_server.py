@@ -130,13 +130,14 @@ def get_plugin_class():
                 "db/clipboard/clipboard_server.db"
             )
             self.log_enabled = self.get_root_setting(
-                ["org.waypanel.plugin.clipboard", "server_log_enabled"], False
+                ["org.waypanel.plugin.clipboard", "server", "log_enabled"], [False]
             )
             self.max_items = self.get_root_setting(
-                ["org.waypanel.plugin.clipboard", "server_max_items"], 100
+                ["org.waypanel.plugin.clipboard", "server", "max_items"], [100]
             )
             self.monitor_interval = self.get_root_setting(
-                ["org.waypanel.plugin.clipboar", "server_monitor_interval"], 0.5
+                ["org.waypanel.plugin.clipboard", "server", "monitor_interval"],
+                [0.5],
             )
 
         async def _init_db(self, panel_instance, db_path):

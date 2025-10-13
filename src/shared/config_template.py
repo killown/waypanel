@@ -240,56 +240,6 @@ default_config = {
         "main_icon": "start-here",
         "fallback_main_icons": distributor_logo_fallback_icons,
     },
-    "org.waypanel.plugin.clipboard": {
-        "_section_hint": (
-            "Settings for the Clipboard Manager plugin, which tracks "
-            "copy/paste history."
-        ),
-        "server_log_enabled": False,
-        "server_log_enabled_hint": (
-            "If **True**, enables logging of clipboard activity for **debugging only**."
-        ),
-        "server_max_items": 100,
-        "server_max_items_hint": (
-            "Maximum number of items to keep in the clipboard history cache."
-        ),
-        "server_monitor_interval": 0.5,
-        "server_monitor_interval_hint": (
-            "The time interval (in seconds) the clipboard manager waits "
-            "before checking for new content."
-        ),
-        "client_popover_min_width": 500,
-        "client_popover_min_width_hint": (
-            "The minimum width (in pixels) for the clipboard history popover window."
-        ),
-        "client_popover_max_height": 600,
-        "client_popover_max_height_hint": (
-            "The maximum height (in pixels) for the clipboard history popover window."
-        ),
-        "client_thumbnail_size": 128,
-        "client_thumbnail_size_hint": (
-            "Size (in pixels) for image thumbnails displayed in the history list."
-        ),
-        "client_preview_text_length": 50,
-        "client_preview_text_length_hint": (
-            "Maximum number of characters to show for a plain text item preview."
-        ),
-        "client_image_row_height": 60,
-        "client_image_row_height_hint": (
-            "The fixed height (in pixels) for history rows that contain image data."
-        ),
-        "client_text_row_height": 38,
-        "client_text_row_height_hint": (
-            "The fixed height (in pixels) for history rows that contain plain text."
-        ),
-        "client_item_spacing": 5,
-        "client_item_spacing_hint": (
-            "Spacing (in pixels) between clipboard items in the popover's list."
-        ),
-        "main_icon": "clipboard",
-        "fallback_main_icons": ["edit-paste-symbolic", "edit-paste"],
-        "hide_in_systray": False,
-    },
     "org.waypanel.plugin.screen_recorder": {"hide_in_systray": False},
     "org.waypanel.plugin.exit_dashboard": {
         "hide_in_systray": False,

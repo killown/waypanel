@@ -1,9 +1,9 @@
 def get_plugin_metadata(_):
-    about = """
-            This plugin serves as the graphical user interface (GUI) for the
-            asynchronous clipboard history server. It allows users to view,
-            search, and manage their clipboard history through a pop-up menu.
-            """
+    about = (
+        "This plugin serves as the graphical user interface (GUI) for the"
+        "asynchronous clipboard history server. It allows users to view,"
+        "search, and manage their clipboard history through a pop-up menu."
+    )
     return {
         "id": "org.waypanel.plugin.clipboard",
         "name": "Clipboard Client",
@@ -27,6 +27,7 @@ def get_plugin_class():
     from src.plugins.core._base import BasePlugin
     from .clipboard_server import get_plugin_class
     from src.shared.path_handler import PathHandler
+    from .template import Helpers
 
     class ClipboardManager:
         def __init__(self, panel_instance):
@@ -107,25 +108,39 @@ def get_plugin_class():
             self.find_text_using_button = {}
             self.row_content = None
             self.listbox = None
+            self.log_enabled = self.get_plugin_setting(["server", "log_enabled"], False)
+            self.max_items = self.get_plugin_setting(["server", "max_items"], 100)
+            self.monitor_interval = self.get_plugin_setting(
+                ["server", "monitor_interval"],
+                0.5,
+            )
             self.popover_min_width = self.get_plugin_setting(
-                ["client_popover_min_width"], 500
+                ["client", "popover_min_width"], 500
             )
             self.popover_max_height = self.get_plugin_setting(
-                ["client_popover_max_height"], 600
+                ["client", "popover_max_height"], 600
             )
             self.thumbnail_size = self.get_plugin_setting(
-                ["client_thumbnail_size"], 128
+                ["client", "thumbnail_size"], 128
             )
             self.preview_text_length = self.get_plugin_setting(
-                ["client_preview_text_length"], 50
+                ["client", "preview_text_length"], 50
             )
             self.image_row_height = self.get_plugin_setting(
-                ["client_image_row_height"], 60
+                ["client", "image_row_height"], 60
             )
             self.text_row_height = self.get_plugin_setting(
-                ["client_text_row_height"], 38
+                ["client", "text_row_height"], 38
             )
-            self.item_spacing = self.get_plugin_setting(["client_item_spacing"], 5)
+            self.item_spacing = self.get_plugin_setting(["client", "item_spacing"], 5)
+            helpers = Helpers(self)
+            helpers.apply_hints()
+            self.main_icon = self.get_plugin_setting(["main_icon"], "clipboard")
+            self.fallback_main_icons = self.get_plugin_setting(
+                ["fallback_main_icons"],
+                ["edit-paste-symbolic", "edit-paste"],
+            )
+            self.hide_in_systray = self.get_plugin_setting(["hide_in_systray"], False)
 
         def on_start(self):
             self.create_popover_menu_clipboard()

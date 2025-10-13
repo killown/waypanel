@@ -230,7 +230,7 @@ class ControlCenterHelpers:
             entry = Gtk.Entry()
             entry.add_css_class("control-center-text-input")
             entry.set_text(value)
-            entry.set_width_chars(30)
+            entry.set_width_chars(5)
             entry.set_max_width_chars(50)
             return entry
         elif isinstance(value, int) or isinstance(value, float):
@@ -245,8 +245,8 @@ class ControlCenterHelpers:
                 page_size=0.0,
             )
             entry.set_adjustment(adjustment)
-            entry.set_width_chars(15)
-            entry.set_max_width_chars(20)
+            entry.set_width_chars(5)
+            entry.set_max_width_chars(10)
             if isinstance(value, float):
                 entry.set_digits(max(1, len(str(value).split(".")[-1])))
             return entry
@@ -260,8 +260,8 @@ class ControlCenterHelpers:
             entry.add_css_class("control-center-text-input")
             entry.set_text(", ".join(map(str, value)))
             entry.set_sensitive(True)
-            entry.set_width_chars(30)
-            entry.set_max_width_chars(50)
+            entry.set_width_chars(10)
+            entry.set_max_width_chars(100)
             if value:
                 first_element_type = type(value[0])
                 if first_element_type is int:
