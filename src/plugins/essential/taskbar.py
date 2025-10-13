@@ -42,20 +42,14 @@ def get_plugin_class():
             self.scrolled_window = self.gtk.ScrolledWindow()
             self.button_pool = []
             self.in_use_buttons = {}
-            self.icon_size = self.get_plugin_setting(
-                ["layout", "icon_size"],
-            )
-            self.spacing = self.get_plugin_setting(
-                ["layout", "spacing"],
-            )
-            self.show_label = self.get_plugin_setting(
-                ["layout", "show_label"],
-            )
+            self.icon_size = self.get_plugin_setting(["layout", "icon_size"], 32)
+            self.spacing = self.get_plugin_setting(["layout", "spacing"], 5)
+            self.show_label = self.get_plugin_setting(["layout", "show_label"], True)
             self.max_title_lenght = self.get_plugin_setting(
-                ["layout", "max_title_lenght"],
+                ["layout", "max_title_lenght"], 25
             )
             self.exclusive_zone = self.get_plugin_setting(
-                ["panel", "exclusive_zone"],
+                ["panel", "exclusive_zone"], True
             )
             self.panel_name = self.config_handler.get_root_setting(
                 ["panel", "name"],

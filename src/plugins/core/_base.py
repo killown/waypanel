@@ -195,26 +195,11 @@ class BasePlugin:
         if metadata:
             plugin_id = metadata["id"]
             if plugin_id:
-                self.set_all_hints(plugin_id, metadata, section, hint)
-
-    def set_all_hints(self, plugin_id, metadata, section, hint):
-        self.config_handler.set_section_hint(plugin_id, metadata["description"])
-        self.set_hint(
-            "Waypanel will use the main icon as the default if it finds one.",
-            ["main_icon"],
-            plugin_id,
-        )
-        self.set_hint(
-            "If waypanel can't find the main icon, it will search through fallback icons.",
-            ["fallback_main_icons"],
-            plugin_id,
-        )
-        self.set_hint(
-            "If True, the icon will be moved for the overflow indicator.",
-            ["hide_in_systray"],
-            plugin_id,
-        )
-        self.set_hint(hint, section, plugin_id)
+                if "description" in metadata:
+                    self.config_handler.set_section_hint(
+                        plugin_id, metadata["description"]
+                    )
+                return self.config_handler.set_setting_hint(plugin_id, section, hint)
 
     def _periodic_gc(self):
         """

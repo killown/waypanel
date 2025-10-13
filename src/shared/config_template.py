@@ -233,12 +233,6 @@ default_config = {
             "Settings for the Overflow Indicator plugin, which shows a button when other panel items are hidden due to lack of space."
         )
     },
-    "org.waypanel.plugin.volume_scroll": {
-        "_section_hint": (
-            "Configuration for the Volume plugin, which provides sound level control and display."
-        ),
-        "polling_interval": 0.5,
-    },
     "org.waypanel.plugin.app_launcher": {
         "_section_hint": (
             "Configuration for the Application Menu (Start Menu) button and associated settings."
@@ -540,55 +534,6 @@ default_config = {
                 ),
             },
         },
-    },
-    "org.waypanel.plugin.calendar": {
-        "_section_hint": (
-            "Configuration for the Calendar plugin, which displays the date/time "
-            "and serves as a host for other widgets (like weather) within its popover."
-        ),
-        "weather": {
-            "_section_hint": (
-                "Settings for the Weather sub-plugin, which attaches to the Calendar popover. "
-            ),
-            "coordinates": ("-23.5505", "-46.6333"),
-            "coordinates_hint": (
-                "The geographical coordinates for weather lookups (latitude, longitude) "
-                "as a tuple of strings (e.g., '34.0522', '-118.2437')."
-            ),
-        },
-    },
-    "org.waypanel.plugin.notify_client": {
-        "_section_hint": (
-            "Settings for the Notification Daemon, which handles system notifications."
-        ),
-        "max_notifications": 5.0,
-        "max_notifications_hint": (
-            "Maximum number of concurrent pop-up notifications that "
-            "will be displayed on the screen at one time."
-        ),
-        "body_max_width_chars": 80.0,
-        "body_max_width_chars_hint": (
-            "Maximum number of characters allowed per line before the "
-            "notification body text wraps."
-        ),
-        "notification_icon_size": 64.0,
-        "notification_icon_size_hint": (
-            "Size (in pixels) of the application icon shown within "
-            "the notification pop-up."
-        ),
-        "popover_width": 500.0,
-        "popover_width_hint": (
-            "The width (in pixels) of the notification popover window."
-        ),
-        "popover_height": 600.0,
-        "popover_height_hint": (
-            "The height (in pixels) of the notification popover window."
-        ),
-        "server_show_messages": True,
-        "server_show_messages_hint": (
-            "If **True**, prints incoming notification messages to the "
-            "console/log file for **debugging only**."
-        ),
     },
     "org.waypanel.plugin.custom_menu": {
         "_section_hint": (

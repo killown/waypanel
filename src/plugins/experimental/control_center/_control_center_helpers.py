@@ -33,10 +33,16 @@ class ControlCenterHelpers:
             if not isinstance(target_dict, dict) or key not in target_dict:
                 key_name = key.replace("_", " ").capitalize()
                 context = ".".join(keys[:i]) if i > 0 else "Root"
-                return f"Hint missing for intermediate key: '{key_name}' (Context: {context})"
+                self.parent.logger.debug(
+                    f"Hint missing for intermediate key: '{key_name}' (Context: {context})"
+                )
+                return ""
             target_dict = target_dict[key]
         if not isinstance(target_dict, dict):
-            return "Internal Error: Invalid path structure in default config."
+            self.parent.logger.debug(
+                "Internal Error: Invalid path structure in default config."
+            )
+            return ""
         final_key = keys[-1]
         value_hint = target_dict.get(f"{final_key}_hint")
         if value_hint:
@@ -68,7 +74,10 @@ class ControlCenterHelpers:
             return f"A configuration section for '{key_name}'."
         key_name = final_key.replace("_", " ").capitalize()
         context = ".".join(keys[:-1]) if len(keys) > 1 else "Root"
-        return f"Hint missing for key: '{key_name}' (Context: {context})"
+        self.parent.logger.debug(
+            f"Hint missing for key: '{key_name}' (Context: {context})"
+        )
+        return ""
 
     def create_nested_widgets(
         self,

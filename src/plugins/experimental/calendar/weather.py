@@ -1,9 +1,9 @@
 def get_plugin_metadata(_):
     about = """
-            This plugin adds a weather display to another plugin's user
-            interface, fetching weather data asynchronously and updating the
-            display periodically.
-            """
+    This plugin adds a weather display to another plugin's user
+    interface, fetching weather data asynchronously and updating the
+    display periodically.
+    """
     return {
         "id": "org.waypanel.plugin.weather",
         "name": "Weather",
@@ -16,11 +16,36 @@ def get_plugin_metadata(_):
 
 
 def get_plugin_class():
+    """
+    The main plugin class entry point. ALL imports are deferred here
+    to comply with the Waypanel loading architecture.
+    Returns:
+        type: The WeatherPlugin class.
+    """
     from src.plugins.core._base import BasePlugin
 
     class WeatherPlugin(BasePlugin):
+        """
+        Plugin to fetch and display weather data integrated into the calendar popover.
+        """
+
         def __init__(self, panel_instance):
+            """
+            Initialize the plugin and retrieve configuration settings.
+            Args:
+                panel_instance: The main panel instance provided by the framework.
+            """
             super().__init__(panel_instance)
+            self.config_handler.set_setting_hint(
+                "org.waypanel.plugin.calendar",
+                ["weather"],
+                "Settings for the weather plugin's integration into the calendar popover. Enable the Weather plugin for this section to be used.",
+            )
+            self.config_handler.set_setting_hint(
+                "org.waypanel.plugin.calendar",
+                ["weather", "coordinates"],
+                "The latitude and longitude coordinates (as a tuple of strings) for fetching local weather data. Example: [-23.5505, -46.6333]",
+            )
             self.weather_label = None
             self.update_task = None
             config_coords = self.get_root_setting(
@@ -40,6 +65,9 @@ def get_plugin_class():
                 )
 
         def on_start(self):
+            """
+            Starts the asynchronous weather setup if coordinates are available.
+            """
             if self.coordinates:
                 self.run_in_async_task(self.setup_weather_async())
             else:
@@ -75,7 +103,7 @@ def get_plugin_class():
                 grid = calendar_plugin.popover_calendar.get_child()
                 if grid:
                     grid.attach(self.weather_label, 0, 1, 1, 1)
-                    self.weather_label.show()  # pyright: ignore
+                    self.weather_label.show()
                     grid.show()
 
             self.schedule_in_gtk_thread(update_ui)
@@ -113,10 +141,9 @@ def get_plugin_class():
             def update_label():
                 if self.weather_label:
                     if temperature is not None:
-                        # pyright: ignore is used because 'temperature' type is dynamic based on API response
-                        self.weather_label.set_label(f"Weather: {temperature}°C")  # pyright: ignore
+                        self.weather_label.set_label(f"Weather: {temperature}°C")
                     else:
-                        self.weather_label.set_label("Weather: Error")  # pyright: ignore
+                        self.weather_label.set_label("Weather: Error")
 
             self.schedule_in_gtk_thread(update_label)
 

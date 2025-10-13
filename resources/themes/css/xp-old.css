@@ -234,7 +234,7 @@
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
-  --font-family-default: "MS Sans Serif", "Tahoma", "Arial", sans-serif;
+  --font-family-default: "Motiva Sans", "Inter", "Segoe UI";
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400;
   --font-weight-medium: 700;

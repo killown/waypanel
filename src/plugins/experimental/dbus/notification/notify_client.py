@@ -1,9 +1,9 @@
 def get_plugin_metadata(_):
-    about = """
-            This plugin provides a graphical user interface (GUI) on a panel
-            for viewing and managing recent desktop notifications, acting as
-            a client to the D-Bus notification server plugin.
-            """
+    about = (
+        "This plugin provides a graphical user interface (GUI) on a panel"
+        "for viewing and managing recent desktop notificationons, acting as"
+        "a client to the D-Bus notification server plugin."
+    )
     return {
         "id": "org.waypanel.plugin.notify_client",
         "name": "Notify Client",
@@ -51,14 +51,74 @@ def get_plugin_class():
             self.dnd_switch.connect("state-set", self.on_dnd_toggled)
             self.db_path = self.path_handler.get_data_path("db/notify/notifications.db")
             self.main_widget = (self.notification_button, "append")
+            self.add_hint(
+                [
+                    "Configuration for the Notification Client plugin, managing the history and UI."
+                ],
+                None,
+            )
+            self.add_hint(
+                [
+                    "The maximum number of recent notifications to display in the popover history."
+                ],
+                "max_notifications",
+            )
+            self.add_hint(
+                [
+                    "The timeout in seconds before a new notification disappears (server-side setting)."
+                ],
+                "server_timeout",
+            )
+            self.add_hint(
+                [
+                    "If True, the server shows messages; False enables Do Not Disturb mode (server-side setting)."
+                ],
+                "server_show_messages",
+            )
+
+            self.body_max_width_chars = self.get_plugin_setting(
+                ["body_max_width_chars"], 50
+            )
+            self.add_hint(
+                [
+                    "The maximum character width for the notification body text before it wraps in the popover."
+                ],
+                "body_max_width_chars",
+            )
+            self.notification_icon_size = self.get_plugin_setting(
+                ["notification_icon_size"], 64
+            )
+            self.add_hint(
+                [
+                    "The size (in pixels) for the application icon displayed in a notification box."
+                ],
+                "notification_icon_size",
+            )
+
+            self.popover_width = self.get_plugin_setting(["popover_width"], 500)
+            self.add_hint(
+                ["The default width of the notification popover (in pixels)."],
+                "popover_width",
+            )
+
+            self.popover_height = self.get_plugin_setting(["popover_height"], 600)
+            self.add_hint(
+                ["The default height of the notification popover (in pixels)."],
+                "popover_height",
+            )
+
+            self.show_messages = self.get_plugin_setting(["server_show_messages"], True)
+            self.add_hint(
+                [
+                    "Toggled by the switch in this plugin's popover. Controls whether the notification server should display messages (True) or enter Do Not Disturb mode (False)."
+                ],
+                ["server_show_messages"],
+            )
 
         def update_dnd_switch_state(self):
             """Update the Do Not Disturb switch state based on the server setting."""
             try:
-                show_messages = self.get_root_setting(
-                    ["org.waypanel.plugin.notify_server", "show_messages"], True
-                )
-                self.dnd_switch.set_active(not show_messages)
+                self.dnd_switch.set_active(not self.show_messages)
             except Exception as e:
                 self.logger.error(f"Error updating DND switch state: {e}")
 
@@ -66,8 +126,8 @@ def get_plugin_class():
             """Callback when the Do Not Disturb switch is toggled."""
             new_show_messages = not state
             try:
-                self.config_handler.set_root_setting(
-                    ["org.waypanel.plugin.notify_server", "show_messages"],
+                self.config_handler.set_plugin_setting(
+                    ["server_show_messages"],
                     new_show_messages,
                 )
                 self.logger.info(
@@ -199,10 +259,6 @@ def get_plugin_class():
 
         def create_notification_box(self, notification):
             """Create a notification box. No explicit link button is added."""
-            body_max_width_chars = self.get_plugin_setting(["body_max_width_chars"], 50)
-            notification_icon_size = self.get_plugin_setting(
-                ["notification_icon_size"], 64
-            )
             hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 30)
             hbox.add_css_class("notify-client-box")
             close_button = self.gtk.Button.new_from_icon_name("window-close-symbolic")
@@ -230,7 +286,7 @@ def get_plugin_class():
                 )
             icon = self.notify_utils.load_icon(notification)
             if icon and icon.get_name():
-                icon.set_pixel_size(notification_icon_size)
+                icon.set_pixel_size(self.notification_icon_size)
                 icon.set_halign(self.gtk.Align.START)
                 icon.add_css_class("notification-icon")
                 self.update_widget_safely(left_box.append, icon)
@@ -245,7 +301,7 @@ def get_plugin_class():
             self.update_widget_safely(right_box.append, summary_label)
             body_label = self.gtk.Label(label=notification["body"])
             body_label.set_wrap(True)
-            body_label.set_max_width_chars(body_max_width_chars)
+            body_label.set_max_width_chars(self.body_max_width_chars)
             body_label.set_halign(self.gtk.Align.START)
             self.update_widget_safely(right_box.append, body_label)
             body_label.add_css_class("notify-client-body-label")
@@ -261,7 +317,7 @@ def get_plugin_class():
             self.notification_on_popover[notification["id"]] = hbox
             return hbox
 
-        def clear_all_notifications(self, *_):
+        def clear_all_notifications(self, *_) -> None:
             """Clear all notifications from the database and remove them from the UI."""
             try:
                 conn = self.sqlite3.connect(self.db_path)
@@ -279,7 +335,7 @@ def get_plugin_class():
             except Exception as e:
                 self.logger.error(f"Error clearing notifications: {e}")
 
-        def delete_notification(self, notification_id, notification_box):
+        def delete_notification(self, notification_id: int, notification_box) -> None:
             """Delete a notification from the database and remove it from the UI.
             :param notification_id: ID of the notification to delete.
             :param notification_box: The self.gtk.Box containing the notification content (the hbox).
@@ -304,7 +360,7 @@ def get_plugin_class():
             except Exception as e:
                 self.logger.error(f"Error deleting notification {notification_id}: {e}")
 
-        def append_next_oldest_notification(self):
+        def append_next_oldest_notification(self) -> None:
             """Fetch the next oldest notification from the database and append it to the UI."""
             try:
                 conn = self.sqlite3.connect(self.db_path)
@@ -335,11 +391,9 @@ def get_plugin_class():
             except Exception as e:
                 self.logger.error(f"Error appending next oldest notification: {e}")
 
-        def open_popover_notifications(self, *_):
+        def open_popover_notifications(self, *_) -> None:
             if not hasattr(self, "popover") or not self.popover:
                 self.popover = self.gtk.Popover.new()
-                self.popover_width = self.get_plugin_setting(["popover_width"], 500)
-                self.popover_height = self.get_plugin_setting(["popover_height"], 600)
                 self.main_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
                 self.main_vbox.set_margin_top(10)
                 self.main_vbox.set_margin_bottom(10)

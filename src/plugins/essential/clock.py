@@ -1,7 +1,5 @@
 def get_plugin_metadata(_):
-    about = """
-            • Displays current date and time in the top panel.
-            """
+    about = "Displays current date and time in the top panel."
     return {
         "id": "org.waypanel.plugin.clock",
         "name": "Clock",
@@ -24,10 +22,7 @@ def get_plugin_class():
             self.clock_box = None
             self.clock_label = None
             self.update_timeout_id = None
-            self.add_hint(
-                "Configuration for the Clock plugin, defining time and date display formats."
-            )
-            self.add_hint("Format %A, %B %d, %Y", "format")
+            self.add_hint("Format %A, %B %d, %Y", ["format"])
 
         def on_start(self):
             self.create_clock_widget()

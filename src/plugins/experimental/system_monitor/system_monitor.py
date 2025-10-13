@@ -311,6 +311,7 @@ def get_plugin_class():
             vbox.append(self.list_view)
             self.popover_system.set_child(vbox)
             self.popover_system.set_parent(self.menubutton_system)
+            self.popover_system.set_size_request(500, 0)
             self.add_initial_rows()
             self.list_view.show()
 

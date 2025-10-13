@@ -237,7 +237,7 @@
   /* ================== FONT VARIABLES ================ */
   /* ================================================= */
 
-  --font-family-default: "Roboto", sans-serif; /* Changed to Roboto */
+  --font-family-default: "Motiva Sans", "Inter", "Segoe UI";
   --font-family-system: "Roboto", "Segoe UI", sans-serif;
   --font-weight-regular: 400;  
   --font-weight-medium: 500;  

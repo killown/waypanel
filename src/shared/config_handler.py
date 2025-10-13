@@ -483,25 +483,57 @@ class ConfigHandler:
 
     def set_setting_hint(
         self,
-        key_path,
-        section,
-        hint,
-    ):
+        key_path: str | tuple[str, ...],
+        section: str | list[str] | tuple[str, ...] | None,
+        hint: str | tuple[str, ...],
+    ) -> bool:
         """
-        Sets the individual setting hint ('_hint') for a given configuration key
+        Sets the metadata hint for a specific configuration setting or subsection
         by writing to the authoritative source: self.default_config.
+
+        This function traverses the nested dictionary structure within
+        self.default_config[key_path] using the value provided in 'section'.
+
         Args:
-            key_path: The full path to the setting key (e.g., ['section', 'setting']).
-            hint: The hint string or tuple of strings to set as the metadata.
+            key_path: The top-level key for the configuration block (e.g., plugin ID).
+            section: The path to the hint's target. Can be a single string (e.g., 'setting_key'),
+                     a list/tuple of strings (e.g., ['subsection', 'setting_key']), or None.
+            hint: The hint value to be set as metadata.
+
         Returns:
             True if the hint was successfully injected, False otherwise.
         """
-        if key_path not in self.default_config:
-            self.default_config[key_path] = {"_section_hint": hint}
-        if section:
-            self.default_config[key_path][f"{section}_hint"] = hint
+        if key_path not in self.default_config or not isinstance(
+            self.default_config.get(key_path), dict
+        ):
+            self.default_config[key_path] = {}
+
+        current_dict = self.default_config[key_path]
+
+        if section is None or section == "":
+            path = []
+        elif isinstance(section, str):
+            path = [section]
+        elif isinstance(section, (list, tuple)):
+            path = list(section)
         else:
-            self.default_config[key_path]["_section_hint"] = hint
+            return False
+
+        if not path:
+            current_dict["_section_hint"] = hint
+            return True
+
+        path_to_parent = path[:-1]
+        last_key = path[-1]
+        hint_key = f"{last_key}_hint"
+
+        for key in path_to_parent:
+            if key not in current_dict or not isinstance(current_dict.get(key), dict):
+                current_dict[key] = {}
+            current_dict = current_dict[key]
+
+        current_dict[hint_key] = hint
+        return True
 
     def get_plugin_setting(
         self, key: Optional[Union[str, List[str]]] = None, default_value: Any = None

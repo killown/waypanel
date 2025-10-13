@@ -169,7 +169,7 @@
 .control-center-text-input,
 .control-center-numeric-input,
 .control-center-value-display {
-  background-color: var(--color-bg-popover);
+  background-color: var(--color-bg-searchbar);
   color: var(--theme-fg-label-inverse);
   border-radius: var(--radius-xs);
   padding: 5px 8px;
@@ -182,7 +182,7 @@
 .control-center-numeric-input:focus {
   box-shadow: 0 0 0 1px var(--color-accent-blue);
   border-color: var(--color-border-entry-focus);
-  background-color: var(--color-bg-popover);
+  background-color: var(--color-bg-searchbar);
 }
 
 /* Toggle switch - uses GTK default */

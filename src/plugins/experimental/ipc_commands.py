@@ -65,6 +65,9 @@ def get_plugin_class():
                     "get_config_data", self._handle_get_config
                 )
                 self.ipc_server.register_command(
+                    "get_default_config", self._handle_get_default_config
+                )
+                self.ipc_server.register_command(
                     "get_plugins_data", self._handle_get_plugins
                 )
                 self.ipc_server.register_command(
@@ -94,6 +97,19 @@ def get_plugin_class():
                 return {
                     "status": "error",
                     "command": "get_config_data",
+                    "message": str(e),
+                }
+
+        def _handle_get_default_config(self, args):
+            """Handler for 'get_default_config' command: returns the default config data."""
+            try:
+                data = self._config_handler.default_config
+                return {"status": "ok", "command": "get_default_config", "data": data}
+            except Exception as e:
+                self.logger.error(f"Error handling get_default_config: {e}")
+                return {
+                    "status": "error",
+                    "command": "get_default_config",
                     "message": str(e),
                 }
 

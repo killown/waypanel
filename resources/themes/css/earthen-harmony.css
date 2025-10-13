@@ -186,7 +186,7 @@
   --radius-xl: 8px;
   --radius-control-default: var(--radius-m);
 
-  --font-family-default: "Garamond", "Times New Roman", serif;
+  --font-family-default: "Motiva Sans", "Inter", "Segoe UI";
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400;
   --font-weight-medium: 500;

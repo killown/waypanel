@@ -244,7 +244,7 @@
   --radius-control-default: var(--radius-s);
   --radius-control-circular: 50%;
 
-  --font-family-default: "Segoe UI Variable", "Roboto", sans-serif;
+  --font-family-default: "Motiva Sans", "Inter", "Segoe UI";
   --font-family-system: var(--font-family-default);
   --font-weight-regular: 400;
   --font-weight-medium: 500;
