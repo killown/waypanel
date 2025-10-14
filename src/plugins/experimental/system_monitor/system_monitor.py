@@ -427,7 +427,7 @@ def get_plugin_class():
                 hbox, 3, self.helper.open_kitty_with_prompt_and_watch_selected_event
             )
 
-        def code_explanation(self) -> str:
+        def code_explanation(self):
             """
             This plugin utilizes a high-performance data-binding architecture based on the GObject
             Introspection (GI) ecosystem to ensure smooth, low-overhead UI updates.

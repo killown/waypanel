@@ -39,6 +39,7 @@ def get_plugin_metadata(_):
         "container": "top-panel-right",
         "index": 5,
         "deps": ["event_manager"],
+        "description": "An example plugin that demonstrates how to create a UI widget and broadcast a message via the IPC server.",
     }
 
 
@@ -54,7 +55,7 @@ def get_plugin_class():
             super().__init__(panel_instance)
             self.button = None
 
-        async def on_start(self):
+        def on_start(self):
             """
             Asynchronous entry point, replacing the deprecated initialize_plugin().
             """
@@ -119,10 +120,6 @@ def get_plugin_class():
             Called before the plugin is completely removed.
             """
             self.logger.info("ExampleBroadcastPlugin is cleaning up resources.")
-
-        def about(self):
-            """An example plugin that demonstrates how to create a UI widget and broadcast a message via the IPC server."""
-            return self.about.__doc__
 
         def code_explanation(self):
             """

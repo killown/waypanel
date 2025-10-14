@@ -63,8 +63,8 @@ class PluginLoader:
             ["plugins", "disabled"]
         )
         self.plugin_icons = {}
-        self.ensure_proportional_layout_attempts = {"max": 30, "current": 0}
-        GLib.timeout_add(100, self.ensure_proportional_layout)
+        # self.ensure_proportional_layout_attempts = {"max": 30, "current": 0}
+        # GLib.timeout_add(100, self.ensure_proportional_layout)
 
     def _find_plugins_in_dir(self, directory_path):
         """

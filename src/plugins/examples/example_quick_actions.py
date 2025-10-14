@@ -1,85 +1,143 @@
 def get_plugin_metadata(_):
+    """Defines the static metadata for the Quick Actions plugin."""
     return {
         "id": "org.waypanel.plugin.example_quick_actions",
-        "name": "Example Quick Actions",
-        "version": "1.0.0",
+        "name": "Quick Actions",
+        "version": "2.0.0",
         "enabled": True,
         "container": "top-panel-center",
         "index": 900,
-        "deps": ["top_panel"],
+        "description": "Provides a popover menu with safe, non-blocking system actions.",
     }
 
 
 def get_plugin_class():
-    import os
+    """Factory function that returns the main plugin class."""
+    from typing import Any, Optional
     from src.plugins.core._base import BasePlugin
+    from gi.repository import Gtk  # pyright: ignore
 
     class QuickActionsPlugin(BasePlugin):
-        def __init__(self, panel_instance):
+        """
+        A plugin that provides a popover menu with quick actions to control
+        the system (e.g., lock, log out, shut down).
+        """
+
+        def __init__(self, panel_instance: Any):
+            """
+            Initializes the plugin's state. Defers all heavy lifting and
+            UI construction to the `on_start` lifecycle hook.
+            """
             super().__init__(panel_instance)
-            self.popover = None
+            self.popover: Optional[Gtk.Popover] = None
+            self.menu_button: Optional[Gtk.MenuButton] = None
+            self.logger.info("QuickActionsPlugin initialized.")
 
-            self.menu_button = self.gtk.MenuButton()
-            self.menu_button.set_icon_name("system-shutdown-symbolic")
-            self.menu_button.add_css_class("quick-actions-button")
+        def on_start(self) -> None:
+            """
+            Asynchronous entry point. Creates the UI and sets up the plugin.
+            """
+            self.logger.info("Lifecycle: QuickActionsPlugin starting.")
+            self._setup_ui()
 
+        def on_stop(self) -> None:
+            """
+            Asynchronous cleanup hook.
+            """
+            self.logger.info("Lifecycle: QuickActionsPlugin stopped.")
+
+        def _setup_ui(self) -> None:
+            """
+            Constructs the main menu button and assigns it to `self.main_widget`.
+            The popover itself is created lazily on the first click.
+            """
+            self.menu_button = Gtk.Button()  # pyright: ignore
+            self.menu_button.set_icon_name("system-shutdown-symbolic")  # pyright: ignore
+            self.menu_button.add_css_class("quick-actions-button")  # pyright: ignore
+            self.menu_button.connect("clicked", self._on_menu_button_click)  # pyright: ignore
+            self.add_cursor_effect(self.menu_button)
             self.main_widget = (self.menu_button, "append")
 
-            self.create_menu_popover()
+        def _on_menu_button_click(self, button: Gtk.MenuButton) -> None:
+            """
+            Handles the menu button click, creating the popover on demand
+            using the shared `create_dashboard_popover` helper.
+            """
+            if self.popover:
+                self.popover.popup()
+                return
+            button_config = {
+                "Lock Screen": {
+                    "icons": ["system-lock-screen-symbolic"],
+                    "summary": "Lock the current session",
+                    "category": "Session",
+                },
+                "Log Out": {
+                    "icons": ["system-log-out-symbolic"],
+                    "summary": "End the current session",
+                    "category": "Session",
+                },
+                "Restart": {
+                    "icons": ["system-reboot-symbolic"],
+                    "summary": "Reboot the system",
+                    "category": "Power",
+                },
+                "Shut Down": {
+                    "icons": ["system-shutdown-symbolic"],
+                    "summary": "Power off the system",
+                    "category": "Power",
+                },
+            }
+            self.popover = self.create_dashboard_popover(
+                parent_widget=button,
+                popover_closed_handler=lambda _: self.logger.debug(
+                    "Quick Actions popover closed."
+                ),
+                popover_visible_handler=lambda _: None,
+                action_handler=self._on_action,
+                button_config=button_config,
+                module_name="quick-actions",
+                max_children_per_line=2,
+            )
 
-        def create_menu_popover(self):
-            self.popover = self.gtk.Popover()
-            vbox = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL, spacing=6)
-
-            actions = [
-                ("Lock Screen", self.lock_screen),
-                ("Log Out", self.logout),
-                ("Restart", self.restart),
-                ("Shut Down", self.shutdown),
-            ]
-
-            for label, callback in actions:
-                button = self.gtk.Button(label=label)
-                button.connect("clicked", callback)
-                vbox.append(button)
-
-            self.popover.set_child(vbox)
-            self.menu_button.set_popover(self.popover)
-
-        def lock_screen(self, _):
-            os.system("loginctl lock-session &")
-
-        def logout(self, _):
-            os.system("swaymsg exit &")
-
-        def restart(self, _):
-            os.system("systemctl reboot &")
-
-        def shutdown(self, _):
-            os.system("systemctl poweroff &")
-
-        def about(self):
-            """A plugin that provides a popover menu with quick actions to control the system (e.g., lock, log out, shut down)."""
-            return self.about.__doc__
+        def _on_action(self, _, action_label: str) -> None:
+            """
+            Handles clicks from within the dashboard popover and executes the
+            appropriate system command safely using the plugin's command runner.
+            """
+            self.logger.info(f"Executing quick action: {action_label}")
+            if self.popover:
+                self.popover.popdown()
+            command_map = {
+                "Lock Screen": "loginctl lock-session",
+                "Log Out": "swaymsg exit",
+                "Restart": "systemctl reboot",
+                "Shut Down": "systemctl poweroff",
+            }
+            command = command_map.get(action_label)
+            if command:
+                self.run_cmd(command)
+            else:
+                self.logger.warning(f"No command defined for action: '{action_label}'")
 
         def code_explanation(self):
             """
-            This plugin creates a quick actions menu with buttons to control the system.
-            It's designed to be a convenient one-click way for users to lock their screen,
-            log out, restart, or shut down.
-
-            The core logic is centered on **popover menu creation and system command execution**:
-
-            1.  **UI Creation**: It creates a `Gtk.MenuButton` and a `Gtk.Popover` widget.
-                The button acts as the anchor for the popover menu.
-            2.  **Action Buttons**: Inside the popover, it dynamically creates buttons
-                for common actions like "Lock Screen" and "Shut Down."
-            3.  **Command Execution**: Each button is connected to a handler method that
-                executes a corresponding shell command using `os.system()`. For example,
-                the "Shut Down" button runs `systemctl poweroff`.
-            4.  **Placement**: The `get_plugin_metadata` function sets the plugin's
-                position on the `top-panel-center`, with a high order to place it
-                to the right of other plugins.
+            This plugin creates a quick actions menu using the framework's best practices.
+            1.  **Asynchronous Lifecycle**: All UI setup is deferred to the `on_start`
+                method, ensuring the GTK environment is fully initialized. `__init__`
+                is kept lightweight for fast plugin loading.
+            2.  **Reusable UI Component**: Instead of manually building a popover, it
+                uses the `self.create_dashboard_popover` helper. The UI is defined
+                declaratively via the `button_config` dictionary, promoting consistency
+                and reducing boilerplate.
+            3.  **Centralized Action Handling**: A single `_on_action` method serves as
+                a dispatcher, mapping button labels to their corresponding system commands.
+                This is cleaner and more maintainable than connecting a separate callback
+                for each button.
+            4.  **Safe Command Execution**: All shell commands are executed via `self.run_cmd(...)`.
+                This is the architecturally correct approach, as it uses the `BasePlugin`'s
+                `CommandRunner` which runs commands in a non-blocking background thread,
+                preventing the UI from freezing. It is a direct, safer replacement for `os.system`.
             """
             return self.code_explanation.__doc__
 

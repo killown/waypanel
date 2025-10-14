@@ -39,7 +39,7 @@ def get_plugin_class():
             )
             self.max_notifications = self.get_plugin_setting_add_hint(
                 ["max_notifications"],
-                5,
+                100,
                 "The maximum number of recent notifications to display in the popover history.",
             )
             self.get_plugin_setting_add_hint(
@@ -47,13 +47,8 @@ def get_plugin_class():
                 10,
                 "The timeout (in seconds) before a new notification disappears (server-side setting).",
             )
-            self.popover_width = self.get_plugin_setting_add_hint(
-                ["popover_width"],
-                500,
-                "The default width of the notification popover (in pixels).",
-            )
-            self.popover_height = self.get_plugin_setting_add_hint(
-                ["popover_height"],
+            self.popover_max_height = self.get_plugin_setting_add_hint(
+                ["popover_max_height"],
                 600,
                 "The default height of the notification popover (in pixels).",
             )
@@ -390,6 +385,13 @@ def get_plugin_class():
                 scrolled_window.set_child(self.vbox)
                 scrolled_window.set_vexpand(True)
                 scrolled_window.set_propagate_natural_width(True)
+                scrolled_window.set_propagate_natural_height(True)
+                scrolled_window.set_min_content_height(100)
+                scrolled_window.set_max_content_height(self.popover_max_height)
+                scrolled_window.set_policy(
+                    self.gtk.PolicyType.NEVER,
+                    self.gtk.PolicyType.AUTOMATIC,
+                )
                 self.update_widget_safely(self.main_vbox.append, scrolled_window)
                 bottom_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
                 bottom_box.set_margin_top(10)
@@ -423,7 +425,6 @@ def get_plugin_class():
             if notifications:
                 for notification in notifications:
                     self.run_in_thread(self.create_notification_box, notification)
-            self.main_vbox.set_size_request(self.popover_width, self.popover_height)
             self.update_dnd_switch_state()
             self.popover.set_parent(self.notification_button)
             self.popover.popup()

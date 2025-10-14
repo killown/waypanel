@@ -1,7 +1,6 @@
 def get_plugin_metadata(_):
     """
     Define the plugin's properties and placement using the modern dictionary format.
-
     Valid Positions:
         - Top Panel:
             "top-panel-left"
@@ -9,34 +8,29 @@ def get_plugin_metadata(_):
             "top-panel-right"
             "top-panel-systray"
             "top-panel-after-systray"
-
         - Bottom Panel:
             "bottom-panel-left"
             "bottom-panel-center"
             "bottom-panel-right"
-
         - Left Panel:
             "left-panel-top"
             "left-panel-center"
             "left-panel-bottom"
-
         - Right Panel:
             "right-panel-top"
             "right-panel-center"
             "right-panel-bottom"
-
         - Background:
-            "background"  # For plugins that don't have a UI
-
+            "background"
     Returns:
         dict: Plugin configuration metadata.
     """
     return {
-        "id": "org.waypanel.plugin.example_broadcast_plugin",
+        "id": "org.waypanel.plugin.example_broadcast",
         "name": "Example Broadcast Plugin",
         "version": "1.0.0",
         "enabled": True,
-        "container": "top-panel-right",
+        "container": "top-panel-center",
         "index": 5,
         "deps": ["event_manager"],
     }
@@ -46,7 +40,6 @@ def get_plugin_class():
     """
     Returns the main plugin class. All necessary imports are deferred here.
     """
-    import asyncio
     from src.plugins.core._base import BasePlugin
 
     class ExampleBroadcastPlugin(BasePlugin):
@@ -54,7 +47,7 @@ def get_plugin_class():
             super().__init__(panel_instance)
             self.button = None
 
-        async def on_start(self):
+        def on_start(self):
             """
             Asynchronous entry point, replacing the deprecated initialize_plugin().
             """
@@ -73,8 +66,8 @@ def get_plugin_class():
             """
             Create a button that triggers an IPC broadcast when clicked.
             """
-            # Use self.gtk helper for widget creation
             button = self.gtk.Button()
+            button.set_icon_name(self._gtk_helper.icon_exist("broadcast"))
             button.connect("clicked", self.on_button_clicked)
             button.set_tooltip_text("Click to broadcast a message!")
             return button
@@ -84,13 +77,11 @@ def get_plugin_class():
             Handle button click event by correctly scheduling the async broadcast.
             """
             self.logger.info("ExampleBroadcastPlugin button clicked!")
-
             message = {
                 "event": "custom_message",
                 "data": "Hello from ExampleBroadcastPlugin!",
             }
-
-            asyncio.create_task(self.broadcast_message(message))
+            self.run_in_async_task(self.broadcast_message(message))
 
         async def broadcast_message(self, message):
             """
@@ -102,19 +93,19 @@ def get_plugin_class():
             except Exception as e:
                 self.logger.error(f"Failed to broadcast message: {e}")
 
-        async def on_stop(self):
+        def on_stop(self):
             """
             Called when the plugin is stopped or unloaded.
             """
             self.logger.info("ExampleBroadcastPlugin has stopped.")
 
-        async def on_reload(self):
+        def on_reload(self):
             """
             Called when the plugin is reloaded dynamically.
             """
             self.logger.info("ExampleBroadcastPlugin has been reloaded.")
 
-        async def on_cleanup(self):
+        def on_cleanup(self):
             """
             Called before the plugin is completely removed.
             """
@@ -129,9 +120,7 @@ def get_plugin_class():
             This plugin is an example demonstrating how to create a simple user
             interface (UI) element and use the Inter-Process Communication (IPC)
             system to broadcast a message to other components.
-
             The core logic is centered on **event-driven UI and IPC broadcasting**:
-
             1.  **UI Creation**: It creates a Gtk.Button and sets it as the main
                 widget, specifying its placement on the top-right of the panel.
             2.  **Event Handling**: It connects the button's "clicked" signal to the

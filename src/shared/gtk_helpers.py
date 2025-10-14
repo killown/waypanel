@@ -997,21 +997,17 @@ class GtkHelpers:
         max_children_per_line: int = 3,
     ):
         """
-        Creates and configures a reusable dashboard popover containing a FlowBox
-        of custom action buttons, based on the provided configuration.
+        Creates and configures a reusable dashboard popover containing a Gtk.Stack
+        of categorized Gtk.FlowBox widgets, based on the provided configuration.
         Args:
-            Gtk: The gi.repository.Gtk module (passed from the caller).
-            gtk_helper: The object containing helper methods like icon_exist, add_cursor_effect.
-            create_popover_func: The function (e.g., self.create_popover) to instantiate the popover.
             parent_widget: The widget the popover is attached to.
             popover_closed_handler: The callback function for popover closure.
             popover_visible_handler: The callback function for popover visibility.
-            action_handler: The callback function for button clicks (e.g., self.on_action).
-            logger: The logger object.
+            action_handler: The callback function for button clicks.
             button_config (dict): A dict defining buttons:
-                                     { "Label": {"icons": ["name1", "name2"], "summary": "...", "category": "..."} }
-            css_class (str): The CSS class for the popover (default: 'dashboard-popover').
-            max_children_per_line (int): Max number of buttons per row in the FlowBox.
+                                  { "Label": {"icons": ["name1"], "summary": "...", "category": "..."} }
+            module_name (str): A prefix for CSS classes to avoid conflicts.
+            max_children_per_line (int): Max number of buttons per row.
         Returns:
             Gtk.Popover: The fully configured dashboard popover.
         """
@@ -1019,14 +1015,6 @@ class GtkHelpers:
         prefixed_label_class = f"{module_name}-label"
         prefixed_summary_class = f"{module_name}-summary"
         prefixed_stack_class = f"{module_name}-stack"
-        prefixed_main_box = f"{module_name}-main-box"
-        prefixed_icon_vbox = f"{module_name}-icon-vbox"
-        print(
-            prefixed_summary_class,
-            prefixed_css_class,
-            prefixed_label_class,
-            prefixed_stack_class,
-        )
         popover_dashboard = self.create_popover(
             parent_widget=parent_widget,
             css_class=prefixed_css_class,
@@ -1034,62 +1022,57 @@ class GtkHelpers:
             closed_handler=popover_closed_handler,
             visible_handler=popover_visible_handler,
         )
-        popover_dashboard.set_vexpand(True)
-        popover_dashboard.set_hexpand(True)
-        main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        stack = Gtk.Stack.new()
-        data_and_categories = {}
+        categorized_buttons = {}
         for label, config in button_config.items():
-            icons = config.get("icons", [])
-            summary = config.get("summary", "")
-            category = config.get("category", "")
-            icon_name = None
-            if icons:
-                icon_name = self.icon_exist(icons[0], icons[1:])
-            data_and_categories[(label, summary, icon_name)] = category
-        done = []
-        for data, category in data_and_categories.items():
-            if category not in done:
-                flowbox = Gtk.FlowBox.new()
-                flowbox.props.homogeneous = True
-                flowbox.set_valign(Gtk.Align.START)
-                flowbox.props.margin_start = 15
-                flowbox.props.margin_end = 15
-                flowbox.props.margin_top = 15
-                flowbox.props.margin_bottom = 15
-                flowbox.props.hexpand = True
-                flowbox.props.vexpand = True
-                flowbox.props.max_children_per_line = max_children_per_line
-                flowbox.props.selection_mode = Gtk.SelectionMode.NONE
-                stack.add_titled(flowbox, category, category if category else "Default")
-                done.append(category)
-            else:
-                flowbox = stack.get_child_by_name(category)
-            icon_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-            if data[2]:
-                icon = Gtk.Image.new_from_icon_name(data[2])
-                icon.set_icon_size(Gtk.IconSize.LARGE)
-                icon_vbox.append(icon)
-            name_label = Gtk.Label.new(data[0])
-            icon_vbox.append(name_label)
-            icon_vbox.add_css_class(prefixed_icon_vbox)
-            summary_label = Gtk.Label.new(data[1])
-            icon_vbox.append(summary_label)
-            button = Gtk.Button.new()
-            button.set_has_frame(False)
-            if icon_vbox is not None and isinstance(icon_vbox, Gtk.Widget):
-                button.set_child(icon_vbox)
-            else:
-                self.logger.info("Error: Invalid icon_vbox provided")
-            flowbox.append(button)
-            button.connect("clicked", action_handler, data[0])
-            name_label.add_css_class(prefixed_label_class)
-            summary_label.add_css_class(prefixed_summary_class)
-            self.add_cursor_effect(button)
-        main_box.append(stack)
-        main_box.add_css_class(prefixed_main_box)
-        popover_dashboard.set_child(main_box)
+            category = config.get("category", "General")
+            if category not in categorized_buttons:
+                categorized_buttons[category] = []
+            categorized_buttons[category].append((label, config))
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        stack = Gtk.Stack()
         stack.add_css_class(prefixed_stack_class)
+        for category, items in categorized_buttons.items():
+            flowbox = Gtk.FlowBox(
+                homogeneous=True,
+                valign=Gtk.Align.START,
+                margin_start=15,
+                margin_end=15,
+                margin_top=10,
+                margin_bottom=15,
+                max_children_per_line=max_children_per_line,
+                selection_mode=Gtk.SelectionMode.NONE,
+            )
+            for label, config in items:
+                icon_name = self.icon_exist(
+                    config.get("icons", [None])[0],
+                    config.get("icons", [None, None])[1:],
+                )
+                icon_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+                if icon_name:
+                    icon = Gtk.Image.new_from_icon_name(icon_name)
+                    icon.set_icon_size(Gtk.IconSize.LARGE)
+                    icon_vbox.append(icon)
+                name_label = Gtk.Label(label=label)
+                name_label.add_css_class(prefixed_label_class)
+                icon_vbox.append(name_label)
+                summary_label = Gtk.Label(label=config.get("summary", ""))
+                summary_label.add_css_class(prefixed_summary_class)
+                icon_vbox.append(summary_label)
+                button = Gtk.Button(child=icon_vbox, has_frame=False)
+                button.connect("clicked", action_handler, label)
+                self.add_cursor_effect(button)
+                flowbox.append(button)
+            stack.add_titled(flowbox, category.replace("_", " "), category)
+        if len(categorized_buttons) > 1:
+            stack_switcher = Gtk.StackSwitcher()
+            stack_switcher.set_stack(stack)
+            stack_switcher.set_margin_top(10)
+            stack_switcher.set_margin_start(10)
+            stack_switcher.set_margin_end(10)
+            main_box.append(stack_switcher)
+            main_box.append(Gtk.Separator(margin_top=5, margin_bottom=5))
+        main_box.append(stack)
+        popover_dashboard.set_child(main_box)
         popover_dashboard.popup()
         return popover_dashboard
 

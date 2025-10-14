@@ -4,9 +4,10 @@ def get_plugin_metadata(_):
         "name": "Example Menu",
         "version": "1.0.0",
         "enabled": True,
-        "container": "top-panel-right",
+        "container": "top-panel-center",
         "index": 6,
         "deps": ["top_panel"],
+        "description": "A plugin that creates a dynamic application menu from installed applications, grouped by category.",
     }
 
 
@@ -19,7 +20,7 @@ def get_plugin_class():
             super().__init__(panel_instance)
             self.logger.info("ExampleMenuPlugin initialized.")
 
-        async def on_start(self):
+        def on_start(self):
             self.logger.info("Starting example menu plugin.")
             self.create_menu_popover_example()
             self.logger.info("Example menu plugin started and menu button added.")
@@ -30,13 +31,9 @@ def get_plugin_class():
             self.main_widget = (self.menubutton_example, "append")
             self.menubutton_example.set_icon_name("preferences-system-symbolic")
             self.menubutton_example.add_css_class("top_left_widgets")
-
-            menu_icon = (
-                self.config_handler.config_data("panel", {})  # pyright: ignore
-                .get("top", {})
-                .get("example_icon", "preferences-system-symbolic")
-            )
-            self.menubutton_example.set_icon_name(self.gtk_helper.get_icon(menu_icon))  # pyright: ignore
+            self.menubutton_example.set_icon_name(
+                self._gtk_helper.icon_exist("start-here")
+            )  # pyright: ignore
 
             self.create_menu_model()
 
@@ -91,10 +88,6 @@ def get_plugin_class():
                 self.cmd.run(app_id)
             except Exception as e:
                 self.logger.error(f"Error running application {app_id}: {e}")
-
-        def about(self):
-            """A plugin that creates a dynamic application menu from installed applications, grouped by category."""
-            return self.about.__doc__
 
         def code_explanation(self):
             """

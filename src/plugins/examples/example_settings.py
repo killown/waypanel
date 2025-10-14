@@ -52,10 +52,10 @@ def get_plugin_class():
                 "creation_timestamp": self.time.time(),
                 "message": "This setting will self-destruct.",
             }
-            self.set_plugin_setting(["session_data"], initial_data)
-            self.add_hint(
-                "This is a hint for the key session_data, this is used in control-center",
+            self.get_plugin_setting_add_hint(
                 ["session_data"],
+                initial_data,
+                "This is a hint for the key session_data, this is used in control-center",
             )
             self.logger.info(
                 f"Initial setting written for plugin '{self.plugin_id}'. "

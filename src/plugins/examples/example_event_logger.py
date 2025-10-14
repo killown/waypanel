@@ -124,6 +124,7 @@ def get_plugin_metadata(_):
         "container": "background",
         "index": 0,
         "deps": ["event_manager"],
+        "description": "Monitors and logs all Wayfire IPC events for debugging and tracking purposes.",
     }
 
 
@@ -137,7 +138,7 @@ def get_plugin_class():
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
 
-        async def on_start(self):
+        def on_start(self):
             """
             Called asynchronously when the plugin is loaded.
             This replaces the deprecated initialize_plugin() function.
@@ -146,7 +147,7 @@ def get_plugin_class():
 
         def subscribe_to_events(self):
             """Subscribe to all Wayfire IPC events"""
-            if "event_manager" not in self.obj.plugin_loader.plugins:
+            if "event_manager" not in self._panel_instance.plugin_loader.plugins:
                 self.logger.error(
                     "Event Manager Plugin is not loaded. Cannot subscribe to events."
                 )
@@ -164,10 +165,6 @@ def get_plugin_class():
         def handle_event(self, event_data):
             """Handle incoming events from Wayfire IPC"""
             self.logger.info(event_data)
-
-        def about(self):
-            """Monitors and logs all Wayfire IPC events for debugging and tracking purposes."""
-            return self.about.__doc__
 
         def code_explanation(self):
             """

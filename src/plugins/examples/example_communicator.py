@@ -49,7 +49,7 @@ def get_plugin_class():
             self.clock_button = None
             self.volume_button = None
 
-        async def on_start(self):
+        def on_start(self):
             """
             Asynchronous entry point, called when the plugin is loaded and enabled.
             This replaces the obsolete initialize_plugin() function.

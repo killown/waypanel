@@ -187,19 +187,16 @@ class BasePlugin:
             metadata = module_object.get_plugin_metadata(self._panel_instance)
             return metadata
 
-    def set_hint(self, hint: str = "", section: list = [], plugin_id: str = ""):
-        return self.config_handler.set_setting_hint(plugin_id, section, hint)
-
     def add_hint(self, hint, section=None):
         metadata = self.get_plugin_metadata()
         if metadata:
             plugin_id = metadata["id"]
             if plugin_id:
                 if "description" in metadata:
-                    self.config_handler.set_section_hint(
+                    self._config_handler.set_section_hint(
                         plugin_id, metadata["description"]
                     )
-                return self.config_handler.set_setting_hint(plugin_id, section, hint)
+                return self._config_handler.set_setting_hint(plugin_id, section, hint)
 
     def get_plugin_setting_add_hint(
         self, key: list[str] | str, default_value: Any, hint: str | tuple[str, ...]
@@ -292,7 +289,7 @@ class BasePlugin:
         """
         try:
             return self.run_in_thread(
-                self.config_handler.update_config, key_path, new_value
+                self._config_handler.update_config, key_path, new_value
             )
         except AttributeError as e:
             self.logger.error(f"Failed to call update_config on config_handler: {e}")
@@ -321,7 +318,7 @@ class BasePlugin:
         Returns:
             Callable: The bound set_section_hint method of the ConfigHandler.
         """
-        return self.config_handler.set_section_hint
+        return self._config_handler.set_section_hint
 
     @property
     def set_plugin_setting(self) -> Callable[[ConfigKeys, Any], None]:
@@ -335,7 +332,7 @@ class BasePlugin:
         Callable
             The underlying `ConfigHandler.set_plugin_setting` method.
         """
-        return self.config_handler.set_plugin_setting  # pyright: ignore
+        return self._config_handler.set_plugin_setting  # pyright: ignore
 
     @property
     def get_plugin_setting(self) -> Callable[[Union[str, List[str]], Any], Any]:
@@ -346,7 +343,7 @@ class BasePlugin:
         -------
         Callable[[list[str], Any | None], Any]
         """
-        return self.config_handler.get_plugin_setting
+        return self._config_handler.get_plugin_setting
 
     @property
     def get_root_setting(self) -> Callable[[List[str], Any]]:
@@ -361,7 +358,7 @@ class BasePlugin:
         Callable
             The underlying `ConfigHandler.get_root_setting` method.
         """
-        return self.config_handler.get_root_setting
+        return self._config_handler.get_root_setting
 
     @property
     def remove_plugin_setting(self):
@@ -376,7 +373,7 @@ class BasePlugin:
         Callable
             The underlying `ConfigHandler.remove_plugin_setting` method.
         """
-        return self.config_handler.remove_plugin_setting  # pyright: ignore
+        return self._config_handler.remove_plugin_setting  # pyright: ignore
 
     @property
     def run_in_async_task(self):
@@ -476,7 +473,7 @@ class BasePlugin:
     @property
     def compositor(self) -> Any:
         """Reference to the compositor interface via the IPC server."""
-        return self.ipc_server.compositor
+        return self._ipc_server.compositor
 
     @property
     def plugins(self) -> dict:
@@ -496,7 +493,7 @@ class BasePlugin:
         This ensures ControlCenterHelpers always sees hints dynamically
         injected by other plugins (e.g., get_plugin_setting).
         """
-        return self.config_handler.default_config
+        return self._config_handler.default_config
 
     @property
     def config_data(self):
