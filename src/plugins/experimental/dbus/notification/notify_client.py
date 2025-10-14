@@ -31,9 +31,47 @@ def get_plugin_class():
             self.vbox.set_margin_bottom(10)
             self.vbox.set_margin_start(10)
             self.show_messages = None
-            self.max_notifications = self.get_plugin_setting(["max_notifications"], 5)
-            self.get_plugin_setting(["server_timeout"], 10)
-            self.get_plugin_setting(["server_show_messages"], True)
+            self.add_hint(
+                [
+                    "Configuration for the Notification Client plugin, managing the history and UI."
+                ],
+                None,
+            )
+            self.max_notifications = self.get_plugin_setting_add_hint(
+                ["max_notifications"],
+                5,
+                "The maximum number of recent notifications to display in the popover history.",
+            )
+            self.get_plugin_setting_add_hint(
+                ["server_timeout"],
+                10,
+                "The timeout (in seconds) before a new notification disappears (server-side setting).",
+            )
+            self.popover_width = self.get_plugin_setting_add_hint(
+                ["popover_width"],
+                500,
+                "The default width of the notification popover (in pixels).",
+            )
+            self.popover_height = self.get_plugin_setting_add_hint(
+                ["popover_height"],
+                600,
+                "The default height of the notification popover (in pixels).",
+            )
+            self.body_max_width_chars = self.get_plugin_setting_add_hint(
+                ["body_max_width_chars"],
+                50,
+                "The maximum character width for the notification body text before it wraps in the popover.",
+            )
+            self.notification_icon_size = self.get_plugin_setting_add_hint(
+                ["notification_icon_size"],
+                64,
+                "The size (in pixels) for the application icon displayed in a notification box.",
+            )
+            self.show_messages = self.get_plugin_setting_add_hint(
+                ["server_show_messages"],
+                True,
+                "If True, the server shows messages; False enables Do Not Disturb mode (server-side setting).",
+            )
             self.vbox.set_margin_end(10)
             self.notification_on_popover = {}
             self.notification_button = self.gtk.Button.new_from_icon_name(
@@ -51,69 +89,6 @@ def get_plugin_class():
             self.dnd_switch.connect("state-set", self.on_dnd_toggled)
             self.db_path = self.path_handler.get_data_path("db/notify/notifications.db")
             self.main_widget = (self.notification_button, "append")
-            self.add_hint(
-                [
-                    "Configuration for the Notification Client plugin, managing the history and UI."
-                ],
-                None,
-            )
-            self.add_hint(
-                [
-                    "The maximum number of recent notifications to display in the popover history."
-                ],
-                "max_notifications",
-            )
-            self.add_hint(
-                [
-                    "The timeout in seconds before a new notification disappears (server-side setting)."
-                ],
-                "server_timeout",
-            )
-            self.add_hint(
-                [
-                    "If True, the server shows messages; False enables Do Not Disturb mode (server-side setting)."
-                ],
-                "server_show_messages",
-            )
-
-            self.body_max_width_chars = self.get_plugin_setting(
-                ["body_max_width_chars"], 50
-            )
-            self.add_hint(
-                [
-                    "The maximum character width for the notification body text before it wraps in the popover."
-                ],
-                "body_max_width_chars",
-            )
-            self.notification_icon_size = self.get_plugin_setting(
-                ["notification_icon_size"], 64
-            )
-            self.add_hint(
-                [
-                    "The size (in pixels) for the application icon displayed in a notification box."
-                ],
-                "notification_icon_size",
-            )
-
-            self.popover_width = self.get_plugin_setting(["popover_width"], 500)
-            self.add_hint(
-                ["The default width of the notification popover (in pixels)."],
-                "popover_width",
-            )
-
-            self.popover_height = self.get_plugin_setting(["popover_height"], 600)
-            self.add_hint(
-                ["The default height of the notification popover (in pixels)."],
-                "popover_height",
-            )
-
-            self.show_messages = self.get_plugin_setting(["server_show_messages"], True)
-            self.add_hint(
-                [
-                    "Toggled by the switch in this plugin's popover. Controls whether the notification server should display messages (True) or enter Do Not Disturb mode (False)."
-                ],
-                ["server_show_messages"],
-            )
 
         def update_dnd_switch_state(self):
             """Update the Do Not Disturb switch state based on the server setting."""
@@ -130,6 +105,7 @@ def get_plugin_class():
                     ["server_show_messages"],
                     new_show_messages,
                 )
+                self.show_messages = new_show_messages
                 self.logger.info(
                     f"Do Not Disturb mode {'enabled' if state else 'disabled'}"
                 )

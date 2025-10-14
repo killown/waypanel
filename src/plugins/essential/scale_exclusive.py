@@ -1,5 +1,5 @@
 def get_plugin_metadata(_):
-    about = """Monitors the 'scale' plugin to enable or disable exclusive layer mode on panels."""
+    about = "Monitors the 'scale' plugin to enable or disable exclusive layer mode on panels."
     return {
         "id": "org.waypanel.plugin.scale_exclusive",
         "name": "Panel Scale Exclusive",
@@ -34,7 +34,7 @@ def get_plugin_class():
             }
             self.on_output_plugin = self.plugins["on_output_connect"]
 
-        def set_panels_exclusive(self, exclusive=True, size=49):
+        def set_panels_exclusive(self, exclusive=True):
             """Helper method to set/unset exclusive mode on all four panels."""
             actions = [
                 (
@@ -84,7 +84,7 @@ def get_plugin_class():
                 target_output_name = self.on_output_plugin.primary_output_name
             focused_output_name = self.ipc.get_focused_output()["name"]
             if target_output_name and focused_output_name == target_output_name:
-                self.set_panels_exclusive(exclusive=True, size=49)
+                self.set_panels_exclusive(exclusive=True)
             else:
                 self.logger.debug(
                     f"Scale activated but on output '{focused_output_name}' != target '{target_output_name}'. "

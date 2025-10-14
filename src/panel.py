@@ -75,7 +75,9 @@ class Panel(Adw.Application):
             self.display = None
             return
         monitor = outputs[0]
-        primary_output_name = self.get_config(["hardware", "primary_output", "name"])
+        primary_output_name = self.get_config(
+            ["org.waypanel.panel", "primary_output", "name"]
+        )
         if primary_output_name:
             found_monitor = next(
                 (
@@ -177,7 +179,7 @@ class Panel(Adw.Application):
         Each panel's properties are determined by the TOML configuration file.
         """
         self.logger.info("Setting up panels...")
-        panel_toml = self.config_data.get("panel", {})
+        panel_toml = self.config_data.get("org.waypanel.panel", {})
         for panel_type, config in panel_toml.items():
             try:
                 if panel_type == "top":
@@ -205,8 +207,10 @@ class Panel(Adw.Application):
         anchor_edge = "TOP"
         css_class = "top-panel"
         layer_position = config.get("layer_position", "TOP")
-        width = self.get_config(["panel", "top", "width"], self.monitor_width)
-        height = self.get_config(["panel", "top", "height"], 32.0)
+        width = self.get_config(
+            ["org.waypanel.panel", "top", "width"], self.monitor_width
+        )
+        height = self.get_config(["org.waypanel.panel", "top", "height"], 32.0)
         self.top_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
@@ -229,8 +233,10 @@ class Panel(Adw.Application):
         anchor_edge = "BOTTOM"
         css_class = "bottom-panel"
         layer_position = config.get("layer_position", "BACKGROUND")
-        width = self.get_config(["panel", "bottom", "width"], self.monitor_width)
-        height = self.get_config(["panel", "bottom", "height"], 32)
+        width = self.get_config(
+            ["org.waypanel.panel", "bottom", "width"], self.monitor_width
+        )
+        height = self.get_config(["org.waypanel.panel", "bottom", "height"], 32)
         self.bottom_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
@@ -253,8 +259,8 @@ class Panel(Adw.Application):
         anchor_edge = "LEFT"
         css_class = "left-panel"
         layer_position = config.get("layer_position", "BACKGROUND")
-        width = self.get_config(["panel", "left", "width"], 32.0)
-        height = self.get_config(["panel", "left", "height"], 0.0)
+        width = self.get_config(["org.waypanel.panel", "left", "width"], 32.0)
+        height = self.get_config(["org.waypanel.panel", "left", "height"], 0.0)
         self.left_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
@@ -277,8 +283,8 @@ class Panel(Adw.Application):
         anchor_edge = "RIGHT"
         css_class = "right-panel"
         layer_position = config.get("layer_position", "BACKGROUND")
-        width = self.get_config(["panel", "right", "width"], 32.0)
-        height = self.get_config(["panel", "right", "height"], 0.0)
+        width = self.get_config(["org.waypanel.panel", "right", "width"], 32.0)
+        height = self.get_config(["org.waypanel.panel", "right", "height"], 0.0)
         self.right_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,

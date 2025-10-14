@@ -1,5 +1,5 @@
 def get_plugin_metadata(_):
-    about = """A dynamic application launcher with a search bar and a grid view of installed and recently used applications."""
+    about = "A dynamic application launcher with a search bar and a grid view of installed and recently used applications."
     return {
         "id": "org.waypanel.plugin.app_launcher",
         "name": "App Launcher",
@@ -22,6 +22,50 @@ def get_plugin_class():
     class AppLauncher(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+            self.popover_width = self.get_plugin_setting_add_hint(
+                ["layout", "popover_width"],
+                720,
+                "The fixed width (in pixels) of the main launcher popover window.",
+            )
+            self.popover_height = self.get_plugin_setting_add_hint(
+                ["layout", "popover_height"],
+                570,
+                "The fixed height (in pixels) of the main launcher popover window.",
+            )
+            self.min_app_grid_height = self.get_plugin_setting_add_hint(
+                ["layout", "min_app_grid_height"],
+                500,
+                "The minimum height (in pixels) reserved for the application grid (FlowBox) inside the popover.",
+            )
+            self.max_apps_per_row = self.get_plugin_setting_add_hint(
+                ["layout", "max_apps_per_row"],
+                5,
+                "The maximum number of application icons to display horizontally per row in the grid layout.",
+            )
+            self.max_recent_apps_db = self.get_plugin_setting_add_hint(
+                ["behavior", "max_recent_apps_db"],
+                50,
+                "The maximum number of recently launched applications to store in the database for sorting/prioritization.",
+            )
+            self.main_icon = self.get_plugin_setting_add_hint(
+                ["main_icon"],
+                "start-here",
+                "The default icon name (Gnome/Freedesktop standard) for the launcher button on the panel.",
+            )
+            distributor_id = distro.id()
+            distributor_logo_fallback_icons = [
+                f"distributor-{distributor_id}",
+                f"{distributor_id}-logo",
+                f"{distributor_id}_logo",
+                f"distributor_{distributor_id}",
+                f"logo{distributor_id}",
+                f"{distributor_id}logo",
+            ]
+            self.fallback_main_icons = self.get_plugin_setting_add_hint(
+                ["fallback_main_icons"],
+                distributor_logo_fallback_icons,
+                "A prioritized list of fallback icons (based on Linux distribution) to use if the main icon is not found.",
+            )
             self.popover_launcher = None
             self.widgets_dict = {}
             self.all_apps = None
@@ -34,19 +78,6 @@ def get_plugin_class():
             self.conn = sqlite3.connect(self.db_path)
             self.cursor = self.conn.cursor()
             self.dockbar_id = "org.waypanel.plugin.dockbar"
-            distributor_id = distro.id()
-            distributor_logo_fallback_icons = [
-                f"distributor-{distributor_id}",
-                f"{distributor_id}-logo",
-                f"{distributor_id}_logo",
-                f"distributor_{distributor_id}",
-                f"logo{distributor_id}",
-                f"{distributor_id}logo",
-            ]
-            self.main_icon = self.get_plugin_setting(["main_icon"], "start-here")
-            self.fallback_main_icons = self.get_plugin_setting(
-                ["fallback_main_icons"], distributor_logo_fallback_icons
-            )
             icon_name = self._gtk_helper.icon_exist(
                 self.main_icon, self.fallback_main_icons
             )
@@ -134,7 +165,7 @@ def get_plugin_class():
             self.flowbox.set_valign(self.gtk.Align.START)
             self.flowbox.set_halign(self.gtk.Align.FILL)
             self.flowbox.props.max_children_per_line = 30
-            self.flowbox.set_max_children_per_line(5)
+            self.flowbox.set_max_children_per_line(self.max_apps_per_row)
             self.flowbox.set_homogeneous(False)
             self.flowbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
             self.flowbox.set_activate_on_single_click(True)
@@ -163,9 +194,11 @@ def get_plugin_class():
             min_size, natural_size = self.flowbox.get_preferred_size()
             width = natural_size.width if natural_size else 0
             self.flowbox.add_css_class("app-launcher-flowbox")
-            self.scrolled_window.set_size_request(720, 570)
+            self.scrolled_window.set_size_request(
+                self.popover_width, self.popover_height
+            )
             self.scrolled_window.set_min_content_width(width)
-            self.scrolled_window.set_min_content_height(500)
+            self.scrolled_window.set_min_content_height(self.min_app_grid_height)
             if self.popover_launcher:
                 self.popover_launcher.set_parent(self.appmenu)
                 self.popover_launcher.add_css_class("app-launcher-popover")
@@ -303,7 +336,7 @@ def get_plugin_class():
             self.conn.commit()
             self.cursor.execute("SELECT COUNT(*) FROM recent_apps")
             count = self.cursor.fetchone()[0]
-            if count > 50:
+            if count > self.max_recent_apps_db:
                 self.cursor.execute(
                     """
                     DELETE FROM recent_apps
@@ -311,14 +344,14 @@ def get_plugin_class():
                         SELECT app_name FROM recent_apps ORDER BY last_opened_at ASC LIMIT ?
                     )
                 """,
-                    (count - 50,),
+                    (count - self.max_recent_apps_db,),
                 )
                 self.conn.commit()
 
         def get_recent_apps(self):
             """Get the list of recent app IDs from the SQLite database."""
             self.cursor.execute(
-                "SELECT app_name FROM recent_apps ORDER BY last_opened_at DESC LIMIT 50"
+                f"SELECT app_name FROM recent_apps ORDER BY last_opened_at DESC LIMIT {self.max_recent_apps_db}"
             )
             recent_app_ids = [row[0] for row in self.cursor.fetchall()]
             return recent_app_ids
@@ -391,7 +424,7 @@ def get_plugin_class():
                 "name": name,
                 "initial_title": name,
             }
-            dockbar_config = self.get_root_setting([self.dockbar_id]) or {}
+            dockbar_config = self.get_root_setting([self.dockbar_id], {})
             app_config = dockbar_config.get("app", {})
             app_config[name] = new_entry
             dockbar_config["app"] = app_config
@@ -493,9 +526,11 @@ def get_plugin_class():
                 try:
                     self.settings.set_string("icon-theme", theme_name)
                     self.logger.info(f"Icon theme set to: {theme_name}")
-                    icon_name = self.get_plugin_setting(["main_icon"])
+                    icon_name = self.get_plugin_setting(["main_icon"], "start-here")
                     if icon_name:
-                        fallback_icons = self.get_plugin_setting(["fallback_icons"])
+                        fallback_icons = self.get_plugin_setting(
+                            ["fallback_icons"], ["start-here"]
+                        )
                         fallback_icons.append(distro.id())
                         icon_name = self._gtk_helper.icon_exist(
                             icon_name, fallback_icons
@@ -550,7 +585,7 @@ def get_plugin_class():
                 menu_box.prepend(theme_box)
             name, desktop_file, keywords = vbox.MYTEXT
             is_in_dockbar = False
-            dockbar_config = self.get_plugin_setting(self.dockbar_id) or {}
+            dockbar_config = self.get_root_setting([self.dockbar_id], {})
             is_in_dockbar = any(
                 entry.get("desktop_file") == desktop_file
                 for entry in dockbar_config.get("app", {}).values()
@@ -596,7 +631,7 @@ def get_plugin_class():
 
         def remove_from_dockbar(self, button, desktop_file, popover):
             """Removes the selected app from the dockbar configuration."""
-            dockbar_config = self.get_plugin_setting(self.dockbar_id) or {}
+            dockbar_config = self.get_root_setting([self.dockbar_id], {})
             app_config = dockbar_config.get("app", {})
             key_to_remove = next(
                 (
@@ -609,7 +644,7 @@ def get_plugin_class():
             if key_to_remove:
                 del app_config[key_to_remove]
                 dockbar_config["app"] = app_config
-                self.set_plugin_setting(self.dockbar_id, dockbar_config)
+                self.config_handler.set_root_setting([self.dockbar_id], dockbar_config)
             popover.popdown()
             if self.popover_launcher:
                 self.popover_launcher.popdown()
@@ -673,11 +708,11 @@ def get_plugin_class():
             1.  Application Discovery: It retrieves all installed applications using
                 self.gio.AppInfo.get_all().
             2.  Recent Apps Persistence: It tracks recently launched applications using a
-                SQLite database (recent_apps.db).
+                SQLite database (recent_apps.db). The maximum number of stored recent apps is configurable via `max_recent_apps_db`.
             3.  Dynamic Filtering: It uses a self.gtk.SearchEntry connected to a
                 self.gtk.FlowBox to provide a fast, real-time search experience.
-            4.  Popover and UI: The launcher is displayed in a self.gtk.Popover attached to a main button. Applications are in a grid-like self.gtk.FlowBox.
-            5.  Icon Theme Selection: The right-click popover allows changing the system-wide icon theme using self.gio.Settings.
+            4.  Popover and UI: The launcher is displayed in a self.gtk.Popover attached to a main button. Applications are in a grid-like self.gtk.FlowBox, whose dimensions and layout are configurable via `popover_width`, `popover_height`, and `max_apps_per_row`.
+            5.  Icon Theme Selection: The right-click popover allows changing the system-wide icon theme using self.gio.Settings. The launcher button's main icon and fallbacks are also configurable.
             """
             return self.code_explanation.__doc__
 

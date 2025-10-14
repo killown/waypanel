@@ -229,7 +229,7 @@ class PluginLoaderHelpers:
             return True
         try:
             width = self.loader.config_handler.get_root_setting(
-                ["panel", "top", "width"]
+                ["org.waypanel.panel", "top", "width"]
             )
             if width is None or width <= 0:
                 self.logger.warning(

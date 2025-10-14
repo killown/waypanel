@@ -1,9 +1,15 @@
 def get_plugin_metadata(_):
+    about = (
+        "Integrates with Wayfire's tiling plugin to automatically maximize new windows "
+        "and adjust the tiling layout upon view events. It also provides a keybind to toggle "
+        "maximization state for all views on the active workspace."
+    )
     return {
         "id": "org.waypanel.plugin.tile",
         "name": "Tile",
         "version": "1.0.0",
-        "enabled": True,
+        "enabled": False,
+        "description": about,
     }
 
 
@@ -12,24 +18,47 @@ def get_plugin_class():
     from src.plugins.core.event_handler_decorator import subscribe_to_event
     import os
 
-    MAXIMIZE_BY_DEFAULT = True
-    ADJUST_LAYOUT = True
-    KEYBIND = "<alt> KEY_TAB"
+    DEFAULT_MAXIMIZE_BY_DEFAULT = True
+    DEFAULT_ADJUST_LAYOUT = True
+    DEFAULT_KEYBIND = "<alt> KEY_TAB"
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     TOGGLE_SCRIPT = os.path.join(SCRIPT_DIR, "_toggle_maximize.py")
 
     class Tile(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+            self.add_hint(
+                [
+                    "Configuration for automatic window tiling and maximization behavior."
+                ],
+                None,
+            )
+            self.maximize_by_default = self.get_plugin_setting_add_hint(
+                ["maximize_by_default"],
+                DEFAULT_MAXIMIZE_BY_DEFAULT,
+                "If True, every new toplevel window will be automatically maximized when created (unless tiled).",
+            )
+            self.adjust_layout = self.get_plugin_setting_add_hint(
+                ["adjust_layout"],
+                DEFAULT_ADJUST_LAYOUT,
+                "If True, when a new window is created, the tiling layout will be automatically adjusted to maintain balance (e.g., resizing adjacent views).",
+            )
+            self.keybind = self.get_plugin_setting_add_hint(
+                ["keybind"],
+                DEFAULT_KEYBIND,
+                "The keybind to toggle the maximization state for all windows on the current workspace. This executes a separate script.",
+            )
             self.logger.info("TileOnScalePlugin initialized.")
             self.workarea_width = self.ipc.get_focused_output()["workarea"]["width"]
-            self.keybind = KEYBIND
             self.schedule_in_gtk_thread(self.register_binding_toggle_maximize)
 
         def register_binding_toggle_maximize(self):
             print(f"Registering binding: {self.keybind}")
             if self.wf_helper.is_keybind_used(self.keybind):
                 self.keybind = "<super> KEY_SPACE"
+                self.logger.warning(
+                    f"Configured keybind for 'tile' is already in use. Falling back to: {self.keybind}"
+                )
             self.ipc.register_binding(
                 binding=self.keybind,
                 command=f"python3 {TOGGLE_SCRIPT}",
@@ -110,7 +139,7 @@ def get_plugin_class():
                 state = event_message.get("state")
                 if plugin != "scale":
                     return
-                if state:
+                if state and self.maximize_by_default:
                     self.wf_helper.tile_maximize_all_from_active_workspace(True)
             except Exception as e:
                 self.logger.error(f"Error handling scale activation: {e}")
@@ -121,12 +150,15 @@ def get_plugin_class():
             try:
                 view = event_message.get("view")
                 if view["type"] == "toplevel" and view["parent"] == -1:
-                    if ADJUST_LAYOUT:
+                    if self.adjust_layout:
                         self.adjust_tile_layout(view)
-                    self.ipc.set_tiling_maximized(view["id"], MAXIMIZE_BY_DEFAULT)
-                    self.wf_helper.tile_maximize_all_from_active_workspace(
-                        MAXIMIZE_BY_DEFAULT
-                    )
+                    if self.maximize_by_default:
+                        self.ipc.set_tiling_maximized(
+                            view["id"], self.maximize_by_default
+                        )
+                        self.wf_helper.tile_maximize_all_from_active_workspace(
+                            self.maximize_by_default
+                        )
             except Exception as e:
                 self.logger.error(f"Error handling view mapped: {e}")
 

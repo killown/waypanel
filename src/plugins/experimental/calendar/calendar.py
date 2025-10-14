@@ -1,8 +1,9 @@
 def get_plugin_metadata(_):
-    about = """
-    This plugin adds a calendar popover to the panel, which is
-    displayed when the user clicks on the clock widget.
-    """
+    about = (
+        "This plugin adds a calendar popover to the panel, which is "
+        "displayed when the user clicks on the clock widget. "
+    )
+
     return {
         "id": "org.waypanel.plugin.calendar",
         "name": "Calendar",

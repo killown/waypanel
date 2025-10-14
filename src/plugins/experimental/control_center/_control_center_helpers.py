@@ -409,7 +409,7 @@ class ControlCenterHelpers:
         selected_theme = combobox.get_active_text()
         if not selected_theme:
             return
-        MAIN_CONFIG_KEY = "panel"
+        MAIN_CONFIG_KEY = "org.waypanel.panel"
         NESTED_CONFIG_KEY = "theme"
         DEFAULT_KEY = "default"
         if self.parent.config:
@@ -443,7 +443,7 @@ class ControlCenterHelpers:
         Creates the Adw.ActionRow with the Gtk.ComboBoxText for Waypanel theme selection.
         """
         theme_names = self._get_available_themes()
-        MAIN_CONFIG_KEY = "panel"
+        MAIN_CONFIG_KEY = "org.waypanel.panel"
         NESTED_CONFIG_KEY = "theme"
         DEFAULT_KEY = "default"
         current_theme = (

@@ -1,24 +1,23 @@
-"""[Google]
+DEFAULT_BOOKMARKS_TEMPLATE = """
+[Google]
 url = "https://www.google.com"
 container = "personal"
-icon = "https://www.google.com/favicon.ico"
 [GitHub]
 url = "https://www.github.com"
 container = "dev"
 [Google Maps]
-url = "https://maps.google.com"
+url = "https://maps.google.com/"
 container = "personal"
-icon = "https://maps.google.com/favicon.ico"
 """
 
 
 def get_plugin_metadata(_):
-    about = """
-            A plugin that provides quick access to a user's web bookmarks via a
-            popover menu. It reads bookmarks from a TOML file, downloads and
-            generates thumbnails for website icons, and launches the
-            corresponding URLs in a web browser.
-            """
+    about = (
+        "A plugin that provides quick access to a user's web bookmarks via a "
+        "popover menu. It reads bookmarks from a TOML file, downloads and "
+        "generates thumbnails for website icons, and launches the "
+        "corresponding URLs in a web browser."
+    )
     return {
         "id": "org.waypanel.plugin.browser_bookmarks",
         "name": "Browser Bookmarks",
@@ -40,6 +39,18 @@ def get_plugin_class():
     import tldextract
     import urllib.parse
 
+    DEFAULT_BOOKMARKS_TEMPLATE = """
+[Google]
+url = "https://www.google.com"
+container = "personal"
+[GitHub]
+url = "https://www.github.com"
+container = "dev"
+[Google Maps]
+url = "https://maps.google.com/"
+container = "personal"
+"""
+
     class PopoverBookmarks(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
@@ -51,8 +62,39 @@ def get_plugin_class():
             self.icons_loaded = False
             self.icon_cache: Dict[str, Any] = {}
             self.listbox = self.gtk.ListBox.new()
-            self.THUMBNAIL_SIZE = (128, 128)
-            self.THUMBNAIL_QUALITY = 100
+            self.add_hint(
+                [
+                    "Configuration for Browser Bookmarks plugin appearance, icon generation, and browser execution."
+                ],
+                None,
+            )
+            self.thumbnail_size = self.get_plugin_setting_add_hint(
+                ["layout", "thumbnail_size"],
+                128,
+                "The size (in pixels, height/width) for the square thumbnail icons in the popover. Higher values require more memory.",
+            )
+            self.thumbnail_quality = self.get_plugin_setting_add_hint(
+                ["layout", "thumbnail_quality"],
+                100,
+                "JPEG/PNG quality (0-100) used when saving generated thumbnail images to the icon cache on disk.",
+            )
+            self.popover_max_children_per_line = self.get_plugin_setting_add_hint(
+                ["layout", "popover_max_children_per_line"],
+                3,
+                "Maximum number of bookmark icons to display per row in the popover before wrapping to the next line.",
+            )
+            self.browser_executable = self.get_plugin_setting_add_hint(
+                ["actions", "browser_executable"],
+                "firefox-developer-edition",
+                "The terminal command for the preferred web browser executable (e.g., 'firefox', 'chromium', 'brave').",
+            )
+            self.browser_args_format = self.get_plugin_setting_add_hint(
+                ["actions", "browser_args_format"],
+                "ext+container:name={container}&url={url}",
+                "The argument format string passed to the browser executable. The mandatory placeholders are `{url}` and `{container}` (for containerized browsers).",
+            )
+            self.THUMBNAIL_SIZE = (self.thumbnail_size, self.thumbnail_size)
+            self.THUMBNAIL_QUALITY = self.thumbnail_quality
 
         def _get_cache_path(self) -> str:
             return self.os.path.join(self.config_path, "bookmarks_cache.toml")
@@ -526,7 +568,9 @@ def get_plugin_class():
                 )
                 self.flowbox = self.gtk.FlowBox()
                 self.flowbox.set_valign(self.gtk.Align.START)
-                self.flowbox.set_max_children_per_line(3)
+                self.flowbox.set_max_children_per_line(
+                    self.popover_max_children_per_line
+                )
                 self.flowbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
                 self.flowbox.set_activate_on_single_click(True)
                 self.flowbox.connect("child-activated", self.open_url_from_bookmarks)
@@ -582,17 +626,7 @@ def get_plugin_class():
             url, container = [i.get_child().MYTEXT for i in x.get_selected_children()][
                 0
             ]
-            all_windows = self.ipc.list_views()
-            view = [
-                i["id"]
-                for i in all_windows
-                if "firefox-developer-edition" in i["app-id"]
-            ]
-            if view:
-                self.ipc.set_focus(view[0])
-            cmd = (
-                f"firefox-developer-edition 'ext+container:name={container}&url={url}'"
-            )
+            cmd = f"{self.browser_executable} '{self.browser_args_format.format(container=container, url=url)}'"
             self.cmd.run(cmd)
             if self.popover_bookmarks:
                 self.popover_bookmarks.popdown()
@@ -607,11 +641,12 @@ def get_plugin_class():
             This plugin seamlessly integrates web bookmarks into the panel by
             combining file I/O, network requests, image processing, and GTK UI
             components. The image fetching logic has been updated to:
-            1. **Scrape for Largest Favicon:** It now scrapes the HTML of the bookmark's URL for `<link>` tags with `rel` values like `icon`, `apple-touch-icon`, etc.
+            1. **Scrape for Largest Favicon:** It scrapes the HTML of the bookmark's URL for `<link>` tags with `rel` values like `icon`, `apple-touch-icon`, etc.
             2. **Prioritize by Size:** It parses the `sizes` attribute (e.g., "180x180") to determine the largest available icon and downloads that one, falling back to a standard `/favicon.ico` if none are explicitly linked.
-            3. **Subdomain-Specific Icons:** The filename generation has been corrected to use the **full hostname** (e.g., maps.google.com vs www.google.com) to ensure different subdomains use different cached icons, thus fixing the issue of all Google icons being the same.
-            4. **Explicit Icon Priority:** The configuration's `icon = "..."` field now explicitly forces that icon URL to be downloaded if present, overriding any scraping logic for that specific bookmark.
-            5. **Content Caching:** The fully constructed GTK widget tree is still cached in `self.final_popover_content` for instant re-use after the first successful load, maintaining high performance.
+            3. **Subdomain-Specific Icons:** The filename generation uses the **full hostname** to ensure different subdomains use different cached icons.
+            4. **Explicit Icon Priority:** The configuration's `icon = "..."` field explicitly forces that icon URL to be downloaded if present.
+            5. **Configuration-Driven Execution:** The browser to be launched (`self.browser_executable`) and the specific arguments (`self.browser_args_format`) are now user-configurable settings.
+            6. **Content Caching:** The fully constructed GTK widget tree is still cached in `self.final_popover_content` for instant re-use after the first successful load, maintaining high performance.
             """
             return self.code_explanation.__doc__
 

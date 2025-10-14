@@ -311,6 +311,8 @@ class GtkHelpers:
 
     def normalize_name(self, name: str) -> str:
         """Normalize icon/app names for comparison."""
+        if isinstance(name, list):
+            self.logger.error(f"Icon name is not str, type list found. {name}")
         return name.lower().strip()
 
     def extract_icon_name(self, icon) -> str:

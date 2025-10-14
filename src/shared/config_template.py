@@ -31,8 +31,8 @@ default_config = {
             "Absolute path to search for user-defined or custom plugins."
         ),
     },
-    "hardware": {
-        "_section_hint": "Configuration for core system hardware and peripherals.",
+    "org.waypanel.panel": {
+        "_section_hint": ("Global settings for Waypanel's panels "),
         "primary_output": {
             "_section_hint": "Settings for the main display output/monitor.",
             "name": "DP-1",
@@ -42,12 +42,6 @@ default_config = {
                 "This output determines where Waypanel is placed by default."
             ),
         },
-    },
-    "panel": {
-        "_section_hint": (
-            "Global settings for Waypanel's layer-shell panels "
-            "(top, bottom, left, right)."
-        ),
         "bottom": {
             "_section_hint": (
                 "Bottom panel configuration. Often used for the Taskbar plugin."

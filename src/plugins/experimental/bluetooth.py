@@ -1,8 +1,8 @@
 def get_plugin_metadata(_):
     about = (
-        "A plugin that provides a dashboard for managing Bluetooth devices.",
-        "It displays a list of paired devices, indicates their connection status",
-        "and allows the user to connect or disconnect them with a single click.",
+        "A plugin that provides a dashboard for managing Bluetooth devices. "
+        "It displays a list of paired devices, indicates their connection status "
+        "and allows the user to connect or disconnect them with a single click. "
     )
     return {
         "id": "org.waypanel.plugin.bluetooth",
@@ -29,21 +29,19 @@ def get_plugin_class():
             self.bluetooth_button_popover = self.gtk.Button()
             self.add_cursor_effect(self.bluetooth_button_popover)
             self.main_widget = (self.bluetooth_button_popover, "append")
-            self.add_hint(
+            self.main_icon = self.get_plugin_setting("main_icon", "bluetooth-symbolic")
+            self.fallback_main_icons = self.get_plugin_setting(
+                ["fallback_main_icons"],
+                ["org.gnome.Settings-bluetooth-symbolic", "bluetooth"],
+            )
+            self.connect_devices = self.get_plugin_setting_add_hint(
+                ["auto_connect"],
+                ["B4:B7:42:F7:9B:AD"],
                 (
                     "A list of **Bluetooth MAC addresses** (e.g., "
                     "['00:1A:7D:XX:XX:XX']) for devices Waypanel should "
                     "automatically attempt to connect to when it starts."
                 ),
-                "auto_connect",
-            )
-
-            self.main_icon = self.get_plugin_setting(
-                ["main_icon"], ["bluetooth-symbolic"]
-            )
-            self.fallback_main_icons = self.get_plugin_setting(
-                ["fallback_main_icons"],
-                ["org.gnome.Settings-bluetooth-symbolic", "bluetooth"],
             )
 
         def on_start(self):
@@ -68,20 +66,15 @@ def get_plugin_class():
 
         async def _auto_connect_devices(self):
             """Reads config and attempts to connect specified Bluetooth devices."""
-            connect_devices = self.get_plugin_setting(
-                ["auto_connect"],
-                ["B4:B7:42:F7:9B:AD"],
-            )
-
-            if not connect_devices:
+            if not self.connect_devices:
                 self.logger.info("No devices configured for auto-connect.")
                 return
             self.logger.info(
-                f"Attempting Bluetooth auto-connect for configured devices: {connect_devices}"
+                f"Attempting Bluetooth auto-connect for configured devices: {self.connect_devices}"
             )
             known_devices = await self._get_devices()
             macs_to_connect = set()
-            for entry in connect_devices:
+            for entry in self.connect_devices:
                 mac = self._extract_mac_from_string(entry)
                 if mac:
                     macs_to_connect.add(mac)

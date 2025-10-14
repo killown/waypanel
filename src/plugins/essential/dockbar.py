@@ -8,14 +8,7 @@ def get_plugin_metadata(panel_instance):
         "top": "top-panel-center",
         "bottom": "bottom-panel-center",
     }
-    about = """
-            Dockbar Plugin — Launch apps.
-            • Left-click: Launch app + toggle scale.
-            • Middle-click: Launch on empty workspace.
-            • Right-click: Move cursor to next output & launch.
-            • Integrates with gestures and event_manager.
-            • Drag-and-drop to reorder icons, saving the new order.
-            """
+    about = "A plugin that creates a configurable dockbar for launching applications."
     return {
         "id": "org.waypanel.plugin.dockbar",
         "name": "Dockbar",
@@ -40,7 +33,50 @@ def get_plugin_class():
 
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
-            self.dockbar = self.gtk.Box(spacing=10, orientation=self.get_orientation())
+            self.add_hint(
+                [
+                    "Configuration for the Dockbar appearance, placement, and mouse click behavior."
+                ],
+                None,
+            )
+            self.panel_position = self.get_plugin_setting_add_hint(
+                ["panel", "position"],
+                "left",
+                "Which panel container the dockbar should be placed on (left, right, top, bottom). This setting determines the physical location and automatically influences the orientation.",
+            )
+            self.spacing = self.get_plugin_setting_add_hint(
+                ["spacing"],
+                10,
+                "Spacing in pixels between the application icons in the dockbar.",
+            )
+            self.class_style = self.get_plugin_setting_add_hint(
+                ["panel", "class_style"],
+                "dockbar-buttons",
+                "CSS class applied to each application button for custom styling.",
+            )
+            self.left_click_toggles_scale = self.get_plugin_setting_add_hint(
+                ["actions", "left_click_toggles_scale"],
+                True,
+                "If True, a left-click on a running app toggles Wayfire's 'scale' plugin for window switching (Requires 'scale' plugin to be enabled).",
+            )
+            self.middle_click_to_empty_workspace = self.get_plugin_setting_add_hint(
+                ["actions", "middle_click_to_empty_workspace"],
+                True,
+                "If True, a middle-click on an app attempts to launch it on the nearest empty workspace.",
+            )
+            self.right_click_to_next_output = self.get_plugin_setting_add_hint(
+                ["actions", "right_click_to_next_output"],
+                True,
+                "If True, a right-click moves the cursor to the next output/monitor and launches the application there.",
+            )
+            self.panel_orientation = self.get_plugin_setting_add_hint(
+                ["panel", "orientation"],
+                "v",
+                "Overrides the automatically detected orientation (horizontal/vertical) only if the panel container allows it (e.g., in a custom-sized container).",
+            )
+            self.dockbar = self.gtk.Box(
+                spacing=self.spacing, orientation=self.get_orientation()
+            )
             self.create_gesture = self.plugins["gestures_setup"].create_gesture
             self._subscribe_to_events()
             self.layer_state = False
@@ -86,7 +122,7 @@ def get_plugin_class():
             """
             Retrieves the GTK panel object based on the configuration.
             """
-            position = self.get_plugin_setting(["panel", "position"], "left").lower()
+            position = self.panel_position.lower()
             valid_panels = {
                 "left": self._panel_instance.left_panel_box_center,
                 "right": self._panel_instance.right_panel_box_center,
@@ -249,12 +285,16 @@ def get_plugin_class():
             Handles a left-click event on a dockbar button.
             """
             self.cmd.run(cmd)
-            self.ipc.scale_toggle()
+            if self.is_scale_enabled() and self.left_click_toggles_scale:
+                self.ipc.scale_toggle()
 
         def on_right_click(self, cmd):
             """
             Handles a right-click event on a dockbar button.
             """
+            if not self.right_click_to_next_output:
+                self.cmd.run(cmd)
+                return
             try:
                 outputs = self.ipc.list_outputs()
                 focused_output = self.ipc.get_focused_output()
@@ -278,34 +318,32 @@ def get_plugin_class():
             """
             Handles a middle-click event on a dockbar button.
             """
-            coordinates = self.wf_helper.find_empty_workspace()
-            if coordinates:
-                ws_x, ws_y = coordinates
-                self.ipc.scale_toggle()
-                self.ipc.set_workspace(ws_x, ws_y)
-                self.cmd.run(cmd)
-            else:
-                self.cmd.run(cmd)
+            if self.middle_click_to_empty_workspace:
+                coordinates = self.wf_helper.find_empty_workspace()
+                if coordinates:
+                    ws_x, ws_y = coordinates
+                    self.ipc.scale_toggle()
+                    self.ipc.set_workspace(ws_x, ws_y)
+                    self.cmd.run(cmd)
+                    return
+            self.cmd.run(cmd)
 
         def get_orientation(self):
             container = get_plugin_metadata(self._panel_instance)["container"]
-            orientation = self.get_plugin_setting(["panel", "orientation"], "v")
             if "top-panel" in container or "bottom-panel" in container:
-                orientation = self.gtk.Orientation.HORIZONTAL
-            else:
-                orientation = self.gtk.Orientation.VERTICAL
-            return orientation
+                return self.gtk.Orientation.HORIZONTAL
+            if self.panel_orientation.lower() == "h":
+                return self.gtk.Orientation.HORIZONTAL
+            return self.gtk.Orientation.VERTICAL
 
         def _setup_dockbar(self):
             """
             Configures the dockbar based on the loaded settings.
             """
-
-            class_style = self.get_plugin_setting(
-                ["panel", "class_style"], "dockbar-buttons"
-            )
             self.run_in_thread(
-                self._load_and_populate_dockbar, self.get_orientation(), class_style
+                self._load_and_populate_dockbar,
+                self.get_orientation(),
+                self.class_style,
             )
             self.main_widget = (self.dockbar, "append")
             self.logger.info("Dockbar setup completed.")
@@ -426,9 +464,9 @@ def get_plugin_class():
                 to the corresponding panel container.
             3.  **Gesture-Enhanced Interaction**: Each button is wired to respond to
                 left, middle, and right mouse clicks, triggering different behaviors:
-                - Left: Launch app and toggle the scale plugin.
-                - Middle: Find an empty workspace, switch to it, then launch.
-                - Right: Move the cursor to the next monitor and launch there.
+                - Left: Launch app and conditionally toggle the scale plugin.
+                - Middle: Find an empty workspace, switch to it, then launch (conditionally).
+                - Right: Move the cursor to the next monitor and launch there (conditionally).
                 - Drag-and-drop: Dragging an icon and dropping it changes its position
                   in the dockbar and saves the new order to the config file.
             4.  **Event-Driven Adaptation**: It listens for system events (like plugin

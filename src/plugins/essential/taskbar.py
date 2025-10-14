@@ -42,14 +42,64 @@ def get_plugin_class():
             self.scrolled_window = self.gtk.ScrolledWindow()
             self.button_pool = []
             self.in_use_buttons = {}
-            self.icon_size = self.get_plugin_setting(["layout", "icon_size"], 32)
-            self.spacing = self.get_plugin_setting(["layout", "spacing"], 5)
-            self.show_label = self.get_plugin_setting(["layout", "show_label"], True)
-            self.max_title_lenght = self.get_plugin_setting(
-                ["layout", "max_title_lenght"], 25
+            self.debounce_interval = self.get_plugin_setting_add_hint(
+                ["debounce", "interval_ms"],
+                50,
+                "The delay (in milliseconds) used to debounce view creation/destruction events, preventing rapid taskbar updates during busy periods.",
             )
-            self.exclusive_zone = self.get_plugin_setting(
-                ["panel", "exclusive_zone"], True
+
+            self.allow_move_view_scroll = self.get_plugin_setting_add_hint(
+                ["actions", "allow_move_view_scroll"],
+                True,
+                "If True, scrolling up/down on a taskbar button moves the corresponding window to the next/previous output (monitor).",
+            )
+
+            self.icon_size = self.get_plugin_setting_add_hint(
+                ["layout", "icon_size"],
+                32,
+                "The size (in pixels) for the application icons displayed on the taskbar buttons.",
+            )
+
+            self.spacing = self.get_plugin_setting_add_hint(
+                ["layout", "spacing"],
+                5,
+                "Spacing (in pixels) between taskbar buttons.",
+            )
+
+            self.show_label = self.get_plugin_setting_add_hint(
+                ["layout", "show_label"],
+                True,
+                "If True, display the window title next to the icon; otherwise, only show the icon.",
+            )
+
+            self.max_title_lenght = self.get_plugin_setting_add_hint(
+                ["layout", "max_title_lenght"],
+                25,
+                "The maximum length (in characters) of the window title shown on the taskbar button label before being truncated with '...'.",
+            )
+
+            self.exclusive_zone = self.get_plugin_setting_add_hint(
+                ["panel", "exclusive_zone"],
+                True,
+                "If True, the taskbar panel will claim an exclusive zone on the screen, ensuring windows do not maximize underneath it.",
+            )
+
+            self.panel_position = self.get_plugin_setting_add_hint(
+                ["panel", "position"],
+                "bottom",
+                "Which panel position the taskbar should be attached to (top, bottom, left, right). This defines the orientation and placement.",
+            )
+
+            self.vertical_layout_width = self.get_plugin_setting_add_hint(
+                ["panel", "vertical_layout_width"],
+                150,
+                "The maximum width (in pixels) to reserve for the taskbar when it is oriented vertically (i.e., on the left or right panel).",
+            )
+
+            self.layer_always_exclusive = self.get_plugin_setting_add_hint(
+                ["panel", "layer_always_exclusive"],
+                False,
+                "If True, the panel's exclusive zone is always active, regardless of other plugins like 'scale'.",
             )
             self.panel_name = self.config_handler.get_root_setting(
                 ["panel", "name"],

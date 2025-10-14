@@ -1,6 +1,5 @@
 def get_plugin_metadata(_):
     about = ("A system dashboard providing quick access to common system actions",)
-
     return {
         "id": "org.waypanel.plugin.exit_dashboard",
         "name": "Exit Dashboard",
@@ -22,31 +21,24 @@ def get_plugin_class():
     SYSTEM_BUTTON_CONFIG = {
         "Logout": {
             "icons": ["system-log-out-symbolic", "gnome-logout-symbolic"],
-            "summary": "",
         },
         "Reboot": {
             "icons": ["system-reboot-update-symbolic", "system-reboot-symbolic"],
-            "summary": "",
         },
         "Shutdown": {
             "icons": ["gnome-shutdown-symbolic", "system-shutdown-symbolic"],
-            "summary": "",
         },
         "Suspend": {
             "icons": ["system-suspend-hibernate-symbolic", "system-suspend-symbolic"],
-            "summary": "",
         },
         "Lock": {
             "icons": ["system-lock-screen-symbolic", "lock-symbolic"],
-            "summary": "",
         },
         "Exit Waypanel": {
             "icons": ["application-exit-symbolic", "application-exit", "exit"],
-            "summary": "",
         },
         "Restart Waypanel": {
             "icons": ["system-restart-symbolic", "system-restart-panel"],
-            "summary": "",
         },
         "Settings": {
             "icons": [
@@ -57,17 +49,70 @@ def get_plugin_class():
                 "preferences-activities-symbolic",
                 "preferences-system",
             ],
-            "summary": "",
         },
     }
 
     class ExitDashboard(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+            self.plugin_css_class = self.get_plugin_setting_add_hint(
+                ["layout", "css_class"],
+                "exit-dashboard-widget",
+                "The base CSS class applied to the button and popover widgets for styling via the theme.",
+            )
+            self.dashboard_columns = self.get_plugin_setting_add_hint(
+                ["layout", "max_buttons_per_row"],
+                3,
+                "The number of system action buttons to display horizontally in the popover dashboard.",
+            )
+            self.restart_delay_seconds = self.get_plugin_setting_add_hint(
+                ["timing", "restart_delay_seconds"],
+                0.1,
+                "Delay (in seconds) before executing the Waypanel restart command, allowing the kill signal to process first.",
+            )
+            self.exit_waypanel_command = self.get_plugin_setting_add_hint(
+                ["commands", "exit_waypanel"],
+                "pkill -f waypanel/main.py",
+                "Command to immediately stop all Waypanel processes.",
+            )
+            self.restart_waypanel_command = self.get_plugin_setting_add_hint(
+                ["commands", "restart_waypanel"],
+                "waypanel &",
+                "Command to launch a new Waypanel instance after a delay.",
+            )
+            self.logout_command = self.get_plugin_setting_add_hint(
+                ["commands", "logout"],
+                "wayland-logout",
+                "Command to end the Wayland session (e.g., to return to the display manager).",
+            )
+            self.shutdown_command = self.get_plugin_setting_add_hint(
+                ["commands", "shutdown"],
+                "shutdown -h now",
+                "Command to immediately power off the system.",
+            )
+            self.suspend_command = self.get_plugin_setting_add_hint(
+                ["commands", "suspend"],
+                "systemctl suspend",
+                "Command to put the system into a low-power sleep state.",
+            )
+            self.reboot_command = self.get_plugin_setting_add_hint(
+                ["commands", "reboot"],
+                "reboot",
+                "Command to restart the system.",
+            )
+            self.lock_command = self.get_plugin_setting_add_hint(
+                ["commands", "lock_screen"],
+                """swaylock --screenshots --clock --indicator --grace-no-mouse --indicator-radius 99 --indicator-thickness 6 --effect-blur 7x5 --effect-vignette -1.5:0.5 --ring-color ffffff --key-hl-color 880032 --line-color 00000000 --inside-color 00000087 --separator-color 00000000 --grace 1 --fade-in 4""",
+                "The full command used to lock the screen (defaults to a complex swaylock command, change this to your preferred locker).",
+            )
+            self.system_button_config = self.get_plugin_setting_add_hint(
+                ["buttons", "system_actions"],
+                SYSTEM_BUTTON_CONFIG,
+                "A dictionary structure to override the default system action buttons, including labels, icons, and summaries. Use this to customize the dashboard buttons.",
+            )
             self.popover_dashboard = None
             self.panel_instance = panel_instance
             self.menubutton_dashboard = None
-            self.plugin_css_class = "exit-dashboard-widget"
 
         def add_css_class_to_children(self, widget):
             """Recursively add the plugin's CSS class to the widget and all its children."""
@@ -140,9 +185,9 @@ def get_plugin_class():
                 popover_closed_handler=self.popover_is_closed,
                 popover_visible_handler=self.popover_is_open,
                 action_handler=self.on_action,
-                button_config=SYSTEM_BUTTON_CONFIG,
+                button_config=self.system_button_config,
                 module_name="exit-dashboard",
-                max_children_per_line=3,
+                max_children_per_line=self.dashboard_columns,
             )
             self.add_css_class_to_children(self.popover_dashboard)
             return self.popover_dashboard
@@ -197,27 +242,21 @@ def get_plugin_class():
 
         def on_action(self, button, action):
             if action == "Exit Waypanel":
-                self.subprocess.Popen("pkill -f waypanel/main.py".split())
+                self.subprocess.Popen(self.exit_waypanel_command.split())
             if action == "Restart Waypanel":
-                self.run_later("waypanel &", 0.1)
-            if action == "Logout":
-                self.subprocess.Popen("wayland-logout".split())
-            if action == "Shutdown":
-                self.subprocess.Popen("shutdown -h now".split())
-            if action == "Suspend":
-                self.subprocess.Popen("systemctl suspend".split())
-            if action == "Reboot":
-                self.subprocess.Popen("reboot".split())
-            if action == "Lock":
-                self.subprocess.Popen(
-                    """swaylock --screenshots --clock --indicator
-                        --grace-no-mouse --indicator-radius 99
-                        --indicator-thickness 6 --effect-blur 7x5
-                        --effect-vignette -1.5:0.5  --ring-color ffffff
-                        --key-hl-color 880032 --line-color 00000000
-                        --inside-color 00000087 --separator-color 00000000
-                        --grace 1 --fade-in 4""".split()
+                self.run_later(
+                    self.restart_waypanel_command, self.restart_delay_seconds
                 )
+            if action == "Logout":
+                self.subprocess.Popen(self.logout_command.split())
+            if action == "Shutdown":
+                self.subprocess.Popen(self.shutdown_command.split())
+            if action == "Suspend":
+                self.subprocess.Popen(self.suspend_command.split())
+            if action == "Reboot":
+                self.subprocess.Popen(self.reboot_command.split())
+            if action == "Lock":
+                self.subprocess.Popen(self.lock_command.split())
             if action == "Settings":
                 self.launch_settings()
                 self.popover_dashboard.popdown()  # pyright: ignore
@@ -234,13 +273,18 @@ def get_plugin_class():
         def code_explanation(self):
             """
             This plugin creates a popover-based user interface for managing system-level actions.
-            The system actions are defined in a global configuration dictionary (SYSTEM_BUTTON_CONFIG),
-            and the UI generation logic is delegated to the reusable helper method (self.create_dashboard_popover)
+            The system actions are defined in a configuration dictionary (`self.system_button_config`),
+            and the UI generation logic is delegated to the reusable helper method (`self.create_dashboard_popover`)
             provided by the BasePlugin.
+            Key elements now controlled by configuration settings:
+            - **`max_buttons_per_row`**: Controls the grid layout columns.
+            - **`timing/restart_delay_seconds`**: Controls the delay for the Waypanel restart command.
+            - **All System Commands**: The underlying shell commands for 'Shutdown', 'Reboot', 'Lock', 'Logout', 'Exit Waypanel', and 'Restart Waypanel' are all exposed as separate configuration settings (e.g., `commands/lock_screen`) to support various display managers or lockers (like GDM, SDDM, or swaylock).
+            - **`buttons/system_actions`**: Allows users to entirely customize the labels, icons, and summaries of the dashboard buttons.
             The plugin's core methods are:
-            1. create_menu_popover_system: Sets up the panel button.
-            2. create_popover_system: Calls the external helper to build the popover.
-            3. on_action: Executes the specific system command (e.g., shutdown, reboot) based on the button label.
+            1. `create_menu_popover_system`: Sets up the panel button.
+            2. `create_popover_system`: Calls the external helper to build the popover using configurable settings.
+            3. `on_action`: Executes the configurable system command based on the button label.
             """
             return self.code_explanation.__doc__
 

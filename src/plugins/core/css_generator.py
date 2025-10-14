@@ -29,7 +29,7 @@ def get_plugin_class():
 
         def _get_current_theme(self):
             theme = self._config_handler.get_root_setting(
-                ["panel", "theme", "default"], DEFAULT_THEME
+                ["org.waypanel.panel", "theme", "default"], DEFAULT_THEME
             )
             return theme
 

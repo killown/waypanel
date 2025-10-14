@@ -2,12 +2,11 @@ def get_plugin_metadata(_):
     import shutil
 
     ENABLE_PLUGIN = bool(shutil.which("pacman"))
-
-    about = """
-            A plugin that checks for available system updates on Arch Linux-based
-            systems using the `checkupdates` command and provides a quick way to
-            refresh the count or launch a terminal to run the update.
-            """
+    about = (
+        "A plugin that checks for available system updates on Arch Linux-based "
+        "systems using the `checkupdates` command and provides a quick way to "
+        "refresh the count or launch a terminal to run the update. "
+    )
     return {
         "id": "org.waypanel.plugin.pacman",
         "name": "Pacman Manager",
@@ -27,6 +26,31 @@ def get_plugin_class():
     class UpdateCheckerPlugin(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+            self.check_interval_seconds = self.get_plugin_setting_add_hint(
+                ["timing", "check_interval_seconds"],
+                3600,
+                "The delay (in seconds) between automatic background checks for new updates. (Default: 1 hour)",
+            )
+            self.check_timeout_seconds = self.get_plugin_setting_add_hint(
+                ["timing", "check_timeout_seconds"],
+                10,
+                "The timeout (in seconds) for the 'checkupdates' command to complete before assuming failure (e.g., no internet connection).",
+            )
+            self.terminal_monitor_interval_seconds = self.get_plugin_setting_add_hint(
+                ["timing", "terminal_monitor_interval_seconds"],
+                2,
+                "The interval (in seconds) to check if the spawned terminal process (for updating) has finished.",
+            )
+            self.update_command = self.get_plugin_setting_add_hint(
+                ["actions", "update_command"],
+                "sudo pacman -Syu",
+                "The full command string executed in the terminal when the 'Update Now' button is clicked.",
+            )
+            self.terminal_preference = self.get_plugin_setting_add_hint(
+                ["actions", "terminal_preference"],
+                ["kitty", "alacritty", "terminator", "xterm"],
+                "A list of preferred terminal emulators to use for launching the update command, in order of preference. Waypanel will use the first one it finds.",
+            )
             self.button = self.gtk.Button(label="0")
             self.button.add_css_class("pacman-update-checker-button")
             self.popover = None
@@ -51,7 +75,9 @@ def get_plugin_class():
             self.run_in_thread(self._setup_popover)
             self.run_in_thread(self._update_ui, 0)
             self.run_in_async_task(self._manual_refresh())
-            self.glib.timeout_add_seconds(3600, self._check_updates_periodically)
+            self.glib.timeout_add_seconds(
+                self.check_interval_seconds, self._check_updates_periodically
+            )
 
         def _setup_popover(self):
             """
@@ -120,7 +146,9 @@ def get_plugin_class():
                     stdout=self.subprocess.PIPE,
                     stderr=self.subprocess.DEVNULL,
                 )
-                stdout, _ = await self.asyncio.wait_for(proc.communicate(), timeout=10)
+                stdout, _ = await self.asyncio.wait_for(
+                    proc.communicate(), timeout=self.check_timeout_seconds
+                )
                 lines = stdout.decode("utf-8").strip().splitlines()
                 count = len(lines)
                 self.update_count = count
@@ -158,28 +186,33 @@ def get_plugin_class():
 
         def _launch_terminal(self, button):
             terminal = None
-            if shutil.which("kitty"):
-                terminal = "kitty"
-            elif shutil.which("alacritty"):
-                terminal = "alacritty"
+            for preferred_terminal in self.terminal_preference:
+                if shutil.which(preferred_terminal):
+                    terminal = preferred_terminal
+                    break
             if not terminal:
                 self.logger.warning(
-                    "No supported terminal emulator found (kitty or alacritty)"
+                    f"No supported terminal emulator found ({', '.join(self.terminal_preference)})"
                 )
                 return
+            command_parts = self.update_command.split()
             try:
                 proc = self.subprocess.Popen(
-                    [terminal, "-e", "sudo", "pacman", "-Syu"],
+                    [terminal, "-e"] + command_parts,
                     stdout=self.subprocess.PIPE,
                     stderr=self.subprocess.PIPE,
                     stdin=self.subprocess.PIPE,
                 )
                 self.terminal_pid = proc.pid
                 self.logger.info(f"Launched terminal with PID: {self.terminal_pid}")
-                self.glib.timeout_add_seconds(2, self._monitor_terminal_process)
+                self.glib.timeout_add_seconds(
+                    self.terminal_monitor_interval_seconds,
+                    self._monitor_terminal_process,
+                )
             except Exception as e:
                 self.logger.exception(f"Failed to launch terminal: {e}")
                 self.terminal_pid = None
+            self.popover.popdown()
 
         def _monitor_terminal_process(self):
             if not hasattr(self, "terminal_pid") or self.terminal_pid is None:
@@ -208,15 +241,10 @@ def get_plugin_class():
             updates by integrating with Arch Linux's package management tools.
             Its core logic revolves around **asynchronous process management,
             UI integration, and dependency handling**:
-            1. **self.gtk.Popover Refactoring**: The manual creation and signal connection
-               for `self.popover` in `__init__` were moved to `_setup_popover` and
-               replaced by a call to `self.create_popover`. The result is assigned
-               to `self.popover`, and the manual `self.menu_button.set_popover()`
-               call is maintained.
-            2. **Concurrency Refactoring**: All usage of the old `global_loop.create_task()` has been replaced with the robust `self.run_in_async_task()`. The initial and periodic check scheduling is moved to the `on_start()` lifecycle hook.
-            3. **GTK Thread Safety**: The `_update_ui` method, which manipulates GTK widgets, is now called exclusively using `self.schedule_in_gtk_thread()` from the asynchronous `_check_updates` method. This guarantees UI stability by ensuring GTK calls always happen on the main thread.
-            4. **Asynchronous Update Check**: The `_check_updates` method continues to use ` self.asyncio.create_subprocess_exec` to run the `checkupdates` command non-blockingly.
-            5. **Process and State Management**: When the "Update Now" button is clicked, it launches a terminal process (`sudo pacman -Syu`) and uses `self.glib.timeout_add_seconds` to synchronously monitor the terminal's PID. Once the process is finished, a new update check is automatically triggered via `self.run_in_async_task(self._manual_refresh())`.
+            1. **Configuration-Driven Behavior**: All timing (check and timeout) and execution (terminal and command) parameters are read from configuration on initialization, making the plugin highly flexible.
+            2. **Asynchronous Update Check**: The `_check_updates` method uses `self.asyncio.create_subprocess_exec` and the configurable `check_timeout_seconds` to run `checkupdates` non-blockingly.
+            3. **GTK Thread Safety**: UI updates are safely marshaled to the main thread using `self.schedule_in_gtk_thread()`.
+            4. **Process Management**: When updating, the plugin selects a terminal from the configurable `terminal_preference` list, executes the `update_command`, and uses a recurring `self.glib.timeout_add_seconds` (with configurable interval) to monitor the terminal process's PID. Once the terminal closes, a new update check is triggered.
             """
             return self.code_explanation.__doc__
 

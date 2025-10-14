@@ -201,6 +201,12 @@ class BasePlugin:
                     )
                 return self.config_handler.set_setting_hint(plugin_id, section, hint)
 
+    def get_plugin_setting_add_hint(
+        self, key: list[str] | str, default_value: Any, hint: str | tuple[str, ...]
+    ) -> Any:
+        self.add_hint(hint, key)
+        return self.get_plugin_setting(key, default_value)
+
     def _periodic_gc(self):
         """
         Manually forces Python's garbage collector (GC) to run.
@@ -309,11 +315,9 @@ class BasePlugin:
     ) -> Callable[[Union[str, List[str]], str | Tuple[str, ...]], bool]:
         """
         Provides direct access to the underlying ConfigHandler's set_section_hint method.
-
         This property allows a plugin to set the documentation hint for its
         configuration section using an idiomatic plugin API:
         'self.set_section_hint(path, hint_text)'.
-
         Returns:
             Callable: The bound set_section_hint method of the ConfigHandler.
         """
@@ -323,12 +327,9 @@ class BasePlugin:
     def set_plugin_setting(self) -> Callable[[ConfigKeys, Any], None]:
         """
         Provides access to the ConfigHandler's method for setting a plugin-specific value.
-
         The returned callable has the signature:
         (list[str], new_value: Any) -> None
-
         This method updates the configuration in memory and persists the change to disk.
-
         Returns
         -------
         Callable
@@ -337,12 +338,10 @@ class BasePlugin:
         return self.config_handler.set_plugin_setting  # pyright: ignore
 
     @property
-    def get_plugin_setting(self) -> Callable[[ConfigKeys, Any]]:
+    def get_plugin_setting(self) -> Callable[[Union[str, List[str]], Any], Any]:
         """Provides access to the ConfigHandler's method for retrieving a value.
-
         This property returns the underlying `ConfigHandler.get_plugin_setting`
         method, which can be used to query the configuration system directly.
-
         Returns
         -------
         Callable[[list[str], Any | None], Any]
@@ -353,13 +352,10 @@ class BasePlugin:
     def get_root_setting(self) -> Callable[[List[str], Any]]:
         """
         Provides access to the ConfigHandler's method for retrieving a root-level (global) value.
-
         The returned callable has the signature:
         (keys: list[str], default: Any) -> Any
-
         Used for core application settings, supporting deep key traversal and
         safe fallback using a default value.
-
         Returns
         -------
         Callable
@@ -371,13 +367,10 @@ class BasePlugin:
     def remove_plugin_setting(self):
         """
         Provides access to the ConfigHandler's method for removing a plugin-specific setting.
-
         The returned callable has the signature:
         (keys: list[str]) -> None
-
         This method handles the atomic deletion of the key from the in-memory
         configuration and persists the change to the configuration file.
-
         Returns
         -------
         Callable

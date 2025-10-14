@@ -1,8 +1,8 @@
 def get_plugin_metadata(_):
-    about = """
-            This plugin provides a graphical user interface for managing the
-            Mullvad VPN client directly from the Wayfire panel.
-            """
+    about = (
+        "This plugin provides a graphical user interface for managing the",
+        "Mullvad VPN client directly from the Wayfire panel.",
+    )
     return {
         "id": "org.waypanel.plugin.mullvad",
         "name": "Mullvad VPN",
@@ -25,7 +25,15 @@ def get_plugin_class():
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
             self.mullvad_version = None
-            self.city_code = self.get_city_code()
+            self.city_code = self.get_plugin_setting_add_hint(
+                ["city_code"],
+                "sao",
+                (
+                    "The two or three-letter city code (lowercase) used as the "
+                    "default target when setting a random city relay. Example: 'sao' for São Paulo. "
+                    "The value will be used in the random local Relay. "
+                ),
+            )
             self.menubutton_mullvad = self.create_menu_button()
             self.popover_mullvad = self.create_popover(
                 parent_widget=self.menubutton_mullvad,
@@ -51,13 +59,6 @@ def get_plugin_class():
             except Exception as e:
                 self.logger.info(f"Error retrieving Mullvad version: {e}")
                 return "Mullvad Version Unavailable"
-
-        def get_city_code(self):
-            """Get the city code from the plugin's config section in config.toml."""
-            plugin_config = self.get_plugin_setting(["plugins", "mullvad", "city_code"])
-            if not plugin_config:
-                plugin_config = "sao"
-            return plugin_config
 
         async def _async_init_setup(self):
             """

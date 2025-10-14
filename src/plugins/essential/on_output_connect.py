@@ -1,5 +1,5 @@
 def get_plugin_metadata(_):
-    about = """Automatically moves the panel to a valid monitor when the current one is disabled."""
+    about = "Automatically moves the panel to a valid monitor when the current one is disabled."
     return {
         "id": "org.waypanel.plugin.on_output_connect",
         "name": "Panel Output Mover",
@@ -29,7 +29,17 @@ def get_plugin_class():
             self._debounce_timeout_id = None
             self.current_output_name = None
             self.primary_output_name = self.config_handler.get_root_setting(
-                key_path=["hardware", "primary_output", "name"], default_value=None
+                ["org.waypanel.panel", "primary_output", "name"],
+                self.get_first_output(),
+            )
+            self.add_hint(
+                ["Configuration for the behavior of moving the panel between outputs."],
+                None,
+            )
+            self.debounce_delay_ms = self.get_plugin_setting_add_hint(
+                ["debounce_delay_ms"],
+                100,
+                "Delay (in milliseconds) before moving the panel after an output layout change. This prevents flickering during transient monitor state changes.",
             )
             if self.primary_output_name:
                 self.logger.info(
@@ -39,15 +49,12 @@ def get_plugin_class():
                 self.logger.info(
                     "No primary output set. Will use first available output."
                 )
-                outputs = self.ipc.list_outputs()
-                if outputs:
-                    self.primary_output_name = outputs[0]["name"]
-                else:
-                    self.logger.critical(
-                        "No outputs found. Cannot set a primary output."
-                    )
-                    self.primary_output_name = None
+                self.primary_output_name = self.get_first_output()
             self.glib.idle_add(self._apply_initial_output)
+
+        def get_first_output(self):
+            outputs = self.ipc.list_outputs()
+            return outputs[0]["name"]
 
         def _apply_initial_output(self):
             """Assign panel to the best available output on startup."""
@@ -116,7 +123,7 @@ def get_plugin_class():
                 target_output["output-id"]
             ):
                 self._debounce_timeout_id = self.glib.timeout_add(
-                    100, self._debounced_update
+                    self.debounce_delay_ms, self._debounced_update
                 )
             else:
                 self.logger.debug("Fullscreen view detected, not moving panel.")
@@ -155,28 +162,30 @@ def get_plugin_class():
                 return
             output_width = geo.get("width")
             user_defined_height_top_panel = self.config_handler.get_root_setting(
-                key_path=["panel", "top", "height"], default_value=32
+                key_path=["org.waypanel.panel", "top", "height"], default_value=32
             )
             user_defined_width_top_panel = self.config_handler.get_root_setting(
-                key_path=["panel", "top", "width"], default_value=output_width
+                key_path=["org.waypanel.panel", "top", "width"],
+                default_value=output_width,
             )
             user_defined_height_left_panel = self.config_handler.get_root_setting(
-                key_path=["panel", "left", "height"], default_value=32
+                key_path=["org.waypanel.panel", "left", "height"], default_value=32
             )
             user_defined_width_left_panel = self.config_handler.get_root_setting(
-                key_path=["panel", "left", "width"], default_value=32
+                key_path=["org.waypanel.panel", "left", "width"], default_value=32
             )
             user_defined_height_right_panel = self.config_handler.get_root_setting(
-                key_path=["panel", "right", "height"], default_value=32
+                key_path=["org.waypanel.panel", "right", "height"], default_value=32
             )
             user_defined_width_right_panel = self.config_handler.get_root_setting(
-                key_path=["panel", "right", "width"], default_value=32
+                key_path=["org.waypanel.panel", "right", "width"], default_value=32
             )
             user_defined_height_bottom_panel = self.config_handler.get_root_setting(
-                key_path=["panel", "bottom", "height"], default_value=32
+                key_path=["org.waypanel.panel", "bottom", "height"], default_value=32
             )
             user_defined_width_bottom_panel = self.config_handler.get_root_setting(
-                key_path=["panel", "bottom", "width"], default_value=output_width
+                key_path=["org.waypanel.panel", "bottom", "width"],
+                default_value=output_width,
             )
             LayerShell.set_monitor(self.top_panel, monitor_gdk_obj)
             LayerShell.set_monitor(self.left_panel, monitor_gdk_obj)
@@ -208,7 +217,7 @@ def get_plugin_class():
             3.  **Dynamic Relocation:** If the primary or current monitor is no longer
                 active, the plugin finds the first available, non-DPMS output and
                 reassigns the panel to it using LayerShell.
-            4.  **Debouncing:** A brief delay is used to prevent the panel from
+            4.  **Debouncing:** A configurable delay is used to prevent the panel from
                 rapidly flickering during transient display changes.
             """
             return self.code_explanation.__doc__

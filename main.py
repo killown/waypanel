@@ -233,7 +233,9 @@ def load_panel(ipc_server):
             logger.warning("SwayIPC not available")
     config_path = find_config_path()
     config = load_config(config_path)
-    panel_conf = config.get("panel", {}) if isinstance(config, dict) else {}
+    panel_conf = (
+        config.get("org.waypanel.panel", {}) if isinstance(config, dict) else {}
+    )
     monitor_name = (
         sys.argv[-1].strip()
         if len(sys.argv) > 1

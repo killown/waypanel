@@ -22,7 +22,15 @@ def get_plugin_class():
             self.clock_box = None
             self.clock_label = None
             self.update_timeout_id = None
-            self.add_hint("Format %A, %B %d, %Y", ["format"])
+            self.add_hint(
+                ["Configuration for the Clock plugin display."],
+                None,
+            )
+            self.time_format = self.get_plugin_setting_add_hint(
+                ["format"],
+                "%d %b %H:%M",
+                "The datetime format string (strftime) used to display the time. Example: %A, %B %d, %Y",
+            )
 
         def on_start(self):
             self.create_clock_widget()
@@ -49,13 +57,11 @@ def get_plugin_class():
         def update_clock(self):
             """
             Updates the clock label with the current time.
-
             Returns:
                 bool: Always returns True to continue the self.glib timeout.
             """
             try:
-                format = self.get_plugin_setting(["format"], "%d %b %H:%M")
-                current_time = self.datetime.datetime.now().strftime(format)
+                current_time = self.datetime.datetime.now().strftime(self.time_format)
                 self.clock_label.set_label(current_time)  # pyright: ignore
             except Exception as e:
                 self.logger.error(f"Error updating clock: {e}")
