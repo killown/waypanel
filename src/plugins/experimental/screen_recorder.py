@@ -1,8 +1,5 @@
 def get_plugin_metadata(_):
-    about = """
-            A plugin that provides a simple screen and audio recording utility for Wayland,
-            using wf-recorder, slurp, and ffmpeg.
-            """
+    about = "A plugin that provides a simple screen and audio recording utility"
     return {
         "id": "org.waypanel.plugin.screen_recorder",
         "name": "Screen Recorder",
@@ -118,17 +115,149 @@ def get_plugin_class():
     class RecordingPlugin(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+
+            # Execution Commands
+            self.wf_recorder_cmd = self.get_plugin_setting_add_hint(
+                ["commands", "wf_recorder_cmd"],
+                "wf-recorder",
+                "The executable path for the Wayfire screen recorder utility.",
+            )
+
+            self.slurp_cmd = self.get_plugin_setting_add_hint(
+                ["commands", "slurp_cmd"],
+                "slurp",
+                "The executable path for the slurp region selection tool.",
+            )
+
+            self.ffmpeg_cmd = self.get_plugin_setting_add_hint(
+                ["commands", "ffmpeg_cmd"],
+                "ffmpeg",
+                "The executable path for the FFmpeg video processing utility.",
+            )
+
+            # Recording Options
+            self.wf_recorder_audio_flag = self.get_plugin_setting_add_hint(
+                ["recording", "audio_flag"],
+                "--audio",
+                "The flag passed to wf-recorder to enable audio recording (empty string to disable).",
+            )
+
+            self.output_format = self.get_plugin_setting_add_hint(
+                ["recording", "output_format"],
+                ".mp4",
+                "The file extension and format for recorded videos.",
+            )
+
+            self.slurp_timeout_seconds = self.get_plugin_setting_add_hint(
+                ["recording", "slurp_timeout_seconds"],
+                5,
+                "Timeout (in seconds) for slurp to wait for a region selection before canceling.",
+            )
+
+            self.record_audio_default = self.get_plugin_setting_add_hint(
+                ["recording", "record_audio_default"],
+                False,
+                "Default state for the 'Record Audio' toggle when the panel starts.",
+            )
+
+            # FFmpeg Joining Settings
+            self.ffmpeg_vsync = self.get_plugin_setting_add_hint(
+                ["ffmpeg", "vsync_value"],
+                "2",
+                "The '-vsync' value used during FFmpeg joining for synchronization.",
+            )
+
+            self.ffmpeg_vcodec = self.get_plugin_setting_add_hint(
+                ["ffmpeg", "video_codec"],
+                "libx264",
+                "The video codec used by FFmpeg for joining multiple outputs.",
+            )
+
+            self.ffmpeg_crf = self.get_plugin_setting_add_hint(
+                ["ffmpeg", "crf_value"],
+                "23",
+                "The Constant Rate Factor (CRF) used by FFmpeg (lower is higher quality/larger file size).",
+            )
+
+            self.ffmpeg_preset = self.get_plugin_setting_add_hint(
+                ["ffmpeg", "preset"],
+                "veryfast",
+                "The encoding preset used by FFmpeg (e.g., 'fast', 'medium', 'slow' - affects speed vs compression).",
+            )
+
+            # Icon Fallbacks
+            self.main_icon_name = self.get_plugin_setting_add_hint(
+                ["icons", "main_icon_name"],
+                "screen_recorder",
+                "The preferred primary icon name for the button when not recording.",
+            )
+
+            self.main_icon_fallbacks = self.get_plugin_setting_add_hint(
+                ["icons", "main_icon_fallbacks"],
+                [
+                    "deepin-screen-recorder-symbolic",
+                    "simplescreenrecorder-panel",
+                    "media-record-symbolic",
+                ],
+                "A list of fallback icon names to try when the recorder is stopped.",
+            )
+
+            self.recording_icon_fallbacks = self.get_plugin_setting_add_hint(
+                ["icons", "recording_icon_fallbacks"],
+                [
+                    "simplescreenrecorder-recording",
+                    "media-playback-stop-symbolic",
+                ],
+                "A list of icon names to use when the recorder is active (to show a 'stop' state).",
+            )
+
+            # Directory Settings
+            self.temp_dir_format = self.get_plugin_setting_add_hint(
+                ["paths", "temp_dir_format"],
+                "/tmp/wfrec_{pid}",
+                "The format string for the temporary directory path, using {pid} as a placeholder for the Waypanel process ID. Must be accessible by all users.",
+            )
+
+            self.videos_dir_fallback = self.get_plugin_setting_add_hint(
+                ["paths", "videos_dir_fallback"],
+                "Videos",
+                "The fallback subdirectory name (relative to ~/) if XDG_VIDEOS_DIR is not defined.",
+            )
+
+            # --- End Configuration ---
+
             self.popover = None
             self.button = None
             self.record_processes = []
             self.output_files = []
-            self.video_dir = f"/tmp/wfrec_{self.os.getpid()}"
+            # Use configurable temp_dir_format
+            self.video_dir = self.temp_dir_format.format(pid=self.os.getpid())
             self.final_dir = self._get_user_videos_dir()
             self.is_recording = False
-            self.record_audio = False
+            # Use configurable record_audio_default
+            self.record_audio = self.get_plugin_setting(
+                ["recording", "record_audio_default"], False
+            )
             self._setup_directories()
             self.button = self.create_widget()
             self.main_widget = (self.button, "append")
+            self.glib.idle_add(self.is_wf_recorder_running)
+
+        def is_wf_recorder_running(self):
+            try:
+                pid = (
+                    self.subprocess.check_output(["pgrep", "-x", "wf-recorder"])
+                    .decode()
+                    .strip()
+                )
+                self.notify_send(
+                    "WF-recorder Process Found",
+                    f"WF-recorder process found with the pid {pid}",
+                    "view-process-system",
+                )
+            except self.subprocess.CalledProcessError:
+                pass
+            return False  # stop glib loop
 
         def _setup_directories(self):
             if self.os.path.exists(self.video_dir):
@@ -157,18 +286,18 @@ def get_plugin_class():
                                 return self.os.path.expandvars(path)
             except Exception as e:
                 self.logger.exception(f"Failed to read ~/.config/user-dirs.dirs: {e}")
-            return self.os.path.join(self.os.path.expanduser("~"), "Videos")
+            # Use configurable videos_dir_fallback
+            return self.os.path.join(
+                self.os.path.expanduser("~"), self.videos_dir_fallback
+            )
 
         def create_widget(self):
             button = self.gtk.Button()
+            # Use configurable icon settings
             button.set_icon_name(
                 self.gtk_helper.icon_exist(
-                    "screen_recorder",
-                    [
-                        "deepin-screen-recorder-symbolic",
-                        "simplescreenrecorder-panel",
-                        "media-record-symbolic",
-                    ],
+                    self.main_icon_name,
+                    self.main_icon_fallbacks,
                 )
             )
             button.set_tooltip_text("Start/Stop Screen Recording")
@@ -224,11 +353,14 @@ def get_plugin_class():
             )
             for output in outputs:
                 name = output["name"]
-                path = self.os.path.join(self.video_dir, f"{name}.mp4")
+                # Use configurable output_format
+                path = self.os.path.join(self.video_dir, f"{name}{self.output_format}")
                 self.output_files.append(path)
-                cmd = ["wf-recorder", "-f", path, "-o", name]
-                if self.record_audio:
-                    cmd.append("--audio")
+                # Use configurable wf_recorder_cmd
+                cmd = [self.wf_recorder_cmd, "-f", path, "-o", name]
+                # Use configurable wf_recorder_audio_flag
+                if self.record_audio and self.wf_recorder_audio_flag:
+                    cmd.append(self.wf_recorder_audio_flag)
                 self.logger.info(
                     f"Starting wf-recorder for {name} -> {path} {'with audio' if self.record_audio else ''}"
                 )
@@ -240,13 +372,11 @@ def get_plugin_class():
                         f"Failed to start wf-recorder for {name}: {e}"
                     )
             self.is_recording = True
+            # Use configurable recording_icon_fallbacks
             self.button.set_icon_name(  # pyright: ignore
                 self.gtk_helper.icon_exist(
-                    "screen_recorder",
-                    [
-                        "simplescreenrecorder-recording",
-                        "media-record",
-                    ],
+                    self.main_icon_name,
+                    self.recording_icon_fallbacks,
                 )
             )
             self.button.set_tooltip_text("Stop Recording")  # pyright: ignore
@@ -273,11 +403,16 @@ def get_plugin_class():
             self.record_processes = []
             self.output_files = []
             timestamp = self.glib.DateTime.new_now_utc().format("%Y%m%d_%H%M%S")
-            path = self.os.path.join(self.final_dir, f"{output_name}_{timestamp}.mp4")
+            # Use configurable output_format
+            path = self.os.path.join(
+                self.final_dir, f"{output_name}_{timestamp}{self.output_format}"
+            )
             self.output_files.append(path)
-            cmd = ["wf-recorder", "-f", path, "-o", output_name]
-            if self.record_audio:
-                cmd.append("--audio")
+            # Use configurable wf_recorder_cmd
+            cmd = [self.wf_recorder_cmd, "-f", path, "-o", output_name]
+            # Use configurable wf_recorder_audio_flag
+            if self.record_audio and self.wf_recorder_audio_flag:
+                cmd.append(self.wf_recorder_audio_flag)
             self.logger.info(
                 f"Starting wf-recorder for output '{output_name}' -> {path} {'with audio' if self.record_audio else ''}"
             )
@@ -285,13 +420,11 @@ def get_plugin_class():
                 proc = await self.asyncio.create_subprocess_exec(*cmd)
                 self.record_processes.append(proc)
                 self.is_recording = True
+                # Use configurable recording_icon_fallbacks
                 self.button.set_icon_name(  # pyright: ignore
                     self.gtk_helper.icon_exist(
-                        "screen_recorder",
-                        [
-                            "simplescreenrecorder-recording",
-                            "media-playback-stop-symbolic",
-                        ],
+                        self.main_icon_name,
+                        self.recording_icon_fallbacks,
                     )
                 )
                 self.button.set_tooltip_text("Stop Recording")  # pyright: ignore
@@ -314,11 +447,13 @@ def get_plugin_class():
             self.record_processes = []
             self.output_files = []
             try:
+                # Use configurable slurp_cmd
                 proc = await self.asyncio.create_subprocess_exec(
-                    "slurp", stdout=self.asyncio.subprocess.PIPE
+                    self.slurp_cmd, stdout=self.asyncio.subprocess.PIPE
                 )
+                # Use configurable slurp_timeout_seconds
                 geometry_bytes, _ = await self.asyncio.wait_for(
-                    proc.communicate(), timeout=5
+                    proc.communicate(), timeout=self.slurp_timeout_seconds
                 )
                 geometry = geometry_bytes.decode("utf-8").strip()
                 if proc.returncode != 0:
@@ -351,11 +486,16 @@ def get_plugin_class():
                 )
                 return
             timestamp = self.glib.DateTime.new_now_utc().format("%Y%m%d_%H%M%S")
-            path = self.os.path.join(self.final_dir, f"region_{timestamp}.mp4")
+            # Use configurable output_format
+            path = self.os.path.join(
+                self.final_dir, f"region_{timestamp}{self.output_format}"
+            )
             self.output_files.append(path)
-            cmd = ["wf-recorder", "-f", path, "-g", geometry]
-            if self.record_audio:
-                cmd.append("--audio")
+            # Use configurable wf_recorder_cmd
+            cmd = [self.wf_recorder_cmd, "-f", path, "-g", geometry]
+            # Use configurable wf_recorder_audio_flag
+            if self.record_audio and self.wf_recorder_audio_flag:
+                cmd.append(self.wf_recorder_audio_flag)
             self.logger.info(
                 f"Starting wf-recorder for region '{geometry}' -> {path} {'with audio' if self.record_audio else ''}"
             )
@@ -363,10 +503,11 @@ def get_plugin_class():
                 proc = await self.asyncio.create_subprocess_exec(*cmd)
                 self.record_processes.append(proc)
                 self.is_recording = True
+                # Use configurable recording_icon_fallbacks
                 self.button.set_icon_name(  # pyright: ignore
                     self.gtk_helper.icon_exist(
-                        "screen_recorder",
-                        ["simplescreenrecorder-recording", "media-record"],
+                        self.main_icon_name,
+                        self.recording_icon_fallbacks,
                     )
                 )
                 self.button.set_tooltip_text("Stop Recording")  # pyright: ignore
@@ -425,14 +566,11 @@ def get_plugin_class():
                 task.cancel()
             self.record_processes.clear()
             self.is_recording = False
+            # Use configurable main_icon_fallbacks
             self.button.set_icon_name(  # pyright: ignore
                 self.gtk_helper.icon_exist(
-                    "screen_recorder",
-                    [
-                        "deepin-screen-recorder-symbolic",
-                        "simplescreenrecorder-panel",
-                        "media-record-symbolic",
-                    ],
+                    self.main_icon_name,
+                    self.main_icon_fallbacks,
                 )
             )
             self.button.set_tooltip_text("Start/Stop Screen Recording")  # pyright: ignore
@@ -461,7 +599,10 @@ def get_plugin_class():
             min_height = min(g["height"] for g in geometries)
             num_outputs = len(files_to_join)
             timestamp = self.glib.DateTime.new_now_utc().format("%Y%m%d_%H%M%S")
-            out_path = self.os.path.join(self.final_dir, f"joined_{timestamp}.mp4")
+            # Use configurable output_format
+            out_path = self.os.path.join(
+                self.final_dir, f"joined_{timestamp}{self.output_format}"
+            )
             if self.os.path.exists(out_path):
                 self.os.remove(out_path)
             filter_complex_parts = []
@@ -479,13 +620,15 @@ def get_plugin_class():
             elif num_outputs == 1:
                 filter_complex_parts[-1] += "[v_out]"
             filter_complex = ";".join(filter_complex_parts)
+            # Use configurable ffmpeg_cmd and ffmpeg_vsync
             cmd = [
-                "ffmpeg",
+                self.ffmpeg_cmd,
                 "-vsync",
-                "2",
+                self.ffmpeg_vsync,
             ]
             for f in files_to_join:
                 cmd.extend(["-i", f])
+            # Use configurable ffmpeg_vcodec, ffmpeg_crf, ffmpeg_preset
             cmd.extend(
                 [
                     "-filter_complex",
@@ -493,11 +636,11 @@ def get_plugin_class():
                     "-map",
                     "[v_out]",
                     "-c:v",
-                    "libx264",
+                    self.ffmpeg_vcodec,
                     "-crf",
-                    "23",
+                    self.ffmpeg_crf,
                     "-preset",
-                    "veryfast",
+                    self.ffmpeg_preset,
                 ]
             )
             if self.record_audio and num_outputs > 0:
@@ -563,20 +706,13 @@ def get_plugin_class():
             This plugin acts as a screen and audio recording tool tailored for Wayland
             compositors, integrating with the system's graphical and command-line
             utilities.
-            **Refactoring Notes (BasePlugin Utility Adherence):**
-            1.  **BasePlugin Utility Use:** The `open_popover` method now correctly uses
-                `self.create_popover(parent_widget=self.button, closed_handler=self.popover_is_closed)`
-                from the `BasePlugin` to handle the generic setup (instantiation,
-                parenting, arrow, and signal connections) of the `Gtk.Popover`.
-            2.  **UI/Logic Separation (`RecordingPopover`):** The custom `RecordingPopover`
-                class was refactored to inherit from `Gtk.Box`. This makes it a pure
-                content container.
-            3.  **Content Insertion:** The `open_popover` method then sets this new
-                content container as the child of the popover instance returned by
-                the base utility: `self.popover.set_child(popover_content)`.
-            4.  **Helper Access:** The `RecordingPopover` accesses all required Waypanel
-                components (GTK, IPC, loop) through the `main_plugin` instance passed
-                to its constructor.
+
+            Key aspects that are now configurable through settings:
+            - **Commands**: The executables for **wf-recorder**, **slurp**, and **ffmpeg** (`commands/*`).
+            - **Recording Parameters**: The audio flag (`recording/audio_flag`), output file format (`recording/output_format`), and initial state for audio recording (`recording/record_audio_default`).
+            - **FFmpeg Settings**: The technical parameters for joining videos, including **VSync**, **video codec**, **CRF**, and **preset** (`ffmpeg/*`).
+            - **UI Icons**: The button's icons for both stopped and active recording states (`icons/*`).
+            - **Directories**: The temporary directory format (`paths/temp_dir_format`) and the fallback directory name for final videos (`paths/videos_dir_fallback`).
             """
             return self.code_explanation.__doc__
 
