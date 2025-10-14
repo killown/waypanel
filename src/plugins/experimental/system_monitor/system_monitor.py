@@ -181,7 +181,8 @@ def get_plugin_class():
                 else:
                     for key in gpu_rows:
                         self.remove_metric(key)
-            except (ImportError, Exception):
+            except Exception as e:
+                self.logger.warning(f"pyamdgpuinfo failed to parse GPU info {e}")
                 for key in gpu_rows:
                     self.remove_metric(key)
             return False

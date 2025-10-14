@@ -28,3 +28,4 @@ rapidfuzz
 lazy-loader
 distro
 tldextract
+pyamdgpuinfo

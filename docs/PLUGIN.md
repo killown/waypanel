@@ -33,6 +33,7 @@ Save this code as `~/.local/share/waypanel/plugins/minimal_random_plugin.py`:
             "container": "top-panel-right",
             "index": 1,
             "deps": ["top_panel"], # Requires the top panel to exist
+            "description": "some description for the plugin"
         }
 
 
@@ -56,7 +57,7 @@ Save this code as `~/.local/share/waypanel/plugins/minimal_random_plugin.py`:
                 super().__init__(panel_instance)
                 self.button = None
 
-            async def on_start(self):
+            def on_start(self):
                 """
                 Activation Lifecycle: Creates the UI and sets it as the main widget.
                 """
@@ -80,7 +81,7 @@ Save this code as `~/.local/share/waypanel/plugins/minimal_random_plugin.py`:
 
                 self.logger.info(f"Button clicked. New random number: {rand_num}")
 
-            async def on_stop(self):
+            def on_stop(self):
                 """Deactivation Point: Performs cleanup."""
                 # self.remove_main_widget() is provided by BasePlugin for safety
                 self.logger.info("MinimalButtonPlugin stopping.")
