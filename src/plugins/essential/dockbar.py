@@ -74,6 +74,12 @@ def get_plugin_class():
                 "v",
                 "Overrides the automatically detected orientation (horizontal/vertical) only if the panel container allows it (e.g., in a custom-sized container).",
             )
+            # Added new setting for LayerShell exclusivity
+            self.layer_always_exclusive = self.get_plugin_setting_add_hint(
+                ["panel", "layer_always_exclusive"],
+                False,
+                "If True, the dockbar panel will be set to Layer.TOP and automatically reserve space (exclusive zone) so that other windows cannot overlap it.",
+            )
             self.dockbar = self.gtk.Box(
                 spacing=self.spacing, orientation=self.get_orientation()
             )
@@ -117,6 +123,19 @@ def get_plugin_class():
                     )
                 except Exception as e:
                     self.logger.error(f"Error checking mod time in GIO callback: {e}")
+
+        def _get_top_level_panel_widget(self):
+            """
+            Retrieves the top-level GTK LayerShell widget for the current panel position.
+            """
+            position = self.panel_position.lower().split("-")[0]
+            top_level_panels = {
+                "left": self._panel_instance.left_panel,
+                "right": self._panel_instance.right_panel,
+                "top": self._panel_instance.top_panel,
+                "bottom": self._panel_instance.bottom_panel,
+            }
+            return top_level_panels.get(position)
 
         def get_panel(self):
             """
@@ -263,8 +282,6 @@ def get_plugin_class():
         def save_dockbar_order(self):
             """
             Saves the current order of the dockbar icons to the configuration file.
-            FIXED: Now uses self.config_handler.set_root_setting for safe,
-            atomic update, creation of missing paths, saving, and reloading.
             """
             try:
                 new_dockbar_config = {}
@@ -285,6 +302,8 @@ def get_plugin_class():
             Handles a left-click event on a dockbar button.
             """
             self.cmd.run(cmd)
+            if self.layer_always_exclusive is True:
+                return
             if self.is_scale_enabled() and self.left_click_toggles_scale:
                 self.ipc.scale_toggle()
 
@@ -338,7 +357,7 @@ def get_plugin_class():
 
         def _setup_dockbar(self):
             """
-            Configures the dockbar based on the loaded settings.
+            Configures the dockbar based on the loaded settings and applies layer shell properties.
             """
             self.run_in_thread(
                 self._load_and_populate_dockbar,
@@ -346,6 +365,28 @@ def get_plugin_class():
                 self.class_style,
             )
             self.main_widget = (self.dockbar, "append")
+
+            # Implementation of layer_always_exclusive feature
+            if self.layer_always_exclusive:
+                top_level_widget = self._get_top_level_panel_widget()
+                if top_level_widget:
+                    try:
+                        self.layer_shell.set_layer(
+                            top_level_widget, self.layer_shell.Layer.TOP
+                        )
+                        self.layer_shell.auto_exclusive_zone_enable(top_level_widget)
+                        self.logger.info(
+                            f"Dockbar set to exclusive Layer.TOP on {self.panel_position}."
+                        )
+                    except AttributeError as e:
+                        self.logger.error(
+                            f"Layer shell error applying exclusive zone: {e}"
+                        )
+                else:
+                    self.logger.warning(
+                        f"Could not find top-level panel widget for position: {self.panel_position}"
+                    )
+
             self.logger.info("Dockbar setup completed.")
 
         def _setup_file_watcher(self):
@@ -455,6 +496,7 @@ def get_plugin_class():
                 accessor: `self.get_plugin_setting(["nested", "key", "path"], default_value)`.
                 Configuration writing (saving dockbar order) now uses the new safe method:
                 `self.config_handler.set_root_setting([self.plugin_id, "app"], new_config)`.
+            2.  **LayerShell Exclusivity (New):** A new setting, `layer_always_exclusive`, controls whether the dockbar is placed on the top layer (`self.layer_shell.Layer.TOP`) and reserves exclusive space (`self.layer_shell.auto_exclusive_zone_enable`). This logic is applied to the top-level panel window in `_setup_dockbar`.
             Its core logic follows these principles:
             1.  **Configuration-Driven UI**: On startup, it reads a TOML config file
                 to determine which applications to display, their icons, and launch commands.

@@ -7,8 +7,6 @@ from wayfire import WayfireSocket
 from gi.repository import Gio  # pyright: ignore
 from src.shared import config_template
 
-_MISSING_SETTING_SENTINEL = object()
-
 
 class ConfigHandler:
     """

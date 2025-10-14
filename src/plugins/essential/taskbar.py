@@ -173,10 +173,16 @@ def get_plugin_class():
             )
             self.scrolled_window.set_child(self.flowbox_container)
             self.logger.debug("Setting up bottom panel.")
+            target = {
+                "left": self.left_panel,
+                "right": self.right_panel,
+                "top": self.top_panel,
+                "bottom": self.bottom_panel,
+            }
             if self.layer_always_exclusive:
-                self.layer_shell.set_layer(self.right_panel, self.layer_shell.Layer.TOP)
-                self.layer_shell.auto_exclusive_zone_enable(self.right_panel)
-                self.right_panel.set_size_request(60, 0)
+                self.layer_shell.set_layer(target[position], self.layer_shell.Layer.TOP)
+                self.layer_shell.auto_exclusive_zone_enable(target[position])
+                target[position].set_size_request(60, 0)
             output = self.os.getenv("waypanel")
             output_name = None
             output_id = None
@@ -596,7 +602,15 @@ def get_plugin_class():
             self.logger.debug(f"Title changed for view: {view}")
             self.update_taskbar_button(view)
 
+        def scale_toggle(self):
+            if self.layer_always_exclusive is True:
+                return
+            self.ipc.scale_toggle()
+
         def handle_plugin_event(self, msg):
+            if self.layer_always_exclusive is True:
+                return
+
             prevent_infinite_loop_from_event_manager_idle_add = False
             if msg.get("event") == "plugin-activation-state-changed":
                 if msg.get("state") is True:
@@ -643,14 +657,14 @@ def get_plugin_class():
                     and self.is_scale_active[output_id]
                 ):
                     try:
-                        self.ipc.scale_toggle()
+                        self.scale_toggle()
                         self.logger.debug("Scale toggled off.")
                     except Exception as e:
                         self.logger.error(message=f"Failed to toggle scale. {e}")
                     finally:
                         self._focus_and_center_cursor(view_id)
                 else:
-                    self.ipc.scale_toggle()
+                    self.scale_toggle()
                     self._focus_and_center_cursor(view_id)
                 self.wf_helper.view_focus_indicator_effect(view)
             except Exception as e:

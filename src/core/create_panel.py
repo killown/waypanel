@@ -106,10 +106,14 @@ def get_target_monitor(
         target = monitors.get(monitor_name)
         if target:
             return target
-    monitor_name = config["org.waypanel.panel"]["primary_output"].get("name")
-    target = monitors.get(monitor_name)
-    if target:
-        return target
+    if (
+        "org.waypanel.panel" in config
+        and "primary_output" in config["org.waypanel.panel"]
+    ):
+        monitor_name = config["org.waypanel.panel"]["primary_output"].get("name")
+        target = monitors.get(monitor_name)
+        if target:
+            return target
     return next(iter(monitors.values()), None)
 
 

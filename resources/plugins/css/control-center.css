@@ -185,7 +185,8 @@
   background-color: var(--color-bg-searchbar);
 }
 
-/* Toggle switch - uses GTK default */
-.control-center-toggle-switch {
-  /* no extra style */
+switch.control-center-toggle-switch slider {
+  background-color: var(--color-bg-box-primary);
+  border-radius: 99px;
+  padding: 10px;
 }
