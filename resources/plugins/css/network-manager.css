@@ -16,7 +16,6 @@
   border-bottom: 1px solid var(--theme-decoration-separator);
   padding-bottom: 5px;
   margin: 5px 10px 5px 10px;
-  align-items: center;
 }
 
 .network-manager-heading {
@@ -56,7 +55,6 @@
 }
 
 .network-manager-device-header {
-  align-items: center;
   margin: 5px;
 }
 
@@ -64,7 +62,6 @@
   background-color: transparent;
   border: none;
   padding: 5px 10px;
-  text-align: left;
   min-height: 30px;
   border-radius: var(--radius-s);
 }
@@ -80,7 +77,6 @@
 }
 
 .network-dashboard-device-icon {
-  align-items: center;
   padding: 5px;
 }
 
@@ -110,7 +106,6 @@
   border-radius: var(--radius-m);
   border: 1px solid var(--theme-decoration-border-control);
   padding: 10px;
-  align-items: center;
   min-height: 35px;
   margin-top: 5px;
 }
