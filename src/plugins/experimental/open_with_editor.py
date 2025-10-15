@@ -388,7 +388,6 @@ def get_plugin_class():
             editor_index = button - 1
             file_path = row_hbox.MYTEXT
             self.open_file_in_editor(file_path=file_path, editor_index=editor_index)
-            gesture.set_state(self.gtk.EventSequenceState.STOPPED)
 
         def _create_file_row(self, full_file_path, root_dir):
             """

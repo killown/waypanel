@@ -148,7 +148,6 @@ container = "personal"
         def _setup_config_paths(self):
             self.home = self.os.path.expanduser("~")
             self.config_path = self._path_handler.get_data_path()
-            print(self.config_path)
             self.bookmarks_image_path = self.os.path.join(
                 self.config_path, "bookmarks/images/"
             )

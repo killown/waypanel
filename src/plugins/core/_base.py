@@ -15,6 +15,7 @@ from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
 from src.shared.command_runner import CommandRunner
 from src.shared.concurrency_helper import ConcurrencyHelper
+from src.shared.install_helpers import InstallHelpers
 from typing import Any, List, ClassVar, Optional, Union, Dict, Set, Callable, Tuple
 import asyncio
 
@@ -122,6 +123,7 @@ class BasePlugin:
     _notifier: Notifier
     _wf_helper: WayfireHelpers
     _gtk_helper: GtkHelpers
+    _install_helper: InstallHelpers
     _data_helper: DataHelpers
     _config_handler: ConfigHandler
     _cmd: CommandRunner
@@ -146,6 +148,7 @@ class BasePlugin:
         self._notifier = Notifier()
         self._wf_helper = WayfireHelpers(panel_instance)
         self._gtk_helper = GtkHelpers(panel_instance)
+        self._install_helper = InstallHelpers(panel_instance)
         self._data_helper = DataHelpers()
         self._cmd = CommandRunner(panel_instance)
         self._concurrency_helper = ConcurrencyHelper(panel_instance)
@@ -305,6 +308,9 @@ class BasePlugin:
                 self._running_futures.remove(future)
         except Exception as e:
             self.logger.error(f"Error cleaning up Future tracking: {e}")
+
+    def module_exist(self, module_name):
+        return self._install_helper.resolve_and_install(module_name)
 
     @property
     def set_section_hint(

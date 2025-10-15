@@ -120,8 +120,8 @@ The `ControlCenter` app (a GTK4/Adwaita GUI) reads `~/.config/waypanel/config.to
   Use `BasePlugin` as a superclass for common helpers (`logger`, `gtk`, `ipc_server`). The modern lifecycle is \*\*asynchronous\*\* and requires three key components:
   1.  **`def get_plugin_metadata()`:** Defines placement and dependencies.
   2.  **`def get_plugin_class()`:** The main entry point where \*\*ALL imports\*\* (e.g., `gi.repository.Gtk`, `BasePlugin`) \*\*must be deferred\*\*.
-  3.  **`async def on_start()`:** The primary activation method (replaces `enable()`).
-  4.  **`async def on_stop()`:** The primary deactivation method (replaces `disable()`).
+  3.  **`def on_start()`:** The primary activation method (replaces `enable()`).
+  4.  **`def on_stop()`:** The primary deactivation method (replaces `disable()`).
 
   The BasePlugin still provides safe widget removal helpers.
 

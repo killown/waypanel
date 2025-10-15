@@ -325,29 +325,44 @@ def ensure_initial_setup(config: AppConfig, installed_path: Optional[Path]):
         logging.warning("No default resources found. Proceeding without them.")
 
 
-def main():
-    """Main execution flow for the Waypanel launcher."""
-    setup_logging()
-    config = AppConfig(app_name=APP_NAME)
-    script_dir = Path(__file__).parent.resolve()
+def exist_process():
     with contextlib.suppress(Exception):
         subprocess.run(
             ["pkill", "-f", f"{APP_NAME}/main.py"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
+
+
+def main():
+    """
+    Main execution flow for the Waypanel launcher.
+
+    Handles initial setup, environment management, and launches the application
+    with a retry mechanism for transient startup failures.
+    """
+    setup_logging()
+    config = AppConfig(app_name=APP_NAME)
+    script_dir = Path(__file__).parent.resolve()
+
     threading.Thread(target=run_backup, args=(config,), daemon=True).start()
-    installed_path = _find_package_path(config.app_name, config.xdg_data_home)
+
+    installed_path: Optional[Path] = _find_package_path(
+        config.app_name, config.xdg_data_home
+    )
     if installed_path and installed_path.is_dir():
-        main_py_dir = installed_path
+        main_py_dir: Path = installed_path
         logging.info("Using installed package from: %s", main_py_dir)
     else:
         main_py_dir = script_dir
         logging.info("Using development path: %s", main_py_dir)
-    req_file = main_py_dir / "requirements.txt"
-    main_py_file = main_py_dir / "main.py"
+
+    req_file: Path = main_py_dir / "requirements.txt"
+    main_py_file: Path = main_py_dir / "main.py"
     os.environ["PYTHONPATH"] = str(main_py_dir)
-    gtk_lib = _find_system_library(
+
+    # Environment setup for libgtk4-layer-shell.
+    gtk_lib: Optional[Path] = _find_system_library(
         lib_name="libgtk4-layer-shell.so",
         search_paths=[
             "/usr/lib/libgtk4-layer-shell.so",
@@ -361,28 +376,54 @@ def main():
     if not gtk_lib:
         logging.critical("libgtk4-layer-shell.so not found. Cannot start.")
         sys.exit(1)
+
     os.environ["LD_PRELOAD"] = str(gtk_lib)
     logging.info("Using GTK4 Layer Shell: %s", gtk_lib)
+
     ensure_initial_setup(config, installed_path)
     manage_virtual_environment(config, req_file)
+
     logging.info("Compiling Python source files to bytecode (.pyc)...")
     with contextlib.suppress(Exception):
-        compileall.compile_dir(main_py_dir, quiet=1, force=False)
+        compileall.compile_dir(str(main_py_dir), quiet=1, force=False)
         logging.info("Compilation complete (skipped if up-to-date).")
-    logging.info("Starting %s application...", APP_NAME)
-    try:
-        cmd = [str(config.venv_python), "-O", str(main_py_file)]
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        logging.critical(
-            "Application exited with a non-zero status code: %d", e.returncode
+
+    MAX_RETRIES: int = 3
+    for attempt in range(1, MAX_RETRIES + 1):
+        exist_process()
+        logging.info(
+            "Attempt %d of %d: Starting %s application...",
+            attempt,
+            MAX_RETRIES,
+            APP_NAME,
         )
-        sys.exit(e.returncode)
-    except FileNotFoundError:
-        logging.critical(
-            "Could not find the main application script at %s.", main_py_file
-        )
-        sys.exit(1)
+        try:
+            cmd: List[str] = [str(config.venv_python), "-O", str(main_py_file)]
+            subprocess.run(cmd, check=True)
+            logging.info("Application started successfully on attempt %d.", attempt)
+            return
+
+        except subprocess.CalledProcessError as e:
+            if attempt < MAX_RETRIES:
+                logging.warning(
+                    "Attempt %d failed with exit code %d. Retrying in case of a transient layout race condition...",
+                    attempt,
+                    e.returncode,
+                )
+            else:
+                logging.critical(
+                    "Final attempt %d failed with exit code %d. Aborting launch.",
+                    attempt,
+                    e.returncode,
+                )
+                sys.exit(e.returncode)
+
+        except FileNotFoundError:
+            logging.critical(
+                "Could not find the main application script at %s or venv Python. Aborting launch.",
+                main_py_file,
+            )
+            sys.exit(1)
 
 
 if __name__ == "__main__":

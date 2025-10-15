@@ -1,11 +1,11 @@
 def get_plugin_metadata(_):
-    about = """
-            A background plugin that manages window states to prevent
-            the Wayland panel from being hidden by fullscreen windows
-            when a window overview feature is activated (e.g., the 'scale' plugin).
-            It temporarily un-fullscreens the focused window and restores it upon
-            deactivation of the associated feature.
-            """
+    about = (
+        "A background plugin that manages window states to prevent "
+        "the Wayland panel from being hidden by fullscreen windows "
+        "when a window overview feature is activated (e.g., the scale plugin). "
+        "It temporarily un-fullscreens the focused window and restores it upon "
+        "deactivation of the associated feature. "
+    )
     return {
         "id": "org.waypanel.plugin.windowrules",
         "name": "Window Rules",
@@ -22,7 +22,6 @@ def get_plugin_class():
     The factory function for the WindowRulesPlugin class.
     All necessary imports are deferred here to ensure fast top-level loading.
     """
-    import asyncio
     from core._base import BasePlugin
     from src.plugins.core.event_handler_decorator import subscribe_to_event
     from typing import Dict, Any
@@ -44,24 +43,25 @@ def get_plugin_class():
             super().__init__(panel_instance)
             self.fullscreen_views: Dict[str, bool] = {}
 
-        async def on_start(self) -> None:
+        def on_start(self) -> None:
             """Logs plugin startup. All event subscriptions are handled by decorators."""
             self.logger.info("WindowRulesPlugin initialized and started.")
 
-        async def on_stop(self) -> None:
+        def on_stop(self) -> None:
             """
             The primary deactivation method. Ensures any window we tracked as
-            fullscreen is returned to its original state.
+            fullscreen is returned to its original state by scheduling restoration
+            tasks in the thread pool.
             """
             self.logger.info(
                 "WindowRulesPlugin stopping. Restoring saved fullscreen states."
             )
-            tasks = []
             views_to_restore = list(self.fullscreen_views.keys())
             for view_id in views_to_restore:
                 if self.fullscreen_views.get(view_id):
 
                     def restore_view_state(vid: str):
+                        """Synchronous logic run in a worker thread."""
                         try:
                             self.ipc.set_view_fullscreen(vid, True)
                         except Exception as e:
@@ -71,9 +71,7 @@ def get_plugin_class():
                         finally:
                             self.fullscreen_views.pop(vid, None)
 
-                    tasks.append(self.run_in_thread(restore_view_state, view_id))
-            if tasks:
-                await asyncio.gather(*tasks, return_exceptions=True)
+                    self.run_in_thread(restore_view_state, view_id)
             self.fullscreen_views.clear()
 
         @subscribe_to_event("plugin-activation-state-changed")
@@ -173,7 +171,9 @@ def get_plugin_class():
             3.  **Restoration on Deactivation**: When the `scale` view is
                 deactivated, the plugin restores the saved fullscreen state
                 using the `self.fullscreen_views` dictionary, ensuring the
-                user's environment returns to its previous state.
+                user's environment returns to its previous state. The
+                `on_stop` method uses `self.run_in_thread` to offload restoration
+                work to avoid blocking the GTK thread.
             4.  **Inter-Process Communication (IPC)**: The plugin
                 orchestrates window state changes using `self.ipc` to interact
                 with the Wayland compositor.

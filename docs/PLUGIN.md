@@ -90,15 +90,14 @@ Save this code as `~/.local/share/waypanel/plugins/minimal_random_plugin.py`:
 
 ---
 
-## 2\. BasePlugin and Asynchronous Lifecycle
+## 2\. BasePlugin
 
 By inheriting from `BasePlugin`, your class gains essential resources and lifecycle methods:
 
 - **`self.logger`:** The structured logger. Use `self.logger.info()`, `.error()`, etc.
 - **`self.ipc_server`:** The object for subscribing to Wayfire events and handling inter-plugin communication.
-- **`self.run_in_async_task(coro)`:** Crucial helper. Use this to call asynchronous methods (which contain `await`) from a synchronous GTK callback (like `on_button_clicked`).
-- **`async def on_start()`:** The required activation method.
-- **`async def on_stop()`:** The required deactivation/cleanup method.
+- **`def on_start()`:** The required activation method.
+- **`def on_stop()`:** The required deactivation/cleanup method.
 
 ---
 

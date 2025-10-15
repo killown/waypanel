@@ -43,11 +43,11 @@ def get_plugin_class():
             self.scale_active_outputs: Dict[str, bool] = {}
             self.last_focused_output_id: Optional[str] = None
 
-        async def on_start(self) -> None:
+        def on_start(self) -> None:
             """Logs plugin startup."""
             self.logger.info("ScaleFocusManagerPlugin initialized and started.")
 
-        async def on_stop(self) -> None:
+        def on_stop(self) -> None:
             """
             The primary deactivation method. Cleans up internal state.
             Note: We do not attempt to forcibly deactivate any remaining scale views,

@@ -360,7 +360,6 @@ def get_plugin_class():
                 initial_title = title[0]
             app_id = view.get("app-id")
             if len(title) > self.max_title_lenght:
-                print(self.max_title_lenght)
                 truncated_title = title[: self.max_title_lenght] + "..."
             else:
                 truncated_title = title

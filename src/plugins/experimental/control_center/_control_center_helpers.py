@@ -142,7 +142,6 @@ class ControlCenterHelpers:
                             value = bool(value)
                     except (KeyError, TypeError):
                         pass
-                    print(value)
                 widget = self.create_widget_for_value(value)
                 if not widget:
                     continue
@@ -413,7 +412,6 @@ class ControlCenterHelpers:
         NESTED_CONFIG_KEY = "theme"
         DEFAULT_KEY = "default"
         if self.parent.config:
-            print(self.parent.config)
             if MAIN_CONFIG_KEY not in self.parent.config:
                 self.parent.config[MAIN_CONFIG_KEY] = {}
             if NESTED_CONFIG_KEY not in self.parent.config[MAIN_CONFIG_KEY]:
