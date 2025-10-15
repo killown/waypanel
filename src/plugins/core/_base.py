@@ -177,7 +177,7 @@ class BasePlugin:
         if metadata is not None:
             if "id" in metadata:
                 self.plugin_id = metadata["id"]
-        GLib.timeout_add_seconds(60, self.run_gc_cleanup)
+        GLib.idle_add(self.run_gc_cleanup)
         self._config_handler = ConfigHandler(panel_instance, self.plugin_id)
 
     def get_plugin_metadata(self):
@@ -217,7 +217,8 @@ class BasePlugin:
             bool: True, signaling GLib to repeat the timer.
         """
         gc.collect()
-        return True
+        self.logger.debug("Initialized the memory cleanup lifecycle _periodic_gc.")
+        return True  # continue glib loop
 
     def run_gc_cleanup(self):
         """
@@ -230,8 +231,8 @@ class BasePlugin:
             bool: False, to ensure this setup function runs only once.
         """
         self._periodic_gc()
-        GLib.timeout_add_seconds(300, self._periodic_gc)
-        return False
+        GLib.timeout_add_seconds(600, self._periodic_gc)
+        return False  # stop glib loop
 
     def set_keyboard_on_demand(self, mode=True):
         """Set the keyboard mode to ON_DEMAND."""

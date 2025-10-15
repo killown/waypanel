@@ -590,9 +590,7 @@ def get_plugin_class():
             Update the clipboard list by clearing, calculating height, and populating the ListBox.
             """
             try:
-                total_height = self.clear_and_calculate_height()
-                if total_height > 0:
-                    self.scrolled_window.set_min_content_height(total_height)
+                self.clear_and_calculate_height()
                 self.populate_listbox()
             except Exception as e:
                 self.logger.error(
@@ -619,8 +617,15 @@ def get_plugin_class():
             )
             self.obj.add_action(show_searchbar_action)
             self.scrolled_window = self.gtk.ScrolledWindow()
+            self.scrolled_window.set_vexpand(True)
+            self.scrolled_window.set_propagate_natural_height(True)
+            self.scrolled_window.set_propagate_natural_width(True)
             self.scrolled_window.set_min_content_width(self.popover_min_width)
-            self.scrolled_window.set_min_content_height(self.popover_max_height)
+            self.scrolled_window.set_max_content_height(self.popover_max_height)
+            self.scrolled_window.set_policy(
+                self.gtk.PolicyType.NEVER,
+                self.gtk.PolicyType.AUTOMATIC,
+            )
             self.main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 10)
             self.main_box.set_margin_top(10)
             self.main_box.set_margin_bottom(10)

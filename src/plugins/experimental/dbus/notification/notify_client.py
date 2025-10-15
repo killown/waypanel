@@ -383,7 +383,6 @@ def get_plugin_class():
                 self.vbox.set_vexpand(True)
                 scrolled_window = self.gtk.ScrolledWindow()
                 scrolled_window.set_child(self.vbox)
-                scrolled_window.set_vexpand(True)
                 scrolled_window.set_propagate_natural_width(True)
                 scrolled_window.set_propagate_natural_height(True)
                 scrolled_window.set_min_content_height(100)

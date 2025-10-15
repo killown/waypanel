@@ -8,8 +8,6 @@
   border-radius: var(--radius-xl);
   padding: 10px;
   box-shadow: var(--shadow-window-float);
-  min-width: 620px;
-  min-height: 600px;
 }
 
 .notes-main-box {
@@ -17,8 +15,6 @@
 }
 
 .notes-scrolledwindow {
-  min-width: 600px;
-  min-height: 600px;
 }
 
 .notes-searchbar {
