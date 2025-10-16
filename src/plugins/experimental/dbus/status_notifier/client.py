@@ -167,11 +167,16 @@ def get_plugin_class():
                 self._pending_creation.discard(service_name)
 
         def _on_listbox_row_activated(self, listbox, row, service_name):
+            """
+            Handles row activation: opens a submenu or triggers a D-Bus click.
+            """
+            if hasattr(row, "_submenu_popover") and row._submenu_popover:
+                row._submenu_popover.popup()
+                return
             item_id_str = row.get_name()
             if not item_id_str:
                 return
-            toplevel = listbox.get_ancestor(Gtk.Popover)
-            if toplevel:
+            if toplevel := listbox.get_ancestor(Gtk.Popover):
                 toplevel.popdown()
             self.global_loop.create_task(
                 self.on_menu_item_clicked(int(item_id_str), service_name)
@@ -202,10 +207,37 @@ def get_plugin_class():
                 self.logger.error(f"Failed to set menu layout: {e}", exc_info=True)
                 self.menus_layout[service_name] = {"layout": [], "dbusmenu": None}
 
+        async def rebuild_menu_for_service(self, service_name: str) -> None:
+            """
+            Forces a full D-Bus menu layout re-fetch and rebuilds the Gtk.ListBox content.
+            This resolves issues where item labels/state change after an action.
+            """
+            if service_name not in self.tray_button:
+                return
+            menubutton = self.tray_button[service_name]
+            popover = menubutton.get_popover()
+            if not popover:
+                return
+            listbox = popover.get_child()
+            if not isinstance(listbox, Gtk.ListBox):
+                self.logger.warning(
+                    f"Child of popover for {service_name} is not a Gtk.ListBox. Cannot rebuild."
+                )
+                return
+            while child := listbox.get_first_child():
+                listbox.remove(child)
+            await self.set_menu_layout(service_name)
+            menu_layout = self.menus_layout.get(service_name, {}).get("layout", [])
+            await self._build_menu_manually(listbox, menu_layout, service_name)
+            self.logger.info(f"Menu rebuilt for service: {service_name}")
+
         async def on_menu_item_clicked(self, item_id, service_name):
             try:
                 if dbusmenu := self.menus_layout[service_name].get("dbusmenu"):
                     await dbusmenu.call_event(item_id, "clicked", Variant("s", ""), 0)
+                    self.global_loop.create_task(
+                        self.rebuild_menu_for_service(service_name)
+                    )
             except Exception as e:
                 self.logger.error(
                     f"Failed to trigger D-Bus action for item {item_id}: {e}",
@@ -220,8 +252,8 @@ def get_plugin_class():
 
         async def _build_menu_manually(self, listbox, menu_data, service_name):
             """
-            Builds the GTK menu from D-Bus data. Corrected to properly embed Gtk.Separator
-            inside a non-interactive Gtk.ListBoxRow.
+            Builds the GTK menu from D-Bus data. Now allows the entire row to activate a submenu
+            while keeping the dedicated Gtk.MenuButton.
             """
             for item in menu_data:
                 await asyncio.sleep(0)
@@ -274,9 +306,6 @@ def get_plugin_class():
                 box.append(label)
                 row.set_child(box)
                 if item.get("submenu"):
-                    submenu_button = Gtk.MenuButton(
-                        icon_name="go-next-symbolic", has_frame=False
-                    )
                     submenu_popover = Gtk.Popover()
                     submenu_listbox = Gtk.ListBox()
                     submenu_listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
@@ -284,14 +313,18 @@ def get_plugin_class():
                         "row-activated", self._on_listbox_row_activated, service_name
                     )
                     submenu_popover.set_child(submenu_listbox)
-                    submenu_button.set_popover(submenu_popover)
+                    submenu_button = Gtk.MenuButton(
+                        icon_name="go-next-symbolic", has_frame=False
+                    )
                     box.append(submenu_button)
+                    submenu_popover.set_parent(row)
+                    row._submenu_popover = submenu_popover  # pyright: ignore
                     await self._build_menu_manually(
                         submenu_listbox, item["submenu"], service_name
                     )
-                else:
-                    row.set_name(str(item["id"]))
+                row.set_name(str(item["id"]))
                 row.set_sensitive(item.get("enabled", True))
+                row.set_activatable(item.get("enabled", True))
                 listbox.append(row)
 
         def get_best_icon_entry(self, pixmap_data, target_size=24):
