@@ -404,9 +404,7 @@ def main():
             try:
                 result: subprocess.CompletedProcess = subprocess.run(
                     cmd,
-                    check=False,
-                    text=True,
-                    capture_output=True,
+                    check=False,  # Important: Do not raise exception on non-zero exit
                 )
 
                 if result.returncode == SUCCESS_EXIT_CODE:
