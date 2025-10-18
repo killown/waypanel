@@ -1,16 +1,26 @@
-def get_plugin_metadata(_):
-    about = """
-    This plugin acts as a system tray client for waypanel.
-    It uses D-Bus to communicate with applications that implement the
-    StatusNotifierItem specification, allowing it to display their icons,
-    tooltips, and context menus.
-    """
+def get_plugin_metadata(panel_instance):
+    container = panel_instance.config_handler.get_root_setting(
+        ["org.waypanel.plugin.status_notifier", "panel"], None
+    )
+
+    if container is None:
+        container = "top-panel-center"
+        plugin_id = "org.waypanel.plugin.status_notifier"
+        panel_instance.config_handler.set_root_setting(plugin_id, container)
+
+    about = (
+        "This plugin acts as a system tray client for waypanel.",
+        "It uses D-Bus to communicate with applications that implement the",
+        "StatusNotifierItem specification, allowing it to display their icons,",
+        "tooltips, and context menus.",
+    )
+
     return {
         "id": "org.waypanel.plugin.status_notifier",
         "name": "Systray",
         "version": "1.0.0",
         "enabled": True,
-        "container": "top-panel-center",
+        "container": container,
         "index": 5,
         "deps": ["event_manager", "top_panel"],
         "description": about,
@@ -18,64 +28,106 @@ def get_plugin_metadata(_):
 
 
 def get_plugin_class():
+    import asyncio
     from dbus_fast import Variant
     from gi.repository import GLib, Gtk  # pyright: ignore
     from src.plugins.core._base import BasePlugin
     from ._service import StatusNotifierWatcher
-    import asyncio
 
     class SystrayClientPlugin(BasePlugin):
+        """
+        Implements a D-Bus StatusNotifierItem client (system tray).
+        This plugin discovers services on D-Bus, creates corresponding
+        Gtk.MenuButton widgets, and builds their context menus dynamically
+        by introspecting the service's D-Bus interface.
+        It is designed to be robust against D-Bus service churn, where
+        services may appear and disappear rapidly.
+        """
+
+        DEBOUNCE_DELAY = 0.25
+
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
             self.subscribe_to_icon_updates()
             self.subscribe_to_removal_events()
             self.messages = {}
             self.menus_layout = {}
-            self.new_message = {}
             self.tray_button = {}
             self.tray_box = self.gtk.FlowBox()
-            self._pending_creation = set()
             self.main_widget = (self.tray_box, "append")
+            self._pending_creation = set()
+            self._rebuild_pending = set()
             self.notifier_watcher = StatusNotifierWatcher("", panel_instance)
+            self.get_plugin_setting_add_hint(
+                ["panel"],
+                "top-panel-center",
+                "set the status notifier position:  left, center, right, systray, after-systray",
+            )
 
         def on_start(self):
+            """
+            Starts the background D-Bus watcher service.
+            """
             self.notifier_watcher.run_server_in_background(self._panel_instance)
 
         def subscribe_to_icon_updates(self):
+            """
+            Subscribes to the event for new tray icons.
+            """
             self.ipc_server.add_event_subscriber(
                 event_type="tray_icon_name_updated", callback=self.on_icon_name_updated
             )
 
         def subscribe_to_removal_events(self):
+            """
+            Subscribes to the event for removed tray icons.
+            """
             self.ipc_server.add_event_subscriber(
                 event_type="tray_icon_removed", callback=self.on_tray_icon_removed
             )
 
-        async def on_tray_icon_removed(self, message):
+        async def on_tray_icon_removed(self, message: dict):
+            """
+            Handles the removal of a tray icon widget and its state.
+            """
             service_name = message["data"]["service_name"]
             if button := self.tray_button.pop(service_name, None):
                 self.tray_box.remove(button)
             self.messages.pop(service_name, None)
             self.menus_layout.pop(service_name, None)
-
-        def set_message_data(self, service_name):
-            if "data" in self.new_message:
-                self.messages[service_name] = self.new_message["data"]
+            self._rebuild_pending.discard(service_name)
 
         def create_pixbuf_from_pixels(self, pixmap_data):
             """
-            Creates a GdkPixbuf from raw pixel data, now robustly handling
-            both single pixmaps and lists of pixmaps.
+            Creates a GdkPixbuf from raw ARGB pixel data.
+            Handles both single pixmaps and lists of pixmaps (choosing the best fit).
             """
             try:
-                if pixmap_data and isinstance(pixmap_data[0], (list, tuple)):
-                    pixmap_data = self.get_best_icon_entry(pixmap_data)
-                if not pixmap_data or len(pixmap_data) != 3:
+                if not pixmap_data:
                     return None
-                width, height, pixel_data_raw = pixmap_data
+                if isinstance(pixmap_data[0], (list, tuple)):
+                    pixmap_data = self.get_best_icon_entry(pixmap_data)
+                if len(pixmap_data) != 3:  # pyright: ignore
+                    self.logger.warning(
+                        f"Invalid pixmap data structure: length is {len(pixmap_data)}"  # pyright: ignore
+                    )
+                    return None
+                width, height, pixel_data_raw = pixmap_data  # pyright: ignore
+                if (
+                    not isinstance(width, int)
+                    or not isinstance(height, int)
+                    or width <= 0
+                    or height <= 0
+                ):
+                    self.logger.warning(f"Invalid pixmap dimensions: {width}x{height}")
+                    return None
                 pixel_data = bytes(pixel_data_raw)
                 expected_size = width * height * 4
                 if len(pixel_data) != expected_size:
+                    self.logger.warning(
+                        f"Pixel data size mismatch. "
+                        f"Expected: {expected_size}, Got: {len(pixel_data)}"
+                    )
                     return None
                 return self.gdkpixbuf.Pixbuf.new_from_data(
                     pixel_data,  # pyright: ignore
@@ -92,10 +144,18 @@ def get_plugin_class():
                 self.logger.error(f"Failed to create pixbuf: {e}", exc_info=True)
                 return None
 
-        async def fetch_menu_path(self, service_name):
-            self.set_message_data(service_name)
-            object_path = self.messages[service_name]["object_path"]
-            bus = self.messages[service_name]["bus"]
+        async def fetch_menu_path(self, service_name: str):
+            """
+            Fetches the D-Bus object path for the menu from the service properties.
+            """
+            if service_name not in self.messages:
+                self.logger.warning(
+                    f"No message data for {service_name} in fetch_menu_path"
+                )
+                raise RuntimeError(f"No message data for {service_name}")
+            message_data = self.messages[service_name]
+            object_path = message_data["object_path"]
+            bus = message_data["bus"]
             try:
                 introspection = await bus.introspect(service_name, object_path)
                 proxy = bus.get_proxy_object(service_name, object_path, introspection)
@@ -104,13 +164,13 @@ def get_plugin_class():
                     "org.kde.StatusNotifierItem", "Menu"
                 )
                 return menu_variant.value
-            except Exception:
+            except Exception as e:
+                self.logger.error(f"Failed to fetch menu path for {service_name}: {e}")
                 return None
 
-        def parse_menu_structure(self, menu_structure):
+        def parse_menu_structure(self, menu_structure: tuple | list):
             """
-            Parses the D-Bus menu structure. Corrected to avoid providing a default
-            label for items intended as separators but missing a label.
+            Recursively parses the D-Bus menu structure into a Python list.
             """
             parsed_menu = []
 
@@ -145,7 +205,10 @@ def get_plugin_class():
                     parsed_menu.extend(self.parse_menu_structure(item))
             return parsed_menu
 
-        async def on_icon_name_updated(self, message):
+        async def on_icon_name_updated(self, message: dict):
+            """
+            Handles the creation of a new tray icon button and its menu.
+            """
             service_name = message["data"]["service_name"]
             if (
                 service_name in self._pending_creation
@@ -154,19 +217,26 @@ def get_plugin_class():
                 return
             try:
                 self._pending_creation.add(service_name)
-                self.new_message = message
+                self.messages[service_name] = message["data"]
                 await self.set_menu_layout(service_name)
                 menu_layout = self.menus_layout.get(service_name, {}).get("layout", [])
                 button = self.create_menubutton(menu_layout, service_name)
-                self.tray_button[service_name] = button
+                if button:
+                    self.tray_button[service_name] = button
+                else:
+                    raise RuntimeError("MenuButton creation failed.")
             except Exception as e:
                 self.logger.error(
-                    f"Error handling icon name update: {e}", exc_info=True
+                    f"Error handling icon name update for {service_name}: {e}",
+                    exc_info=True,
                 )
+                self.messages.pop(service_name, None)
+                self.menus_layout.pop(service_name, None)
+                self.tray_button.pop(service_name, None)
             finally:
                 self._pending_creation.discard(service_name)
 
-        def _on_listbox_row_activated(self, listbox, row, service_name):
+        def _on_listbox_row_activated(self, listbox, row, service_name: str):
             """
             Handles row activation: opens a submenu or triggers a D-Bus click.
             """
@@ -182,8 +252,15 @@ def get_plugin_class():
                 self.on_menu_item_clicked(int(item_id_str), service_name)
             )
 
-        async def initialize_proxy_object(self, service_name):
-            self.set_message_data(service_name)
+        async def initialize_proxy_object(self, service_name: str):
+            """
+            Fetches and initializes a fresh D-Bus proxy object for the menu service.
+            """
+            if service_name not in self.messages:
+                self.logger.warning(
+                    f"No message data found for service {service_name}. Action aborted."
+                )
+                raise RuntimeError(f"No message data for {service_name}")
             bus = self.messages[service_name]["bus"]
             menu_path = await self.fetch_menu_path(service_name)
             if not menu_path:
@@ -193,27 +270,82 @@ def get_plugin_class():
                 service_name, menu_path, introspection
             )
 
-        async def set_menu_layout(self, service_name):
-            await self.initialize_proxy_object(service_name)
+        async def set_menu_layout(self, service_name: str):
+            """
+            Fetches the D-Bus menu layout and subscribes to layout updates.
+            """
             try:
+                await self.initialize_proxy_object(service_name)
                 dbusmenu = self.proxy_object.get_interface("com.canonical.dbusmenu")
-                props = ["label", "enabled", "visible", "icon-name", "icon-data"]
+                if not dbusmenu:
+                    self.logger.warning(
+                        f"Service {service_name} has no com.canonical.dbusmenu interface."
+                    )
+                    self.menus_layout[service_name] = {"layout": [], "dbusmenu": None}
+                    return
+
+                def layout_updated_handler(revision: int, parent_id: int):
+                    self.logger.info(
+                        f"D-Bus signal LayoutUpdated received for {service_name}. Scheduling menu rebuild."
+                    )
+                    self.global_loop.create_task(
+                        self.schedule_menu_rebuild(service_name)
+                    )
+
+                dbusmenu.on_layout_updated(layout_updated_handler)
+                props = [
+                    "label",
+                    "enabled",
+                    "visible",
+                    "icon-name",
+                    "icon-data",
+                    "type",
+                ]
                 rev, layout = await dbusmenu.call_get_layout(0, -1, props)
                 self.menus_layout[service_name] = {
                     "layout": self.parse_menu_structure(layout),
                     "dbusmenu": dbusmenu,
                 }
             except Exception as e:
-                self.logger.error(f"Failed to set menu layout: {e}", exc_info=True)
+                self.logger.error(
+                    f"Failed to set menu layout for {service_name}: {e}", exc_info=True
+                )
                 self.menus_layout[service_name] = {"layout": [], "dbusmenu": None}
+
+        async def schedule_menu_rebuild(self, service_name: str) -> None:
+            """
+            Debounces menu rebuild requests to prevent event loops.
+            """
+            if service_name in self._rebuild_pending:
+                self.logger.info(
+                    f"Debouncing rebuild for {service_name}. Request ignored."
+                )
+                return
+            if service_name not in self.tray_button:
+                self.logger.warning(
+                    f"Cannot schedule rebuild for {service_name}: No tray button."
+                )
+                return
+            self._rebuild_pending.add(service_name)
+            try:
+                await asyncio.sleep(self.DEBOUNCE_DELAY)
+                self.logger.info(
+                    f"Debounce window over. Rebuilding menu for {service_name}."
+                )
+                await self.rebuild_menu_for_service(service_name)
+            except Exception as e:
+                self.logger.error(
+                    f"Error during debounced rebuild for {service_name}: {e}",
+                    exc_info=True,
+                )
+            finally:
+                self._rebuild_pending.discard(service_name)
 
         async def rebuild_menu_for_service(self, service_name: str) -> None:
             """
-            Forces a full D-Bus menu layout re-fetch and rebuilds the Gtk.ListBox content.
-            This resolves issues where item labels/state change after an action.
+            Forces a full D-Bus menu layout re-fetch and rebuilds the Gtk.ListBox.
+            This function is now called by the debouncer.
             """
-            if service_name not in self.tray_button:
-                return
             menubutton = self.tray_button[service_name]
             popover = menubutton.get_popover()
             if not popover:
@@ -221,40 +353,80 @@ def get_plugin_class():
             listbox = popover.get_child()
             if not isinstance(listbox, Gtk.ListBox):
                 self.logger.warning(
-                    f"Child of popover for {service_name} is not a Gtk.ListBox. Cannot rebuild."
+                    f"Child of popover for {service_name} is not a Gtk.ListBox."
                 )
                 return
             while child := listbox.get_first_child():
                 listbox.remove(child)
-            await self.set_menu_layout(service_name)
-            menu_layout = self.menus_layout.get(service_name, {}).get("layout", [])
-            await self._build_menu_manually(listbox, menu_layout, service_name)
-            self.logger.info(f"Menu rebuilt for service: {service_name}")
-
-        async def on_menu_item_clicked(self, item_id, service_name):
             try:
-                if dbusmenu := self.menus_layout[service_name].get("dbusmenu"):
-                    await dbusmenu.call_event(item_id, "clicked", Variant("s", ""), 0)
-                    self.global_loop.create_task(
-                        self.rebuild_menu_for_service(service_name)
-                    )
+                await self.set_menu_layout(service_name)
+                menu_layout = self.menus_layout.get(service_name, {}).get("layout", [])
+                await self._build_menu_manually(listbox, menu_layout, service_name)
+                self.logger.info(f"Menu rebuilt for service: {service_name}")
             except Exception as e:
                 self.logger.error(
-                    f"Failed to trigger D-Bus action for item {item_id}: {e}",
-                    exc_info=True,
+                    f"Failed to rebuild menu for {service_name}: {e}", exc_info=True
                 )
 
+        async def on_menu_item_clicked(self, item_id: int, service_name: str):
+            """
+            Triggers a D-Bus 'clicked' event for a specific menu item.
+            """
+            try:
+                await self.initialize_proxy_object(service_name)
+                dbusmenu = self.proxy_object.get_interface("com.canonical.dbusmenu")
+                if not dbusmenu:
+                    self.logger.error(
+                        f"D-Bus menu interface unavailable for {service_name}"
+                    )
+                    return
+                await dbusmenu.call_event(item_id, "clicked", Variant("s", ""), 0)
+                self.global_loop.create_task(self.schedule_menu_rebuild(service_name))
+            except RuntimeError as e:
+                self.logger.warning(
+                    f"D-Bus menu action aborted. Service proxy failed for {service_name}: {e}"
+                )
+            except Exception as e:
+                error_msg = str(e)
+                if "does not refer to a menu item" in error_msg:
+                    self.logger.warning(
+                        f"Stale menu ID {item_id} in {service_name}. Forcing rebuild."
+                    )
+                    self.global_loop.create_task(
+                        self.schedule_menu_rebuild(service_name)
+                    )
+                    self.logger.info(
+                        f"Menu rebuild scheduled for {service_name}. Please re-click."
+                    )
+                else:
+                    self.logger.error(
+                        f"Failed to trigger D-Bus action for item {item_id}: {e}",
+                        exc_info=True,
+                    )
+
         def _normalize_label(self, label: str) -> str:
+            """
+            Cleans up D-Bus menu item labels, removing mnemonics.
+            """
             if not isinstance(label, str) or not label:
                 return ""
             label = label.replace("_", "")
             return label.strip().capitalize()
 
-        async def _build_menu_manually(self, listbox, menu_data, service_name):
+        async def _build_menu_manually(
+            self, listbox, menu_data: list, service_name: str
+        ):
             """
-            Builds the GTK menu from D-Bus data. Now allows the entire row to activate a submenu
-            while keeping the dedicated Gtk.MenuButton.
+            Builds the Gtk.ListBox and Gtk.ListBoxRows from the parsed menu data.
             """
+            if not menu_data:
+                row = Gtk.ListBoxRow()
+                row.set_child(Gtk.Label(label="No actions available", xalign=0.5))
+                row.set_sensitive(False)
+                row.set_margin_top(8)
+                row.set_margin_bottom(8)
+                listbox.append(row)
+                return
             for item in menu_data:
                 await asyncio.sleep(0)
                 if not item.get("visible", True):
@@ -297,15 +469,16 @@ def get_plugin_class():
                             image = Gtk.Image.new_from_pixbuf(pixbuf)
                         except GLib.Error:
                             pass
-                    else:
+                    if not image:
                         if pixbuf := self.create_pixbuf_from_pixels(icon_data):
                             image = Gtk.Image.new_from_pixbuf(pixbuf)
                 if image:
                     box.append(image)
                 label = Gtk.Label(label=label_text, xalign=0)
+                label.set_hexpand(True)
                 box.append(label)
                 row.set_child(box)
-                if item.get("submenu"):
+                if submenu_data := item.get("submenu"):
                     submenu_popover = Gtk.Popover()
                     submenu_listbox = Gtk.ListBox()
                     submenu_listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
@@ -313,30 +486,39 @@ def get_plugin_class():
                         "row-activated", self._on_listbox_row_activated, service_name
                     )
                     submenu_popover.set_child(submenu_listbox)
-                    submenu_button = Gtk.MenuButton(
-                        icon_name="go-next-symbolic", has_frame=False
-                    )
-                    box.append(submenu_button)
+                    submenu_arrow = Gtk.Image.new_from_icon_name("go-next-symbolic")
+                    box.append(submenu_arrow)
                     submenu_popover.set_parent(row)
                     row._submenu_popover = submenu_popover  # pyright: ignore
                     await self._build_menu_manually(
-                        submenu_listbox, item["submenu"], service_name
+                        submenu_listbox, submenu_data, service_name
                     )
                 row.set_name(str(item["id"]))
                 row.set_sensitive(item.get("enabled", True))
                 row.set_activatable(item.get("enabled", True))
                 listbox.append(row)
 
-        def get_best_icon_entry(self, pixmap_data, target_size=24):
+        def get_best_icon_entry(self, pixmap_data: list, target_size: int = 24):
+            """
+            Selects the best icon from a list of (width, height, data) tuples.
+            """
             if not pixmap_data:
                 return None
             return min(pixmap_data, key=lambda x: abs(x[0] - target_size))
 
-        def create_menubutton(self, menu_structure, service_name):
-            self.set_message_data(service_name)
-            icon_name = self.messages[service_name]["icon_name"]
+        def create_menubutton(self, menu_structure, service_name: str):
+            """
+            Creates the main Gtk.MenuButton for the tray icon.
+            """
+            if service_name not in self.messages:
+                self.logger.error(
+                    f"Cannot create menubutton for {service_name}: No message data."
+                )
+                return None
+            message_data = self.messages[service_name]
+            icon_name = message_data["icon_name"]
             menubutton = self.gtk.MenuButton()
-            if icon_pixmap_data := self.messages[service_name].get("icon_pixmap"):
+            if icon_pixmap_data := message_data.get("icon_pixmap"):
                 if pixbuf := self.create_pixbuf_from_pixels(icon_pixmap_data):
                     menubutton.set_child(self.gtk.Image.new_from_pixbuf(pixbuf))
                 else:
@@ -344,6 +526,15 @@ def get_plugin_class():
             else:
                 menubutton.set_icon_name(icon_name)
             menubutton.add_css_class("tray_icon")
+            if tooltip_variant := message_data.get("tooltip"):
+                try:
+                    icon_name, icon_data, title, text = tooltip_variant.value
+                    if title and text:
+                        menubutton.set_tooltip_text(f"{title}\n{text}")
+                    elif title:
+                        menubutton.set_tooltip_text(title)
+                except Exception:
+                    pass
             popover = Gtk.Popover()
             listbox = Gtk.ListBox()
             listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
@@ -359,15 +550,21 @@ def get_plugin_class():
             return menubutton
 
         def on_stop(self):
+            """
+            Handles plugin stop logic.
+            """
             self.logger.info("SystrayClientPlugin has stopped.")
 
         def on_reload(self):
+            """
+            Handles plugin reload logic.
+            """
             self.logger.info("SystrayClientPlugin has been reloaded.")
 
         def on_cleanup(self):
+            """
+            Handles plugin cleanup logic.
+            """
             self.logger.info("SystrayClientPlugin is cleaning up resources.")
-
-        def code_explanation(self):
-            return "Fixed pixbuf creation for multi-resolution icons, added PNG support, and implemented D-Bus service ownership check to prevent retrying stale service names."
 
     return SystrayClientPlugin

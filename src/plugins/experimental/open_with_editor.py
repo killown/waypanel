@@ -499,7 +499,7 @@ def get_plugin_class():
             success = False
             if is_tui_editor:
                 filename = self.os.path.basename(file_path)
-                window_title = f"{editor.upper()} ({filename})"
+                window_title = f"{editor} {filename}"
                 editor_command = f"{editor} {file_path}"
                 for terminal in self.terminal_emulators:
                     if terminal in ["gnome-terminal", "terminator", "tilix"]:

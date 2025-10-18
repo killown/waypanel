@@ -72,8 +72,8 @@ def get_plugin_class():
                 "If True, display the window title next to the icon; otherwise, only show the icon.",
             )
 
-            self.max_title_lenght = self.get_plugin_setting_add_hint(
-                ["layout", "max_title_lenght"],
+            self.max_title_length = self.get_plugin_setting_add_hint(
+                ["layout", "max_title_length"],
                 25,
                 "The maximum length (in characters) of the window title shown on the taskbar button label before being truncated with '...'.",
             )
@@ -359,8 +359,8 @@ def get_plugin_class():
             if title:
                 initial_title = title[0]
             app_id = view.get("app-id")
-            if len(title) > self.max_title_lenght:
-                truncated_title = title[: self.max_title_lenght] + "..."
+            if len(title) > self.max_title_length:
+                truncated_title = title[: self.max_title_length] + "..."
             else:
                 truncated_title = title
             button.view_id = view.get("id")
