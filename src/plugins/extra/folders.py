@@ -151,7 +151,7 @@ def get_plugin_class():
             if not self.listbox:
                 return
             self.gtk_helper.clear_listbox(self.listbox)
-            all_folders = self.get_plugin_setting("path") or {}
+            all_folders = self.get_plugin_setting("path", None) or {}
             pinned_paths = set()
             if all_folders:
                 for key, folder_data in all_folders.items():
@@ -228,7 +228,7 @@ def get_plugin_class():
             listbox_row = row_hbox.get_parent()
             if listbox_row:
                 listbox_row.add_css_class("folders-lisbox-row")
-            all_folders = self.get_plugin_setting("path") or {}
+            all_folders = self.get_plugin_setting("path", None) or {}
             is_pinned = any(
                 data.get("path") == folder_path for data in all_folders.values()
             )
@@ -283,7 +283,7 @@ def get_plugin_class():
             """
             Pins a folder by updating the configuration and refreshing the UI.
             """
-            all_folders = self.get_plugin_setting("path") or {}
+            all_folders = self.get_plugin_setting("path", None) or {}
             folder_name = pathlib.Path(folder_path).name
             new_folder_entry = {
                 "name": folder_name,
@@ -297,7 +297,7 @@ def get_plugin_class():
                 if data.get("path") != folder_path
             }
             final_folders = {folder_name: new_folder_entry, **updated_folders}
-            self.set_plugin_setting("path", final_folders)
+            self.set_plugin_setting(["path"], final_folders)
             if self.listbox:
                 self.listbox.remove(listbox_row)
                 new_row_hbox = self._create_folder_row(
@@ -318,7 +318,7 @@ def get_plugin_class():
             """
             Unpins a folder from configuration and re-inserts it into the UI.
             """
-            all_folders = self.get_plugin_setting("path") or {}
+            all_folders = self.get_plugin_setting("path", None) or {}
             folder_name = pathlib.Path(folder_path).name
             key_to_delete = None
             for key, data in all_folders.items():
@@ -327,7 +327,7 @@ def get_plugin_class():
                     break
             if key_to_delete:
                 del all_folders[key_to_delete]
-                self.set_plugin_setting("path", all_folders)
+                self.set_plugin_setting(["path"], all_folders)
                 self.logger.info(f"'{folder_name}' unpinned from config.")
             else:
                 self.logger.warning(

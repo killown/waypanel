@@ -1,10 +1,16 @@
-def get_plugin_metadata(_):
+def get_plugin_metadata(panel):
+    id = "org.waypanel.plugin.example_menu"
+    default_container = "top-panel-center"
+
+    # check for user config containers, this is not necessary for background plugins
+    container, id = panel.config_handler.get_plugin_container(default_container, id)
+
     return {
-        "id": "org.waypanel.plugin.example_menu",
+        "id": id,
         "name": "Example Menu",
         "version": "1.0.0",
         "enabled": True,
-        "container": "top-panel-center",
+        "container": container,
         "index": 6,
         "deps": ["top_panel"],
         "description": "A plugin that creates a dynamic application menu from installed applications, grouped by category.",

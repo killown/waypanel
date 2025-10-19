@@ -1,4 +1,4 @@
-def get_plugin_metadata(_):
+def get_plugin_metadata(panel):
     """
     Define where the plugin should be placed in the panel and its properties.
     plugin_loader will use this metadata to append the widget to the panel instance.
@@ -26,12 +26,19 @@ def get_plugin_metadata(_):
     Returns:
         dict: Plugin configuration metadata.
     """
+
+    id = "org.waypanel.plugin.example_communicator_plugin"
+    default_container = "top-panel-center"
+
+    # check for user config containers, this is not necessary for background plugins
+    container, id = panel.config_handler.get_plugin_container(default_container, id)
+
     return {
-        "id": "org.waypanel.plugin.example_communicator_plugin",
+        "id": id,
         "name": "Example Communicator Plugin",
         "version": "1.0.0",
         "enabled": True,
-        "container": "top-panel-center",
+        "container": container,
         "index": 5,
         "deps": ["top_panel"],
     }

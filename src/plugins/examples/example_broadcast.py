@@ -1,4 +1,4 @@
-def get_plugin_metadata(_):
+def get_plugin_metadata(panel):
     """
     Define the plugin's properties and placement using the modern dictionary format.
     Valid Positions:
@@ -25,12 +25,19 @@ def get_plugin_metadata(_):
     Returns:
         dict: Plugin configuration metadata.
     """
+
+    id = "org.waypanel.plugin.example_broadcast"
+    default_container = "top-panel-center"
+
+    # check for user config containers, this is not necessary for background plugins
+    container, id = panel.config_handler.get_plugin_container(default_container, id)
+
     return {
-        "id": "org.waypanel.plugin.example_broadcast",
+        "id": id,
         "name": "Example Broadcast Plugin",
         "version": "1.0.0",
         "enabled": True,
-        "container": "top-panel-center",
+        "container": container,
         "index": 5,
         "deps": ["event_manager"],
     }

@@ -1,4 +1,4 @@
-def get_plugin_metadata(_):
+def get_plugin_metadata(panel):
     """
     Defines the static metadata for the Main Example plugin.
     Metadata must be deterministic and must not rely on runtime configuration,
@@ -8,12 +8,19 @@ def get_plugin_metadata(_):
     Returns:
         dict: A dictionary containing the plugin's core metadata.
     """
+
+    id = "org.waypanel.plugin.main_example"
+    default_container = "top-panel-center"
+
+    # check for user config containers, this is not necessary for background plugins
+    container, id = panel.config_handler.get_plugin_container(default_container, id)
+
     return {
-        "id": "org.waypanel.plugin.main_example",
+        "id": id,
         "name": "Main Example",
         "version": "2.3.0",
         "enabled": True,
-        "container": "top-panel-center",
+        "container": container,
         "index": 1,
         "deps": ["event_manager"],
         "description": "A robust, production-grade example using the Dashboard Popover helper.",

@@ -1,11 +1,16 @@
-def get_plugin_metadata(_):
+def get_plugin_metadata(panel):
     """Defines the static metadata for the Quick Actions plugin."""
+    id = "org.waypanel.plugin.example_quick_actions"
+    default_container = "top-panel-center"
+
+    # check for user config containers, this is not necessary for background plugins
+    container, id = panel.config_handler.get_plugin_container(default_container, id)
     return {
-        "id": "org.waypanel.plugin.example_quick_actions",
+        "id": id,
         "name": "Quick Actions",
         "version": "2.0.0",
         "enabled": True,
-        "container": "top-panel-center",
+        "container": container,
         "index": 900,
         "description": "Provides a popover menu with safe, non-blocking system actions.",
     }
