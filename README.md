@@ -30,7 +30,7 @@ yay -S waypanel-git
 
 ##### Option 2: manual install (archlinux):
 
-pacman -S gtk4-layer-shell gobject-introspection vala playerctl python-gobject wayland-protocols ninja mesa playerctl libadwaita bluez-tools
+pacman -S gtk4-layer-shell gobject-introspection vala playerctl python-gobject wayland-protocols ninja mesa playerctl libadwaita bluez-tools uv
 
 ## Installing `waypanel` from github Source
 
@@ -39,12 +39,6 @@ pacman -S gtk4-layer-shell gobject-introspection vala playerctl python-gobject w
     git clone https://github.com/killown/waypanel.git
     cd waypanel
     python run.py # This will set up the venv automatically and run the panel
-
-### Theme Compatibility
-
-yay -S gruvbox-plus-icon-theme-git
-
-gsettings set org.gnome.desktop.interface icon-theme 'Gruvbox-Plus-Dark'
 
 ## License
 
