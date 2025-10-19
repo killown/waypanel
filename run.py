@@ -1,24 +1,19 @@
+#!/usr/bin/env python3
 """
 A robust application launcher for Waypanel.
+
 This script prepares the runtime environment by setting up necessary
-directories, managing a virtual environment with custom dependencies,
+directories, managing a virtual environment with custom dependencies using 'uv',
 and then executing the main application.
 """
 
-import compileall
-import contextlib
-import glob
 import logging
 import os
-import shutil
-import subprocess
 import sys
-import tempfile
-import threading
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 APP_NAME = "waypanel"
 PYWAYFIRE_REPO_URL = "https://github.com/WayfireWM/pywayfire.git"
@@ -71,11 +66,6 @@ class AppConfig:
         return self.venv_dir / "bin"
 
     @property
-    def venv_pip(self) -> Path:
-        """The path to the 'pip' executable in the venv."""
-        return self.venv_bin_dir / "pip"
-
-    @property
     def venv_python(self) -> Path:
         """The path to the 'python' executable in the venv."""
         return self.venv_bin_dir / "python"
@@ -105,10 +95,13 @@ def setup_logging():
 def _enforce_backup_retention(backup_dir: Path, max_copies: int):
     """
     Removes the oldest backup folders if the maximum limit is exceeded.
+
     Args:
         backup_dir: The directory containing backups.
         max_copies: The maximum number of backups to retain.
     """
+    import shutil
+
     try:
         all_backups = sorted(backup_dir.glob("backup_*"), key=lambda p: p.name)
         if len(all_backups) > max_copies:
@@ -128,11 +121,15 @@ def _enforce_backup_retention(backup_dir: Path, max_copies: int):
 def run_backup(config: AppConfig, max_copies: int = 10):
     """
     Performs a comprehensive backup of data and config directories.
+
     This function is designed to be run in a separate thread.
+
     Args:
         config: The application configuration object.
         max_copies: The maximum number of backups to retain.
     """
+    import shutil
+
     logging.info("Starting asynchronous data and config backup...")
     source_dirs = {"data": config.data_dir, "config": config.config_dir}
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -185,8 +182,9 @@ def _find_system_library(lib_name: str, search_paths: List[str]) -> Optional[Pat
 def _find_package_path(app_name: str, xdg_data_home: Path) -> Optional[Path]:
     """
     Finds the installed package path using absolute glob patterns.
-    This is the corrected version of the function.
     """
+    import glob
+
     home = Path.home()
     candidate_patterns = [
         f"{xdg_data_home}/lib/python*/site-packages",
@@ -207,17 +205,29 @@ def _find_package_path(app_name: str, xdg_data_home: Path) -> Optional[Path]:
 
 def _install_pywayfire_from_source(config: AppConfig) -> None:
     """
-    Uninstalls wayfire and installs pywayfire from its GitHub repository.
+    Uninstalls wayfire and installs pywayfire from its GitHub repository using uv.
+
     Args:
         config: The application configuration object.
+
     Raises:
         subprocess.CalledProcessError: If any command fails.
-        FileNotFoundError: If 'git' command is not found.
+        FileNotFoundError: If 'git' or 'uv' command is not found.
     """
+    import subprocess
+    import tempfile
+
     logging.info("Performing custom pywayfire installation...")
     logging.info("Uninstalling any existing 'wayfire' package...")
     subprocess.run(
-        [str(config.venv_pip), "uninstall", "-y", "wayfire"],
+        [
+            "uv",
+            "pip",
+            "uninstall",
+            "-y",
+            "wayfire",
+            f"--python={config.venv_python}",
+        ],
         check=False,
         capture_output=True,
         text=True,
@@ -236,9 +246,9 @@ def _install_pywayfire_from_source(config: AppConfig) -> None:
             ],
             check=True,
         )
-        logging.info("Installing pywayfire from source...")
+        logging.info("Installing pywayfire from source using uv...")
         subprocess.run(
-            [str(config.venv_python), "-m", "pip", "install", "."],
+            ["uv", "pip", "install", ".", f"--python={config.venv_python}"],
             cwd=clone_dir,
             check=True,
         )
@@ -247,11 +257,14 @@ def _install_pywayfire_from_source(config: AppConfig) -> None:
 
 def manage_virtual_environment(config: AppConfig, req_file: Path):
     """
-    Ensures the venv exists and all dependencies are installed.
+    Ensures the venv exists and all dependencies are installed using uv.
+
     Args:
         config: The application configuration object.
         req_file: Path to the requirements.txt file.
     """
+    import subprocess
+
     if not config.venv_dir.is_dir():
         logging.info("Creating virtual environment...")
         config.venv_dir.mkdir(parents=True, exist_ok=True)
@@ -270,14 +283,16 @@ def manage_virtual_environment(config: AppConfig, req_file: Path):
         logging.info("Installing dependencies...")
         try:
             _install_pywayfire_from_source(config)
-            logging.info("Installing dependencies from %s...", req_file)
+            logging.info("Installing dependencies from %s using uv...", req_file)
             subprocess.run(
                 [
-                    str(config.venv_pip),
+                    "uv",
+                    "pip",
                     "install",
                     "--no-cache-dir",
                     "-r",
                     str(req_file),
+                    f"--python={config.venv_python}",
                 ],
                 check=True,
             )
@@ -287,13 +302,21 @@ def manage_virtual_environment(config: AppConfig, req_file: Path):
             logging.critical("Failed to install dependencies: %s", e)
             if isinstance(e, FileNotFoundError):
                 logging.critical(
-                    "Ensure 'git' and 'pip' are installed and in your PATH."
+                    "Ensure 'git' and 'uv' are installed and in your PATH."
                 )
             sys.exit(1)
 
 
 def ensure_initial_setup(config: AppConfig, installed_path: Optional[Path]):
-    """Ensures config files and resources exist before launch."""
+    """
+    Ensures config files and resources exist before launch.
+
+    Args:
+        config: The application configuration object.
+        installed_path: The discovered path of the installed package, if any.
+    """
+    import shutil
+
     if not config.config_file.is_file():
         logging.info(
             "Config file not found. Creating empty config at %s", config.config_file
@@ -326,6 +349,10 @@ def ensure_initial_setup(config: AppConfig, installed_path: Optional[Path]):
 
 
 def exist_process():
+    """Terminates any existing instances of the main application."""
+    import contextlib
+    import subprocess
+
     with contextlib.suppress(Exception):
         subprocess.run(
             ["pkill", "-f", f"{APP_NAME}/main.py"],
@@ -341,6 +368,11 @@ def main():
     Handles initial setup, environment management, and launches the application
     with a retry mechanism for transient startup failures.
     """
+    import compileall
+    import contextlib
+    import subprocess
+    import threading
+
     setup_logging()
     config = AppConfig(app_name=APP_NAME)
     script_dir = Path(__file__).parent.resolve()
@@ -388,40 +420,43 @@ def main():
         compileall.compile_dir(str(main_py_dir), quiet=1, force=False)
         logging.info("Compilation complete (skipped if up-to-date).")
 
-        SUCCESS_EXIT_CODE: int = 0
+    SUCCESS_EXIT_CODE: int = 0
 
-        cmd: List[str] = [str(config.venv_python), "-O", str(main_py_file)]
+    cmd: List[str] = [str(config.venv_python), "-O", str(main_py_file)]
 
-        while True:
-            exist_process()
-            try:
-                result: subprocess.CompletedProcess = subprocess.run(
-                    cmd,
-                    check=False,  # Important: Do not raise exception on non-zero exit
+    while True:
+        exist_process()
+        try:
+            result: subprocess.CompletedProcess = subprocess.run(
+                cmd,
+                check=False,  # Important: Do not raise exception on non-zero exit
+            )
+
+            if result.returncode == SUCCESS_EXIT_CODE:
+                logging.info(
+                    "Application exited successfully (code 0)."
+                    " Assuming user-initiated exit or success."
                 )
+                return
+            is_user_kill_signal: bool = result.returncode < 0 and abs(
+                result.returncode
+            ) in {2, 15}  # 2=SIGINT, 15=SIGTERM
 
-                if result.returncode == SUCCESS_EXIT_CODE:
-                    logging.info(
-                        "Application exited successfully (code 0) on attempt %d. Assuming user-initiated exit or success.",
-                    )
-                    return
-                is_user_kill_signal: bool = result.returncode < 0 and abs(
-                    result.returncode
-                ) in {2, 15}  # 2=SIGINT, 15=SIGTERM
-
-                if is_user_kill_signal:
-                    logging.info(
-                        "Application terminated by user signal (exit code %d). Aborting retry loop.",
-                        result.returncode,
-                    )
-                    sys.exit(result.returncode)
-
-            except FileNotFoundError:
-                logging.critical(
-                    "Could not find the main application script at %s or venv Python. Aborting launch.",
-                    main_py_file,
+            if is_user_kill_signal:
+                logging.info(
+                    "Application terminated by user signal (exit code %d)."
+                    " Aborting retry loop.",
+                    result.returncode,
                 )
-                sys.exit(1)
+                sys.exit(result.returncode)
+
+        except FileNotFoundError:
+            logging.critical(
+                "Could not find the main application script at %s or venv Python."
+                " Aborting launch.",
+                main_py_file,
+            )
+            sys.exit(1)
 
 
 if __name__ == "__main__":
