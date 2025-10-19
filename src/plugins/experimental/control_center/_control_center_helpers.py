@@ -1,5 +1,5 @@
 import os
-from gi.repository import Gtk, Adw  # pyright: ignore
+from gi.repository import Gtk, Adw, Gdk  # pyright: ignore
 from typing import Any, List, Dict, Union
 
 
@@ -12,21 +12,13 @@ class ControlCenterHelpers:
     def __init__(self, center: Any) -> None:
         """
         Initializes the helper with a reference to the parent ControlCenter plugin.
-        Args:
-            center: A reference to the parent ControlCenter instance.
         """
         self.parent = center
+        self.parent.current_wp_css_provider = Gtk.CssProvider.new()
 
     def _get_hint_for_path(self, current_dict: Dict[str, Any], *keys: str) -> str:
         """
         Retrieves the hint/description for a given configuration path from the default configuration.
-        Args:
-            current_dict: The configuration dictionary to traverse (usually self.default_config).
-            *keys: The full path segments, resolved to the full config key.
-                   (e.g., 'org.waypanel.plugin.bluetooth', 'hide_in_systray' OR
-                   'hardware', 'soundcard', 'blacklist').
-        Returns:
-            The human-readable hint string, or a generic message if none is found.
         """
         target_dict = current_dict
         for i, key in enumerate(keys[:-1]):
@@ -85,15 +77,6 @@ class ControlCenterHelpers:
         subdict: Dict[str, Any],
         current_path: List[str],
     ) -> Gtk.Box:
-        """
-        Recursively creates nested widgets (Expander, ActionRow) for a sub-dictionary.
-        Args:
-            widget_dict: The dictionary to store the created widgets for saving.
-            subdict: The segment of the configuration data to process.
-            current_path: The full configuration path leading to this sub-dictionary.
-        Returns:
-            A Gtk.Box containing the preferences group for the nested settings.
-        """
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         box.add_css_class("control-center-nested-group-box")
         group_title = current_path[-1].replace("_", " ").capitalize()
@@ -169,15 +152,6 @@ class ControlCenterHelpers:
         data_list: List[Dict[str, Any]],
         current_path: List[str],
     ) -> Gtk.Box:
-        """
-        Creates widgets for a list of dictionaries (e.g., a list of commands).
-        Args:
-            widget_list: The list to store the created widgets for saving.
-            data_list: The list of data dictionaries to process.
-            current_path: The full configuration path leading to this list.
-        Returns:
-            A Gtk.Box containing the preferences group for the list editor.
-        """
         list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         list_box.add_css_class("control-center-list-editor")
         group_title = current_path[-1].replace("_", " ").capitalize()
@@ -228,13 +202,6 @@ class ControlCenterHelpers:
         return list_box
 
     def create_widget_for_value(self, value: Any) -> Union[Gtk.Widget, None]:
-        """
-        Generates the appropriate Gtk widget based on the data type of the value.
-        Args:
-            value: The configuration value (str, int, float, bool, list).
-        Returns:
-            The corresponding Gtk.Widget instance, or None if the type is unhandled.
-        """
         if isinstance(value, str):
             entry = Gtk.Entry()
             entry.add_css_class("control-center-text-input")
@@ -288,10 +255,6 @@ class ControlCenterHelpers:
             return value_label
 
     def _list_fs_themes(self, dirs: list[str]) -> list[str]:
-        """
-        Scans directories for theme/icon folders. A theme must contain 'index.theme' or 'gtk-4.0'
-        for GTK/Icon themes to be included in the list.
-        """
         themes = set()
         for d in dirs:
             full_dir = os.path.expanduser(d)
@@ -306,7 +269,6 @@ class ControlCenterHelpers:
         return sorted(list(themes))
 
     def _get_current_gsettings_theme(self, schema: str, key: str) -> str:
-        """Reads the current theme setting using gsettings."""
         try:
             result = (
                 os.popen(f"gsettings get {schema} {key} 2>/dev/null").read().strip()
@@ -318,7 +280,6 @@ class ControlCenterHelpers:
             return ""
 
     def display_notify(self, title: str, icon_name: str):
-        """Displays an in-app Adw.Toast using the internal ToastOverlay."""
         if not self.parent.toast_overlay:
             print("ERROR: Cannot show toast. Adw.ToastOverlay not initialized.")
             return
@@ -330,7 +291,6 @@ class ControlCenterHelpers:
     def _on_gsettings_theme_selected(
         self, combobox: Gtk.ComboBoxText, schema: str, key: str
     ):
-        """Applies the selected theme using gsettings set."""
         selected_theme = combobox.get_active_text()
         if not selected_theme or selected_theme == "(No themes found)":
             return
@@ -356,7 +316,6 @@ class ControlCenterHelpers:
         key: str,
         theme_dirs: list[str],
     ) -> Adw.ActionRow:
-        """Creates an Adw.ActionRow with a ComboBoxText for a gsettings theme."""
         theme_names = self._list_fs_themes(theme_dirs)
         current_theme = self._get_current_gsettings_theme(schema, key)
         if not theme_names:
@@ -386,9 +345,6 @@ class ControlCenterHelpers:
         return action_row
 
     def _get_available_themes(self) -> list[str]:
-        """
-        Fetches a list of available Waypanel CSS themes by scanning the local directory.
-        """
         css_dir = os.path.expanduser("~/.local/share/waypanel/resources/themes/css")
         if not os.path.isdir(css_dir):
             return []
@@ -400,10 +356,16 @@ class ControlCenterHelpers:
             ]
         )
 
+    def _get_waypanel_css_path(self, theme_name: str) -> str:
+        """Determines the full path to the Waypanel custom CSS file."""
+        return os.path.expanduser(
+            f"~/.local/share/waypanel/resources/themes/css/{theme_name}.css"
+        )
+
     def _on_theme_selected(self, combobox: Gtk.ComboBoxText):
         """
-        Handles the combobox selection, applies the theme via Gtk.Settings,
-        and saves the preference to the Waypanel config under [panel.theme] default.
+        Handles the combobox selection, applies the theme *live* by reloading
+        the Waypanel custom CSS via Gtk.CssProvider, and saves the preference.
         """
         selected_theme = combobox.get_active_text()
         if not selected_theme:
@@ -411,35 +373,37 @@ class ControlCenterHelpers:
         MAIN_CONFIG_KEY = "org.waypanel.panel"
         NESTED_CONFIG_KEY = "theme"
         DEFAULT_KEY = "default"
-        if self.parent.config:
-            if MAIN_CONFIG_KEY not in self.parent.config:
-                self.parent.config[MAIN_CONFIG_KEY] = {}
-            if NESTED_CONFIG_KEY not in self.parent.config[MAIN_CONFIG_KEY]:
-                self.parent.config[MAIN_CONFIG_KEY][NESTED_CONFIG_KEY] = {}
-            self.parent.config[MAIN_CONFIG_KEY][NESTED_CONFIG_KEY][DEFAULT_KEY] = (
-                selected_theme
+        css_path = self._get_waypanel_css_path(selected_theme)
+        display = Gdk.Display.get_default()
+        try:
+            provider = self.parent.current_wp_css_provider
+            provider.load_from_path(css_path)
+            Gtk.StyleContext.add_provider_for_display(
+                display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
             )
-        else:
-            self.parent.logger.warning(
-                "Cannot find the config for the theme selection."
+            self.parent.logger.info(
+                f"Waypanel CSS applied live: {selected_theme} from {css_path}"
+            )
+        except Exception as e:
+            self.parent.logger.error(
+                f"Failed to load/apply Waypanel CSS theme '{selected_theme}': {e}",
+                exc_info=True,
+            )
+            self.display_notify(
+                f"Error applying Waypanel theme: {e}", "dialog-error-symbolic"
             )
         try:
+            config_dict = self.parent.config.setdefault(MAIN_CONFIG_KEY, {})
+            config_dict.setdefault(NESTED_CONFIG_KEY, {})[DEFAULT_KEY] = selected_theme
             self.parent.config_handler.save_config()
             if hasattr(self.parent._panel_instance, "apply_theme"):
                 self.parent._panel_instance.apply_theme(selected_theme)
-            self.display_notify(
-                f"Waypanel theme set to {selected_theme}. Panel may require restart to fully apply to all widgets.",
-                "preferences-desktop-theme-symbolic",
-            )
         except Exception as e:
             self.display_notify(
                 f"Error saving theme setting: {e}", "dialog-error-symbolic"
             )
 
     def _create_theme_selector_widget(self) -> Adw.ActionRow:
-        """
-        Creates the Adw.ActionRow with the Gtk.ComboBoxText for Waypanel theme selection.
-        """
         theme_names = self._get_available_themes()
         MAIN_CONFIG_KEY = "org.waypanel.panel"
         NESTED_CONFIG_KEY = "theme"
@@ -471,9 +435,6 @@ class ControlCenterHelpers:
         return action_row
 
     def _create_theme_page(self, ui_key: str) -> Gtk.ScrolledWindow:
-        """
-        Creates the dedicated settings page for theme selection with all three options.
-        """
         scrolled_window = Gtk.ScrolledWindow()
         scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)

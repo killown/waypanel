@@ -11,20 +11,23 @@ container = "personal"
 """
 
 
-def get_plugin_metadata(_):
+def get_plugin_metadata(panel):
     about = (
         "A plugin that provides quick access to a user's web bookmarks via a "
         "popover menu. It reads bookmarks from a TOML file, downloads and "
         "generates thumbnails for website icons, and launches the "
         "corresponding URLs in a web browser."
     )
+    id = "org.waypanel.plugin.browser_bookmarks"
+    default_container = "top-panel-box-widgets-left"
+    container, id = panel.config_handler.get_plugin_container(default_container, id)
     return {
-        "id": "org.waypanel.plugin.browser_bookmarks",
+        "id": id,
         "name": "Browser Bookmarks",
         "version": "1.0.0",
         "enabled": True,
         "index": 2,
-        "container": "top-panel-box-widgets-left",
+        "container": container,
         "deps": ["top_panel"],
         "description": about,
     }

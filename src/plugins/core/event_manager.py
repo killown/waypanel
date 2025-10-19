@@ -4,7 +4,6 @@ def get_plugin_metadata(_):
         "name": "Event Manager",
         "version": "1.0.0",
         "enabled": True,
-        "priority": 1,
     }
 
 

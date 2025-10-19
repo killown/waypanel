@@ -559,6 +559,25 @@ class ConfigHandler:
             return default_value
         return result
 
+    def get_plugin_container(self, default_container: str, id: str) -> Tuple[str, str]:
+        """
+        Args:
+            default_container: The fallback container name (e.g., 'top-panel-center')
+                to use if the specific setting is not found.
+            id: The unique identifier of the plugin, used as the root key
+                in the configuration system (e.g., 'org.waypanel.plugin.clock').
+
+        Returns:
+            A tuple containing:
+                - str: The resolved container name.
+                - str: The original plugin identifier (`id`).
+        """
+        container = self.get_root_setting([id, "container"], None)
+        if container is None:
+            container = default_container
+            self.set_root_setting([id, "container"], container)
+        return container, id
+
     def set_plugin_setting(
         self,
         key: Union[str, List[str]],

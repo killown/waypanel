@@ -388,19 +388,12 @@ def main():
         compileall.compile_dir(str(main_py_dir), quiet=1, force=False)
         logging.info("Compilation complete (skipped if up-to-date).")
 
-        MAX_RETRIES: int = 3
         SUCCESS_EXIT_CODE: int = 0
 
         cmd: List[str] = [str(config.venv_python), "-O", str(main_py_file)]
 
-        for attempt in range(1, MAX_RETRIES + 1):
+        while True:
             exist_process()
-            logging.info(
-                "Attempt %d of %d: Starting %s application...",
-                attempt,
-                MAX_RETRIES,
-                APP_NAME,
-            )
             try:
                 result: subprocess.CompletedProcess = subprocess.run(
                     cmd,
@@ -410,7 +403,6 @@ def main():
                 if result.returncode == SUCCESS_EXIT_CODE:
                     logging.info(
                         "Application exited successfully (code 0) on attempt %d. Assuming user-initiated exit or success.",
-                        attempt,
                     )
                     return
                 is_user_kill_signal: bool = result.returncode < 0 and abs(
@@ -424,19 +416,6 @@ def main():
                     )
                     sys.exit(result.returncode)
 
-                if attempt < MAX_RETRIES:
-                    logging.warning(
-                        "Attempt %d failed with exit code %d. Retrying in case of a transient error...",
-                        attempt,
-                        result.returncode,
-                    )
-                else:
-                    logging.critical(
-                        "Final attempt %d failed with exit code %d. Aborting launch.",
-                        attempt,
-                        result.returncode,
-                    )
-                    sys.exit(result.returncode)
             except FileNotFoundError:
                 logging.critical(
                     "Could not find the main application script at %s or venv Python. Aborting launch.",

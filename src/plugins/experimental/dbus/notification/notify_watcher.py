@@ -38,7 +38,7 @@ def get_plugin_class():
         def start_watching(self):
             """Start watching for notifications by monitoring the database file."""
             try:
-                self.notify_client = self.obj.plugins.get("notify_client")
+                self.notify_client = self.plugin_loader.plugins.get("notify_client")
                 if not self.notify_client:
                     self.logger.error("Notify client plugin is not loaded.")
                     return

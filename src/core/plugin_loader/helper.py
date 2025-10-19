@@ -3,11 +3,73 @@ import importlib
 import os
 from gi.repository import GLib  # pyright: ignore
 from src.shared.notify_send import Notifier
+from typing import Any, Dict, Tuple
 
+PluginMetadataTuple = Tuple[Any, str, int, int, str]
 try:
     SOURCE_REMOVE = GLib.SOURCE_REMOVE
 except AttributeError:
     SOURCE_REMOVE = False
+
+
+class PluginResolver(dict):
+    """
+    Proxy that resolves short plugin names (e.g., 'clock') to full plugin IDs
+    (e.g., 'org.waypanel.plugin.clock') upon lookup.
+    Architectural Rationale: This class maintains **Dependency Integrity** by allowing
+    plugins to access dependencies via their short, familiar names (backward compatibility)
+    while the underlying storage and Topological Sort rely on the full, stable IDs.
+    """
+
+    def __init__(
+        self, *args, id_map: Dict[str, str], full_id_map: Dict[str, str], **kwargs
+    ):
+        """Initializes the resolver with short-to-full ID maps."""
+        super().__init__(*args, **kwargs)
+        self.short_name_to_id = id_map
+        self.module_name_to_id = full_id_map
+
+    def __getitem__(self, key: str) -> Any:
+        """
+        Handles dictionary-style access (self[key]). Uses custom resolution logic.
+        """
+        if super().__contains__(key):
+            return super().__getitem__(key)
+        resolved_id_by_short = self.short_name_to_id.get(key)
+        if resolved_id_by_short and super().__contains__(resolved_id_by_short):
+            return super().__getitem__(resolved_id_by_short)
+        resolved_id_by_module_name = self.module_name_to_id.get(key)
+        if resolved_id_by_module_name and super().__contains__(
+            resolved_id_by_module_name
+        ):
+            return super().__getitem__(resolved_id_by_module_name)
+        raise KeyError(key)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """
+        Overrides dict.get() to use the custom dependency resolution via __getitem__.
+        This fixes the failure with self.plugins.get("short_name").
+        """
+        try:
+            return self.__getitem__(key)
+        except KeyError:
+            return default
+
+    def __contains__(self, key: str) -> bool:
+        """
+        Handles 'key in self' checks using custom resolution logic.
+        """
+        if super().__contains__(key):
+            return True
+        if self.short_name_to_id.get(key) and super().__contains__(
+            self.short_name_to_id.get(key)
+        ):
+            return True
+        if self.module_name_to_id.get(key) and super().__contains__(
+            self.module_name_to_id.get(key)
+        ):
+            return True
+        return False
 
 
 class PluginLoaderHelpers:

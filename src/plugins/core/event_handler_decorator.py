@@ -44,14 +44,15 @@ def get_plugin_class():
         def on_start(self):
             self._register_handlers()
 
-        def _register_handlers(self) -> None:
+        def _register_handlers(self):
             """Register all decorated event handlers from other plugins."""
-            if "event_manager" not in self.obj.plugins:
+            if "event_manager" not in self.plugin_loader.plugins:
                 self.logger.error("Event Manager is not available.")
-                return
-            event_manager = self.obj.plugins["event_manager"]
+                return None
+
+            event_manager = self.plugin_loader.plugins["event_manager"]
             registered = set()
-            for plugin_name, plugin in self.obj.plugins.items():
+            for plugin_name, plugin in self.plugin_loader.plugins.items():
                 if plugin_name == "event_handler_decorator":
                     continue
                 try:

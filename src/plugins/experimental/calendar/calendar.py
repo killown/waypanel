@@ -91,10 +91,10 @@ def get_plugin_class():
 
         def setup_calendar(self):
             """Setup the calendar popover."""
-            if "clock" not in self.obj.plugins:
+            if "clock" not in self.plugin_loader.plugins:
                 self.logger.error("Clock plugin is not loaded. Cannot append calendar.")
                 return
-            clock_plugin = self.obj.plugins["clock"]
+            clock_plugin = self.plugin_loader.plugins["clock"]
             clock_button = clock_plugin.clock_button
             self.popover_calendar = self._gtk_helper.create_popover(
                 clock_button, "calender-popover", has_arrow=False, offset=(0, 5)
@@ -123,9 +123,9 @@ def get_plugin_class():
             if self.popover_calendar and self.popover_calendar.is_visible():
                 self.popover_calendar.popdown()
             else:
-                self.popover_calendar.popup()
+                self.popover_calendar.popup()  # pyright: ignore
 
-        def code_explanation(self) -> str:
+        def code_explanation(self):
             """
             The core logic of this plugin is based on an architectural
             pattern of modular UI composition and event-driven behavior.

@@ -27,7 +27,7 @@ def get_plugin_class():
     from src.plugins.core._base import BasePlugin
     from .clipboard_server import get_plugin_class
     from src.shared.path_handler import PathHandler
-    from .template import Helpers
+    from ._clipboard_template import Helpers
 
     class ClipboardManager:
         def __init__(self, panel_instance):

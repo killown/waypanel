@@ -1,16 +1,21 @@
-def get_plugin_metadata(_):
+def get_plugin_metadata(panel):
     about = (
-        "A plugin that provides a dashboard for managing Bluetooth devices. "
-        "It displays a list of paired devices, indicates their connection status "
-        "and allows the user to connect or disconnect them with a single click. "
+        "A plugin that provides a dashboard for managing Bluetooth devices.",
+        "It displays a list of paired devices, indicates their connection status",
+        "and allows the user to connect or disconnect them with a single click.",
     )
+
+    id = "org.waypanel.plugin.bluetooth"
+    default_container = "top-panel-systray"
+    container, id = panel.config_handler.get_plugin_container(default_container, id)
+
     return {
-        "id": "org.waypanel.plugin.bluetooth",
+        "id": id,
         "name": "Bluetooth Manager",
         "version": "1.0.0",
         "enabled": True,
         "index": 6,
-        "container": "top-panel-systray",
+        "container": container,
         "deps": ["top_panel"],
         "description": about,
     }
@@ -29,7 +34,9 @@ def get_plugin_class():
             self.bluetooth_button_popover = self.gtk.Button()
             self.add_cursor_effect(self.bluetooth_button_popover)
             self.main_widget = (self.bluetooth_button_popover, "append")
-            self.main_icon = self.get_plugin_setting("main_icon", "bluetooth-symbolic")
+            self.main_icon = self.get_plugin_setting(
+                "main_icon", ["bluetooth-symbolic"]
+            )
             self.fallback_main_icons = self.get_plugin_setting(
                 ["fallback_main_icons"],
                 ["org.gnome.Settings-bluetooth-symbolic", "bluetooth"],

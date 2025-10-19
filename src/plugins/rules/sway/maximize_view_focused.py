@@ -1,6 +1,11 @@
 def get_plugin_metadata(_):
-    # ENABLE_PLUGIN = False if os.getenv("WAYFIRE_SOCKET") else True
-    return {"enabled": False, "deps": "event_manager"}
+    return {
+        "id": "org.waypanel.plugin.auto_maximize",
+        "enabled": False,
+        "name": "Maximize Focused View",
+        "version": "1.0.0",
+        "deps": "event_manager",
+    }
 
 
 def get_plugin_class():

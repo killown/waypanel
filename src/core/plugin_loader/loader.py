@@ -3,7 +3,10 @@ import importlib
 from gi.repository import GLib, Gtk  # pyright: ignore
 import sys
 import traceback
-from src.core.plugin_loader.helper import PluginLoaderHelpers
+from src.core.plugin_loader.helper import PluginLoaderHelpers, PluginResolver
+from typing import Any, Dict, Tuple, Union
+
+PluginMetadataTuple = Tuple[Any, str, int, int, str]
 
 
 class PluginLoader:
@@ -21,7 +24,11 @@ class PluginLoader:
     def __init__(self, panel_instance):
         self.panel_instance = panel_instance
         self.logger = self.panel_instance.logger
-        self.plugins = {}
+        self._plugins_instance_map = {}
+        self.plugins = self._plugins_instance_map
+        self.plugin_id_to_short_name: Dict[str, str] = {}
+        self.short_name_to_id: Dict[str, str] = {}
+        self.module_name_to_id: Dict[str, str] = {}
         self.plugins_path = {}
         self.plugins_import = {}
         self.plugin_containers = {}
@@ -63,8 +70,6 @@ class PluginLoader:
             ["plugins", "disabled"]
         )
         self.plugin_icons = {}
-        # self.ensure_proportional_layout_attempts = {"max": 30, "current": 0}
-        # GLib.timeout_add(100, self.ensure_proportional_layout)
 
     def _find_plugins_in_dir(self, directory_path):
         """
@@ -162,91 +167,123 @@ class PluginLoader:
         start_index = self.plugins_to_process_index
         end_index = min(start_index + CHUNK_SIZE, len(self.plugins_to_process))
         plugins_chunk = self.plugins_to_process[start_index:end_index]
-        if not plugins_chunk:
-            self.logger.info(
-                f"Plugin loader: Batch import and validation complete for all {len(self.plugins_to_process)} plugins."
+        try:
+            if not plugins_chunk and start_index == len(self.plugins_to_process):
+                self.logger.info(
+                    f"Plugin loader: Batch import and validation complete for all {len(self.plugins_to_process)} plugins."
+                )
+                self.plugins_to_process = []
+                self.plugins_to_process_index = 0
+                self.plugins = PluginResolver(
+                    self._plugins_instance_map,
+                    id_map=self.short_name_to_id,
+                    full_id_map=self.module_name_to_id,
+                )
+                GLib.idle_add(self._initialize_sorted_plugins)
+                GLib.idle_add(self._update_plugin_configuration, self.valid_plugins)
+                return False
+            plugins_imported_in_chunk = 0
+            for module_name, module_path in plugins_chunk:
+                if module_name.startswith("_") or module_name in self.disabled_plugins:
+                    continue
+                try:
+                    module = importlib.import_module(module_path)
+                    plugins_imported_in_chunk += 1
+                    if not hasattr(module, "get_plugin_metadata") or not hasattr(
+                        module, "get_plugin_class"
+                    ):
+                        self.logger.error(
+                            f"Module {module_name} is missing required functions (get_plugin_metadata or get_plugin_class). Skipping."
+                        )
+                        if module_path in sys.modules:
+                            del sys.modules[module_path]
+                        continue
+                    metadata = module.get_plugin_metadata(self.panel_instance)
+                    if not isinstance(metadata, dict):
+                        self.logger.error(
+                            f"Plugin {module_name} get_plugin_metadata did not return a dictionary. Skipping."
+                        )
+                        if module_path in sys.modules:
+                            del sys.modules[module_path]
+                        continue
+                    plugin_id = metadata["id"]
+                    short_name = plugin_id.split(".")[-1]
+                    self.plugin_id_to_short_name[plugin_id] = short_name
+                    self.short_name_to_id[short_name] = plugin_id
+                    self.module_name_to_id[module_name] = plugin_id
+                    required_fields = ["id", "name", "version"]
+                    missing_fields = [f for f in required_fields if f not in metadata]
+                    if missing_fields:
+                        self.logger.error(
+                            f"Plugin {module_name} is missing required metadata fields: {', '.join(missing_fields)}. Skipping."
+                        )
+                        if module_path in sys.modules:
+                            del sys.modules[module_path]
+                        continue
+                    if not metadata.get("enabled", True):
+                        self.data_helper.get_current_time_with_ms(
+                            f"Skipping disabled plugin (metadata 'enabled' is False): {plugin_id}"
+                        )
+                        if module_path in sys.modules:
+                            del sys.modules[module_path]
+                        continue
+                    has_plugin_deps = metadata.get("deps", [])
+                    if not self.validate_deps_list(has_plugin_deps):
+                        self.logger.error(
+                            error=ValueError("Invalid 'deps' list in plugin metadata."),
+                            message=f"Plugin '{plugin_id}' has an invalid 'deps' list. Skipping.",
+                            level="error",
+                        )
+                        if module_path in sys.modules:
+                            del sys.modules[module_path]
+                        continue
+                    container = metadata.get("container", "background")
+                    priority = metadata.get("priority", 0)
+                    index = metadata.get("index", 0)
+                    if container == "background":
+                        self.logger.debug(
+                            f"Plugin {plugin_id} is a background service."
+                        )
+                    self.plugin_metadata_map[plugin_id] = metadata
+                    self.plugins_import[plugin_id] = module_path
+                    self.logger.debug(
+                        f"Registered plugin: {plugin_id} -> {module_path}"
+                    )
+                    self.valid_plugins.append(plugin_id)
+                    self.plugin_metadata.append(
+                        (module, container, priority, index, plugin_id)
+                    )
+                except Exception as e:
+                    self.logger.error(
+                        f"Failed to load or validate plugin {module_name}:"
+                    )
+                    print(f" {e}:\n{traceback.format_exc()}")
+                    if module_path in sys.modules:
+                        del sys.modules[module_path]
+            self.plugins_to_process_index = end_index
+            remaining_plugins = (
+                len(self.plugins_to_process) - self.plugins_to_process_index
             )
-            self.plugins_to_process = []
-            self.plugins_to_process_index = 0
-            return False
-        plugins_imported_in_chunk = 0
-        for module_name, module_path in plugins_chunk:
-            if module_name.startswith("_") or module_name in self.disabled_plugins:
-                continue
-            try:
-                module = importlib.import_module(module_path)
-                plugins_imported_in_chunk += 1
-                if not hasattr(module, "get_plugin_metadata") or not hasattr(
-                    module, "get_plugin_class"
-                ):
-                    self.logger.error(
-                        f"Module {module_name} is missing required functions (get_plugin_metadata or get_plugin_class). Skipping."
-                    )
-                    if module_path in sys.modules:
-                        del sys.modules[module_path]
-                    continue
-                metadata = module.get_plugin_metadata(self.panel_instance)
-                if not isinstance(metadata, dict):
-                    self.logger.error(
-                        f"Plugin {module_name} get_plugin_metadata did not return a dictionary. Skipping."
-                    )
-                    if module_path in sys.modules:
-                        del sys.modules[module_path]
-                    continue
-                required_fields = ["id", "name", "version"]
-                missing_fields = [f for f in required_fields if f not in metadata]
-                if missing_fields:
-                    self.logger.error(
-                        f"Plugin {module_name} is missing required metadata fields: {', '.join(missing_fields)}. Skipping."
-                    )
-                    if module_path in sys.modules:
-                        del sys.modules[module_path]
-                    continue
-                if not metadata.get("enabled", True):
-                    self.data_helper.get_current_time_with_ms(
-                        f"Skipping disabled plugin (metadata 'enabled' is False): {module_name}"
-                    )
-                    if module_path in sys.modules:
-                        del sys.modules[module_path]
-                    continue
-                has_plugin_deps = metadata.get("deps", [])
-                if not self.validate_deps_list(has_plugin_deps):
-                    self.logger.error(
-                        error=ValueError("Invalid 'deps' list in plugin metadata."),
-                        message=f"Plugin '{module_name}' has an invalid 'deps' list. Skipping.",
-                        level="error",
-                    )
-                    if module_path in sys.modules:
-                        del sys.modules[module_path]
-                    continue
-                container = metadata.get("container", "background")
-                priority = metadata.get("priority", 0)
-                index = metadata.get("index", 0)
-                if container == "background":
-                    self.logger.debug(f"Plugin {module_name} is a background service.")
-                self.plugin_metadata_map[module_name] = metadata
-                self.plugins_import[module_name] = module_path
-                self.logger.debug(f"Registered plugin: {module_name} -> {module_path}")
-                self.valid_plugins.append(module_name)
-                self.plugin_metadata.append((module, container, priority, index))
-            except Exception as e:
-                self.logger.error(f"Failed to load or validate plugin {module_name}:")
-                print(f" {e}:\n{traceback.format_exc()}")
-                if module_path in sys.modules:
-                    del sys.modules[module_path]
-        self.plugins_to_process_index = end_index
-        remaining_plugins = len(self.plugins_to_process) - self.plugins_to_process_index
-        if remaining_plugins > 0:
-            self.data_helper.get_current_time_with_ms(
-                f"Plugin loader: Chunk import complete. {plugins_imported_in_chunk} plugins imported. {remaining_plugins} remaining. Rescheduling..."
-            )
-            return True
-        else:
-            self.logger.info(
-                f"Plugin loader: Batch import and validation complete for all {len(self.plugins_to_process)} plugins."
-            )
-            GLib.idle_add(self._initialize_sorted_plugins)
-            GLib.idle_add(self._update_plugin_configuration, self.valid_plugins)
+            if remaining_plugins > 0:
+                self.data_helper.get_current_time_with_ms(
+                    f"Plugin loader: Chunk import complete. {plugins_imported_in_chunk} plugins imported. {remaining_plugins} remaining. Rescheduling..."
+                )
+                return True
+            else:
+                self.logger.info(
+                    f"Plugin loader: Batch import and validation complete for all {len(self.plugins_to_process)} plugins."
+                )
+                self.plugins = PluginResolver(
+                    self._plugins_instance_map,
+                    id_map=self.short_name_to_id,
+                    full_id_map=self.module_name_to_id,
+                )
+                GLib.idle_add(self._initialize_sorted_plugins)
+                GLib.idle_add(self._update_plugin_configuration, self.valid_plugins)
+                return False
+        except Exception as e:
+            self.logger.critical(f"FATAL: Unhandled exception during batch import: {e}")
+            print(traceback.format_exc())
             return False
 
     def _update_plugin_configuration(self, valid_plugins):
@@ -277,10 +314,6 @@ class PluginLoader:
     def count_plugins_with_containers(self) -> int:
         """
         Count the number of enabled plugins that have a 'container' key.
-        Args:
-            plugin_dict (dict): Dictionary of plugins.
-        Returns:
-            int: Number of plugins with a container.
         """
         return sum(
             1
@@ -293,13 +326,12 @@ class PluginLoader:
         widget_action,
         widget_to_append,
         target,
-        module_name,
+        plugin_id,
         hide_in_systray=False,
     ):
         """
         Handles the placement of a plugin's widget on the panel.
         """
-        plugin_id = self.plugin_metadata_map.get(module_name, {}).get("id", module_name)
         main_widget = (
             widget_to_append[0]
             if isinstance(widget_to_append, list) and widget_to_append
@@ -307,7 +339,7 @@ class PluginLoader:
         )
         icon_name = self.config_handler.get_root_setting([plugin_id, "main_icon"])
         if icon_name and main_widget:
-            self.gtk_helpers.set_plugin_main_icon(main_widget, module_name, icon_name)
+            self.gtk_helpers.set_plugin_main_icon(main_widget, plugin_id, icon_name)
         if not hide_in_systray:
             hide_in_systray = self.config_handler.get_root_setting(
                 [plugin_id, "hide_in_systray"]
@@ -315,7 +347,7 @@ class PluginLoader:
         if hide_in_systray:
             if not hasattr(self, "overflow_container") or not self.overflow_container:
                 self.logger.warning(
-                    f"Plugin {module_name} is set to hide but overflow container is not registered. Placing normally."
+                    f"Plugin {plugin_id} is set to hide but overflow container is not registered. Placing normally."
                 )
             else:
                 widgets = (
@@ -325,7 +357,7 @@ class PluginLoader:
                 )
                 if len(widgets) > 1:
                     container_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-                    container_box.set_name(f"{module_name}_overflow_box")
+                    container_box.set_name(f"{plugin_id}_overflow_box")
                     for widget in widgets:
                         self.update_widget_safely(container_box.append, widget)
                     self.update_widget_safely(
@@ -342,7 +374,7 @@ class PluginLoader:
                 if isinstance(widget_to_append, list)
                 else [widget_to_append]
             )
-            box_name = f"{module_name}_box"
+            box_name = f"{plugin_id}_box"
             if box_name not in self.plugin_containers:
                 flow_box = Gtk.FlowBox()
                 flow_box.set_valign(Gtk.Align.START)
@@ -356,7 +388,7 @@ class PluginLoader:
             self.update_widget_safely(flow_box.remove_all)
             for widget in widgets:
                 if hasattr(widget, "get_icon_name"):
-                    self.plugin_icons[module_name] = widget.get_icon_name()
+                    self.plugin_icons[plugin_id] = widget.get_icon_name()
                 self.update_widget_safely(flow_box.append, widget)
         elif widget_action == "set_content":
             widgets = (
@@ -376,13 +408,25 @@ class PluginLoader:
         if not self.plugin_metadata:
             self.logger.info("No plugin metadata found. Skipping initialization.")
             return False
-        all_plugins = {}
+        all_plugins: Dict[str, PluginMetadataTuple] = {}
         for metadata in self.plugin_metadata:
-            module_name = metadata[0].__name__.split(".")[-1]
-            all_plugins[module_name] = metadata
-            self.plugin_metadata_map[module_name]["metadata"] = metadata
+            plugin_id = metadata[4]
+            all_plugins[plugin_id] = metadata
         in_degree = {name: 0 for name in all_plugins}
         adj_list = {name: [] for name in all_plugins}
+
+        def resolve_dependency_id(dep_name: str) -> Union[str, None]:
+            """Resolves a dependency name (short, module, or full ID) to a loaded plugin's full ID."""
+            resolved_id = self.short_name_to_id.get(dep_name)
+            if resolved_id in all_plugins:
+                return resolved_id
+            resolved_id_by_module = self.module_name_to_id.get(dep_name)
+            if resolved_id_by_module in all_plugins:
+                return resolved_id_by_module
+            if dep_name in all_plugins:
+                return dep_name
+            return None
+
         for name, metadata in all_plugins.items():
             module = metadata[0]
             try:
@@ -399,8 +443,9 @@ class PluginLoader:
                 )
                 deps = []
             for dep in deps:
-                if dep in all_plugins:
-                    adj_list[dep].append(name)
+                dep_id_for_graph = resolve_dependency_id(dep)
+                if dep_id_for_graph:
+                    adj_list[dep_id_for_graph].append(name)
                     in_degree[name] += 1
                 else:
                     self.logger.warning(
@@ -468,8 +513,11 @@ class PluginLoader:
             container,
             priority,
             order,
+            plugin_id,
         ) in plugins_chunk:
-            self._initialize_single_plugin(module, container, order, priority)
+            self._initialize_single_plugin(
+                module, container, order, priority, plugin_id
+            )
         self.plugins_to_initialize_index = end_index
         remaining_plugins = (
             len(self.plugins_to_initialize) - self.plugins_to_initialize_index
@@ -492,13 +540,12 @@ class PluginLoader:
             GLib.timeout_add(300, run_once)
             return False
 
-    def _initialize_single_plugin(self, module, container, order, priority):
+    def _initialize_single_plugin(self, module, container, order, priority, plugin_id):
         """
         Initializes a single plugin. Since plugins are loaded in dependency order
         (Topological Sort), the complex retry logic is no longer necessary.
         """
         metadata = module.get_plugin_metadata(self.panel_instance)
-        plugin_name = metadata.get("id").split(".")[-1]
         hide_in_systray = metadata.get("hidden", False)
         try:
             plugin_instance = None
@@ -509,16 +556,16 @@ class PluginLoader:
                 plugin_instance = plugin_class(self.panel_instance)
             if hasattr(plugin_instance, "on_start"):
                 plugin_instance.on_start()
-            self.logger.info(f"Initialized plugin: {plugin_name}")
-            self.plugins[plugin_name] = plugin_instance
-            target_box = self._get_target_panel_box(container, plugin_name)
+            self.logger.info(f"Initialized plugin: {plugin_id}")
+            self.plugins[plugin_id] = plugin_instance
+            target_box = self._get_target_panel_box(container, plugin_id)
             if target_box is None:
                 self.logger.error(
-                    f"No target box found for plugin {plugin_name} with container {container}. Assuming background."
+                    f"No target box found for plugin {plugin_id} with container {container}. Assuming background."
                 )
             if container == "background" or target_box is None:
                 self.logger.info(
-                    f"Plugin [{plugin_name}] initialized as a background plugin. ✅"
+                    f"Plugin [{plugin_id}] initialized as a background plugin. ✅"
                 )
                 return False
             if not hasattr(plugin_instance, "set_widget"):
@@ -529,20 +576,12 @@ class PluginLoader:
             def run_once():
                 """
                 dynamic timeout based on the amount of plugins which contains container
-                Remove this after find a solution for:
-                The 'top-panel-systray' target is treated specially to prevent a panel crash
-                caused by GTK layout thrashing during application startup. Rapidly and
-                sequentially adding multiple widgets to dynamic containers, such as the
-                systray's container box, forces repeated full panel layout recalculations.
-                This can lead to assertion crashes (e.g., self.gtkCountingBloomFilter).
-                we give 100 ms time for every plugin with container so it is more than enough
-                to not reach this crash
                 """
                 self.handle_set_widget(
                     widget_action,
                     widget_to_append,
                     target_box,
-                    plugin_name,
+                    plugin_id,
                     hide_in_systray,
                 )
                 return False
@@ -553,9 +592,9 @@ class PluginLoader:
                 timeout = self.count_plugins_with_containers() * 100
                 GLib.timeout_add(timeout, run_once)
         except Exception as e:
-            self.logger.error(f"Failed to initialize plugin '{plugin_name}': {e} ❌")
+            self.logger.error(f"Failed to initialize plugin '{plugin_id}': {e} ❌")
             print(traceback.format_exc())
         self.data_helper.get_current_time_with_ms(
-            f"Plugin loader: {plugin_name} successfully loaded ✅"
+            f"Plugin loader: {plugin_id} successfully loaded ✅"
         )
         return False
