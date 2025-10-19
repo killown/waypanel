@@ -30,21 +30,12 @@ def get_plugin_class():
             super().__init__(panel_instance)
             self.config = {}
             self.widget_map = {}
+            self.ui_key_to_plugin_id_map: Dict[str, str] = {}
             self.helper = ControlCenterHelpers(self)
             self.toast_overlay: Adw.ToastOverlay = None
             self.gtk = Gtk
             self.adw = Adw
             self.win = None
-
-        def _generate_plugin_map(self, config):
-            plugin_map = {}
-            for full_id in config.keys():
-                if full_id.startswith("org.waypanel.plugin."):
-                    short_name = full_id.split(".")[-1]
-                    plugin_map[short_name] = full_id
-                else:
-                    plugin_map[full_id] = full_id
-            return plugin_map
 
         def create_category_widget(self, category_name: str) -> Gtk.Widget:
             """
@@ -242,9 +233,8 @@ def get_plugin_class():
             """
             Creates a scrollable content page for a given category by generating
             appropriate Gtk/Adw widgets for each configuration key-value pair.
-            The full configuration path is resolved here to ensure hints are correctly loaded.
             """
-            full_config_key = self._generate_plugin_map(self.default_config).get(
+            full_config_key = self.helper._generate_plugin_map(self.default_config).get(
                 category_name, category_name
             )
             scrolled_window = Gtk.ScrolledWindow()
@@ -257,6 +247,32 @@ def get_plugin_class():
             main_box.set_margin_bottom(20)
             main_box.set_margin_start(20)
             main_box.set_margin_end(20)
+            if category_name != "control_center":
+                plugin_id = self.ui_key_to_plugin_id_map.get(category_name)
+                if plugin_id:
+                    status_group = Adw.PreferencesGroup(
+                        title="Plugin Status",
+                        description="Manage the plugin's runtime state.",
+                    )
+                    disabled_list = self.config_handler.get_root_setting(
+                        ["plugins", "disabled"], []
+                    )
+                    plugin_name = plugin_id.split(".")[-1]
+                    is_enabled = plugin_name not in disabled_list
+                    toggle_switch = Gtk.Switch()
+                    toggle_switch.add_css_class("control-center-plugin-enable-switch")
+                    toggle_switch.set_active(is_enabled)
+                    toggle_switch.connect(
+                        "notify::active", self._on_plugin_enable_toggled, category_name
+                    )
+                    toggle_row = Adw.ActionRow(
+                        title="Enable Plugin",
+                        subtitle="Toggle the plugin on or off. Changes are persistent.",
+                    )
+                    toggle_row.add_suffix(toggle_switch)
+                    toggle_row.set_activatable_widget(toggle_switch)
+                    status_group.add(toggle_row)
+                    main_box.append(status_group)
             group_desc = self.helper._get_hint_for_path(
                 self.default_config, full_config_key
             )
@@ -329,6 +345,7 @@ def get_plugin_class():
             """Populates the FlowBox with category widgets and the Stack with content pages."""
             self.widget_map = {}
             self.category_widgets = {}
+            self.ui_key_to_plugin_id_map = {}
             if not self.config:
                 label_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
                 label = Gtk.Label(
@@ -352,6 +369,7 @@ def get_plugin_class():
             self.category_widgets[THEME_UI_KEY] = category_widget
             content_page = self.helper._create_theme_page(THEME_UI_KEY)
             self.content_stack.add_named(content_page, THEME_UI_KEY)
+            self.ui_key_to_plugin_id_map[THEME_UI_KEY] = "theme"
             sorted_config_keys = sorted(self.config.keys())
             for full_config_key in sorted_config_keys:
                 category_data = self.config[full_config_key]
@@ -361,6 +379,7 @@ def get_plugin_class():
                     ui_key = full_config_key
                 if ui_key == THEME_UI_KEY:
                     continue
+                self.ui_key_to_plugin_id_map[ui_key] = full_config_key
                 category_widget = self.create_category_widget(ui_key)
                 self.category_flowbox.insert(category_widget, -1)
                 self.category_widgets[ui_key] = category_widget
@@ -392,124 +411,65 @@ def get_plugin_class():
                     widget.set_visible(False)
 
         def on_save_clicked(self, button):
+            """Handles saving the configuration for the currently visible category."""
             current_category = self.content_stack.get_visible_child_name()
             if current_category:
-                self.save_category(current_category)
+                self.helper.save_category(current_category)
 
-        def save_category(self, category_name):
-            full_config_key = category_name
-            plugin_map = self._generate_plugin_map(self.default_config)
-            if category_name in plugin_map:
-                full_config_key = plugin_map[category_name]
-
-            def get_value_from_widget(widget):
-                if isinstance(widget, Gtk.Entry):
-                    text = widget.get_text()
-                    if hasattr(widget, "original_type") and getattr(
-                        widget, "original_type", "str"
-                    ):
-
-                        def cast_element(s):
-                            s = s.strip()
-                            original_type_str = getattr(widget, "original_type", "str")
-                            if original_type_str == "int":
-                                try:
-                                    return int(s)
-                                except ValueError:
-                                    return s
-                            elif original_type_str == "float":
-                                try:
-                                    return float(s)
-                                except ValueError:
-                                    return s
-                            return s
-
-                        return [
-                            cast_element(x) for x in text.split(",") if x.strip() != ""
-                        ]
-                    try:
-                        return int(text)
-                    except (ValueError, TypeError):
-                        try:
-                            return float(text)
-                        except (ValueError, TypeError):
-                            if text.lower() == "true":
-                                return True
-                            if text.lower() == "false":
-                                return False
-                            return text
-                elif isinstance(widget, Gtk.SpinButton):
-                    val = widget.get_value()
-                    if val == int(val):
-                        return int(val)
-                    return val
-                elif isinstance(widget, Gtk.Switch):
-                    return widget.get_active()
-                return None
-
-            def update_config_from_widgets(config_dict, widget_dict):
-                for key, value in widget_dict.items():
-                    if key == "_dynamic_fields":
-                        continue
-                    if isinstance(value, dict):
-                        if key in config_dict:
-                            update_config_from_widgets(config_dict[key], value)
-                    elif isinstance(value, list):
-                        if key in config_dict and isinstance(config_dict[key], list):
-                            for i, list_item_widgets in enumerate(value):
-                                if i < len(config_dict[key]):
-                                    cmd_entry = list_item_widgets.get("cmd_entry")
-                                    name_entry = list_item_widgets.get("name_entry")
-                                    if cmd_entry:
-                                        config_dict[key][i]["cmd"] = (
-                                            get_value_from_widget(cmd_entry)
-                                        )
-                                    if name_entry:
-                                        config_dict[key][i]["name"] = (
-                                            get_value_from_widget(name_entry)
-                                        )
-                    else:
-                        new_value = get_value_from_widget(value)
-                        if new_value is not None:
-                            config_dict[key] = new_value
-
-            if category_name in self.widget_map:
-                if self.config:
-                    if full_config_key in self.config:
-                        update_config_from_widgets(
-                            self.config[full_config_key],
-                            self.widget_map[category_name],
-                        )
-                        if "_dynamic_fields" in self.widget_map[category_name]:
-                            dynamic_fields = self.widget_map[category_name][
-                                "_dynamic_fields"
-                            ]
-                            for path_widget, key_widget, value_widget in dynamic_fields:
-                                key = key_widget.get_text().strip()
-                                path_str = path_widget.get_text().strip()
-                                if not key:
-                                    continue
-                                value = get_value_from_widget(value_widget)
-                                current_level = self.config[full_config_key]
-                                if path_str:
-                                    path_parts = path_str.split(".")
-                                    for part in path_parts:
-                                        current_level = current_level.setdefault(
-                                            part, {}
-                                        )
-                                current_level[key] = value
-                    else:
-                        return
+        def _on_plugin_enable_toggled(
+            self, switch: Gtk.Switch, gparam, category_name: str
+        ):
+            """
+            Handles the 'Enable Plugin' switch state change.
+            This method orchestrates both persistent and runtime state changes.
+            1.  Persists the change by adding/removing the plugin's full ID
+                from `[plugins].disabled` via ConfigHandler.
+            2.  Stops/starts the running instance via PluginLoader.
+            """
+            plugin_id = self.ui_key_to_plugin_id_map.get(category_name)
+            if not plugin_id:
+                self.logger.error(
+                    f"Could not find full plugin ID for UI key: {category_name}. Cannot toggle."
+                )
+                return
+            is_enabled = switch.get_active()
+            self.logger.info(
+                f"Request to toggle plugin '{plugin_id}'. New state: {'ENABLED' if is_enabled else 'DISABLED'}"
+            )
             try:
-                self.config_handler.save_config()
-                self.helper.display_notify(
-                    f"The {category_name.replace('_', ' ').capitalize()} settings have been saved successfully!",
-                    "configure-symbolic",
+                plugin_name = plugin_id.split(".")[-1]
+                disabled_list_path = ["plugins", "disabled"]
+                current_disabled_list = self.config_handler.get_root_setting(
+                    disabled_list_path, []
                 )
+                new_disabled_list = list(current_disabled_list)
+                if is_enabled:
+                    if plugin_name in new_disabled_list:
+                        new_disabled_list.remove(plugin_name)
+                        self.config_handler.update_config(
+                            disabled_list_path, new_disabled_list
+                        )
+                    self.plugin_loader.reload_plugin(plugin_name)
+                    toast = Adw.Toast.new(
+                        f"Plugin '{category_name.capitalize()}' enabled."
+                    )
+                else:
+                    if plugin_name not in new_disabled_list:
+                        new_disabled_list.append(plugin_name)
+                        self.config_handler.update_config(
+                            disabled_list_path, new_disabled_list
+                        )
+                    self.plugin_loader.disable_plugin(plugin_name)
+                    toast = Adw.Toast.new(
+                        f"Plugin '{category_name.capitalize()}' disabled."
+                    )
+                self.toast_overlay.add_toast(toast)
             except Exception as e:
-                self.helper.display_notify(
-                    f"Error saving {category_name.replace('_', ' ').capitalize()} settings: {e}",
-                    "dialog-error",
+                self.logger.error(
+                    f"Failed to toggle plugin '{plugin_id}': {e}", exc_info=True
                 )
+                toast = Adw.Toast.new(f"Error toggling plugin: {category_name}")
+                self.toast_overlay.add_toast(toast)
+                switch.set_active(not is_enabled)
 
     return ControlCenter

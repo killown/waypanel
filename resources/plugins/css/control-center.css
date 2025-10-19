@@ -185,7 +185,8 @@
   background-color: var(--color-bg-searchbar);
 }
 
-switch.control-center-toggle-switch slider {
+switch.control-center-toggle-switch slider,
+switch.control-center-plugin-enable-switch slider {
   background-color: var(--color-bg-box-primary);
   border-radius: 99px;
   padding: 10px;

@@ -1,7 +1,132 @@
+/* ---------------------------
+   Weather widget styles
+   Apply after your :root variable block
+   --------------------------- */
 
-.weather-label {
-  font-size: 15px;
-  font-weight: bold;
-  background-color: transparent;
-  color: var(--color-fg-secondary);
+/* Container: grid layout, subtle panel look */
+.weather-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;      /* two columns: left=main, right=aux */
+  grid-auto-rows: min-content;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 10px;
+  margin: 6px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  background-color: var(--primary-bg);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-elevated);
+  border: 1px solid rgba(255,255,255,0.03);
+}
+
+/* Title row spans full width */
+.weather-grid > .weather-title-label {
+  grid-column: 1 / -1;
+  font-family: var(--font-family-system);
+  font-weight: var(--font-weight-medium);
+  font-size: 0.95rem;
+  color: var(--main-text);
+  text-transform: none;
+  padding: 4px 6px;
+  letter-spacing: 0.2px;
+}
+
+/* Primary temperature value — visually prominent */
+.weather-temp-value-label {
+  font-family: var(--font-family-system);
+  font-weight: var(--font-weight-bold);
+  font-size: 1.8rem;               /* large temp number */
+  line-height: 1;
+  color: var(--main-text);
+  padding: 2px 4px;
+  justify-self: start;
+}
+
+/* Secondary metric labels (wind / humidity) — grouped */
+.weather-wind-value-label,
+.weather-humidity-value-label {
+  font-family: var(--font-family-system);
+  font-weight: var(--font-weight-regular);
+  font-size: 0.90rem;
+  color: var(--soft-text);
+  padding: 2px 4px;
+  justify-self: start;
+}
+
+/* Right-side stack: summary, totals, small metadata */
+.weather-rain-summary-label {
+  justify-self: end;
+  font-family: var(--font-family-system);
+  font-weight: var(--font-weight-medium);
+  font-size: 0.9rem;
+  color: var(--main-text);
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));
+  box-shadow: var(--shadow-element-minimal);
+  border: 1px solid rgba(255,255,255,0.03);
+}
+
+/* Small numeric total (e.g., daily mm) */
+.weather-total-label {
+  justify-self: end;
+  font-family: var(--font-family-system);
+  font-weight: var(--font-weight-medium);
+  font-size: 0.85rem;
+  color: var(--soft-text);
+  padding: 2px 6px;
+  border-radius: var(--radius-s);
+  background-color: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.02);
+}
+
+/* tiny visual separator / hint (optional element inside grid) */
+.weather-grid .sep {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--theme-decoration-separator), transparent);
+  margin: 6px 0;
+  opacity: 0.6;
+}
+
+/* Status variants */
+.weather-rain-summary-label.rainy {
+  background: var(--success-green-light);
+  color: var(--success-green);
+  border-color: rgba(95,185,56,0.35);
+  box-shadow: none;
+}
+
+.weather-rain-summary-label.warning {
+  background: var(--color-status-warning-bg);
+  color: var(--theme-status-warning);
+  border-color: rgba(252,207,3,0.35);
+}
+
+/* Compact / small mode (if you add a "compact" class) */
+.weather-grid.compact {
+  gap: 6px;
+  padding: 6px;
+}
+.weather-grid.compact .weather-temp-value-label {
+  font-size: 1.25rem;
+}
+
+/* Accessibility: focus ring for interactive labels (if clickable) */
+.weather-grid :focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(64,146,255,0.12), 0 0 0 6px rgba(0,48,131,0.06);
+  border-radius: var(--radius-m);
+}
+
+/* Small responsive tweak for very narrow widths */
+@media (max-width: 420px) {
+  .weather-grid {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+  .weather-rain-summary-label,
+  .weather-total-label {
+    justify-self: start;
+  }
 }

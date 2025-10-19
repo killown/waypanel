@@ -510,3 +510,125 @@ class ControlCenterHelpers:
         main_box.append(preferences_group)
         scrolled_window.set_child(main_box)
         return scrolled_window
+
+    def _generate_plugin_map(self, config):
+        plugin_map = {}
+        for full_id in config.keys():
+            if full_id.startswith("org.waypanel.plugin."):
+                short_name = full_id.split(".")[-1]
+                plugin_map[short_name] = full_id
+            else:
+                plugin_map[full_id] = full_id
+        return plugin_map
+
+    def save_category(self, category_name):
+        full_config_key = category_name
+        plugin_map = self._generate_plugin_map(self.parent.default_config)
+        if category_name in plugin_map:
+            full_config_key = plugin_map[category_name]
+
+        def get_value_from_widget(widget):
+            if isinstance(widget, Gtk.Entry):
+                text = widget.get_text()
+                if hasattr(widget, "original_type") and getattr(
+                    widget, "original_type", "str"
+                ):
+
+                    def cast_element(s):
+                        s = s.strip()
+                        original_type_str = getattr(widget, "original_type", "str")
+                        if original_type_str == "int":
+                            try:
+                                return int(s)
+                            except ValueError:
+                                return s
+                        elif original_type_str == "float":
+                            try:
+                                return float(s)
+                            except ValueError:
+                                return s
+                        return s
+
+                    return [cast_element(x) for x in text.split(",") if x.strip() != ""]
+                try:
+                    return int(text)
+                except (ValueError, TypeError):
+                    try:
+                        return float(text)
+                    except (ValueError, TypeError):
+                        if text.lower() == "true":
+                            return True
+                        if text.lower() == "false":
+                            return False
+                        return text
+            elif isinstance(widget, Gtk.SpinButton):
+                val = widget.get_value()
+                if val == int(val):
+                    return int(val)
+                return val
+            elif isinstance(widget, Gtk.Switch):
+                return widget.get_active()
+            return None
+
+        def update_config_from_widgets(config_dict, widget_dict):
+            for key, value in widget_dict.items():
+                if key == "_dynamic_fields":
+                    continue
+                if isinstance(value, dict):
+                    if key in config_dict:
+                        update_config_from_widgets(config_dict[key], value)
+                elif isinstance(value, list):
+                    if key in config_dict and isinstance(config_dict[key], list):
+                        for i, list_item_widgets in enumerate(value):
+                            if i < len(config_dict[key]):
+                                cmd_entry = list_item_widgets.get("cmd_entry")
+                                name_entry = list_item_widgets.get("name_entry")
+                                if cmd_entry:
+                                    config_dict[key][i]["cmd"] = get_value_from_widget(
+                                        cmd_entry
+                                    )
+                                if name_entry:
+                                    config_dict[key][i]["name"] = get_value_from_widget(
+                                        name_entry
+                                    )
+                else:
+                    new_value = get_value_from_widget(value)
+                    if new_value is not None:
+                        config_dict[key] = new_value
+
+        if category_name in self.parent.widget_map:
+            if self.parent.config:
+                if full_config_key in self.parent.config:
+                    update_config_from_widgets(
+                        self.parent.config[full_config_key],
+                        self.parent.widget_map[category_name],
+                    )
+                    if "_dynamic_fields" in self.parent.widget_map[category_name]:
+                        dynamic_fields = self.parent.widget_map[category_name][
+                            "_dynamic_fields"
+                        ]
+                        for path_widget, key_widget, value_widget in dynamic_fields:
+                            key = key_widget.get_text().strip()
+                            path_str = path_widget.get_text().strip()
+                            if not key:
+                                continue
+                            value = get_value_from_widget(value_widget)
+                            current_level = self.parent.config[full_config_key]
+                            if path_str:
+                                path_parts = path_str.split(".")
+                                for part in path_parts:
+                                    current_level = current_level.setdefault(part, {})
+                            current_level[key] = value
+                else:
+                    return
+        try:
+            self.parent.config_handler.save_config()
+            self.display_notify(
+                f"The {category_name.replace('_', ' ').capitalize()} settings have been saved successfully!",
+                "configure-symbolic",
+            )
+        except Exception as e:
+            self.display_notify(
+                f"Error saving {category_name.replace('_', ' ').capitalize()} settings: {e}",
+                "dialog-error",
+            )

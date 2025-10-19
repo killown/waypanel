@@ -4,6 +4,11 @@ import os
 from gi.repository import GLib  # pyright: ignore
 from src.shared.notify_send import Notifier
 
+try:
+    SOURCE_REMOVE = GLib.SOURCE_REMOVE
+except AttributeError:
+    SOURCE_REMOVE = False
+
 
 class PluginLoaderHelpers:
     def __init__(self, panel_instance, loader_instance) -> None:
@@ -13,12 +18,12 @@ class PluginLoaderHelpers:
         self.overflow_container = None
         self.loader = loader_instance
 
-    def reload_plugin(self, plugin_name):
+    def reload_plugin(self, plugin_name: str) -> None:
         """
         Initiates a dynamic, non-disruptive reload of a single plugin.
-        It safely removes the old widget, disables the old instance, reloads the
-        module from disk, extracts its placement metadata, and re-initializes
-        it using the new single-plugin logic.
+        It safely removes the old widget, disables the old instance, reloads
+        the module from disk, extracts its new placement metadata, and
+        delegates re-initialization to the robust `enable_plugin` method.
         """
         if plugin_name not in self.loader.plugins_path:
             self.logger.error(
@@ -41,8 +46,6 @@ class PluginLoaderHelpers:
                             f"Removed old widget for plugin: {plugin_name}"
                         )
             self.disable_plugin(plugin_name)
-            if plugin_name in self.loader.plugins:
-                del self.loader.plugins[plugin_name]
             module_path = self.loader.plugins_import.get(plugin_name)
             if not module_path:
                 self.logger.error(
@@ -52,66 +55,93 @@ class PluginLoaderHelpers:
             if module_path in sys.modules:
                 module = sys.modules[module_path]
                 importlib.reload(module)
+                self.logger.debug(f"Reloaded module from disk: {module_path}")
             else:
                 module = importlib.import_module(module_path)
-            position = "background"
-            priority = 0
-            order = 0
-            position_result = getattr(module, "get_plugin_metadata")(
-                self.panel_instance
-            )
-            if position_result != "background" and position_result:
-                if self.loader.data_helper.validate_tuple(
-                    position_result, name="position_result"
-                ):
-                    if len(position_result) == 3:
-                        position, order, priority = position_result
-                    else:
-                        position, order = position_result
-                        priority = 0
-                else:
-                    self.logger.error(
-                        f"Invalid position result for reloaded plugin {plugin_name}. Skipping initialization."
-                    )
-                    return
-            self.loader._initialize_single_plugin(module, position, order, priority)
-            self.logger.info(f"Reloaded and initialized plugin: {plugin_name}")
+                self.logger.debug(f"Imported new module: {module_path}")
+            if not hasattr(module, "get_plugin_metadata"):
+                self.logger.error(
+                    f"Reloaded plugin '{plugin_name}' is missing "
+                    "get_plugin_metadata(). Skipping."
+                )
+                return
+            metadata_dict = getattr(module, "get_plugin_metadata")(self.panel_instance)
+            position = metadata_dict.get("container", "background")
+            order = metadata_dict.get("index", 0)
+            priority = metadata_dict.get("priority", 0)
+            plugin_metadata = (module, position, order, priority)
+            self.enable_plugin(plugin_name, plugin_metadata)
+            self.logger.info(f"Reload scheduled for plugin: {plugin_name}")
         except Exception as e:
-            self.logger.error(f"Error reloading plugin '{plugin_name}': {e}")
+            self.logger.error(
+                f"Critical error during reload process for '{plugin_name}': {e}",
+                exc_info=True,
+            )
 
-    def enable_plugin(self, plugin_name, plugin_metadata):
-        """Enable a plugin by name.
-        Initializes and activates a plugin using the provided metadata by calling
-        the new single-plugin initialization method.
+    def _safe_initialize_wrapper(
+        self, plugin_name: str, plugin_metadata: tuple
+    ) -> bool:
+        """
+        A robust, exception-safe wrapper for plugin initialization.
+        This function is executed by the GLib main loop and is responsible
+        for calling the actual plugin initializer, logging the true result,
+        and catching any exceptions that occur during initialization.
         Args:
-            plugin_name (str): The name of the plugin to enable.
-            plugin_metadata (tuple): A tuple containing the required initialization data:
-                                     (module, position, order, priority).
+            plugin_name: The name of the plugin being initialized.
+            plugin_metadata: The 4-tuple (module, position, order, priority).
+        Returns:
+            bool: GLib.SOURCE_REMOVE (or False) to ensure this idle task
+                  is removed from the main loop after execution.
+        """
+        try:
+            if not (plugin_metadata and len(plugin_metadata) == 4):
+                self.logger.error(
+                    f"Invalid metadata for '{plugin_name}' passed to wrapper. "
+                    "Skipping initialization."
+                )
+                return SOURCE_REMOVE
+            module, position, order, priority = plugin_metadata
+            self.loader._initialize_single_plugin(module, position, order, priority)
+            self.logger.info(
+                f"Successfully enabled and initialized plugin: {plugin_name}"
+            )
+        except Exception as e:
+            self.logger.error(
+                f"Failed to initialize plugin '{plugin_name}': {e}",
+                exc_info=True,
+            )
+        return SOURCE_REMOVE
+
+    def enable_plugin(self, plugin_name: str, plugin_metadata: tuple) -> None:
+        """Enable a plugin by name.
+        Schedules a plugin to be initialized safely on the GLib main loop
+        using a robust wrapper.
+        Args:
+            plugin_name: The name of the plugin to enable.
+            plugin_metadata: A 4-tuple containing the required data:
+                             (module, position, order, priority).
         """
         if plugin_name not in self.loader.plugins_path:
             self.logger.error(
                 f"Plugin '{plugin_name}' not found in plugins_path. Skipping enable."
             )
             return
+        if not (plugin_metadata and len(plugin_metadata) == 4):
+            self.logger.error(
+                f"Invalid or missing metadata for enabling plugin: {plugin_name}. "
+                "Expected 4-tuple (module, position, order, priority)."
+            )
+            return
         try:
-            if plugin_metadata and len(plugin_metadata) == 4:
-                module, position, order, priority = plugin_metadata
-                GLib.idle_add(
-                    self.loader._initialize_single_plugin,
-                    module,
-                    position,
-                    order,
-                    priority,
-                )
-                self.logger.info(f"Enabled and initialized plugin: {plugin_name}")
-            else:
-                self.logger.error(
-                    f"Invalid or missing metadata for enabling plugin: {plugin_name}. Expected 4-tuple (module, position, order, priority)."
-                )
+            GLib.idle_add(
+                self._safe_initialize_wrapper,
+                plugin_name,
+                plugin_metadata,
+            )
+            self.logger.info(f"Scheduled plugin for enabling: {plugin_name}")
         except Exception as e:
             self.logger.error(
-                error=e,
-                message=f"Error enabling plugin '{plugin_name}': {e}",
+                f"Error scheduling plugin '{plugin_name}' for enabling: {e}",
                 level="error",
             )
 
