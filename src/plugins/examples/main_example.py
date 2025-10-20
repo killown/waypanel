@@ -1,5 +1,8 @@
 def get_plugin_metadata(panel):
     """
+    Args:
+        panel: The main Panel instance, used here to access config_handler.
+               (Type: The specific Panel application class.)
     Defines the static metadata for the Main Example plugin.
     Metadata must be deterministic and must not rely on runtime configuration,
     ensuring predictable loading and placement by the plugin manager. This

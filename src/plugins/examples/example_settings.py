@@ -1,5 +1,8 @@
 def get_plugin_metadata(panel):
     """
+    Args:
+        panel: The main Panel instance, used here to access config_handler.
+               (Type: The specific Panel application class.)
     Provides the structured metadata for the Setting Timer Example plugin.
     This plugin demonstrates the lifecycle of a configuration setting.
     """

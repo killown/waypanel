@@ -1,6 +1,11 @@
 def get_plugin_metadata(panel):
     """
-    Define the plugin's properties and placement using the modern dictionary format.
+    Define the plugin's properties, dependencies, and panel placement.
+
+    Args:
+        panel: The main Panel instance, used here to access config_handler.
+               (Type: The specific Panel application class.)
+
     Valid Positions:
         - Top Panel:
             "top-panel-left"

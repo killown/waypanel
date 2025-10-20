@@ -1,5 +1,9 @@
 def get_plugin_metadata(panel):
     """
+    Args:
+        panel: The main Panel instance, used here to access config_handler.
+               (Type: The specific Panel application class.)
+
     Define where the plugin should be placed in the panel and its properties.
     plugin_loader will use this metadata to append the widget to the panel instance.
     Valid Positions:

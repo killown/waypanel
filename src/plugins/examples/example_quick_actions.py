@@ -1,5 +1,11 @@
 def get_plugin_metadata(panel):
-    """Defines the static metadata for the Quick Actions plugin."""
+    """
+    Define the plugin's properties, dependencies, and panel placement.
+
+    Args:
+        panel: The main Panel instance, used here to access config_handler.
+               (Type: The specific Panel application class.)
+    """
     id = "org.waypanel.plugin.example_quick_actions"
     default_container = "top-panel-center"
 
