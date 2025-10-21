@@ -23,7 +23,7 @@
 
 .bluetooth-dashboard-buttons-connected {
   background-color: var(--success-green);
-  color: var(--primary-bg);
+  color: var(--main-text);
   border-radius: 8px;
   border-style: none;
   font-weight: 800;

@@ -440,7 +440,10 @@ def main():
                 return
             is_user_kill_signal: bool = result.returncode < 0 and abs(
                 result.returncode
-            ) in {2, 15}  # 2=SIGINT, 15=SIGTERM
+            ) in {
+                2,
+                15,
+            }  # 2=SIGINT, 15=SIGTERM
 
             if is_user_kill_signal:
                 logging.info(

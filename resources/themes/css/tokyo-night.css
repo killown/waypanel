@@ -23,7 +23,7 @@
   --color-vibrancy-light-blur: var(--color-bg-surface);
   --opacity-vibrancy-bar: 1.0; 
 
-  --color-fg-primary: #C0CAF5;
+  --color-fg-primary: #eaeeff;
   --color-fg-secondary: #A9B1D6;
   --color-fg-muted: #B8C3E5; /* WCAG Fix (5.8:1 on Base) */
   --color-fg-subtle: #878EA8; /* WCAG Fix (3.8:1 on Base) */

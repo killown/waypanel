@@ -1015,6 +1015,8 @@ class GtkHelpers:
         prefixed_label_class = f"{module_name}-label"
         prefixed_summary_class = f"{module_name}-summary"
         prefixed_stack_class = f"{module_name}-stack"
+        prefixed_icon_vbox_class = f"{module_name}-icon-vbox"
+        prefixed_button_class = f"{module_name}-button"
         popover_dashboard = self.create_popover(
             parent_widget=parent_widget,
             css_class=prefixed_css_class,
@@ -1048,6 +1050,7 @@ class GtkHelpers:
                     config.get("icons", [None, None])[1:],
                 )
                 icon_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+                icon_vbox.add_css_class(prefixed_icon_vbox_class)
                 if icon_name:
                     icon = Gtk.Image.new_from_icon_name(icon_name)
                     icon.set_icon_size(Gtk.IconSize.LARGE)
@@ -1059,6 +1062,7 @@ class GtkHelpers:
                 summary_label.add_css_class(prefixed_summary_class)
                 icon_vbox.append(summary_label)
                 button = Gtk.Button(child=icon_vbox, has_frame=False)
+                button.add_css_class(prefixed_button_class)
                 button.connect("clicked", action_handler, label)
                 self.add_cursor_effect(button)
                 flowbox.append(button)

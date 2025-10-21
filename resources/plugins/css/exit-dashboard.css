@@ -30,7 +30,10 @@
 .exit-dashboard-icon-vbox {
     color: var(--theme-fg-label-primary);
     background-color: var(--secondary-bg);
-    padding: 12px;
+    padding-top: 15px;
+    padding-left: 5px;
+    padding-right: 5px;
+    margin-bottom: 5px;
     border-radius: var(--radius-s);
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
     border: 1px solid transparent;
@@ -62,7 +65,6 @@
     color: var(--theme-fg-label-primary);
     font-size: 1em;
     font-weight: var(--font-weight-bold);
-    margin-bottom: 6px;
     text-shadow: 0 1px 1px rgba(0,0,0,0.4);
 }
 
