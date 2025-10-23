@@ -1,13 +1,16 @@
-def get_plugin_metadata(_):
+def get_plugin_metadata(panel):
     about = "A plugin that provides a simple screen and audio recording utility"
+    id = "org.waypanel.plugin.screen_recorder"
+    default_container = "top-panel-systray"
+    container, id = panel.config_handler.get_plugin_container(default_container, id)
     return {
-        "id": "org.waypanel.plugin.screen_recorder",
+        "id": id,
         "name": "Screen Recorder",
         "version": "1.0.0",
         "enabled": True,
         "index": 10,
-        "hidden": True,
-        "container": "top-panel-systray",
+        "hidden": False,
+        "container": container,
         "deps": ["top_panel"],
         "description": about,
     }

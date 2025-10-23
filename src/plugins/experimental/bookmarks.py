@@ -1,16 +1,3 @@
-DEFAULT_BOOKMARKS_TEMPLATE = """
-[Google]
-url = "https://www.google.com"
-container = "personal"
-[GitHub]
-url = "https://www.github.com"
-container = "dev"
-[Google Maps]
-url = "https://maps.google.com/"
-container = "personal"
-"""
-
-
 def get_plugin_metadata(panel):
     about = (
         "A plugin that provides quick access to a user's web bookmarks via a "
@@ -340,7 +327,7 @@ container = "personal"
             return False
 
         def _create_round_thumbnail(self, source_path: str, target_path: str) -> bool:
-            """Creates a circular thumbnail with padding for low-res icons (specifically favicon.ico)."""
+            """Creates a circular thumbnail with padding for low-res icons."""
             try:
                 THUMB_W, THUMB_H = self.THUMBNAIL_SIZE
                 PADDING = 7
@@ -374,12 +361,22 @@ container = "personal"
             bookmarks_path = self._path_handler.get_data_path()
             bookmarks_dir = self.os.path.join(bookmarks_path, "bookmarks")
             bookmarks_file = self.os.path.join(bookmarks_dir, "bookmarks.toml")
-            with open(bookmarks_file, "r") as f:
-                all_bookmarks = self.toml.load(f)
+            try:
+                with open(bookmarks_file, "r") as f:
+                    all_bookmarks = self.toml.load(f)
+            except FileNotFoundError:
+                self.logger.warning(f"Bookmarks file not found at: {bookmarks_file}")
+                return []
+            except Exception as e:
+                self.logger.error(f"Error reading bookmarks file {bookmarks_file}: {e}")
+                return []
             self.icon_cache = self._load_cache()
             prepared_tasks = []
             for name, bookmark_data in all_bookmarks.items():
                 url = bookmark_data.get("url", "")
+                if not url:
+                    self.logger.warning(f"Bookmark '{name}' has no URL, skipping.")
+                    continue
                 explicit_icon_url = bookmark_data.get("icon", "")
                 safe_filename = self._get_safe_icon_filename(url)
                 bookmark_image = self.os.path.join(
@@ -503,7 +500,7 @@ container = "personal"
                                     "PNG",
                                     quality=self.THUMBNAIL_QUALITY,
                                 )
-                            thumbnail_success = True
+                                thumbnail_success = True
                         except Exception as e:
                             self.logger.warning(
                                 f"Failed to open/process standard image file {bookmark_image}. Falling back to symbolic icon: {e}"
@@ -511,22 +508,19 @@ container = "personal"
                             thumbnail_success = False
                 elif self.os.path.exists(thumbnail_path):
                     thumbnail_success = True
+            processed_data = {
+                "name": name,
+                "url": url,
+                "container": container,
+                "size": self.THUMBNAIL_SIZE,
+                "bookmark_image": bookmark_image,
+                "thumbnail_path": thumbnail_path,
+                "safe_filename": safe_filename,
+            }
             if thumbnail_success:
-                processed_data = {
-                    "name": name,
-                    "url": url,
-                    "container": container,
-                    "thumbnail_path": thumbnail_path,
-                    "size": self.THUMBNAIL_SIZE,
-                }
+                processed_data["thumbnail_path_actual"] = thumbnail_path
             else:
-                processed_data = {
-                    "name": name,
-                    "url": url,
-                    "container": container,
-                    "symbolic_icon": True,
-                    "size": self.THUMBNAIL_SIZE,
-                }
+                processed_data["symbolic_icon"] = True
             return processed_data, cache_update
 
         async def _load_and_update_bookmarks(self, is_initial_load: bool = False):
@@ -557,6 +551,11 @@ container = "personal"
         ):
             if not self.popover_bookmarks:
                 return False
+            popover_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 6)
+            popover_vbox.set_margin_start(6)
+            popover_vbox.set_margin_end(6)
+            popover_vbox.set_margin_top(6)
+            popover_vbox.set_margin_bottom(6)
             main_box = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
             if not processed_bookmarks:
                 error_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 10)
@@ -587,6 +586,7 @@ container = "personal"
                     )
                     row_hbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
                     row_hbox.MYTEXT = (url, container)
+                    row_hbox.BOOKMARK_DATA = data
                     row_hbox.add_css_class("bookmarks-hbox-row")
                     line = self.gtk.Label.new()
                     line.set_label(name)
@@ -601,13 +601,19 @@ container = "personal"
                         image.set_pixel_size(size[0])
                     else:
                         thumbnail_pixbuf = self.gdkpixbuf.Pixbuf.new_from_file_at_scale(
-                            data["thumbnail_path"], size[0], size[1], True
+                            data["thumbnail_path_actual"], size[0], size[1], True
                         )
                         image = self.gtk.Image.new_from_pixbuf(thumbnail_pixbuf)
                     image.props.margin_end = 0
                     image.set_halign(self.gtk.Align.CENTER)
                     row_hbox.append(image)
                     row_hbox.append(line)
+                    right_click_gesture = self.gtk.GestureClick.new()
+                    right_click_gesture.set_button(3)
+                    right_click_gesture.connect(
+                        "pressed", self._on_bookmark_right_click
+                    )
+                    row_hbox.add_controller(right_click_gesture)
                     self.add_cursor_effect(row_hbox)
                     self.flowbox.append(row_hbox)
                     line.add_css_class("bookmarks-label-from-popover")
@@ -617,12 +623,200 @@ container = "personal"
                 width = self.flowbox.get_preferred_size().natural_size.width
                 self.scrolled_window.set_min_content_width(width)
                 self.scrolled_window.set_min_content_height(height)
-            self.final_popover_content = main_box
+            popover_vbox.append(main_box)
+            add_button_box = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
+            add_button_box.set_halign(self.gtk.Align.FILL)
+            add_button_box.set_margin_top(6)
+            add_button_box.add_css_class("bookmarks-add-button-box")
+            add_button = self.create_async_button(
+                label="Add from Clipboard",
+                callback=self._on_add_from_clipboard_clicked,
+                css_class="bookmarks-add-button",
+            )
+            add_button.set_hexpand(True)
+            add_button.add_css_class("")
+            add_button_box.append(add_button)
+            popover_vbox.append(add_button_box)
+            self.final_popover_content = popover_vbox
             self.icons_loaded = True
             if not is_initial_load:
                 self.popover_bookmarks.set_child(self.final_popover_content)
                 self.popover_bookmarks.popup()
             return False
+
+        def _on_bookmark_right_click(self, gesture, n_press, x, y):
+            """
+            Handles the right-click event on a bookmark item
+            using the manual Gtk.Popover pattern.
+            """
+            widget = gesture.get_widget()
+            data = widget.BOOKMARK_DATA
+            popover_menu = self.gtk.Popover()
+            popover_menu.set_parent(widget)
+            menu_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
+            menu_box.set_margin_start(10)
+            menu_box.set_margin_end(10)
+            menu_box.set_margin_top(10)
+            menu_box.set_margin_bottom(10)
+            remove_button = self.gtk.Button.new_with_label("Remove")
+            remove_button.connect(
+                "clicked", self._on_remove_button_clicked, data, popover_menu
+            )
+            menu_box.append(remove_button)
+            popover_menu.set_child(menu_box)
+            popover_menu.popup()
+
+        def _on_remove_button_clicked(self, button, data, popover):
+            """
+            Callback for the 'Remove' button in the manual context menu.
+            """
+            popover.popdown()
+            bookmark_name = data.get("name", "Unknown")
+            self.logger.info(f"Remove action activated for: {bookmark_name}")
+            self.run_in_async_task(self._async_remove_bookmark(data))
+
+        async def _async_remove_bookmark(self, data: Dict[str, Any]):
+            """
+            Asynchronously handles bookmark removal and UI refresh.
+            """
+            bookmark_name = data.get("name", "Unknown")
+            self.logger.info(f"Starting async removal for: {bookmark_name}")
+            try:
+                remove_success = await self.asyncio.to_thread(
+                    self._sync_remove_bookmark, data
+                )
+                if remove_success:
+                    self.logger.info(f"Successfully removed: {bookmark_name}")
+                    self.notify_send("Bookmark Removed", f"Removed {bookmark_name}")
+                    self.icons_loaded = False
+                    self.final_popover_content = None
+                    if self.popover_bookmarks:
+                        self.schedule_in_gtk_thread(self.popover_bookmarks.popdown)
+                    await self._load_and_update_bookmarks()
+                else:
+                    self.logger.error(f"Failed to remove bookmark: {bookmark_name}")
+                    self.notify_send(
+                        "Bookmark Error", f"Failed to remove {bookmark_name}"
+                    )
+            except Exception as e:
+                self.logger.exception(
+                    f"Error during async removal of {bookmark_name}: {e}"
+                )
+                self.notify_send("Bookmark Error", "An unexpected error occurred.")
+
+        def _sync_remove_bookmark(self, data: Dict[str, Any]) -> bool:
+            """
+            Synchronously removes bookmark from config files and deletes
+            associated image/thumbnail files.
+            This is designed to be run in a background thread.
+            """
+            bookmark_name = data.get("name")
+            safe_filename = data.get("safe_filename")
+            bookmark_image = data.get("bookmark_image")
+            thumbnail_path = data.get("thumbnail_path")
+            if not all([bookmark_name, safe_filename, bookmark_image, thumbnail_path]):
+                self.logger.error(f"Invalid data for removal: {data}")
+                return False
+            bookmarks_file = self.os.path.join(
+                self._path_handler.get_data_path(), "bookmarks", "bookmarks.toml"
+            )
+            cache_file = self._get_cache_path()
+            try:
+                if self.os.path.exists(bookmarks_file):
+                    with open(bookmarks_file, "r") as f:
+                        all_bookmarks = self.toml.load(f)
+                    if all_bookmarks.pop(bookmark_name, None):
+                        with open(bookmarks_file, "w") as f:
+                            self.toml.dump(all_bookmarks, f)
+                        self.logger.info(
+                            f"Removed '{bookmark_name}' from {bookmarks_file}"
+                        )
+                if self.os.path.exists(cache_file):
+                    self.icon_cache = self._load_cache()
+                    if self.icon_cache.pop(safe_filename, None):
+                        self._save_cache()
+                        self.logger.info(f"Removed '{safe_filename}' from {cache_file}")
+                for f_path in [bookmark_image, thumbnail_path]:
+                    if self.os.path.exists(f_path):
+                        try:
+                            self.os.remove(f_path)
+                            self.logger.info(f"Deleted file: {f_path}")
+                        except OSError as e:
+                            self.logger.warning(f"Could not delete file {f_path}: {e}")
+                return True
+            except Exception as e:
+                self.logger.exception(f"Failed to sync-remove '{bookmark_name}': {e}")
+                return False
+
+        async def _on_add_from_clipboard_clicked(self):
+            """
+            Handles the click event for the 'Add from Clipboard' button.
+            Fetches URL from clipboard, writes to bookmarks.toml, and refreshes.
+            """
+            self.logger.info("Add from clipboard clicked.")
+            try:
+                import pyperclip
+
+                url = pyperclip.paste()
+                if "https://" not in url and "http://" not in url:
+                    url = f"https://{url}"
+                print(url)
+            except Exception as e:
+                self.logger.error(f"Failed to read from clipboard: {e}")
+                self.notify_send("Bookmark Error", "Could not read from clipboard.")
+                return
+            if not url or not (url.startswith("http://") or url.startswith("https://")):
+                self.logger.warning(f"Clipboard text is not a valid URL: {url}")
+                self.notify_send(
+                    "Bookmark Error", "Clipboard does not contain a valid URL."
+                )
+                return
+            try:
+                extracted = tldextract.extract(url)
+                title = extracted.fqdn if extracted.fqdn else "New Bookmark"
+            except Exception:
+                title = "New Bookmark"
+            write_success = await self.asyncio.to_thread(
+                self._sync_write_bookmark, title, url, "personal"
+            )
+            if write_success:
+                self.logger.info(f"Successfully added bookmark: {title} ({url})")
+                self.notify_send("Bookmark Added", f"Added {title}")
+                self.icons_loaded = False
+                self.final_popover_content = None
+                await self._load_and_update_bookmarks()
+            else:
+                self.logger.error("Failed to write new bookmark to TOML file.")
+                self.notify_send("Bookmark Error", "Failed to save new bookmark.")
+
+        def _sync_write_bookmark(self, title, url, container):
+            """
+            Synchronously reads, updates, and writes to the bookmarks.toml file.
+            This function is designed to be run in a background thread.
+            """
+            bookmarks_file = self.os.path.join(
+                self._path_handler.get_data_path(), "bookmarks", "bookmarks.toml"
+            )
+            try:
+                if self.os.path.exists(bookmarks_file):
+                    with open(bookmarks_file, "r") as f:
+                        all_bookmarks = self.toml.load(f)
+                else:
+                    all_bookmarks = {}
+                original_title = title
+                count = 1
+                while title in all_bookmarks:
+                    title = f"{original_title} ({count})"
+                    count += 1
+                all_bookmarks[title] = {"url": url, "container": container}
+                with open(bookmarks_file, "w") as f:
+                    self.toml.dump(all_bookmarks, f)
+                return True
+            except Exception as e:
+                self.logger.exception(
+                    f"Failed to write bookmark to {bookmarks_file}: {e}"
+                )
+                return False
 
         def open_url_from_bookmarks(self, x, *_):
             url, container = [i.get_child().MYTEXT for i in x.get_selected_children()][
@@ -649,6 +843,7 @@ container = "personal"
             4. **Explicit Icon Priority:** The configuration's `icon = "..."` field explicitly forces that icon URL to be downloaded if present.
             5. **Configuration-Driven Execution:** The browser to be launched (`self.browser_executable`) and the specific arguments (`self.browser_args_format`) are now user-configurable settings.
             6. **Content Caching:** The fully constructed GTK widget tree is still cached in `self.final_popover_content` for instant re-use after the first successful load, maintaining high performance.
+            7. **Right-Click to Remove:** Bookmarks can be removed via a right-click context menu. This action robustly cleans up the entry from the TOML configuration, removes the associated icon/thumbnail from disk, and clears the cache entry before refreshing the UI.
             """
             return self.code_explanation.__doc__
 

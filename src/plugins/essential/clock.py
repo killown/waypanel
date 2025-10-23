@@ -1,11 +1,16 @@
-def get_plugin_metadata(_):
+def get_plugin_metadata(panel):
     about = "Displays current date and time in the top panel."
+
+    id = "org.waypanel.plugin.clock"
+    default_container = "top-panel-center"
+    container, id = panel.config_handler.get_plugin_container(default_container, id)
+
     return {
-        "id": "org.waypanel.plugin.clock",
+        "id": id,
         "name": "Clock",
         "version": "1.0.0",
         "enabled": True,
-        "container": "top-panel-center",
+        "container": container,
         "index": 5,
         "deps": ["top_panel"],
         "description": about,

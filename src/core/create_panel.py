@@ -82,13 +82,7 @@ def get_config_path() -> str:
     """Get the path to the panel configuration file."""
     home = os.path.expanduser("~")
     config_path = os.path.join(home, ".config/waypanel")
-    panel_config = os.path.join(config_path, "config.toml")
-    if not os.path.exists(panel_config):
-        full_path = os.path.abspath(__file__)
-        directory_path = os.path.dirname(full_path)
-        parent_directory_path = os.path.dirname(os.path.dirname(directory_path))
-        panel_config = os.path.join(parent_directory_path, "config/panel.toml")
-    return panel_config
+    return os.path.join(config_path, "config.toml")
 
 
 def load_full_config() -> Dict[str, Any]:

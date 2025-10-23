@@ -177,7 +177,7 @@ class BasePlugin:
         if metadata is not None:
             if "id" in metadata:
                 self.plugin_id = metadata["id"]
-        GLib.idle_add(self.run_gc_cleanup)
+        self.run_gc_cleanup()
         self._config_handler = ConfigHandler(panel_instance, self.plugin_id)
 
     def get_plugin_metadata(self):
@@ -230,8 +230,7 @@ class BasePlugin:
         Returns:
             bool: False, to ensure this setup function runs only once.
         """
-        self._periodic_gc()
-        GLib.timeout_add_seconds(600, self._periodic_gc)
+        GLib.timeout_add_seconds(300, self._periodic_gc)
         return False  # stop glib loop
 
     def set_keyboard_on_demand(self, mode=True):

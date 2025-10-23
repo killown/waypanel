@@ -1,13 +1,10 @@
 # install https://codeberg.org/dnkl/fuzzel to enable the plugin
 def get_plugin_metadata(_):
-    import shutil
-
-    ENABLE_PLUGIN = shutil.which("fuzzel") is not None
     return {
         "id": "org.waypanel.plugin.scale_search",
         "name": "Scale Search",
         "version": "1.0.0",
-        "enabled": ENABLE_PLUGIN,
+        "enabled": False,
         "deps": ["event_manager"],
     }
 

@@ -1,20 +1,26 @@
-def get_plugin_metadata(_):
+def get_plugin_metadata(panel):
+    plugin_identifier = "org.waypanel.plugin.wayfire_plugins"
+    default_container = "top-panel-systray"
+
+    container, resolved_plugin_id = panel.config_handler.get_plugin_container(
+        default_container, plugin_identifier
+    )
+
     return {
-        "id": "org.waypanel.plugin.wayfire_plugins",
+        "id": resolved_plugin_id,
         "name": "Wayfire Plugins",
+        "description": (
+            "Graphical interface for managing Wayfire compositor plugins, "
+            "enabling real-time activation, deactivation, and quick "
+            "configuration access."
+        ),
         "version": "1.0.0",
         "enabled": True,
         "index": 6,
-        "container": "top-panel-systray",
+        "hidden": True,
+        "container": container,
         "deps": ["top_panel"],
     }
-
-
-def initialize_plugin(panel_instance):
-    wayfire_plugins = get_plugin_class()
-    plugin = wayfire_plugins(panel_instance)
-    plugin.run_in_thread(plugin._initial_load_async)
-    return plugin
 
 
 def get_plugin_class():
@@ -32,7 +38,7 @@ def get_plugin_class():
         Encapsulates all UI building, search filtering, and content management.
         """
 
-        def __init__(self, main_plugin, plugins_data):
+        def __init__(self, main_plugin, plugins_data, container):
             super().__init__()
             self.main_plugin = main_plugin
             self.plugins_data = plugins_data
@@ -40,17 +46,19 @@ def get_plugin_class():
             self.add_css_class("app-launcher-popover")
             self.plugins_widgets = {}
             self._icon_cache = {}
-            self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            if container.startswith("top") or container.startswith("bottom"):
+                self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            else:
+                self.main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+
             self.main_box.add_css_class("app-launcher-main-box")
             self.searchbar = Gtk.SearchEntry(placeholder_text="Search plugins...")
             self.searchbar.connect(
                 "search_changed", lambda _: self.flowbox.invalidate_filter()
             )
             self.main_box.append(self.searchbar)
-            scrolled = Gtk.ScrolledWindow(min_content_height=500, width_request=720)
+            scrolled = Gtk.ScrolledWindow(min_content_height=500, width_request=520)
             self.flowbox = Gtk.FlowBox(
-                valign=Gtk.Align.START,
-                halign=Gtk.Align.FILL,
                 max_children_per_line=5,
                 selection_mode=Gtk.SelectionMode.NONE,
                 activate_on_single_click=True,
@@ -366,7 +374,8 @@ def get_plugin_class():
                 self.popover.popdown()
                 return
             if not self.popover:
-                self.popover = PluginListPopover(self, self.wf_plugins)
+                container = get_plugin_metadata(self._panel_instance)["container"]
+                self.popover = PluginListPopover(self, self.wf_plugins, container)
             self.popover.set_parent(self.button)
             self.popover.popup()
             self.run_in_thread(self._refresh_popover_async)

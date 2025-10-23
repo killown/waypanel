@@ -2,12 +2,6 @@ from wayfire import WayfireSocket
 
 socket = WayfireSocket()
 outputs = socket.list_outputs()
-if outputs:
-    first_output_geometry = outputs[0]["geometry"]
-    screen_width = first_output_geometry["width"]
-else:
-    screen_width = 1920
-FIXED_DIMENSION = 32.0
 
 default_config = {
     "_section_hint": (
@@ -62,9 +56,7 @@ default_config = {
                 "reserve screen space, preventing maximized windows "
                 "from covering it and resizing the available desktop area."
             ),
-            "width": screen_width,
             "width_hint": "The width (in pixels) of this horizontal panel, matched to the primary output width.",
-            "height": FIXED_DIMENSION,
             "height_hint": "The fixed height (in pixels) of this horizontal panel.",
         },
         "left": {
@@ -88,7 +80,6 @@ default_config = {
             ),
             "height": 0.0,
             "height_hint": "The height (in pixels) of this vertical panel. Set to 0.0 to allow the dockbar to center vertically.",
-            "width": FIXED_DIMENSION,
             "width_hint": "The fixed width (in pixels) of this vertical panel.",
         },
         "right": {
@@ -112,7 +103,6 @@ default_config = {
             ),
             "height": 0.0,
             "height_hint": "The height (in pixels) of this vertical panel. Set to 0.0 to allow the dockbar to center vertically.",
-            "width": FIXED_DIMENSION,
             "width_hint": "The fixed width (in pixels) of this vertical panel.",
         },
         "top": {
@@ -131,7 +121,6 @@ default_config = {
             ),
             "height": 32.0,
             "height_hint": ("The fixed height (in pixels) of the top panel area."),
-            "width": screen_width,
             "width_hint": "The width (in pixels) of this horizontal panel, matched to the primary output width.",
         },
     },

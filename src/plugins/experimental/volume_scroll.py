@@ -159,7 +159,6 @@ def get_plugin_class():
                 delta = -10.0 if dy > 0 else 10.0
                 new_volume = current_volume + delta
                 target_volume = max(0.0, min(new_volume, float(self.max_volume)))
-                print(target_volume, new_volume, float(self.max_volume))
                 self.adjust_volume(target_volume)
             except Exception as e:
                 self.logger.error(f"Error handling scroll event: {e}")
@@ -206,7 +205,6 @@ def get_plugin_class():
                         "@DEFAULT_SINK@",
                         pactl_arg,
                     ]
-                    self.logger.info(f"Executing volume change: {' '.join(cmd)}")
                     self.subprocess.run(cmd, check=True, capture_output=True)
                     current_volume = self.get_current_volume()
                     self.glib.idle_add(self._update_ui_post_adjustment, current_volume)

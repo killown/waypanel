@@ -1,13 +1,17 @@
-def get_plugin_metadata(_):
+def get_plugin_metadata(panel):
     about = """A plugin that dynamically creates custom menus and submenus based on a TOML configuration file."""
 
+    id = "org.waypanel.plugin.custom_menu"
+    default_container = "top-panel-systray"
+    container, id = panel.config_handler.get_plugin_container(default_container, id)
+
     return {
-        "id": "org.waypanel.plugin.custom_menu",
+        "id": id,
         "name": "Custom Menus",
         "version": "1.0.0",
         "enabled": True,
         "index": 4,
-        "container": "top-panel-systray",
+        "container": container,
         "deps": [
             "top_panel",
         ],

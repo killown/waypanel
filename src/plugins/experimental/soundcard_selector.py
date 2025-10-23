@@ -1,12 +1,17 @@
-def get_plugin_metadata(_):
+def get_plugin_metadata(panel):
     about = "A plugin that provides a quick way to switch default sound device"
+    id = "org.waypanel.plugin.soundcard_selector"
+    default_container = "top-panel-systray"
+    container, id = panel.config_handler.get_plugin_container(default_container, id)
+    hidden = panel.config_handler.get_root_setting([id, "hide_in_systray"], True)
     return {
-        "id": "org.waypanel.plugin.soundcard_selector",
+        "id": id,
         "name": "Sound Card Selector",
         "version": "1.0.0",
         "deps": ["top_panel"],
-        "container": "top-panel-systray",
+        "container": container,
         "index": 2,
+        "hidden": hidden,
         "enabled": True,
         "description": about,
     }
@@ -36,7 +41,6 @@ def get_plugin_class():
             self.mic_blacklist = self.get_plugin_setting(
                 ["microphone", "blacklist"], ["Navi"]
             )
-
             self.add_hint(
                 "Increase the maximum card/mic name length allowed in the selector.",
                 ["name_lenght"],
@@ -98,7 +102,6 @@ def get_plugin_class():
             """
             Retrieves a list of sound card names, excluding blacklisted ones.
             """
-
             if isinstance(self.soundcard_blacklist, str):
                 self.soundcard_blacklist = [self.soundcard_blacklist]
             soundcard_list = []

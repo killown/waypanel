@@ -1,8 +1,10 @@
 def get_plugin_metadata(panel):
     about = "Notes plugin with quick-access, search, and inline edit/delete."
+
     id = "org.waypanel.plugin.notes"
     default_container = "top-panel-systray"
     container, id = panel.config_handler.get_plugin_container(default_container, id)
+
     return {
         "id": id,
         "name": "Notes",
