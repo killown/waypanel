@@ -92,7 +92,7 @@ def get_plugin_class():
         #
         # def on_hidden_view(self, widget, view):
         #     id = view["id"]
-        #     if id in self.ipc.list_ids():
+        #     if id in self.ipc.list_view_ids():
         #         self.ipc.unhide_view(id)
         #         # ***Warning*** this was freezing the panel
         #         # set focus will return an Exception in case the view is not toplevel

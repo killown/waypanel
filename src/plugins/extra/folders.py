@@ -146,7 +146,7 @@ def get_plugin_class():
 
         def _populate_folder_list(self):
             """
-            Populates the listbox with configured folders and all directories from the home directory.
+            Populates the listbox with configured folders, mounted folders, and all directories from the home directory.
             """
             if not self.listbox:
                 return
@@ -170,19 +170,41 @@ def get_plugin_class():
                     listbox_row = self.gtk.ListBoxRow.new()
                     listbox_row.set_child(row_hbox)
                     self.listbox.append(listbox_row)
-            visible_dirs = []
-            hidden_dirs = []
+            mounted_dirs = []
+            visible_home_dirs = []
+            hidden_home_dirs = []
             for path in self._home_path.iterdir():
                 folders_path = str(path)
                 if not path.is_dir() or folders_path in pinned_paths:
                     continue
-                if path.name.startswith("."):
-                    hidden_dirs.append(path)
+                if path.is_mount():
+                    mounted_dirs.append(path)
+                elif path.name.startswith("."):
+                    hidden_home_dirs.append(path)
                 else:
-                    visible_dirs.append(path)
-            visible_dirs.sort(key=lambda p: p.name.lower())
-            hidden_dirs.sort(key=lambda p: p.name.lower())
-            sorted_home_dirs = visible_dirs + hidden_dirs
+                    visible_home_dirs.append(path)
+            mounted_dirs.sort(key=lambda p: p.name.lower())
+            if mounted_dirs:
+                separator = self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL)
+                separator_row = self.gtk.ListBoxRow.new()
+                separator_row.set_child(separator)
+                self.listbox.append(separator_row)
+                filemanager = "nautilus"
+                icon = "drive-harddisk-symbolic"
+                for path in mounted_dirs:
+                    row_hbox = self._create_folder_row(
+                        name=f"DRIVE: {path.name}",
+                        folders_path=str(path),
+                        filemanager=filemanager,
+                        icon=icon,
+                        icon_size=self.gtk.IconSize.INHERIT,
+                    )
+                    listbox_row = self.gtk.ListBoxRow.new()
+                    listbox_row.set_child(row_hbox)
+                    self.listbox.append(listbox_row)
+            visible_home_dirs.sort(key=lambda p: p.name.lower())
+            hidden_home_dirs.sort(key=lambda p: p.name.lower())
+            sorted_home_dirs = visible_home_dirs + hidden_home_dirs
             filemanager = "nautilus"
             icon = "nautilus"
             for path in sorted_home_dirs:

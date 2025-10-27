@@ -139,6 +139,9 @@ def get_plugin_class():
                 ["org.waypanel.plugin.clipboard", "server", "monitor_interval"],
                 [0.5],
             )
+            self.blacklist = self.get_root_setting(
+                ["org.waypanel.plugin.clipboard", "server", "blacklist"], []
+            )
 
         async def _init_db(self, panel_instance, db_path):
             """
@@ -163,11 +166,22 @@ def get_plugin_class():
 
         async def add_item(self, content):
             """
-            Add an item if it's new and non-empty, maintaining max items limit.
-            Avoids adding duplicate items by checking if the content already exists in the database.
+            Add an item if it's new, non-empty, and not blacklisted.
+            Maintains max items limit and avoids duplicates.
             """
             if not content.strip() or content == self.last_clipboard_content:
                 return
+
+            if self.blacklist:
+                content_lower = content.lower()
+                for blocked_word in self.blacklist:
+                    if blocked_word.lower() in content_lower:
+                        if self.log_enabled:
+                            self.logger.info(
+                                f"Item contains blacklisted word '{blocked_word}'. Skipping."
+                            )
+                        return
+
             async with aiosqlite.connect(self.db_path) as db:
                 cursor = await db.execute(
                     "SELECT COUNT(*) FROM clipboard_items WHERE content = ?", (content,)

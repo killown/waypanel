@@ -18,121 +18,78 @@ def get_plugin_metadata(_):
 
 def get_plugin_class():
     import io
-    import mimetypes
     from pathlib import Path
-    import aiosqlite
     import pyperclip
     from PIL import Image
-    import re
     from src.plugins.core._base import BasePlugin
     from .clipboard_server import get_plugin_class
-    from src.shared.path_handler import PathHandler
     from ._clipboard_template import Helpers
-
-    class ClipboardManager:
-        def __init__(self, panel_instance):
-            plugin = get_plugin_class()
-            self.server = plugin(panel_instance)
-            self.path_handler = PathHandler(panel_instance)
-            self.db_path = self.path_handler.get_data_path(
-                "db/clipboard/clipboard_server.db"
-            )
-
-        async def initialize(self):
-            pass
-
-        async def get_history(self) -> list[tuple[int, str, str | None, int]]:
-            """Returns all items as (id, content, label, is_pinned) tuples (new feature)"""
-            return await self.server.get_items()  # pyright: ignore
-
-        async def get_item_by_id(
-            self, target_id: int
-        ) -> tuple[int, str, str | None, int] | None:
-            """Get specific item by its database ID (first tuple element)"""
-            items = await self.get_history()
-            for item_id, content, label, is_pinned in items:
-                if item_id == target_id:
-                    return (item_id, content, label, is_pinned)
-            return None
-
-        async def update_item_label(self, item_id: int, new_label: str | None):
-            """NEW: Update the custom label for a specific item ID using the server API."""
-            await self.server.update_label(item_id, new_label)
-
-        async def update_item_pin_status(self, item_id: int, is_pinned: bool):
-            """NEW: Update the pin status (0 or 1) for a specific item ID."""
-            await self.server.update_pin_status(item_id, 1 if is_pinned else 0)
-
-        async def clear_history(self):
-            await self.server.clear_all()
-
-        async def reset_ids(self):
-            """Properly rebuild the table with sequential IDs (UPDATED for 'label' and 'is_pinned' column)"""
-            async with aiosqlite.connect(self.db_path) as db:
-                await db.execute("""
-                    CREATE TABLE new_clipboard_items (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        content TEXT NOT NULL,
-                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        label TEXT DEFAULT NULL,
-                        is_pinned INTEGER DEFAULT 0 -- NEW: Field for Pinning
-                    )
-                """)
-                await db.execute("""
-                    INSERT INTO new_clipboard_items (content, timestamp, label, is_pinned)
-                    SELECT content, timestamp, label, 0 FROM clipboard_items
-                    ORDER BY timestamp DESC
-                """)
-                await db.execute("DROP TABLE clipboard_items")
-                await db.execute(
-                    "ALTER TABLE new_clipboard_items RENAME TO clipboard_items"
-                )
-                await db.commit()
-
-        async def delete_item(self, item_id: int):
-            await self.server.delete_item(item_id)
-
-        def get_item_by_id_sync(
-            self, target_id: int
-        ) -> tuple[int, str, str | None, int] | None:
-            """Blocking version for non-async contexts"""
-            import asyncio
-
-            return asyncio.run(self.get_item_by_id(target_id))
+    from ._clipboard_helpers import ClipboardHelpers, ClipboardManager
 
     class ClipboardClient(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
-            self.manager = ClipboardManager(panel_instance)
+            self.manager = ClipboardManager(panel_instance, get_plugin_class)
             self.popover_clipboard = None
             self.find_text_using_button = {}
             self.row_content = None
             self.listbox = None
-            self.log_enabled = self.get_plugin_setting(["server", "log_enabled"], False)
-            self.max_items = self.get_plugin_setting(["server", "max_items"], 100)
-            self.monitor_interval = self.get_plugin_setting(
+            self.clipboard_helper = ClipboardHelpers(self)
+            self.log_enabled = self.get_plugin_setting_add_hint(
+                ["server", "log_enabled"],
+                False,
+                "Enable or disable detailed logging for the clipboard server.",
+            )
+            self.max_items = self.get_plugin_setting_add_hint(
+                ["server", "max_items"],
+                100,
+                "The maximum number of clipboard items to store in the history.",
+            )
+            self.get_plugin_setting_add_hint(
+                ["server", "blacklist"],
+                [""],
+                "A list of words to filter. If a clipboard item contains any of these words, it will not be stored.",
+            )
+            self.monitor_interval = self.get_plugin_setting_add_hint(
                 ["server", "monitor_interval"],
                 0.5,
+                "How often (in seconds) the server checks the clipboard for new content.",
             )
-            self.popover_min_width = self.get_plugin_setting(
-                ["client", "popover_min_width"], 500
+            self.popover_min_width = self.get_plugin_setting_add_hint(
+                ["client", "popover_min_width"],
+                500,
+                "The minimum width (in pixels) of the clipboard history popover.",
             )
-            self.popover_max_height = self.get_plugin_setting(
-                ["client", "popover_max_height"], 600
+            self.popover_max_height = self.get_plugin_setting_add_hint(
+                ["client", "popover_max_height"],
+                600,
+                "The maximum height (in pixels) the clipboard history list can grow to.",
             )
-            self.thumbnail_size = self.get_plugin_setting(
-                ["client", "thumbnail_size"], 128
+            self.thumbnail_size = self.get_plugin_setting_add_hint(
+                ["client", "thumbnail_size"],
+                128,
+                "The size (in pixels) for generated image thumbnails in the history.",
             )
-            self.preview_text_length = self.get_plugin_setting(
-                ["client", "preview_text_length"], 50
+            self.preview_text_length = self.get_plugin_setting_add_hint(
+                ["client", "preview_text_length"],
+                50,
+                "The maximum number of characters to display for text previews.",
             )
-            self.image_row_height = self.get_plugin_setting(
-                ["client", "image_row_height"], 60
+            self.image_row_height = self.get_plugin_setting_add_hint(
+                ["client", "image_row_height"],
+                60,
+                "The height (in pixels) for rows in the list that contain images.",
             )
-            self.text_row_height = self.get_plugin_setting(
-                ["client", "text_row_height"], 38
+            self.text_row_height = self.get_plugin_setting_add_hint(
+                ["client", "text_row_height"],
+                38,
+                "The height (in pixels) for rows in the list that contain only text.",
             )
-            self.item_spacing = self.get_plugin_setting(["client", "item_spacing"], 5)
+            self.item_spacing = self.get_plugin_setting_add_hint(
+                ["client", "item_spacing"],
+                5,
+                "The vertical spacing (in pixels) between items in the clipboard history list.",
+            )
             helpers = Helpers(self)
             helpers.apply_hints()
             self.main_icon = self.get_plugin_setting(["main_icon"], "clipboard")
@@ -168,42 +125,6 @@ def get_plugin_class():
             button.set_halign(self.gtk.Align.FILL)
             return button
 
-        def is_image_content(self, content):
-            """
-            Detect both image files AND raw image data.
-            Args:
-                content: The clipboard content to check (can be str or bytes).
-            Returns:
-                bool: True if the content represents an image, False otherwise.
-            """
-            if isinstance(content, str) and self.data_helper.validate_string(
-                content, "content from is_image_content"
-            ):
-                if len(content) < 256 and Path(content).exists():
-                    mime = mimetypes.guess_type(content)[0]
-                    return mime and mime.startswith("image/")
-            elif isinstance(content, bytes) and self.data_helper.validate_bytes(
-                content, name="bytes from is_image_content"
-            ):
-                magic_numbers = {
-                    b"\x89PNG": "PNG",
-                    b"\xff\xd8": "JPEG",
-                    b"GIF87a": "GIF",
-                    b"GIF89a": "GIF",
-                    b"BM": "BMP",
-                    b"RIFF....WEBP": "WEBP",
-                }
-                return any(content.startswith(magic) for magic in magic_numbers.keys())
-            elif isinstance(  # pyright: ignorecontent, str) and self.data_helper.validate_string(
-                content, "content from is_image_content"
-            ):
-                if (
-                    content.startswith(("data:image/png", "data:image/jpeg"))
-                    or content == "<image>"
-                ):
-                    return True
-            return False
-
         def on_paste_clicked(self, manager: ClipboardManager, item_id: int):
             """Standalone version requiring manager instance"""
             if item := self.manager.get_item_by_id_sync(item_id):
@@ -231,7 +152,7 @@ def get_plugin_class():
 
         def copy_to_clipboard(self, content):
             """Universal copy function that handles both text and images"""
-            if self.is_image_content(content):
+            if self.clipboard_helper.is_image_content(content):
                 if Path(content).exists():
                     try:
                         self.subprocess.run(
@@ -257,77 +178,6 @@ def get_plugin_class():
                     pyperclip.copy(content)
                 except Exception as e:
                     self.logger.error(f"Failed to copy text: {e}")
-
-        def clear_and_calculate_height(self):
-            """
-            Clear the existing list and calculate the required height for the scrolled window.
-            FIXED (GTK4/PyGObject Memory Leak): Implements the GTK4 iteration pattern and
-            adds explicit cleanup for self.gtk.Popovers to resolve the "still has children left"
-            warning and prevent the memory leak.
-            Returns:
-                int: The calculated total height.
-            """
-            try:
-                if self.listbox is not None:
-                    row = self.listbox.get_first_child()
-                    while row:
-                        next_row = row.get_next_sibling()
-                        row_hbox = row.get_child()  # pyright: ignore
-                        if row_hbox:
-                            child = row_hbox.get_first_child()
-                            while child:
-                                if (
-                                    hasattr(child, "popover")
-                                    and child.popover is not None
-                                ):
-                                    try:
-                                        child.popover.unparent()
-                                        del child.popover
-                                    except Exception:
-                                        pass
-                                if child in self.find_text_using_button:
-                                    del self.find_text_using_button[child]
-                                child = child.get_next_sibling()
-                        if hasattr(row, "popover") and row.popover is not None:  # pyright: ignore
-                            try:
-                                row.popover.unparent()  # pyright: ignore
-                                del row.popover  # pyright: ignore
-                            except Exception:
-                                pass
-                        self.listbox.remove(row)
-                        row = next_row
-                self.asyncio.run(self.manager.initialize())
-                items = self.asyncio.run(self.manager.get_history())
-                self.asyncio.run(self.manager.server.stop())
-                IMAGE_EXTENSIONS = (
-                    ".png",
-                    ".jpg",
-                    ".jpeg",
-                    ".gif",
-                    ".bmp",
-                    ".webp",
-                    ".svg",
-                )
-                total_height = 0
-                for item_id, content, label, is_pinned in items:
-                    if any(
-                        content.lower().endswith(ext)
-                        for ext in IMAGE_EXTENSIONS
-                        if isinstance(content, str)
-                    ) or self.is_image_content(content):
-                        total_height += self.image_row_height
-                    else:
-                        css_height_space = 30
-                        total_height += self.text_row_height + css_height_space
-                    total_height += self.item_spacing
-                total_height = max(total_height, 100)
-                total_height = min(total_height, self.popover_max_height)
-                return total_height
-            except Exception as e:
-                self.logger.error(
-                    message=f"Error clearing list or calculating height in clear_and_calculate_height. {e}",
-                )
-                return 100
 
         def populate_listbox(self):
             try:
@@ -376,6 +226,7 @@ def get_plugin_class():
                         display_text = display_text[: self.preview_text_length] + "..."
                     elif len(display_text) > 80:
                         display_text = display_text[:80] + "..."
+                    final_display_text = display_text
                     row_hbox.MYTEXT = f"{item_id} {item_content.strip()} {item_label.strip() if item_label else ''}"  # pyright: ignore
                     row_hbox.ITEM_ID = item_id  # pyright: ignore
                     row_hbox.IS_PINNED = is_pinned  # pyright: ignore
@@ -393,7 +244,7 @@ def get_plugin_class():
                         pin_icon.set_opacity(0.7)
                         self.update_widget_safely(row_hbox.append, pin_icon)
                     self.update_widget_safely(self.listbox.append, list_box_row)  # pyright: ignore
-                    is_image = self.is_image_content(item_content)
+                    is_image = self.clipboard_helper.is_image_content(item_content)
                     if is_image:
                         thumb = self.create_thumbnail(
                             item_content, size=self.thumbnail_size
@@ -417,24 +268,101 @@ def get_plugin_class():
                                     if Path(item_content).exists()
                                     else "Image Content"
                                 )
+                                final_display_text = display_text
                     line = self.gtk.Label.new()
-                    line.set_tooltip_markup(item_content)
-                    escaped_text = self.glib.markup_escape_text(display_text)
-                    escaped_text = self.format_color_text(display_text)
+                    line.ITEM_ID = item_id  # pyright: ignore[attr-defined]
+                    line.REAL_CONTENT = item_content  # pyright: ignore[attr-defined]
+                    line.IS_PINNED = is_pinned  # pyright: ignore[attr-defined]
+                    line.ITEM_LABEL = item_label  # pyright: ignore[attr-defined]
+                    line.IS_HIDDEN = True  # pyright: ignore[attr-defined]
+                    is_password = (
+                        self.clipboard_helper.is_likely_password(item_content)
+                        and not is_image
+                    )
                     markup_format = '<span font="DejaVu Sans Mono">{id} {text}</span>'
                     if item_label or is_pinned:
                         markup_format = '<span background="#404040" foreground="#FFFFFF" font="DejaVu Sans Mono">{id} {text}</span>'
-                    line.set_markup(markup_format.format(id=item_id, text=escaped_text))
+                    line.MARKUP_FORMAT = markup_format  # pyright: ignore[attr-defined]
+                    if is_password:
+                        hidden_text = "••••••••••"
+                        escaped_text = self.glib.markup_escape_text(hidden_text)
+                        line.set_markup(
+                            markup_format.format(id=item_id, text=escaped_text)
+                        )
+                        line.set_tooltip_markup("This item appears to be a password.")
+                        reveal_button = self.gtk.Button()
+                        reveal_button.add_css_class("clipboard-reveal-button")
+                        reveal_button.set_icon_name(
+                            self.gtk_helper.icon_exist("view-reveal-symbolic")
+                        )
+                        reveal_button.set_tooltip_text("Show/Hide Content")
+                        reveal_button.connect(
+                            "clicked", self.on_reveal_password_clicked, line
+                        )
+                        self.update_widget_safely(row_hbox.append, line)
+                        self.update_widget_safely(row_hbox.append, reveal_button)
+                    else:
+                        escaped_text = self.glib.markup_escape_text(final_display_text)
+                        escaped_text = self.clipboard_helper.format_color_text(
+                            escaped_text
+                        )
+                        line.set_markup(
+                            markup_format.format(id=item_id, text=escaped_text)
+                        )
+                        line.set_tooltip_markup(item_content)
+                        self.update_widget_safely(row_hbox.append, line)
                     line.props.margin_end = 5
                     line.props.hexpand = True
                     line.set_halign(self.gtk.Align.START)
-                    self.update_widget_safely(row_hbox.append, line)
                     self.find_text_using_button[delete_button] = line
                     self.find_text_using_button[label_button] = line
             except Exception as e:
                 self.logger.error(
                     message=f"Error populating ListBox in populate_listbox. {e}",
                 )
+
+        def on_reveal_password_clicked(self, button, line_label):
+            """
+            Toggles the visibility of password content in the clipboard list.
+            Args:
+                button (self.gtk.Button): The reveal button that was clicked.
+                line_label (self.gtk.Label): The label widget displaying the content.
+            """
+            try:
+                is_hidden = line_label.IS_HIDDEN
+                markup_format = line_label.MARKUP_FORMAT
+                item_id = line_label.ITEM_ID
+                if is_hidden:
+                    real_content = line_label.REAL_CONTENT
+                    item_label = line_label.ITEM_LABEL
+                    display_text = item_label if item_label else real_content
+                    if len(display_text) > self.preview_text_length and not item_label:
+                        display_text = display_text[: self.preview_text_length] + "..."
+                    elif len(display_text) > 80:
+                        display_text = display_text[:80] + "..."
+                    escaped_text = self.glib.markup_escape_text(display_text)
+                    escaped_text = self.clipboard_helper.format_color_text(escaped_text)
+                    line_label.set_markup(
+                        markup_format.format(id=item_id, text=escaped_text)
+                    )
+                    line_label.set_tooltip_markup(real_content)
+                    button.set_icon_name(
+                        self.gtk_helper.icon_exist("view-conceal-symbolic")
+                    )
+                    line_label.IS_HIDDEN = False
+                else:
+                    hidden_text = "••••••••••"
+                    escaped_text = self.glib.markup_escape_text(hidden_text)
+                    line_label.set_markup(
+                        markup_format.format(id=item_id, text=escaped_text)
+                    )
+                    line_label.set_tooltip_markup("This item appears to be a password.")
+                    button.set_icon_name(
+                        self.gtk_helper.icon_exist("view-reveal-symbolic")
+                    )
+                    line_label.IS_HIDDEN = True
+            except Exception as e:
+                self.logger.error(f"Failed to toggle password visibility: {e}")
 
         def on_right_click_row(self, gesture, n_press: int, x: float, y: float):
             """
@@ -546,7 +474,6 @@ def get_plugin_class():
             save_button.set_valign(self.gtk.Align.CENTER)
             entry = self.gtk.Entry()
             entry.add_css_class("clipboard-entry-editor")
-
             entry.set_text(current_label if current_label else "")
             entry.set_placeholder_text(f"Label for ID {item_id} (empty to clear)")
             entry.props.hexpand = True
@@ -590,7 +517,7 @@ def get_plugin_class():
             Update the clipboard list by clearing, calculating height, and populating the ListBox.
             """
             try:
-                self.clear_and_calculate_height()
+                self.clipboard_helper.clear_and_calculate_height()
                 self.populate_listbox()
             except Exception as e:
                 self.logger.error(
@@ -670,71 +597,6 @@ def get_plugin_class():
             self.on_paste_clicked(self.manager, item_id)
             if self.popover_clipboard:
                 self.popover_clipboard.popdown()
-
-        def is_color_code(self, text):
-            """
-            Returns True ONLY if the input is EXACTLY:
-            - A 3/6-digit hex color (with or without
-            - An RGB color, e.g., "rgb(255,0,0)"
-            - An RGBA color, e.g., "rgba(255,0,0,0.5)"
-            Returns False for partial matches (e.g., "x#FF0000", "123abc").
-            """
-            if self.data_helper.validate_string(
-                text, "text from is_color_code"
-            ) and re.fullmatch(r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", text):
-                return True
-            if self.data_helper.validate_string(text, "text from is_color_code"):
-                if re.fullmatch(
-                    r"^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$", text
-                ):
-                    r, g, b = map(int, re.findall(r"\d+", text))
-                    return all(0 <= c <= 255 for c in (r, g, b))
-                if re.fullmatch(
-                    r"^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*([01]?\.\d+)\s*\)$",
-                    text,
-                ):
-                    r, g, b, a = map(float, re.findall(r"[\d.]+", text))
-                    return all(0 <= c <= 255 for c in (r, g, b)) and (0 <= a <= 1)
-            return False
-
-        def get_contrast_color(self, color):
-            """
-            Calculate contrasting color (black or white) for:
-            - Hex strings (e.g., "#FF0000", "F00", "FF0000")
-            - RGB tuples (e.g., (255, 0, 0))
-            """
-            if self.data_helper.validate_string(color, "color from get_contrast_color"):
-                hex_color = color.lstrip("#")
-                if len(hex_color) == 3:
-                    hex_color = "".join([c * 2 for c in hex_color])
-                rgb = tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
-            elif (
-                self.data_helper.validate_list(color, element_type=(tuple, list))  # pyright: ignore
-                and len(color) == 3
-            ):
-                rgb = tuple(color)
-            else:
-                raise ValueError(
-                    "Input must be a hex string (e.g., '#FF0000') or RGB tuple (e.g., (255, 0, 0))"
-                )
-            luminance = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255
-            return "#000000" if luminance > 0.5 else "#ffffff"
-
-        def format_color_text(self, text):
-            """Wrap color codes in markup with proper background/foreground colors."""
-            text = self.glib.markup_escape_text(text)
-            color_pattern = re.compile(
-                r"(?<!\w)(#?[0-9a-fA-F]{3}|#?[0-9a-fA-F]{6})(?!\w)"
-            )
-
-            def replace_color(match):
-                color = match.group(1)
-                if not color.startswith("#"):
-                    color = f"#{color}"
-                fg_color = self.get_contrast_color(color)
-                return f'<span background="{color}" foreground="{fg_color}">{match.group(1)}</span>'
-
-            return color_pattern.sub(replace_color, text)
 
         def clear_clipboard(self, *_):
             self.asyncio.run(self.manager.clear_history())

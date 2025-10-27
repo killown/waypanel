@@ -335,18 +335,33 @@ def get_plugin_class():
                     self.add_button_to_taskbar(view)
             self.logger.info("Taskbar reconciliation completed.")
 
-        def remove_button(self, view_id):
+        def remove_button(self, view_id: str) -> None:
+            """
+            Removes a taskbar button for a given view ID and returns the widget
+            to the button pool.
+
+            Parameters
+            ----------
+            view_id : str
+                The unique identifier of the Wayfire view whose button should be removed.
+            """
             if view_id not in self.in_use_buttons:
                 return
+
+            if view_id in self.ipc.list_view_ids():
+                return
+
             button = self.in_use_buttons.pop(view_id)
             button.set_visible(False)
             self.safe_remove_css_class(button, "focused")
             self.remove_gesture(button)
+
             for item in self.button_pool:
                 if item["button"] == button:
                     item["view_id"] = "available"
                     self.logger.debug(f"Button for view ID {view_id} returned to pool.")
                     break
+
             self.taskbar.remove(button)
             self.taskbar.append(button)
             self.taskbar.queue_draw()

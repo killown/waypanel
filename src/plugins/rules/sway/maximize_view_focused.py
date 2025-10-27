@@ -4,7 +4,7 @@ def get_plugin_metadata(_):
         "enabled": False,
         "name": "Maximize Focused View",
         "version": "1.0.0",
-        "deps": "event_manager",
+        "deps": ["event_manager"],
     }
 
 
@@ -17,7 +17,7 @@ def get_plugin_class():
             super().__init__(panel_instance)
             self.logger.info("AutoMaximizePlugin initialized.")
 
-        @subscribe_to_event("view-mapped")
+        @subscribe_to_event("view-focused")
         def on_view_focused(self, event_message):
             """
             Handle 'view-focused' event by maximizing the view.
@@ -28,11 +28,8 @@ def get_plugin_class():
             try:
                 if "view" in event_message:
                     view = event_message["view"]
-                    print(view)
                     view_id = view.get("id")
-
                     if not view_id:
-                        self.logger.warning("Received evenmd without a valid view ID.")
                         return
                     for _ in range(3):
                         self.ipc.utils.maximize_view(view_id)

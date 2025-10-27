@@ -236,7 +236,7 @@ def get_plugin_class():
 
         def on_hidden_view(self, widget, view) -> None:
             id = view.get("id")
-            if id in self.ipc.list_ids():
+            if id in self.ipc.list_view_ids():
                 self.ipc.unhide_view(id)
 
         def get_socket_path(self) -> str:

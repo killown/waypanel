@@ -186,17 +186,17 @@ def get_plugin_class():
 
         def _process_weather_data(
             self, data: Dict[str, Any]
-        ) -> Optional[Dict[str, str]]:
+        ) -> Optional[Dict[str, Any]]:
             """
             Processes the raw forecast JSON into a structured dictionary.
             Args:
                 data (dict): The JSON data from the weather API.
             Returns:
-                dict | None: A dictionary of formatted strings for UI display
+                dict | None: A dictionary of formatted strings and bools for UI display
                              (including "current_temp"), or None on failure.
             """
             try:
-                results = {}
+                results: Dict[str, Any] = {}
                 timeseries = data["properties"]["timeseries"]
                 if not timeseries:
                     self.logger.warning("Weather data timeseries is empty.")
@@ -257,6 +257,7 @@ def get_plugin_class():
                 rain_next_6h = [
                     r for r in rain_hours if r[0] < timeseries[6]["time"] and r[1] > 0
                 ]
+                results["has_6h_rain"] = bool(rain_next_6h)
                 rain_summary_lines = ["🌦️ Rain (next 6h):"]
                 if rain_next_6h:
                     for t, r in rain_next_6h:
@@ -267,6 +268,7 @@ def get_plugin_class():
                 else:
                     rain_summary_lines.append("  ☀️ No rain expected.")
                 results["rain_summary"] = "\n".join(rain_summary_lines)
+                results["has_24h_rain"] = total_rain > 0
                 results["rain_total"] = f"Total rain (24h): {total_rain:.1f} mm"
                 return results
             except (KeyError, IndexError, TypeError, ZeroDivisionError) as e:
@@ -276,7 +278,7 @@ def get_plugin_class():
         async def fetch_and_update_weather_async(self):
             """Asynchronously fetch weather data and update the UI grid."""
             data = await self.fetch_weather_data_async()
-            processed_data: Optional[Dict[str, str]] = None
+            processed_data: Optional[Dict[str, Any]] = None
             if data:
                 processed_data = self._process_weather_data(data)
 
@@ -299,8 +301,16 @@ def get_plugin_class():
                     self.temp_value_label.set_label(processed_data["temp"])
                     self.wind_value_label.set_label(processed_data["wind"])
                     self.humidity_value_label.set_label(processed_data["humidity"])
-                    self.rain_summary_label.set_label(processed_data["rain_summary"])
-                    self.rain_total_label.set_label(processed_data["rain_total"])
+                    has_6h_rain = processed_data.get("has_6h_rain", False)
+                    self.rain_summary_label.set_visible(has_6h_rain)
+                    if has_6h_rain:
+                        self.rain_summary_label.set_label(
+                            processed_data["rain_summary"]
+                        )
+                    has_24h_rain = processed_data.get("has_24h_rain", False)
+                    self.rain_total_label.set_visible(has_24h_rain)
+                    if has_24h_rain:
+                        self.rain_total_label.set_label(processed_data["rain_total"])
                 else:
                     status_text = "Failed to fetch" if not data else "Parse error"
                     self.weather_title_label.set_label(f"🌍 Weather: {status_text}")
@@ -308,8 +318,8 @@ def get_plugin_class():
                     self.temp_value_label.set_label("N/A")
                     self.wind_value_label.set_label("N/A")
                     self.humidity_value_label.set_label("N/A")
-                    self.rain_summary_label.set_label("🌦️ Rain (next 6h):\n  N/A")
-                    self.rain_total_label.set_label("Total rain (24h): N/A")
+                    self.rain_summary_label.set_visible(False)
+                    self.rain_total_label.set_visible(False)
 
             self.schedule_in_gtk_thread(update_ui)
 

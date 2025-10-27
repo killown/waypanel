@@ -25,7 +25,6 @@ def get_plugin_class():
                                 providing access to shared resources and widgets.
             """
             super().__init__(panel_instance)
-            # FIX: Flag to ensure deferred widgets are attached only once
             self._deferred_widgets_attached = False
             self._setup_panel_boxes()
             self.add_css_class()
@@ -39,7 +38,6 @@ def get_plugin_class():
             This centralizes the self.gtk.Grid.attach_next_to call, allowing callers to easily
             specify any self.gtk.PositionType (LEFT, RIGHT, TOP, BOTTOM).
             """
-            # FIX: Only attach if the widget does not have a parent yet.
             if widget_to_attach.get_parent() is None:
                 grid.attach_next_to(
                     widget_to_attach,
@@ -72,12 +70,10 @@ def get_plugin_class():
             self.spacer.add_css_class("right-box-spacer")
             self.update_widget_safely(self.obj.top_panel_box_right.append, self.spacer)
             self.obj.top_panel_grid_right = self.gtk.Grid()
-
             if self.obj.top_panel_box_right.get_parent() is None:
                 self.obj.top_panel_grid_right.attach(
                     self.obj.top_panel_box_right, 1, 0, 1, 2
                 )
-
             self._attach_widget_to_grid_next_to(
                 self.obj.top_panel_grid_right,
                 self.obj.top_panel_box_systray,

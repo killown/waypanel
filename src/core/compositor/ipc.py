@@ -293,7 +293,7 @@ class IPC:
             return self.sock.set_workspace(x, y, view_id)  # pyright: ignore
 
     @handle_ipc_error
-    def list_ids(self) -> List[int]:
+    def list_view_ids(self) -> List[int]:
         """Get a list of all view IDs."""
         views = self.sock.list_views()  # pyright: ignore
         if views:
