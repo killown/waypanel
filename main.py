@@ -124,7 +124,13 @@ def start_config_watcher():
     if not wayfire_ini.exists():
         logger.warning(f"wayfire.toml not found at {wayfire_ini}")
         return None
-    watcher = WayfireConfigWatcher(wayfire_ini, restart_application)
+    # watcher = WayfireConfigWatcher(wayfire_ini, restart_application)
+    watcher = WayfireConfigWatcher(
+        wayfire_ini,
+        lambda: logger.debug(
+            "Wayfire config change detected, ignoring automatic restart."
+        ),
+    )
     watcher.start()
     return watcher
 
