@@ -304,7 +304,6 @@ def manage_virtual_environment(config: AppConfig, req_file: Path):
                 logging.critical(
                     "Ensure 'git' and 'uv' are installed and in your PATH."
                 )
-            sys.exit(1)
 
 
 def ensure_initial_setup(config: AppConfig, installed_path: Optional[Path]):
