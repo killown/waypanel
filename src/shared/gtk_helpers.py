@@ -3,7 +3,6 @@ import configparser
 import rapidfuzz
 import subprocess
 import os
-import inspect
 from rapidfuzz.fuzz import token_set_ratio
 from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
@@ -313,6 +312,7 @@ class GtkHelpers:
         """Normalize icon/app names for comparison."""
         if isinstance(name, list):
             self.logger.error(f"Icon name is not str, type list found. {name}")
+            return name[0].lower().strip()
         return name.lower().strip()
 
     def extract_icon_name(self, icon) -> str:
