@@ -76,9 +76,12 @@ def get_plugin_class():
             self.timeout = self.config_handler.config_data.get(
                 "org.waypanel.plugin.notify_client"
             ).get("server_timeout", 10)
-            self.show_messages = self.config_handler.config_data.get(
+            self.notify_client_setting = self.config_handler.config_data.get(
                 "org.waypanel.plugin.notify_client"
-            ).get("server_show_messages", True)
+            )
+            self.show_messages = self.notify_client_setting.get(
+                "server_show_messages", True
+            )
 
             # Initialize the database
             self.db_path = self.db._initialize_db()
