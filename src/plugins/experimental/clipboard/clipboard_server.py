@@ -175,7 +175,7 @@ def get_plugin_class():
             if self.blacklist:
                 content_lower = content.lower()
                 for blocked_word in self.blacklist:
-                    if blocked_word.lower() in content_lower:
+                    if blocked_word.lower() in content_lower and len(blocked_word) > 1:
                         if self.log_enabled:
                             self.logger.info(
                                 f"Item contains blacklisted word '{blocked_word}'. Skipping."

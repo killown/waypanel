@@ -112,11 +112,9 @@ class GtkHelpers:
             fallback_icons (list): A list of backup icon names to try.
         """
         fallback_icons = self.config_handler.get_root_setting(
-            ["plugins", plugin_name, "fallback_main_icons"]
+            [plugin_name, "fallback_main_icons"], None
         )
-        icon_name = self.icon_exist(icon_name)
-        if not icon_name:
-            icon_name = self.icon_exist(icon_name, fallback_icons)
+        icon_name = self.icon_exist(icon_name, fallback_icons)
         if icon_name:
             widget.set_icon_name(icon_name)  # pyright: ignore
         else:

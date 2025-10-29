@@ -28,6 +28,11 @@ def get_plugin_class():
             self.menu_button = None
             self.widgets = []
             self.main_widget = (self.widgets, "append")
+            self.get_plugin_setting(["main_icon"], "dialog-scripts")
+            self.get_plugin_setting(
+                ["fallback_main_icons"],
+                ["open-menu-symbolic"],
+            )
 
         def on_start(self):
             self.setup_menus()
