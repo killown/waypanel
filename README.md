@@ -24,9 +24,8 @@ Ensure the following plugins are enabled in your ~/.config/wayfire.ini:
 
 plugins = ipc ipc-rules stipc
 
-##### Option 1: aur (archlinux)
-
-yay -S waypanel-git
+##### install pywayfire
+git clone https://github.com/WayfireWM/pywayfire; cd pywayfire; sh install
 
 ##### Archlinux deps:
 sudo pacman -S gtk4-layer-shell gobject-introspection vala playerctl python-gobject wayland-protocols ninja mesa playerctl libadwaita bluez-tools uv
