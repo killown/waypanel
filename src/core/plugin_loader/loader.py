@@ -586,11 +586,13 @@ class PluginLoader:
                 )
                 return False
 
-            if target_box != self.panel_instance.top_panel_box_systray:
-                run_once()
-            else:
-                timeout = self.count_plugins_with_containers() * 10
-                GLib.timeout_add(timeout, run_once)
+            if hasattr(self.panel_instance, "top_panel_box_systray"):
+                if target_box != self.panel_instance.top_panel_box_systray:
+                    run_once()
+                else:
+                    timeout = self.count_plugins_with_containers() * 10
+                    GLib.timeout_add(timeout, run_once)
+
         except Exception as e:
             self.logger.error(f"Failed to initialize plugin '{plugin_id}': {e} ❌")
             print(traceback.format_exc())
