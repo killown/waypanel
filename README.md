@@ -36,9 +36,6 @@ plugins = ipc ipc-rules stipc
     sudo dnf install gtk4 gtk4-layer-shell-devel.x86_64 gobject-introspection vala playerctl python3-gobject ninja libadwaita bluez-tools python3-uv.noarch python-devel
 
 ## Installing `waypanel` from github Source
-
-### Clone the repository and run waypanel.sh
-
     git clone https://github.com/killown/waypanel.git
     cd waypanel
     python run.py # This will set up the venv automatically and run the panel
