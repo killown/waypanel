@@ -5,7 +5,7 @@ def get_plugin_metadata(panel_instance):
 
     if container is None:
         container = "top-panel-center"
-        plugin_id = "org.waypanel.plugin.status_notifier"
+        plugin_id = ["org.waypanel.plugin.status_notifier"]
         panel_instance.config_handler.set_root_setting(plugin_id, container)
 
     about = (
