@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
 """
 A robust application launcher for Waypanel.
-
 This script prepares the runtime environment by setting up necessary
-directories, managing a virtual environment with custom dependencies using 'uv',
+directories, managing a virtual environment with custom dependencies using 'pip',
 and then executing the main application.
 """
 
@@ -95,7 +93,6 @@ def setup_logging():
 def _enforce_backup_retention(backup_dir: Path, max_copies: int):
     """
     Removes the oldest backup folders if the maximum limit is exceeded.
-
     Args:
         backup_dir: The directory containing backups.
         max_copies: The maximum number of backups to retain.
@@ -121,9 +118,7 @@ def _enforce_backup_retention(backup_dir: Path, max_copies: int):
 def run_backup(config: AppConfig, max_copies: int = 10):
     """
     Performs a comprehensive backup of data and config directories.
-
     This function is designed to be run in a separate thread.
-
     Args:
         config: The application configuration object.
         max_copies: The maximum number of backups to retain.
@@ -205,14 +200,12 @@ def _find_package_path(app_name: str, xdg_data_home: Path) -> Optional[Path]:
 
 def _install_pywayfire_from_source(config: AppConfig) -> None:
     """
-    Uninstalls wayfire and installs pywayfire from its GitHub repository using uv.
-
+    Uninstalls wayfire and installs pywayfire from its GitHub repository using pip.
     Args:
         config: The application configuration object.
-
     Raises:
         subprocess.CalledProcessError: If any command fails.
-        FileNotFoundError: If 'git' or 'uv' command is not found.
+        FileNotFoundError: If 'git' command is not found.
     """
     import subprocess
     import tempfile
@@ -221,12 +214,12 @@ def _install_pywayfire_from_source(config: AppConfig) -> None:
     logging.info("Uninstalling any existing 'wayfire' package...")
     subprocess.run(
         [
-            "uv",
+            str(config.venv_python),
+            "-m",
             "pip",
             "uninstall",
             "-y",
             "wayfire",
-            f"--python={config.venv_python}",
         ],
         check=False,
         capture_output=True,
@@ -246,9 +239,9 @@ def _install_pywayfire_from_source(config: AppConfig) -> None:
             ],
             check=True,
         )
-        logging.info("Installing pywayfire from source using uv...")
+        logging.info("Installing pywayfire from source using pip...")
         subprocess.run(
-            ["uv", "pip", "install", ".", f"--python={config.venv_python}"],
+            [str(config.venv_python), "-m", "pip", "install", "."],
             cwd=clone_dir,
             check=True,
         )
@@ -257,8 +250,7 @@ def _install_pywayfire_from_source(config: AppConfig) -> None:
 
 def manage_virtual_environment(config: AppConfig, req_file: Path):
     """
-    Ensures the venv exists and all dependencies are installed using uv.
-
+    Ensures the venv exists and all dependencies are installed using pip.
     Args:
         config: The application configuration object.
         req_file: Path to the requirements.txt file.
@@ -283,16 +275,16 @@ def manage_virtual_environment(config: AppConfig, req_file: Path):
         logging.info("Installing dependencies...")
         try:
             _install_pywayfire_from_source(config)
-            logging.info("Installing dependencies from %s using uv...", req_file)
+            logging.info("Installing dependencies from %s using pip...", req_file)
             subprocess.run(
                 [
-                    "uv",
+                    str(config.venv_python),
+                    "-m",
                     "pip",
                     "install",
                     "--no-cache-dir",
                     "-r",
                     str(req_file),
-                    f"--python={config.venv_python}",
                 ],
                 check=True,
             )
@@ -301,15 +293,12 @@ def manage_virtual_environment(config: AppConfig, req_file: Path):
         except (subprocess.CalledProcessError, FileNotFoundError) as e:
             logging.critical("Failed to install dependencies: %s", e)
             if isinstance(e, FileNotFoundError):
-                logging.critical(
-                    "Ensure 'git' and 'uv' are installed and in your PATH."
-                )
+                logging.critical("Ensure 'git' is installed and in your PATH.")
 
 
 def ensure_initial_setup(config: AppConfig, installed_path: Optional[Path]):
     """
     Ensures config files and resources exist before launch.
-
     Args:
         config: The application configuration object.
         installed_path: The discovered path of the installed package, if any.
@@ -363,7 +352,6 @@ def exist_process():
 def main():
     """
     Main execution flow for the Waypanel launcher.
-
     Handles initial setup, environment management, and launches the application
     with a retry mechanism for transient startup failures.
     """
@@ -375,9 +363,7 @@ def main():
     setup_logging()
     config = AppConfig(app_name=APP_NAME)
     script_dir = Path(__file__).parent.resolve()
-
     threading.Thread(target=run_backup, args=(config,), daemon=True).start()
-
     installed_path: Optional[Path] = _find_package_path(
         config.app_name, config.xdg_data_home
     )
@@ -387,12 +373,9 @@ def main():
     else:
         main_py_dir = script_dir
         logging.info("Using development path: %s", main_py_dir)
-
     req_file: Path = main_py_dir / "requirements.txt"
     main_py_file: Path = main_py_dir / "main.py"
     os.environ["PYTHONPATH"] = str(main_py_dir)
-
-    # Environment setup for libgtk4-layer-shell.
     gtk_lib: Optional[Path] = _find_system_library(
         lib_name="libgtk4-layer-shell.so",
         search_paths=[
@@ -407,30 +390,23 @@ def main():
     if not gtk_lib:
         logging.critical("libgtk4-layer-shell.so not found. Cannot start.")
         sys.exit(1)
-
     os.environ["LD_PRELOAD"] = str(gtk_lib)
     logging.info("Using GTK4 Layer Shell: %s", gtk_lib)
-
     ensure_initial_setup(config, installed_path)
     manage_virtual_environment(config, req_file)
-
     logging.info("Compiling Python source files to bytecode (.pyc)...")
     with contextlib.suppress(Exception):
         compileall.compile_dir(str(main_py_dir), quiet=1, force=False)
         logging.info("Compilation complete (skipped if up-to-date).")
-
     SUCCESS_EXIT_CODE: int = 0
-
     cmd: List[str] = [str(config.venv_python), "-O", str(main_py_file)]
-
     while True:
         exist_process()
         try:
             result: subprocess.CompletedProcess = subprocess.run(
                 cmd,
-                check=False,  # Important: Do not raise exception on non-zero exit
+                check=False,
             )
-
             if result.returncode == SUCCESS_EXIT_CODE:
                 logging.info(
                     "Application exited successfully (code 0)."
@@ -442,8 +418,7 @@ def main():
             ) in {
                 2,
                 15,
-            }  # 2=SIGINT, 15=SIGTERM
-
+            }
             if is_user_kill_signal:
                 logging.info(
                     "Application terminated by user signal (exit code %d)."
@@ -451,7 +426,6 @@ def main():
                     result.returncode,
                 )
                 sys.exit(result.returncode)
-
         except FileNotFoundError:
             logging.critical(
                 "Could not find the main application script at %s or venv Python."
