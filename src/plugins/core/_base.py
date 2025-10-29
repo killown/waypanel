@@ -352,7 +352,7 @@ class BasePlugin:
         return self._config_handler.get_plugin_setting
 
     @property
-    def get_root_setting(self) -> Callable[[List[str], Any]]:
+    def get_root_setting(self):
         """
         Provides access to the ConfigHandler's method for retrieving a root-level (global) value.
         The returned callable has the signature:
