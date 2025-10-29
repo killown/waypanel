@@ -573,25 +573,13 @@ class PluginLoader:
             widget_to_append = plugin_instance.set_widget()[0]
             widget_action = plugin_instance.set_widget()[1]
 
-            def run_once():
-                """
-                dynamic timeout based on the amount of plugins which contains container
-                """
-                self.handle_set_widget(
-                    widget_action,
-                    widget_to_append,
-                    target_box,
-                    plugin_id,
-                    hide_in_systray,
-                )
-                return False
-
-            if hasattr(self.panel_instance, "top_panel_box_systray"):
-                if target_box != self.panel_instance.top_panel_box_systray:
-                    run_once()
-                else:
-                    timeout = self.count_plugins_with_containers() * 10
-                    GLib.timeout_add(timeout, run_once)
+            self.handle_set_widget(
+                widget_action,
+                widget_to_append,
+                target_box,
+                plugin_id,
+                hide_in_systray,
+            )
 
         except Exception as e:
             self.logger.error(f"Failed to initialize plugin '{plugin_id}': {e} ❌")
