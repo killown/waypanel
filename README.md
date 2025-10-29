@@ -27,15 +27,19 @@ plugins = ipc ipc-rules stipc
     sh install
 
 ##### Archlinux deps:
-    sudo pacman -S gtk4-layer-shell gobject-introspection vala playerctl python-gobject wayland-protocols ninja mesa playerctl libadwaita bluez-tools uv
+    sudo pacman -S gtk4-layer-shell gobject-introspection vala playerctl python-gobject wayland-protocols ninja mesa playerctl libadwaita bluez-tools wl-clipboard
 
 ##### Fedora Deps:
-    sudo dnf install gtk4 gtk4-layer-shell-devel.x86_64 gobject-introspection vala playerctl python3-gobject ninja libadwaita bluez-tools python3-uv.noarch python-devel
+    sudo dnf install gtk4 gtk4-layer-shell-devel.x86_64 gobject-introspection vala playerctl python3-gobject ninja libadwaita bluez-tools python3-uv.noarch python-devel wl-clipboard
+
+##### Ubuntu Deps:
+    sudo apt install libgtk-4-dev libgtk4-layer-shell-dev gobject-introspection valac playerctl python3-gi ninja-build libadwaita-1-dev bluez-tools python3-dev python3.13-venv wl-clipboard
 
 ## install `waypanel`
     git clone https://github.com/killown/waypanel.git
     cd waypanel
     python run.py # This will set up the venv automatically and run the panel
+
 
 ## License
 
