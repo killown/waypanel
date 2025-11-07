@@ -145,8 +145,9 @@ default_config = {
         "_section_hint": (
             "Configuration for the Quick Notes plugin, allowing users to save and view short text entries."
         ),
-        "main_icon": "stock_notes",
+        "main_icon": "notes-panel",
         "fallback_main_icons": [
+            "stock_notes",
             "accessories-notes-symbolic",
             "xapp-annotations-text-symbolic",
             "accessories-notes",

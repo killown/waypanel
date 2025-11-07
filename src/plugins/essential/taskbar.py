@@ -18,6 +18,7 @@ def get_plugin_metadata(panel_instance):
             "gestures_setup",
             "on_output_connect",
             "right_panel",
+            "view_property_controller",
         ],
         "description": about,
     }
@@ -273,12 +274,11 @@ def get_plugin_class():
                 )
                 return
             button = self.in_use_buttons[view_id]
-            app_id = view.get("app-id")
             title = view.get("title")
-            initial_title = title.split()[0]
             if not title or not view_id:
                 return
-            icon_name = self.gtk_helper.get_icon(app_id, initial_title, title)
+            icon_name = self.ipc.get_view_property(view_id, "icon")
+
             if icon_name is None:
                 return
             title = self.gtk_helper.filter_utf_for_gtk(view.get("title", ""))
@@ -370,17 +370,13 @@ def get_plugin_class():
 
         def update_button(self, button, view):
             title = view.get("title")
-            initial_title = ""
-            if title:
-                initial_title = title[0]
-            app_id = view.get("app-id")
             if len(title) > self.max_title_length:
                 truncated_title = title[: self.max_title_length] + "..."
             else:
                 truncated_title = title
             button.view_id = view.get("id")
             button.set_tooltip_text(title)
-            icon_name = self.gtk_helper.get_icon(app_id, initial_title, title)
+            icon_name = self.ipc.get_view_property(button.view_id, "icon")
             button.icon.set_from_icon_name(icon_name)
             button.icon.set_pixel_size(self.icon_size)
             if self.show_label:

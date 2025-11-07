@@ -396,6 +396,19 @@ class IPC:
         return self.wf_utils.get_workspace_number(workspace_x, workspace_y)  # pyright: ignore
 
     @handle_ipc_error
+    def get_view_property(self, view_id: int, property: Any) -> dict:
+        """Get the view property"""
+        try:
+            return self.sock.get_view_property(view_id, property)["value"]  # pyright: ignore
+        except Exception as e:
+            return {"result": e, "value": None}
+
+    @handle_ipc_error
+    def set_view_property(self, view_id: int, key: Any, value: Any) -> dict:
+        """Set the view property"""
+        return self.sock.set_view_property(view_id, key, value)  # pyright: ignore
+
+    @handle_ipc_error
     def set_view_minimized(self, view_id: int, state: bool) -> None:
         """Set the minimized state of a view."""
         return self.sock.set_view_minimized(view_id, state)  # pyright: ignore

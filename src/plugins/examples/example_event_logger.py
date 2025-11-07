@@ -35,6 +35,8 @@ ALL_EVENTS = [
     # Emitted when a view is unmapped (hidden/closed, but not destroyed yet)
     "view-unmapped",
     # Emitted when a view is mapped (i.e., becomes visible on screen)
+    "view-pre-map",
+    # Emitted when a view is about to be mapped (i.e, before appear in the screen)
     "view-mapped",
     # Emitted when the title of a view changes (e.g., browser tab changes title)
     "view-title-changed",
@@ -121,6 +123,7 @@ def get_plugin_metadata(_):
         "name": "Example Event Logger",
         "version": "1.0.0",
         "enabled": True,
+        # background container is used when the plugin loader has no widget to append/set
         "container": "background",
         "index": 0,
         "deps": ["event_manager"],

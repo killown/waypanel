@@ -51,7 +51,7 @@
   margin-bottom: 8px;
 }
 .pacman-refresh-button {
-  background-color: var(--color-bg-button);
+  background-color: var(--color-bg-box-primary);
   color: var(--theme-fg-label-primary);
   border-radius: var(--radius-m);
   padding: 6px 12px;

@@ -8,7 +8,7 @@ from src.shared.data_helpers import DataHelpers
 from src.shared.config_handler import ConfigHandler
 from src.shared.command_runner import CommandRunner
 from src.shared.concurrency_helper import ConcurrencyHelper
-from gi.repository import Gtk, Gdk, GLib, Gio  # pyright: ignore
+from gi.repository import Gtk, Gdk, GLib, Gio, GObject  # pyright: ignore
 from typing import Any, Optional, Callable, Union
 
 gi.require_version("Gtk", "4.0")
@@ -1116,3 +1116,40 @@ class GtkHelpers:
             int: The number of widgets currently appended to the box.
         """
         return len(list(box.observe_children()))
+
+    def set_clipboard_text(self, text: str) -> None:
+        """
+        Sets the string content onto the system clipboard using the 'wl-copy' utility.
+        This method utilizes inter-process communication (IPC) via 'subprocess'
+        to interface directly with the Wayland compositor's clipboard manager,
+        bypassing the GDK/GTK clipboard abstraction layer for optimal stability.
+        Args:
+            text: The string content to place on the clipboard.
+        Raises:
+            RuntimeError: If the 'wl-copy' utility fails, is not found, or times out.
+        """
+        import subprocess
+
+        try:
+            subprocess.run(
+                ["wl-copy"],
+                input=text.encode("utf-8"),
+                check=True,
+                capture_output=True,
+                timeout=2,
+            )
+        except FileNotFoundError:
+            raise RuntimeError(
+                "Clipboard utility 'wl-copy' not found. Ensure 'wl-clipboard' is installed."
+            )
+        except subprocess.CalledProcessError as e:
+            error_output = (
+                e.stderr.decode("utf-8").strip() if e.stderr else "No detailed output."
+            )
+            raise RuntimeError(
+                f"Clipboard copy failed (wl-copy exited with code {e.returncode}). Output: {error_output}"
+            )
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(
+                "Clipboard copy timed out waiting for 'wl-copy' process."
+            )

@@ -92,10 +92,12 @@ def get_plugin_class():
             )
             helpers = Helpers(self)
             helpers.apply_hints()
-            self.main_icon = self.get_plugin_setting(["main_icon"], "clipboard")
+            self.main_icon = self.get_plugin_setting(
+                ["main_icon"], "edit-paste-symbolic"
+            )
             self.fallback_main_icons = self.get_plugin_setting(
                 ["fallback_main_icons"],
-                ["edit-paste-symbolic", "edit-paste"],
+                ["clipboard", "edit-paste"],
             )
             self.hide_in_systray = self.get_plugin_setting(["hide_in_systray"], False)
 

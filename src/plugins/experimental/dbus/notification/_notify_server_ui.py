@@ -27,6 +27,8 @@ def get_plugin_class():
                 application_id="com.example.NotificationPopup"
             )
             self.app.connect("activate", self.on_activate)
+            self.temporary_popup_width = 0
+            self.temporary_popup_height = 0
 
         def on_activate(self, app):
             """
@@ -106,8 +108,10 @@ def get_plugin_class():
                     "Do Not Disturb mode is active. Notification suppressed."
                 )
                 return
+
             popup_width = self.get_plugin_setting(["popup_width"], 399)
             popup_height = self.get_plugin_setting(["popup_height"], 150)
+
             focused_output = self.ipc.get_focused_output()
             output_w = focused_output["geometry"]["width"]
             if "rect" in focused_output:

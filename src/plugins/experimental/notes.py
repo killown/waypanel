@@ -161,6 +161,7 @@ def get_plugin_class():
                 "document-edit",
                 "The icon name used for the edit button on a note row. Falls back to 'document-edit'.",
             )
+
             self.menubutton_notes = Gtk.Button.new()
             self.menubutton_notes.add_css_class("notes-menubutton")
             self.main_widget = (self.menubutton_notes, "append")

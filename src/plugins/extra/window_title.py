@@ -10,7 +10,7 @@ def get_plugin_metadata(_):
         "enabled": True,
         "index": 1,
         "container": "top-panel-left",
-        "deps": ["top_panel", "event_manager"],
+        "deps": ["top_panel", "event_manager", "view_property_controller"],
         "description": about,
     }
 
@@ -177,7 +177,7 @@ def get_plugin_class():
                 else:
                     app_id = view.get("app-id", "").lower()
                 if app_id:
-                    icon_name = self._gtk_helper.get_icon(app_id, initial_title, title)
+                    icon_name = self.ipc.get_view_property(view.get("id"), "icon")
                     if icon_name:
                         self.update_title(title, icon_name)
             except Exception as e:
