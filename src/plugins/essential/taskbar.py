@@ -279,8 +279,9 @@ def get_plugin_class():
                 return
             icon_name = self.ipc.get_view_property(view_id, "icon")
 
-            if icon_name is None:
-                return
+            if not isinstance(icon_name, str):
+                icon_name = self.gtk_helper.icon_exist(view.get("app-id"))
+
             title = self.gtk_helper.filter_utf_for_gtk(view.get("title", ""))
             if not title:
                 return
@@ -377,6 +378,10 @@ def get_plugin_class():
             button.view_id = view.get("id")
             button.set_tooltip_text(title)
             icon_name = self.ipc.get_view_property(button.view_id, "icon")
+
+            if not isinstance(icon_name, str):
+                icon_name = self.gtk_helper.icon_exist(view.get("app-id"))
+
             button.icon.set_from_icon_name(icon_name)
             button.icon.set_pixel_size(self.icon_size)
             if self.show_label:
