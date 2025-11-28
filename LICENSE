@@ -1,21 +1,268 @@
-The MIT License (MIT)
+    GNU AFFERO GENERAL PUBLIC LICENSE
+    Version 3, 19 November 2007
 
-Copyright (c) 2023 Thiago Lucio (@Killown) <systemofdown@gmail.com>
+    Copyright (C) 2025 Thiago Lucio (@Killown) <systemofdown@gmail.com>
+    <Preamble>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+     This program is free software: you can redistribute it and/or modify
+     it under the terms of the GNU Affero General Public License as published by
+     the Free Software Foundation, either version 3 of the License, or
+     (at your option) any later version.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+     This program is distributed in the hope that it will be useful,
+     but WITHOUT ANY WARRANTY; without even the implied warranty of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+     GNU Affero General Public License for more details.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+     You should have received a copy of the GNU Affero General Public License
+     along with this program.  If not, see <www.gnu.org>.
+
+    <End Preamble>
+
+    <Full License Text Follows>
+
+    TERMS AND CONDITIONS
+
+    0. Definitions.
+
+    "This License" refers to version 3 of the GNU Affero General Public License.
+
+    "Copyright" also means copyright-like laws that apply to other kinds of
+    works, such as semiconductor masks.
+
+    "The Program" refers to any copyrightable work licensed under this License.
+    Each licensee is addressed as "you". "Licensees" and "recipients" may be
+    individuals or organizations.
+
+    To "modify" a work means to copy from or adapt all or part of the work in a
+    fashion requiring copyright permission, other than the making of an exact
+    copy. The resulting work is called an "unmodified version" of the original
+    Program if it has been made by others acting under your authority.
+
+    "Distribute" means to initiate or provide for, whether directly or
+    indirectly, a means whereby copies of a program or the output of a program
+    are supplied to a third party. Mere interaction with a user through a
+    computer network, with no transfer of a copy, does not constitute
+    distribution.
+
+    An "interactive user interface" means an interactive user interface
+    involving the use of a computer network or the output of a program via a
+    computer network.
+
+    The "Corresponding Source" for a work in object code form means all the
+    source code needed to generate, install, and run the object code and to
+    modify the work, including scripts to control those activities. However,
+    it does not include production, installation, or distribution programs that
+    are part of the normal operating system (if any) of the computer on which
+    the work runs, unless that program itself is a derivative of the work.
+
+    The Corresponding Source for a work means the work as a whole, so
+    that all its parts are controlled by their respective licenses.
+    Notwithstanding any other provision of this License, you must not
+    invalidate the terms of any other license, whether specific to a part of
+    the work or applicable to the work as a whole.
+
+    1. Source Code.
+
+    The Corresponding Source is the preferred form of the work for making
+    modifications to it. "Object code" means any form of a work that is not
+    the Corresponding Source.
+
+    You may convey verbatim copies of the Program's source code as you receive
+    it, in any medium, provided that you conspicuously and appropriately
+    publish on each copy an appropriate copyright notice; keep intact all
+    notices stating that this License and any non-permissive terms added in
+    accordance with section 7 apply to the code; keep intact all notices
+    of the absence of any warranty; and give all recipients a copy of this
+    License along with the Program.
+
+    You may charge any price or no price for each copy that you convey, and
+    you may offer support or warranty protection for a fee.
+
+    2. Conveying Modified Source Versions.
+
+    You may convey a work based on the Program, or the modifications to
+    produce it from the Program, in the form of source code under the terms
+    of section 1, provided that you also take these actions:
+
+        a) The work must carry prominent notices stating that you modified
+        it, and giving a relevant date.
+
+        b) The work must carry prominent notices stating that it is
+        released under this License and any conditions added under section 7.
+        This requirement modifies the "keep intact all notices" requirement
+        of section 1.
+
+        c) You must license the entire work, as a whole, under this License
+        to anyone who comes into possession of a copy. This License will
+        therefore apply, along with any applicable section 7 additional
+        terms, to the whole work, and all its parts, regardless of how they
+        are packaged. This License gives no permission to license the work
+        in any other way, but it does not invalidate any permission you
+        might have separately received to use, modify, or distribute the
+        work under other terms.
+
+        d) If the work has interactive user interfaces that are controlled
+        by computer network, the notice required by section 1 of this
+        License must appear prominently in the initial view of the
+        application.
+
+        e) The work must include a copy of this License.
+
+    You may charge any price or no price for each copy that you convey, and
+    you may offer support or warranty protection for a fee.
+
+    3. Object Code Conveyance.
+
+    You may convey the object code form of a work under the terms of
+    sections 1 and 2, provided that you also convey the
+    Corresponding Source in one of these ways:
+
+        a) Convey the object code in, or embodied in, a physical product
+        (including a physical distribution medium), accompanied by the
+        Corresponding Source fixed on a durable physical medium
+        customarily used for software interchange.
+
+        b) Convey the object code in, or embodied in, a physical product
+        (including a physical distribution medium), accompanied by a
+        written offer, valid for at least three years, to give any third
+        party, for a charge no more than your cost of physically
+        performing this conveying of source, a complete machine-readable
+        copy of the Corresponding Source, which is to be delivered using
+        a durable physical medium customarily used for software
+        interchange.
+
+        c) Convey the object code with an offer to give access to the
+        Corresponding Source (other than a downloading service) from a
+        network server at no charge, through any public access network
+        protocol, for as long as the object code is available to
+        the public.
+
+        d) By offering access to the Corresponding Source from a network
+        server at no charge, through any public access network protocol,
+        for as long as the object code is available to the public. This
+        offer is sufficient to satisfy the requirement to convey the
+        Corresponding Source. If the location and the network protocol
+        are known to the recipients of the object code, the Corresponding
+        Source need not be included in the object code.
+
+        e) Convey the object code by transmitting it over a network (including
+        an interactive user interface), provided that the recipient
+        receives a machine-readable copy of the Corresponding Source by
+        downloading it through an appropriate network protocol
+        within one month.
+
+    A "user" of an interactive user interface includes anyone who has
+    authorized a third party to use the interface on their behalf.
+
+    If you convey object code in a modular system that is licensed under this
+    License, the Corresponding Source need not include source code for other
+    modules of the system that are not derivatives of the Program.
+
+    4. Terminating the license.
+
+    You may not propagate or modify the Program except as expressly provided
+    under this License. Any attempt otherwise to propagate or modify the
+    Program is void, and will automatically terminate your rights under this
+    License (including any patent licenses granted under the second paragraph
+    of section 11).
+
+    However, if you cease all violation of this License, then your license
+    from a particular copyright holder is reinstated (a) provisionally,
+    unless and until the copyright holder explicitly and finally
+    terminates your license, and (b) permanently, if the copyright holder
+    fails to notify you of the violation by some reasonable means prior
+    to 60 days after the cessation.
+
+    Moreover, your license from a particular copyright holder is reinstated
+    permanently if the copyright holder notifies you of the violation by
+    some reasonable means, this is the first time you have received notice
+    of violation (for any form of the Program) from that copyright holder,
+    and you cure the violation prior to 30 days after your receipt of the
+    notice.
+
+    Termination of your rights under this section does not terminate the
+    licenses of parties who have received copies or rights from you under
+    this License. If your rights have been terminated and not permanently
+    reinstated, you do not qualify to receive new licenses for the same
+    material under section 10.
+
+    5. Acceptance.
+
+    You are not required to accept this License in order to receive or
+    run the Program. Independent propagation of a covered work without a
+    license is prohibited.
+
+    However, nothing other than this License grants you permission to
+    propagate or modify any covered work. These actions infringe copyright
+    if you do not accept this License. Therefore, by modifying or propagating
+    the Program, you indicate your acceptance of this License to do so.
+
+    6. Additional Permissions.
+
+    "Additional permissions" are terms that supplement the terms of this
+    License by making exceptions or granting waivers as to all or part of
+    the Program. Additional permissions that are permitted to be stated
+    within this License are treated as additional terms, which may be
+    added to the work at your discretion. If a work contains additional
+    permissions or is a work licensed under a different license that allows
+    additional permissions, those additional permissions may be added to
+    the work at your discretion.
+
+    7. Conveying Non-Source Forms.
+
+    You may convert a covered work into any other form or format, provided
+    that this does not modify or obscure the notices required by this
+    License.
+
+    8. Use over a Network.
+
+    If you modify the Program or use it to provide a service that makes
+    modified or unmodified copies of the Program or part of it available
+    to third parties over a network, you must ensure that all such third
+    parties can receive a copy of the Program's Corresponding Source,
+    either through a separate distribution channel or via the network
+    interaction. If you don't want to make the source code available to
+    network users, you may not modify or use the Program in this manner.
+
+    9. Termination.
+
+    This License applies for the entire period of copyright on the Program.
+
+    10. No Warranty.
+
+    BECAUSE THE PROGRAM IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
+    FOR THE PROGRAM, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
+    OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
+    PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
+    EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+    THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM IS
+    WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF
+    ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
+
+    11. Limitation of Liability.
+
+    IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
+    WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MODIFIES AND/OR
+    CONVEYS THE PROGRAM AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES,
+    INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES
+    ARISING OUT OF THE USE OR INABILITY TO USE THE PROGRAM (INCLUDING BUT
+    NOT LIMITED TO LOSS OF DATA OR DATA BEING RENDERED INACCURATE OR
+    LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM
+    TO OPERATE WITH ANY OTHER PROGRAMS), EVEN IF SUCH HOLDER OR OTHER
+    PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+    12. General Provisions.
+
+    If any part of this License is found to be invalid or unenforceable
+    under applicable law, that part shall be enforced to the maximum
+    extent possible, and the remainder of the License shall continue
+    in full force and effect.
+
+    13. This License constitutes the entire agreement between the parties
+    with respect to the subject matter hereof and supersedes all prior
+    and contemporaneous agreements and understandings, whether written or
+    oral.
+
+    END OF TERMS AND CONDITIONS
