@@ -43,4 +43,5 @@ plugins = ipc ipc-rules stipc
 
 ## License
 
-waypanel is licensed under the MIT license. [See LICENSE for more information](https://github.com/killown/waypanel/blob/main/LICENSE).
+waypanel is licensed under the **AGPLv3 (GNU Affero General Public License version 3)**. [See LICENSE for more information](https://github.com/killown/waypanel/blob/main/LICENSE).
+
