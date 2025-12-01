@@ -9,12 +9,6 @@ from src.ipc.utils import translate_ipc
 
 
 class EventServer:
-    """
-    The goal of this additional IPC server:
-    is to handle compositor IPC issues and prevent code from hanging.
-    MODIFICATION: Now supports bi-directional Request-Response IPC (RPC).
-    """
-
     def __init__(self, logger):
         self.logger = logger
         self.ipcet_paths = [
@@ -32,13 +26,11 @@ class EventServer:
         self.loop = global_loop
 
     def _cleanup_sockets(self) -> None:
-        """Remove existing socket files"""
         for path in self.ipcet_paths:
             if os.path.exists(path):
                 os.remove(path)
 
     def reconnect_wayfire_socket(self) -> None:
-        """Reconnect to Wayfire socket"""
         self.logger.info("reconnecting wayfire ipc")
         self.ipc = IPC()
         self.ipc.watch()
@@ -46,7 +38,6 @@ class EventServer:
         self.ipc.watch()
 
     def is_socket_active(self) -> bool:
-        """Check if socket is connected, reconnect if not"""
         if not self.ipc.is_connected():
             try:
                 self.reconnect_wayfire_socket()
@@ -57,7 +48,6 @@ class EventServer:
         return True
 
     def read_events(self) -> None:
-        """Read events from Wayfire socket in background thread"""
         while True:
             if not self.is_socket_active():
                 continue
@@ -90,10 +80,6 @@ class EventServer:
                 continue
 
     def register_command(self, command_name: str, handler) -> None:
-        """
-        Register a handler for a specific synchronous IPC command.
-        This is the method the DevIpcPlugin uses.
-        """
         if command_name in self.command_handlers:
             self.logger.warning(f"Overwriting IPC command handler for: {command_name}")
         self.command_handlers[command_name] = handler
@@ -121,9 +107,6 @@ class EventServer:
             self.logger.debug(f"No subscribers for event: {event_type}")
 
     async def handle_event(self) -> None:
-        """
-        Process and broadcast events to connected clients.
-        """
         while True:
             event = await self.event_queue.get()
             serialized_event = json.dumps(event) + b"\n"
@@ -151,9 +134,6 @@ class EventServer:
                     self.logger.debug(f"No subscribers for event: {event}")
 
     async def handle_client(self, reader, writer) -> None:
-        """
-        Manage individual client connections, listen for RPC requests, and send responses.
-        """
         self.clients.append(writer)
         try:
             while True:
@@ -162,7 +142,6 @@ class EventServer:
                 if not raw_data:
                     break
                 if not raw_data.strip():
-                    await asyncio.sleep(3600)
                     continue
                 response = {}
                 try:
@@ -218,7 +197,6 @@ class EventServer:
             await writer.wait_closed()
 
     async def start_server(self, path) -> None:
-        """Start UNIX socket server on specified path"""
         server = await asyncio.start_unix_server(
             lambda r, w: self.handle_client(r, w), path=path
         )
@@ -226,7 +204,6 @@ class EventServer:
             await server.serve_forever()
 
     async def main(self) -> None:
-        """Main server entry point"""
         servers = [self.start_server(path) for path in self.ipcet_paths]
         self.loop = asyncio.get_running_loop()
         self.executor.submit(self.read_events)
@@ -236,9 +213,6 @@ class EventServer:
             pass
 
     async def broadcast_message(self, message) -> None:
-        """
-        Broadcast a custom message to all connected clients.
-        """
         serialized_message = json.dumps(message) + b"\n"
         for client in self.clients[:]:
             try:
