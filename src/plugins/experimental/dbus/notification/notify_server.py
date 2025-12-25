@@ -167,7 +167,23 @@ def get_plugin_class():
 
         @method()
         def GetServerInformation(self) -> "ssss":
-            return ["waypanel", "notify_server_plugin", "0.1", "0.1"]
+            """Returns the server identity and supported specification version.
+
+            The return signature consists of four strings:
+            1. Server Name: Identifies the implementation.
+            2. Vendor: The entity/project responsible for the code.
+            3. Version: The specific release version of this server.
+            4. Spec Version: The FreeDesktop.org Notification Spec version supported.
+
+            IMPLICATIONS:
+            The Spec Version MUST be '1.0' or higher (e.g., '1.2'). Setting this to
+            a value where the major version is 0 (e.g., '0.1') will cause
+            strict client libraries like libnotify to trigger a SIGABRT via
+            an internal assertion failure. This value acts as a contract
+            guaranteeing that the server supports the mandatory methods and
+            signals defined in the reported version of the protocol.
+            """
+            return ["waypanel", "waypanel-project", "1.0.0", "1.2"]
 
         def close_notification(self, id, reason):
             if id in self.notifications:
