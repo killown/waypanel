@@ -6,7 +6,7 @@ def get_plugin_metadata(_):
     return {
         "id": "org.waypanel.plugin.volume_scroll",
         "name": "Volume Scroll",
-        "version": "1.0.2",
+        "version": "1.0.3",
         "deps": ["top_panel"],
         "enabled": True,
         "description": about,
@@ -32,7 +32,9 @@ def get_plugin_class():
 
         def __init__(self, panel_instance):
             """
-            Initialize the plugin.
+            Initialize the plugin and setup configuration hints.
+            Args:
+                panel_instance: The main panel controller instance.
             """
             super().__init__(panel_instance)
             self.add_hint(["Configuration for the Volume Scroll OSD plugin."], None)
@@ -40,108 +42,62 @@ def get_plugin_class():
             self.hide_timeout_id = None
             self.timeout_in_seconds = self.get_plugin_setting(["popup_timeout"], 1)
             self.add_hint(
-                [
-                    "The duration in seconds the OSD window remains visible after the last volume change."
-                ],
+                ["The duration in seconds the OSD window remains visible."],
                 "popup_timeout",
             )
             self.slider = None
             self.icon = None
             self.label = None
-            self.max_volume = self.get_plugin_setting(["max_volume"], 150)
+            self.max_volume_limit = self.get_plugin_setting(["max_volume"], 150)
             self.add_hint(
-                [
-                    "The maximum volume percentage allowed for the slider/scroll. Must be > 100."
-                ],
+                ["The maximum volume percentage allowed. Must be > 100."],
                 "max_volume",
             )
             self.slider_handler_id = None
-            self.run_in_thread(self.update_max_volume)
             self.run_in_thread(self.setup_scroll_event)
-            self.add_hint(
-                [
-                    "Settings controlling the position and size of the floating OSD volume widget."
-                ],
-                ["layout"],
-            )
+            self.add_hint(["Settings for OSD position and size."], ["layout"])
             self.default_anchor_edge = self.get_plugin_setting(
                 ["layout", "anchor_edge", "default"], ["TOP"]
-            )
-            self.add_hint(
-                [
-                    "A list of edges to anchor the floating OSD window to (TOP, BOTTOM, LEFT, RIGHT)."
-                ],
-                ["layout", "anchor_edge", "default"],
             )
             self.anchor_edge_top = self.get_plugin_setting(
                 ["layout", "anchor_edge", "top"], 0
             )
-            self.add_hint(
-                ["Margin (in pixels) from the top edge."],
-                ["layout", "anchor_edge", "top"],
-            )
             self.anchor_edge_bottom = self.get_plugin_setting(
                 ["layout", "anchor_edge", "bottom"], 0
-            )
-            self.add_hint(
-                ["Margin (in pixels) from the bottom edge."],
-                ["layout", "anchor_edge", "bottom"],
             )
             self.anchor_edge_left = self.get_plugin_setting(
                 ["layout", "anchor_edge", "left"], 0
             )
-            self.add_hint(
-                ["Margin (in pixels) from the left edge."],
-                ["layout", "anchor_edge", "left"],
-            )
             self.anchor_edge_right = self.get_plugin_setting(
                 ["layout", "anchor_edge", "right"], 0
-            )
-            self.add_hint(
-                ["Margin (in pixels) from the right edge."],
-                ["layout", "anchor_edge", "right"],
-            )
-            self.add_hint(
-                ["Settings for the default size of the floating OSD volume widget."],
-                ["layout", "popup_size"],
             )
             self.popup_width = self.get_plugin_setting(
                 ["layout", "popup_size", "width"], 200
             )
-            self.add_hint(
-                ["The default width of the floating OSD volume widget (in pixels)."],
-                ["layout", "popup_size", "width"],
-            )
-            self.popup_height = self.get_plugin_setting(
-                ["layout", "popup_size", "height"], 100
-            )
-            self.add_hint(
-                ["The default height of the floating OSD volume widget (in pixels)."],
-                ["layout", "popup_size", "height"],
-            )
 
-        def update_max_volume(self) -> None:
+        def _get_default_sink(
+            self, pulse: pulsectl.Pulse
+        ) -> typing.Optional[typing.Any]:
             """
-            Fetch the maximum volume supported by the system.
+            Retrieve the default system sink.
+            Args:
+                pulse: An active pulsectl.Pulse instance.
+            Returns:
+                The sink object or None if not found.
             """
             try:
-                with pulsectl.Pulse("volume-increaser") as pulse:
-                    for sink in pulse.sink_list():
-                        if "RUNNING" in str(sink.state).upper():
-                            self.max_volume = round(
-                                sink.volume.values[0]
-                                * self.max_volume
-                                * sink.base_volume
-                                / sink.volume.value_flat
-                            )
-                            break
+                server_info = pulse.server_info()
+                default_name = server_info.default_sink_name
+                for sink in pulse.sink_list():
+                    if sink.name == default_name:
+                        return sink
             except Exception as e:
-                self.logger.error(f"Error fetching maximum volume: {e}")
-                self.max_volume = 150
+                self.logger.error(f"Failed to identify default sink: {e}")
+            return None
 
         def setup_scroll_event(self) -> None:
             """
-            Set up the scroll event listener.
+            Initialize the GTK event controller for scroll handling.
             """
             scroll_controller = self.gtk.EventControllerScroll.new(
                 self.gtk.EventControllerScrollFlags.BOTH_AXES
@@ -151,120 +107,92 @@ def get_plugin_class():
 
         def on_scroll(self, controller, dx: float, dy: float) -> bool:
             """
-            Handle scroll events to adjust the volume.
-            FIX: Calculates the new absolute target volume and clamps it.
+            Handle scroll events to adjust volume relative to current levels.
+            Args:
+                controller: The GTK event controller.
+                dx: Horizontal scroll delta.
+                dy: Vertical scroll delta.
+            Returns:
+                bool: False to allow further event propagation.
             """
             try:
                 current_volume = self.get_current_volume()
-                delta = -10.0 if dy > 0 else 10.0
+                delta = -5.0 if dy > 0 else 5.0
                 new_volume = current_volume + delta
-                target_volume = max(0.0, min(new_volume, float(self.max_volume)))
+                target_volume = max(0.0, min(new_volume, float(self.max_volume_limit)))
                 self.adjust_volume(target_volume)
             except Exception as e:
-                self.logger.error(f"Error handling scroll event: {e}")
+                self.logger.error(f"Scroll event processing failed: {e}")
             return False
-
-        def _update_ui_post_adjustment(self, current_volume: float) -> bool:
-            """
-            Safely updates the GTK UI elements from the main thread after
-            a volume change has occurred in a background thread.
-            """
-            self.set_volume(current_volume)
-            self.show_widget()
-            return False
-
-        def adjust_volume(self, target_volume: typing.Union[str, float]) -> None:
-            """
-            Offloads volume adjustment (blocking I/O) to a background thread.
-            Always sets the volume absolutely using the provided target percentage.
-            Args:
-                target_volume: The volume target, either as a float (from scroll)
-                               or an absolute percentage string (from slider, e.g., "150%").
-            """
-
-            def _blocking_task():
-                """
-                The blocking operations executed on a worker thread.
-                """
-                cmd = ""
-                pactl_arg: str
-                try:
-                    if isinstance(target_volume, str) and target_volume.endswith("%"):
-                        pactl_arg = target_volume
-                    elif isinstance(target_volume, float):
-                        pactl_arg = f"{int(round(target_volume))}%"
-                    else:
-                        self.logger.error(
-                            f"Invalid volume adjustment input: {target_volume}"
-                        )
-                        return
-                    cmd = [
-                        "pactl",
-                        "--",
-                        "set-sink-volume",
-                        "@DEFAULT_SINK@",
-                        pactl_arg,
-                    ]
-                    self.subprocess.run(cmd, check=True, capture_output=True)
-                    current_volume = self.get_current_volume()
-                    self.glib.idle_add(self._update_ui_post_adjustment, current_volume)
-                except ValueError as e:
-                    self.logger.error(
-                        f"Volume calculation failed due to invalid input: {e} in adjustment: {target_volume}",
-                        exc_info=True,
-                    )
-                except subprocess.CalledProcessError as e:
-                    error_output = e.stderr.decode("utf-8").strip()
-                    self.logger.error(
-                        f"pactl failed with exit code {e.returncode} for command '{' '.join(cmd)}'. Error: {error_output}",
-                        exc_info=True,
-                    )
-                except Exception as e:
-                    self.logger.error(
-                        f"Error adjusting volume in thread: {e}", exc_info=True
-                    )
-
-            self.run_in_thread(_blocking_task)
 
         def get_current_volume(self) -> float:
             """
-            Get the current volume level using `pulsectl`.
-            Returns the raw floating-point percentage.
+            Fetch the volume of the default sink regardless of its state.
+            Returns:
+                float: Current volume percentage (0-100+).
             """
             try:
-                with pulsectl.Pulse("volume-increaser") as pulse:
-                    for sink in pulse.sink_list():
-                        if "RUNNING" in str(sink.state).upper():
-                            volume = sink.volume.values[0] * 100
-                            return volume
-                return 0.0
+                with pulsectl.Pulse("volume-query") as pulse:
+                    sink = self._get_default_sink(pulse)
+                    if sink:
+                        return sink.volume.values[0] * 100
             except Exception as e:
                 self.logger.error(f"Error fetching current volume: {e}")
-                return 0.0
+            return 0.0
+
+        def adjust_volume(self, target_volume: typing.Union[str, float]) -> None:
+            """
+            Execute volume adjustment in a background thread to prevent UI blocking.
+            Args:
+                target_volume: Target level as a float or percentage string.
+            """
+
+            def _blocking_task():
+                try:
+                    if isinstance(target_volume, str) and target_volume.endswith("%"):
+                        pactl_arg = target_volume
+                    else:
+                        pactl_arg = f"{int(round(float(target_volume)))}%"
+                    cmd = ["pactl", "set-sink-volume", "@DEFAULT_SINK@", pactl_arg]
+                    subprocess.run(cmd, check=True, capture_output=True)
+                    current = self.get_current_volume()
+                    self.glib.idle_add(self._update_ui_post_adjustment, current)
+                except Exception as e:
+                    self.logger.error(f"Background volume adjustment failed: {e}")
+
+            self.run_in_thread(_blocking_task)
+
+        def _update_ui_post_adjustment(self, current_volume: float) -> bool:
+            """
+            Update the OSD or Widget on the main thread.
+            """
+            if "simple-text/update-display" in self.ipc.list_methods():
+                focused_output = self.ipc.get_focused_output()
+                pos_x = (focused_output["geometry"]["width"] // 2) - 200
+                pos_y = focused_output["workarea"]["y"] - 32
+                self.ipc.update_osd(
+                    text=f"Volume: {round(current_volume)}%",
+                    font_size=18,
+                    timeout=1000,
+                    x=pos_x,
+                    y=pos_y,
+                )
+            else:
+                self.set_volume(current_volume)
+                self.show_widget()
+            return False
 
         def create_floating_widget(self) -> None:
             """
-            Create the floating volume widget with icon, label, and slider in one horizontal row.
+            Construct the GTK window for the OSD.
             """
             self.widget = self.gtk.Window()
             self.layer_shell.init_for_window(self.widget)
             self.layer_shell.set_layer(self.widget, self.layer_shell.Layer.TOP)
-            if "TOP" in self.default_anchor_edge:
-                self.layer_shell.set_anchor(
-                    self.widget, self.layer_shell.Edge.TOP, True
-                )
-            if "BOTTOM" in self.default_anchor_edge:
-                self.layer_shell.set_anchor(
-                    self.widget, self.layer_shell.Edge.BOTTOM, True
-                )
-            if "LEFT" in self.default_anchor_edge:
-                self.layer_shell.set_anchor(
-                    self.widget, self.layer_shell.Edge.LEFT, True
-                )
-            if "RIGHT" in self.default_anchor_edge:
-                self.layer_shell.set_anchor(
-                    self.widget, self.layer_shell.Edge.RIGHT, True
-                )
+            for edge in ["TOP", "BOTTOM", "LEFT", "RIGHT"]:
+                if edge in self.default_anchor_edge:
+                    gtk_edge = getattr(self.layer_shell.Edge, edge)
+                    self.layer_shell.set_anchor(self.widget, gtk_edge, True)
             self.layer_shell.set_margin(
                 self.widget, self.layer_shell.Edge.LEFT, self.anchor_edge_left
             )
@@ -278,42 +206,30 @@ def get_plugin_class():
                 self.widget, self.layer_shell.Edge.BOTTOM, self.anchor_edge_bottom
             )
             hbox = self.gtk.Box(orientation=self.gtk.Orientation.HORIZONTAL, spacing=10)
-            hbox.set_margin_top(5)
-            hbox.set_margin_bottom(5)
             hbox.set_margin_start(10)
             hbox.set_margin_end(10)
             self.icon = self.gtk.Image.new_from_icon_name("audio-volume-high-symbolic")
-            self.icon.set_pixel_size(24)
-            hbox.append(self.icon)
-            self.label = self.gtk.Label(label="100%")
-            self.label.set_valign(self.gtk.Align.CENTER)
-            hbox.append(self.label)
+            self.label = self.gtk.Label(label="0%")
             self.slider = self.gtk.Scale.new_with_range(
-                self.gtk.Orientation.HORIZONTAL, 0, self.max_volume, 1
+                self.gtk.Orientation.HORIZONTAL, 0, self.max_volume_limit, 1
             )
-            self.slider.set_value(self.max_volume)
             self.slider.set_hexpand(True)
-            self.slider.set_halign(self.gtk.Align.FILL)
-            self.slider.set_valign(self.gtk.Align.CENTER)
+            hbox.append(self.icon)
+            hbox.append(self.label)
             hbox.append(self.slider)
             self.slider_handler_id = self.slider.connect(
                 "value-changed", self.on_slider_changed
             )
             self.widget.set_child(hbox)
             self.widget.set_default_size(self.popup_width, 1)
-            self.icon.add_css_class("floating-volume-icon")
-            self.slider.add_css_class("floating-volume-slider")
-            self.label.add_css_class("floating-volume-label")
-            hbox.add_css_class("floating-volume-box")
-            self.widget.add_css_class("floating-volume-widget")
 
         def show_widget(self) -> None:
-            """Show the floating widget."""
+            """
+            Display the OSD widget with a visibility timeout.
+            """
             if not self.widget:
                 self.create_floating_widget()
-            if self.widget:
-                self.widget.present()
-                self.widget.set_opacity(1.0)
+            self.widget.present()
             if self.hide_timeout_id:
                 self.glib.source_remove(self.hide_timeout_id)
             self.hide_timeout_id = self.glib.timeout_add_seconds(
@@ -322,7 +238,7 @@ def get_plugin_class():
 
         def hide_widget(self) -> bool:
             """
-            Hide the floating widget.
+            Hide the OSD widget.
             """
             if self.widget:
                 self.widget.hide()
@@ -331,48 +247,37 @@ def get_plugin_class():
 
         def set_volume(self, volume: float) -> None:
             """
-            Set the volume level and update the widget.
+            Sync the UI components with the current volume level.
+            Args:
+                volume: The volume percentage to display.
             """
-            clamped_volume = min(volume, self.max_volume)
+            clamped = min(volume, self.max_volume_limit)
             if self.slider and self.slider_handler_id:
                 self.slider.handler_block(self.slider_handler_id)
-                self.slider.set_value(clamped_volume)
+                self.slider.set_value(clamped)
                 self.slider.handler_unblock(self.slider_handler_id)
-            if self.label and self.icon:
-                int_clamped_volume = int(round(clamped_volume))
-                int_raw_volume = int(round(volume))
-                self.label.set_text(f"{int_raw_volume}%")
-                if int_clamped_volume == 0:
-                    icon_name = "audio-volume-muted-symbolic"
-                elif int_clamped_volume < 33:
-                    icon_name = "audio-volume-low-symbolic"
-                elif int_clamped_volume < 66:
-                    icon_name = "audio-volume-medium-symbolic"
+            if self.label:
+                self.label.set_text(f"{int(round(volume))}%")
+            if self.icon:
+                icon_map = [
+                    (0, "audio-volume-muted-symbolic"),
+                    (33, "audio-volume-low-symbolic"),
+                    (66, "audio-volume-medium-symbolic"),
+                    (101, "audio-volume-high-symbolic"),
+                ]
+                for threshold, name in icon_map:
+                    if clamped <= threshold:
+                        self.icon.set_from_icon_name(name)
+                        break
                 else:
-                    icon_name = "audio-volume-high-symbolic"
-                self.icon.set_from_icon_name(icon_name)
+                    self.icon.set_from_icon_name("audio-volume-high-symbolic")
 
         def on_slider_changed(self, *__) -> None:
             """
-            Handle slider value changes by immediately offloading the blocking
-            volume adjustment to a background thread.
+            Handle manual slider adjustments.
             """
             if self.slider:
-                volume = self.slider.get_value()
-                self.adjust_volume(f"{int(round(volume))}%")
-
-        def code_explanation(self) -> str:
-            """
-            Provides a detailed explanation of the plugin's architecture and logic.
-            """
-            return """
-            This plugin provides a dynamic and temporary visual feedback
-            for volume changes triggered by the scroll wheel.
-            Its core logic is centered on **event-driven volume control and
-            dynamic UI display**:
-            1.  **Scroll Control Fix**: The `on_scroll` method now calculates the new absolute target volume (current +/- 8%), clamps it to `self.max_volume` (150%), and passes this float value to `adjust_volume`. This guarantees scroll events respect the 150% ceiling and avoid the 100% cap.
-            2.  **Slider Control**: `on_slider_changed` passes the absolute percentage set by the slider (up to 150%) as a string, which the background task uses for an absolute `pactl` set.
-            3.  **UI Consistency**: The `set_volume` method continues to use the true system volume for the label display, while clamping the slider position and icon logic to the defined 150% maximum.
-            """
+                val = self.slider.get_value()
+                self.adjust_volume(val)
 
     return VolumeScrollPlugin
