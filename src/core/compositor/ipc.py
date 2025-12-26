@@ -1,16 +1,14 @@
 import logging
 import os
 import socket
+import typing
 
 from typing import (
     Any,
     Callable,
-    Optional,
     Type,
+    TypeAlias,
     Union,
-    List,
-    Tuple,
-    Dict,
     get_origin,
     get_args,
 )
@@ -22,9 +20,12 @@ from gi.repository import GLib  # pyright: ignore
 logger = logging.getLogger(__name__)
 
 
+TypeInput: TypeAlias = Type | list[Type] | tuple[Type, ...]
+
+
 def validate_type(
     value: Any,
-    expected_type: Union[Type, List[Type], Tuple[Type, ...]],
+    expected_type: TypeInput,
     name: str = "value",
     allow_none: bool = False,
     optional: bool = False,
@@ -32,14 +33,12 @@ def validate_type(
     """
     Validate that the provided value matches the expected type.
 
-    Supports:
-        - Single types (int, str, etc.)
-        - Lists of types for iterables or unions
-        - Optional/None values via `allow_none` or `optional`
+    This implementation uses typing introspection (get_origin, get_args) to
+    robustly handle generic types and unions, ensuring Python 3.14+ compatibility.
 
     Args:
         value: The value to validate.
-        expected_type: Expected type(s) (e.g., int, [str, int], (str, int), Optional[str])
+        expected_type: Expected type(s) (e.g., int, list[str], str | None).
         name: Name/description of the value for error messages.
         allow_none: If True, allows None even if not in Optional.
         optional: If True, treats as Optional[expected_type].
@@ -47,57 +46,115 @@ def validate_type(
     Returns:
         bool: True if valid, raises TypeError otherwise.
     """
-    origin = get_origin(expected_type)
-    args = get_args(expected_type)
-
-    if origin is Union and type(None) in args:
-        inner_type = [t for t in args if t is not type(None)]
-        if len(inner_type) == 1:
-            return validate_type(value, inner_type[0], name=name, allow_none=True)
+    current_type = expected_type
 
     if optional:
-        if value is None:
-            return True
-        return validate_type(value, expected_type, name=name)
+        allow_none = True
+
+    origin = get_origin(current_type)
+    args = get_args(current_type)
+
+    if origin is Union and type(None) in args:
+        allow_none = True
+        inner_types = tuple(t for t in args if t is not type(None))
+
+        if len(inner_types) == 1:
+            current_type = inner_types[0]
+        elif len(inner_types) > 1:
+            current_type = Union[inner_types]
+        else:
+            current_type = Any
+
+        origin = get_origin(current_type)
+        args = get_args(current_type)
 
     if allow_none and value is None:
         return True
+    if value is None:
+        raise TypeError(f"Invalid {name}: Expected {expected_type}, got None.")
 
-    if isinstance(expected_type, list):
+    if current_type is Any:
+        return True
+
+    if origin is Union:
+        for t in args:
+            try:
+                if validate_type(value, t, name=name, allow_none=False, optional=False):
+                    return True
+            except TypeError:
+                continue
+
+        type_names = ", ".join(t.__name__ for t in args if hasattr(t, "__name__"))
+        raise TypeError(
+            f"Invalid {name}: Expected one of ({type_names}), got {type(value).__name__}"
+        )
+
+    if origin is list or origin is list:
         if not isinstance(value, list):
             raise TypeError(
                 f"Invalid {name}: Expected list, got {type(value).__name__}"
             )
-        for idx, item in enumerate(value):
-            if not any(isinstance(item, t) for t in expected_type):
-                raise TypeError(
-                    f"Invalid element at index {idx} in {name}: "
-                    f"Expected one of {', '.join(t.__name__ for t in expected_type)}, "
-                    f"got {type(item).__name__}"
-                )
+
+        if args:
+            element_type = args[0]
+            for idx, item in enumerate(value):
+                validate_type(item, element_type, name=f"{name}[{idx}]")
         return True
 
-    if isinstance(expected_type, tuple):
+    if origin is tuple or origin is tuple:
         if not isinstance(value, tuple):
             raise TypeError(
                 f"Invalid {name}: Expected tuple, got {type(value).__name__}"
             )
-        if len(expected_type) != len(value):
-            raise TypeError(
-                f"Length mismatch in {name}: Expected {len(expected_type)} elements, "
-                f"got {len(value)}"
-            )
-        for idx, (item, typ) in enumerate(zip(value, expected_type)):
-            if not isinstance(item, typ):
+
+        if args:
+            if len(args) == 2 and args[1] is Ellipsis:
+                element_type = args[0]
+                for idx, item in enumerate(value):
+                    validate_type(item, element_type, name=f"{name}[{idx}]")
+                return True
+
+            if len(args) != len(value):
                 raise TypeError(
-                    f"Invalid element at index {idx} in {name}: "
-                    f"Expected {typ.__name__}, got {type(item).__name__}"
+                    f"Length mismatch in {name}: Expected {len(args)} elements, "
+                    f"got {len(value)}"
                 )
+            for idx, (item, typ) in enumerate(zip(value, args)):
+                validate_type(item, typ, name=f"{name}[{idx}]")
+            return True
+
         return True
 
-    if not isinstance(value, expected_type):
+    if isinstance(current_type, list):
+        if not any(isinstance(value, t) for t in current_type):
+            type_names = ", ".join(t.__name__ for t in current_type)
+            raise TypeError(
+                f"Invalid {name}: Expected one of ({type_names}), got {type(value).__name__}"
+            )
+        return True
+
+    if isinstance(current_type, tuple):
+        if not isinstance(value, tuple):
+            raise TypeError(
+                f"Invalid {name}: Expected tuple, got {type(value).__name__}"
+            )
+        if len(current_type) != len(value):
+            raise TypeError(
+                f"Length mismatch in {name}: Expected {len(current_type)} elements, "
+                f"got {len(value)}"
+            )
+        for idx, (item, typ) in enumerate(zip(value, current_type)):
+            validate_type(item, typ, name=f"{name}[{idx}]")
+        return True
+
+    if not isinstance(current_type, type):
         raise TypeError(
-            f"Invalid {name}: Expected type {expected_type.__name__}, "
+            f"Invalid type hint: Could not resolve expected type {expected_type} for {name}"
+        )
+
+    if not isinstance(value, current_type):
+        raise TypeError(
+            f"Invalid {name}: Expected type {current_type.__name__}, "
             f"got {type(value).__name__}"
         )
 
@@ -107,7 +164,12 @@ def validate_type(
 def type_checked(func: Callable) -> Callable:
     @wraps(func)
     def wrapper(*args, **kwargs):
-        annotations = func.__annotations__
+        try:
+            annotations = typing.get_type_hints(func)
+        except NameError as e:
+            raise RuntimeError(
+                f"Type hints failed to resolve in {func.__name__}: {e}. Ensure type hints are importable or quoted/evaluated."
+            )
         for arg_name, arg_value in kwargs.items():
             expected_type = annotations.get(arg_name)
             if expected_type:
@@ -118,25 +180,18 @@ def type_checked(func: Callable) -> Callable:
 
 
 def apply_type_checked(cls: type) -> type:
-    """
-    A class decorator that applies @type_checked to all callable methods.
-    """
     for name, method in vars(cls).items():
         if isinstance(method, (classmethod, staticmethod)):
-            # Handle classmethod/staticmethod wrappers
             inner_func = method.__func__
             wrapped_func = type_checked(inner_func)
             decorated_method = type(method)(wrapped_func)
             setattr(cls, name, decorated_method)
         elif callable(method) and not name.startswith("__"):
-            # Regular instance method
             setattr(cls, name, type_checked(method))
     return cls
 
 
 def handle_ipc_error(func):
-    """Decorator to handle common IPC-related errors."""
-
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         try:
@@ -226,7 +281,47 @@ class IPC:
         return True
 
     @handle_ipc_error
-    def get_view(self, id: int) -> Optional[Dict[str, Any]]:
+    def update_osd(
+        self,
+        text: str = "",
+        font_size: int = 32,
+        x: int = 100,
+        y: int = 100,
+        timeout: int = 100,
+    ) -> dict[str, Any]:
+        """Triggers a notification overlay with deferred activity-based timeout.
+
+        The notification renders immediately and persists until seat activity is
+        detected. Once the user interacts with the system, the timeout countdown
+        begins before the OSD is dismissed.
+
+        https://github.com/killown/wayfire-plugins/blob/main/plugins/simple-text/src/simple-text.cpp
+
+        Args:
+            text: The message string to display in the overlay.
+            image: Absolute filesystem path to an icon (PNG/JPG).
+            font_size: Pixel height of the rendered text.
+            x: Horizontal screen coordinate for the overlay origin.
+            y: Vertical screen coordinate for the overlay origin.
+            timeout: Milliseconds to persist after user activity is detected.
+
+        Returns:
+            A dictionary containing the IPC response from the compositor.
+        """
+        payload = {
+            "method": "simple-text/update-display",
+            "data": {
+                "text": text,
+                "font_size": font_size,
+                "x": x,
+                "y": y,
+                "timeout": timeout,
+            },
+        }
+        return self.sock.send_json(payload)
+
+    @handle_ipc_error
+    def get_view(self, id: int) -> dict[str, Any] | None:
         """Get the view by the given id."""
         return self.sock.get_view(id)  # pyright: ignore
 
@@ -244,22 +339,27 @@ class IPC:
         return self.sock.set_view_alpha(id, alpha)  # pyright: ignore
 
     @handle_ipc_error
-    def list_outputs(self) -> Optional[List[Dict[str, Any]]]:
+    def list_methods(self) -> list | None:
+        """List all wayfire methods."""
+        return self.sock.list_methods()  # pyright: ignore
+
+    @handle_ipc_error
+    def list_outputs(self) -> list[dict[str, Any]] | None:
         """List all outputs connected to the compositor."""
         return self.sock.list_outputs()  # pyright: ignore
 
     @handle_ipc_error
-    def get_focused_output(self) -> Optional[Dict[str, Any]]:
+    def get_focused_output(self) -> dict[str, Any] | None:
         """Get the currently focused output."""
         return self.sock.get_focused_output()  # pyright: ignore
 
     @handle_ipc_error
-    def get_focused_view(self) -> Optional[Dict[str, Any]]:
+    def get_focused_view(self) -> dict[str, Any] | None:
         """Get the currently focused view."""
         return self.sock.get_focused_view()  # pyright: ignore
 
     @handle_ipc_error
-    def list_views(self) -> List[Dict[str, Any]]:
+    def list_views(self) -> list[dict[str, Any]]:
         """List all views managed by the compositor."""
         return self.sock.list_views()  # pyright: ignore
 
@@ -269,7 +369,7 @@ class IPC:
         return self.sock.watch(events)  # pyright: ignore
 
     @handle_ipc_error
-    def read_next_event(self) -> Optional[Dict[str, Any]]:
+    def read_next_event(self) -> dict[str, Any] | None:
         """Read the next event from the compositor."""
         return self.sock.read_next_event()  # pyright: ignore
 
@@ -285,7 +385,7 @@ class IPC:
         return self.sock.close()  # pyright: ignore
 
     @handle_ipc_error
-    def set_workspace(self, x: int, y: int, view_id: Optional[int] = None) -> Any:
+    def set_workspace(self, x: int, y: int, view_id: int | None = None) -> Any:
         """Set the workspace to the specified coordinates."""
         if view_id is None:
             return self.sock.set_workspace(x, y)  # pyright: ignore
@@ -293,7 +393,7 @@ class IPC:
             return self.sock.set_workspace(x, y, view_id)  # pyright: ignore
 
     @handle_ipc_error
-    def list_view_ids(self) -> List[int]:
+    def list_view_ids(self) -> list[int]:
         """Get a list of all view IDs."""
         views = self.sock.list_views()  # pyright: ignore
         if views:
@@ -301,7 +401,7 @@ class IPC:
         return []
 
     @handle_ipc_error
-    def get_view_geometry(self, view_id: int) -> Optional[Dict[str, Any]]:
+    def get_view_geometry(self, view_id: int) -> dict[str, Any] | None:
         """Get the geometry of a specific view."""
         view = self.sock.get_view(view_id)  # pyright: ignore
         if view:
@@ -315,14 +415,14 @@ class IPC:
         y: int,
         w: int,
         h: int,
-        output_id: Optional[int] = None,
+        output_id: int | None = None,
     ) -> Any:
         """Configure a view's position and size."""
         if hasattr(self.sock, "configure_view"):
             return self.sock.configure_view(view_id, x, y, w, h, output_id)  # pyright: ignore
 
     @handle_ipc_error
-    def has_output_fullscreen_view(self, output_id: Optional[int] = None) -> bool:
+    def has_output_fullscreen_view(self, output_id: int | None = None) -> bool:
         """Check if the specified output has fullscreen views."""
         return self.wf_utils.has_output_fullscreen_view(output_id)  # pyright: ignore
 
@@ -360,7 +460,7 @@ class IPC:
         return self.stipc.click_button(button, mode)  # pyright: ignore
 
     @handle_ipc_error
-    def list_input_devices(self) -> Optional[Dict[str, Any]]:
+    def list_input_devices(self) -> dict[str, Any] | None:
         """Retrieve a list of input devices managed by the compositor."""
         return self.sock.list_input_devices()  # pyright: ignore
 
@@ -371,19 +471,19 @@ class IPC:
             return self.sock.configure_input_device(device_id, enable)  # pyright: ignore
 
     @handle_ipc_error
-    def get_output(self, output_id: int) -> Optional[Dict[str, Any]]:
+    def get_output(self, output_id: int) -> dict[str, Any] | None:
         """Get detailed information about a specific output."""
         return self.sock.get_output(output_id)  # pyright: ignore
 
     @handle_ipc_error
-    def get_current_workspace(self) -> Optional[Dict[str, Any]]:
+    def get_current_workspace(self) -> dict[str, Any] | None:
         """Get the current workspace coordinates."""
         focused_output = self.sock.get_focused_output()  # pyright: ignore
         if focused_output is not None:
             return focused_output.get("workspace", {})
 
     @handle_ipc_error
-    def get_active_workspace_number(self) -> Optional[int]:
+    def get_active_workspace_number(self) -> int | None:
         """Retrieve the number of the currently active workspace."""
         focused_output = self.sock.get_focused_output()  # pyright: ignore
         if focused_output is not None:
@@ -444,7 +544,7 @@ class IPC:
         return self.stipc.destroy_wayland_output(output)  # pyright: ignore
 
     @handle_ipc_error
-    def get_output_id_by_name(self, output_name: str) -> Optional[int]:
+    def get_output_id_by_name(self, output_name: str) -> int | None:
         """Get output ID by its name."""
         outputs = self.sock.list_outputs()  # pyright: ignore
         if outputs:
@@ -454,14 +554,14 @@ class IPC:
         return None
 
     @handle_ipc_error
-    def get_output_geometry(self, output_id: int) -> Optional[Dict[str, Any]]:
+    def get_output_geometry(self, output_id: int) -> dict[str, Any] | None:
         """Get geometry of a specific output."""
         output = self.sock.get_output(output_id)  # pyright: ignore
         if output:
             return output["geometry"]
 
     @handle_ipc_error
-    def get_workspaces_without_views(self) -> List[List[int]]:
+    def get_workspaces_without_views(self) -> list[list[int]]:
         """
         Get workspaces that don't contain any views.
 
@@ -472,12 +572,12 @@ class IPC:
         return self.wf_utils.get_workspaces_without_views()  # pyright: ignore
 
     @handle_ipc_error
-    def get_workspace_from_view(self, view_id: int) -> Dict[str, int]:
+    def get_workspace_from_view(self, view_id: int) -> dict[str, int]:
         """Get workspace coordinates for a specific view."""
         return self.wf_utils.get_workspace_from_view(view_id)  # pyright: ignore
 
     @handle_ipc_error
-    def get_focused_output_views(self) -> List[Dict[str, Any]]:
+    def get_focused_output_views(self) -> list[dict[str, Any]]:
         """Get all views on the focused output."""
         return [
             view
@@ -486,13 +586,13 @@ class IPC:
         ]
 
     @handle_ipc_error
-    def get_focused_output_id(self) -> Optional[int]:
+    def get_focused_output_id(self) -> int | None:
         """Get ID of the currently focused output."""
         focused_output = self.sock.get_focused_output()  # pyright: ignore
         if focused_output:
             return focused_output.get("id")
 
-    #  WARNING: wayfire specific functions -------------------
+    # WARNING: wayfire specific functions -------------------
     @handle_ipc_error
     def get_view_alpha(self, id: int) -> float:
         """Get the view alpha by the given id."""
@@ -523,13 +623,13 @@ class IPC:
         return self.sock.toggle_expo()  # pyright: ignore
 
     @handle_ipc_error
-    def create_headless_output(self, width: int, height: int) -> Dict[str, Any]:
+    def create_headless_output(self, width: int, height: int) -> dict[str, Any]:
         """Create a headless output with the specified dimensions."""
         return self.sock.create_headless_output(width, height)  # pyright: ignore
 
     @handle_ipc_error
     def destroy_headless_output(
-        self, output_name: Optional[str] = None, output_id: Optional[int] = None
+        self, output_name: str | None = None, output_id: int | None = None
     ) -> None:
         """Destroy a headless output by its name or ID."""
         return self.sock.destroy_headless_output(output_name, output_id)  # pyright: ignore
@@ -550,7 +650,7 @@ class IPC:
         return self.sock.cube_rotate_right()  # pyright: ignore
 
     @handle_ipc_error
-    def scale_toggle_all(self, output_id: Optional[int] = None) -> None:
+    def scale_toggle_all(self, output_id: int | None = None) -> None:
         """Toggle the Scale mode for all workspaces."""
         if output_id is not None:
             self.sock.scale_toggle_all(output_id)  # pyright: ignore
@@ -558,7 +658,7 @@ class IPC:
             self.sock.scale_toggle_all()  # pyright: ignore
 
     @handle_ipc_error
-    def scale_toggle(self, output_id: Optional[int] = None) -> None:
+    def scale_toggle(self, output_id: int | None = None) -> None:
         """Toggle the scale plugin."""
         if output_id is not None:
             self.sock.scale_toggle(output_id)  # pyright: ignore
@@ -571,12 +671,12 @@ class IPC:
         return self.sock.assign_slot(view_id, slot)  # pyright: ignore
 
     @handle_ipc_error
-    def get_option_value(self, option_name: str) -> Union[str, int, float, bool, None]:
+    def get_option_value(self, option_name: str) -> str | int | float | bool | None:
         """Retrieve the value of a specific Wayfire option."""
         return self.sock.get_option_value(option_name)  # pyright: ignore
 
     @handle_ipc_error
-    def set_option_values(self, values: Dict[str, Any]) -> Any:
+    def set_option_values(self, values: dict[str, Any]) -> Any:
         """Set multiple Wayfire option values."""
         return self.sock.set_option_values(values)  # pyright: ignore
 
@@ -591,7 +691,7 @@ class IPC:
         return self.sock.register_binding(  # pyright: ignore
             binding=binding,
             command=command,
-            exec_always=True,
+            exec_always=exec_always,
             mode=mode,
         )
 
@@ -648,7 +748,7 @@ class IPC:
 
         Args:
             view (dict): A dictionary representing the view with keys "x", "y",
-                          "width", and "height" for its position and dimensions.
+                        "width", and "height" for its position and dimensions.
             ws_x (int): The x-coordinate of the workspace in grid units.
             ws_y (int): The y-coordinate of the workspace in grid units.
             monitor (dict): A dictionary representing the monitor with keys "width"
@@ -656,24 +756,20 @@ class IPC:
 
         Returns:
             int: The area of the intersection between the view and the workspace.
-                  Returns 0 if there is no overlap.
+                 Returns 0 if there is no overlap.
         """
-        # Calculate workspace rectangle
         workspace_start_x = ws_x * monitor["width"]
         workspace_start_y = ws_y * monitor["height"]
         workspace_end_x = workspace_start_x + monitor["width"]
         workspace_end_y = workspace_start_y + monitor["height"]
-        # Calculate view rectangle
         view_start_x = view["x"]
         view_start_y = view["y"]
         view_end_x = view_start_x + view["width"]
         view_end_y = view_start_y + view["height"]
-        # Calculate intersection coordinates
         inter_start_x = max(view_start_x, workspace_start_x)
         inter_start_y = max(view_start_y, workspace_start_y)
         inter_end_x = min(view_end_x, workspace_end_x)
         inter_end_y = min(view_end_y, workspace_end_y)
-        # Calculate intersection area
         inter_width = max(0, inter_end_x - inter_start_x)
         inter_height = max(0, inter_end_y - inter_start_y)
         return inter_width * inter_height
