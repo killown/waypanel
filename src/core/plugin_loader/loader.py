@@ -80,6 +80,8 @@ class PluginLoader:
         for root, dirs, files in os.walk(directory_path):
             if "examples" in dirs:
                 dirs.remove("examples")
+            if ".git" in dirs:
+                dirs.remove(".git")
             if "__pycache__" in dirs:
                 dirs.remove("__pycache__")
             for file_name in files:
