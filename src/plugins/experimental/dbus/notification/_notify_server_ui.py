@@ -9,7 +9,7 @@ def get_plugin_metadata(_):
         "name": "Notify Server UI",
         "version": "1.0.0",
         "enabled": True,
-        "deps": ["top_panel"],
+        "deps": ["top_panel", "notify_client"],
         "description": about,
     }
 
@@ -38,10 +38,10 @@ def get_plugin_class():
 
         def notify_reload_config(self):
             self.show_messages = self.get_root_setting(
-                ["org.waypanel.plugin.notify_server", "show_messages"], True
+                ["org.waypanel.plugin.notify_client", "show_messages"], True
             )
             self.timeout = self.get_root_setting(
-                ["org.waypanel.plugin.notify_server", "timeout"], 10
+                ["org.waypanel.plugin.notify_client", "timeout"], 10
             )
 
         def _extract_first_uri_from_text(self, text: str) -> str | None:

@@ -37,6 +37,8 @@ def get_plugin_class():
             self.vbox.set_margin_bottom(10)
             self.vbox.set_margin_start(10)
             self.show_messages = None
+            self.cached_notifications = []
+
             self.add_hint(
                 [
                     "Configuration for the Notification Client plugin, managing the history and UI."
@@ -69,7 +71,7 @@ def get_plugin_class():
                 "The size (in pixels) for the application icon displayed in a notification box.",
             )
             self.show_messages = self.get_plugin_setting_add_hint(
-                ["server_show_messages"],
+                ["show_messages"],
                 True,
                 "If True, the server shows messages; False enables Do Not Disturb mode (server-side setting).",
             )
@@ -91,6 +93,19 @@ def get_plugin_class():
             self.db_path = self.path_handler.get_data_path("db/notify/notifications.db")
             self.main_widget = (self.notification_button, "append")
 
+        def on_start(self):
+            """
+            Pre-connects to the database and pre-loads notification data.
+            """
+            self.run_in_thread(self._preload_notifications)
+
+        def _preload_notifications(self):
+            """Internal method to populate the cache in a background thread."""
+            self.cached_notifications = self.fetch_last_notifications()
+            self.logger.info(
+                f"Preloaded {len(self.cached_notifications)} notifications."
+            )
+
         def update_dnd_switch_state(self):
             """Update the Do Not Disturb switch state based on the server setting."""
             try:
@@ -101,39 +116,36 @@ def get_plugin_class():
         def on_dnd_toggled(self, switch, state):
             """
             Callback when the Do Not Disturb switch is toggled.
-
-            Args:
-                switch: The GtkSwitch widget.
-                state: The new boolean state of the switch.
+            state: True means DND is ON (No messages)
+            state: False means DND is OFF (Show messages)
             """
             new_show_messages = not state
-            try:
-                self.config_handler.set_plugin_setting(
-                    ["server_show_messages"],
-                    new_show_messages,
-                )
-                self.show_messages = new_show_messages
-                self.logger.info(
-                    f"Do Not Disturb mode {'enabled' if state else 'disabled'}"
-                )
-            except Exception as e:
-                self.logger.error(f"Error toggling Do Not Disturb mode: {e}")
+            self.get_plugin_setting(
+                ["show_messages"],
+                new_show_messages,
+            )
+            self.set_plugin_setting(["show_messages"], new_show_messages)
 
-        def fetch_last_notifications(self, limit=5):
+            self.show_messages = new_show_messages
+            self.logger.info(
+                f"Do Not Disturb mode {'enabled' if state else 'disabled'}"
+            )
+
+        def fetch_last_notifications(self, limit=None):
             """
             Fetch the last notifications from the database.
 
             Args:
                 limit: Maximum number of notifications to retrieve.
             """
-            limit = self.max_notifications
+            limit_val = limit if limit is not None else self.max_notifications
             try:
                 if not self.os.path.exists(self.db_path):
                     self.logger.warning(f"Database file not found at {self.db_path}")
                     return []
                 conn = self.sqlite3.connect(self.db_path)
                 cursor = conn.cursor()
-                limit_int = int(limit) if limit is not None else 5
+                limit_int = int(limit_val)
                 cursor.execute(f"""
                     SELECT id, app_name, summary, body, app_icon, actions, hints, timestamp
                     FROM notifications
@@ -169,6 +181,7 @@ def get_plugin_class():
                 return notifications
             except Exception as e:
                 self.logger.error(f"Error fetching notifications from database: {e}")
+                return []
 
         def _extract_first_uri_from_text(self, text: str) -> str | None:
             """
@@ -349,6 +362,7 @@ def get_plugin_class():
                     child = next_child
 
                 self.notification_on_popover = {}
+                self.cached_notifications = []
                 self.logger.info("All notifications cleared and database vacuumed.")
             except Exception as e:
                 self.logger.error(f"Error clearing notifications: {e}")
@@ -386,45 +400,18 @@ def get_plugin_class():
                 if notification_id in self.notification_on_popover:
                     del self.notification_on_popover[notification_id]
 
+                self.cached_notifications = [
+                    n for n in self.cached_notifications if n["id"] != notification_id
+                ]
+
                 self.logger.info(
                     f"Notification {notification_id} deleted and database vacuumed."
                 )
             except Exception as e:
                 self.logger.error(f"Error deleting notification {notification_id}: {e}")
 
-        def append_next_oldest_notification(self) -> None:
-            """Fetch the next oldest notification from the database and append it to the UI."""
-            try:
-                conn = self.sqlite3.connect(self.db_path)
-                cursor = conn.cursor()
-                displayed_ids = tuple(self.notification_on_popover.keys())
-                query = f"""
-                    SELECT id, app_name, summary, body, app_icon, actions, hints, timestamp
-                    FROM notifications
-                    WHERE id NOT IN ({",".join(["?"] * len(displayed_ids)) if displayed_ids else "NULL"})
-                    ORDER BY timestamp DESC
-                    LIMIT 1
-                """
-                cursor.execute(query, displayed_ids)
-                row = cursor.fetchone()
-                conn.close()
-                if row:
-                    notification = {
-                        "id": row[0],
-                        "app_name": row[1],
-                        "summary": row[2],
-                        "body": row[3],
-                        "app_icon": row[4],
-                        "actions": row[5],
-                        "hints": self.json.loads(row[6]),
-                        "timestamp": row[7],
-                    }
-                    self.create_notification_box(notification)
-            except Exception as e:
-                self.logger.error(f"Error appending next oldest notification: {e}")
-
         def open_popover_notifications(self, *_) -> None:
-            """Creates or updates the notification popover."""
+            """Creates or updates the notification popover using cached data."""
             if not hasattr(self, "popover") or not self.popover:
                 self.popover = self.gtk.Popover.new()
                 self.main_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
@@ -477,18 +464,29 @@ def get_plugin_class():
                 self.vbox.remove(child)
                 child = next_child
             self.notification_on_popover = {}
-            notifications = self.fetch_last_notifications()
+
+            # Use preloaded cache or fetch if cache is empty
+            notifications = (
+                self.cached_notifications
+                if self.cached_notifications
+                else self.fetch_last_notifications()
+            )
+
             if not notifications:
                 self.logger.info("No notifications to display.")
                 no_notify_label = self.gtk.Label(label="No recent notifications")
                 no_notify_label.add_css_class("no-notifications-label")
                 self.update_widget_safely(self.vbox.append, no_notify_label)
-            if notifications:
+            else:
                 for notification in notifications:
-                    self.run_in_thread(self.create_notification_box, notification)
+                    self.create_notification_box(notification)
+
             self.update_dnd_switch_state()
             self.popover.set_parent(self.notification_button)
             self.popover.popup()
+
+            # Refresh cache in background for next interaction
+            self.run_in_thread(self._preload_notifications)
 
         def code_explanation(self):
             """
