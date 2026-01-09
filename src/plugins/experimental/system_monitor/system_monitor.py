@@ -17,6 +17,7 @@ def get_plugin_metadata(_):
 
 def get_plugin_class():
     import gi
+    import os
 
     gi.require_version("Gio", "2.0")
     from gi.repository import GObject  # pyright: ignore
@@ -146,6 +147,7 @@ def get_plugin_class():
             _add("Network")
             _add("Battery")
             _add("GPU")
+            _add("WLR_RENDERER")
             _add("VRAM")
             _add("GPU Load")
             _add("Watch events", "all")
@@ -159,9 +161,12 @@ def get_plugin_class():
             _add("APP Disk Write Count")
 
         def add_gpu(self):
-            gpu_rows = ["GPU", "VRAM", "GPU Load"]
+            gpu_rows = ["GPU", "WLR_RENDERER", "VRAM", "GPU Load"]
             try:
                 import pyamdgpuinfo
+
+                renderer = os.environ.get("WLR_RENDERER", "gles2")
+                self.update_metric("WLR_RENDERER", renderer)
 
                 if pyamdgpuinfo.detect_gpus():
                     gpu = pyamdgpuinfo.get_gpu(0)
@@ -180,11 +185,13 @@ def get_plugin_class():
                     self.update_metric("GPU Load", f"{gpu_load:.1f}%")
                 else:
                     for key in gpu_rows:
-                        self.remove_metric(key)
+                        if key != "WLR_RENDERER":
+                            self.remove_metric(key)
             except Exception as e:
                 self.logger.warning(f"pyamdgpuinfo failed to parse GPU info {e}")
                 for key in gpu_rows:
-                    self.remove_metric(key)
+                    if key != "WLR_RENDERER":
+                        self.remove_metric(key)
             return False
 
         def fetch_and_update_system_data(self):
@@ -274,10 +281,6 @@ def get_plugin_class():
             return self.popover_system and self.popover_system.is_visible()
 
         def popover_is_closed(self, *args):
-            """
-            [FIX] Stops the periodic system data fetching when the popover is closed
-            by clicking outside or using the escape key.
-            """
             self.stop_system_updates()
 
         def open_popover_system(self, *_):
@@ -431,26 +434,44 @@ def get_plugin_class():
         def code_explanation(self):
             """
             This plugin utilizes a high-performance data-binding architecture based on the GObject
-            Introspection (GI) ecosystem to ensure smooth, low-overhead UI updates.
+            Introspection (GI) ecosystem to provide a real-time system monitor.
 
-            **Core Architectural Components:**
-            1.  **ProperMetricItem (GObject.Object):** This class encapsulates a single metric (Name, Value, Tooltip).
-                By inheriting from `GObject.Object` and using `@GObject.Property`, it implements the
-                Observer Pattern. Changes to an item's value automatically trigger a notification
-                via the GI system.
-            2.  **Gio.ListStore & Gtk.ListView:** The `Gio.ListStore` holds the `ProperMetricItem` objects.
-                The `Gtk.ListView` displays the metrics using a `Gtk.SignalListItemFactory`.
-            3.  **GObject.BindingFlags.DEFAULT:** In `_row_factory_bind`, GObject bindings are established
-                between the `ProperMetricItem.value` property and the `Gtk.Label.label` property of the
-                list item. This is the **key architectural element**: the UI (Label) is bound directly
-                to the data model (ProperMetricItem), eliminating the need for manual widget updates
-                and minimizing flickering.
-            4.  **Modular Monitoring:** The `fetch_and_update_system_data` method offloads complex metric
-                gathering to the `SystemMonitorHelpers` module, ensuring separation of concerns
-                (UI logic vs. system polling).
-            5.  **Dynamic Gestures:** Gestures are dynamically added to list items based on the metric name.
-                For example, clicking the 'APP PID' metric opens an `htop` instance focused on that PID,
-                exemplifying deep system integration via Wayland IPC and external tools.
+            **1. Data Model (ProperMetricItem):**
+            Inherits from `GObject.Object` to implement the Observer pattern. By using `@GObject.Property`,
+            it emits 'notify' signals whenever a metric (name, value, or tooltip) changes. This allows
+            the UI to automatically update without manual intervention.
+
+            **2. UI Hierarchy & Modern GTK4 Widgets:**
+            - **Gio.ListStore:** A type-safe, GObject-based list that holds `ProperMetricItem` instances.
+            - **Gtk.ListView:** A scalable widget that displays data from the `ListStore`. It uses a
+              `Gtk.SignalListItemFactory` to separate the UI structure (`setup`) from data binding (`bind`).
+            - **Gtk.Popover:** The main container that appears when the plugin icon is clicked, hosting
+              the list of system metrics.
+
+            **3. Dynamic Data Binding:**
+            In `_row_factory_bind`, `metric_item.bind_property` is used. This creates a direct link between
+            the data (the value of the metric) and the UI (the label text). When the background polling
+            updates a value, GTK updates the display immediately.
+
+            **4. System Polling & Metric Logic:**
+            - **fetch_and_update_system_data:** The central loop that gathers CPU, RAM, Network, and Disk
+              metrics using the `helper` class.
+            - **add_gpu:** Handles specialized logic for AMD GPUs via `pyamdgpuinfo`. It also retrieves
+              the `WLR_RENDERER` environment variable, defaulting to 'gles2' if empty.
+            - **Focused View Tracking:** Uses Wayfire IPC to identify the active window and show
+              process-specific details like PID, Memory, and Disk I/O.
+
+            **5. Interactive Gestures:**
+            The plugin maps specific metrics to system actions. For instance:
+            - Clicking **CPU Usage** opens the GNOME System Monitor.
+            - Clicking **APP PID** opens `htop` focused on that process.
+            - Right-clicking **APP PID** kills the process.
+            - Clicking **GPU** rows opens `amdgpu_top` in a terminal.
+
+            **6. Lifecycle Management:**
+            Polling is strictly controlled by the Popover state (`start_system_updates` vs
+            `stop_system_updates`). Polling only occurs when the UI is visible, minimizing
+            background resource usage.
             """
             return self.code_explanation.__doc__
 
