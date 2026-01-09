@@ -30,6 +30,7 @@ def get_plugin_class():
     import xml.etree.ElementTree as ET
 
     WAYFIRE_METADATA_DIR = "/usr/share/wayfire/metadata"
+    WAYFIRE_LOCAL_METADATA_DIR = os.path.expanduser(".local/share/wayfire/metadata")
     WAYFIRE_TOML_PATH = os.path.expanduser("~/.config/waypanel/wayfire/wayfire.toml")
 
     class PluginListPopover(Gtk.Popover):
@@ -280,30 +281,50 @@ def get_plugin_class():
             """Load all plugins and query Wayfire IPC for which are currently active."""
             self.wf_plugins = []
             self.active_plugin_names = self._get_active_plugin_names()
-            if not self.os.path.exists(WAYFIRE_METADATA_DIR):
-                self.logger.error(f"Metadata dir not found: {WAYFIRE_METADATA_DIR}")
-                return
-            for filename in self.os.listdir(WAYFIRE_METADATA_DIR):
-                if not filename.endswith(".xml"):
+
+            metadata_dirs = [
+                WAYFIRE_METADATA_DIR,
+                WAYFIRE_LOCAL_METADATA_DIR,
+            ]
+
+            seen_plugins = set()
+
+            for meta_dir in metadata_dirs:
+                if not self.os.path.exists(meta_dir):
                     continue
-                path = self.os.path.join(WAYFIRE_METADATA_DIR, filename)
-                try:
-                    tree = ET.parse(path)
-                    root = tree.getroot()
-                    name = root.get("name", filename.replace(".xml", ""))
-                    desc = root.findtext("description", "No description")
-                    icon_name = self.parse_icon_name(name)
-                    icon = root.findtext("icon", icon_name)
-                    self.wf_plugins.append(
-                        {
-                            "name": name,
-                            "description": desc,
-                            "icon": icon,
-                            "enabled": name in self.active_plugin_names,
-                        }
-                    )
-                except Exception as e:
-                    self.logger.error(f"Failed to parse {filename}: {e}")
+
+                for filename in self.os.listdir(meta_dir):
+                    if not filename.endswith(".xml"):
+                        continue
+
+                    path = self.os.path.join(meta_dir, filename)
+
+                    try:
+                        tree = ET.parse(path)
+                        root = tree.getroot()
+
+                        name = root.get("name", filename.replace(".xml", ""))
+
+                        if name in seen_plugins:
+                            continue
+                        seen_plugins.add(name)
+
+                        desc = root.findtext("description", "No description")
+                        icon_name = self.parse_icon_name(name)
+                        icon = root.findtext("icon", icon_name)
+
+                        self.wf_plugins.append(
+                            {
+                                "name": name,
+                                "description": desc,
+                                "icon": icon,
+                                "enabled": name in self.active_plugin_names,
+                            }
+                        )
+
+                    except Exception as e:
+                        self.logger.error(f"Failed to parse {path}: {e}")
+
             self.wf_plugins.sort(key=lambda x: (-x["enabled"], x["name"]))
 
         def _get_active_plugin_names(self):
