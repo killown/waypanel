@@ -1,15 +1,12 @@
-import subprocess
-import psutil
-import gi
-
-gi.require_version("Gio", "2.0")
-gi.require_version("Gtk", "4.0")
-from gi.repository import GObject, Gtk
-
-
 def get_plugin_metadata(_):
     """
     Returns metadata for the System Monitor plugin.
+
+    Args:
+        _: Reserved for future use by the plugin loader.
+
+    Returns:
+        dict: Plugin configuration and description metadata.
     """
     about = """
     Comprehensive system and application resource monitor.
@@ -18,7 +15,7 @@ def get_plugin_metadata(_):
     return {
         "id": "org.waypanel.plugin.system_monitor",
         "name": "System Monitor",
-        "version": "3.5.0",
+        "version": "3.5.4",
         "enabled": True,
         "index": 9,
         "container": "top-panel-systray",
@@ -29,19 +26,34 @@ def get_plugin_metadata(_):
 
 def get_plugin_class():
     """
-    Returns the SystemMonitorPlugin class with sectioned UI and restored gestures.
+    Returns the SystemMonitorPlugin class with stable UI updates to prevent blinking.
+
+    Returns:
+        type: The SystemMonitorPlugin class.
     """
+    import subprocess
+    import psutil
+    import gi
+
+    gi.require_version("Gio", "2.0")
+    gi.require_version("Gtk", "4.0")
+    from gi.repository import GObject, Gtk
+    from ._system_monitor_helper import SystemMonitorHelpers
+    from src.plugins.core._base import BasePlugin
 
     class ProperMetricItem(GObject.Object):
         """
         GObject-based data model for system metrics with property notification.
         """
 
-        def __init__(self, name: str, value: str, tooltip: str = ""):
+        def __init__(
+            self, name: str, value: str, tooltip: str = "", visible: bool = True
+        ):
             super().__init__()
             self._name = name
             self._value = value
             self._tooltip = tooltip
+            self._visible = visible
 
         @GObject.Property(type=str)
         def name(self) -> str:
@@ -71,12 +83,20 @@ def get_plugin_class():
             self._tooltip = value
             self.notify("tooltip")
 
-    from ._system_monitor_helper import SystemMonitorHelpers
-    from src.plugins.core._base import BasePlugin
+        @GObject.Property(type=bool, default=True)
+        def visible(self) -> bool:
+            return self._visible
+
+        @visible.setter
+        def visible(self, value: bool):
+            if self._visible != value:
+                self._visible = value
+                self.notify("visible")
 
     class SystemMonitorPlugin(BasePlugin):
         """
         Plugin class managing hardware stats and process tracking in a sectioned layout.
+        Uses visibility bindings to prevent UI flicker during list updates.
         """
 
         def __init__(self, panel_instance):
@@ -87,6 +107,7 @@ def get_plugin_class():
             self.list_stores = {}
             self.metric_items = {}
             self.disk_labels = {}
+            self.updated_keys = set()
             self.sections = {
                 "CPU": "cpu-symbolic",
                 "RAM": "memory-symbolic",
@@ -121,6 +142,10 @@ def get_plugin_class():
         def _set_margins(self, widget: Gtk.Widget, value: int):
             """
             Manual application of margins for GTK4.
+
+            Args:
+                widget: The target widget.
+                value: Margin size in pixels.
             """
             widget.set_margin_top(value)
             widget.set_margin_bottom(value)
@@ -156,40 +181,57 @@ def get_plugin_class():
             is_visible: bool = True,
         ):
             """
-            Updates the specific section store with current metric data.
+            Updates the specific section store and tracks the key for pruning.
+
+            Args:
+                section: Section header (e.g., CPU).
+                name: Metric name label.
+                value: Metric value.
+                tooltip: Optional hover text.
+                is_visible: Current visibility state.
             """
             if self.popover_system is None:
                 return
             key = f"{section}:{name}"
-            if key in self.metric_items:
-                item = self.metric_items[key]
-                if is_visible:
+            if is_visible:
+                self.updated_keys.add(key)
+                if key in self.metric_items:
+                    item = self.metric_items[key]
                     item.value = str(value)
+                    item.visible = True
                     if tooltip is not None:
                         item.tooltip = tooltip
                 else:
-                    self.remove_metric(section, name)
-            elif is_visible:
-                self.add_metric(section, name, value, tooltip)
+                    self.add_metric(section, name, value, tooltip)
+            else:
+                self.remove_metric(section, name)
 
         def remove_metric(self, section: str, name: str):
             """
-            Removes an item from a section's store.
+            Hides an item instead of removing it from the store to prevent layout blinking.
+
+            Args:
+                section: Target section.
+                name: Metric name.
             """
             key = f"{section}:{name}"
             if key in self.metric_items:
-                item = self.metric_items.pop(key)
-                store = self.list_stores[section]
-                for i in range(store.get_n_items()):
-                    if store.get_item(i) is item:
-                        store.remove(i)
-                        break
+                self.metric_items[key].visible = False
 
         def add_metric(
             self, section: str, name: str, value: str, tooltip: str | None = None
         ):
             """
             Appends a new metric item to the relevant section store.
+
+            Args:
+                section: Section header.
+                name: Metric label.
+                value: Initial value.
+                tooltip: Initial tooltip.
+
+            Returns:
+                ProperMetricItem: The newly created item.
             """
             if section not in self.list_stores:
                 return None
@@ -202,6 +244,12 @@ def get_plugin_class():
         def _hw_prettifier(self, driver: str) -> str:
             """
             Maps sensor driver strings to hardware names.
+
+            Args:
+                driver: Raw driver name.
+
+            Returns:
+                str: Prettified hardware name.
             """
             mapping = {
                 "k10temp": "AMD CPU",
@@ -214,7 +262,7 @@ def get_plugin_class():
 
         def add_gpu(self):
             """
-            Handles multi-vendor GPU status polling.
+            Handles multi-vendor GPU status polling synchronously to sync with pruning.
             """
             try:
                 nv = subprocess.run(
@@ -249,7 +297,7 @@ def get_plugin_class():
 
         def _poll_sensors(self):
             """
-            Polls thermals and routes them correctly to CPU, GPU, Network, or Storage sections.
+            Polls thermals and routes them correctly. Only detected hardware is updated.
             """
             try:
                 for driver, entries in psutil.sensors_temperatures().items():
@@ -276,19 +324,24 @@ def get_plugin_class():
 
         def fetch_and_update_system_data(self):
             """
-            Updates all monitor sections and restores Wayfire/Gesture data.
+            Updates all monitor sections and prunes keys using visibility to avoid flickering.
+
+            Returns:
+                bool: Whether the popover is still visible.
             """
+            self.updated_keys.clear()
+
             self.update_metric("CPU", "Usage", f"{self.helper.get_cpu_usage()}%")
             self.update_metric("RAM", "Usage", self.helper.get_ram_info())
             self.update_metric("Network", "Usage", self.helper.get_network_usage())
-            self.update_metric("Wayfire", "Watch events", "all")
-
             if "Battery" in self.sections:
                 batt = self.helper.get_battery_status()
-                self.update_metric("Battery", "Status", batt or "N/A")
+                self.update_metric(
+                    "Battery", "Status", batt or "N/A", is_visible=batt is not None
+                )
 
-            self.glib.idle_add(self.add_gpu)
-            self.glib.idle_add(self._poll_sensors)
+            self.add_gpu()
+            self._poll_sensors()
 
             disks = self.helper.get_disk_usages()
             for u in disks:
@@ -302,34 +355,46 @@ def get_plugin_class():
                 p = view["pid"]
                 p_usage = self.helper.get_process_usage(p)
                 p_disk = self.helper.get_process_disk_usage(p)
-                self.update_metric(
-                    "Wayfire", "Exec", self.helper.get_process_executable(p)
-                )
+
                 self.update_metric(
                     "Wayfire", "APP ID", f"({view['app-id']}): {view['id']}"
+                )
+                self.update_metric(
+                    "Wayfire", "Exec", self.helper.get_process_executable(p)
                 )
                 self.update_metric(
                     "Wayfire",
                     "APP PID",
                     p,
-                    tooltip_text="Left: htop | Middle: Monitor | Right: Kill",
+                    tooltip="Left: htop | Middle: Monitor | Right: Kill",
                 )
                 if p_usage:
                     self.update_metric("Wayfire", "APP Memory", p_usage["memory_usage"])
                 if p_disk:
-                    self.app_io_label.set_markup(
-                        f"<b>I/O:</b> R:{p_disk['read_bytes']} | W:{p_disk['write_bytes']}"
+                    self.update_metric(
+                        "Wayfire",
+                        "Disk Usage",
+                        f"<b>I/O:</b> R:{p_disk['read_bytes']} | W:{p_disk['write_bytes']}",
                     )
+
+                self.update_metric(
+                    "Wayfire", "Watch events", "L_CLICK all or R_CLICK selected"
+                )
+
             else:
-                for k in ["Exec", "APP ID", "APP PID", "APP Memory"]:
-                    self.remove_metric("Wayfire", k)
                 self.app_io_label.set_markup("")
+
+            for full_key, item in self.metric_items.items():
+                if full_key not in self.updated_keys:
+                    if "Wayfire" in full_key:
+                        continue
+                    item.visible = False
 
             return self.popover_system and self.popover_system.is_visible()
 
         def open_popover_system(self, *_):
             """
-            Toggles popover visibility.
+            Toggles popover visibility and starts updates.
             """
             if self.popover_system and self.popover_system.is_visible():
                 self.popover_system.popdown()
@@ -341,7 +406,7 @@ def get_plugin_class():
 
         def create_popover_system(self):
             """
-            Builds section-based GTK4 layout with themed containers and a hidden Storage section.
+            Builds section-based layout with a default-hidden Storage expander.
             """
             self.popover_system = self.gtk.Popover.new()
             self.popover_system.connect("closed", lambda *_: self.stop_system_updates())
@@ -372,7 +437,12 @@ def get_plugin_class():
 
         def _build_section(self, name, icon, container):
             """
-            Constructs a themed section frame.
+            Constructs a themed section frame with a stable ListView.
+
+            Args:
+                name: Header label.
+                icon: Header icon name.
+                container: Parent container.
             """
             frame = self.gtk.Frame()
             vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, spacing=5)
@@ -405,6 +475,9 @@ def get_plugin_class():
         def _get_factory(self):
             """
             Returns a configured SignalListItemFactory.
+
+            Returns:
+                Gtk.SignalListItemFactory: The setup factory.
             """
             f = self.gtk.SignalListItemFactory()
             f.connect("setup", self._factory_setup)
@@ -413,7 +486,11 @@ def get_plugin_class():
 
         def _factory_setup(self, f, li):
             """
-            Row layout helper.
+            Row layout helper with visibility containers.
+
+            Args:
+                f: Factory instance.
+                li: Target list item.
             """
             hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, spacing=20)
             n = self.gtk.Label(halign=self.gtk.Align.START, hexpand=True, xalign=0.0)
@@ -422,20 +499,28 @@ def get_plugin_class():
             hbox.append(n)
             hbox.append(v)
             li.set_child(hbox)
-            li._n, li._v = n, v
+            li._n, li._v, li._h = n, v, hbox
 
         def _factory_bind(self, f, li):
             """
-            Property binding and gesture assignment.
+            Property binding and gesture assignment. Restores right-click for Watch events.
+
+            Args:
+                f: Factory instance.
+                li: Bound list item.
             """
             item = li.get_item()
-            h = li.get_child()
+            h = li._h
             li._n.set_markup(f"{item.name}:")
+
             item.bind_property(
                 "value", li._v, "label", GObject.BindingFlags.SYNC_CREATE
             )
             item.bind_property(
                 "tooltip", h, "tooltip-text", GObject.BindingFlags.SYNC_CREATE
+            )
+            item.bind_property(
+                "visible", h, "visible", GObject.BindingFlags.SYNC_CREATE
             )
 
             nm = item.name
