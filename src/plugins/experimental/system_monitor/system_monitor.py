@@ -1,12 +1,24 @@
+import subprocess
+import psutil
+import gi
+
+gi.require_version("Gio", "2.0")
+gi.require_version("Gtk", "4.0")
+from gi.repository import GObject, Gtk
+
+
 def get_plugin_metadata(_):
+    """
+    Returns metadata for the System Monitor plugin.
+    """
     about = """
-    Provides a real-time, comprehensive view of system and application resource utilization
-    (CPU, RAM, Disk, Network, GPU, and Focused View Stats) via a GTK popover.
+    Comprehensive system and application resource monitor.
+    Features themed section-based layout with CPU, GPU, RAM, Network, Wayfire, and Storage.
     """
     return {
         "id": "org.waypanel.plugin.system_monitor",
         "name": "System Monitor",
-        "version": "1.0.0",
+        "version": "3.5.0",
         "enabled": True,
         "index": 9,
         "container": "top-panel-systray",
@@ -16,44 +28,46 @@ def get_plugin_metadata(_):
 
 
 def get_plugin_class():
-    import gi
-    import os
-
-    gi.require_version("Gio", "2.0")
-    from gi.repository import GObject  # pyright: ignore
+    """
+    Returns the SystemMonitorPlugin class with sectioned UI and restored gestures.
+    """
 
     class ProperMetricItem(GObject.Object):
-        def __init__(self, name, value, tooltip=""):
+        """
+        GObject-based data model for system metrics with property notification.
+        """
+
+        def __init__(self, name: str, value: str, tooltip: str = ""):
             super().__init__()
             self._name = name
             self._value = value
             self._tooltip = tooltip
 
         @GObject.Property(type=str)
-        def name(self):  # pyright: ignore
+        def name(self) -> str:
             return self._name
 
         @name.setter
-        def name(self, value):
+        def name(self, value: str):
             self._name = value
             self.notify("name")
 
         @GObject.Property(type=str)
-        def value(self):  # pyright: ignore
+        def value(self) -> str:
             return self._value
 
         @value.setter
-        def value(self, new_value):
+        def value(self, new_value: str):
             if self._value != new_value:
                 self._value = new_value
                 self.notify("value")
 
         @GObject.Property(type=str)
-        def tooltip(self):  # pyright: ignore
+        def tooltip(self) -> str:
             return self._tooltip
 
         @tooltip.setter
-        def tooltip(self, value):
+        def tooltip(self, value: str):
             self._tooltip = value
             self.notify("tooltip")
 
@@ -61,18 +75,35 @@ def get_plugin_class():
     from src.plugins.core._base import BasePlugin
 
     class SystemMonitorPlugin(BasePlugin):
+        """
+        Plugin class managing hardware stats and process tracking in a sectioned layout.
+        """
+
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
             self.popover_system = None
             self.update_timeout_id = None
             self.helper = SystemMonitorHelpers(panel_instance)
-            self.list_view = None
-            self.list_store = self.gio.ListStore.new(ProperMetricItem)
+            self.list_stores = {}
             self.metric_items = {}
+            self.disk_labels = {}
+            self.sections = {
+                "CPU": "cpu-symbolic",
+                "RAM": "memory-symbolic",
+                "GPU": "video-display-symbolic",
+                "Wayfire": "applications-system-symbolic",
+                "Network": "network-workgroup-symbolic",
+            }
+            if psutil.sensors_battery():
+                self.sections["Battery"] = "battery-full-symbolic"
+
             self.create_gesture = self.plugins["gestures_setup"].create_gesture
             self.create_menu_popover_system()
 
         def create_menu_popover_system(self):
+            """
+            Initializes the tray button and icon.
+            """
             self.menubutton_system = self.gtk.Button()
             self.menubutton_system.add_css_class("system-monitor-menubutton")
             icon_name = self.gtk_helper.icon_exist(
@@ -87,392 +118,355 @@ def get_plugin_class():
             self.gtk_helper.add_cursor_effect(self.menubutton_system)
             self.main_widget = (self.menubutton_system, "append")
 
+        def _set_margins(self, widget: Gtk.Widget, value: int):
+            """
+            Manual application of margins for GTK4.
+            """
+            widget.set_margin_top(value)
+            widget.set_margin_bottom(value)
+            widget.set_margin_start(value)
+            widget.set_margin_end(value)
+
         def start_system_updates(self):
+            """
+            Starts polling GLib sources.
+            """
             self.glib.timeout_add(1000, self.fetch_and_update_system_data)
             self.update_timeout_id = self.glib.timeout_add_seconds(
                 self.helper.update_interval, self.fetch_and_update_system_data
             )
 
         def stop_system_updates(self):
+            """
+            Cleans up polling sources.
+            """
             if self.update_timeout_id:
-                self.glib.source_remove(self.update_timeout_id)
+                try:
+                    self.glib.source_remove(self.update_timeout_id)
+                except Exception:
+                    pass
                 self.update_timeout_id = None
 
-        def update_metric(self, name, value, tooltip_text=None, is_visible=True):
-            if self.list_view is None:
+        def update_metric(
+            self,
+            section: str,
+            name: str,
+            value: str,
+            tooltip: str | None = None,
+            is_visible: bool = True,
+        ):
+            """
+            Updates the specific section store with current metric data.
+            """
+            if self.popover_system is None:
                 return
-            if name in self.metric_items:
-                item = self.metric_items[name]
+            key = f"{section}:{name}"
+            if key in self.metric_items:
+                item = self.metric_items[key]
                 if is_visible:
                     item.value = str(value)
-                    if tooltip_text is not None:
-                        item.tooltip = tooltip_text
+                    if tooltip is not None:
+                        item.tooltip = tooltip
                 else:
-                    self.remove_metric(name)
+                    self.remove_metric(section, name)
             elif is_visible:
-                self.add_metric(name, value, tooltip_text)
+                self.add_metric(section, name, value, tooltip)
 
-        def remove_metric(self, name):
-            if name in self.metric_items:
-                item_to_remove = self.metric_items.pop(name)
-                found_index = -1
-                for i in range(self.list_store.get_n_items()):
-                    item = self.list_store.get_item(i)
-                    if item is item_to_remove:
-                        found_index = i
+        def remove_metric(self, section: str, name: str):
+            """
+            Removes an item from a section's store.
+            """
+            key = f"{section}:{name}"
+            if key in self.metric_items:
+                item = self.metric_items.pop(key)
+                store = self.list_stores[section]
+                for i in range(store.get_n_items()):
+                    if store.get_item(i) is item:
+                        store.remove(i)
                         break
-                if found_index != -1:
-                    self.list_store.remove(found_index)
 
-        def add_metric(self, name, value, tooltip_text=None):
-            if self.list_view is None or name in self.metric_items:
+        def add_metric(
+            self, section: str, name: str, value: str, tooltip: str | None = None
+        ):
+            """
+            Appends a new metric item to the relevant section store.
+            """
+            if section not in self.list_stores:
                 return None
-            tooltip = tooltip_text if tooltip_text is not None else ""
-            item = ProperMetricItem(name, str(value), tooltip)
-            self.list_store.append(item)
-            self.metric_items[name] = item
+            key = f"{section}:{name}"
+            item = ProperMetricItem(name, str(value), tooltip or "")
+            self.list_stores[section].append(item)
+            self.metric_items[key] = item
             return item
 
-        def add_initial_rows(self):
-            self.list_store.remove_all()
-            self.metric_items.clear()
-
-            def _add(name, value="..."):
-                item = ProperMetricItem(name, value)
-                self.list_store.append(item)
-                self.metric_items[name] = item
-
-            _add("CPU Usage")
-            _add("RAM Usage")
-            _add("Network")
-            _add("Battery")
-            _add("GPU")
-            _add("WLR_RENDERER")
-            _add("VRAM")
-            _add("GPU Load")
-            _add("Watch events", "all")
-            _add("Exec")
-            _add("APP ID")
-            _add("APP PID")
-            _add("APP Memory Usage")
-            _add("APP Disk Read")
-            _add("APP Disk Write")
-            _add("APP Disk Read Count")
-            _add("APP Disk Write Count")
+        def _hw_prettifier(self, driver: str) -> str:
+            """
+            Maps sensor driver strings to hardware names.
+            """
+            mapping = {
+                "k10temp": "AMD CPU",
+                "coretemp": "Intel CPU",
+                "amdgpu": "Radeon GPU",
+                "nvme": "SSD Storage",
+                "mt7921_phy0": "WiFi",
+            }
+            return mapping.get(driver, driver.replace("_", " ").title())
 
         def add_gpu(self):
-            gpu_rows = ["GPU", "WLR_RENDERER", "VRAM", "GPU Load"]
+            """
+            Handles multi-vendor GPU status polling.
+            """
+            try:
+                nv = subprocess.run(
+                    [
+                        "nvidia-smi",
+                        "--query-gpu=name,utilization.gpu,memory.used,memory.total",
+                        "--format=csv,noheader,nounits",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                p = nv.stdout.strip().split(",")
+                self.update_metric("GPU", "Vendor", f"NVIDIA {p[0].strip()}")
+                self.update_metric("GPU", "Load", f"{p[1].strip()}%")
+                self.update_metric("GPU", "VRAM", f"{p[2].strip()} / {p[3].strip()} MB")
+            except Exception:
+                pass
+
             try:
                 import pyamdgpuinfo
 
-                renderer = os.environ.get("WLR_RENDERER", "gles2")
-                self.update_metric("WLR_RENDERER", renderer)
-
                 if pyamdgpuinfo.detect_gpus():
                     gpu = pyamdgpuinfo.get_gpu(0)
-                    total_vram_gb = gpu.memory_info["vram_size"] / (1024**3)
-                    used_vram_bytes = gpu.query_vram_usage()
-                    used_vram_gb = used_vram_bytes / (1024**3)
-                    usage_percent = (
-                        used_vram_bytes / gpu.memory_info["vram_size"]
-                    ) * 100
-                    gpu_load = gpu.query_load()
-                    self.update_metric("GPU", gpu.name)
-                    self.update_metric(
-                        "VRAM",
-                        f"({usage_percent:.1f}%) {used_vram_gb:.1f} / {total_vram_gb:.1f} GB",
-                    )
-                    self.update_metric("GPU Load", f"{gpu_load:.1f}%")
-                else:
-                    for key in gpu_rows:
-                        if key != "WLR_RENDERER":
-                            self.remove_metric(key)
-            except Exception as e:
-                self.logger.warning(f"pyamdgpuinfo failed to parse GPU info {e}")
-                for key in gpu_rows:
-                    if key != "WLR_RENDERER":
-                        self.remove_metric(key)
-            return False
+                    total = gpu.memory_info["vram_size"] / (1024**3)
+                    used = gpu.query_vram_usage() / (1024**3)
+                    self.update_metric("GPU", "Vendor", gpu.name)
+                    self.update_metric("GPU", "Load", f"{gpu.query_load():.1f}%")
+                    self.update_metric("GPU", "VRAM", f"{used:.1f} / {total:.1f} GB")
+            except Exception:
+                pass
+
+        def _poll_sensors(self):
+            """
+            Polls thermals and routes them correctly to CPU, GPU, Network, or Storage sections.
+            """
+            try:
+                for driver, entries in psutil.sensors_temperatures().items():
+                    vendor = self._hw_prettifier(driver)
+                    val = f"{entries[0].current}°C"
+                    if entries[0].current >= (entries[0].critical or 85):
+                        val = f"<span foreground='#ff3b3b' weight='bold'>{val}</span>"
+
+                    if driver == "nvme":
+                        self.update_metric("Storage", f"{vendor} Temp", val)
+                    elif driver == "mt7921_phy0":
+                        self.update_metric("Network", "WiFi Temp", val)
+                    else:
+                        section = (
+                            "CPU"
+                            if "CPU" in vendor
+                            else "GPU"
+                            if "GPU" in vendor
+                            else "CPU"
+                        )
+                        self.update_metric(section, f"{vendor} Temp", val)
+            except Exception:
+                pass
 
         def fetch_and_update_system_data(self):
-            cpu_usage = self.helper.get_cpu_usage()
-            memory_usage = self.helper.get_ram_info()
-            disk_usages = self.helper.get_disk_usages()
-            network_usage = self.helper.get_network_usage()
-            battery_status = self.helper.get_battery_status()
-            focused_view_id = self._wf_helper.get_the_last_focused_view_id()
-            focused_view = self.ipc.get_view(focused_view_id)
-            self.update_metric("CPU Usage", f"{cpu_usage}%")
-            self.update_metric("RAM Usage", f"{memory_usage}")
+            """
+            Updates all monitor sections and restores Wayfire/Gesture data.
+            """
+            self.update_metric("CPU", "Usage", f"{self.helper.get_cpu_usage()}%")
+            self.update_metric("RAM", "Usage", self.helper.get_ram_info())
+            self.update_metric("Network", "Usage", self.helper.get_network_usage())
+            self.update_metric("Wayfire", "Watch events", "all")
+
+            if "Battery" in self.sections:
+                batt = self.helper.get_battery_status()
+                self.update_metric("Battery", "Status", batt or "N/A")
+
             self.glib.idle_add(self.add_gpu)
-            current_mountpoints = {usage["mountpoint"] for usage in disk_usages}
-            for usage in disk_usages:
-                mountpoint = usage["mountpoint"]
-                used = usage["used"]
-                total = usage["total"]
-                name = f"Disk ({mountpoint})"
-                self.update_metric(name, f"{used:.1f} / {total:.0f}GB")
-            all_known_keys = list(self.metric_items.keys())
-            for key in all_known_keys:
-                if key.startswith("Disk ("):
-                    mountpoint = key[6:-1]
-                    if mountpoint not in current_mountpoints:
-                        self.remove_metric(key)
-            self.update_metric("Network", network_usage)
-            self.update_metric(
-                "Battery", battery_status, is_visible=(battery_status is not None)
-            )
-            focused_view_keys = [
-                "Exec",
-                "APP ID",
-                "APP PID",
-                "APP Memory Usage",
-                "APP Disk Read",
-                "APP Disk Write",
-                "APP Disk Read Count",
-                "APP Disk Write Count",
-            ]
-            if focused_view:
-                pid = focused_view["pid"]
-                process_usage = self.helper.get_process_usage(pid)
-                process_disk_usage = self.helper.get_process_disk_usage(pid)
-                self.update_metric("Exec", self.helper.get_process_executable(pid))
+            self.glib.idle_add(self._poll_sensors)
+
+            disks = self.helper.get_disk_usages()
+            for u in disks:
                 self.update_metric(
-                    "APP ID", f"({focused_view['app-id']}): {focused_view['id']}"
+                    "Storage", u["mountpoint"], f"{u['used']:.1f} / {u['total']:.0f}GB"
+                )
+
+            fid = self._wf_helper.get_the_last_focused_view_id()
+            view = self.ipc.get_view(fid)
+            if view:
+                p = view["pid"]
+                p_usage = self.helper.get_process_usage(p)
+                p_disk = self.helper.get_process_disk_usage(p)
+                self.update_metric(
+                    "Wayfire", "Exec", self.helper.get_process_executable(p)
                 )
                 self.update_metric(
-                    "APP PID", pid, tooltip_text="Right click to kill process"
-                )
-                proc_usage_visible = process_usage is not None
-                self.update_metric(
-                    "APP Memory Usage",
-                    process_usage["memory_usage"] if proc_usage_visible else "...",
-                    is_visible=proc_usage_visible,
-                )
-                disk_read_visible = process_disk_usage is not None
-                self.update_metric(
-                    "APP Disk Read",
-                    process_disk_usage["read_bytes"] if disk_read_visible else "...",
-                    is_visible=disk_read_visible,
+                    "Wayfire", "APP ID", f"({view['app-id']}): {view['id']}"
                 )
                 self.update_metric(
-                    "APP Disk Write",
-                    process_disk_usage["write_bytes"] if disk_read_visible else "...",
-                    is_visible=disk_read_visible,
+                    "Wayfire",
+                    "APP PID",
+                    p,
+                    tooltip_text="Left: htop | Middle: Monitor | Right: Kill",
                 )
-                self.update_metric(
-                    "APP Disk Read Count",
-                    str(process_disk_usage["read_count"])
-                    if disk_read_visible
-                    else "...",
-                    is_visible=disk_read_visible,
-                )
-                self.update_metric(
-                    "APP Disk Write Count",
-                    str(process_disk_usage["write_count"])
-                    if disk_read_visible
-                    else "...",
-                    is_visible=disk_read_visible,
-                )
+                if p_usage:
+                    self.update_metric("Wayfire", "APP Memory", p_usage["memory_usage"])
+                if p_disk:
+                    self.app_io_label.set_markup(
+                        f"<b>I/O:</b> R:{p_disk['read_bytes']} | W:{p_disk['write_bytes']}"
+                    )
             else:
-                for key in focused_view_keys:
-                    self.update_metric(key, "", is_visible=False)
-            self.update_metric("Watch events", "all")
+                for k in ["Exec", "APP ID", "APP PID", "APP Memory"]:
+                    self.remove_metric("Wayfire", k)
+                self.app_io_label.set_markup("")
+
             return self.popover_system and self.popover_system.is_visible()
 
-        def popover_is_closed(self, *args):
-            self.stop_system_updates()
-
         def open_popover_system(self, *_):
+            """
+            Toggles popover visibility.
+            """
             if self.popover_system and self.popover_system.is_visible():
                 self.popover_system.popdown()
-                self.stop_system_updates()
-            elif self.popover_system and not self.popover_system.is_visible():
-                self.popover_system.popup()
-                self.start_system_updates()
             else:
-                self.create_popover_system()
-                self.popover_system.popup()  # pyright: ignore
+                if not self.popover_system:
+                    self.create_popover_system()
+                self.popover_system.popup()
                 self.start_system_updates()
 
         def create_popover_system(self):
+            """
+            Builds section-based GTK4 layout with themed containers and a hidden Storage section.
+            """
             self.popover_system = self.gtk.Popover.new()
-            self.popover_system.add_css_class("system-monitor-popover")
-            self.popover_system.connect("closed", self.popover_is_closed)
-            vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, spacing=10)
-            vbox.add_css_class("system-monitor-vbox")
-            vbox.set_margin_top(10)
-            vbox.set_margin_bottom(10)
-            vbox.set_margin_start(10)
-            vbox.set_margin_end(10)
-            selection_model = self.gtk.SingleSelection.new(self.list_store)
-            row_factory = self.gtk.SignalListItemFactory()
-            row_factory.connect("setup", self._row_factory_setup)
-            row_factory.connect("bind", self._row_factory_bind)
-            self.list_view = self.gtk.ListView.new(selection_model, row_factory)
-            self.list_view.add_css_class("system-monitor-listview")
-            self.list_view.set_single_click_activate(False)
-            vbox.append(self.list_view)
-            self.popover_system.set_child(vbox)
+            self.popover_system.connect("closed", lambda *_: self.stop_system_updates())
+
+            root_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, spacing=15)
+            self._set_margins(root_vbox, 15)
+
+            for name, icon in self.sections.items():
+                self._build_section(name, icon, root_vbox)
+
+            storage_exp = self.gtk.Expander.new("Storage & Disks")
+            storage_exp.set_expanded(False)
+            storage_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, spacing=5)
+            self._set_margins(storage_vbox, 10)
+
+            store = self.gio.ListStore.new(ProperMetricItem)
+            self.list_stores["Storage"] = store
+            lv = self.gtk.ListView.new(
+                self.gtk.SingleSelection.new(store), self._get_factory()
+            )
+            storage_vbox.append(lv)
+            storage_exp.set_child(storage_vbox)
+            root_vbox.append(storage_exp)
+
+            self.popover_system.set_child(root_vbox)
             self.popover_system.set_parent(self.menubutton_system)
-            self.popover_system.set_size_request(500, 0)
-            self.add_initial_rows()
-            self.list_view.show()
+            self.popover_system.set_size_request(450, -1)
 
-        def _row_factory_setup(self, factory, list_item):
+        def _build_section(self, name, icon, container):
+            """
+            Constructs a themed section frame.
+            """
+            frame = self.gtk.Frame()
+            vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, spacing=5)
+            self._set_margins(vbox, 10)
+
+            header = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, spacing=10)
+            header.append(self.gtk.Image.new_from_icon_name(icon))
+            lbl = self.gtk.Label()
+            lbl.set_markup(f"<b>{name}</b>")
+            header.append(lbl)
+            vbox.append(header)
+            vbox.append(self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL))
+
+            store = self.gio.ListStore.new(ProperMetricItem)
+            self.list_stores[name] = store
+            lv = self.gtk.ListView.new(
+                self.gtk.SingleSelection.new(store), self._get_factory()
+            )
+            vbox.append(lv)
+
+            if name == "Wayfire":
+                self.app_io_label = self.gtk.Label(
+                    halign=self.gtk.Align.START, xalign=0.0
+                )
+                vbox.append(self.app_io_label)
+
+            frame.set_child(vbox)
+            container.append(frame)
+
+        def _get_factory(self):
+            """
+            Returns a configured SignalListItemFactory.
+            """
+            f = self.gtk.SignalListItemFactory()
+            f.connect("setup", self._factory_setup)
+            f.connect("bind", self._factory_bind)
+            return f
+
+        def _factory_setup(self, f, li):
+            """
+            Row layout helper.
+            """
             hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, spacing=20)
-            hbox.add_css_class("system-monitor-hbox")
-            hbox.set_halign(self.gtk.Align.FILL)
-            hbox.set_margin_top(3)
-            hbox.set_margin_bottom(3)
-            name_label = self.gtk.Label(label="Initializing...")
-            name_label.add_css_class("system-monitor-name-label")
-            name_label.set_halign(self.gtk.Align.START)
-            name_label.set_hexpand(True)
-            name_label.set_xalign(0.0)
-            name_label.set_justify(self.gtk.Justification.LEFT)
-            name_label.set_width_chars(15)
-            value_label = self.gtk.Label(label="...")
-            value_label.add_css_class("system-monitor-value-label")
-            value_label.set_halign(self.gtk.Align.END)
-            value_label.set_xalign(1.0)
-            hbox.append(name_label)
-            hbox.append(value_label)
-            list_item.set_child(hbox)
-            list_item._name_label = name_label
-            list_item._value_label = value_label
-            list_item._bindings = []
+            n = self.gtk.Label(halign=self.gtk.Align.START, hexpand=True, xalign=0.0)
+            v = self.gtk.Label(halign=self.gtk.Align.END, xalign=1.0)
+            v.set_use_markup(True)
+            hbox.append(n)
+            hbox.append(v)
+            li.set_child(hbox)
+            li._n, li._v = n, v
 
-        def _row_factory_bind(self, factory, list_item):
-            metric_item = list_item.get_item()
-            hbox = list_item.get_child()
-            for binding in list_item._bindings:
-                binding.unbind()
-            list_item._bindings.clear()
-            list_item._name_label.set_label(metric_item.name)
-            binding_value = metric_item.bind_property(
-                "value", list_item._value_label, "label", GObject.BindingFlags.DEFAULT
-            )
-            list_item._bindings.append(binding_value)
-            binding_tooltip = metric_item.bind_property(
-                "tooltip", hbox, "tooltip-text", GObject.BindingFlags.DEFAULT
-            )
-            list_item._bindings.append(binding_tooltip)
-            name = metric_item.name
-            if name == "APP ID":
-                self.create_gesture_for_focused_view_id(hbox)
-            if name == "APP PID":
-                self.create_gesture_for_focused_view_pid(hbox)
-            elif name == "CPU Usage":
-                self.create_gesture_for_cpu_usage(hbox)
-            elif "Disk (" in name or "Disk Read" in name or "Disk Write" in name:
-                self.create_iotop_gesture_for_focused_view_pid(hbox)
-            elif name in ["GPU", "VRAM", "GPU Load"]:
-                self.create_gesture_for_amdgpu_top(hbox)
-            elif name == "Watch events":
-                self.create_watch_events_gesture(hbox)
-
-        def last_toplevel_focused_view(self):
-            if "taskbar" in self.plugins:
-                return self.plugins["taskbar"].last_toplevel_focused_view
-            return None
-
-        def create_gesture_for_amdgpu_top(self, hbox):
-            self.create_gesture(hbox, 1, self.helper.open_terminal_with_amdgpu_top)
-
-        def open_gnome_system_monitor(self, _):
-            self.run_cmd("gnome-system-monitor")
-
-        def create_gesture_for_cpu_usage(self, hbox):
-            self.create_gesture(hbox, 1, self.open_gnome_system_monitor)
-
-        def create_gesture_for_focused_view_id(self, hbox):
-            def view_callback(_):
-                view_id = self.wf_helper.get_the_last_focused_view_id()
-                view = self.ipc.get_view(view_id)
-                self.helper.open_kitty_with_ipython_view(view)
-
-            self.create_gesture(hbox, 1, view_callback)
-
-        def create_gesture_for_focused_view_pid(self, hbox):
-            def htop_callback(_):
-                focused_view = self.last_toplevel_focused_view()
-                if focused_view is not None:
-                    pid = focused_view["pid"]
-                    self.helper.open_terminal_with_htop(pid)
-
-            self.create_gesture(hbox, 1, htop_callback)
-            self.create_gesture(hbox, 2, lambda _: self.helper.open_system_monitor())
-
-            def kill_callback(_):
-                focused_view = self.last_toplevel_focused_view()
-                if focused_view is not None:
-                    pid = focused_view["pid"]
-                    self.helper.kill_process(pid)
-
-            self.create_gesture(hbox, 3, kill_callback)
-
-        def create_iotop_gesture_for_focused_view_pid(self, hbox):
-            def iotop_callback(_):
-                focused_view = self.last_toplevel_focused_view()
-                if focused_view is not None:
-                    pid = focused_view["pid"]
-                    disk_read_metric = self.metric_items.get("APP Disk Read")
-                    if disk_read_metric and disk_read_metric.value != "...":
-                        self.helper.open_terminal_with_iotop(pid)
-                    else:
-                        pass
-
-            self.create_gesture(hbox, 1, iotop_callback)
-
-        def create_watch_events_gesture(self, hbox):
-            self.create_gesture(hbox, 1, self.helper.open_kitty_with_rich_events_view)
-            self.create_gesture(
-                hbox, 3, self.helper.open_kitty_with_prompt_and_watch_selected_event
-            )
-
-        def code_explanation(self):
+        def _factory_bind(self, f, li):
             """
-            This plugin utilizes a high-performance data-binding architecture based on the GObject
-            Introspection (GI) ecosystem to provide a real-time system monitor.
-
-            **1. Data Model (ProperMetricItem):**
-            Inherits from `GObject.Object` to implement the Observer pattern. By using `@GObject.Property`,
-            it emits 'notify' signals whenever a metric (name, value, or tooltip) changes. This allows
-            the UI to automatically update without manual intervention.
-
-            **2. UI Hierarchy & Modern GTK4 Widgets:**
-            - **Gio.ListStore:** A type-safe, GObject-based list that holds `ProperMetricItem` instances.
-            - **Gtk.ListView:** A scalable widget that displays data from the `ListStore`. It uses a
-              `Gtk.SignalListItemFactory` to separate the UI structure (`setup`) from data binding (`bind`).
-            - **Gtk.Popover:** The main container that appears when the plugin icon is clicked, hosting
-              the list of system metrics.
-
-            **3. Dynamic Data Binding:**
-            In `_row_factory_bind`, `metric_item.bind_property` is used. This creates a direct link between
-            the data (the value of the metric) and the UI (the label text). When the background polling
-            updates a value, GTK updates the display immediately.
-
-            **4. System Polling & Metric Logic:**
-            - **fetch_and_update_system_data:** The central loop that gathers CPU, RAM, Network, and Disk
-              metrics using the `helper` class.
-            - **add_gpu:** Handles specialized logic for AMD GPUs via `pyamdgpuinfo`. It also retrieves
-              the `WLR_RENDERER` environment variable, defaulting to 'gles2' if empty.
-            - **Focused View Tracking:** Uses Wayfire IPC to identify the active window and show
-              process-specific details like PID, Memory, and Disk I/O.
-
-            **5. Interactive Gestures:**
-            The plugin maps specific metrics to system actions. For instance:
-            - Clicking **CPU Usage** opens the GNOME System Monitor.
-            - Clicking **APP PID** opens `htop` focused on that process.
-            - Right-clicking **APP PID** kills the process.
-            - Clicking **GPU** rows opens `amdgpu_top` in a terminal.
-
-            **6. Lifecycle Management:**
-            Polling is strictly controlled by the Popover state (`start_system_updates` vs
-            `stop_system_updates`). Polling only occurs when the UI is visible, minimizing
-            background resource usage.
+            Property binding and gesture assignment.
             """
-            return self.code_explanation.__doc__
+            item = li.get_item()
+            h = li.get_child()
+            li._n.set_markup(f"{item.name}:")
+            item.bind_property(
+                "value", li._v, "label", GObject.BindingFlags.SYNC_CREATE
+            )
+            item.bind_property(
+                "tooltip", h, "tooltip-text", GObject.BindingFlags.SYNC_CREATE
+            )
+
+            nm = item.name
+            if nm == "APP PID":
+                self.create_gesture(
+                    h, 1, lambda _: self.helper.open_terminal_with_htop(item.value)
+                )
+                self.create_gesture(h, 2, lambda _: self.helper.open_system_monitor())
+                self.create_gesture(
+                    h, 3, lambda _: self.helper.kill_process(item.value)
+                )
+            elif nm == "Usage" and "CPU" in li._n.get_text():
+                self.create_gesture(
+                    h, 1, lambda _: self.run_cmd("gnome-system-monitor")
+                )
+            elif nm == "Watch events":
+                self.create_gesture(h, 1, self.helper.open_kitty_with_rich_events_view)
+                self.create_gesture(
+                    h, 3, self.helper.open_kitty_with_prompt_and_watch_selected_event
+                )
+            elif nm == "APP ID":
+                self.create_gesture(
+                    h,
+                    1,
+                    lambda _: self.helper.open_kitty_with_ipython_view(
+                        self.ipc.get_view(
+                            self._wf_helper.get_the_last_focused_view_id()
+                        )
+                    ),
+                )
+            elif nm in ["Load", "VRAM", "Vendor"]:
+                self.create_gesture(h, 1, self.helper.open_terminal_with_amdgpu_top)
 
     return SystemMonitorPlugin
