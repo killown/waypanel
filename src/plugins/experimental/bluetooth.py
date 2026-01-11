@@ -37,7 +37,7 @@ def get_plugin_class():
             self.add_cursor_effect(self.bluetooth_button_popover)
             self.main_widget = (self.bluetooth_button_popover, "append")
             self.main_icon = self.get_plugin_setting(
-                "main_icon", ["bluetooth-symbolic"]
+                "main_icon", "bluetooth-active-symbolic"
             )
             self.fallback_main_icons = self.get_plugin_setting(
                 ["fallback_main_icons"],
