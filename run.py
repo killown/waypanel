@@ -1,5 +1,7 @@
+#!/usr/bin/env python3
 """
 A robust application launcher for Waypanel.
+
 This script prepares the runtime environment by setting up necessary
 directories, managing a virtual environment with custom dependencies using 'pip',
 and then executing the main application.
@@ -19,7 +21,9 @@ PYWAYFIRE_REPO_URL = "https://github.com/WayfireWM/pywayfire.git"
 
 @dataclass(frozen=True)
 class AppConfig:
-    """Encapsulates all configuration and path details for the application."""
+    """
+    Encapsulates all configuration and path details for the application.
+    """
 
     app_name: str
     xdg_data_home: Path = Path(
@@ -65,7 +69,16 @@ class AppConfig:
 
     @property
     def venv_python(self) -> Path:
-        """The path to the 'python' executable in the venv."""
+        """
+        Locates the Python executable within the virtual environment.
+
+        Returns:
+            Path: The path to the python or python3 executable.
+        """
+        for name in ("python", "python3"):
+            binary = self.venv_bin_dir / name
+            if binary.exists():
+                return binary
         return self.venv_bin_dir / "python"
 
     @property
@@ -93,6 +106,7 @@ def setup_logging():
 def _enforce_backup_retention(backup_dir: Path, max_copies: int):
     """
     Removes the oldest backup folders if the maximum limit is exceeded.
+
     Args:
         backup_dir: The directory containing backups.
         max_copies: The maximum number of backups to retain.
@@ -118,7 +132,7 @@ def _enforce_backup_retention(backup_dir: Path, max_copies: int):
 def run_backup(config: AppConfig, max_copies: int = 10):
     """
     Performs a comprehensive backup of data and config directories.
-    This function is designed to be run in a separate thread.
+
     Args:
         config: The application configuration object.
         max_copies: The maximum number of backups to retain.
@@ -159,25 +173,49 @@ def run_backup(config: AppConfig, max_copies: int = 10):
 
 
 def _find_system_library(lib_name: str, search_paths: List[str]) -> Optional[Path]:
-    """Finds a library file in a list of predefined paths, including Nix store."""
-    candidates = [Path(p) for p in search_paths]
-    for lib_path in candidates:
-        if lib_path.is_file():
-            return lib_path
+    """
+    Finds a library file in predefined paths, environment variables, or using system utilities.
+
+    Args:
+        lib_name: The filename of the library to locate (e.g., 'libgtk4-layer-shell.so').
+        search_paths: A list of directory paths or full file paths to check initially.
+
+    Returns:
+        The Path to the library if found, otherwise None.
+    """
+    import os
+    import ctypes.util
+    from pathlib import Path
+
+    env_override = os.getenv("WAYPANEL_GTK_LAYER_SHELL_PATH")
+    if env_override and Path(env_override).is_file():
+        return Path(env_override)
+
+    for path_str in search_paths:
+        path = Path(path_str)
+        if path.is_file():
+            return path
+        if path.is_dir() and (path / lib_name).is_file():
+            return path / lib_name
+
     nix_store = Path("/nix/store")
     if nix_store.is_dir():
         try:
-            nix_libs = nix_store.glob(f"**/{lib_name}")
-            return next(nix_libs, None)
-        except Exception:
+            for match in nix_store.glob(f"**/{lib_name}"):
+                if match.is_file():
+                    return match
+        except (PermissionError, OSError):
             pass
+
+    find_lib = ctypes.util.find_library(lib_name.replace("lib", "").replace(".so", ""))
+    if find_lib:
+        return Path(find_lib)
+
     return None
 
 
 def _find_package_path(app_name: str, xdg_data_home: Path) -> Optional[Path]:
-    """
-    Finds the installed package path using absolute glob patterns.
-    """
+    """Finds the installed package path using absolute glob patterns."""
     import glob
 
     home = Path.home()
@@ -200,18 +238,17 @@ def _find_package_path(app_name: str, xdg_data_home: Path) -> Optional[Path]:
 
 def _install_pywayfire_from_source(config: AppConfig) -> None:
     """
-    Uninstalls wayfire and installs pywayfire from its GitHub repository using pip.
+    Uninstalls wayfire and installs pywayfire from its GitHub repository.
+
     Args:
         config: The application configuration object.
-    Raises:
-        subprocess.CalledProcessError: If any command fails.
-        FileNotFoundError: If 'git' command is not found.
     """
     import subprocess
     import tempfile
 
     logging.info("Performing custom pywayfire installation...")
     logging.info("Uninstalling any existing 'wayfire' package...")
+
     subprocess.run(
         [
             str(config.venv_python),
@@ -225,6 +262,7 @@ def _install_pywayfire_from_source(config: AppConfig) -> None:
         capture_output=True,
         text=True,
     )
+
     with tempfile.TemporaryDirectory() as tmpdir:
         clone_dir = Path(tmpdir) / "pywayfire"
         logging.info("Cloning %s into temporary directory...", PYWAYFIRE_REPO_URL)
@@ -239,6 +277,7 @@ def _install_pywayfire_from_source(config: AppConfig) -> None:
             ],
             check=True,
         )
+
         logging.info("Installing pywayfire from source using pip...")
         subprocess.run(
             [str(config.venv_python), "-m", "pip", "install", "."],
@@ -251,6 +290,7 @@ def _install_pywayfire_from_source(config: AppConfig) -> None:
 def manage_virtual_environment(config: AppConfig, req_file: Path):
     """
     Ensures the venv exists and all dependencies are installed using pip.
+
     Args:
         config: The application configuration object.
         req_file: Path to the requirements.txt file.
@@ -270,35 +310,40 @@ def manage_virtual_environment(config: AppConfig, req_file: Path):
             ],
             check=True,
         )
+
     os.environ["PATH"] = f"{config.venv_bin_dir}{os.pathsep}{os.environ['PATH']}"
+
     if not config.requirements_flag.is_file():
         logging.info("Installing dependencies...")
         try:
             _install_pywayfire_from_source(config)
-            logging.info("Installing dependencies from %s using pip...", req_file)
-            subprocess.run(
-                [
-                    str(config.venv_python),
-                    "-m",
-                    "pip",
-                    "install",
-                    "--no-cache-dir",
-                    "-r",
-                    str(req_file),
-                ],
-                check=True,
-            )
+
+            if req_file.is_file():
+                logging.info("Installing dependencies from %s using pip...", req_file)
+                subprocess.run(
+                    [
+                        str(config.venv_python),
+                        "-m",
+                        "pip",
+                        "install",
+                        "--no-cache-dir",
+                        "-r",
+                        str(req_file),
+                    ],
+                    check=True,
+                )
             config.requirements_flag.touch()
             logging.info("All dependencies installed successfully.")
         except (subprocess.CalledProcessError, FileNotFoundError) as e:
             logging.critical("Failed to install dependencies: %s", e)
             if isinstance(e, FileNotFoundError):
-                logging.critical("Ensure 'git' is installed and in your PATH.")
+                logging.critical("Ensure 'git' and 'venv' python are accessible.")
 
 
 def ensure_initial_setup(config: AppConfig, installed_path: Optional[Path]):
     """
     Ensures config files and resources exist before launch.
+
     Args:
         config: The application configuration object.
         installed_path: The discovered path of the installed package, if any.
@@ -351,87 +396,78 @@ def exist_process():
 
 def main():
     """
-    Main execution flow for the Waypanel launcher.
-    Handles initial setup, environment management, and launches the application
-    with a retry mechanism for transient startup failures.
+    Main execution flow for the Waypanel launcher with enhanced dependency discovery.
+
+    This function sets up the runtime environment, ensures the GTK4 Layer Shell
+    library is accessible via LD_PRELOAD, and manages the application lifecycle.
     """
-    import compileall
-    import contextlib
-    import subprocess
+    import os
+    import sys
+    import logging
     import threading
+    import contextlib
+    import compileall
+    import subprocess
+    from pathlib import Path
 
     setup_logging()
     config = AppConfig(app_name=APP_NAME)
     script_dir = Path(__file__).parent.resolve()
+
     threading.Thread(target=run_backup, args=(config,), daemon=True).start()
-    installed_path: Optional[Path] = _find_package_path(
-        config.app_name, config.xdg_data_home
+
+    installed_path = _find_package_path(config.app_name, config.xdg_data_home)
+    main_py_dir = (
+        installed_path if installed_path and installed_path.is_dir() else script_dir
     )
-    if installed_path and installed_path.is_dir():
-        main_py_dir: Path = installed_path
-        logging.info("Using installed package from: %s", main_py_dir)
-    else:
-        main_py_dir = script_dir
-        logging.info("Using development path: %s", main_py_dir)
-    req_file: Path = main_py_dir / "requirements.txt"
-    main_py_file: Path = main_py_dir / "main.py"
+
     os.environ["PYTHONPATH"] = str(main_py_dir)
-    gtk_lib: Optional[Path] = _find_system_library(
+
+    gtk_lib = _find_system_library(
         lib_name="libgtk4-layer-shell.so",
         search_paths=[
             "/usr/lib/libgtk4-layer-shell.so",
             "/usr/lib/x86_64-linux-gnu/libgtk4-layer-shell.so",
+            "/usr/lib/aarch64-linux-gnu/libgtk4-layer-shell.so",
             "/usr/lib64/libgtk4-layer-shell.so",
-            str(
-                config.xdg_data_home / "lib/gtk4-layer-shell/lib/libgtk4-layer-shell.so"
-            ),
+            "/usr/local/lib/libgtk4-layer-shell.so",
+            "/usr/local/lib64/libgtk4-layer-shell.so",
+            "/app/lib/libgtk4-layer-shell.so",
+            str(config.xdg_data_home / "lib/libgtk4-layer-shell.so"),
         ],
     )
+
     if not gtk_lib:
         logging.critical("libgtk4-layer-shell.so not found. Cannot start.")
         sys.exit(1)
+
     os.environ["LD_PRELOAD"] = str(gtk_lib)
     logging.info("Using GTK4 Layer Shell: %s", gtk_lib)
+
     ensure_initial_setup(config, installed_path)
-    manage_virtual_environment(config, req_file)
-    logging.info("Compiling Python source files to bytecode (.pyc)...")
+    manage_virtual_environment(config, main_py_dir / "requirements.txt")
+
     with contextlib.suppress(Exception):
         compileall.compile_dir(str(main_py_dir), quiet=1, force=False)
-        logging.info("Compilation complete (skipped if up-to-date).")
-    SUCCESS_EXIT_CODE: int = 0
-    cmd: List[str] = [str(config.venv_python), "-O", str(main_py_file)]
+
+    main_py_file = main_py_dir / "main.py"
+    python_exe = config.venv_python
+
+    if not main_py_file.is_file() or not python_exe.exists():
+        logging.critical("Runtime files missing at: %s", main_py_dir)
+        sys.exit(1)
+
+    cmd = [str(python_exe), "-O", str(main_py_file)]
+
     while True:
         exist_process()
         try:
-            result: subprocess.CompletedProcess = subprocess.run(
-                cmd,
-                check=False,
-            )
-            if result.returncode == SUCCESS_EXIT_CODE:
-                logging.info(
-                    "Application exited successfully (code 0)."
-                    " Assuming user-initiated exit or success."
-                )
+            result = subprocess.run(cmd, check=False)
+            if result.returncode == 0:
                 return
-            is_user_kill_signal: bool = result.returncode < 0 and abs(
-                result.returncode
-            ) in {
-                2,
-                15,
-            }
-            if is_user_kill_signal:
-                logging.info(
-                    "Application terminated by user signal (exit code %d)."
-                    " Aborting retry loop.",
-                    result.returncode,
-                )
+            if result.returncode < 0 and abs(result.returncode) in {2, 15}:
                 sys.exit(result.returncode)
         except FileNotFoundError:
-            logging.critical(
-                "Could not find the main application script at %s or venv Python."
-                " Aborting launch.",
-                main_py_file,
-            )
             sys.exit(1)
 
 
