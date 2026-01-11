@@ -454,10 +454,15 @@ def main() -> None:
     else:
         logging.info("Filesystem is read-only. Skipping bytecode compilation.")
 
-    main_py_file = main_py_dir / "main.py"
+    main_py_file = None
+    for candidate in [main_py_dir / "main.py", main_py_dir / "src" / "main.py"]:
+        if candidate.is_file():
+            main_py_file = candidate
+            break
+
     python_exe = config.venv_python
 
-    if not main_py_file.is_file() or not python_exe.exists():
+    if not main_py_file or not python_exe.exists():
         logging.critical("Runtime files missing at: %s", main_py_dir)
         sys.exit(1)
 
