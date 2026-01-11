@@ -394,12 +394,13 @@ def exist_process():
         )
 
 
-def main():
+def main() -> None:
     """
-    Main execution flow for the Waypanel launcher with enhanced dependency discovery.
+    Main execution flow for the Waypanel launcher with environment validation.
 
-    This function sets up the runtime environment, ensures the GTK4 Layer Shell
-    library is accessible via LD_PRELOAD, and manages the application lifecycle.
+    This function attempts to find 'libgtk4-layer-shell.so', configures the
+    runtime environment, and executes the main application. It includes a
+    safety check for bytecode compilation to prevent crashes on read-only filesystems.
     """
     import os
     import sys
@@ -411,7 +412,8 @@ def main():
     from pathlib import Path
 
     setup_logging()
-    config = AppConfig(app_name=APP_NAME)
+    app_name = "waypanel"
+    config = AppConfig(app_name=app_name)
     script_dir = Path(__file__).parent.resolve()
 
     threading.Thread(target=run_backup, args=(config,), daemon=True).start()
@@ -428,10 +430,7 @@ def main():
         search_paths=[
             "/usr/lib/libgtk4-layer-shell.so",
             "/usr/lib/x86_64-linux-gnu/libgtk4-layer-shell.so",
-            "/usr/lib/aarch64-linux-gnu/libgtk4-layer-shell.so",
             "/usr/lib64/libgtk4-layer-shell.so",
-            "/usr/local/lib/libgtk4-layer-shell.so",
-            "/usr/local/lib64/libgtk4-layer-shell.so",
             "/app/lib/libgtk4-layer-shell.so",
             str(config.xdg_data_home / "lib/libgtk4-layer-shell.so"),
         ],
@@ -447,8 +446,13 @@ def main():
     ensure_initial_setup(config, installed_path)
     manage_virtual_environment(config, main_py_dir / "requirements.txt")
 
-    with contextlib.suppress(Exception):
-        compileall.compile_dir(str(main_py_dir), quiet=1, force=False)
+    if os.access(main_py_dir, os.W_OK):
+        logging.info("Compiling Python source files to bytecode (.pyc)...")
+        with contextlib.suppress(Exception):
+            compileall.compile_dir(str(main_py_dir), quiet=1, force=False)
+            logging.info("Compilation complete.")
+    else:
+        logging.info("Filesystem is read-only. Skipping bytecode compilation.")
 
     main_py_file = main_py_dir / "main.py"
     python_exe = config.venv_python
@@ -463,11 +467,13 @@ def main():
         exist_process()
         try:
             result = subprocess.run(cmd, check=False)
-            if result.returncode == 0:
+            if result.returncode == 0 or (
+                result.returncode < 0 and abs(result.returncode) in {2, 15}
+            ):
+                logging.info("Application session ended (code %d).", result.returncode)
                 return
-            if result.returncode < 0 and abs(result.returncode) in {2, 15}:
-                sys.exit(result.returncode)
         except FileNotFoundError:
+            logging.critical("Execution failed: executable or script missing.")
             sys.exit(1)
 
 
