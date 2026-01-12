@@ -1,60 +1,53 @@
 .taskbar {
-  margin: 3px; 
+  margin: 3px;
+  padding: 4px;
+  border-radius: var(--radius-l);
+  
+  /* Solidified glass base using the panel background color with reduced transparency */
+  background-color: rgba(44, 44, 46, 0.85);
+  backdrop-filter: blur(15px);
+  
+  /* * REALISTIC COLORED GLASS STACK:
+   * 1. THE RIM: Stronger 1px white highlight for a thicker glass look.
+   * 2. THE CONTOUR: 1px dark border to define the physical volume.
+   * 3. INTERNAL WELL: Deep inset shadow to sink the buttons into the glass track.
+   * 4. HUE SATURATION: Uses the shadow-hue-bleed to tint the internal reflections.
+   * 5. GROUNDING: Heavy drop shadows to make the dense glass feel heavy.
+   */
+  box-shadow:
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 3px 10px 0 rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 10px 25px -5px var(--color-shadow-dark),
+    0 0 15px 0 var(--color-shadow-hue-bleed);
+
+  /* * Directional Surface Light:
+   * Simulates a studio light setup hitting the top-left of the glass bar.
+   */
+  background-image: linear-gradient(135deg, 
+                                   rgba(255, 255, 255, 0.08) 0%, 
+                                   var(--color-bg-surface) 30%, 
+                                   var(--color-bg-base) 100%);
+  
+  border: none;
 }
 
 .taskbar-button {
-  background: var(--color-bg-deep);
+  background-color: var(--color-bg-button-normal);
+  border-radius: var(--radius-control-default);
+  margin: 2px;
   
-  border-radius: var(--radius-control-default); 
-  border: 1px solid rgba(0, 0, 0, 0.4); 
-  
-  box-shadow:
-    inset 2px 2px 4px rgba(255, 255, 255, 0.08),
-    3px 3px 6px rgba(0, 0, 0, 0.7);
-    
-  font-family: "DSEG7-Classic", "DSEG14-Classic", monospace;
-  font-size: 13px;
-  color: var(--main-text);
-  text-decoration: none;
-  text-shadow:
-    0 0 2px var(--dseg-shadow-soft),
-    0 0 5px var(--dseg-shadow-soft);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.taskbar-button:hover {
-  color: var(--main-text);
-  background-color: var(--color-bg-raised);
-  border: 1px solid var(--accent-blue);
-  
+  /* Buttons contrast against the dense glass track */
   box-shadow: 
-    5px 5px 10px rgba(0, 0, 0, 0.8),
-    -1px -1px 2px rgba(255, 255, 255, 0.1);
-  transform: translateY(-1px);
-  text-shadow: none;
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+    0 2px 4px 0 rgba(0, 0, 0, 0.5);
 }
 
 .taskbar-button.focused {
-  background-color: var(--color-bg-base);
-  color: var(--color-fg-inverse);
-  font-weight: bold;
-  border: 1px solid var(--accent-blue);
-  box-shadow: 0 0 10px var(--accent-blue);
-}
-
-.taskbar-button.focused:hover {
-  background-color: var(--color-accent-blue-dark);
-  transform: none;
-  transition: all 0.1s ease;
-  color: var(--color-fg-inverse);
-  box-shadow: 0 0 14px var(--accent-blue);
-}
-
-.taskbar-button:active {
-    background-color: var(--color-bg-deep);
-    border: 1px solid rgba(0, 0, 0, 0.6);
-    box-shadow:
-        inset 5px 5px 10px rgba(0, 0, 0, 0.8),
-        inset -2px -2px 4px rgba(255, 255, 255, 0.05);
-    transform: translateY(1px);
+  background-color: var(--theme-bg-selected-primary);
+  /* The focused button glows and interacts with the glass track */
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.4),
+    0 0 15px 0 var(--color-shadow-hue-bleed);
 }

@@ -1,13 +1,72 @@
 .dockbar-buttons {
-  border-radius: 10px;
-  padding: 1px 10px 1px 10px;
-  -gtk-icon-size: 48px;
-  font-size: 16px;
-  color: transparent;
+  border-radius: var(--radius-xs);
+  margin: -4px;
+  background-color: transparent;
+  transition: all 250ms ease-out;
 }
 
 .dockbar-buttons:hover {
-  color: var(--primary-bg);
-  background-color: var(--tertiary-bg);
-  text-shadow: 0.006em 0.006em 0.007em var(--dseg-shadow-dark);
+  color: var(--theme-status-accent);
+  background-color: var(--color-bg-transparent-active);
+  text-shadow: 0 0 10px var(--color-shadow-hue-bleed);
+}
+
+.box-dockbar-buttons {
+  border-radius: var(--radius-l);
+  padding: 3px 6px;
+  -gtk-icon-size: 36px;
+  background-color: var(--color-bg-button-normal);
+  color: var(--theme-fg-label-primary);
+  
+  /* Remove hard border, use multi-layered shadows for 3D depth */
+  border: none;
+  
+  /* 1. Inset highlight (top) 2. Inset shadow (bottom) 3. Soft drop shadow 4. Ambient glow */
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.08),
+              inset 0 -2px 2px 0 rgba(0, 0, 0, 0.3),
+              0 4px 6px -1px var(--shadow-dark),
+              0 0 2px 0 var(--color-shadow-lighter);
+
+  background-image: linear-gradient(to bottom, 
+                                   rgba(255, 255, 255, 0.03), 
+                                   rgba(0, 0, 0, 0.08));
+
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.box-dockbar-buttons:hover {
+  background-color: var(--color-bg-button-normal-hover);
+  
+  /* Shadow-based border effect using the user's accent color */
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15),
+              inset 0 -1px 1px 0 rgba(0, 0, 0, 0.2),
+              0 0 0 1px var(--theme-status-accent),
+              0 8px 16px -2px var(--shadow-dark),
+              0 0 12px 0 var(--color-shadow-hue-bleed);
+              
+  transform: translateY(-2px);
+}
+
+.box-dockbar-buttons:active {
+  background-color: var(--color-bg-button-normal-active);
+  background-image: none;
+  
+  /* Deeply recessed shadow for realistic compression */
+  box-shadow: inset 0 4px 8px 0 rgba(0, 0, 0, 0.6),
+              inset 0 -1px 0 0 rgba(255, 255, 255, 0.05),
+              0 1px 2px 0 rgba(255, 255, 255, 0.1);
+              
+  transform: translateY(1px) scale(0.96);
+  transition-duration: 40ms;
+}
+
+.box-dockbar-buttons:checked {
+  background-color: var(--theme-bg-selected-primary);
+  color: var(--theme-fg-text-selected);
+  
+  /* Internal glow that matches the selected accent color */
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.4),
+              inset 0 0 15px 0 rgba(255, 255, 255, 0.1),
+              0 0 25px 0 var(--color-shadow-hue-bleed),
+              0 0 0 1px var(--theme-status-accent);
 }

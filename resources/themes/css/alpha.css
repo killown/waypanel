@@ -1,0 +1,252 @@
+:root {
+  /* ================================================= */
+  /* ==== CORE PALETTE - FROSTED CRYSTAL (OPAQUE WINDOW) ==== */
+  /* ================================================= */
+  
+  --color-bg-base: #0f1115;
+  --color-bg-window: #0f1115;
+  --color-bg-panel: #16192000;
+  --color-bg-popover: #1c1f26;
+  --color-bg-searchbar: #0a0c1074;
+  --color-bg-box-primary: rgba(13, 18, 31, 0.853);
+  --color-bg-box-secondary: #22262e;
+  --color-bg-button: #252a33;
+  --color-bg-button-hover: #2d333d;
+  --color-bg-button-active: #1e2229;
+  --color-bg-surface: #161920;
+  --color-bg-raised: #1c1f26;
+  --color-bg-deep: #07080a9a;
+  --color-bg-alt-row: #12141a;
+  --color-bg-transparent-active: rgba(124, 199, 255, 0.15);
+  
+  --color-vibrancy-dark-blur: blur(30px) saturate(180%);
+  --color-vibrancy-light-blur: blur(20px) saturate(140%);
+  --opacity-vibrancy-bar: 1.0;
+
+  --color-fg-primary: #ffffff;
+  --color-fg-secondary: #e2e4e9;
+  --color-fg-muted: #9499a5;
+  --color-fg-subtle: #737883; 
+  --color-fg-inverse: #000000;
+  --color-fg-link-accessible: #7cc7ff; 
+
+  --color-accent-blue: #40a9ff;
+  --color-accent-blue-dark: #096dd9;
+  --color-accent-gray: #3a3f4b;
+  --color-status-success: #4ade80;
+  --color-status-danger: #f87171;
+  --color-status-warning: #fbbf24;
+  --color-separator-line: #2d323d;
+  --color-shadow-hue-bleed: rgba(64, 169, 255, 0.1);
+  
+  --color-status-success-bg: rgba(74, 222, 128, 0.1);
+  --color-status-danger-bg: rgba(248, 113, 113, 0.1);
+  --color-status-warning-bg: rgba(251, 191, 36, 0.1);
+
+  --color-shadow-dark: rgba(0, 0, 0, 0.6);
+  --color-shadow-medium: rgba(0, 0, 0, 0.4);
+  --color-shadow-lighter: rgba(0, 0, 0, 0.2);
+
+
+  /* ================================================= */
+  /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
+  /* ================================================= */
+
+  --theme-bg-view-primary: var(--color-bg-base);
+  --theme-bg-view-secondary: var(--color-bg-surface);
+  --theme-bg-view-tertiary: var(--color-bg-raised);
+  --theme-bg-view-vibrant: var(--color-bg-panel);
+
+  --theme-bg-control-base: var(--color-bg-button);
+  --theme-bg-selected-primary: var(--color-accent-blue);
+  --theme-bg-selected-inactive: var(--color-bg-raised);
+  --theme-bg-selected-secondary: var(--color-bg-transparent-active);
+  --theme-bg-text-selection: rgba(64, 169, 255, 0.35);
+  
+  --theme-bg-under-page: var(--color-bg-deep);
+  --theme-bg-alternating-row: var(--color-bg-alt-row);
+  --theme-bg-find-highlight: rgba(251, 191, 36, 0.4);
+  --theme-bg-acrylic-backdrop: var(--color-bg-panel);
+
+
+  /* ================================================= */
+  /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
+  /* ================================================= */
+  
+  --color-bg-entry-base: #07080a;
+  --color-bg-entry-focus: #000000;
+  --color-bg-entry-disabled: var(--color-bg-alt-row);
+  --color-bg-textview: #0d0f14;
+  
+  --color-bg-button-flat: transparent;
+  --color-bg-button-flat-hover: var(--color-bg-transparent-active);
+  --color-bg-button-flat-active: var(--color-bg-button-active);
+  --color-bg-button-normal: var(--color-bg-button);
+  --color-bg-button-normal-hover: var(--color-bg-button-hover);
+  --color-bg-button-normal-active: var(--color-bg-button-active);
+  --color-bg-button-suggested: var(--color-accent-blue);
+  --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
+  
+  --color-bg-menu-bar: var(--color-bg-base);
+  --color-bg-menu-popup: var(--color-bg-popover);
+  --color-bg-menu-item-hover: var(--color-bg-transparent-active);
+  --color-bg-popover-content: var(--color-bg-popover);
+
+  --color-bg-list-header: #1c1f26;
+  --color-bg-tab-bar: #0f1115;
+  --color-bg-tab-active: #1c1f26;
+  --color-bg-tab-inactive: #0f1115;
+  --color-bg-tab-hover: #161920;
+  --color-bg-treeview-header: #1c1f26;
+
+  --color-bg-toggle-off: #3a3f4b;
+  --color-bg-toggle-on: var(--color-accent-blue);
+  --color-bg-check-radio-box: #0a0c10;
+  
+  --color-bg-scrollbar-track: transparent;
+  --color-bg-scrollbar-slider: #3a3f4b;
+  --color-bg-scrollbar-slider-hover: #4a505e;
+  
+  --color-bg-status-bar: #0a0c10;
+  --color-bg-tooltip: #1c1f26;
+
+
+  /* ================================================= */
+  /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
+  /* ================================================= */
+
+  --theme-fg-label-primary: var(--color-fg-primary);
+  --theme-fg-label-secondary: var(--color-fg-secondary);
+  --theme-fg-label-tertiary: var(--color-fg-muted);
+  --theme-fg-label-quaternary: var(--color-fg-subtle);
+  --theme-fg-label-inverse: var(--color-fg-inverse);
+  
+  --theme-fg-control-text: var(--color-fg-primary);
+  --theme-fg-control-text-disabled: #4a505e;
+  --theme-fg-link: var(--color-fg-link-accessible);
+  --theme-fg-placeholder: var(--color-fg-muted);
+  --theme-fg-header-text: var(--color-fg-primary);
+  
+  --theme-fg-text-selected: #ffffff;
+  --theme-fg-text-alternate-selected: #ffffff;
+
+
+  /* ================================================= */
+  /* ============= DECORATION & SEPARATORS ============= */
+  /* ================================================= */
+
+  --theme-decoration-separator: var(--color-separator-line);
+  --theme-decoration-grid-line: #1c1f26;
+  --theme-decoration-keyboard-focus: 0 0 0 2px var(--color-bg-base), 0 0 0 4px var(--color-accent-blue);
+  --theme-decoration-border-control: #3a3f4b;
+  --color-border-entry-base: #2d323d;
+  --color-border-entry-focus: var(--color-accent-blue);
+  --color-focus-ring: var(--color-accent-blue);
+
+
+  /* ================================================= */
+  /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
+  /* ================================================= */
+  
+  --theme-status-accent: var(--color-accent-blue);
+  --theme-status-accent-inactive: var(--color-accent-gray);
+  --theme-status-success: var(--color-status-success);
+  --theme-status-danger: var(--color-status-danger);
+  --theme-status-warning: var(--color-status-warning);
+  --theme-status-highlight-virtual: var(--color-bg-transparent-active);
+
+
+  /* ================================================= */
+  /* ====== SEMANTIC MAPPING (USED BY BASE CSS) ====== */
+  /* ================================================= */
+
+  --primary-bg: var(--theme-bg-view-primary);
+  --secondary-bg: var(--theme-bg-view-secondary);
+  --tertiary-bg: var(--theme-bg-view-tertiary);
+  --header-border: var(--theme-decoration-separator);
+
+  --main-text: var(--theme-fg-label-primary);
+  --soft-text: var(--theme-fg-label-secondary);
+  --calendar-other-month: var(--theme-fg-label-tertiary);
+
+  --accent-blue: var(--theme-status-accent);
+  --success-green: var(--theme-status-success);
+  --danger-red: var(--theme-status-danger);
+  
+  --success-green-light: var(--color-status-success-bg);
+  --window-control-hover-bg: var(--color-bg-button-hover);
+  --window-control-border-color: transparent;
+
+  --dseg-shadow-soft: rgba(0, 0, 0, 0.4);
+  --dseg-shadow-dark: rgba(0, 0, 0, 0.6);
+
+  /* ================================================= */
+  /* =============== SHADOWS AND OPACITY ============== */
+  /* ================================================= */
+
+  --shadow-dark: rgba(0, 0, 0, 0.5);
+  --shadow-medium: rgba(0, 0, 0, 0.3);
+  --shadow-subtle-white: rgba(255, 255, 255, 0.03);
+
+  --opacity-0: 0.0;
+  --opacity-08: 0.08;
+  --opacity-507: 0.507;
+  --opacity-555: 0.555;
+  --opacity-75: 0.75;
+  --opacity-15: 0.15;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+
+  --shadow-subtle: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-elevated: 0 8px 16px var(--shadow-dark), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-button-flat: none;
+  --shadow-control-small: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-control-small-hover: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-element-minimal: 0 1px 1px rgba(0, 0, 0, 0.1);
+  
+  --shadow-window-float: 0 24px 48px var(--shadow-dark), 0 0 0 1px var(--color-separator-line);
+  --shadow-menubar-separator: none;
+  
+  --shadow-neumorphic-inset-medium: inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  --shadow-neumorphic-outset-large: 0 4px 10px rgba(0, 0, 0, 0.3);
+  --shadow-neumorphic-press: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+
+  /* ================================================= */
+  /* =========== CUSTOM GEOMETRY & EFFECTS (ADDED) ========= */
+  /* ================================================= */
+
+  --glass-border-effect: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+  
+  --radius-title-content: 10px;
+  --shadow-title-inset-light: var(--glass-border-effect);
+  --shadow-title-inset-dark: none;
+
+  --radius-window-control: 6px;
+  --padding-window-control-vertical: 4px;
+  --padding-window-control-horizontal: 10px;
+
+  --shadow-clock-inset: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-clock-border-highlight: 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-clock-drop: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-clock-text-glow: 0 0 10px rgba(255, 255, 255, 0.15);
+  --shadow-clock-text-haze: 0 0 15px rgba(64, 169, 255, 0.3);
+
+  /* ================================================= */
+  /* ================== FONT VARIABLES ================ */
+  /* ================================================= */
+  
+  --radius-xs: 4px;
+  --radius-s: 8px;
+  --radius-m: 12px;
+  --radius-l: 18px;
+  --radius-xl: 24px;
+  --radius-control-default: var(--radius-s);
+  --radius-control-circular: 50%;
+
+  --font-family-default: "Inter", "SF Pro Display", "Segoe UI", sans-serif;
+  --font-family-system: var(--font-family-default);
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
+}
