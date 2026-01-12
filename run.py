@@ -285,7 +285,7 @@ def main() -> None:
 
     if not wayfire_socket_env:
         logging.critical(
-            f"Critical Failure: Environment variable '{wayfire_socket_env}' is empty or unset. "
+            f"Critical Failure: Environment variable 'WAYFIRE_SOCKET' is empty or unset. "
             "This prevents connection to the compositor. Ensure that the 'ipc' and 'ipc-rules' "
             "Wayfire plugins are enabled in your configuration."
         )
