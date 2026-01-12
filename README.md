@@ -38,6 +38,12 @@ Ensure the following plugins are enabled in your ~/.config/wayfire.ini:
     cd waypanel
     python run.py # This will set up the venv automatically and run the panel
 
+## Recommended icon themes
+- https://github.com/PapirusDevelopmentTeam/papirus-icon-theme
+- https://github.com/SylEleuth/gruvbox-plus-icon-pack
+- https://github.com/vinceliuice/Tela-icon-theme
+- https://github.com/bikass/kora
+
 ## Basic usage
 - Toggle scale to show all panels. The default activator can be found in /usr/share/wayfire/metadata/scale.xml
 
