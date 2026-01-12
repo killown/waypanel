@@ -12,7 +12,7 @@ import time
 import tempfile
 from pathlib import Path
 
-from gi.repository import Gio  # pyright: ignore
+from gi.repository import Gio
 from src.ipc.server import EventServer
 from src.core.compositor.ipc import IPC
 from src.core.log_setup import setup_logging
@@ -20,9 +20,11 @@ from src.core.log_setup import setup_logging
 gi.require_version("Gio", "2.0")
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 XDG_CONFIG_HOME = Path(os.getenv("XDG_CONFIG_HOME", Path.home() / ".config"))
 XDG_CACHE_HOME = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
 XDG_DATA_HOME = Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+
 DEFAULT_CONFIG_PATH = XDG_CONFIG_HOME / "waypanel"
 GTK_LAYER_SHELL_INSTALL_PATH = Path(
     os.getenv("GTK_LAYER_SHELL_PATH", XDG_DATA_HOME / "lib" / "gtk4-layer-shell")
@@ -36,12 +38,15 @@ CONFIG_SUBDIR = "waypanel/config"
 DEFAULT_SYSTEM_CONFIG = Path(
     os.getenv("WAYPANEL_SYSTEM_CONFIG", "/usr/share/waypanel/default-config")
 )
+
 if os.path.exists("/nix/store") and not DEFAULT_SYSTEM_CONFIG.exists():
     nix_system_config = Path("/run/current-system/sw/share/waypanel/default-config")
     if nix_system_config.exists():
         DEFAULT_SYSTEM_CONFIG = nix_system_config
+
 logger = setup_logging(level=logging.INFO)
 sock = IPC()
+
 try:
     sock.clear_bindings()
 except Exception:
@@ -49,6 +54,10 @@ except Exception:
 
 
 class WayfireConfigWatcher:
+    """
+    Manages filesystem monitoring for configuration files using Gio.FileMonitor.
+    """
+
     def __init__(self, watched_path, callback):
         self.callback = callback
         self._watched = Path(watched_path).resolve()
@@ -58,7 +67,6 @@ class WayfireConfigWatcher:
         self.logger = logging.getLogger("WaypanelLogger")
 
     def _on_file_changed(self, monitor, file, other_file, event_type):
-        """Callback for Gio.FileMonitor 'changed' signal."""
         if event_type in (
             Gio.FileMonitorEvent.CHANGES_DONE_HINT,
             Gio.FileMonitorEvent.MOVED,
@@ -75,7 +83,6 @@ class WayfireConfigWatcher:
                     self.logger.exception("reload callback failed")
 
     def start(self):
-        """Starts the GIO file monitor."""
         if not self._watched.exists():
             self.logger.warning(f"File to monitor does not exist: {self._watched}")
             return
@@ -88,7 +95,6 @@ class WayfireConfigWatcher:
             self.monitor = None
 
     def stop(self):
-        """Stops the GIO file monitor."""
         if self.monitor:
             self.monitor.cancel()
 
@@ -124,7 +130,6 @@ def start_config_watcher():
     if not wayfire_ini.exists():
         logger.warning(f"wayfire.toml not found at {wayfire_ini}")
         return None
-    # watcher = WayfireConfigWatcher(wayfire_ini, restart_application)
     watcher = WayfireConfigWatcher(
         wayfire_ini,
         lambda: logger.debug(
@@ -260,7 +265,7 @@ def load_panel(ipc_server):
         try:
             outputs = [
                 o
-                for o in compositor_sock.list_outputs()  # pyright: ignore
+                for o in compositor_sock.list_outputs()
                 if o.get("name") == monitor_name
             ]
             if outputs:
