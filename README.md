@@ -14,9 +14,9 @@ Waypanel is a lightweight, modular, and highly customizable status panel designe
 
 Ensure the following plugins are enabled in your ~/.config/wayfire.ini:
 
-[core]
+    [core]
 
-plugins = ipc ipc-rules stipc
+    plugins = ipc ipc-rules stipc scale
 
 ##### install pywayfire
     git clone https://github.com/WayfireWM/pywayfire
@@ -38,8 +38,25 @@ plugins = ipc ipc-rules stipc
     cd waypanel
     python run.py # This will set up the venv automatically and run the panel
 
+## Basic usage
+- Toggle scale to show all panels. The default activator can be found in /usr/share/wayfire/metadata/scale.xml
+
+https://github.com/user-attachments/assets/8d1d3472-e9b1-4c03-a935-cf9f66c8748c
+
+- To add icons to the dockbar, go to the first icon in the top-left (the app launcher), right-click the desired app icon, and select “Add to dockbar.”
+
+https://github.com/user-attachments/assets/459a0581-047f-447c-8f50-8ce32adcb723
+
+- To access the panel settings, open the system dashboard in the top-right corner.
+
+https://github.com/user-attachments/assets/2dc2ee69-8a02-4bf9-a662-90ea2f46dee6
+
+
+ 
+
+
+
 
 ## License
-
 waypanel is licensed under the **AGPLv3 (GNU Affero General Public License version 3)**. [See LICENSE for more information](https://github.com/killown/waypanel/blob/main/LICENSE).
 
