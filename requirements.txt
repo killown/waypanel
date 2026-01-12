@@ -1,6 +1,5 @@
 aiohttp
 beautifulsoup4
-netifaces
 numpy
 psutil
 pulsectl
