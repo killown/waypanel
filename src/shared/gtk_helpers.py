@@ -615,78 +615,63 @@ class GtkHelpers:
         use_function: Optional[Callable] = None,
         use_args: Optional[Any] = None,
     ) -> Optional[Gtk.Button]:
-        """
-        Create a Gtk.Button with an icon or label, click behavior, and CSS styling.
+        """Creates a Gtk.Button with strictly constrained sizing and click handling.
+
         Args:
-            icon_name (str): The name of the icon or label text.
-            cmd (str): The command to execute on button click. Use "NULL" to disable the button.
-            class_style (str): The CSS class to apply to the button.
-            use_label (bool): Whether to use a label instead of an icon.
-            use_function (Optional[Callable]): A function to execute on button click.
-            use_args (Optional[Any]): Arguments to pass to the custom function.
+            icon_name: The name of the icon or label text.
+            cmd: The command to execute. Use "NULL" to disable the button.
+            class_style: The CSS class to apply.
+            use_label: Whether to use a label instead of an icon.
+            use_function: A function to execute on button click.
+            use_args: Arguments to pass to the custom function.
+
         Returns:
-            Optional[Gtk.Button]: The created button, or None if creation failed.
+            The configured Gtk.Button or None if validation fails.
         """
         try:
-            if not icon_name and not use_label:
-                self.logger.error(
-                    "Invalid input: Either icon_name or use_label must be provided.",
-                    exc_info=True,
-                )
+            if not icon_name:
+                self.logger.error("Invalid input: icon_name must be provided.")
                 return None
-            icon_name = self.icon_exist(icon_name)
+
+            valid_icon = self.icon_exist(icon_name)
             button = Gtk.Button()
-            assert button is not None, "Button creation failed"
-            box = Gtk.Box()
+
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+            box.set_halign(Gtk.Align.CENTER)
+            box.set_valign(Gtk.Align.CENTER)
+            box.set_hexpand(False)
+            box.set_vexpand(False)
+
             if use_label:
-                label = Gtk.Label(label=icon_name)
-                box.append(label)
+                child = Gtk.Label(label=valid_icon)
             else:
-                if icon_name:
-                    try:
-                        icon = Gtk.Image.new_from_icon_name(icon_name)
-                        box.append(icon)
-                    except Exception as e:
-                        self.logger.error(
-                            f"Failed to create icon with name: {icon_name}",
-                            exc_info=True,
-                        )
-                        return None
+                child = Gtk.Image.new_from_icon_name(valid_icon)
+
+            child.set_hexpand(False)
+            child.set_vexpand(False)
+            box.append(child)
             button.set_child(box)
+
+            if class_style:
+                button.add_css_class(class_style)
+                box_class_name = f"box-{class_style}"
+                box.add_css_class(box_class_name)
+
             if cmd == "NULL":
                 button.set_sensitive(False)
                 return button
-            if use_function:
-                try:
-                    button.connect("clicked", lambda *_: use_function(use_args))
-                except Exception as e:
-                    self.logger.error(
-                        f"Failed to connect custom function to button: {e}",
-                        exc_info=True,
-                    )
-                    return None
-            else:
-                try:
-                    button.connect("clicked", lambda *_: self.command.run(cmd))
-                except Exception as e:
-                    self.logger.error(
-                        f"Failed to connect command '{cmd}' to button: {e}",
-                        exc_info=True,
-                    )
-                    return None
-            try:
-                button.add_css_class(class_style)
-            except Exception as e:
-                self.logger.error(
-                    f"Failed to apply CSS class '{class_style}' to button: {e}",
-                    exc_info=True,
-                )
-                return None
-            return button
-        except Exception as e:
-            self.logger.error(
-                f"Unexpected error while creating button: {e}", exc_info=True
+
+            handler = (
+                (lambda *_: use_function(use_args))
+                if use_function
+                else (lambda *_: self.command.run(cmd))
             )
+            button.connect("clicked", handler)
+
+            return button
+
+        except Exception as e:
+            self.logger.error(f"Error creating button: {e}", exc_info=True)
             return None
 
     def search_local_desktop(self, initial_title: str) -> Optional[str]:
