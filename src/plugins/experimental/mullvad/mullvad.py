@@ -43,7 +43,7 @@ def get_plugin_class():
 
         async def _async_init_setup(self):
             self.mullvad_version = await self.asyncio.to_thread(self._get_version)
-            self.icon_name = "mullvad-vpn"
+            self.icon_name = "network-vpn"
 
             self.menubutton_mullvad.set_icon_name(self.icon_name)
             self.menubutton_mullvad.add_css_class("top_right_widgets")
