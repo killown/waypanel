@@ -267,6 +267,8 @@ def main() -> None:
     import subprocess
     from pathlib import Path
 
+    wayfire_socket_env = os.environ.get("WAYFIRE_SOCKET")
+
     setup_logging()
     ConfigClass = get_config_class()
     config = ConfigClass(app_name="waypanel")
@@ -279,6 +281,14 @@ def main() -> None:
     gtk_lib = _find_system_library("libgtk4-layer-shell.so")
     if not gtk_lib:
         logging.critical("libgtk4-layer-shell.so not found. Cannot start.")
+        sys.exit(1)
+
+    if not wayfire_socket_env:
+        logging.critical(
+            f"Critical Failure: Environment variable '{wayfire_socket_env}' is empty or unset. "
+            "This prevents connection to the compositor. Ensure that the 'ipc' and 'ipc-rules' "
+            "Wayfire plugins are enabled in your configuration."
+        )
         sys.exit(1)
 
     os.environ["LD_PRELOAD"] = str(gtk_lib)
