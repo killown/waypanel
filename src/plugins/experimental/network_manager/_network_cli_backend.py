@@ -1,8 +1,8 @@
 import asyncio
 import subprocess
 import functools
-import logging
 from typing import Optional, Dict, Any, List, Tuple
+from src.shared.command_runner import CommandRunner
 
 NmcliDeviceDict = Dict[str, str]
 
@@ -16,44 +16,24 @@ class NetworkCLI:
         logger (logging.Logger | Any): A logger instance for reporting operations and errors.
     """
 
-    def __init__(self, logger: logging.Logger | Any) -> None:
+    def __init__(self, panel_instance) -> None:
         """
         Initializes the NetworkCLI instance.
         Args:
             logger: The logger instance to use. Must support standard logging methods (e.g., info, error).
         """
-        self.logger = logger
+        self.logger = panel_instance.logger
+        self.cmd = CommandRunner(panel_instance)
 
     async def _connect_to_network_async(self, ssid: str) -> None:
-        """
-        Asynchronously connects to a Wi-Fi network using 'nmcli device wifi connect'.
-        This method is a non-blocking wrapper around the external nmcli process.
-        Args:
-            ssid: The SSID (name) of the Wi-Fi network to connect to.
-        """
         self.logger.info(f"CLI: Attempting to connect to network: {ssid}")
-        try:
-            command: List[str] = ["nmcli", "device", "wifi", "connect", ssid]
-            proc: asyncio.subprocess.Process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout: bytes
-            stderr: bytes
-            stdout, stderr = await proc.communicate()
-            if proc.returncode == 0:
-                self.logger.info(f"CLI: Successfully connected to {ssid}.")
-            else:
-                self.logger.error(
-                    f"CLI: Failed to connect to {ssid}. nmcli error:\n{stderr.decode('utf-8').strip()}"
-                )
-        except OSError as e:
-            self.logger.error(
-                f"CLI: OS Error during network connection (nmcli execution failure): {e}"
-            )
-        except Exception as e:
-            self.logger.error(f"CLI: Unexpected error during network connection: {e}")
+        code, stdout, stderr = await self.cmd.run_async(
+            ["nmcli", "device", "wifi", "connect", ssid]
+        )
+        if code == 0:
+            self.logger.info(f"CLI: Successfully connected to {ssid}.")
+        else:
+            self.logger.error(f"CLI: Failed to connect to {ssid}. Error: {stderr}")
 
     async def run_nmcli_device_show_async(self) -> str:
         """

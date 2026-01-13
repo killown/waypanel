@@ -29,7 +29,7 @@ def get_plugin_class():
     class NetworkManager(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
-            self.cli_backend = NetworkCLI(self.logger)
+            self.cli_backend = NetworkCLI(panel_instance)
             self.button = self.gtk.MenuButton()
             self.popover = None
             self.icon_wired_connected = self.gtk_helper.icon_exist(
