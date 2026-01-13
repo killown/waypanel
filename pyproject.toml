@@ -29,4 +29,4 @@ package-dir = { "waypanel" = "." }
 include-package-data = true
 
 [tool.setuptools.package-data]
-"waypanel" = ["src/**/*", "config/*", "*.txt", "*.md"]
+"waypanel" = ["src/**/*", "config/*", "resources/**/*", "*.txt", "*.md"]
