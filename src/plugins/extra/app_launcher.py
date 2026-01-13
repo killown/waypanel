@@ -183,8 +183,25 @@ def get_plugin_class():
             GIO's sandbox binary validation.
             """
             self.all_apps = {}
-            xdg_str = self.os.environ.get("XDG_DATA_DIRS", "/usr/share:/app/share")
-            paths = xdg_str.split(":")
+
+            # Get User path (defaults to ~/.local/share)
+            user_data = self.os.environ.get(
+                "XDG_DATA_HOME", self.os.path.expanduser("~/.local/share")
+            )
+
+            # Get System paths
+            system_xdg = self.os.environ.get(
+                "XDG_DATA_DIRS", "/usr/local/share:/usr/share"
+            )
+
+            # Merge all unique paths into a single search list
+            paths = []
+            if self.os.path.exists(user_data):
+                paths.append(user_data)
+
+            for p in system_xdg.split(":"):
+                if p and p not in paths:
+                    paths.append(p)
 
             for path in paths:
                 app_dir = self.os.path.join(path, "applications")
@@ -203,12 +220,11 @@ def get_plugin_class():
                         keyfile = self.glib.KeyFile.new()
 
                         try:
-                            # Use KeyFile to read metadata without validation
                             keyfile.load_from_file(
                                 file_path, self.glib.KeyFileFlags.NONE
                             )
 
-                            # Respect standard Freedesktop visibility flags
+                            # Filter NoDisplay and Hidden
                             if keyfile.has_key(
                                 "Desktop Entry", "NoDisplay"
                             ) and keyfile.get_boolean("Desktop Entry", "NoDisplay"):
@@ -220,6 +236,8 @@ def get_plugin_class():
 
                             name = keyfile.get_locale_string("Desktop Entry", "Name")
                             icon_name = keyfile.get_string("Desktop Entry", "Icon")
+
+                            # Extract Keywords for search filtering
                             keywords = []
                             try:
                                 keywords = keyfile.get_string_list(
@@ -229,8 +247,10 @@ def get_plugin_class():
                                 pass
 
                             if name:
-                                # Create a lightweight container mimicking GIO AppInfo
+
                                 class AppData:
+                                    """Mimics GIO.AppInfo interface."""
+
                                     def __init__(self, n, i, fid, kw, gio):
                                         self.n, self.i, self.fid, self.kw, self.gio = (
                                             n,
