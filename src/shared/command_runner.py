@@ -25,12 +25,28 @@ class CommandRunner:
     def _get_flatpak_env_args(self) -> List[str]:
         """
         Returns the surgical environment cleaning arguments for flatpak-spawn.
+        Dynamically detects the host's actual Wayland display socket from the filesystem.
         """
         uid = os.getuid()
+        runtime_dir = f"/run/user/{uid}"
+
+        wayland_display = "wayland-0"
+        display = os.getenv("DISPLAY", ":0")
+
+        try:
+            if os.path.exists(runtime_dir):
+                sockets = [
+                    f for f in os.listdir(runtime_dir) if f.startswith("wayland-")
+                ]
+                if sockets:
+                    wayland_display = sorted(sockets)[-1]
+        except Exception as e:
+            self.logger.error(f"Error detecting host wayland socket: {e}")
+
         return [
-            f"--env=XDG_RUNTIME_DIR=/run/user/{uid}",
-            f"--env=WAYLAND_DISPLAY={os.getenv('WAYLAND_DISPLAY', 'wayland-0')}",
-            f"--env=DISPLAY={os.getenv('DISPLAY', ':0')}",
+            f"--env=XDG_RUNTIME_DIR={runtime_dir}",
+            f"--env=WAYLAND_DISPLAY={wayland_display}",
+            f"--env=DISPLAY={display}",
             "--env=DBUS_SESSION_BUS_ADDRESS=",
             "--env=PYTHONPATH=",
             "--env=LD_LIBRARY_PATH=",
