@@ -179,14 +179,95 @@ def get_plugin_class():
 
         def _populate_flowbox_with_apps(self):
             """
-            Populates the flowbox with application buttons and ensures all are cached.
-            This runs once on first popover open.
+            Populates the flowbox by manually parsing desktop files to bypass
+            GIO's sandbox binary validation.
             """
-            all_apps_list = self.gio.AppInfo.get_all()
-            self.all_apps = {i.get_id(): i for i in all_apps_list if i.get_id()}
+            self.all_apps = {}
+            xdg_str = self.os.environ.get("XDG_DATA_DIRS", "/usr/share:/app/share")
+            paths = xdg_str.split(":")
+
+            for path in paths:
+                app_dir = self.os.path.join(path, "applications")
+                if not self.os.path.exists(app_dir):
+                    continue
+
+                try:
+                    for file_name in self.os.listdir(app_dir):
+                        if (
+                            not file_name.endswith(".desktop")
+                            or file_name in self.all_apps
+                        ):
+                            continue
+
+                        file_path = self.os.path.join(app_dir, file_name)
+                        keyfile = self.glib.KeyFile.new()
+
+                        try:
+                            # Use KeyFile to read metadata without validation
+                            keyfile.load_from_file(
+                                file_path, self.glib.KeyFileFlags.NONE
+                            )
+
+                            # Respect standard Freedesktop visibility flags
+                            if keyfile.has_key(
+                                "Desktop Entry", "NoDisplay"
+                            ) and keyfile.get_boolean("Desktop Entry", "NoDisplay"):
+                                continue
+                            if keyfile.has_key(
+                                "Desktop Entry", "Hidden"
+                            ) and keyfile.get_boolean("Desktop Entry", "Hidden"):
+                                continue
+
+                            name = keyfile.get_locale_string("Desktop Entry", "Name")
+                            icon_name = keyfile.get_string("Desktop Entry", "Icon")
+                            keywords = []
+                            try:
+                                keywords = keyfile.get_string_list(
+                                    "Desktop Entry", "Keywords"
+                                )
+                            except:
+                                pass
+
+                            if name:
+                                # Create a lightweight container mimicking GIO AppInfo
+                                class AppData:
+                                    def __init__(self, n, i, fid, kw, gio):
+                                        self.n, self.i, self.fid, self.kw, self.gio = (
+                                            n,
+                                            i,
+                                            fid,
+                                            kw,
+                                            gio,
+                                        )
+
+                                    def get_name(self):
+                                        return self.n
+
+                                    def get_id(self):
+                                        return self.fid
+
+                                    def get_keywords(self):
+                                        return self.kw
+
+                                    def get_icon(self):
+                                        return (
+                                            self.gio.ThemedIcon.new(self.i)
+                                            if self.i
+                                            else None
+                                        )
+
+                                self.all_apps[file_name] = AppData(
+                                    name, icon_name, file_name, keywords, self.gio
+                                )
+                        except:
+                            continue
+                except Exception as e:
+                    self.logger.error(f"AppLauncher: Error scanning {app_dir}: {e}")
+
             for app_id, app_info in self.all_apps.items():
                 if app_id not in self.icons:
                     self._add_app_to_flowbox(app_info, app_id)
+
             self.update_flowbox()
 
         def _finalize_popover_setup(self, is_initial_setup=False):
