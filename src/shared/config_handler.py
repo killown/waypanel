@@ -181,61 +181,62 @@ class ConfigHandler:
         """
         if self._cached_config and not force_reload:
             return self._cached_config
+
         config_from_file: Dict[str, Any] = {}
         file_path = Path(self.config_file)
         file_must_be_created = not file_path.exists()
         load_succeeded = False
+
         if file_must_be_created:
-            self.logger.info("Config file is missing. Will apply defaults and create.")
+            self.logger.info("Config file is missing. Applying defaults.")
             config_from_file = {}
             load_succeeded = True
         else:
             max_retries = 3
-            retry_delay_seconds = 0.1
             for attempt in range(max_retries):
                 try:
                     with open(file_path, "r") as f:
                         config_from_file = toml.load(f)
                     self.logger.debug("Existing config.toml loaded successfully.")
-                    load_succeeded = True
                     self._last_mod_time = os.path.getmtime(self.config_file)
+                    load_succeeded = True
                     break
                 except Exception as e:
-                    self.logger.error(
-                        f"Error loading config file on attempt {attempt + 1}: {e}. Retrying..."
-                    )
-                    time.sleep(retry_delay_seconds)
+                    self.logger.error(f"Load attempt {attempt + 1} failed: {e}")
+                    time.sleep(0.1)
             else:
                 self.logger.error(
-                    "Failed to load config file after all retries. Using default configuration and skipping file save to preserve user data."
+                    "Failed to load config file. Falling back to defaults."
                 )
                 config_from_file = {}
+
         self._load_successful = load_succeeded
-        default_config_for_merge = self.default_config_stripped
-        self._recursive_merge(config_from_file, default_config_for_merge)
-        needs_write_back = file_must_be_created
-        if needs_write_back:
-            self.logger.info(
-                "Saving default configuration to file because it was missing."
-            )
-            original_config_data = getattr(self, "config_data", None)
-            self.config_data = config_from_file
-            self.save_config()
-            self.config_data = original_config_data
+
+        self._recursive_merge(config_from_file, self.default_config_stripped)
+
+        self.config_data = config_from_file
         self._cached_config = config_from_file
-        self.logger.debug("Configuration loaded and merged with defaults.")
-        return config_from_file
+
+        if file_must_be_created:
+            self.logger.info("Writing default configuration to new file.")
+            self.save_config()
+
+        self.logger.debug("Configuration loaded and synchronized.")
+        return self.config_data
 
     def _setup_config_paths(self) -> None:
         """Sets up and assigns the various system paths (XDG compliant)."""
         config_paths = self.setup_config_paths()
-        self.home: str = config_paths.get("home", "")
-        self.webapps_applications: str = os.path.join(
-            self.home, ".local/share/applications"
-        )
+        self.home: str = config_paths.get("home", os.path.expanduser("~"))
         self.config_path: str = config_paths.get("config_path", "")
         self.style_css_config: str = config_paths.get("style_css_config", "")
         self.cache_folder: str = config_paths.get("cache_folder", "")
+        self.config_file = Path(self.config_path) / "config.toml"
+        os.makedirs(self.config_path, exist_ok=True)
+        os.makedirs(self.cache_folder, exist_ok=True)
+        self.webapps_applications: str = os.path.join(
+            self.home, ".local/share/applications"
+        )
 
     def setup_config_paths(self) -> Dict[str, str]:
         """
@@ -598,5 +599,10 @@ class ConfigHandler:
         self.set_root_setting(key_path, value)
 
     def get_settings(self) -> Dict[str, Any]:
-        """Returns the current live configuration dictionary (self.config_data)."""
-        return self.config_data
+        """
+        Returns the current live configuration dictionary.
+        Ensures a reload if the cache is empty.
+        """
+        if self._cached_config is None:
+            return self.load_config(force_reload=True)
+        return self._cached_config
