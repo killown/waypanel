@@ -271,40 +271,39 @@ class GtkHelpers:
     def search_desktop(self, app_id: str) -> Optional[str]:
         """
         Search for a desktop file associated with the given application ID.
-        This function searches through installed applications to find a matching desktop file
-        whose ID contains the provided `app_id`.
-        Args:
-            app_id (str): The application ID or app_id to search for.
-        Returns:
-            Optional[str]: The ID of the first matching desktop file if found, or None if no match is found.
+        Includes host mirrors for Flatpak compatibility.
         """
-        try:
-            if not self.data_helper.validate_string(app_id):
-                self.logger.warning(f"Invalid or missing app_id: {app_id}")
-                return None
-            try:
-                all_apps = Gio.AppInfo.get_all()
-            except Exception as e:  # pyright: ignore
-                self.logger.error(f"Failed to retrieve installed applications. {e}")
-                return None
-            desktop_files = [
-                app.get_id().lower()  # pyright: ignore
-                for app in all_apps
-                if app.get_id() and app_id.lower() in app.get_id().lower()  # pyright: ignore
-            ]
-            if desktop_files:
-                self.logger.debug(
-                    f"Found desktop file for app_id '{app_id}': {desktop_files[0]}"
-                )
-                return desktop_files[0]
-            else:
-                self.logger.info(f"No desktop file found for app_id: {app_id}")
-                return None
-        except Exception as e:
-            self.logger.error(
-                f"Unexpected error while searching for desktop file with app_id: {app_id} {e}",
-            )
+        if not self.data_helper.validate_string(app_id):
             return None
+
+        # Try manual path check first to bypass Gio sandbox filtering
+        search_paths = [
+            "/usr/share/applications",
+            os.path.expanduser("~/.local/share/applications"),
+            "/run/host/usr/share/applications",
+        ]
+
+        app_id_lower = app_id.lower()
+        for app_dir in search_paths:
+            if not os.path.isdir(app_dir):
+                continue
+
+            for file_name in os.listdir(app_dir):
+                if file_name.lower().startswith(app_id_lower) and file_name.endswith(
+                    ".desktop"
+                ):
+                    return file_name
+
+        # Fallback to Gio
+        try:
+            all_apps = Gio.AppInfo.get_all()
+            for app in all_apps:
+                if app.get_id() and app_id_lower in app.get_id().lower():  # pyright: ignore
+                    return app.get_id()
+        except Exception as e:
+            self.logger.error(f"Gio AppInfo fallback failed: {e}")
+
+        return None
 
     def normalize_name(self, name: str) -> str:
         """Normalize icon/app names for comparison."""
@@ -785,57 +784,43 @@ class GtkHelpers:
     def extract_icon_info(self, application_name: str) -> Optional[str]:
         """
         Extract the icon name for a given application by searching desktop files.
-        This function searches through standard desktop file directories to find an entry
-        matching the provided application name, then returns the associated icon name.
-        Args:
-            application_name (str): The name of the application to search for.
-        Returns:
-            Optional[str]: The icon name if found, or None if no matching application is found.
+        Includes host mirrors for Flatpak compatibility.
         """
         search_paths = [
             "/usr/share/applications/",
             os.path.expanduser("~/.local/share/applications/"),
+            "/run/host/usr/share/applications/",
         ]
-        try:
-            for search_path in search_paths:
-                if not os.path.exists(search_path):
-                    self.logger.debug(f"Search path does not exist: {search_path}")
+
+        for search_path in search_paths:
+            if not os.path.exists(search_path):
+                continue
+
+            for file_name in os.listdir(search_path):
+                if not file_name.endswith(".desktop"):
                     continue
+
+                file_path = os.path.join(search_path, file_name)
                 try:
-                    for file_name in os.listdir(search_path):
-                        if not file_name.endswith(".desktop"):
-                            continue
-                        file_path = os.path.join(search_path, file_name)
-                        try:
-                            with open(file_path, "r") as desktop_file:
-                                found_name = False
-                                for line in desktop_file:
-                                    if line.startswith("Name="):
-                                        app_name = line.strip().split("=")[1]
-                                        if app_name == application_name:
-                                            found_name = True
-                                    elif found_name and line.startswith("Icon="):
-                                        icon_name = line.strip().split("=")[1]
-                                        self.logger.debug(
-                                            f"Found icon '{icon_name}' for application '{application_name}' in file: {file_path}"
-                                        )
-                                        return icon_name
-                        except Exception as e:
-                            self.logger.error(
-                                error=e,
-                                message=f"Error reading desktop file: {file_path}",
-                                context={"file": file_path},
-                            )
+                    with open(
+                        file_path, "r", encoding="utf-8", errors="ignore"
+                    ) as desktop_file:
+                        found_name = False
+                        for line in desktop_file:
+                            clean_line = line.strip()
+                            if clean_line.startswith("Name="):
+                                app_name = clean_line.split("=", 1)[1]
+                                if app_name == application_name:
+                                    found_name = True
+                            elif found_name and clean_line.startswith("Icon="):
+                                icon_name = clean_line.split("=", 1)[1]
+                                self.logger.debug(
+                                    f"Found icon '{icon_name}' for '{application_name}' in: {file_path}"
+                                )
+                                return icon_name
                 except Exception as e:
-                    self.logger.error(
-                        error=e,
-                        message=f"Error listing files in directory: {search_path}",
-                        context={"directory": search_path},
-                    )
-        except Exception as e:
-            self.logger.error(
-                error=e, message="Unexpected error while extracting icon info."
-            )
+                    self.logger.error(f"Error reading desktop file {file_path}: {e}")
+
         self.logger.info(f"No icon found for application: {application_name}")
         return None
 
