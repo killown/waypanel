@@ -71,6 +71,20 @@ class CommandRunner:
                 env_str = " ".join(self._get_flatpak_env_args())
                 final_cmd = f"flatpak-spawn --host {env_str} {cmd}"
 
+            # If in Flatpak, bypass IPC and run via subprocess to ensure portal bridge works
+            if self.is_flatpak:
+                GLib.idle_add(
+                    lambda: subprocess.Popen(
+                        final_cmd,
+                        shell=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        start_new_session=True,
+                    )
+                )
+                self.logger.info(f"Flatpak host command dispatched: {final_cmd}")
+                return
+
             if os.getenv("WAYFIRE_SOCKET"):
 
                 def run_wayfire():
