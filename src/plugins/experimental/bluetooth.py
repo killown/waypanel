@@ -26,6 +26,8 @@ def get_plugin_metadata(panel):
 def get_plugin_class():
     import re
     import pulsectl
+    from dbus_fast import BusType
+    from dbus_fast.aio import MessageBus
     from src.plugins.core._base import BasePlugin
 
     class Bluetooth(BasePlugin):
@@ -52,13 +54,28 @@ def get_plugin_class():
                     "automatically attempt to connect to when it starts."
                 ),
             )
+            self.bus = None
+            self._bus_lock = self.asyncio.Lock()
 
         def on_start(self):
             """Hook called by BasePlugin after successful initialization."""
             self.bluetooth_button_popover.connect(
                 "clicked", self.open_popover_dashboard
             )
-            self.run_in_async_task(self._auto_connect_devices())
+            self.run_in_async_task(self._init_dbus_and_auto_connect())
+
+        async def _ensure_bus(self):
+            async with self._bus_lock:
+                if self.bus is None:
+                    try:
+                        self.bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+                    except Exception as e:
+                        self.logger.error(f"Failed to connect to System Bus: {e}")
+                return self.bus
+
+        async def _init_dbus_and_auto_connect(self):
+            if await self._ensure_bus():
+                await self._auto_connect_devices()
 
         def _extract_mac_from_string(self, entry_string):
             """
@@ -76,11 +93,8 @@ def get_plugin_class():
         async def _auto_connect_devices(self):
             """Reads config and attempts to connect specified Bluetooth devices."""
             if not self.connect_devices:
-                self.logger.info("No devices configured for auto-connect.")
                 return
-            self.logger.info(
-                f"Attempting Bluetooth auto-connect for configured devices: {self.connect_devices}"
-            )
+
             known_devices = await self._get_devices()
             macs_to_connect = set()
             for entry in self.connect_devices:
@@ -92,83 +106,58 @@ def get_plugin_class():
                     if device.get("name") == entry:
                         macs_to_connect.add(device["mac"])
                         break
-            if not macs_to_connect:
-                self.logger.warning(
-                    f"Could not find MAC addresses for any configured auto-connect device based on input: {connect_devices}"
-                )
-                return
+
             for mac in macs_to_connect:
-                device_info = await self._get_device_info(mac)
-                if not device_info:
-                    self.logger.warning(
-                        f"Device info not found for MAC: {mac}. Skipping auto-connect."
-                    )
-                    continue
-                device_name = device_info.get("Name", mac)
-                is_connected = device_info.get("Connected", "no").lower() == "yes"
-                if is_connected:
-                    self.logger.info(
-                        f"Device '{device_name}' is already connected. Skipping auto-connect."
-                    )
-                    continue
-                self.logger.info(f"Auto-connecting to device: {device_name} ({mac})")
-                await self._connect_device_and_set_sink(mac, device_info)
-            self.logger.info("Bluetooth auto-connect routine complete.")
+                info = await self._get_device_info(mac)
+                if info and not info.get("Connected"):
+                    await self._connect_device_and_set_sink(mac, info)
 
         async def _get_devices(self):
+            bus = await self._ensure_bus()
+            if not bus:
+                return []
             try:
-                proc = await self.asyncio.to_thread(
-                    self.subprocess.run,
-                    ["bluetoothctl", "devices"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
+                introspection = await bus.introspect("org.bluez", "/")
+                proxy = bus.get_proxy_object("org.bluez", "/", introspection)
+                manager = proxy.get_interface("org.freedesktop.DBus.ObjectManager")
+                objects = await manager.call_get_managed_objects()
+
                 device_list = []
-                for line in proc.stdout.strip().split("\n"):
-                    match = re.search(r"Device (\S+) (.*)", line)
-                    if match:
-                        device_list.append(
-                            {"mac": match.group(1), "name": match.group(2)}
+                for path, interfaces in objects.items():
+                    if "org.bluez.Device1" in interfaces:
+                        props = interfaces["org.bluez.Device1"]
+                        mac = props["Address"].value
+                        name = (
+                            props.get("Name", {}).value
+                            or props.get("Alias", {}).value
+                            or "Unknown"
                         )
+                        device_list.append({"mac": mac, "name": name, "path": path})
                 return device_list
             except Exception as e:
-                self.logger.exception(f"Error getting bluetooth devices: {e}")
+                self.logger.exception(f"Error getting devices: {e}")
                 return []
 
         async def _get_device_info(self, mac_address):
+            bus = await self._ensure_bus()
+            if not bus:
+                return None
             try:
-                proc = await self.asyncio.to_thread(
-                    self.subprocess.run,
-                    ["bluetoothctl", "info", mac_address],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-                if "Device not found" in proc.stdout:
-                    return None
-                info = {}
-                for line in proc.stdout.strip().split("\n"):
-                    line = line.strip()
-                    if not line:
-                        continue
-                    match = re.match(r"(\S+):\s*(.*)", line)
-                    if match:
-                        key = match.group(1)
-                        value = match.group(2)
-                        info[key] = value.strip()
+                obj_path = f"/org/bluez/hci0/dev_{mac_address.replace(':', '_')}"
+                introspection = await bus.introspect("org.bluez", obj_path)
+                proxy = bus.get_proxy_object("org.bluez", obj_path, introspection)
+                properties = proxy.get_interface("org.freedesktop.DBus.Properties")
+                all_props = await properties.call_get_all("org.bluez.Device1")
+
+                info = {k: v.value for k, v in all_props.items()}
+                info["mac"] = mac_address
+                info["path"] = obj_path
                 return info
-            except Exception as e:
-                self.logger.exception(
-                    f"Error getting device info for {mac_address}: {e}"
-                )
+            except Exception:
                 return None
 
         async def _get_pa_sink_for_device(self, mac_address):
-            """
-            Retrieves the PulseAudio sink Info object for a given Bluetooth MAC address
-            using the pulsectl library.
-            """
+            """Retrieves the PulseAudio sink Info object using pulsectl."""
             mac_upper = mac_address.upper().replace(":", "_")
 
             def _sync_get_sink():
@@ -180,20 +169,14 @@ def get_plugin_class():
                     return None
 
             try:
-                sink_info = await self.asyncio.to_thread(_sync_get_sink)
-                return sink_info
+                return await self.asyncio.to_thread(_sync_get_sink)
             except Exception as e:
-                self.logger.exception(
-                    f"Error listing PulseAudio sinks (pulsectl) for mac {mac_address}: {e}"
-                )
+                self.logger.exception(f"PulseAudio error for {mac_address}: {e}")
                 return None
 
         async def _set_default_sink(self, sink_info, device_name):
-            """Sets the default PulseAudio sink (output device) using pulsectl."""
+            """Sets the default PulseAudio sink using pulsectl."""
             if not sink_info:
-                self.logger.warning(
-                    "No PulseAudio sink info provided to set as default."
-                )
                 return
 
             def _sync_set_default(sink):
@@ -201,16 +184,14 @@ def get_plugin_class():
                     pulse.sink_default_set(sink)
 
             try:
-                self.logger.info(f"Setting default sink: {device_name}")
                 await self.asyncio.to_thread(_sync_set_default, sink_info)
-                display_name_part = device_name
                 self.notifier.notify_send(
                     "Bluetooth Audio",
-                    f"Default audio set to {display_name_part}",
+                    f"Default audio set to {device_name}",
                     "audio-volume-high-symbolic",
                 )
             except Exception as e:
-                self.logger.exception(f"Failed to set default sink with pulsectl: {e}")
+                self.logger.exception(f"Failed to set default sink: {e}")
 
         def open_popover_dashboard(self, *_):
             if self.popover_dashboard and self.popover_dashboard.is_visible():
@@ -226,15 +207,11 @@ def get_plugin_class():
                 closed_handler=self.popover_is_closed,
                 css_class="bluetooth-dashboard-popover",
             )
-            box = self.gtk.Box.new(
-                orientation=self.gtk.Orientation.VERTICAL, spacing=10
-            )
-            box.set_margin_top(10)
-            box.set_margin_bottom(10)
-            box.set_margin_start(10)
-            box.set_margin_end(10)
-            loading_label = self.gtk.Label(label="Loading...")
-            box.append(loading_label)
+            box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 10)
+            for side in ["top", "bottom", "start", "end"]:
+                getattr(box, f"set_margin_{side}")(10)
+
+            box.append(self.gtk.Label(label="Loading..."))
             self.popover_dashboard.set_child(box)
             self.popover_dashboard.popup()
             self.run_in_async_task(self._fetch_and_update_bluetooth_info())
@@ -245,7 +222,6 @@ def get_plugin_class():
             for device in devices_list:
                 info = await self._get_device_info(device["mac"])
                 if info:
-                    info["mac"] = device["mac"]
                     device_details.append(info)
             self.schedule_in_gtk_thread(self._update_popover_buttons, device_details)
 
@@ -253,162 +229,148 @@ def get_plugin_class():
             if not self.popover_dashboard:
                 return False
             popover_box = self.popover_dashboard.get_child()
-            for child in popover_box:  # pyright: ignore
-                popover_box.remove(child)  # pyright: ignore
+            while child := popover_box.get_first_child():
+                popover_box.remove(child)
+
             self.bluetooth_buttons.clear()
             if not device_details:
-                no_devices_label = self.gtk.Label(label="No Bluetooth devices found.")
-                popover_box.append(no_devices_label)  # pyright: ignore
+                popover_box.append(self.gtk.Label(label="No Bluetooth devices found."))
             else:
                 for device in device_details:
-                    bluetooth_button = self.gtk.Box.new(
-                        orientation=self.gtk.Orientation.HORIZONTAL, spacing=6
-                    )
-                    self.add_cursor_effect(bluetooth_button)
-                    bluetooth_button.add_css_class("bluetooth-dashboard-buttons")
-                    label = self.gtk.Label()
-                    label.set_label(" " + device.get("Name", device.get("mac")))
-                    bluetooth_button.append(label)
-                    spacer = self.gtk.Box.new(
-                        orientation=self.gtk.Orientation.HORIZONTAL, spacing=0
-                    )
+                    btn = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 6)
+                    btn.add_css_class("bluetooth-dashboard-buttons")
+                    self.add_cursor_effect(btn)
+
+                    name = device.get("Name", device["mac"])
+                    btn.append(self.gtk.Label(label=f" {name}"))
+
+                    spacer = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
                     spacer.set_hexpand(True)
-                    bluetooth_button.append(spacer)
-                    icon = self.gtk.Image()
-                    icon_name = device.get("Icon", "audio-card")
-                    icon.set_from_icon_name(icon_name)
+                    btn.append(spacer)
+
+                    icon = self.gtk.Image.new_from_icon_name(
+                        device.get("Icon", "audio-card")
+                    )
                     icon.set_pixel_size(24)
-                    bluetooth_button.append(icon)
+                    btn.append(icon)
+
+                    mac = device["mac"]
                     gesture = self.gtk.GestureClick.new()
-                    device_mac = device["mac"]
                     gesture.connect(
                         "released",
-                        lambda _, *args, mac=device_mac: self.run_in_async_task(
-                            self._handle_bluetooth_click(mac)
+                        lambda *_, m=mac: self.run_in_async_task(
+                            self._handle_bluetooth_click(m)
                         ),
                     )
-                    gesture.set_button(1)
-                    bluetooth_button.add_controller(gesture)
-                    if device.get("Connected", "no").lower() == "yes":
-                        bluetooth_button.add_css_class(
-                            "bluetooth-dashboard-buttons-connected"
-                        )
-                    else:
-                        self.safe_remove_css_class(
-                            bluetooth_button, "bluetooth-dashboard-buttons-connected"
-                        )
-                    self.bluetooth_buttons[device["mac"]] = bluetooth_button
-                    popover_box.append(bluetooth_button)  # pyright: ignore
+                    btn.add_controller(gesture)
+
+                    if device.get("Connected"):
+                        btn.add_css_class("bluetooth-dashboard-buttons-connected")
+
+                    self.bluetooth_buttons[mac] = btn
+                    popover_box.append(btn)
             return False
 
         async def _connect_device_and_set_sink(self, device_id, device_info):
-            """Helper to handle connection, sink setup, and notification (used by click and auto-connect)."""
+            """Handles connection and PulseAudio sink setup."""
             device_name = device_info.get("Name", device_id)
-            icon_name = device_info.get("Icon", "bluetooth")
-            is_audio_device = any(
-                s in icon_name.lower() for s in ["audio", "headset", "speaker", "card"]
+            icon = device_info.get("Icon", "bluetooth")
+            is_audio = any(
+                s in icon.lower() for s in ["audio", "headset", "speaker", "card"]
             )
+
             await self.connect_bluetooth_device(device_id)
-            if is_audio_device:
-                self.logger.info(
-                    f"Attempting to set connected Bluetooth audio device ({device_name}) as default sink."
-                )
-                pa_sink_info = None
-                MAX_RETRIES = 10
-                WAIT_TIME = 0.5
-                for i in range(MAX_RETRIES):
-                    self.logger.debug(
-                        f"Attempt {i + 1}/{MAX_RETRIES}: Searching for PA sink..."
-                    )
-                    pa_sink_info = await self._get_pa_sink_for_device(device_id)
-                    if pa_sink_info:
-                        self.logger.info(
-                            f"Successfully found PA sink on attempt {i + 1}."
-                        )
+
+            if is_audio:
+                pa_sink = None
+                for _ in range(10):
+                    pa_sink = await self._get_pa_sink_for_device(device_id)
+                    if pa_sink:
                         break
-                    await self.asyncio.sleep(WAIT_TIME)
-                if pa_sink_info:
-                    await self._set_default_sink(pa_sink_info, device_name)
-                else:
-                    self.logger.warning(
-                        f"Could not find PulseAudio sink for connected device {device_name} ({device_id}) after {MAX_RETRIES * WAIT_TIME} seconds."
-                    )
+                    await self.asyncio.sleep(0.5)
+                if pa_sink:
+                    await self._set_default_sink(pa_sink, device_name)
 
         async def _handle_bluetooth_click(self, device_id):
-            device_info = await self._get_device_info(device_id)
-            if not device_info:
+            info = await self._get_device_info(device_id)
+            if not info:
                 return
-            device_name = device_info.get("Name", device_id)
-            icon_name = device_info.get("Icon", "bluetooth")
-            is_connected = device_info.get("Connected", "no").lower() == "yes"
-            if is_connected:
-                self.notifier.notify_send(
-                    "Bluetooth plugin",
-                    f"Disconnecting bluetooth device: {device_name}",
-                    icon_name,
-                )
+
+            name = info.get("Name", device_id)
+            icon = info.get("Icon", "bluetooth")
+
+            if info.get("Connected"):
+                self.notifier.notify_send("Bluetooth", f"Disconnecting: {name}", icon)
                 await self.disconnect_bluetooth_device(device_id)
             else:
-                self.notifier.notify_send(
-                    "Bluetooth plugin",
-                    f"Connecting bluetooth device: {device_name}",
-                    icon_name,
-                )
-                await self._connect_device_and_set_sink(device_id, device_info)
+                self.notifier.notify_send("Bluetooth", f"Connecting: {name}", icon)
+                await self._connect_device_and_set_sink(device_id, info)
+
             if self.popover_dashboard and self.popover_dashboard.is_visible():
                 await self._update_single_button_state(device_id)
 
         async def _update_single_button_state(self, device_id):
             if device_id in self.bluetooth_buttons:
-                device_info = await self._get_device_info(device_id)
-                if not device_info:
+                info = await self._get_device_info(device_id)
+                if not info:
                     return
-                button = self.bluetooth_buttons[device_id]
-                is_connected = device_info.get("Connected", "no").lower() == "yes"
-
-                def _update_ui():
-                    if is_connected:
-                        button.add_css_class("bluetooth-dashboard-buttons-connected")
-                    else:
-                        self.safe_remove_css_class(
-                            button, "bluetooth-dashboard-buttons-connected"
-                        )
-
-                self.schedule_in_gtk_thread(_update_ui)
+                btn = self.bluetooth_buttons[device_id]
+                conn = info.get("Connected")
+                self.schedule_in_gtk_thread(
+                    lambda: btn.add_css_class("bluetooth-dashboard-buttons-connected")
+                    if conn
+                    else self.safe_remove_css_class(
+                        btn, "bluetooth-dashboard-buttons-connected"
+                    )
+                )
 
         async def disconnect_bluetooth_device(self, device_id):
-            await self.asyncio.to_thread(
-                self.subprocess.run,
-                ["bluetoothctl", "disconnect", device_id],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
+            bus = await self._ensure_bus()
+            if not bus:
+                return
+            try:
+                obj_path = f"/org/bluez/hci0/dev_{device_id.replace(':', '_')}"
+                introspection = await bus.introspect("org.bluez", obj_path)
+                proxy = bus.get_proxy_object("org.bluez", obj_path, introspection)
+                await proxy.get_interface("org.bluez.Device1").call_disconnect()
+            except Exception as e:
+                self.logger.error(f"D-Bus Disconnect failed: {e}")
 
         async def connect_bluetooth_device(self, device_id):
-            await self.asyncio.to_thread(
-                self.subprocess.run,
-                ["bluetoothctl", "connect", device_id],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
+            bus = await self._ensure_bus()
+            if not bus:
+                return
+            try:
+                obj_path = f"/org/bluez/hci0/dev_{device_id.replace(':', '_')}"
+                introspection = await bus.introspect("org.bluez", obj_path)
+                proxy = bus.get_proxy_object("org.bluez", obj_path, introspection)
+                await proxy.get_interface("org.bluez.Device1").call_connect()
+            except Exception as e:
+                self.logger.error(f"D-Bus Connect failed: {e}")
 
         def popover_is_closed(self, *_):
             self.popover_dashboard = None
-            return
 
         def code_explanation(self):
             """
             This plugin acts as a user-friendly interface for the system's
             Bluetooth functionality.
-            **Refactoring Summary using BasePlugin Helpers:**
-            - **Startup:** The plugin's initialization logic is moved from the factory function to the class method `on_start()`.
-            - **Task Management:** All `global_loop.create_task` calls were replaced by the robust helper **`self.run_in_async_task()`** (e.g., in `on_start`, `create_popover_with_loading_state`, and the `GestureClick` handler).
-            - **GTK Component Creation (FIXED):** The direct call was replaced by the fully encapsulated helper **`self.create_popover()`** in `create_popover_with_loading_state`, correctly passing `parent_widget` and `closed_handler` as arguments.
-            - **Thread Safety:** The old `GLib.idle_add` was replaced by **`self.schedule_in_gtk_thread()`** to ensure UI updates are performed safely on the main GTK thread.
-            - **Blocking Calls:** Blocking functions (`subprocess.run` and `pulsectl` operations) are wrapped using **`await self.asyncio.to_thread()`** to execute them in the thread pool without blocking the main event loop.
-            - **Standard Library Access:** Direct imports are consistently replaced with the read-only properties: **`self.os`**, **`self.asyncio`**, and **`self.subprocess`**.
+            **Refactoring Summary:**
+            - **Protocol Transition:** Replaced the external 'bluetoothctl'
+              binary dependency with 'dbus-fast'.
+            - **D-Bus Integration:** Implemented direct communication with
+              the BlueZ System Bus (BusType.SYSTEM) via the D-Bus
+              ObjectManager interface.
+            - **Lazy Connection Pattern:** Added an asynchronous lock
+              mechanism (_bus_lock) and a helper method (_ensure_bus) to
+              prevent race conditions and ensure the MessageBus is fully
+              connected before introspection or method calls.
+            - **Path Normalization:** Automates the conversion of MAC
+              addresses to BlueZ object paths (e.g., replacing ':' with '_')
+              to interact with Device1 interfaces.
+            - **Audio Synchronization:** Maintains the PulseAudio sink
+              management logic, ensuring that connected audio devices are
+              automatically set as the default output through 'pulsectl'.
             """
             return self.code_explanation.__doc__
 
