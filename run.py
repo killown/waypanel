@@ -201,14 +201,12 @@ def manage_virtual_environment(config, req_file) -> None:
     if not config.venv_dir.is_dir():
         logging.info("Creating virtual environment...")
         config.venv_dir.mkdir(parents=True, exist_ok=True)
-        # Ensure pip is included even with system-site-packages
         subprocess.run(
             [
                 sys.executable,
                 "-m",
                 "venv",
                 "--system-site-packages",
-                "--with-pip",
                 str(config.venv_dir),
             ],
             check=True,
@@ -218,7 +216,6 @@ def manage_virtual_environment(config, req_file) -> None:
 
     if not config.requirements_flag.is_file():
         try:
-            # Check if pip exists in venv, if not, bootstrap it
             pip_check = subprocess.run(
                 [str(config.venv_python), "-m", "pip", "--version"], capture_output=True
             )
@@ -226,7 +223,8 @@ def manage_virtual_environment(config, req_file) -> None:
             if pip_check.returncode != 0:
                 logging.info("Bootstrapping pip into venv...")
                 subprocess.run(
-                    [sys.executable, "-m", "ensurepip", "--upgrade"], check=True
+                    [str(config.venv_python), "-m", "ensurepip", "--upgrade"],
+                    check=True,
                 )
 
             _install_pywayfire_from_source(config)
