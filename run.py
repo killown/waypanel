@@ -4,18 +4,20 @@ A robust application launcher for Waypanel.
 """
 
 
-def setup_logging():
+def setup_logging() -> None:
     """Configures a basic logger to print info to stdout and errors to stderr."""
     import sys
     import logging
 
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
+
     logging.basicConfig(
         level=logging.INFO,
         format="[%(levelname)s] %(message)s",
         stream=sys.stdout,
     )
+
     stderr_handler = logging.StreamHandler(sys.stderr)
     stderr_handler.setLevel(logging.ERROR)
     formatter = logging.Formatter("[%(levelname)s] %(message)s")
@@ -31,6 +33,8 @@ def get_config_class():
 
     @dataclass(frozen=True)
     class AppConfig:
+        """Manages application-specific directory and file paths."""
+
         app_name: str
         xdg_data_home: Path = Path(
             os.getenv("XDG_DATA_HOME", "~/.local/share")
@@ -56,7 +60,6 @@ def get_config_class():
 
         @property
         def build_dir(self) -> Path:
-            """Writeable build directory in cache for Flatpak compatibility."""
             return self.xdg_cache_home / self.app_name / "build"
 
         @property
@@ -90,7 +93,7 @@ def get_config_class():
     return AppConfig
 
 
-def run_backup(config, max_copies: int = 10):
+def run_backup(config, max_copies: int = 10) -> None:
     """Performs a comprehensive backup of data and config directories."""
     import shutil
     import logging
@@ -110,7 +113,6 @@ def run_backup(config, max_copies: int = 10):
             ignore = shutil.ignore_patterns("venv") if name == "data" else None
             shutil.copytree(source_path, target_path, symlinks=False, ignore=ignore)
 
-        # Retention management
         all_backups = sorted(
             config.backup_base_dir.glob("backup_*"), key=lambda p: p.name
         )
@@ -132,7 +134,6 @@ def _find_system_library(lib_name: str) -> str:
     if env_override and Path(env_override).is_file():
         return env_override
 
-    # Check LD_LIBRARY_PATH and common locations
     search_paths = [
         "/usr/lib/libgtk4-layer-shell.so",
         "/usr/lib/x86_64-linux-gnu/libgtk4-layer-shell.so",
@@ -183,7 +184,7 @@ def _install_pywayfire_from_source(config) -> None:
     )
 
 
-def manage_virtual_environment(config, req_file):
+def manage_virtual_environment(config, req_file) -> None:
     """Ensures the venv exists and all dependencies are installed."""
     import os
     import sys
@@ -228,23 +229,37 @@ def manage_virtual_environment(config, req_file):
             sys.exit(1)
 
 
-def ensure_initial_setup(config):
-    """Ensures config files and resources exist before launch."""
+def ensure_initial_setup(config) -> None:
+    """
+    Ensures config files and resources exist before launch by checking environment paths.
+    """
     import shutil
+    import os
     from pathlib import Path
 
     if not config.config_file.is_file():
         config.config_dir.mkdir(parents=True, exist_ok=True)
         config.config_file.touch()
 
-    if not config.resources_dir.is_dir():
-        script_dir = Path(__file__).parent.resolve()
-        res_src = script_dir / "resources"
-        if res_src.is_dir():
-            shutil.copytree(res_src, config.resources_dir)
+    search_locations = [
+        Path(__file__).parent.resolve() / "resources",
+        Path("/app/share/waypanel/resources"),
+        Path("/usr/share/waypanel/resources"),
+        Path(os.getenv("WAYPANEL_RESOURCES_PATH", "")),
+    ]
+
+    res_src = next((p for p in search_locations if p.is_dir()), None)
+
+    if res_src and (
+        not config.resources_dir.is_dir() or not any(config.resources_dir.iterdir())
+    ):
+        config.data_dir.mkdir(parents=True, exist_ok=True)
+        if config.resources_dir.exists():
+            shutil.rmtree(config.resources_dir)
+        shutil.copytree(res_src, config.resources_dir)
 
 
-def exist_process():
+def exist_process() -> None:
     """Terminates any existing instances of the main application."""
     import subprocess
     import contextlib
@@ -273,7 +288,6 @@ def main() -> None:
     ConfigClass = get_config_class()
     config = ConfigClass(app_name="waypanel")
 
-    # Dynamic root detection
     install_root = Path(__file__).parent.resolve()
 
     threading.Thread(target=run_backup, args=(config,), daemon=True).start()
@@ -285,7 +299,7 @@ def main() -> None:
 
     if not wayfire_socket_env:
         logging.critical(
-            f"Critical Failure: Environment variable 'WAYFIRE_SOCKET' is empty or unset. "
+            "Critical Failure: Environment variable 'WAYFIRE_SOCKET' is empty or unset. "
             "This prevents connection to the compositor. Ensure that the 'ipc' and 'ipc-rules' "
             "Wayfire plugins are enabled in your configuration."
         )
