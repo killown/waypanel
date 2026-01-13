@@ -222,36 +222,38 @@ def manage_virtual_environment(config, req_file) -> None:
 
     os.environ["PATH"] = f"{config.venv_dir}/bin{os.pathsep}{os.environ['PATH']}"
 
-    if not config.requirements_flag.is_file():
-        try:
-            pip_check = subprocess.run(
-                [str(venv_python), "-m", "pip", "--version"], capture_output=True
+    if config.requirements_flag.exists():
+        return
+
+    try:
+        pip_check = subprocess.run(
+            [str(venv_python), "-m", "pip", "--version"], capture_output=True
+        )
+
+        if pip_check.returncode != 0:
+            subprocess.run(
+                [str(venv_python), "-m", "ensurepip", "--upgrade"], check=True
             )
 
-            if pip_check.returncode != 0:
-                subprocess.run(
-                    [str(venv_python), "-m", "ensurepip", "--upgrade"], check=True
-                )
+        _install_pywayfire_from_source(config)
 
-            _install_pywayfire_from_source(config)
-
-            if req_file.is_file():
-                subprocess.run(
-                    [
-                        str(venv_python),
-                        "-m",
-                        "pip",
-                        "install",
-                        "--no-cache-dir",
-                        "-r",
-                        str(req_file),
-                    ],
-                    check=True,
-                )
-            config.requirements_flag.touch()
-        except Exception as e:
-            logging.critical("Failed to install dependencies: %s", e)
-            sys.exit(1)
+        if req_file.is_file():
+            subprocess.run(
+                [
+                    str(venv_python),
+                    "-m",
+                    "pip",
+                    "install",
+                    "--no-cache-dir",
+                    "-r",
+                    str(req_file),
+                ],
+                check=True,
+            )
+        config.requirements_flag.touch()
+    except Exception as e:
+        logging.critical("Failed to install dependencies: %s", e)
+        sys.exit(1)
 
 
 def ensure_initial_setup(config) -> None:
