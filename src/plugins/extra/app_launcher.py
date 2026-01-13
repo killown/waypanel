@@ -195,20 +195,32 @@ def get_plugin_class():
             )
 
             # Merge all unique paths into a single search list
+            raw_paths = []
+            if user_data:
+                raw_paths.append(user_data)
+
+            # Split and extend with all XDG_DATA_DIRS
+            raw_paths.extend(system_xdg.split(":"))
+
+            # Deduplicate and normalize paths
             paths = []
-            if self.os.path.exists(user_data):
-                paths.append(user_data)
+            for p in raw_paths:
+                if not p:
+                    continue
+                abs_p = self.os.path.abspath(p)
+                if abs_p not in paths:
+                    paths.append(abs_p)
 
-            for p in system_xdg.split(":"):
-                if p and p not in paths:
-                    paths.append(p)
-
+            # Iterate through all discovered data directories
             for path in paths:
                 app_dir = self.os.path.join(path, "applications")
-                if not self.os.path.exists(app_dir):
+
+                # We try to list it regardless if it looks like a host path
+                if not self.os.path.isdir(app_dir):
                     continue
 
                 try:
+                    # Use listdir to find all .desktop files, bypassing GIO sandbox filters
                     for file_name in self.os.listdir(app_dir):
                         if (
                             not file_name.endswith(".desktop")
@@ -220,6 +232,7 @@ def get_plugin_class():
                         keyfile = self.glib.KeyFile.new()
 
                         try:
+                            # Load desktop file manually using KeyFile
                             keyfile.load_from_file(
                                 file_path, self.glib.KeyFileFlags.NONE
                             )
@@ -280,10 +293,12 @@ def get_plugin_class():
                                     name, icon_name, file_name, keywords, self.gio
                                 )
                         except:
+                            # Skip malformed desktop files
                             continue
                 except Exception as e:
                     self.logger.error(f"AppLauncher: Error scanning {app_dir}: {e}")
 
+            # Add unique applications to the UI flowbox
             for app_id, app_info in self.all_apps.items():
                 if app_id not in self.icons:
                     self._add_app_to_flowbox(app_info, app_id)
