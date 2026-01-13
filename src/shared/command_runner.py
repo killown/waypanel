@@ -47,6 +47,7 @@ class CommandRunner:
             f"--env=XDG_RUNTIME_DIR={runtime_dir}",
             f"--env=WAYLAND_DISPLAY={wayland_display}",
             f"--env=DISPLAY={display}",
+            "--env=XDG_DATA_DIRS=/usr/local/share:/usr/share",
             "--env=DBUS_SESSION_BUS_ADDRESS=",
             "--env=PYTHONPATH=",
             "--env=LD_LIBRARY_PATH=",
@@ -71,33 +72,43 @@ class CommandRunner:
                 env_str = " ".join(self._get_flatpak_env_args())
                 final_cmd = f"flatpak-spawn --host {env_str} {cmd}"
 
-                # Direct execution for Flatpak to ensure the portal bridge works
                 def run_flatpak():
                     subprocess.Popen(
                         final_cmd,
                         shell=True,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
                         start_new_session=True,
                     )
                     return False
 
                 GLib.idle_add(run_flatpak)
-                self.logger.info(f"Flatpak host command dispatched: {final_cmd}")
                 return
 
-            def run_standard():
-                subprocess.Popen(
-                    final_cmd,
-                    shell=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    start_new_session=True,
-                )
-                return False
+            # Host System Logic
+            if os.getenv("WAYFIRE_SOCKET"):
+                # Use Wayfire IPC to ensure the compositor handles the process lifecycle
+                def run_wayfire():
+                    if hasattr(self, "ipc") and self.ipc:
+                        self.ipc.run_cmd(final_cmd)
+                    return False
 
-            GLib.idle_add(run_standard)
-            self.logger.info(f"Command scheduled: {final_cmd}")
+                GLib.idle_add(run_wayfire)
+
+            elif os.getenv("SWAYSOCK"):
+                # Sway handles direct Popen better via its own environment
+                GLib.idle_add(
+                    lambda: subprocess.Popen(
+                        final_cmd,
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        start_new_session=True,
+                    )
+                )
+                self.logger.info(f"Command scheduled: {final_cmd}")
         except Exception as e:
             self.logger.error(
                 error=e, message=f"Error running command: {cmd}", level="error"
