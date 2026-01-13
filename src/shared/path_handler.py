@@ -21,6 +21,7 @@ class PathHandler:
         self.logger: Any = panel_instance.logger
         self._default_config_dirs: Tuple[str, ...] = ("/etc/xdg",)
         self._default_data_dirs: Tuple[str, ...] = ("/usr/local/share", "/usr/share")
+        self._package_root: Path = Path(__file__).resolve().parents[2]
 
     def _get_xdg_base_dir(self, env_var: str, default_path: Path) -> Path:
         """
@@ -83,12 +84,25 @@ class PathHandler:
 
     def get_data_path(self, *path_parts: Union[str, Path]) -> str:
         """
-        Returns a path (as a string) inside the user's XDG data directory.
-        Ensures the immediate parent directory of the final resource exists.
+        Returns a path (as a string) inside the user's XDG data directory or
+        falls back to the internal package root.
+
+        Args:
+            *path_parts: Components of the path.
+
+        Returns:
+            str: The resolved absolute path.
         """
-        path: Path = self.get_data_dir().joinpath(*path_parts)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return str(path)
+        user_path: Path = self.get_data_dir().joinpath(*path_parts)
+        if user_path.exists():
+            return str(user_path)
+
+        internal_path: Path = self._package_root.joinpath(*path_parts)
+        if internal_path.exists():
+            return str(internal_path)
+
+        user_path.parent.mkdir(parents=True, exist_ok=True)
+        return str(user_path)
 
     def get_cache_dir(self) -> Path:
         """
