@@ -184,74 +184,125 @@ def get_plugin_class():
             self.all_apps = {}
 
             search_paths = [
-                "/usr/share",
-                self.os.path.expanduser("~/.local/share"),
-                "/run/host/usr/share",
+                "/usr/share/applications",
+                self.os.path.expanduser("~/.local/share/applications"),
+                "/run/host/usr/share/applications",
             ]
 
-            for base_path in search_paths:
-                app_dir = self.os.path.join(base_path, "applications")
+            for app_dir in search_paths:
                 if not self.os.path.isdir(app_dir):
                     continue
 
-                try:
-                    for file_name in self.os.listdir(app_dir):
-                        if (
-                            not file_name.endswith(".desktop")
-                            or file_name in self.all_apps
-                        ):
-                            continue
+                for file_name in self.os.listdir(app_dir):
+                    if not file_name.endswith(".desktop") or file_name in self.all_apps:
+                        continue
 
-                        file_path = self.os.path.join(app_dir, file_name)
-                        keyfile = self.glib.KeyFile.new()
+                    file_path = self.os.path.join(app_dir, file_name)
+                    keyfile = self.glib.KeyFile.new()
 
-                        if not keyfile.load_from_file(
-                            file_path, self.glib.KeyFileFlags.NONE
-                        ):
-                            continue
+                    if not keyfile.load_from_file(
+                        file_path, self.glib.KeyFileFlags.NONE
+                    ):
+                        continue
 
-                        # Standard filters
-                        if keyfile.has_key(
+                    if not keyfile.has_group("Desktop Entry"):
+                        continue
+
+                    is_no_display = False
+                    try:
+                        is_no_display = keyfile.get_boolean(
                             "Desktop Entry", "NoDisplay"
-                        ) and keyfile.get_boolean("Desktop Entry", "NoDisplay"):
-                            continue
+                        )
+                    except self.glib.Error:
+                        is_no_display = False
 
-                        name = keyfile.get_locale_string("Desktop Entry", "Name")
+                    if is_no_display:
+                        continue
+
+                    is_hidden = False
+                    try:
+                        is_hidden = keyfile.get_boolean("Desktop Entry", "Hidden")
+                    except self.glib.Error:
+                        is_hidden = False
+
+                    if is_hidden:
+                        continue
+
+                    name = keyfile.get_locale_string("Desktop Entry", "Name")
+
+                    icon_name = None
+                    try:
                         icon_name = keyfile.get_string("Desktop Entry", "Icon")
+                    except self.glib.Error:
+                        icon_name = None
 
-                        try:
-                            keywords = keyfile.get_string_list(
-                                "Desktop Entry", "Keywords"
-                            )
-                        except:
-                            keywords = []
+                    keywords = []
+                    try:
+                        keywords = keyfile.get_string_list("Desktop Entry", "Keywords")
+                    except self.glib.Error:
+                        keywords = []
 
-                        if name:
-                            # Mimic GIO.AppInfo interface for compatibility
-                            app_data = type(
-                                "HostApp",
-                                (),
-                                {
-                                    "get_name": lambda s=None: name,
-                                    "get_id": lambda s=None: file_name,
-                                    "get_keywords": lambda s=None: keywords,
-                                    "get_icon": lambda s=None: self.gio.ThemedIcon.new(
-                                        icon_name
-                                    )
-                                    if icon_name
-                                    else None,
-                                },
-                            )
-                            self.all_apps[file_name] = app_data
-                except Exception as e:
-                    self.logger.error(f"AppLauncher: Error scanning {app_dir}: {e}")
+                    if name:
+                        app_data = type(
+                            "HostApp",
+                            (),
+                            {
+                                "get_name": lambda s=None, n=name: n,
+                                "get_id": lambda s=None, f=file_name: f,
+                                "get_keywords": lambda s=None, k=keywords: k,
+                                "get_icon": lambda s=None,
+                                i=icon_name: self.gio.ThemedIcon.new(i) if i else None,
+                            },
+                        )
+                        self.all_apps[file_name] = app_data
 
-            # Add to UI
             for app_id, app_info in self.all_apps.items():
                 if app_id not in self.icons:
                     self._add_app_to_flowbox(app_info, app_id)
 
             self.update_flowbox()
+
+        def update_flowbox(self):
+            """
+            Updates the flowbox using our manually discovered self.all_apps cache
+            to prevent the GIO sandbox from clearing the host application list.
+            """
+            current_installed_apps = self.all_apps if self.all_apps else {}
+
+            recent_app_ids = self.get_recent_apps()
+
+            apps_to_remove = set(self.icons.keys()) - set(current_installed_apps.keys())
+            for app_id in apps_to_remove:
+                widget_data = self.icons.pop(app_id, None)
+                if widget_data:
+                    vbox = widget_data["vbox"]
+                    flowbox_child = vbox.get_parent()
+                    if flowbox_child:
+                        self.flowbox.remove(flowbox_child)
+
+            for app_id, app in current_installed_apps.items():
+                if app_id not in self.icons:
+                    self._add_app_to_flowbox(app, app_id)
+
+            desired_app_id_order = []
+            recent_ids_set = set(recent_app_ids)
+            for app_id in recent_app_ids:
+                if app_id in current_installed_apps and app_id in self.icons:
+                    desired_app_id_order.append(app_id)
+
+            non_recent_apps = sorted(
+                [
+                    app_id
+                    for app_id in current_installed_apps
+                    if app_id not in recent_ids_set and app_id in self.icons
+                ],
+                key=lambda app_id: current_installed_apps[app_id].get_name().lower(),
+            )
+
+            desired_app_id_order.extend(non_recent_apps)
+            self.desired_app_order = desired_app_id_order
+            self.flowbox.invalidate_sort()
+            self.flowbox.invalidate_filter()
 
         def _finalize_popover_setup(self, is_initial_setup=False):
             """Finalize the popover setup."""
@@ -276,47 +327,6 @@ def get_plugin_class():
                 self.cmd.run(cmd)
             if self.popover_launcher:
                 self.popover_launcher.popdown()
-
-        def update_flowbox(self):
-            """
-            Updates the flowbox by checking for installed/uninstalled apps
-            and reordering existing, cached widgets to prioritize recently opened apps.
-            """
-            all_apps_list = self.gio.AppInfo.get_all()
-            current_installed_apps = {
-                a.get_id(): a for a in all_apps_list if a.get_id()
-            }
-            recent_app_ids = self.get_recent_apps()
-            apps_to_remove = set(self.icons.keys()) - set(current_installed_apps.keys())
-            for app_id in apps_to_remove:
-                widget_data = self.icons.pop(app_id, None)
-                if widget_data:
-                    vbox = widget_data["vbox"]
-                    flowbox_child = vbox.get_parent()
-                    if flowbox_child:
-                        self.flowbox.remove(flowbox_child)
-            for app_id, app in current_installed_apps.items():
-                if app_id not in self.icons:
-                    self._add_app_to_flowbox(app, app_id)
-            desired_app_id_order = []
-            recent_ids_set = set(recent_app_ids)
-            for app_id in recent_app_ids:
-                if app_id in current_installed_apps and app_id in self.icons:
-                    desired_app_id_order.append(app_id)
-            non_recent_apps = sorted(
-                [
-                    app_id
-                    for app_id in current_installed_apps
-                    if app_id not in recent_ids_set and app_id in self.icons
-                ],
-                key=lambda app_id: current_installed_apps[app_id].get_name().lower()
-                if current_installed_apps[app_id].get_name()
-                else app_id.lower(),  # pyright: ignore
-            )
-            desired_app_id_order.extend(non_recent_apps)
-            self.desired_app_order = desired_app_id_order
-            self.flowbox.invalidate_sort()
-            self.flowbox.invalidate_filter()
 
         def _add_app_to_flowbox(self, app, app_id):
             """
