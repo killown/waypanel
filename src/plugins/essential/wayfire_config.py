@@ -378,7 +378,7 @@ def get_plugin_class():
             Debounces and triggers an asynchronous reload of the configuration.
             """
             import time
-            from src.plugins.core._event_loop import global_loop
+            from src.plugins.core._event_loop import get_global_loop
 
             now = time.time()
             if now - self._last_reload < self._debounce_sec:
@@ -405,6 +405,6 @@ def get_plugin_class():
                     self._pending_reload = False
 
             self._pending_reload = True
-            global_loop.create_task(apply_coroutine())
+            get_global_loop().create_task(apply_coroutine())
 
     return WayfireConfigWatcherPlugin

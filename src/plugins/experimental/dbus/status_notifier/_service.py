@@ -6,7 +6,7 @@ from dbus_fast import Variant, DBusError, BusType, PropertyAccess
 import asyncio
 import typing
 from typing import Dict
-from src.plugins.core._event_loop import global_loop
+from src.plugins.core._event_loop import get_global_loop
 from src.plugins.core._base import BasePlugin
 from ._dbus_menu_proxy import DBusMenuProxy, dbus_menu_to_gio_model
 
@@ -74,7 +74,7 @@ class StatusNotifierWatcher(ServiceInterface):
         self.host = StatusNotifierHost(panel_instance)
         self.obj = panel_instance
         self.logger = self.obj.logger
-        self.loop = global_loop
+        self.loop = get_global_loop()
         self.newest_service_name = None
         self._items: list[tuple[str, str]] = []
         self.bus = None
@@ -119,8 +119,8 @@ class StatusNotifierWatcher(ServiceInterface):
                 await asyncio.sleep(1)
 
         def _start_loop():
-            asyncio.set_event_loop(global_loop)
-            global_loop.run_until_complete(_run_server(panel_instance))
+            asyncio.set_event_loop(get_global_loop())
+            get_global_loop().run_until_complete(_run_server(panel_instance))
 
         import threading
 

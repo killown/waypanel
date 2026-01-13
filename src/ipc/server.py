@@ -4,7 +4,7 @@ import orjson as json
 import time
 from concurrent.futures import ThreadPoolExecutor
 from src.core.compositor.ipc import IPC
-from src.plugins.core._event_loop import global_loop
+from src.plugins.core._event_loop import get_global_loop
 from src.ipc.utils import translate_ipc
 
 
@@ -23,7 +23,7 @@ class EventServer:
         self.clients = []
         self.event_subscribers = {}
         self.command_handlers = {}
-        self.loop = global_loop
+        self.loop = get_global_loop
 
     def _cleanup_sockets(self) -> None:
         for path in self.ipcet_paths:
