@@ -179,48 +179,22 @@ def get_plugin_class():
 
         def _populate_flowbox_with_apps(self):
             """
-            Populates the flowbox by manually parsing desktop files to bypass
-            GIO's sandbox binary validation.
+            Populates the flowbox by manually parsing desktop files from host and sandbox.
             """
             self.all_apps = {}
 
-            # Get User path (defaults to ~/.local/share)
-            user_data = self.os.environ.get(
-                "XDG_DATA_HOME", self.os.path.expanduser("~/.local/share")
-            )
+            search_paths = [
+                "/usr/share",
+                self.os.path.expanduser("~/.local/share"),
+                "/run/host/usr/share",
+            ]
 
-            # Get System paths
-            system_xdg = self.os.environ.get(
-                "XDG_DATA_DIRS", "/usr/local/share:/usr/share"
-            )
-
-            # Merge all unique paths into a single search list
-            raw_paths = []
-            if user_data:
-                raw_paths.append(user_data)
-
-            # Split and extend with all XDG_DATA_DIRS
-            raw_paths.extend(system_xdg.split(":"))
-
-            # Deduplicate and normalize paths
-            paths = []
-            for p in raw_paths:
-                if not p:
-                    continue
-                abs_p = self.os.path.abspath(p)
-                if abs_p not in paths:
-                    paths.append(abs_p)
-
-            # Iterate through all discovered data directories
-            for path in paths:
-                app_dir = self.os.path.join(path, "applications")
-
-                # We try to list it regardless if it looks like a host path
+            for base_path in search_paths:
+                app_dir = self.os.path.join(base_path, "applications")
                 if not self.os.path.isdir(app_dir):
                     continue
 
                 try:
-                    # Use listdir to find all .desktop files, bypassing GIO sandbox filters
                     for file_name in self.os.listdir(app_dir):
                         if (
                             not file_name.endswith(".desktop")
@@ -231,74 +205,48 @@ def get_plugin_class():
                         file_path = self.os.path.join(app_dir, file_name)
                         keyfile = self.glib.KeyFile.new()
 
-                        try:
-                            # Load desktop file manually using KeyFile
-                            keyfile.load_from_file(
-                                file_path, self.glib.KeyFileFlags.NONE
-                            )
-
-                            # Filter NoDisplay and Hidden
-                            if keyfile.has_key(
-                                "Desktop Entry", "NoDisplay"
-                            ) and keyfile.get_boolean("Desktop Entry", "NoDisplay"):
-                                continue
-                            if keyfile.has_key(
-                                "Desktop Entry", "Hidden"
-                            ) and keyfile.get_boolean("Desktop Entry", "Hidden"):
-                                continue
-
-                            name = keyfile.get_locale_string("Desktop Entry", "Name")
-                            icon_name = keyfile.get_string("Desktop Entry", "Icon")
-
-                            # Extract Keywords for search filtering
-                            keywords = []
-                            try:
-                                keywords = keyfile.get_string_list(
-                                    "Desktop Entry", "Keywords"
-                                )
-                            except:
-                                pass
-
-                            if name:
-
-                                class AppData:
-                                    """Mimics GIO.AppInfo interface."""
-
-                                    def __init__(self, n, i, fid, kw, gio):
-                                        self.n, self.i, self.fid, self.kw, self.gio = (
-                                            n,
-                                            i,
-                                            fid,
-                                            kw,
-                                            gio,
-                                        )
-
-                                    def get_name(self):
-                                        return self.n
-
-                                    def get_id(self):
-                                        return self.fid
-
-                                    def get_keywords(self):
-                                        return self.kw
-
-                                    def get_icon(self):
-                                        return (
-                                            self.gio.ThemedIcon.new(self.i)
-                                            if self.i
-                                            else None
-                                        )
-
-                                self.all_apps[file_name] = AppData(
-                                    name, icon_name, file_name, keywords, self.gio
-                                )
-                        except:
-                            # Skip malformed desktop files
+                        if not keyfile.load_from_file(
+                            file_path, self.glib.KeyFileFlags.NONE
+                        ):
                             continue
+
+                        # Standard filters
+                        if keyfile.has_key(
+                            "Desktop Entry", "NoDisplay"
+                        ) and keyfile.get_boolean("Desktop Entry", "NoDisplay"):
+                            continue
+
+                        name = keyfile.get_locale_string("Desktop Entry", "Name")
+                        icon_name = keyfile.get_string("Desktop Entry", "Icon")
+
+                        try:
+                            keywords = keyfile.get_string_list(
+                                "Desktop Entry", "Keywords"
+                            )
+                        except:
+                            keywords = []
+
+                        if name:
+                            # Mimic GIO.AppInfo interface for compatibility
+                            app_data = type(
+                                "HostApp",
+                                (),
+                                {
+                                    "get_name": lambda s=None: name,
+                                    "get_id": lambda s=None: file_name,
+                                    "get_keywords": lambda s=None: keywords,
+                                    "get_icon": lambda s=None: self.gio.ThemedIcon.new(
+                                        icon_name
+                                    )
+                                    if icon_name
+                                    else None,
+                                },
+                            )
+                            self.all_apps[file_name] = app_data
                 except Exception as e:
                     self.logger.error(f"AppLauncher: Error scanning {app_dir}: {e}")
 
-            # Add unique applications to the UI flowbox
+            # Add to UI
             for app_id, app_info in self.all_apps.items():
                 if app_id not in self.icons:
                     self._add_app_to_flowbox(app_info, app_id)
