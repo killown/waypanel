@@ -36,7 +36,7 @@ container = "personal"
 [GitHub]
 url = "https://www.github.com"
 container = "dev"
-[Google Maps]
+[Google-Maps]
 url = "https://maps.google.com/"
 container = "personal"
 """
