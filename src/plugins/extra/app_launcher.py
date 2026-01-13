@@ -587,67 +587,6 @@ def get_plugin_class():
                         "Error: Could not find an editor to open the .desktop file."
                     )
 
-        def _get_available_icon_themes(self):
-            """Scans common XDG directories for icon themes by looking for index.theme files."""
-            theme_names = set()
-            base_dirs = [
-                self.os.path.join(self.os.path.expanduser("~"), ".icons"),
-                "/usr/share/icons",
-            ]
-            for base_dir in base_dirs:
-                if self.os.path.exists(base_dir):
-                    try:
-                        for entry in self.os.listdir(base_dir):
-                            theme_path = self.os.path.join(
-                                base_dir, entry, "index.theme"
-                            )
-                            if self.os.path.exists(theme_path) and self.os.path.isdir(
-                                self.os.path.join(base_dir, entry)
-                            ):
-                                theme_names.add(entry)
-                    except Exception as e:
-                        if hasattr(self, "logger") and self.logger:
-                            self.logger.warning(
-                                f"Failed to scan icon directory {base_dir}: {e}"
-                            )
-            theme_names.add("hicolor")
-            return sorted(list(theme_names))
-
-        def _on_icon_theme_changed(self, dropdown, pspec):
-            """Sets the new icon theme via GSettings."""
-            if not self.settings:
-                if hasattr(self, "logger") and self.logger:
-                    self.logger.error(
-                        "GSettings not initialized. Cannot change icon theme."
-                    )
-                return
-            selected_item = dropdown.get_selected_item()
-            if selected_item:
-                theme_name = selected_item.get_string()
-                try:
-                    self.settings.set_string("icon-theme", theme_name)
-                    self.logger.info(f"Icon theme set to: {theme_name}")
-                    icon_name = self.get_plugin_setting(["main_icon"], "start-here")
-                    if icon_name:
-                        fallback_icons = self.get_plugin_setting(
-                            ["fallback_icons"], ["start-here"]
-                        )
-                        fallback_icons.append(distro.id())
-                        icon_name = self._gtk_helper.icon_exist(
-                            icon_name, fallback_icons
-                        )
-                    if not icon_name:
-                        icon_name = self.gtk_helper.icon_exist(distro.id())
-                    self.appmenu.set_icon_name(icon_name)
-                    parent_popover = dropdown.get_root()
-                    if isinstance(parent_popover, self.gtk.Popover):
-                        parent_popover.popdown()
-                except Exception as e:
-                    if hasattr(self, "logger") and self.logger:
-                        self.logger.error(
-                            f"Failed to set icon theme via GSettings: {e}"
-                        )
-
         def on_right_click_popover(self, gesture, n_press, x, y, vbox):
             """
             Handle right-click event to show a popover menu.
@@ -659,31 +598,6 @@ def get_plugin_class():
             menu_box.set_margin_end(10)
             menu_box.set_margin_top(10)
             menu_box.set_margin_bottom(10)
-            if self.settings:
-                current_theme = self.settings.get_string("icon-theme")
-                available_themes = self._get_available_icon_themes()
-                theme_list_store = self.gtk.StringList.new(available_themes)
-                theme_dropdown = self.gtk.DropDown.new(theme_list_store, None)
-                theme_dropdown.set_hexpand(True)
-                theme_dropdown.connect(
-                    "notify::selected-item", self._on_icon_theme_changed
-                )
-                current_index = 0
-                for i, theme_name in enumerate(available_themes):
-                    if theme_name == current_theme:
-                        current_index = i
-                        break
-                theme_dropdown.set_selected(current_index)
-                theme_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
-                theme_box.set_halign(self.gtk.Align.FILL)
-                theme_box.set_margin_bottom(10)
-                theme_label = self.gtk.Label.new("Icon Theme:")
-                theme_label.set_halign(self.gtk.Align.CENTER)
-                theme_box.append(theme_label)
-                theme_box.append(theme_dropdown)
-                separator = self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL)
-                theme_box.append(separator)
-                menu_box.prepend(theme_box)
             name, desktop_file, keywords = vbox.MYTEXT
             is_in_dockbar = False
             dockbar_config = self.get_root_setting([self.dockbar_id], {})
@@ -707,23 +621,6 @@ def get_plugin_class():
                 "clicked", self.open_desktop_file, desktop_file, popover
             )
             menu_box.append(open_desktop_button)
-            search_button = self.gtk.Button.new_with_label("Search in GNOME Software")
-            search_button.connect(
-                "clicked", self.search_in_gnome_software, name, popover
-            )
-            menu_box.append(search_button)
-            if is_in_dockbar:
-                remove_button = self.gtk.Button.new_with_label("Remove from dockbar")
-                remove_button.connect(
-                    "clicked", self.remove_from_dockbar, desktop_file, popover
-                )
-                menu_box.append(remove_button)
-            else:
-                add_button = self.gtk.Button.new_with_label("Add to dockbar")
-                add_button.connect(
-                    "clicked", self.add_to_dockbar, name, desktop_file, popover
-                )
-                menu_box.append(add_button)
             popover.set_child(menu_box)
             popover.set_parent(vbox)
             popover.set_has_arrow(False)
@@ -749,21 +646,6 @@ def get_plugin_class():
             popover.popdown()
             if self.popover_launcher:
                 self.popover_launcher.popdown()
-
-        def search_in_gnome_software(self, button, name, popover):
-            """
-            Runs gnome-software with the search parameter for the selected application.
-            """
-            cmd = f"gnome-software --search={name}"
-            try:
-                self.run_cmd(cmd)
-            except FileNotFoundError:
-                if hasattr(self, "logger") and self.logger:
-                    self.logger.error("Error: gnome-software command not found.")
-            finally:
-                popover.popdown()
-                if self.popover_launcher:
-                    self.popover_launcher.popdown()
 
         def run_app_from_menu(self, button, desktop_file, popover):
             """
