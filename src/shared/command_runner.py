@@ -72,27 +72,31 @@ class CommandRunner:
                 final_cmd = f"flatpak-spawn --host {env_str} {cmd}"
 
                 # Direct execution for Flatpak to ensure the portal bridge works
-                GLib.idle_add(
-                    lambda: subprocess.Popen(
+                def run_flatpak():
+                    subprocess.Popen(
                         final_cmd,
                         shell=True,
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,
                         start_new_session=True,
                     )
-                )
+                    return False
+
+                GLib.idle_add(run_flatpak)
                 self.logger.info(f"Flatpak host command dispatched: {final_cmd}")
                 return
 
-            GLib.idle_add(
-                lambda: subprocess.Popen(
+            def run_standard():
+                subprocess.Popen(
                     final_cmd,
                     shell=True,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     start_new_session=True,
                 )
-            )
+                return False
+
+            GLib.idle_add(run_standard)
             self.logger.info(f"Command scheduled: {final_cmd}")
         except Exception as e:
             self.logger.error(
