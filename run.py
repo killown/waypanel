@@ -195,8 +195,16 @@ def manage_virtual_environment(config, req_file) -> None:
     """Ensures the venv exists and all dependencies are installed."""
     import os
     import sys
+    import shutil
     import subprocess
     import logging
+
+    venv_python = config.venv_dir / "bin" / "python3"
+    if not venv_python.exists():
+        venv_python = config.venv_dir / "bin" / "python"
+
+    if config.venv_dir.exists() and not venv_python.exists():
+        shutil.rmtree(config.venv_dir)
 
     if not config.venv_dir.is_dir():
         logging.info("Creating virtual environment...")
@@ -212,19 +220,17 @@ def manage_virtual_environment(config, req_file) -> None:
             check=True,
         )
 
-    os.environ["PATH"] = f"{config.venv_bin_dir}{os.pathsep}{os.environ['PATH']}"
+    os.environ["PATH"] = f"{config.venv_dir}/bin{os.pathsep}{os.environ['PATH']}"
 
     if not config.requirements_flag.is_file():
         try:
             pip_check = subprocess.run(
-                [str(config.venv_python), "-m", "pip", "--version"], capture_output=True
+                [str(venv_python), "-m", "pip", "--version"], capture_output=True
             )
 
             if pip_check.returncode != 0:
-                logging.info("Bootstrapping pip into venv...")
                 subprocess.run(
-                    [str(config.venv_python), "-m", "ensurepip", "--upgrade"],
-                    check=True,
+                    [str(venv_python), "-m", "ensurepip", "--upgrade"], check=True
                 )
 
             _install_pywayfire_from_source(config)
@@ -232,7 +238,7 @@ def manage_virtual_environment(config, req_file) -> None:
             if req_file.is_file():
                 subprocess.run(
                     [
-                        str(config.venv_python),
+                        str(venv_python),
                         "-m",
                         "pip",
                         "install",
