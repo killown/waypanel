@@ -42,7 +42,7 @@ def get_plugin_class():
             self.run_in_async_task(self._async_init_setup())
 
         async def _async_init_setup(self):
-            self.mullvad_version = await self.asyncio.to_thread(self._get_version)
+            self.mullvad_version = await self._get_version_async()
             self.icon_name = "network-vpn"
 
             self.menubutton_mullvad.set_icon_name(self.icon_name)
@@ -58,7 +58,9 @@ def get_plugin_class():
                 "map", lambda _: self.run_in_async_task(self.refresh_all())
             )
 
-            if self.os.path.exists("/usr/bin/mullvad"):
+            if self.os.path.exists("/usr/bin/mullvad") or self.os.path.exists(
+                "/run/host/usr/bin/mullvad"
+            ):
                 self.glib.timeout_add(10000, self._trigger_status_update)
 
         def _create_popover_ui(self):
@@ -169,15 +171,10 @@ def get_plugin_class():
         async def lazy_load_account(self):
             """Fetch and show Mullvad account details only on request."""
             try:
-                proc = await self.asyncio.create_subprocess_exec(
-                    "mullvad",
-                    "account",
-                    "get",
-                    stdout=self.asyncio.subprocess.PIPE,
-                    stderr=self.asyncio.subprocess.DEVNULL,
+                code, stdout, stderr = await self.cmd.run_async(
+                    ["mullvad", "account", "get"]
                 )
-                stdout, _ = await proc.communicate()
-                raw = stdout.decode().strip()
+                raw = stdout.strip()
                 details = {
                     l.split(":")[0].strip(): l.split(":")[1].strip()
                     for l in raw.split("\n")
@@ -258,10 +255,8 @@ def get_plugin_class():
             self.schedule_in_gtk_thread(_ui_update)
 
         async def _set_specific_relay(self, hostname):
-            await self.asyncio.create_subprocess_exec(
-                "mullvad", "relay", "set", "location", hostname
-            )
-            await self.asyncio.create_subprocess_exec("mullvad", "connect")
+            await self.cmd.run_async(["mullvad", "relay", "set", "location", hostname])
+            await self.cmd.run_async(["mullvad", "connect"])
             self.notifier.notify_send(
                 "Mullvad VPN", f"Connecting to {hostname}...", self.icon_name
             )
@@ -269,11 +264,8 @@ def get_plugin_class():
 
         async def update_vpn_status(self):
             try:
-                proc = await self.asyncio.create_subprocess_exec(
-                    "mullvad", "status", stdout=self.asyncio.subprocess.PIPE
-                )
-                stdout, _ = await proc.communicate()
-                raw = stdout.decode().strip()
+                code, stdout, stderr = await self.cmd.run_async(["mullvad", "status"])
+                raw = stdout.strip()
                 self.is_connected = "Connected" in raw
                 lines = raw.split("\n")
                 details = {
@@ -316,12 +308,12 @@ def get_plugin_class():
 
         async def _handle_toggle(self):
             cmd = "disconnect" if self.is_connected else "connect"
-            await self.asyncio.create_subprocess_exec("mullvad", cmd)
+            await self.cmd.run_async(["mullvad", cmd])
             self.glib.timeout_add(800, self._trigger_status_update)
 
         async def reconnect_vpn(self):
-            await self.asyncio.create_subprocess_exec("mullvad", "disconnect")
-            await self.asyncio.create_subprocess_exec("mullvad", "connect")
+            await self.cmd.run_async(["mullvad", "disconnect"])
+            await self.cmd.run_async(["mullvad", "connect"])
             self.glib.timeout_add(800, self._trigger_status_update)
 
         async def set_relay_city(self):
@@ -341,14 +333,12 @@ def get_plugin_class():
             if targets:
                 await self._set_specific_relay(random.choice(targets)["hostname"])
 
-        def _get_version(self):
+        async def _get_version_async(self):
             try:
-                return (
-                    self.os.popen("mullvad --version")
-                    .read()
-                    .strip()
-                    .replace("mullvad ", "")
+                code, stdout, stderr = await self.cmd.run_async(
+                    ["mullvad", "--version"]
                 )
+                return stdout.strip().replace("mullvad ", "")
             except:
                 return "Unknown"
 
