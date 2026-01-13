@@ -26,14 +26,25 @@ class NetworkCLI:
         self.cmd = CommandRunner(panel_instance)
 
     async def _connect_to_network_async(self, ssid: str) -> None:
+        """
+        Asynchronously connects to a Wi-Fi network using 'nmcli device wifi connect'.
+        This method is a non-blocking wrapper around the external nmcli process.
+        Args:
+            ssid: The SSID (name) of the Wi-Fi network to connect to.
+        """
         self.logger.info(f"CLI: Attempting to connect to network: {ssid}")
-        code, stdout, stderr = await self.cmd.run_async(
-            ["nmcli", "device", "wifi", "connect", ssid]
-        )
-        if code == 0:
-            self.logger.info(f"CLI: Successfully connected to {ssid}.")
-        else:
-            self.logger.error(f"CLI: Failed to connect to {ssid}. Error: {stderr}")
+        try:
+            command: List[str] = ["nmcli", "device", "wifi", "connect", ssid]
+            code, stdout, stderr = await self.cmd.run_async(command)
+
+            if code == 0:
+                self.logger.info(f"CLI: Successfully connected to {ssid}.")
+            else:
+                self.logger.error(
+                    f"CLI: Failed to connect to {ssid}. nmcli error:\n{stderr}"
+                )
+        except Exception as e:
+            self.logger.error(f"CLI: Unexpected error during network connection: {e}")
 
     async def run_nmcli_device_show_async(self) -> str:
         """
@@ -44,20 +55,12 @@ class NetworkCLI:
         """
         try:
             command: List[str] = ["nmcli", "device", "show"]
-            process: asyncio.subprocess.Process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout: bytes
-            stderr: bytes
-            stdout, stderr = await process.communicate()
-            if process.returncode == 0:
-                return stdout.decode("utf-8")
+            code, stdout, stderr = await self.cmd.run_async(command)
+
+            if code == 0:
+                return stdout
             else:
-                return f"Error running nmcli device show:\n{stderr.decode('utf-8').strip()}"
-        except OSError as e:
-            return f"Exception while running nmcli (OS Error - command not found?):\n{str(e)}"
+                return f"Error running nmcli device show:\n{stderr}"
         except Exception as e:
             return f"Exception while running nmcli:\n{str(e)}"
 
@@ -78,17 +81,14 @@ class NetworkCLI:
                 "device",
                 "status",
             ]
-            process: asyncio.subprocess.Process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout: bytes
-            stdout, _ = await process.communicate()
-            for line in stdout.decode("utf-8").strip().split("\n"):
+            code, stdout, _ = await self.cmd.run_async(command)
+
+            if code != 0:
+                return None
+
+            for line in stdout.strip().split("\n"):
                 parts: List[str] = line.strip().split(":")
                 if len(parts) >= 4:
-                    device: str = parts[0]
                     type_: str = parts[1]
                     state: str = parts[2]
                     connection: str = parts[3]
@@ -108,33 +108,27 @@ class NetworkCLI:
             The SSID (connection name) of the connected Wi-Fi network, or None.
         """
         try:
-            result: subprocess.CompletedProcess = subprocess.run(
-                [
-                    "nmcli",
-                    "-t",
-                    "-f",
-                    "DEVICE,TYPE,STATE,CONNECTION",
-                    "device",
-                    "status",
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=True,
-                encoding="utf-8",
-            )
-            for line in result.stdout.strip().split("\n"):
+            command: List[str] = [
+                "nmcli",
+                "-t",
+                "-f",
+                "DEVICE,TYPE,STATE,CONNECTION",
+                "device",
+                "status",
+            ]
+            stdout = self.cmd.run_sync(command)
+
+            if not stdout:
+                return None
+
+            for line in stdout.strip().split("\n"):
                 parts: List[str] = line.strip().split(":")
                 if len(parts) >= 4:
-                    device: str = parts[0]
                     type_: str = parts[1]
                     state: str = parts[2]
                     connection: str = parts[3]
                     if type_ == "wifi" and state.lower() == "connected":
                         return connection
-            return None
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"Error: nmcli command failed (sync): {e}")
             return None
         except Exception as e:
             self.logger.error(f"Error in synchronous SSID check: {e}")
@@ -158,15 +152,12 @@ class NetworkCLI:
                 "wifi",
                 "list",
             ]
-            process: asyncio.subprocess.Process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout: bytes
-            stdout, _ = await process.communicate()
-            output_lines: List[str] = stdout.decode("utf-8").strip().split("\n")
-            for line in output_lines:
+            code, stdout, _ = await self.cmd.run_async(command)
+
+            if code != 0:
+                return 0
+
+            for line in stdout.strip().split("\n"):
                 if ":" in line:
                     parts: List[str] = line.split(":")
                     if len(parts) >= 2:
@@ -200,10 +191,6 @@ class NetworkCLI:
                     parts: List[str] = line.strip().split()
                     if len(parts) > 1 and parts[1] == "00000000":
                         return parts[0]
-        except FileNotFoundError:
-            self.logger.warning(
-                "File /proc/net/route not found. System may not support this method."
-            )
         except Exception as e:
             self.logger.error(f"Error reading default route: {e}")
         return None
@@ -233,11 +220,7 @@ class NetworkCLI:
                 f"/sys/class/net/{interface}/carrier", "r", encoding="utf-8"
             ) as f:
                 return f.read().strip() == "1"
-        except FileNotFoundError:
-            self.logger.error(f"Interface '{interface}' or carrier file not found.")
-            return False
-        except Exception as e:
-            self.logger.error(f"Error checking carrier for interface {interface}: {e}")
+        except Exception:
             return False
 
     async def check_interface_carrier_async(self, interface: str) -> bool:
@@ -276,15 +259,8 @@ class NetworkCLI:
         """
         self.logger.info("CLI: Starting async nmcli scan...")
         try:
-            rescan_command: List[str] = ["nmcli", "device", "wifi", "rescan"]
-            rescan_process: asyncio.subprocess.Process = (
-                await asyncio.create_subprocess_exec(
-                    *rescan_command,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-            )
-            await rescan_process.wait()
+            await self.cmd.run_async(["nmcli", "device", "wifi", "rescan"])
+
             list_command: List[str] = [
                 "nmcli",
                 "-g",
@@ -293,22 +269,8 @@ class NetworkCLI:
                 "wifi",
                 "list",
             ]
-            list_process: asyncio.subprocess.Process = (
-                await asyncio.create_subprocess_exec(
-                    *list_command,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-            )
-            stdout: bytes
-            stdout, _ = await list_process.communicate()
-            raw_output: str = stdout.decode("utf-8")
-            return list_process.returncode, raw_output
-        except OSError as e:
-            self.logger.error(
-                f"CLI: OS Error executing nmcli scan (command not found?): {e}"
-            )
-            return None, ""
+            code, stdout, _ = await self.cmd.run_async(list_command)
+            return code, stdout
         except Exception as e:
             self.logger.error(f"CLI: Unexpected error executing nmcli scan: {e}")
             return None, ""
@@ -323,7 +285,6 @@ class NetworkCLI:
         Args:
             ssids_to_autoconnect: A list of SSIDs that should have autoconnect enabled.
         """
-        all_wifi_connections: List[str] = []
         try:
             list_command: List[str] = [
                 "nmcli",
@@ -333,30 +294,18 @@ class NetworkCLI:
                 "connection",
                 "show",
             ]
-            list_proc: asyncio.subprocess.Process = (
-                await asyncio.create_subprocess_exec(
-                    *list_command,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-            )
-            stdout: bytes
-            stdout, _ = await list_proc.communicate()
+            code, stdout, _ = await self.cmd.run_async(list_command)
+
+            if code != 0:
+                return
+
             all_wifi_connections = [
                 line.split(":")[0].strip()
-                for line in stdout.decode("utf-8").strip().split("\n")
+                for line in stdout.strip().split("\n")
                 if ":802-11-wireless" in line and line.split(":")[0].strip()
             ]
-        except Exception as e:
-            self.logger.error(f"CLI: Error listing all connections: {e}")
-            return
-        if not ssids_to_autoconnect:
-            self.logger.info(
-                "CLI: Autoconnect whitelist is empty. All Wi-Fi profiles will be set to autoconnect=no."
-            )
-        for conn_name in all_wifi_connections:
-            profile_ssid: str = conn_name
-            try:
+
+            for conn_name in all_wifi_connections:
                 ssid_command: List[str] = [
                     "nmcli",
                     "-g",
@@ -365,28 +314,13 @@ class NetworkCLI:
                     "show",
                     conn_name,
                 ]
-                ssid_proc: asyncio.subprocess.Process = (
-                    await asyncio.create_subprocess_exec(
-                        *ssid_command,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                    )
-                )
-                ssid_out: bytes
-                ssid_out, _ = await ssid_proc.communicate()
-                retrieved_ssid: str = ssid_out.decode("utf-8").strip()
+                _, ssid_out, _ = await self.cmd.run_async(ssid_command)
+                retrieved_ssid: str = ssid_out.strip()
                 profile_ssid = retrieved_ssid if retrieved_ssid else conn_name
-            except Exception as e:
-                self.logger.warning(
-                    f"CLI: Failed to reliably retrieve SSID for connection {conn_name}: {e}"
-                )
 
-            autoconnect_state = ""
-            if profile_ssid and ssids_to_autoconnect:
                 autoconnect_state: str = (
                     "yes" if profile_ssid in ssids_to_autoconnect else "no"
                 )
-            try:
                 modify_command: List[str] = [
                     "nmcli",
                     "connection",
@@ -395,26 +329,9 @@ class NetworkCLI:
                     "connection.autoconnect",
                     autoconnect_state,
                 ]
-                modify_proc: asyncio.subprocess.Process = (
-                    await asyncio.create_subprocess_exec(
-                        *modify_command,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                    )
-                )
-                await modify_proc.wait()
-                if modify_proc.returncode != 0:
-                    self.logger.warning(
-                        f"CLI: Warning: Failed to set autoconnect={autoconnect_state} for profile '{conn_name}' (SSID: {profile_ssid})."
-                    )
-                else:
-                    self.logger.debug(
-                        f"CLI: Set autoconnect={autoconnect_state} for profile '{conn_name}' (SSID: {profile_ssid})."
-                    )
-            except Exception as e:
-                self.logger.error(
-                    f"CLI: Error applying autoconnect modification for {conn_name}: {e}"
-                )
+                await self.cmd.run_async(modify_command)
+        except Exception as e:
+            self.logger.error(f"CLI: Error applying autoconnect modification: {e}")
 
     def parse_nmcli_output(self, raw_output: str) -> List[NmcliDeviceDict]:
         """
@@ -432,8 +349,7 @@ class NetworkCLI:
         """
         devices: List[NmcliDeviceDict] = []
         current_device: NmcliDeviceDict = {}
-        lines: List[str] = raw_output.strip().splitlines()
-        for line in lines:
+        for line in raw_output.strip().splitlines():
             line = line.strip()
             if not line:
                 if current_device:
@@ -442,8 +358,6 @@ class NetworkCLI:
                     current_device = {}
                 continue
             if ":" in line:
-                key: str
-                value: str
                 key, value = line.split(":", 1)
                 current_device[key.strip()] = value.strip()
         if current_device:
