@@ -22,12 +22,26 @@ class CommandRunner:
         self.ipc = panel_instance.ipc
         self.is_flatpak = os.path.exists("/.flatpak-info")
 
+    def _get_flatpak_env_args(self) -> List[str]:
+        """
+        Returns the surgical environment cleaning arguments for flatpak-spawn.
+        """
+        uid = os.getuid()
+        return [
+            f"--env=XDG_RUNTIME_DIR=/run/user/{uid}",
+            f"--env=WAYLAND_DISPLAY={os.getenv('WAYLAND_DISPLAY', 'wayland-0')}",
+            f"--env=DISPLAY={os.getenv('DISPLAY', ':0')}",
+            "--env=DBUS_SESSION_BUS_ADDRESS=",
+            "--env=PYTHONPATH=",
+            "--env=LD_LIBRARY_PATH=",
+        ]
+
     def _wrap_cmd(self, cmd: List[str]) -> List[str]:
         """
         Prefixes a command list with flatpak-spawn if inside a sandbox.
         """
         if self.is_flatpak:
-            return ["flatpak-spawn", "--host"] + cmd
+            return ["flatpak-spawn", "--host"] + self._get_flatpak_env_args() + cmd
         return cmd
 
     def run(self, cmd: str) -> None:
@@ -38,8 +52,8 @@ class CommandRunner:
         try:
             final_cmd = cmd
             if self.is_flatpak:
-                # For string-based shell execution, we wrap the whole string
-                final_cmd = f"flatpak-spawn --host {cmd}"
+                env_str = " ".join(self._get_flatpak_env_args())
+                final_cmd = f"flatpak-spawn --host {env_str} {cmd}"
 
             if os.getenv("WAYFIRE_SOCKET"):
 
@@ -107,7 +121,6 @@ class CommandRunner:
         Opens a URL in the default web browser without blocking the UI.
         """
         try:
-            # Uses the run method which already handles flatpak-spawn wrapping
             self.run(f'xdg-open "{url}"')
             self.logger.info(f"Attempted to open URL: {url} with xdg-open.")
         except Exception as e:
