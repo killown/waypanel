@@ -11,13 +11,11 @@ def setup_logging() -> None:
 
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
-
     logging.basicConfig(
         level=logging.INFO,
         format="[%(levelname)s] %(message)s",
         stream=sys.stdout,
     )
-
     stderr_handler = logging.StreamHandler(sys.stderr)
     stderr_handler.setLevel(logging.ERROR)
     formatter = logging.Formatter("[%(levelname)s] %(message)s")
@@ -33,7 +31,15 @@ def get_config_class():
 
     @dataclass(frozen=True)
     class AppConfig:
-        """Manages application-specific directory and file paths."""
+        """
+        Configuration container for application directory and file paths.
+
+        Attributes:
+            app_name: The internal name of the application.
+            xdg_data_home: Base directory for user-specific data files.
+            xdg_config_home: Base directory for user-specific configuration files.
+            xdg_cache_home: Base directory for user-specific non-essential data files.
+        """
 
         app_name: str
         xdg_data_home: Path = Path(
@@ -60,6 +66,7 @@ def get_config_class():
 
         @property
         def build_dir(self) -> Path:
+            """Writeable build directory in cache."""
             return self.xdg_cache_home / self.app_name / "build"
 
         @property
@@ -230,9 +237,7 @@ def manage_virtual_environment(config, req_file) -> None:
 
 
 def ensure_initial_setup(config) -> None:
-    """
-    Ensures config files and resources exist before launch by checking environment paths.
-    """
+    """Ensures config files and resources exist before launch."""
     import shutil
     import os
     from pathlib import Path
@@ -241,22 +246,19 @@ def ensure_initial_setup(config) -> None:
         config.config_dir.mkdir(parents=True, exist_ok=True)
         config.config_file.touch()
 
-    search_locations = [
-        Path(__file__).parent.resolve() / "resources",
-        Path("/app/share/waypanel/resources"),
-        Path("/usr/share/waypanel/resources"),
-        Path(os.getenv("WAYPANEL_RESOURCES_PATH", "")),
-    ]
+    if not config.resources_dir.is_dir() or not any(config.resources_dir.iterdir()):
+        search_locations = [
+            Path(__file__).parent.resolve() / "resources",
+            Path("/app/waypanel/resources"),
+            Path("/app/share/waypanel/resources"),
+            Path("/usr/share/waypanel/resources"),
+            Path(os.getenv("WAYPANEL_RESOURCES_PATH", "")),
+        ]
+        res_src = next((p for p in search_locations if p.is_dir()), None)
 
-    res_src = next((p for p in search_locations if p.is_dir()), None)
-
-    if res_src and (
-        not config.resources_dir.is_dir() or not any(config.resources_dir.iterdir())
-    ):
-        config.data_dir.mkdir(parents=True, exist_ok=True)
-        if config.resources_dir.exists():
-            shutil.rmtree(config.resources_dir)
-        shutil.copytree(res_src, config.resources_dir)
+        if res_src:
+            config.data_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(res_src, config.resources_dir, dirs_exist_ok=True)
 
 
 def exist_process() -> None:
