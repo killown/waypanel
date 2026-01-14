@@ -1,3 +1,6 @@
+# NOTE: if using main_icon and fallback_main_icons,
+# necessary to include the icons in the template so the icons will appear in the first setup
+
 from wayfire import WayfireSocket
 
 socket = WayfireSocket()
@@ -153,6 +156,16 @@ default_config = {
             "accessories-notes",
         ],
         "icon_delete": "edit-delete",
+        "hide_in_systray": False,
+    },
+    "org.waypanel.plugin.clipboard": {
+        "main_icon": "clipboard",
+        "fallback_main_icons": ["clipboard", "edit-paste"],
+        "hide_in_systray": False,
+    },
+    "org.waypanel.plugin.bluetooth": {
+        "main_icon": "bluetooth-active-symbolic",
+        "fallback_main_icons": ["org.gnome.Settings-bluetooth-symbolic", "bluetooth"],
         "hide_in_systray": False,
     },
     "org.waypanel.plugin.overflow_indicator": {
