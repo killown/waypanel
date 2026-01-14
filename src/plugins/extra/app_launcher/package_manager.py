@@ -140,18 +140,18 @@ class PackageHelper:
         app_id = desktop_id.removesuffix(".desktop")
 
         inner_script = (
-            f"if flatpak info '{app_id}' &>/dev/null; then "
+            f"app_id='{app_id}'; host_path='{host_path}'; "
+            'if flatpak info "\\$app_id" &>/dev/null; then '
             "echo -e '\\033[1;34m--- Flatpak Application Detected ---\\033[0m'; "
-            f"flatpak info '{app_id}'; "
-            f"echo -en '\\n\\033[1;31mUninstall {app_id}? (y/N):\\033[0m '; "
+            'flatpak info "\\$app_id"; '
+            "echo -en '\\n\\033[1;31mUninstall '\"\\$app_id\"'? (y/N):\\033[0m '; "
             "read -r resp; "
-            'if [[ \\"\\$resp\\" =~ ^\\[yY\\]$ ]]; then '
-            f"flatpak uninstall '{app_id}'; "
+            'if [[ "\\$resp" =~ ^[yY]$ ]]; then flatpak uninstall "\\$app_id"; '
             "else echo 'Aborted.'; fi; "
             "else "
-            f"PKG=\\$(pacman -Qqo '{host_path}' 2>/dev/null || echo '{app_id}'); "
+            'PKG=\\$(pacman -Qqo "\\$host_path" 2>/dev/null || echo "\\$app_id"); '
             "echo -e '\\033[1;34m--- Full Package Information ---\\033[0m'; "
-            'pacman -Qi \\"\\$PKG\\"; '
+            'pacman -Qi "\\$PKG"; '
             "echo -e '\\n\\033[1;33mChoose Uninstallation Method for '\"\\$PKG\"':\\033[0m'; "
             "echo '1) Standard (-R)      : Remove only the package'; "
             "echo '2) Recursive (-Rs)     : Remove package and unneeded dependencies'; "
@@ -159,19 +159,21 @@ class PackageHelper:
             "echo 'q) Cancel'; "
             "echo -en '\\nSelection: '; read -r opt; "
             "case \\$opt in "
-            '1) sudo pacman -R \\"\\$PKG\\" ;; '
-            '2) sudo pacman -Rs \\"\\$PKG\\" ;; '
-            '3) sudo pacman -Rscd \\"\\$PKG\\" ;; '
+            '1) sudo pacman -R "\\$PKG" ;; '
+            '2) sudo pacman -Rs "\\$PKG" ;; '
+            '3) sudo pacman -Rscd "\\$PKG" ;; '
             "*) echo 'Aborted.' ;; "
             "esac; fi; "
             "echo -e '\\nPress Enter to close...'; read -r"
         )
 
+        escaped_inner = inner_script.replace('"', '\\"')
+
         flags = "--hold -e" if terminal in ["kitty", "alacritty"] else "-e"
         if terminal == "gnome-terminal":
             flags = "--"
 
-        base_cmd = f'{terminal} {flags} sh -c "{inner_script}"'
+        base_cmd = f'{terminal} {flags} sh -c "{escaped_inner}"'
 
         if self.is_flatpak:
             env_args = " ".join(self._get_flatpak_env_args())
