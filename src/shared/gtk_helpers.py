@@ -129,23 +129,33 @@ class GtkHelpers:
         Returns:
             str: The name of the matching icon if found, or "image-missing" otherwise.
         """
+        if not hasattr(self, "icon_cache"):
+            self.icon_cache = {}
+
+        if argument in self.icon_cache:
+            return self.icon_cache[argument]
+
         icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())  # pyright: ignore
 
         # --- FLATPAK COMPATIBILITY INJECTION ---
-        if os.path.exists("/.flatpak-info"):
-            if icon_theme:
-                current_paths = list(icon_theme.get_search_path())
-                # Map common host icon locations mirrored by Flatpak
-                host_paths = [
-                    "/run/host/usr/share/icons",
-                    "/run/host/usr/local/share/icons",
-                    os.path.expanduser("~/.local/share/icons"),
-                ]
-                for hp in host_paths:
-                    if os.path.isdir(hp) and hp not in current_paths:
-                        current_paths.append(hp)
+        if os.path.exists("/.flatpak-info") and not getattr(
+            self, "_icon_path_injected", False
+        ):
+            current_paths = list(icon_theme.get_search_path())
+            host_paths = [
+                "/run/host/usr/share/icons",
+                "/run/host/usr/local/share/icons",
+                os.path.expanduser("~/.local/share/icons"),
+            ]
+            injected = False
+            for hp in host_paths:
+                if os.path.isdir(hp) and hp not in current_paths:
+                    current_paths.append(hp)
+                    injected = True
 
+            if injected:
                 icon_theme.set_search_path(current_paths)
+            self._icon_path_injected = True
         # ---------------------------------------
 
         norm_arg = self.normalize_name(argument)
@@ -153,16 +163,13 @@ class GtkHelpers:
             fallback_icons = [""]
         for icon in fallback_icons:
             if icon_theme.has_icon(icon):
-                if not hasattr(self, "icon_cache"):
-                    self.icon_cache = {}
                 self.icon_cache[argument] = icon
                 return icon
         try:
             if not isinstance(argument, str) or not argument.strip():
                 self.logger.warning(f"Invalid or missing argument: {argument}")
                 return "image-missing"
-            if hasattr(self, "icon_cache") and argument in self.icon_cache:
-                return self.icon_cache[argument]
+
             gio_icon_list = getattr(self, "gio_icon_list", [])
             for app_info in gio_icon_list:
                 app_id = app_info.get_id()
@@ -173,10 +180,9 @@ class GtkHelpers:
                         icon = app_info.get_icon()
                         icon_name = self.extract_icon_name(icon)
                         if icon_name:
-                            if not hasattr(self, "icon_cache"):
-                                self.icon_cache = {}
-                            self.icon_cache[argument] = icon_name.lower()
-                            return icon_name.lower()
+                            res = icon_name.lower()
+                            self.icon_cache[argument] = res
+                            return res
             patterns = [
                 norm_arg,
                 f"{norm_arg}-symbolic",
@@ -190,8 +196,6 @@ class GtkHelpers:
             ]
             for pattern in patterns:
                 if icon_theme.has_icon(pattern):
-                    if not hasattr(self, "icon_cache"):
-                        self.icon_cache = {}
                     self.icon_cache[argument] = pattern
                     return pattern
             all_icons = icon_theme.get_icon_names()
@@ -200,30 +204,31 @@ class GtkHelpers:
                 rapidfuzz.fuzz.partial_ratio,
                 rapidfuzz.fuzz.ratio,
             ]
+
+            best_match_name = None
+            highest_score = 0
             for scorer in fuzzy_scorers:
-                best_match = rapidfuzz.process.extractOne(
+                match = rapidfuzz.process.extractOne(
                     query=norm_arg,
                     choices=all_icons,
                     scorer=scorer,
                     processor=rapidfuzz.utils.default_process,
-                    score_cutoff=85,
+                    score_cutoff=75,
                 )
-                if best_match:
-                    result = best_match[0]
-                    if not hasattr(self, "icon_cache"):
-                        self.icon_cache = {}
-                    self.icon_cache[argument] = result
-                    return result
+                if match and match[1] > highest_score:
+                    highest_score = match[1]
+                    best_match_name = match[0]
+
+            if best_match_name:
+                self.icon_cache[argument] = best_match_name
+                return best_match_name
+
             for icon_name in all_icons:
                 norm_icon = rapidfuzz.utils.default_process(icon_name)
                 if norm_arg in norm_icon or norm_icon in norm_arg:
-                    if not hasattr(self, "icon_cache"):
-                        self.icon_cache = {}
                     self.icon_cache[argument] = icon_name
                     return icon_name
             self.logger.debug(f"No icon found for argument: {argument}")
-            if not hasattr(self, "icon_cache"):
-                self.icon_cache = {}
             self.icon_cache[argument] = "image-missing"
             return "image-missing"
         except Exception as e:
@@ -231,8 +236,6 @@ class GtkHelpers:
                 f"Unexpected error while checking if icon exists for argument: {e}",
                 exc_info=True,
             )
-            if not hasattr(self, "icon_cache"):
-                self.icon_cache = {}
             self.icon_cache[argument] = "image-missing"
             return "image-missing"
 
