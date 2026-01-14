@@ -137,10 +137,18 @@ class PackageHelper:
         if self.is_flatpak and host_path.startswith("/run/host"):
             host_path = host_path.replace("/run/host", "", 1)
 
-        pkg_fallback = desktop_id.removesuffix(".desktop")
+        app_id = desktop_id.removesuffix(".desktop")
 
         inner_script = (
-            f"PKG=\\$(pacman -Qqo '{host_path}' 2>/dev/null || echo '{pkg_fallback}'); "
+            f"if flatpak info '{app_id}' &>/dev/null; then "
+            f"echo -e '\\033[1;34m--- Flatpak Application Detected ---\\033[0m'; "
+            f"flatpak info '{app_id}'; "
+            f"echo -en '\\n\\033[1;31mUninstall {app_id}? (y/N):\\033[0m '; "
+            "read -r resp; "
+            f"if [[ \"\\$resp\" =~ ^[yY]$ ]]; then flatpak uninstall '{app_id}'; "
+            "else echo 'Aborted.'; fi; "
+            "else "
+            f"PKG=\\$(pacman -Qqo '{host_path}' 2>/dev/null || echo '{app_id}'); "
             "echo -e '\\033[1;34m--- Full Package Information ---\\033[0m'; "
             'pacman -Qi "\\$PKG"; '
             "echo -e '\\n\\033[1;33mChoose Uninstallation Method for '\"\\$PKG\"':\\033[0m'; "
@@ -154,7 +162,7 @@ class PackageHelper:
             '2) sudo pacman -Rs "\\$PKG" ;; '
             '3) sudo pacman -Rscd "\\$PKG" ;; '
             "*) echo 'Aborted.' ;; "
-            "esac; "
+            "esac; fi; "
             "echo -e '\\nPress Enter to close...'; read -r"
         )
 
