@@ -118,7 +118,7 @@ class PackageHelper:
 
     def uninstall(self, desktop_id: str) -> None:
         """
-        Launches an interactive uninstallation menu in a terminal.
+        Launches an interactive uninstallation menu in a terminal via a temp script.
 
         Args:
             desktop_id: The identifier for the application to uninstall.
@@ -138,48 +138,63 @@ class PackageHelper:
             host_path = host_path.replace("/run/host", "", 1)
 
         app_id = desktop_id.removesuffix(".desktop")
+        script_path = "/tmp/waypanel_uninstall.sh"
 
-        inner_script = (
-            f"app_id='{app_id}'; host_path='{host_path}'; "
-            'if flatpak info "\\$app_id" &>/dev/null; then '
-            "echo -e '\\033[1;34m--- Flatpak Application Detected ---\\033[0m'; "
-            'flatpak info "\\$app_id"; '
-            "echo -en '\\n\\033[1;31mUninstall '\"\\$app_id\"'? (y/N):\\033[0m '; "
-            "read -r resp; "
-            'if [[ "\\$resp" =~ ^[yY]$ ]]; then flatpak uninstall "\\$app_id"; '
-            "else echo 'Aborted.'; fi; "
-            "else "
-            'PKG=\\$(pacman -Qqo "\\$host_path" 2>/dev/null || echo "\\$app_id"); '
-            "echo -e '\\033[1;34m--- Full Package Information ---\\033[0m'; "
-            'pacman -Qi "\\$PKG"; '
-            "echo -e '\\n\\033[1;33mChoose Uninstallation Method for '\"\\$PKG\"':\\033[0m'; "
-            "echo '1) Standard (-R)      : Remove only the package'; "
-            "echo '2) Recursive (-Rs)     : Remove package and unneeded dependencies'; "
-            "echo '3) Force/Cascade (-Rscd): Remove package, dependencies, and bypass checks'; "
-            "echo 'q) Cancel'; "
-            "echo -en '\\nSelection: '; read -r opt; "
-            "case \\$opt in "
-            '1) sudo pacman -R "\\$PKG" ;; '
-            '2) sudo pacman -Rs "\\$PKG" ;; '
-            '3) sudo pacman -Rscd "\\$PKG" ;; '
-            "*) echo 'Aborted.' ;; "
-            "esac; fi; "
-            "echo -e '\\nPress Enter to close...'; read -r"
-        )
+        content = f"""#!/bin/bash
+app_id='{app_id}'
+host_path='{host_path}'
 
-        escaped_inner = inner_script.replace('"', '\\"')
+if flatpak info "$app_id" &>/dev/null; then
+    echo -e '\\033[1;34m--- Flatpak Application Detected ---\\033[0m'
+    flatpak info "$app_id"
+    echo -en '\\n\\033[1;31mUninstall '"$app_id"'? (y/N):\\033[0m '
+    read -r resp
+    if [[ "$resp" =~ ^[yY]$ ]]; then
+        flatpak uninstall "$app_id"
+    else
+        echo 'Aborted.'
+    fi
+else
+    PKG=$(pacman -Qqo "$host_path" 2>/dev/null || echo "$app_id")
+    echo -e '\\033[1;34m--- Full Package Information ---\\033[0m'
+    pacman -Qi "$PKG"
+    echo -e '\\n\\033[1;33mChoose Uninstallation Method for '"$PKG"':\\033[0m'
+    echo '1) Standard (-R)      : Remove only the package'
+    echo '2) Recursive (-Rs)     : Remove package and unneeded dependencies'
+    echo '3) Force/Cascade (-Rscd): Remove package, dependencies, and bypass checks'
+    echo 'q) Cancel'
+    echo -en '\\nSelection: '
+    read -r opt
+    case $opt in
+        1) sudo pacman -R "$PKG" ;;
+        2) sudo pacman -Rs "$PKG" ;;
+        3) sudo pacman -Rscd "$PKG" ;;
+        *) echo 'Aborted.' ;;
+    esac
+fi
+echo -e '\\nPress Enter to close...'
+read -r
+"""
+
+        try:
+            with open(script_path, "w") as f:
+                f.write(content)
+            os.chmod(script_path, 0o755)
+        except Exception as e:
+            self.logger.error(f"AppLauncher: Failed to create uninstall script: {e}")
+            return
 
         flags = "--hold -e" if terminal in ["kitty", "alacritty"] else "-e"
         if terminal == "gnome-terminal":
             flags = "--"
 
-        base_cmd = f'{terminal} {flags} sh -c "{escaped_inner}"'
-
         if self.is_flatpak:
             env_args = " ".join(self._get_flatpak_env_args())
-            final_cmd = f"flatpak-spawn --host {env_args} {base_cmd}"
+            final_cmd = (
+                f"flatpak-spawn --host {env_args} {terminal} {flags} {script_path}"
+            )
         else:
-            final_cmd = base_cmd
+            final_cmd = f"{terminal} {flags} {script_path}"
 
         self.logger.info(f"AppLauncher: Executing: {final_cmd}")
 
