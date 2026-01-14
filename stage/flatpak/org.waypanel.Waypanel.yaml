@@ -22,7 +22,11 @@ finish-args:
   - --filesystem=xdg-config/waypanel
   - --filesystem=~/.local/share/waypanel:create
   - --filesystem=xdg-cache/waypanel:create
+  #   Multi-session/TTY support (1-3); specific paths
+  #   prevent broad xdg-run exposure to maintain least-privilege security.
   - --filesystem=xdg-run/wayfire-wayland-1-.socket
+  - --filesystem=xdg-run/wayfire-wayland-2-.socket
+  - --filesystem=xdg-run/wayfire-wayland-3-.socket
   - --talk-name=org.mpris.MediaPlayer2.*
 
 build-options:
