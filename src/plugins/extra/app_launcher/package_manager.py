@@ -145,7 +145,7 @@ class PackageHelper:
             f"flatpak info '{app_id}'; "
             f"echo -en '\\n\\033[1;31mUninstall {app_id}? (y/N):\\033[0m '; "
             "read -r resp; "
-            'if [[ \\"$resp\\" =~ ^[yY]$ ]]; then '
+            'if [[ \\"\\$resp\\" =~ ^\\[yY\\]$ ]]; then '
             f"flatpak uninstall '{app_id}'; "
             "else echo 'Aborted.'; fi; "
             "else "
