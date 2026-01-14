@@ -1,41 +1,88 @@
 import os
 import shutil
+import subprocess
 from typing import Optional, List
 
 
 class PackageHelper:
-    """Handles package identification, dependency checking, and uninstallation.
+    """Handles package identification and uninstallation with Flatpak host awareness.
 
     Attributes:
         plugin (Any): Reference to the main plugin instance.
         logger (Any): Logger instance retrieved from the plugin.
-        manager (Optional[str]): Absolute path to the pacman executable.
+        is_flatpak (bool): Whether the plugin is running inside a Flatpak sandbox.
         terminals (List[str]): Priority list of terminal emulators.
     """
 
     def __init__(self, plugin_instance):
-        """Initializes the package helper.
+        """Initializes the package helper and detects environment state.
 
         Args:
             plugin_instance: The AppLauncher instance.
         """
         self.plugin = plugin_instance
         self.logger = plugin_instance.logger
-        self.manager = shutil.which("pacman")
+        self.is_flatpak = os.path.exists("/.flatpak-info")
         self.terminals = ["kitty", "alacritty", "foot", "gnome-terminal", "xterm"]
+        self.manager_name = "pacman"
 
     def is_supported(self) -> bool:
-        """Checks if pacman is available.
+        """Checks if pacman is available on the host or in the sandbox.
 
         Returns:
             bool: True if pacman is found.
         """
-        return self.manager is not None
+        if self.is_flatpak:
+            try:
+                check = subprocess.run(
+                    ["flatpak-spawn", "--host", "which", self.manager_name],
+                    capture_output=True,
+                    text=True,
+                )
+                return check.returncode == 0
+            except Exception:
+                return False
+        return shutil.which(self.manager_name) is not None
+
+    def _get_flatpak_env_args(self) -> List[str]:
+        """Detects host Wayland/X11 sockets and returns environment flags for flatpak-spawn.
+
+        Returns:
+            List[str]: List of --env arguments for flatpak-spawn.
+        """
+        uid = os.getuid()
+        runtime_dir = f"/run/user/{uid}"
+        wayland_display = os.getenv("WAYLAND_DISPLAY", "wayland-0")
+        display = os.getenv("DISPLAY", ":0")
+
+        if os.path.exists(runtime_dir):
+            try:
+                sockets = [
+                    f for f in os.listdir(runtime_dir) if f.startswith("wayland-")
+                ]
+                if sockets:
+                    wayland_display = sorted(sockets)[-1]
+            except Exception:
+                pass
+
+        return [
+            f"--env=XDG_RUNTIME_DIR={runtime_dir}",
+            f"--env=WAYLAND_DISPLAY={wayland_display}",
+            f"--env=DISPLAY={display}",
+        ]
 
     def _get_terminal(self) -> Optional[str]:
-        """Finds an available terminal emulator."""
+        """Finds an available terminal emulator on the host or sandbox."""
         for term in self.terminals:
-            if shutil.which(term):
+            if self.is_flatpak:
+                check = subprocess.run(
+                    ["flatpak-spawn", "--host", "which", term],
+                    capture_output=True,
+                    text=True,
+                )
+                if check.returncode == 0:
+                    return term
+            elif shutil.which(term):
                 return term
         return None
 
@@ -53,7 +100,7 @@ class PackageHelper:
         return None
 
     def uninstall(self, desktop_id: str) -> None:
-        """Launches a terminal with full package info and uninstallation options.
+        """Launches a terminal to perform uninstallation, escaping the Flatpak sandbox if needed.
 
         Args:
             desktop_id: The identifier for the application.
@@ -68,16 +115,17 @@ class PackageHelper:
             self.logger.error(f"AppLauncher: Could not locate path for {desktop_id}")
             return
 
+        # If in Flatpak, we must strip /run/host because the host shell won't recognize it
+        host_file_path = file_path
+        if self.is_flatpak and host_file_path.startswith("/run/host"):
+            host_file_path = host_file_path.replace("/run/host", "", 1)
+
         pkg_fallback = desktop_id.removesuffix(".desktop")
-        
-        # Script logic:
-        # 1. Identify package name using pacman -Qqo.
-        # 2. Print full package information using pacman -Qi.
-        # 3. Present options for different removal levels.
+
         inner_script = (
-            f"PKG=\\$(pacman -Qqo '{file_path}' 2>/dev/null || echo '{pkg_fallback}'); "
+            f"PKG=\\$(pacman -Qqo '{host_file_path}' 2>/dev/null || echo '{pkg_fallback}'); "
             "echo -e '\\033[1;34m--- Full Package Information ---\\033[0m'; "
-            "pacman -Qi \"\\$PKG\"; "
+            'pacman -Qi "\\$PKG"; '
             "echo -e '\\n\\033[1;33mChoose Uninstallation Method for '\"\\$PKG\"':\\033[0m'; "
             "echo '1) Standard (-R)      : Remove only the package'; "
             "echo '2) Recursive (-Rs)     : Remove package and unneeded dependencies'; "
@@ -85,10 +133,10 @@ class PackageHelper:
             "echo 'q) Cancel'; "
             "echo -en '\\nSelection: '; read -r opt; "
             "case \\$opt in "
-                "1) sudo pacman -R \"\\$PKG\" ;; "
-                "2) sudo pacman -Rs \"\\$PKG\" ;; "
-                "3) sudo pacman -Rscd \"\\$PKG\" ;; "
-                "*) echo 'Aborted.' ;; "
+            '1) sudo pacman -R "\\$PKG" ;; '
+            '2) sudo pacman -Rs "\\$PKG" ;; '
+            '3) sudo pacman -Rscd "\\$PKG" ;; '
+            "*) echo 'Aborted.' ;; "
             "esac; "
             "echo -e '\\nPress Enter to close...'; read -r"
         )
@@ -97,16 +145,24 @@ class PackageHelper:
         if terminal == "gnome-terminal":
             flags = "--"
 
-        cmd = f"{terminal} {flags} sh -c \"{inner_script}\""
+        # Construct the host-escape command if necessary
+        base_cmd = f'{terminal} {flags} sh -c "{inner_script}"'
 
-        self.logger.info(f"AppLauncher: Requesting uninstall menu with info: {cmd}")
+        if self.is_flatpak:
+            env_args = " ".join(self._get_flatpak_env_args())
+            final_cmd = f"flatpak-spawn --host {env_args} {base_cmd}"
+        else:
+            final_cmd = base_cmd
+
+        self.logger.info(f"AppLauncher: Executing: {final_cmd}")
 
         try:
             if hasattr(self.plugin, "cmd") and self.plugin.cmd:
-                self.plugin.cmd.run(cmd)
+                self.plugin.cmd.run(final_cmd)
             elif hasattr(self.plugin, "run_cmd"):
-                self.plugin.run_cmd(cmd)
+                self.plugin.run_cmd(final_cmd)
             else:
-                os.system(f"{cmd} &")
+                os.system(f"{final_cmd} &")
         except Exception as e:
             self.logger.error(f"AppLauncher: Command execution failed: {e}")
+
