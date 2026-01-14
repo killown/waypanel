@@ -256,23 +256,48 @@ class ControlCenterHelpers:
 
     def _list_fs_themes(self, dirs: list[str]) -> list[str]:
         themes = set()
+        is_flatpak = os.path.exists("/.flatpak-info")
+
+        resolved_dirs = []
         for d in dirs:
-            full_dir = os.path.expanduser(d)
+            expanded = os.path.expanduser(d)
+            resolved_dirs.append(expanded)
+
+            # Only system paths need the /run/host prefix in Flatpak
+            # User paths (~/.local/share/...) are handled by the sandbox's home mapping
+            if is_flatpak and expanded.startswith("/usr"):
+                host_mirror = os.path.join("/run/host", expanded.lstrip("/"))
+                resolved_dirs.append(host_mirror)
+
+        for full_dir in resolved_dirs:
             if os.path.isdir(full_dir):
-                for item in os.listdir(full_dir):
-                    full_path = os.path.join(full_dir, item)
-                    if os.path.isdir(full_path) and not item.startswith("."):
-                        if os.path.exists(
-                            os.path.join(full_path, "index.theme")
-                        ) or os.path.exists(os.path.join(full_path, "gtk-4.0")):
-                            themes.add(item)
+                try:
+                    for item in os.listdir(full_dir):
+                        full_path = os.path.join(full_dir, item)
+                        if os.path.isdir(full_path) and not item.startswith("."):
+                            # Check for valid GTK or Icon theme structure
+                            if any(
+                                [
+                                    os.path.exists(
+                                        os.path.join(full_path, "index.theme")
+                                    ),
+                                    os.path.exists(os.path.join(full_path, "gtk-4.0")),
+                                    os.path.exists(os.path.join(full_path, "gtk-3.0")),
+                                ]
+                            ):
+                                themes.add(item)
+                except (PermissionError, FileNotFoundError):
+                    continue
         return sorted(list(themes))
 
     def _get_current_gsettings_theme(self, schema: str, key: str) -> str:
+        """Retrieves gsettings from the host if in Flatpak, otherwise locally."""
+        is_flatpak = os.path.exists("/.flatpak-info")
+        cmd_prefix = "flatpak-spawn --host " if is_flatpak else ""
         try:
-            result = (
-                os.popen(f"gsettings get {schema} {key} 2>/dev/null").read().strip()
-            )
+            # Use subprocess for cleaner output handling than os.popen
+            cmd = f"{cmd_prefix}gsettings get {schema} {key}"
+            result = os.popen(f"{cmd} 2>/dev/null").read().strip()
             if result and result.startswith("'") and result.endswith("'"):
                 return result[1:-1]
             return result
@@ -294,9 +319,14 @@ class ControlCenterHelpers:
         selected_theme = combobox.get_active_text()
         if not selected_theme or selected_theme == "(No themes found)":
             return
+
+        is_flatpak = os.path.exists("/.flatpak-info")
+        cmd_prefix = "flatpak-spawn --host " if is_flatpak else ""
+
         try:
-            command = f"gsettings set {schema} {key} '{selected_theme}'"
+            command = f"{cmd_prefix}gsettings set {schema} {key} '{selected_theme}'"
             os.system(command)
+
             display_name = key.replace("-", " ").capitalize()
             self.display_notify(
                 f"{display_name} set to {selected_theme}.",
