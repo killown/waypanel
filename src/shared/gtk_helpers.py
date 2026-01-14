@@ -130,6 +130,24 @@ class GtkHelpers:
             str: The name of the matching icon if found, or "image-missing" otherwise.
         """
         icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())  # pyright: ignore
+
+        # --- FLATPAK COMPATIBILITY INJECTION ---
+        if os.path.exists("/.flatpak-info"):
+            if icon_theme:
+                current_paths = list(icon_theme.get_search_path())
+                # Map common host icon locations mirrored by Flatpak
+                host_paths = [
+                    "/run/host/usr/share/icons",
+                    "/run/host/usr/local/share/icons",
+                    os.path.expanduser("~/.local/share/icons"),
+                ]
+                for hp in host_paths:
+                    if os.path.isdir(hp) and hp not in current_paths:
+                        current_paths.append(hp)
+
+                icon_theme.set_search_path(current_paths)
+        # ---------------------------------------
+
         norm_arg = self.normalize_name(argument)
         if fallback_icons is None:
             fallback_icons = [""]
@@ -276,23 +294,42 @@ class GtkHelpers:
         if not self.data_helper.validate_string(app_id):
             return None
 
-        # Try manual path check first to bypass Gio sandbox filtering
+        is_flatpak = os.path.exists("/.flatpak-info")
         search_paths = [
             "/usr/share/applications",
             os.path.expanduser("~/.local/share/applications"),
-            "/run/host/usr/share/applications",
         ]
+
+        if is_flatpak:
+            # Map host paths to sandbox-visible mirrors
+            uid = os.getuid()
+            search_paths.extend(
+                [
+                    "/run/host/usr/share/applications",
+                    "/run/host/usr/local/share/applications",
+                    f"/run/host/run/user/{uid}/flatpak-install/share/applications",
+                    os.path.join(
+                        "/run/host",
+                        os.path.expanduser("~").lstrip("/"),
+                        ".local/share/applications",
+                    ),
+                ]
+            )
 
         app_id_lower = app_id.lower()
         for app_dir in search_paths:
             if not os.path.isdir(app_dir):
                 continue
 
-            for file_name in os.listdir(app_dir):
-                if file_name.lower().startswith(app_id_lower) and file_name.endswith(
-                    ".desktop"
-                ):
-                    return file_name
+            try:
+                for file_name in os.listdir(app_dir):
+                    if (
+                        file_name.lower().startswith(app_id_lower)
+                        or app_id_lower in file_name.lower()
+                    ) and file_name.endswith(".desktop"):
+                        return os.path.join(app_dir, file_name)
+            except PermissionError:
+                continue
 
         # Fallback to Gio
         try:
