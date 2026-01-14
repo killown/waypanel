@@ -35,6 +35,11 @@ def get_plugin_class():
             self.row_content = None
             self.listbox = None
             self.clipboard_helper = ClipboardHelpers(self)
+            self.main_icon = self.get_plugin_setting(["main_icon"], "edit-paste")
+            self.fallback_main_icons = self.get_plugin_setting(
+                ["fallback_main_icons"],
+                ["clipboard", "edit-paste"],
+            )
             self.log_enabled = self.get_plugin_setting_add_hint(
                 ["server", "log_enabled"],
                 False,
@@ -92,11 +97,6 @@ def get_plugin_class():
             )
             helpers = Helpers(self)
             helpers.apply_hints()
-            self.main_icon = self.get_plugin_setting(["main_icon"], "edit-paste")
-            self.fallback_main_icons = self.get_plugin_setting(
-                ["fallback_main_icons"],
-                ["clipboard", "edit-paste"],
-            )
             self.hide_in_systray = self.get_plugin_setting(["hide_in_systray"], False)
 
         def on_start(self):
