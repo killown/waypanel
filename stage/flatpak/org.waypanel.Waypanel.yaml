@@ -1,0 +1,114 @@
+id: org.waypanel.Waypanel
+runtime: org.gnome.Platform
+runtime-version: "49"
+sdk: org.gnome.Sdk
+command: waypanel-launcher
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  - --share=network
+  - --talk-name=org.freedesktop.Notifications
+  - --own-name=org.waypanel.Waypanel
+  - --own-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.kde.StatusNotifierItem
+  - --socket=session-bus
+  - --socket=system-bus
+  - --filesystem=host:ro
+  - --filesystem=~/.local/share:ro
+  - --socket=pulseaudio
+  - --filesystem=xdg-config/waypanel
+  - --filesystem=~/.local/share/waypanel:create
+  - --filesystem=xdg-cache/waypanel:create
+  - --filesystem=xdg-run/wayfire-wayland-1-.socket
+  - --talk-name=org.mpris.MediaPlayer2.*
+
+build-options:
+  env:
+    PYTHONPATH: /app/waypanel:/app/lib/python3.13/site-packages
+    LD_LIBRARY_PATH: /app/lib:/app/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu
+
+modules:
+  - name: gtk4-layer-shell
+    buildsystem: meson
+    config-opts:
+      - --libdir=/app/lib
+    sources:
+      - type: git
+        url: https://github.com/wmww/gtk4-layer-shell.git
+        tag: v1.0.2
+
+  - name: playerctl
+    buildsystem: meson
+    config-opts:
+      - --libdir=/app/lib
+      - -Dintrospection=true
+      - -Dgtk-doc=false
+    sources:
+      - type: git
+        url: https://github.com/altdesktop/playerctl.git
+        tag: v2.4.1
+
+  - name: wl-clipboard
+    buildsystem: meson
+    config-opts:
+      - --prefix=/app
+      - --libdir=/app/lib
+      - -Dfishcompletiondir=/app/share/fish/vendor_completions.d
+    sources:
+      - type: git
+        url: https://github.com/bugaevc/wl-clipboard.git
+        tag: v2.2.1
+
+  - name: wayland-libs
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/lib
+      - cp -v /usr/lib/x86_64-linux-gnu/libwayland-client.so* /app/lib/
+      - cp -v /usr/lib/x86_64-linux-gnu/libwayland-cursor.so* /app/lib/
+      - cp -v /usr/lib/x86_64-linux-gnu/libwayland-egl.so* /app/lib/
+
+  - name: waypanel-dependencies
+    buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
+    build-commands:
+      - python3 -m ensurepip
+      - pip3 install --prefix=/app --no-cache-dir pip setuptools wheel
+      - pip3 install --prefix=/app --no-cache-dir aiohttp beautifulsoup4 numpy psutil pulsectl Requests SoundCard toml colorama dbus-next dbus-fast pygobject-stubs orjson cffi PyGObject watchdog pyperclip aiosqlite pillow structlog rich pygments cairosvg unidecode rapidfuzz lazy-loader distro tldextract pyamdgpuinfo wayfire
+
+  - name: git
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/bin /app/libexec/git-core
+      - cp /usr/bin/git /app/bin/git
+      - cp -r /usr/libexec/git-core/* /app/libexec/git-core/
+
+  - name: waypanel
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/waypanel
+      - cp -rv . /app/waypanel/
+      - mkdir -p /app/bin
+      - |
+        cat <<'RE_EOF' > /app/bin/waypanel-launcher
+        #!/bin/sh
+
+        export PATH="/app/bin:/app/libexec/git-core:${PATH}"
+        export PYTHONPATH="/app/waypanel:/app/lib/python3.13/site-packages"
+        export LD_LIBRARY_PATH="/app/lib:/app/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu"
+        export WAYPANEL_GTK_LAYER_SHELL_PATH="/app/lib/libgtk4-layer-shell.so"
+
+        REAL_USER=$(id -un)
+        export XDG_DATA_DIRS="${XDG_DATA_HOME}:/run/host/usr/share:/usr/share:/app/share"
+
+        exec python3 /app/waypanel/run.py "$@"
+        RE_EOF
+        chmod +x /app/bin/waypanel-launcher
+    sources:
+      - type: git
+        url: https://github.com/killown/waypanel.git
+        branch: main
