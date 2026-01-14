@@ -1,0 +1,400 @@
+def get_plugin_metadata(_):
+    """
+    Returns the metadata for the App Launcher plugin.
+    """
+    about = "A dynamic application launcher with a search bar and a grid view of installed and recently used applications."
+    return {
+        "id": "org.waypanel.plugin.app_launcher",
+        "name": "App Launcher",
+        "version": "1.0.0",
+        "enabled": True,
+        "index": 1,
+        "container": "top-panel-box-widgets-left",
+        "deps": [
+            "top_panel",
+        ],
+        "description": about,
+    }
+
+
+def get_plugin_class():
+    """
+    Dynamically imports dependencies and returns the AppLauncher class.
+    """
+    import distro
+    from src.plugins.core._base import BasePlugin
+    from .database import RecentAppsDatabase
+    from .scanner import AppScanner
+    from .menu import AppMenuHandler
+
+    class AppLauncher(BasePlugin):
+        """
+        Plugin class for the application launcher interface.
+        """
+
+        def __init__(self, panel_instance):
+            """
+            Initializes the launcher settings, scanner, database, menu handler and UI.
+            """
+            super().__init__(panel_instance)
+            self.popover_width = self.get_plugin_setting_add_hint(
+                ["layout", "popover_width"],
+                720,
+                "The fixed width (in pixels) of the main launcher popover window.",
+            )
+            self.popover_height = self.get_plugin_setting_add_hint(
+                ["layout", "popover_height"],
+                570,
+                "The fixed height (in pixels) of the main launcher popover window.",
+            )
+            self.min_app_grid_height = self.get_plugin_setting_add_hint(
+                ["layout", "min_app_grid_height"],
+                500,
+                "The minimum height (in pixels) reserved for the application grid (FlowBox) inside the popover.",
+            )
+            self.max_apps_per_row = self.get_plugin_setting_add_hint(
+                ["layout", "max_apps_per_row"],
+                5,
+                "The maximum number of application icons to display horizontally per row in the grid layout.",
+            )
+            self.max_recent_apps_db = self.get_plugin_setting_add_hint(
+                ["behavior", "max_recent_apps_db"],
+                50,
+                "The maximum number of recently launched applications to store in the database for sorting/prioritization.",
+            )
+            self.main_icon = self.get_plugin_setting_add_hint(
+                ["main_icon"],
+                "start-here",
+                "The default icon name (Gnome/Freedesktop standard) for the launcher button on the panel.",
+            )
+            distributor_id = distro.id()
+            distributor_logo_fallback_icons = [
+                f"distributor-{distributor_id}",
+                f"{distributor_id}-logo",
+                f"{distributor_id}_logo",
+                f"distributor_{distributor_id}",
+                f"logo{distributor_id}",
+                f"{distributor_id}logo",
+            ]
+            self.fallback_main_icons = self.get_plugin_setting_add_hint(
+                ["fallback_main_icons"],
+                distributor_logo_fallback_icons,
+                "A prioritized list of fallback icons (based on Linux distribution) to use if the main icon is not found.",
+            )
+
+            self.scanner = AppScanner()
+            self.menu_handler = AppMenuHandler(self)
+            self.popover_launcher = None
+            self.widgets_dict = {}
+            self.all_apps = None
+            self.appmenu = self.gtk.Button()
+            self.search_get_child = None
+            self.icons = {}
+            self.search_row = []
+            self.desired_app_order = []
+            self.db_path = self.path_handler.get_data_path("db/appmenu/recent_apps.db")
+
+            self.recent_db = RecentAppsDatabase(
+                db_path=self.db_path,
+                max_recent=self.max_recent_apps_db,
+                time_handler=self.time,
+            )
+
+            self.dockbar_id = "org.waypanel.plugin.dockbar"
+            icon_name = self._gtk_helper.icon_exist(
+                self.main_icon, self.fallback_main_icons
+            )
+            self.appmenu.set_icon_name(icon_name)
+
+        def on_start(self):
+            """Triggered when the plugin starts. Initializes UI and database."""
+            self.main_widget = (self.appmenu, "append")
+            try:
+                self.settings = self.gio.Settings.new("org.gnome.desktop.interface")
+            except Exception as e:
+                self.logger.error(
+                    f"Appmenu: Failed to initialize GSettings for icon-theme: {e}"
+                )
+                self.settings = None
+            self._create_recent_apps_table()
+            self.create_menu_popover_launcher()
+            self.create_popover_launcher()
+
+        def _create_recent_apps_table(self):
+            """Ensures the database table is ready."""
+            self.recent_db.initialize_schema()
+
+        def close(self):
+            """Closes the database connection on plugin shutdown."""
+            self.recent_db.disconnect()
+
+        def create_menu_popover_launcher(self):
+            """Configures the launcher button click handler."""
+            self.appmenu.connect("clicked", self.open_popover_launcher)
+            self.appmenu.add_css_class("app-launcher-menu-button")
+            self.gtk_helper.add_cursor_effect(self.appmenu)
+
+        def create_popover_launcher(self):
+            """Constructs the popover UI."""
+            self.popover_launcher = self._create_and_configure_popover()
+            self._setup_scrolled_window_and_flowbox()
+            self._populate_flowbox_with_apps()
+            self._finalize_popover_setup(is_initial_setup=True)
+            return self.popover_launcher
+
+        def _create_and_configure_popover(self):
+            """Creates and returns the popover widget."""
+            popover = self.create_popover(
+                parent_widget=self.appmenu,
+                css_class="app-launcher-popover",
+                has_arrow=True,
+                closed_handler=self.popover_is_closed,
+                visible_handler=self.popover_is_open,
+            )
+            show_searchbar_action = self.gio.SimpleAction.new("show_searchbar")
+            show_searchbar_action.connect(
+                "activate", self.on_show_searchbar_action_actived
+            )
+            if hasattr(self, "obj") and self.obj:
+                self.obj.add_action(show_searchbar_action)
+            return popover
+
+        def _setup_scrolled_window_and_flowbox(self):
+            """Initializes the search bar and the scrolling application grid."""
+            self.scrolled_window = self.gtk.ScrolledWindow()
+            self.scrolled_window.set_policy(
+                self.gtk.PolicyType.NEVER,
+                self.gtk.PolicyType.AUTOMATIC,
+            )
+            self.main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
+            self.main_box.add_css_class("app-launcher-main-box")
+            self.searchbar = self.gtk.SearchEntry.new()
+            self.searchbar.grab_focus()
+            self.searchbar.connect("search_changed", self.on_search_entry_changed)
+            self.searchbar.connect("activate", self.on_keypress)
+            self.searchbar.connect("stop-search", self.on_searchbar_key_release)
+            self.searchbar.set_focus_on_click(True)
+            self.searchbar.set_placeholder_text("Search apps...")
+            self.searchbar.add_css_class("app-launcher-searchbar")
+            self.main_box.append(self.searchbar)
+            self.flowbox = self.gtk.FlowBox()
+            self.flowbox.set_valign(self.gtk.Align.START)
+            self.flowbox.set_halign(self.gtk.Align.FILL)
+            self.flowbox.props.max_children_per_line = 30
+            self.flowbox.set_max_children_per_line(self.max_apps_per_row)
+            self.flowbox.set_homogeneous(False)
+            self.flowbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
+            self.flowbox.set_activate_on_single_click(True)
+            self.flowbox.connect("child-activated", self.run_app_from_launcher)
+            self.flowbox.add_css_class("app-launcher-flowbox")
+            self.flowbox.set_sort_func(self.app_sort_func, None)
+            self.flowbox.set_filter_func(self.on_filter_invalidate)
+            self.main_box.append(self.scrolled_window)
+            self.scrolled_window.set_child(self.flowbox)
+            self.popover_launcher.set_child(self.main_box)
+
+        def _populate_flowbox_with_apps(self):
+            """Discovers and adds desktop applications to the launcher grid."""
+            self.all_apps = self.scanner.scan()
+
+            for app_id, app_info in self.all_apps.items():
+                if app_id not in self.icons:
+                    self._add_app_to_flowbox(app_info, app_id)
+            self.update_flowbox()
+
+        def update_flowbox(self):
+            """Synchronizes grid UI with installed apps and usage history."""
+            current_installed_apps = self.all_apps if self.all_apps else {}
+            recent_app_ids = self.get_recent_apps()
+            apps_to_remove = set(self.icons.keys()) - set(current_installed_apps.keys())
+            for app_id in apps_to_remove:
+                widget_data = self.icons.pop(app_id, None)
+                if widget_data:
+                    vbox = widget_data["vbox"]
+                    flowbox_child = vbox.get_parent()
+                    if flowbox_child:
+                        self.flowbox.remove(flowbox_child)
+            for app_id, app in current_installed_apps.items():
+                if app_id not in self.icons:
+                    self._add_app_to_flowbox(app, app_id)
+            desired_app_id_order = []
+            recent_ids_set = set(recent_app_ids)
+            for app_id in recent_app_ids:
+                if app_id in current_installed_apps and app_id in self.icons:
+                    desired_app_id_order.append(app_id)
+            non_recent_apps = sorted(
+                [
+                    app_id
+                    for app_id in current_installed_apps
+                    if app_id not in recent_ids_set and app_id in self.icons
+                ],
+                key=lambda app_id: current_installed_apps[app_id].get_name().lower(),
+            )
+            desired_app_id_order.extend(non_recent_apps)
+            self.desired_app_order = desired_app_id_order
+            self.flowbox.invalidate_sort()
+            self.flowbox.invalidate_filter()
+
+        def _finalize_popover_setup(self, is_initial_setup=False):
+            """Applies final layout sizing to the popover."""
+            min_size, natural_size = self.flowbox.get_preferred_size()
+            width = natural_size.width if natural_size else 0
+            self.flowbox.add_css_class("app-launcher-flowbox")
+            self.scrolled_window.set_size_request(
+                self.popover_width, self.popover_height
+            )
+            self.scrolled_window.set_min_content_width(width)
+            self.scrolled_window.set_min_content_height(self.min_app_grid_height)
+            if self.popover_launcher:
+                self.popover_launcher.set_parent(self.appmenu)
+                self.popover_launcher.add_css_class("app-launcher-popover")
+                if not is_initial_setup:
+                    self.popover_launcher.popup()
+
+        def on_keypress(self, *_):
+            """Launches the searched application."""
+            cmd = "gtk-launch {}".format(self.search_get_child)
+            if hasattr(self, "cmd") and self.cmd:
+                self.cmd.run(cmd)
+            if self.popover_launcher:
+                self.popover_launcher.popdown()
+
+        def _add_app_to_flowbox(self, app, app_id):
+            """Creates visual entry for an application and adds to grid."""
+            keywords = (
+                " ".join(app.get_keywords()) if hasattr(app, "get_keywords") else ""
+            )
+            display_name = app.get_name() if app.get_name() else app_id
+            cmd = app_id
+            if display_name.count(" ") > 2:
+                truncated_display_name = " ".join(display_name.split()[:3])
+            else:
+                truncated_display_name = display_name
+            icon = app.get_icon()
+            if icon is None:
+                icon = self.gio.ThemedIcon.new_with_default_fallbacks(
+                    "application-x-executable-symbolic"
+                )
+            if app_id not in self.icons:
+                vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
+                vbox.set_halign(self.gtk.Align.CENTER)
+                vbox.set_valign(self.gtk.Align.CENTER)
+                vbox.set_margin_top(1)
+                vbox.set_margin_bottom(1)
+                vbox.set_margin_start(1)
+                vbox.set_margin_end(1)
+                vbox.add_css_class("app-launcher-vbox")
+                vbox.MYTEXT = display_name, cmd, keywords
+                image = self.gtk.Image.new_from_gicon(icon)
+                image.set_halign(self.gtk.Align.CENTER)
+                image.add_css_class("app-launcher-icon-from-popover")
+                self.gtk_helper.add_cursor_effect(image)
+                label = self.gtk.Label.new(truncated_display_name)
+                label.set_max_width_chars(20)
+                label.set_ellipsize(self.pango.EllipsizeMode.END)
+                label.set_halign(self.gtk.Align.CENTER)
+                label.add_css_class("app-launcher-label-from-popover")
+                self.icons[app_id] = {"icon": image, "label": label, "vbox": vbox}
+                vbox = self.icons[app_id]["vbox"]
+                vbox.append(self.icons[app_id]["icon"])
+                vbox.append(self.icons[app_id]["label"])
+                gesture = self.gtk.GestureClick.new()
+                gesture.set_button(self.gdk.BUTTON_SECONDARY)
+                gesture.connect("pressed", self.menu_handler.on_right_click_popover, vbox)
+                vbox.add_controller(gesture)
+                self.flowbox.append(vbox)
+                self.flowbox.add_css_class("app-launcher-flowbox")
+
+        def app_sort_func(self, child1, child2, user_data=None):
+            """Orders applications based on the desired sort order."""
+            _, app_id_1, _ = child1.get_child().MYTEXT
+            _, app_id_2, _ = child2.get_child().MYTEXT
+            try:
+                index1 = self.desired_app_order.index(app_id_1)
+            except ValueError:
+                index1 = len(self.desired_app_order) + 1
+            try:
+                index2 = self.desired_app_order.index(app_id_2)
+            except ValueError:
+                index2 = len(self.desired_app_order) + 1
+            return (index1 > index2) - (index1 < index2)
+
+        def add_recent_app(self, app_id: str):
+            """Proxies the application ID to the database manager."""
+            self.recent_db.add_app(app_id)
+
+        def get_recent_apps(self):
+            """Retrieves recent application IDs from the database manager."""
+            return self.recent_db.fetch_recent()
+
+        def run_app_from_launcher(self, x, y):
+            """Executes the selected application."""
+            mytext = [i.get_child().MYTEXT for i in x.get_selected_children()][0]
+            name, desktop_id, keywords = mytext
+            desktop_id_no_ext = desktop_id.split(".desktop")[0]
+            cmd = "gtk-launch {}".format(desktop_id_no_ext)
+            self.add_recent_app(desktop_id)
+            if hasattr(self, "cmd") and self.cmd:
+                self.cmd.run(cmd)
+            if self.popover_launcher:
+                self.popover_launcher.popdown()
+            self.update_flowbox()
+
+        def open_popover_launcher(self, *_):
+            """Toggles the visibility of the launcher popover."""
+            if self.popover_launcher:
+                if self.popover_launcher.is_visible():
+                    self.popover_launcher.popdown()
+                    self.popover_is_closed()
+                else:
+                    self.update_flowbox()
+                    self.flowbox.unselect_all()
+                    self.popover_launcher.popup()
+                    self.searchbar.set_text("")
+                    self.popover_is_open()
+
+        def popover_is_open(self, *_):
+            """Handles UI logic when the popover opens."""
+            self.set_keyboard_on_demand()
+            vadjustment = self.scrolled_window.get_vadjustment()
+            vadjustment.set_value(0)
+
+        def popover_is_closed(self, *_):
+            """Handles UI logic when the popover closes."""
+            self.set_keyboard_on_demand(False)
+            if hasattr(self, "listbox"):
+                self.flowbox.invalidate_filter()
+
+        def on_searchbar_key_release(self, widget, event):
+            """Closes popover on Escape key press."""
+            if event.keyval == self.gdk.KEY_Escape:
+                if self.popover_launcher:
+                    self.popover_launcher.popdown()
+                return True
+            return False
+
+        def on_show_searchbar_action_actived(self, action, parameter):
+            """Activates the search mode."""
+            self.searchbar.set_search_mode(True)
+
+        def on_search_entry_changed(self, searchentry):
+            """Updates grid filter when search text changes."""
+            searchentry.grab_focus()
+            self.flowbox.invalidate_filter()
+
+        def on_filter_invalidate(self, row):
+            """Filters rows based on name, ID, or keywords."""
+            text_to_search = self.searchbar.get_text().strip().lower()
+            if not isinstance(row, str):
+                vbox = row.get_child()
+                if not hasattr(vbox, "MYTEXT"):
+                    return False
+                display_name, desktop_id, keywords = vbox.MYTEXT
+                combined_text = f"{display_name} {desktop_id} {keywords}".lower()
+                if text_to_search in combined_text:
+                    self.search_get_child = desktop_id
+                    return True
+                return False
+            return text_to_search in row.lower().strip()
+
+    return AppLauncher
