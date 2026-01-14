@@ -138,7 +138,10 @@ class PackageHelper:
             host_path = host_path.replace("/run/host", "", 1)
 
         app_id = desktop_id.removesuffix(".desktop")
-        script_path = "/tmp/waypanel_uninstall.sh"
+
+        # Use XDG_RUNTIME_DIR for Flatpak/Host sharing
+        base_dir = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+        script_path = os.path.join(base_dir, "waypanel_uninstall.sh")
 
         content = f"""#!/bin/bash
 app_id='{app_id}'
@@ -190,6 +193,7 @@ read -r
 
         if self.is_flatpak:
             env_args = " ".join(self._get_flatpak_env_args())
+            # Ensure the host executes the script from the correct runtime path
             final_cmd = (
                 f"flatpak-spawn --host {env_args} {terminal} {flags} {script_path}"
             )
