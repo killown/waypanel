@@ -61,9 +61,8 @@ https://github.com/user-attachments/assets/8d1d3472-e9b1-4c03-a935-cf9f66c8748c
 
 https://github.com/user-attachments/assets/459a0581-047f-447c-8f50-8ce32adcb723
 
-- To adjust panel settings, open the system dashboard from the top-right corner, or edit ~/.config/waypanel/config directly.
+- To adjust panel settings, open the app-launcher and click in settings or edit ~/.config/waypanel/config directly.
 
-https://github.com/user-attachments/assets/2dc2ee69-8a02-4bf9-a662-90ea2f46dee6
 
 ## License
 
