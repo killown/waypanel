@@ -1,5 +1,7 @@
 .openwitheditor-menu-button {
-    -gtk-icon-size: 29px;
+  -gtk-icon-size: 25px;
+  padding-top: 9px;
+  padding-bottom: 2px;
 }
 .openwitheditor-menu-button:hover {
   background-color: var(--color-bg-button-hover);

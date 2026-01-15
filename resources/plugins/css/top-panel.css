@@ -14,7 +14,6 @@
 }
 
 .top-panel-box-widgets-left {
-  -gtk-icon-size: 32px;
   background: var(--color-bg-box-primary);
   border-top-right-radius: 10px;
   border-radius: var(--radius-s, 10px); 
