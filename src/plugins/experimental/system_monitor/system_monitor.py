@@ -15,7 +15,7 @@ def get_plugin_metadata(_):
     return {
         "id": "org.waypanel.plugin.system_monitor",
         "name": "System Monitor",
-        "version": "3.5.4",
+        "version": "3.5.5",
         "enabled": True,
         "index": 9,
         "container": "top-panel-systray",
@@ -121,20 +121,28 @@ def get_plugin_class():
             self.create_gesture = self.plugins["gestures_setup"].create_gesture
             self.create_menu_popover_system()
 
+            self.main_icon = self.get_plugin_setting_add_hint(
+                ["main_icon"],
+                "system-monitor-app-symbolic",
+                "The default icon name for the system monitor plugin.",
+            )
+
+            self.fallback_main_icons = self.get_plugin_setting_add_hint(
+                ["fallback_main_icons"],
+                [
+                    "utilities-system-monitor-symbolic",
+                    "com.github.stsdc.monitor-symbolic",
+                    "org.gnome.Settings-device-diagnostics-symbolic",
+                ],
+                "A prioritized list of fallback icons to use if the main icon is not found.",
+            )
+
         def create_menu_popover_system(self):
             """
             Initializes the tray button and icon.
             """
             self.menubutton_system = self.gtk.Button()
             self.menubutton_system.add_css_class("system-monitor-menubutton")
-            icon_name = self.gtk_helper.icon_exist(
-                "system-monitor-app-symbolic",
-                [
-                    "utilities-system-monitor-symbolic",
-                    "com.github.stsdc.monitor-symbolic",
-                ],
-            )
-            self.menubutton_system.set_icon_name(icon_name)
             self.menubutton_system.connect("clicked", self.open_popover_system)
             self.gtk_helper.add_cursor_effect(self.menubutton_system)
             self.main_widget = (self.menubutton_system, "append")
@@ -243,7 +251,7 @@ def get_plugin_class():
 
         def _hw_prettifier(self, driver: str) -> str:
             """
-            Maps sensor driver strings to hardware names.
+            Maps sensor driver strings to hardware names dynamically.
 
             Args:
                 driver: Raw driver name.
@@ -257,13 +265,21 @@ def get_plugin_class():
                 "amdgpu": "Radeon GPU",
                 "nvme": "SSD Storage",
                 "mt7921_phy0": "WiFi",
+                "iwlwifi_1": "WiFi",
+                "acpitz": "Thermal Zone",
+                "pch_cannonlake": "PCH",
             }
-            return mapping.get(driver, driver.replace("_", " ").title())
+            if driver in mapping:
+                return mapping[driver]
+
+            # Clean up underscore/case for unknown drivers
+            return driver.replace("_", " ").title()
 
         def add_gpu(self):
             """
-            Handles multi-vendor GPU status polling synchronously to sync with pruning.
+            Handles multi-vendor GPU status polling synchronously.
             """
+            # NVIDIA
             try:
                 nv = subprocess.run(
                     [
@@ -282,6 +298,7 @@ def get_plugin_class():
             except Exception:
                 pass
 
+            # AMD
             try:
                 import pyamdgpuinfo
 
@@ -295,30 +312,40 @@ def get_plugin_class():
             except Exception:
                 pass
 
+            # Intel (via sysfs or similar if helper supports it)
+            # Future expansion: Add Intel GPU metrics if a reliable library is found.
+
         def _poll_sensors(self):
             """
-            Polls thermals and routes them correctly. Only detected hardware is updated.
+            Polls thermals and routes them correctly based on hardware patterns.
             """
             try:
-                for driver, entries in psutil.sensors_temperatures().items():
+                temps = psutil.sensors_temperatures()
+                if not temps:
+                    return
+
+                for driver, entries in temps.items():
+                    if not entries:
+                        continue
+
                     vendor = self._hw_prettifier(driver)
-                    val = f"{entries[0].current}°C"
-                    if entries[0].current >= (entries[0].critical or 85):
+                    current_temp = entries[0].current
+                    critical_temp = entries[0].critical or 85
+
+                    val = f"{current_temp}°C"
+                    if current_temp >= critical_temp:
                         val = f"<span foreground='#ff3b3b' weight='bold'>{val}</span>"
 
-                    if driver == "nvme":
+                    # Dynamic routing logic
+                    if "nvme" in driver or "Storage" in vendor:
                         self.update_metric("Storage", f"{vendor} Temp", val)
-                    elif driver == "mt7921_phy0":
+                    elif any(x in driver for x in ["wifi", "mt7921", "iwl"]):
                         self.update_metric("Network", "WiFi Temp", val)
+                    elif "gpu" in driver.lower() or "radeon" in vendor.lower():
+                        self.update_metric("GPU", f"{vendor} Temp", val)
                     else:
-                        section = (
-                            "CPU"
-                            if "CPU" in vendor
-                            else "GPU"
-                            if "GPU" in vendor
-                            else "CPU"
-                        )
-                        self.update_metric(section, f"{vendor} Temp", val)
+                        # Default to CPU section for general thermal zones or CPU drivers
+                        self.update_metric("CPU", f"{vendor} Temp", val)
             except Exception:
                 pass
 
@@ -334,6 +361,7 @@ def get_plugin_class():
             self.update_metric("CPU", "Usage", f"{self.helper.get_cpu_usage()}%")
             self.update_metric("RAM", "Usage", self.helper.get_ram_info())
             self.update_metric("Network", "Usage", self.helper.get_network_usage())
+
             if "Battery" in self.sections:
                 batt = self.helper.get_battery_status()
                 self.update_metric(
@@ -380,9 +408,6 @@ def get_plugin_class():
                 self.update_metric(
                     "Wayfire", "Watch events", "L_CLICK all or R_CLICK selected"
                 )
-
-            else:
-                self.app_io_label.set_markup("")
 
             for full_key, item in self.metric_items.items():
                 if full_key not in self.updated_keys:
@@ -447,7 +472,7 @@ def get_plugin_class():
             frame = self.gtk.Frame()
             vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, spacing=5)
             self._set_margins(vbox, 10)
-
+            icon = self.icon_exist(icon)
             header = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, spacing=10)
             header.append(self.gtk.Image.new_from_icon_name(icon))
             lbl = self.gtk.Label()
@@ -503,7 +528,7 @@ def get_plugin_class():
 
         def _factory_bind(self, f, li):
             """
-            Property binding and gesture assignment. Restores right-click for Watch events.
+            Property binding and gesture assignment.
 
             Args:
                 f: Factory instance.
