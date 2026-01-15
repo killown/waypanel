@@ -1,8 +1,42 @@
 /* Launcher Button */
 .app-launcher-menu-button {
-  -gtk-icon-size: 25px;
+  -gtk-icon-size: 24px;
+
   padding-top: 9px;
-  padding-bottom: 2px;
+  padding-bottom: 7px;
+
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.45) 0%,
+      rgba(255, 255, 255, 0.18) 22%,
+      rgba(255, 255, 255, 0.0) 23%
+    ),
+    var(--color-bg-box-primary);
+
+  border-radius: var(--radius-m);
+  border-right: 2px solid color-mix(
+  in srgb,
+  var(--color-bg-deep) 50%,
+  transparent 10%
+  );
+  box-shadow:
+    inset 0 0px 0 rgba(255, 255, 255, 0.6),   /* top highlight */
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),      /* bottom edge */
+    0 1px 1px var(--color-shadow-medium);    /* subtle drop */
+
+  color: var(--theme-fg-label-primary);
+
+  transition: background 120ms linear, box-shadow 120ms linear;
+}
+
+.app-launcher-menu-button:hover {
+  background: var(--color-bg-button-normal-hover);
+  box-shadow:
+    inset 0 2px 2px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 0 var(--color-shadow-dark),
+    inset 5px 0 5px rgba(255, 255, 255, 0.1),
+    0 2px 8px var(--shadow-medium);
 }
 
 /* Popover Shell */
