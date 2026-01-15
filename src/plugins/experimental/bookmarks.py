@@ -151,8 +151,8 @@ container = "personal"
             self.menubutton_bookmarks.connect("clicked", self.open_popover_bookmarks)
             self.main_widget = (self.menubutton_bookmarks, "append")
             icon_name = self.icon_exist(
-                "bookmarks",
-                ["applications-internet"],
+                "firefox-symbolic",
+                ["chromium-browser-symbolic", "user-bookmarks-symbolic"],
             )
             self.menubutton_bookmarks.set_icon_name(icon_name)
             self.menubutton_bookmarks.add_css_class("bookmarks-menu-button")
