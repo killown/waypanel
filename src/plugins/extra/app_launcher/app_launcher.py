@@ -22,14 +22,11 @@ def get_plugin_class():
     Dynamically imports dependencies and returns the AppLauncher class.
     """
     import distro
-    import os
-    import psutil
     from src.plugins.core._base import BasePlugin
     from .database import RecentAppsDatabase
     from .scanner import AppScanner
     from .menu import AppMenuHandler
     from .remote_apps import RemoteApps
-    from typing import List, Any
 
     SYSTEM_BUTTON_CONFIG = {
         "Settings": {
