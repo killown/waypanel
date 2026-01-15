@@ -162,6 +162,27 @@ def get_plugin_class():
                 "The icon name used for the edit button on a note row. Falls back to 'document-edit'.",
             )
 
+            self.main_icon = self.get_plugin_setting_add_hint(
+                ["main_icon"],
+                "notes",
+                "The default icon name for the notes plugin.",
+            )
+
+            self.fallback_main_icons = self.get_plugin_setting_add_hint(
+                ["fallback_main_icons"],
+                [
+                    "view-paged-symbolic",
+                    "notes-panel",
+                    "stock_notes",
+                    "accessories-notes-symbolic",
+                    "xapp-annotations-text-symbolic",
+                    "accessories-notes",
+                    "accessories-text-editor-symbolic",
+                    "x-office-document-symbolic",
+                ],
+                "A prioritized list of fallback icons to use if the main icon is not found.",
+            )
+
             self.menubutton_notes = Gtk.Button.new()
             self.menubutton_notes.add_css_class("notes-menubutton")
             self.main_widget = (self.menubutton_notes, "append")
