@@ -216,6 +216,7 @@ def get_plugin_class():
 
             self.footer_box.append(ignore_label)
             self.footer_box.append(self.ignore_switch)
+            self.footer_box.add_css_class("app-launcher-footer-box")
 
             self.main_box.append(self.footer_box)
 
@@ -258,7 +259,7 @@ def get_plugin_class():
                 if widget_data:
                     vbox = widget_data["vbox"]
                     flowbox_child = vbox.get_parent()
-                    # Use self.flowbox.remove() instead of unparent() to avoid 
+                    # Use self.flowbox.remove() instead of unparent() to avoid
                     # Gtk-CRITICAL during the next sort/filter pass.
                     if flowbox_child and flowbox_child.get_parent() == self.flowbox:
                         self.flowbox.remove(flowbox_child)
@@ -284,7 +285,7 @@ def get_plugin_class():
             )
             desired_app_id_order.extend(non_recent_apps)
             self.desired_app_order = desired_app_id_order
-            
+
             self.flowbox.invalidate_sort()
             self.flowbox.invalidate_filter()
 
@@ -363,7 +364,12 @@ def get_plugin_class():
         def app_sort_func(self, child1, child2, user_data=None):
             """Orders applications based on the desired sort order."""
             v1, v2 = child1.get_child(), child2.get_child()
-            if not v1 or not v2 or not hasattr(v1, "MYTEXT") or not hasattr(v2, "MYTEXT"):
+            if (
+                not v1
+                or not v2
+                or not hasattr(v1, "MYTEXT")
+                or not hasattr(v2, "MYTEXT")
+            ):
                 return 0
 
             data1, data2 = v1.MYTEXT, v2.MYTEXT
@@ -509,3 +515,4 @@ def get_plugin_class():
             return False
 
     return AppLauncher
+

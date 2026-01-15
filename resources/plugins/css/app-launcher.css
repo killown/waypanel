@@ -74,3 +74,37 @@
   font-weight: bold;
   color: var(--main-text);
 }
+
+.app-item-remote {
+  background: transparent;
+  border-radius: 8px;
+  padding: 10px;
+  transition: background 0.2s ease;
+}
+.app-item-remote:hover {
+  background: lch(40 0 0 / 0.1);
+}
+.flatpak-emblem {
+  font-size: 7pt;
+  font-weight: bold;
+  background: lch(45 50 265);
+  color: lch(98 0 0);
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-top: -2px;
+}
+
+.app-launcher-footer-box {
+  background-color: var(--color-bg-deep);
+  border-top: 1px solid lch(32 2 260 / 0.6);
+  padding: 12px 16px;
+  box-shadow: 0 -5px 20px lch(5 8 260 / 0.5);
+  border-radius: 0 0 10px 10px;
+}
+
+.app-launcher-footer-label {
+  color: var(--main-text);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  opacity: 0.85;
+}
