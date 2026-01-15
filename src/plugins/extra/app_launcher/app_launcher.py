@@ -22,10 +22,13 @@ def get_plugin_class():
     Dynamically imports dependencies and returns the AppLauncher class.
     """
     import distro
+    import os
     from src.plugins.core._base import BasePlugin
     from .database import RecentAppsDatabase
     from .scanner import AppScanner
     from .menu import AppMenuHandler
+    from .remote_apps import RemoteApps
+    from typing import List, Any
 
     class AppLauncher(BasePlugin):
         """
@@ -37,6 +40,8 @@ def get_plugin_class():
             Initializes the launcher settings, scanner, database, menu handler and UI.
             """
             super().__init__(panel_instance)
+            self.remote_widgets = []
+            self.search_timeout_id = None
             self.popover_width = self.get_plugin_setting_add_hint(
                 ["layout", "popover_width"],
                 720,
@@ -84,6 +89,7 @@ def get_plugin_class():
 
             self.scanner = AppScanner()
             self.menu_handler = AppMenuHandler(self)
+            self.remote_apps = RemoteApps(self)
             self.popover_launcher = None
             self.widgets_dict = {}
             self.all_apps = None
@@ -204,7 +210,7 @@ def get_plugin_class():
 
         def update_flowbox(self):
             """Synchronizes grid UI with installed apps and usage history."""
-            current_installed_apps = self.all_apps if self.all_apps else {}
+            current_installed_apps = self.scanner.scan() if self.all_apps else {}
             recent_app_ids = self.get_recent_apps()
             apps_to_remove = set(self.icons.keys()) - set(current_installed_apps.keys())
             for app_id in apps_to_remove:
@@ -213,9 +219,10 @@ def get_plugin_class():
                     vbox = widget_data["vbox"]
                     flowbox_child = vbox.get_parent()
                     if flowbox_child:
-                        self.flowbox.remove(flowbox_child)
+                        flowbox_child.unparent()
             for app_id, app in current_installed_apps.items():
                 if app_id not in self.icons:
+                    print(app_id)
                     self._add_app_to_flowbox(app, app_id)
             desired_app_id_order = []
             recent_ids_set = set(recent_app_ids)
@@ -300,7 +307,9 @@ def get_plugin_class():
                 vbox.append(self.icons[app_id]["label"])
                 gesture = self.gtk.GestureClick.new()
                 gesture.set_button(self.gdk.BUTTON_SECONDARY)
-                gesture.connect("pressed", self.menu_handler.on_right_click_popover, vbox)
+                gesture.connect(
+                    "pressed", self.menu_handler.on_right_click_popover, vbox
+                )
                 vbox.add_controller(gesture)
                 self.flowbox.append(vbox)
                 self.flowbox.add_css_class("app-launcher-flowbox")
@@ -355,6 +364,7 @@ def get_plugin_class():
 
         def popover_is_open(self, *_):
             """Handles UI logic when the popover opens."""
+            self.update_flowbox()
             self.set_keyboard_on_demand()
             vadjustment = self.scrolled_window.get_vadjustment()
             vadjustment.set_value(0)
@@ -378,9 +388,34 @@ def get_plugin_class():
             self.searchbar.set_search_mode(True)
 
         def on_search_entry_changed(self, searchentry):
-            """Updates grid filter when search text changes."""
+            """Updates grid filter and always schedules a remote search (debounced)."""
+            from gi.repository import GLib
+
             searchentry.grab_focus()
+
+            if self.search_timeout_id:
+                GLib.source_remove(self.search_timeout_id)
+                self.search_timeout_id = None
+
+            # Clear remote widgets for fresh results
+            for widget in self.remote_widgets:
+                self.flowbox.remove(widget)
+            self.remote_widgets.clear()
+
             self.flowbox.invalidate_filter()
+
+            query = searchentry.get_text().strip().lower()
+            if len(query) >= 3:
+                # Trigger Flathub search for all queries >= 3 chars
+                self.search_timeout_id = GLib.timeout_add(
+                    350, self.remote_apps._trigger_remote_search, query
+                )
+
+        def install_remote_app(self, hit: dict):
+            """Triggers installation and closes the launcher popover."""
+            self.menu_handler.pkg_helper.install_flatpak(hit)
+            if self.popover_launcher:
+                self.popover_launcher.popdown()
 
         def on_filter_invalidate(self, row):
             """Filters rows based on name, ID, or keywords."""
@@ -389,7 +424,14 @@ def get_plugin_class():
                 vbox = row.get_child()
                 if not hasattr(vbox, "MYTEXT"):
                     return False
-                display_name, desktop_id, keywords = vbox.MYTEXT
+
+                data = vbox.MYTEXT
+                is_remote = data[3] if len(data) > 3 else False
+
+                if is_remote:
+                    return True  # Always show remote hits when they are generated
+
+                display_name, desktop_id, keywords = data[:3]
                 combined_text = f"{display_name} {desktop_id} {keywords}".lower()
                 if text_to_search in combined_text:
                     self.search_get_child = desktop_id

@@ -7,7 +7,7 @@ from typing import Optional, List
 class PackageHelper:
     """
     Handles package identification, dependency checking, and uninstallation.
-    Escapes Flatpak sandbox to interact with host pacman when necessary.
+    Escapes Flatpak sandbox to interact with host package managers.
 
     Attributes:
         plugin (Any): Reference to the main plugin instance.
@@ -29,22 +29,29 @@ class PackageHelper:
 
     def is_supported(self) -> bool:
         """
-        Checks if pacman is available on the host or local system.
+        Checks if the system supports Flatpak or Pacman.
 
         Returns:
-            bool: True if pacman is found.
+            bool: True if a supported package manager is found.
         """
         if self.is_flatpak:
             try:
                 check = subprocess.run(
+                    ["flatpak-spawn", "--host", "which", "flatpak"],
+                    capture_output=True,
+                    text=True,
+                )
+                if check.returncode == 0:
+                    return True
+                check_pacman = subprocess.run(
                     ["flatpak-spawn", "--host", "which", "pacman"],
                     capture_output=True,
                     text=True,
                 )
-                return check.returncode == 0
+                return check_pacman.returncode == 0
             except Exception:
                 return False
-        return shutil.which("pacman") is not None
+        return shutil.which("flatpak") is not None or shutil.which("pacman") is not None
 
     def _get_flatpak_env_args(self) -> List[str]:
         """
@@ -109,6 +116,8 @@ class PackageHelper:
             "/usr/share/applications",
             os.path.expanduser("~/.local/share/applications"),
             "/run/host/usr/share/applications",
+            "/var/lib/flatpak/exports/share/applications",
+            os.path.expanduser("~/.local/share/flatpak/exports/share/applications"),
         ]
         for p in paths:
             full = os.path.join(p, desktop_id)
@@ -118,7 +127,7 @@ class PackageHelper:
 
     def uninstall(self, desktop_id: str) -> None:
         """
-        Launches an interactive uninstallation menu in a terminal via a temp script.
+        Detects application type and launches an interactive uninstallation script.
 
         Args:
             desktop_id: The identifier for the application to uninstall.
@@ -138,8 +147,6 @@ class PackageHelper:
             host_path = host_path.replace("/run/host", "", 1)
 
         app_id = desktop_id.removesuffix(".desktop")
-
-        # Use XDG_RUNTIME_DIR for Flatpak/Host sharing
         base_dir = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
         script_path = os.path.join(base_dir, "waypanel_uninstall.sh")
 
@@ -159,21 +166,25 @@ if flatpak info "$app_id" &>/dev/null; then
     fi
 else
     PKG=$(pacman -Qqo "$host_path" 2>/dev/null || echo "$app_id")
-    echo -e '\\033[1;34m--- Full Package Information ---\\033[0m'
-    pacman -Qi "$PKG"
-    echo -e '\\n\\033[1;33mChoose Uninstallation Method for '"$PKG"':\\033[0m'
-    echo '1) Standard (-R)      : Remove only the package'
-    echo '2) Recursive (-Rs)     : Remove package and unneeded dependencies'
-    echo '3) Force/Cascade (-Rscd): Remove package, dependencies, and bypass checks'
-    echo 'q) Cancel'
-    echo -en '\\nSelection: '
-    read -r opt
-    case $opt in
-        1) sudo pacman -R "$PKG" ;;
-        2) sudo pacman -Rs "$PKG" ;;
-        3) sudo pacman -Rscd "$PKG" ;;
-        *) echo 'Aborted.' ;;
-    esac
+    echo -e '\\033[1;34m--- System Package Information ---\\033[0m'
+    if pacman -Qi "$PKG" &>/dev/null; then
+        pacman -Qi "$PKG"
+        echo -e '\\n\\033[1;33mChoose Uninstallation Method for '"$PKG"':\\033[0m'
+        echo '1) Standard (-R)      : Remove only the package'
+        echo '2) Recursive (-Rs)     : Remove package and unneeded dependencies'
+        echo '3) Force/Cascade (-Rscd): Remove package, dependencies, and bypass checks'
+        echo 'q) Cancel'
+        echo -en '\\nSelection: '
+        read -r opt
+        case $opt in
+            1) sudo pacman -R "$PKG" ;;
+            2) sudo pacman -Rs "$PKG" ;;
+            3) sudo pacman -Rscd "$PKG" ;;
+            *) echo 'Aborted.' ;;
+        esac
+    else
+        echo "Error: Package $PKG not found in pacman database."
+    fi
 fi
 echo -e '\\nPress Enter to close...'
 read -r
@@ -193,7 +204,6 @@ read -r
 
         if self.is_flatpak:
             env_args = " ".join(self._get_flatpak_env_args())
-            # Ensure the host executes the script from the correct runtime path
             final_cmd = (
                 f"flatpak-spawn --host {env_args} {terminal} {flags} {script_path}"
             )
@@ -205,9 +215,78 @@ read -r
         try:
             if hasattr(self.plugin, "cmd") and self.plugin.cmd:
                 self.plugin.cmd.run(final_cmd)
-            elif hasattr(self.plugin, "run_cmd"):
-                self.plugin.run_cmd(final_cmd)
             else:
-                os.system(f"{final_cmd} &")
+                subprocess.Popen(final_cmd.split())
         except Exception as e:
             self.logger.error(f"AppLauncher: Command failed: {e}")
+
+    def search_flathub(self, query: str) -> List[dict]:
+        """
+        Search Flathub and return the hits from the JSON response.
+        """
+        import requests
+
+        url = "https://flathub.org/api/v2/search"
+        try:
+            resp = requests.post(url, json={"query": query}, timeout=5)
+            resp.raise_for_status()
+            return resp.json().get("hits", [])
+        except Exception as e:
+            self.logger.error(f"PackageHelper: Flathub search failed: {e}")
+            return []
+
+    def install_flatpak(self, hit: dict):
+        """
+        Displays app details and prompts for installation in terminal.
+
+        Args:
+            hit (dict): Flathub application metadata.
+        """
+        terminal = self._get_terminal() or "xterm"
+        app_id = hit.get("app_id")
+        name = hit.get("name", "Unknown")
+        summary = hit.get("summary", "No summary.")
+        license = hit.get("project_license", "Unknown")
+        dev = hit.get("developer_name", "Unknown")
+        desc = hit.get("description", "").replace("'", "").replace('"', "")
+
+        script_path = "/tmp/waypanel_flatpak_install.sh"
+        content = f"""#!/bin/bash
+echo -e "\\033[1;34m[FLATHUB APPLICATION INFO]\\033[0m"
+echo -e "\\033[1mName:\\033[0m {name}"
+echo -e "\\033[1mID:\\033[0m   {app_id}"
+echo -e "\\033[1mDev:\\033[0m  {dev}"
+echo -e "\\033[1mLic:\\033[0m  {license}"
+echo -e "\\n\\033[1mSummary:\\033[0m\\n{summary}"
+echo -e "\\n\\033[1mDescription:\\033[0m"
+echo "{desc}" | fold -s -w 80
+echo -e "\\n--------------------------------------------------"
+echo -en "Install this application? (y/N): "
+read -r opt
+if [[ "$opt" =~ ^[Yy]$ ]]; then
+    flatpak install flathub {app_id} -y
+fi
+echo -e "\\nPress Enter to close..."
+read -r
+"""
+        try:
+            with open(script_path, "w") as f:
+                f.write(content)
+            os.chmod(script_path, 0o755)
+        except Exception as e:
+            self.logger.error(f"PackageHelper: Script failure: {e}")
+            return
+
+        flags = "--hold -e" if terminal in ["kitty", "alacritty"] else "-e"
+        if terminal == "gnome-terminal":
+            flags = "--"
+
+        if self.is_flatpak:
+            env_args = " ".join(self._get_flatpak_env_args())
+            final_cmd = (
+                f"flatpak-spawn --host {env_args} {terminal} {flags} {script_path}"
+            )
+        else:
+            final_cmd = f"{terminal} {flags} {script_path}"
+
+        subprocess.Popen(final_cmd.split())

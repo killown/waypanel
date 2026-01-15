@@ -6,7 +6,7 @@ from typing import Dict, Any, List
 class AppScanner:
     """
     Handles the discovery and parsing of Linux desktop application entries.
-    
+
     Attributes:
         search_paths (List[str]): Directories to scan for .desktop files.
     """
@@ -16,6 +16,7 @@ class AppScanner:
         self.search_paths: List[str] = [
             "/usr/share/applications",
             os.path.expanduser("~/.local/share/applications"),
+            os.path.expanduser("~/.local/share/flatpak/exports/share/applications/"),
             "/run/host/usr/share/applications",
         ]
 
@@ -90,7 +91,12 @@ class AppScanner:
             return []
 
     def _create_app_object(
-        self, app_id: str, name: str, icon: str | None, exec_cmd: str | None, keywords: List[str]
+        self,
+        app_id: str,
+        name: str,
+        icon: str | None,
+        exec_cmd: str | None,
+        keywords: List[str],
     ) -> Any:
         """
         Creates a metadata object compatible with the plugin's interaction logic.
@@ -113,3 +119,4 @@ class AppScanner:
                 return Gio.ThemedIcon.new(icon) if icon else None
 
         return AppEntry()
+

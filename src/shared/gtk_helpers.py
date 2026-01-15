@@ -301,6 +301,7 @@ class GtkHelpers:
         search_paths = [
             "/usr/share/applications",
             os.path.expanduser("~/.local/share/applications"),
+            os.path.expanduser("~/.local/share/flatpak/exports/share/applications/"),
         ]
 
         if is_flatpak:
