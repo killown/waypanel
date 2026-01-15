@@ -37,7 +37,10 @@ class AppMenuHandler:
         for margin in ["start", "end", "top", "bottom"]:
             getattr(menu_box, f"set_margin_{margin}")(10)
 
-        name, desktop_file, keywords = vbox.MYTEXT
+        # Handle unpacking safely for both 3-tuple (original) and 4-tuple (remote/updated) formats
+        mytext = vbox.MYTEXT
+        name, desktop_file, keywords = mytext[:3]
+        is_remote = mytext[3] if len(mytext) > 3 else False
         
         dock_config = self.plugin.get_root_setting([self.plugin.dockbar_id], {})
         is_docked = any(
@@ -63,11 +66,43 @@ class AppMenuHandler:
             uninst_btn.connect("clicked", self.on_uninstall_clicked, desktop_file, popover)
             menu_box.append(uninst_btn)
 
+        # Ignore/Unignore Logic
+        ignored = self.plugin.get_plugin_setting(["behavior", "ignored_apps"], [])
+        
+        if desktop_file in ignored:
+            unignore_btn = self.plugin.gtk.Button.new_with_label("Unignore App")
+            unignore_btn.add_css_class("app-launcher-menu-item")
+            unignore_btn.connect("clicked", self.unignore_app, desktop_file, popover)
+            menu_box.append(unignore_btn)
+        else:
+            ignore_btn = self.plugin.gtk.Button.new_with_label("Ignore App")
+            ignore_btn.add_css_class("app-launcher-menu-item")
+            ignore_btn.connect("clicked", self.ignore_app, desktop_file, popover)
+            menu_box.append(ignore_btn)
+
         popover.set_child(menu_box)
         popover.set_parent(vbox)
         popover.set_has_arrow(False)
         popover.popup()
         gesture.set_state(self.plugin.gtk.EventSequenceState.CLAIMED)
+
+    def ignore_app(self, button, desktop_file, popover):
+        """Adds the desktop file to the ignored list."""
+        ignored = self.plugin.get_plugin_setting(["behavior", "ignored_apps"], [])
+        if desktop_file not in ignored:
+            ignored.append(desktop_file)
+            self.plugin.set_plugin_setting(["behavior", "ignored_apps"], ignored)
+        popover.popdown()
+        self.plugin.update_flowbox()
+
+    def unignore_app(self, button, desktop_file, popover):
+        """Removes the desktop file from the ignored list."""
+        ignored = self.plugin.get_plugin_setting(["behavior", "ignored_apps"], [])
+        if desktop_file in ignored:
+            ignored.remove(desktop_file)
+            self.plugin.set_plugin_setting(["behavior", "ignored_apps"], ignored)
+        popover.popdown()
+        self.plugin.update_flowbox()
 
     def on_uninstall_clicked(self, button, desktop_file, popover):
         """Handler for the uninstall menu entry.

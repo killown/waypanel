@@ -111,6 +111,11 @@ def get_plugin_class():
                 self.main_icon, self.fallback_main_icons
             )
             self.appmenu.set_icon_name(icon_name)
+            self.show_ignored = self.get_plugin_setting_add_hint(
+                ["behavior", "show_ignored"],
+                False,
+                "Whether to show applications marked as ignored.",
+            )
 
         def on_start(self):
             """Triggered when the plugin starts. Initializes UI and database."""
@@ -196,39 +201,79 @@ def get_plugin_class():
             self.flowbox.set_sort_func(self.app_sort_func, None)
             self.flowbox.set_filter_func(self.on_filter_invalidate)
             self.main_box.append(self.scrolled_window)
+
+            self.footer_box = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 10)
+            self.footer_box.set_halign(self.gtk.Align.END)
+            self.footer_box.set_margin_bottom(8)
+            self.footer_box.set_margin_end(12)
+
+            ignore_label = self.gtk.Label.new("Show Ignored")
+            ignore_label.add_css_class("app-launcher-footer-label")
+
+            self.ignore_switch = self.gtk.Switch.new()
+            self.ignore_switch.set_active(self.show_ignored)
+            self.ignore_switch.connect("state-set", self.on_ignore_switch_toggled)
+
+            self.footer_box.append(ignore_label)
+            self.footer_box.append(self.ignore_switch)
+
+            self.main_box.append(self.footer_box)
+
             self.scrolled_window.set_child(self.flowbox)
             self.popover_launcher.set_child(self.main_box)
+
+        def on_ignore_switch_toggled(self, switch, state):
+            """Updates visibility preference for ignored applications."""
+            self.show_ignored = state
+            self.set_plugin_setting(["behavior", "show_ignored"], state)
+            self.update_flowbox()
+            return False
 
         def _populate_flowbox_with_apps(self):
             """Discovers and adds desktop applications to the launcher grid."""
             self.all_apps = self.scanner.scan()
-
             for app_id, app_info in self.all_apps.items():
                 if app_id not in self.icons:
                     self._add_app_to_flowbox(app_info, app_id)
             self.update_flowbox()
 
         def update_flowbox(self):
-            """Synchronizes grid UI with installed apps and usage history."""
-            current_installed_apps = self.scanner.scan() if self.all_apps else {}
+            """
+            Synchronizes grid UI with installed apps and usage history.
+            """
+            self.all_apps = self.scanner.scan()
+            current_installed_apps = self.all_apps
             recent_app_ids = self.get_recent_apps()
+
+            # Clean up remote widgets
+            for widget in list(self.remote_widgets):
+                if widget.get_parent() == self.flowbox:
+                    self.flowbox.remove(widget)
+            self.remote_widgets.clear()
+
+            # Clean up uninstalled apps
             apps_to_remove = set(self.icons.keys()) - set(current_installed_apps.keys())
             for app_id in apps_to_remove:
                 widget_data = self.icons.pop(app_id, None)
                 if widget_data:
                     vbox = widget_data["vbox"]
                     flowbox_child = vbox.get_parent()
-                    if flowbox_child:
-                        flowbox_child.unparent()
+                    # Use self.flowbox.remove() instead of unparent() to avoid 
+                    # Gtk-CRITICAL during the next sort/filter pass.
+                    if flowbox_child and flowbox_child.get_parent() == self.flowbox:
+                        self.flowbox.remove(flowbox_child)
+
+            # Add newly installed apps
             for app_id, app in current_installed_apps.items():
                 if app_id not in self.icons:
-                    print(app_id)
                     self._add_app_to_flowbox(app, app_id)
+
             desired_app_id_order = []
             recent_ids_set = set(recent_app_ids)
             for app_id in recent_app_ids:
                 if app_id in current_installed_apps and app_id in self.icons:
                     desired_app_id_order.append(app_id)
+
             non_recent_apps = sorted(
                 [
                     app_id
@@ -239,6 +284,7 @@ def get_plugin_class():
             )
             desired_app_id_order.extend(non_recent_apps)
             self.desired_app_order = desired_app_id_order
+            
             self.flowbox.invalidate_sort()
             self.flowbox.invalidate_filter()
 
@@ -260,7 +306,7 @@ def get_plugin_class():
 
         def on_keypress(self, *_):
             """Launches the searched application."""
-            cmd = "gtk-launch {}".format(self.search_get_child)
+            cmd = f"gtk-launch {self.search_get_child}"
             if hasattr(self, "cmd") and self.cmd:
                 self.cmd.run(cmd)
             if self.popover_launcher:
@@ -291,7 +337,7 @@ def get_plugin_class():
                 vbox.set_margin_start(1)
                 vbox.set_margin_end(1)
                 vbox.add_css_class("app-launcher-vbox")
-                vbox.MYTEXT = display_name, cmd, keywords
+                vbox.MYTEXT = (display_name, cmd, keywords, False)
                 image = self.gtk.Image.new_from_gicon(icon)
                 image.set_halign(self.gtk.Align.CENTER)
                 image.add_css_class("app-launcher-icon-from-popover")
@@ -316,16 +362,26 @@ def get_plugin_class():
 
         def app_sort_func(self, child1, child2, user_data=None):
             """Orders applications based on the desired sort order."""
-            _, app_id_1, _ = child1.get_child().MYTEXT
-            _, app_id_2, _ = child2.get_child().MYTEXT
+            v1, v2 = child1.get_child(), child2.get_child()
+            if not v1 or not v2 or not hasattr(v1, "MYTEXT") or not hasattr(v2, "MYTEXT"):
+                return 0
+
+            data1, data2 = v1.MYTEXT, v2.MYTEXT
+            app_id_1, app_id_2 = data1[1], data2[1]
+            is_rem_1 = data1[3] if len(data1) > 3 else False
+            is_rem_2 = data2[3] if len(data2) > 3 else False
+
+            if is_rem_1 != is_rem_2:
+                return 1 if is_rem_1 else -1
+
             try:
                 index1 = self.desired_app_order.index(app_id_1)
             except ValueError:
-                index1 = len(self.desired_app_order) + 1
+                index1 = 999
             try:
                 index2 = self.desired_app_order.index(app_id_2)
             except ValueError:
-                index2 = len(self.desired_app_order) + 1
+                index2 = 999
             return (index1 > index2) - (index1 < index2)
 
         def add_recent_app(self, app_id: str):
@@ -338,10 +394,22 @@ def get_plugin_class():
 
         def run_app_from_launcher(self, x, y):
             """Executes the selected application."""
-            mytext = [i.get_child().MYTEXT for i in x.get_selected_children()][0]
-            name, desktop_id, keywords = mytext
+            selected = x.get_selected_children()
+            if not selected:
+                return
+            vbox = selected[0].get_child()
+            if not hasattr(vbox, "MYTEXT"):
+                return
+
+            data = vbox.MYTEXT
+            name, desktop_id, keywords = data[0], data[1], data[2]
+            is_remote = data[3] if len(data) > 3 else False
+
+            if is_remote:
+                return
+
             desktop_id_no_ext = desktop_id.split(".desktop")[0]
-            cmd = "gtk-launch {}".format(desktop_id_no_ext)
+            cmd = f"gtk-launch {desktop_id_no_ext}"
             self.add_recent_app(desktop_id)
             if hasattr(self, "cmd") and self.cmd:
                 self.cmd.run(cmd)
@@ -354,13 +422,11 @@ def get_plugin_class():
             if self.popover_launcher:
                 if self.popover_launcher.is_visible():
                     self.popover_launcher.popdown()
-                    self.popover_is_closed()
                 else:
                     self.update_flowbox()
                     self.flowbox.unselect_all()
                     self.popover_launcher.popup()
                     self.searchbar.set_text("")
-                    self.popover_is_open()
 
         def popover_is_open(self, *_):
             """Handles UI logic when the popover opens."""
@@ -372,8 +438,11 @@ def get_plugin_class():
         def popover_is_closed(self, *_):
             """Handles UI logic when the popover closes."""
             self.set_keyboard_on_demand(False)
-            if hasattr(self, "listbox"):
-                self.flowbox.invalidate_filter()
+            for widget in list(self.remote_widgets):
+                if widget.get_parent():
+                    self.flowbox.remove(widget)
+            self.remote_widgets.clear()
+            self.flowbox.invalidate_filter()
 
         def on_searchbar_key_release(self, widget, event):
             """Closes popover on Escape key press."""
@@ -388,25 +457,22 @@ def get_plugin_class():
             self.searchbar.set_search_mode(True)
 
         def on_search_entry_changed(self, searchentry):
-            """Updates grid filter and always schedules a remote search (debounced)."""
+            """Updates grid filter and schedules a remote search."""
             from gi.repository import GLib
 
             searchentry.grab_focus()
-
             if self.search_timeout_id:
                 GLib.source_remove(self.search_timeout_id)
                 self.search_timeout_id = None
 
-            # Clear remote widgets for fresh results
-            for widget in self.remote_widgets:
-                self.flowbox.remove(widget)
+            for widget in list(self.remote_widgets):
+                if widget.get_parent():
+                    self.flowbox.remove(widget)
             self.remote_widgets.clear()
 
             self.flowbox.invalidate_filter()
-
             query = searchentry.get_text().strip().lower()
             if len(query) >= 3:
-                # Trigger Flathub search for all queries >= 3 chars
                 self.search_timeout_id = GLib.timeout_add(
                     350, self.remote_apps._trigger_remote_search, query
                 )
@@ -418,25 +484,28 @@ def get_plugin_class():
                 self.popover_launcher.popdown()
 
         def on_filter_invalidate(self, row):
-            """Filters rows based on name, ID, or keywords."""
+            """Filters based on search query and the ignore list."""
             text_to_search = self.searchbar.get_text().strip().lower()
-            if not isinstance(row, str):
-                vbox = row.get_child()
-                if not hasattr(vbox, "MYTEXT"):
-                    return False
+            child = row.get_child()
 
-                data = vbox.MYTEXT
-                is_remote = data[3] if len(data) > 3 else False
-
-                if is_remote:
-                    return True  # Always show remote hits when they are generated
-
-                display_name, desktop_id, keywords = data[:3]
-                combined_text = f"{display_name} {desktop_id} {keywords}".lower()
-                if text_to_search in combined_text:
-                    self.search_get_child = desktop_id
-                    return True
+            if not child or not hasattr(child, "MYTEXT"):
                 return False
-            return text_to_search in row.lower().strip()
+
+            data = child.MYTEXT
+            display_name, desktop_id, keywords = data[0], data[1], data[2]
+            is_remote = data[3] if len(data) > 3 else False
+
+            if is_remote:
+                return True
+
+            ignored_list = self.get_plugin_setting(["behavior", "ignored_apps"], [])
+            if not self.show_ignored and desktop_id in ignored_list:
+                return False
+
+            combined_text = f"{display_name} {desktop_id} {keywords}".lower()
+            if text_to_search in combined_text:
+                self.search_get_child = desktop_id.split(".desktop")[0]
+                return True
+            return False
 
     return AppLauncher
