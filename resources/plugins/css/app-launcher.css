@@ -7,14 +7,17 @@
 
 /* Popover Shell */
 .app-launcher-popover.background > contents {
-  background-color: var(--color-bg-deep);
-  border: 1px solid var(--color-accent-blue-darker);
-  border-radius: 12px;
-  box-shadow: 0 8px 25px var(--shadow-dark);
+  background-color: var(--theme-bg-under-page);
+  border: 1px solid var(--theme-decoration-separator);
+  border-radius: var(--radius-xl);
+  box-shadow: 
+    var(--shadow-window-float),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.5);
 }
 
 .app-launcher-popover.background > arrow {
-  background-color: var(--color-bg-deep);
+  background-color: var(--theme-bg-under-page);
 }
 
 .app-launcher-popover {
@@ -24,7 +27,7 @@
 
 /* Main Layout */
 .app-launcher-main-box {
-  background-color: var(--color-bg-deep);
+  background-color: var(--theme-bg-under-page);
 }
 
 .app-launcher-middle-hbox {
@@ -39,7 +42,7 @@
 
 .app-launcher-popover flowboxchild {
   padding: 0px;
-  margin-bottom: 24px; /* Vertical separation between rows */
+  margin-bottom: 24px;
   margin-left: 2px;
   margin-right: 2px;
 }
@@ -50,136 +53,178 @@
   margin: 0px;
 }
 
-/* Sidebar - Improved Aesthetics */
+/* Sidebar - Enhanced 3D Glassified Aesthetics */
 .app-launcher-sidebar-vbox {
-  background-color: lch(5 5 260 / 0.4);
-  padding: 12px 8px;
-  min-width: 180px;
-  border-left: 1px solid lch(100 0 0 / 0.05);
+  background-color: var(--color-bg-transparent-active);
+  padding: 16px 10px;
+  min-width: 90px;
+  /* 3D sidebar extrusion effect */
+  border-right: 1px solid var(--theme-decoration-separator);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+  box-shadow: 
+    inset -15px 0 30px -15px var(--color-shadow-medium),
+    inset 2px 0 5px rgba(255, 255, 255, 0.03),
+    inset -2px 0 5px rgba(0, 0, 0, 0.4);
 }
 
 .app-launcher-sidebar-button {
   background: transparent;
-  border: none;
-  padding: 10px 14px;
-  margin-bottom: 4px;
+  border: 1px solid transparent;
+  padding: 12px 16px;
+  margin-bottom: 8px;
   border-radius: var(--radius-m);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Sound effect triggers (Wayfire/GTK4 specific hint) */
+  -gtk-secondary-caret-color: inherit; 
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .app-launcher-sidebar-button:hover {
-  background-color: var(--color-bg-transparent-active);
-  transform: translateX(-2px);
+  background-color: var(--color-bg-button-normal-hover);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  transform: translateX(4px) scale(1.02);
+  box-shadow: 
+    var(--shadow-elevated),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .app-launcher-sidebar-button:active {
-  background-color: var(--color-bg-button-active);
-  transform: translateX(0);
+  background-color: var(--color-bg-button-normal-active);
+  transform: translateX(2px) scale(0.98);
+  box-shadow: 
+    var(--shadow-neumorphic-press),
+    inset 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.app-launcher-sidebar-button:checked,
+.app-launcher-sidebar-button:selected {
+  background-color: var(--theme-bg-selected-secondary);
+  border-color: var(--theme-status-success);
+  box-shadow: 
+    0 0 15px var(--color-status-success-bg),
+    inset 0 1px 2px rgba(255, 255, 255, 0.1);
 }
 
 .app-launcher-system-button-icon {
-  -gtk-icon-size: 20px;
-  color: var(--main-text);
-  margin-right: 4px;
+  -gtk-icon-size: 22px;
+  color: var(--theme-fg-label-primary);
+  margin-right: 6px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4));
 }
 
 .app-launcher-system-button-label {
-  color: var(--main-text);
+  color: var(--theme-fg-label-secondary);
   font-size: 13px;
-  font-weight: var(--font-weight-medium);
-  letter-spacing: 0.2px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
-/* Sidebar Separator */
+/* Sidebar Separator - Laser Line */
 .app-launcher-sidebar-vbox separator {
-  background-color: lch(100 0 0 / 0.1);
-  margin: 10px 8px;
-  min-height: 1px;
+  background: linear-gradient(to right, 
+    transparent, 
+    var(--theme-status-accent), 
+    transparent
+  );
+  margin: 15px 12px;
+  min-height: 2px;
+  opacity: var(--opacity-60);
+  box-shadow: 0 0 8px var(--theme-status-accent);
 }
 
 /* Ignore Switch Section */
 .app-launcher-footer-label {
-  color: var(--soft-text);
-  font-size: 11px;
+  color: var(--theme-status-success);
+  font-size: 10px;
   font-weight: var(--font-weight-bold);
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  margin-bottom: 4px;
-  padding-left: 4px;
+  margin-bottom: 6px;
+  padding-left: 6px;
 }
 
 .app-launcher-ignore-switch {
-  margin-left: 4px;
+  margin-left: 6px;
 }
 
 /* Search bar */
 .app-launcher-searchbar {
   background-color: var(--color-bg-searchbar);
-  border: 1px solid lch(100 0 0 / 0.1);
-  border-radius: 10px;
+  border: 1px solid var(--theme-decoration-separator);
+  border-radius: var(--radius-m);
   margin: 12px;
-  padding: 5px 10px;
-  color: var(--main-text);
+  padding: 8px 12px;
+  color: var(--theme-fg-label-primary);
   font-size: 18px;
   font-weight: var(--font-weight-medium);
   font-family: var(--font-family-default);
+  box-shadow: var(--shadow-neumorphic-press);
 }
 
 .app-launcher-searchbar:focus {
-  border-color: var(--color-accent-blue);
-  box-shadow: 0 0 0 1px var(--color-accent-blue);
+  border-color: var(--theme-status-success);
+  box-shadow: 0 0 15px var(--color-status-success-bg);
 }
 
 /* Icon Styling - Specifically for Popover Grid */
 .app-launcher-popover .app-launcher-icon-from-popover {
-  -gtk-icon-size: 64px; /* Tuned to ensure 4 fit per row */
+  -gtk-icon-size: 64px;
   padding: 10px;
-  background-color: var(--secondary-bg);
-  border-radius: 10px;
-  box-shadow:
-    2px 2px 4px rgba(0, 0, 0, 0.5),
-    -2px -2px 4px rgba(255, 255, 255, 0.08);
-  transition: all 0.2s ease-in-out;
+  background-color: var(--theme-bg-view-secondary);
+  border: 1px solid var(--gruv-shadow-border);
+  border-radius: var(--radius-l);
+  box-shadow: 
+    var(--shadow-subtle),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .app-launcher-popover .app-launcher-icon-from-popover:hover {
-  background-color: var(--tertiary-bg);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-neumorphic-outset-large);
+  background-color: var(--color-bg-button-normal-hover);
+  border-color: var(--theme-status-accent);
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 
+    var(--shadow-elevated),
+    inset 0 1px 2px rgba(255, 255, 255, 0.1);
 }
 
 .app-launcher-popover .app-launcher-icon-from-popover:active {
   transform: translateY(1px);
   box-shadow: var(--shadow-neumorphic-press);
-  background-color: var(--primary-bg);
+  background-color: var(--theme-bg-under-page);
 }
 
 .app-launcher-popover .app-launcher-label-from-popover {
   font-size: 11px;
-  font-weight: bold;
-  color: var(--main-text);
+  font-weight: var(--font-weight-bold);
+  color: var(--theme-fg-label-primary);
   margin-top: 10px;
 }
 
 /* Remote Items */
 .app-item-remote {
   background: transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-m);
   padding: 10px;
   transition: background 0.2s ease;
 }
 
 .app-item-remote:hover {
-  background: lch(40 0 0 / 0.1);
+  background: var(--color-status-danger-bg);
 }
 
 .flatpak-emblem {
   font-size: 7pt;
-  font-weight: bold;
-  background: lch(45 50 265);
-  color: lch(98 0 0);
-  padding: 1px 5px;
-  border-radius: 4px;
+  font-weight: var(--font-weight-bold);
+  background: var(--theme-status-accent);
+  color: var(--theme-fg-label-inverse);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
   margin-top: -2px;
+  box-shadow: 0 0 8px var(--theme-status-accent);
 }
 
 /* Scrolled Window */
