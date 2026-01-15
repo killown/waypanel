@@ -28,41 +28,6 @@ def get_plugin_class():
     from .menu import AppMenuHandler
     from .remote_apps import RemoteApps
 
-    SYSTEM_BUTTON_CONFIG = {
-        "Settings": {
-            "icons": [
-                "settings-configure-symbolic",
-                "systemsettings-symbolic",
-                "settings",
-                "system-settings-symbolic",
-                "preferences-activities-symbolic",
-                "preferences-system",
-            ],
-        },
-        "Lock": {
-            "icons": ["system-lock-screen-symbolic", "lock-symbolic"],
-        },
-        "Logout": {
-            "icons": ["system-log-out-symbolic", "gnome-logout-symbolic"],
-        },
-        "Suspend": {
-            "icons": ["system-suspend-hibernate-symbolic", "system-suspend-symbolic"],
-        },
-        "Reboot": {
-            "icons": ["system-reboot-update-symbolic", "system-reboot-symbolic"],
-        },
-        "Shutdown": {
-            "icons": [
-                "gnome-shutdown-symbolic",
-                "system-shutdown-symbolic",
-                "switch-off-symbolic",
-            ],
-        },
-        "Exit Panel": {
-            "icons": ["application-exit-symbolic", "application-exit", "exit"],
-        },
-    }
-
     class AppLauncher(BasePlugin):
         """
         Plugin class for the application launcher interface.
@@ -137,11 +102,63 @@ def get_plugin_class():
                 "swaylock",
                 "The full command used to lock the screen.",
             )
-            self.system_button_config = self.get_plugin_setting_add_hint(
-                ["buttons", "system_actions"],
-                SYSTEM_BUTTON_CONFIG,
-                "A dictionary structure for the lateral system action buttons.",
-            )
+
+            # Customizable System Action Icons
+            self.system_button_config = {
+                "Settings": {
+                    "icons": self.get_plugin_setting(
+                        ["buttons", "icons", "settings"],
+                        [
+                            "settings-configure-symbolic",
+                            "systemsettings-symbolic",
+                            "settings",
+                        ],
+                    ),
+                },
+                "Lock": {
+                    "icons": self.get_plugin_setting(
+                        ["buttons", "icons", "lock"],
+                        ["system-lock-screen-symbolic", "lock-symbolic"],
+                    ),
+                },
+                "Logout": {
+                    "icons": self.get_plugin_setting(
+                        ["buttons", "icons", "logout"],
+                        ["system-log-out-symbolic", "gnome-logout-symbolic"],
+                    ),
+                },
+                "Suspend": {
+                    "icons": self.get_plugin_setting(
+                        ["buttons", "icons", "suspend"],
+                        [
+                            "system-suspend-hibernate-symbolic",
+                            "system-suspend-symbolic",
+                        ],
+                    ),
+                },
+                "Reboot": {
+                    "icons": self.get_plugin_setting(
+                        ["buttons", "icons", "reboot"],
+                        ["system-reboot-update-symbolic", "system-reboot-symbolic"],
+                    ),
+                },
+                "Shutdown": {
+                    "icons": self.get_plugin_setting(
+                        ["buttons", "icons", "shutdown"],
+                        [
+                            "gnome-shutdown-symbolic",
+                            "system-shutdown-symbolic",
+                            "switch-off-symbolic",
+                        ],
+                    ),
+                },
+                "Exit Panel": {
+                    "icons": self.get_plugin_setting(
+                        ["buttons", "icons", "exit"],
+                        ["application-exit-symbolic", "application-exit", "exit"],
+                    ),
+                },
+            }
 
             distributor_id = distro.id()
             distributor_logo_fallback_icons = [
@@ -258,7 +275,6 @@ def get_plugin_class():
             self.sidebar_vbox.set_margin_end(10)
             self.sidebar_vbox.set_margin_top(10)
             self.sidebar_vbox.set_margin_bottom(10)
-            self.sidebar_vbox.add_css_class("app-launcher-sidebar-vbox")
 
             for action_label, config in self.system_button_config.items():
                 btn = self.gtk.Button()
@@ -307,7 +323,6 @@ def get_plugin_class():
             self.center_vbox.set_hexpand(True)
             self.center_vbox.add_css_class("app-launcher-center-vbox")
 
-            # Header: Search bar (Now inside center_vbox)
             self.searchbar = self.gtk.SearchEntry.new()
             self.searchbar.grab_focus()
             self.searchbar.connect("search_changed", self.on_search_entry_changed)
@@ -320,7 +335,6 @@ def get_plugin_class():
             self.searchbar.set_hexpand(True)
             self.center_vbox.append(self.searchbar)
 
-            # Apps Grid
             self.scrolled_window = self.gtk.ScrolledWindow()
             self.scrolled_window.set_policy(
                 self.gtk.PolicyType.NEVER,
@@ -384,9 +398,7 @@ def get_plugin_class():
             self.update_flowbox()
 
         def update_flowbox(self):
-            """
-            Synchronizes grid UI with installed apps and usage history.
-            """
+            """Synchronizes grid UI with installed apps and usage history."""
             self.all_apps = self.scanner.scan()
             current_installed_apps = self.all_apps
             recent_app_ids = self.get_recent_apps()
@@ -433,7 +445,6 @@ def get_plugin_class():
             """Applies final layout sizing to the popover."""
             min_size, natural_size = self.flowbox.get_preferred_size()
             width = natural_size.width if natural_size else 0
-            self.flowbox.add_css_class("app-launcher-flowbox")
             self.scrolled_window.set_size_request(
                 self.popover_width - 200, self.popover_height
             )
@@ -441,7 +452,6 @@ def get_plugin_class():
             self.scrolled_window.set_min_content_height(self.min_app_grid_height)
             if self.popover_launcher:
                 self.popover_launcher.set_parent(self.appmenu)
-                self.popover_launcher.add_css_class("app-launcher-popover")
                 if not is_initial_setup:
                     self.popover_launcher.popup()
 
@@ -473,10 +483,6 @@ def get_plugin_class():
                 vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
                 vbox.set_halign(self.gtk.Align.CENTER)
                 vbox.set_valign(self.gtk.Align.CENTER)
-                vbox.set_margin_top(1)
-                vbox.set_margin_bottom(1)
-                vbox.set_margin_start(1)
-                vbox.set_margin_end(1)
                 vbox.add_css_class("app-launcher-vbox")
                 vbox.MYTEXT = (display_name, cmd, keywords, False)
                 image = self.gtk.Image.new_from_gicon(icon)
@@ -489,9 +495,8 @@ def get_plugin_class():
                 label.set_halign(self.gtk.Align.CENTER)
                 label.add_css_class("app-launcher-label-from-popover")
                 self.icons[app_id] = {"icon": image, "label": label, "vbox": vbox}
-                vbox = self.icons[app_id]["vbox"]
-                vbox.append(self.icons[app_id]["icon"])
-                vbox.append(self.icons[app_id]["label"])
+                vbox.append(image)
+                vbox.append(label)
                 gesture = self.gtk.GestureClick.new()
                 gesture.set_button(self.gdk.BUTTON_SECONDARY)
                 gesture.connect(
@@ -499,7 +504,6 @@ def get_plugin_class():
                 )
                 vbox.add_controller(gesture)
                 self.flowbox.append(vbox)
-                self.flowbox.add_css_class("app-launcher-flowbox")
 
         def app_sort_func(self, child1, child2, user_data=None):
             """Orders applications based on the desired sort order."""
