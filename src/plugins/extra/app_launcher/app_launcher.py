@@ -52,7 +52,11 @@ def get_plugin_class():
             "icons": ["system-reboot-update-symbolic", "system-reboot-symbolic"],
         },
         "Shutdown": {
-            "icons": ["gnome-shutdown-symbolic", "system-shutdown-symbolic"],
+            "icons": [
+                "gnome-shutdown-symbolic",
+                "system-shutdown-symbolic",
+                "switch-off-symbolic",
+            ],
         },
         "Exit Panel": {
             "icons": ["application-exit-symbolic", "application-exit", "exit"],
