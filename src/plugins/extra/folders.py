@@ -35,6 +35,21 @@ def get_plugin_class():
             self._home_path = pathlib.Path.home()
             self.popover_folders = None
             self.plugin_id = get_plugin_metadata(panel_instance).get("id")
+            self.main_icon = self.get_plugin_setting_add_hint(
+                ["main_icon"],
+                "nautilus-folder-search-symbolic",
+                "The default icon name for the notes plugin.",
+            )
+
+            self.fallback_main_icons = self.get_plugin_setting_add_hint(
+                ["fallback_main_icons"],
+                [
+                    "folder-symbolic",
+                    "org.gnome.Nautilus-symbolic",
+                    "folder-open-symbolic",
+                ],
+                "A prioritized list of fallback icons to use if the main icon is not found.",
+            )
 
         def on_start(self):
             """
@@ -51,11 +66,6 @@ def get_plugin_class():
             )
             self.menubutton_folders = self.gtk.Button()
             self.menubutton_folders.connect("clicked", self.open_popover_folders)
-            icon_name = self.gtk_helper.set_widget_icon_name(
-                "folders",
-                ["folder"],
-            )
-            self.menubutton_folders.set_icon_name(icon_name)
             self.menubutton_folders.add_css_class("folders-menu-button")
             self.gtk_helper.add_cursor_effect(self.menubutton_folders)
 
