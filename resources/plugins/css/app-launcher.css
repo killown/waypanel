@@ -108,3 +108,17 @@
   font-weight: var(--font-weight-medium);
   opacity: 0.85;
 }
+
+.app-launcher-system-button-icon {
+  color: var(--main-text);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  opacity: 0.85;
+}
+
+.app-launcher-system-button-label {
+  color: var(--main-text);
+  font-size: 16px;
+  font-weight: var(--font-weight-medium);
+  opacity: 0.85;
+}

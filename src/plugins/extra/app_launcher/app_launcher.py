@@ -23,12 +23,44 @@ def get_plugin_class():
     """
     import distro
     import os
+    import psutil
     from src.plugins.core._base import BasePlugin
     from .database import RecentAppsDatabase
     from .scanner import AppScanner
     from .menu import AppMenuHandler
     from .remote_apps import RemoteApps
     from typing import List, Any
+
+    SYSTEM_BUTTON_CONFIG = {
+        "Settings": {
+            "icons": [
+                "settings-configure-symbolic",
+                "systemsettings-symbolic",
+                "settings",
+                "system-settings-symbolic",
+                "preferences-activities-symbolic",
+                "preferences-system",
+            ],
+        },
+        "Lock": {
+            "icons": ["system-lock-screen-symbolic", "lock-symbolic"],
+        },
+        "Logout": {
+            "icons": ["system-log-out-symbolic", "gnome-logout-symbolic"],
+        },
+        "Suspend": {
+            "icons": ["system-suspend-hibernate-symbolic", "system-suspend-symbolic"],
+        },
+        "Reboot": {
+            "icons": ["system-reboot-update-symbolic", "system-reboot-symbolic"],
+        },
+        "Shutdown": {
+            "icons": ["gnome-shutdown-symbolic", "system-shutdown-symbolic"],
+        },
+        "Exit Panel": {
+            "icons": ["application-exit-symbolic", "application-exit", "exit"],
+        },
+    }
 
     class AppLauncher(BasePlugin):
         """
@@ -44,7 +76,7 @@ def get_plugin_class():
             self.search_timeout_id = None
             self.popover_width = self.get_plugin_setting_add_hint(
                 ["layout", "popover_width"],
-                720,
+                860,
                 "The fixed width (in pixels) of the main launcher popover window.",
             )
             self.popover_height = self.get_plugin_setting_add_hint(
@@ -72,6 +104,44 @@ def get_plugin_class():
                 "start-here",
                 "The default icon name (Gnome/Freedesktop standard) for the launcher button on the panel.",
             )
+
+            # System Action Commands
+            self.exit_panel_command = self.get_plugin_setting_add_hint(
+                ["commands", "exit_panel"],
+                "pkill -f waypanel/main.py",
+                "Command to immediately stop all Waypanel processes.",
+            )
+            self.logout_command = self.get_plugin_setting_add_hint(
+                ["commands", "logout"],
+                "wayland-logout",
+                "Command to end the Wayland session.",
+            )
+            self.shutdown_command = self.get_plugin_setting_add_hint(
+                ["commands", "shutdown"],
+                "shutdown -h now",
+                "Command to immediately power off the system.",
+            )
+            self.suspend_command = self.get_plugin_setting_add_hint(
+                ["commands", "suspend"],
+                "systemctl suspend",
+                "Command to put the system into a low-power sleep state.",
+            )
+            self.reboot_command = self.get_plugin_setting_add_hint(
+                ["commands", "reboot"],
+                "reboot",
+                "Command to restart the system.",
+            )
+            self.lock_command = self.get_plugin_setting_add_hint(
+                ["commands", "lock_screen"],
+                "swaylock",
+                "The full command used to lock the screen.",
+            )
+            self.system_button_config = self.get_plugin_setting_add_hint(
+                ["buttons", "system_actions"],
+                SYSTEM_BUTTON_CONFIG,
+                "A dictionary structure for the lateral system action buttons.",
+            )
+
             distributor_id = distro.id()
             distributor_logo_fallback_icons = [
                 f"distributor-{distributor_id}",
@@ -84,7 +154,7 @@ def get_plugin_class():
             self.fallback_main_icons = self.get_plugin_setting_add_hint(
                 ["fallback_main_icons"],
                 distributor_logo_fallback_icons,
-                "A prioritized list of fallback icons (based on Linux distribution) to use if the main icon is not found.",
+                "A prioritized list of fallback icons to use if the main icon is not found.",
             )
 
             self.scanner = AppScanner()
@@ -171,14 +241,11 @@ def get_plugin_class():
             return popover
 
         def _setup_scrolled_window_and_flowbox(self):
-            """Initializes the search bar and the scrolling application grid."""
-            self.scrolled_window = self.gtk.ScrolledWindow()
-            self.scrolled_window.set_policy(
-                self.gtk.PolicyType.NEVER,
-                self.gtk.PolicyType.AUTOMATIC,
-            )
+            """Initializes the search bar, app grid, and sidebar actions."""
             self.main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
             self.main_box.add_css_class("app-launcher-main-box")
+
+            # Header: Search bar
             self.searchbar = self.gtk.SearchEntry.new()
             self.searchbar.grab_focus()
             self.searchbar.connect("search_changed", self.on_search_entry_changed)
@@ -188,40 +255,108 @@ def get_plugin_class():
             self.searchbar.set_placeholder_text("Search apps...")
             self.searchbar.add_css_class("app-launcher-searchbar")
             self.main_box.append(self.searchbar)
+
+            # Content area with Sidebar
+            self.middle_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
+            self.middle_hbox.add_css_class("app-launcher-middle-hbox")
+
+            # Apps Grid
+            self.scrolled_window = self.gtk.ScrolledWindow()
+            self.scrolled_window.set_policy(
+                self.gtk.PolicyType.NEVER,
+                self.gtk.PolicyType.AUTOMATIC,
+            )
             self.flowbox = self.gtk.FlowBox()
             self.flowbox.set_valign(self.gtk.Align.START)
             self.flowbox.set_halign(self.gtk.Align.FILL)
-            self.flowbox.props.max_children_per_line = 30
             self.flowbox.set_max_children_per_line(self.max_apps_per_row)
-            self.flowbox.set_homogeneous(False)
             self.flowbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
             self.flowbox.set_activate_on_single_click(True)
             self.flowbox.connect("child-activated", self.run_app_from_launcher)
             self.flowbox.add_css_class("app-launcher-flowbox")
             self.flowbox.set_sort_func(self.app_sort_func, None)
             self.flowbox.set_filter_func(self.on_filter_invalidate)
-            self.main_box.append(self.scrolled_window)
 
-            self.footer_box = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 10)
-            self.footer_box.set_halign(self.gtk.Align.END)
-            self.footer_box.set_margin_bottom(8)
-            self.footer_box.set_margin_end(12)
+            self.scrolled_window.set_child(self.flowbox)
+            self.scrolled_window.set_hexpand(True)
+            self.middle_hbox.append(self.scrolled_window)
 
+            # Sidebar Column
+
+            self.sidebar_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 4)
+            self.sidebar_vbox.add_css_class("app-launcher-sidebar-vbox")
+            self.sidebar_vbox.set_valign(self.gtk.Align.FILL)
+            self.sidebar_vbox.set_margin_start(10)
+            self.sidebar_vbox.set_margin_end(10)
+            self.sidebar_vbox.set_margin_top(10)
+            self.sidebar_vbox.set_margin_bottom(10)
+
+            for action_label, config in self.system_button_config.items():
+                btn = self.gtk.Button()
+                btn.add_css_class("app-launcher-sidebar-button")
+                self.gtk_helper.add_cursor_effect(btn)
+
+                btn_content = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 12)
+                icon_name = self.icon_exist(config["icons"][0], config["icons"])
+                img = self.gtk.Image.new_from_icon_name(icon_name)
+                img.set_pixel_size(32)
+                img.add_css_class("app-launcher-system-button-icon")
+                lbl = self.gtk.Label.new(action_label)
+                lbl.add_css_class("app-launcher-system-button-label")
+                lbl.set_halign(self.gtk.Align.START)
+
+                btn_content.append(img)
+                btn_content.append(lbl)
+                btn.set_child(btn_content)
+                btn.connect("clicked", self.on_system_action_clicked, action_label)
+                self.sidebar_vbox.append(btn)
+
+            # Bottom of Column: Show Ignored Switch
+            separator = self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL)
+            separator.set_margin_top(10)
+            separator.set_margin_bottom(10)
+            self.sidebar_vbox.append(separator)
+
+            ignore_container = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 6)
+            ignore_container.set_halign(self.gtk.Align.START)
             ignore_label = self.gtk.Label.new("Show Ignored")
             ignore_label.add_css_class("app-launcher-footer-label")
+            ignore_label.set_halign(self.gtk.Align.START)
 
             self.ignore_switch = self.gtk.Switch.new()
             self.ignore_switch.set_active(self.show_ignored)
+            self.ignore_switch.set_halign(self.gtk.Align.START)
             self.ignore_switch.connect("state-set", self.on_ignore_switch_toggled)
 
-            self.footer_box.append(ignore_label)
-            self.footer_box.append(self.ignore_switch)
-            self.footer_box.add_css_class("app-launcher-footer-box")
+            ignore_container.append(ignore_label)
+            ignore_container.append(self.ignore_switch)
+            self.sidebar_vbox.append(ignore_container)
 
-            self.main_box.append(self.footer_box)
-
-            self.scrolled_window.set_child(self.flowbox)
+            self.middle_hbox.append(self.sidebar_vbox)
+            self.main_box.append(self.middle_hbox)
             self.popover_launcher.set_child(self.main_box)
+
+        def on_system_action_clicked(self, button, action):
+            """Executes requested system action and closes popover."""
+            if action == "Exit Panel":
+                self.subprocess.Popen(self.exit_panel_command.split())
+            elif action == "Logout":
+                self.subprocess.Popen(self.logout_command.split())
+            elif action == "Shutdown":
+                self.subprocess.Popen(self.shutdown_command.split())
+            elif action == "Suspend":
+                self.subprocess.Popen(self.suspend_command.split())
+            elif action == "Reboot":
+                self.subprocess.Popen(self.reboot_command.split())
+            elif action == "Lock":
+                self.subprocess.Popen(self.lock_command.split())
+            elif action == "Settings":
+                control_center = self.plugins.get("control_center")
+                if control_center:
+                    control_center.do_activate()
+
+            if self.popover_launcher:
+                self.popover_launcher.popdown()
 
         def on_ignore_switch_toggled(self, switch, state):
             """Updates visibility preference for ignored applications."""
@@ -246,25 +381,20 @@ def get_plugin_class():
             current_installed_apps = self.all_apps
             recent_app_ids = self.get_recent_apps()
 
-            # Clean up remote widgets
             for widget in list(self.remote_widgets):
                 if widget.get_parent() == self.flowbox:
                     self.flowbox.remove(widget)
             self.remote_widgets.clear()
 
-            # Clean up uninstalled apps
             apps_to_remove = set(self.icons.keys()) - set(current_installed_apps.keys())
             for app_id in apps_to_remove:
                 widget_data = self.icons.pop(app_id, None)
                 if widget_data:
                     vbox = widget_data["vbox"]
                     flowbox_child = vbox.get_parent()
-                    # Use self.flowbox.remove() instead of unparent() to avoid
-                    # Gtk-CRITICAL during the next sort/filter pass.
                     if flowbox_child and flowbox_child.get_parent() == self.flowbox:
                         self.flowbox.remove(flowbox_child)
 
-            # Add newly installed apps
             for app_id, app in current_installed_apps.items():
                 if app_id not in self.icons:
                     self._add_app_to_flowbox(app, app_id)
@@ -295,7 +425,7 @@ def get_plugin_class():
             width = natural_size.width if natural_size else 0
             self.flowbox.add_css_class("app-launcher-flowbox")
             self.scrolled_window.set_size_request(
-                self.popover_width, self.popover_height
+                self.popover_width - 200, self.popover_height
             )
             self.scrolled_window.set_min_content_width(width)
             self.scrolled_window.set_min_content_height(self.min_app_grid_height)
@@ -515,4 +645,3 @@ def get_plugin_class():
             return False
 
     return AppLauncher
-
