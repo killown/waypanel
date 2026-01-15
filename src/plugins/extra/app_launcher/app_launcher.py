@@ -73,7 +73,7 @@ def get_plugin_class():
             self.search_timeout_id = None
             self.popover_width = self.get_plugin_setting_add_hint(
                 ["layout", "popover_width"],
-                860,
+                900,
                 "The fixed width (in pixels) of the main launcher popover window.",
             )
             self.popover_height = self.get_plugin_setting_add_hint(
@@ -242,44 +242,11 @@ def get_plugin_class():
             self.main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
             self.main_box.add_css_class("app-launcher-main-box")
 
-            # Header: Search bar
-            self.searchbar = self.gtk.SearchEntry.new()
-            self.searchbar.grab_focus()
-            self.searchbar.connect("search_changed", self.on_search_entry_changed)
-            self.searchbar.connect("activate", self.on_keypress)
-            self.searchbar.connect("stop-search", self.on_searchbar_key_release)
-            self.searchbar.set_focus_on_click(True)
-            self.searchbar.set_placeholder_text("Search apps...")
-            self.searchbar.add_css_class("app-launcher-searchbar")
-            self.main_box.append(self.searchbar)
-
             # Content area with Sidebar
             self.middle_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
             self.middle_hbox.add_css_class("app-launcher-middle-hbox")
 
-            # Apps Grid
-            self.scrolled_window = self.gtk.ScrolledWindow()
-            self.scrolled_window.set_policy(
-                self.gtk.PolicyType.NEVER,
-                self.gtk.PolicyType.AUTOMATIC,
-            )
-            self.flowbox = self.gtk.FlowBox()
-            self.flowbox.set_valign(self.gtk.Align.START)
-            self.flowbox.set_halign(self.gtk.Align.FILL)
-            self.flowbox.set_max_children_per_line(self.max_apps_per_row)
-            self.flowbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
-            self.flowbox.set_activate_on_single_click(True)
-            self.flowbox.connect("child-activated", self.run_app_from_launcher)
-            self.flowbox.add_css_class("app-launcher-flowbox")
-            self.flowbox.set_sort_func(self.app_sort_func, None)
-            self.flowbox.set_filter_func(self.on_filter_invalidate)
-
-            self.scrolled_window.set_child(self.flowbox)
-            self.scrolled_window.set_hexpand(True)
-            self.middle_hbox.append(self.scrolled_window)
-
             # Sidebar Column
-
             self.sidebar_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 4)
             self.sidebar_vbox.add_css_class("app-launcher-sidebar-vbox")
             self.sidebar_vbox.set_valign(self.gtk.Align.FILL)
@@ -287,6 +254,7 @@ def get_plugin_class():
             self.sidebar_vbox.set_margin_end(10)
             self.sidebar_vbox.set_margin_top(10)
             self.sidebar_vbox.set_margin_bottom(10)
+            self.sidebar_vbox.add_css_class("app-launcher-sidebar-vbox")
 
             for action_label, config in self.system_button_config.items():
                 btn = self.gtk.Button()
@@ -296,7 +264,7 @@ def get_plugin_class():
                 btn_content = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 12)
                 icon_name = self.icon_exist(config["icons"][0], config["icons"])
                 img = self.gtk.Image.new_from_icon_name(icon_name)
-                img.set_pixel_size(32)
+                img.set_pixel_size(22)
                 img.add_css_class("app-launcher-system-button-icon")
                 lbl = self.gtk.Label.new(action_label)
                 lbl.add_css_class("app-launcher-system-button-label")
@@ -323,12 +291,53 @@ def get_plugin_class():
             self.ignore_switch = self.gtk.Switch.new()
             self.ignore_switch.set_active(self.show_ignored)
             self.ignore_switch.set_halign(self.gtk.Align.START)
+            self.ignore_switch.add_css_class("app-launcher-ignore-switch")
             self.ignore_switch.connect("state-set", self.on_ignore_switch_toggled)
 
             ignore_container.append(ignore_label)
             ignore_container.append(self.ignore_switch)
             self.sidebar_vbox.append(ignore_container)
 
+            # Center Container: Search bar + Scrolled Window
+            self.center_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
+            self.center_vbox.set_hexpand(True)
+            self.center_vbox.add_css_class("app-launcher-center-vbox")
+
+            # Header: Search bar (Now inside center_vbox)
+            self.searchbar = self.gtk.SearchEntry.new()
+            self.searchbar.grab_focus()
+            self.searchbar.connect("search_changed", self.on_search_entry_changed)
+            self.searchbar.connect("activate", self.on_keypress)
+            self.searchbar.connect("stop-search", self.on_searchbar_key_release)
+            self.searchbar.set_focus_on_click(True)
+            self.searchbar.set_placeholder_text("Search apps...")
+            self.searchbar.add_css_class("app-launcher-searchbar")
+            self.searchbar.set_valign(self.gtk.Align.START)
+            self.searchbar.set_hexpand(True)
+            self.center_vbox.append(self.searchbar)
+
+            # Apps Grid
+            self.scrolled_window = self.gtk.ScrolledWindow()
+            self.scrolled_window.set_policy(
+                self.gtk.PolicyType.NEVER,
+                self.gtk.PolicyType.AUTOMATIC,
+            )
+            self.flowbox = self.gtk.FlowBox()
+            self.flowbox.set_valign(self.gtk.Align.START)
+            self.flowbox.set_halign(self.gtk.Align.FILL)
+            self.flowbox.set_max_children_per_line(self.max_apps_per_row)
+            self.flowbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
+            self.flowbox.set_activate_on_single_click(True)
+            self.flowbox.connect("child-activated", self.run_app_from_launcher)
+            self.flowbox.add_css_class("app-launcher-flowbox")
+            self.flowbox.set_sort_func(self.app_sort_func, None)
+            self.flowbox.set_filter_func(self.on_filter_invalidate)
+
+            self.scrolled_window.set_child(self.flowbox)
+            self.scrolled_window.set_vexpand(True)
+            self.center_vbox.append(self.scrolled_window)
+
+            self.middle_hbox.append(self.center_vbox)
             self.middle_hbox.append(self.sidebar_vbox)
             self.main_box.append(self.middle_hbox)
             self.popover_launcher.set_child(self.main_box)
