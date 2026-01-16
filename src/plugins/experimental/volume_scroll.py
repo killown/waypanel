@@ -22,7 +22,6 @@ def get_plugin_class():
     """
     from src.plugins.core._base import BasePlugin
     import pulsectl
-    import subprocess
     import typing
 
     class VolumeScrollPlugin(BasePlugin):
@@ -153,8 +152,8 @@ def get_plugin_class():
                         pactl_arg = target_volume
                     else:
                         pactl_arg = f"{int(round(float(target_volume)))}%"
-                    cmd = ["pactl", "set-sink-volume", "@DEFAULT_SINK@", pactl_arg]
-                    subprocess.run(cmd, check=True, capture_output=True)
+                    cmd = f"pactl set-sink-volume @DEFAULT_SINK@ {pactl_arg}"
+                    self.cmd.run(cmd)
                     current = self.get_current_volume()
                     self.glib.idle_add(self._update_ui_post_adjustment, current)
                 except Exception as e:
