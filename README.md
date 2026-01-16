@@ -64,15 +64,16 @@ Ensure the following plugins are enabled in your ~/.config/wayfire.ini:
 
 ## Basic usage
 
-- Toggle scale to show all panels. The default activator can be found in /usr/share/wayfire/metadata/scale.xml
+    Toggle scale to show all panels. The default activator can be found in /usr/share/wayfire/metadata/scale.xml
 
 https://github.com/user-attachments/assets/8d1d3472-e9b1-4c03-a935-cf9f66c8748c
 
-- To add icons to the dockbar, go to the first icon in the top-left (the app launcher), right-click the desired app icon, and select “Add to dockbar.”
+    To add icons to the dockbar, go to the first icon in the top-left (the app launcher), 
+    right-click the desired app icon, and select “Add to dockbar.”
 
 https://github.com/user-attachments/assets/459a0581-047f-447c-8f50-8ce32adcb723
 
-- To adjust panel settings, open the app-launcher and click in settings or edit ~/.config/waypanel/config directly.
+    To adjust panel settings, open the app-launcher and click in settings or edit ~/.config/waypanel/config directly.
 
 https://github.com/user-attachments/assets/0902666a-2aa8-44aa-8969-fd6283a8de3d
 
