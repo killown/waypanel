@@ -1,15 +1,10 @@
-# Waypanel Scraper Guide
+# Using Scraper tool to build waypanel plugins
 
-This tool aggregates the Waypanel project source code into a single, formatted text file to provide high-fidelity context for AI coding assistants.
+This document explains how to use the `scraper.py` tool to generate a context file that allows an AI to build Waypanel plugins while adhering to strict architectural rules.
 
 ## 1\. Generate the Context File
 
-Run the script from your terminal at the project root. It automatically excludes `.venv`, `build`, and egg-info directories.
-
-    # Navigate to project root
-    cd ~/G/w
-
-    # Run the scraper
+Run the script from your terminal at the project root. 
     python3 tools/scraper.py --input . --output waypanel_context.txt
 
 **Parameters:**
