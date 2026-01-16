@@ -6,7 +6,7 @@ def get_plugin_metadata(panel):
     )
 
     id = "org.waypanel.plugin.bluetooth"
-    default_container = "top-panel-systray"
+    default_container = "right-panel-center"
     container, id = panel.config_handler.get_plugin_container(default_container, id)
     hidden = panel.config_handler.get_root_setting([id, "hide_in_systray"], True)
 

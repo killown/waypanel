@@ -163,6 +163,14 @@ default_config = {
         "fallback_main_icons": ["clipboard", "edit-paste"],
         "hide_in_systray": False,
     },
+    "org.waypanel.plugin.folders": {
+        "main_icon": "nautilus-folder-search-symbolic",
+        "fallback_main_icons": [
+            "folder-symbolic",
+            "org.gnome.Nautilus-symbolic",
+            "folder-open-symbolic",
+        ],
+    },
     "org.waypanel.plugin.bluetooth": {
         "main_icon": "bluetooth-active-symbolic",
         "fallback_main_icons": ["org.gnome.Settings-bluetooth-symbolic", "bluetooth"],
@@ -174,10 +182,15 @@ default_config = {
         )
     },
     "org.waypanel.plugin.screen_recorder": {"hide_in_systray": False},
-    "org.waypanel.plugin.exit_dashboard": {
+    "org.waypanel.plugin.system_monitor": {
+        "main_icon": "system-monitor-app-symbolic",
+        "fallback_main_icons": [
+            "utilities-system-monitor-symbolic",
+            "com.github.stsdc.monitor-symbolic",
+            "org.gnome.Settings-device-diagnostics-symbolic",
+        ],
         "hide_in_systray": False,
     },
-    "org.waypanel.plugin.system_monitor": {"hide_in_systray": False},
     "org.waypanel.plugin.mullvad": {
         "hide_in_systray": False,
     },
@@ -242,9 +255,46 @@ default_config = {
             ),
         },
         "app": {
-            "_section_hint": (
-                "Settings defining the list of pinned/favorite applications that appear in the Dockbar."
-            ),
+            "Firefox": {
+                "cmd": "gtk-launch firefox",
+                "icon": "firefox",
+                "wclass": "firefox",
+                "desktop_file": "firefox.desktop",
+                "name": "Firefox",
+                "initial_title": "Firefox",
+            },
+            "Chromium": {
+                "cmd": "gtk-launch chromium",
+                "icon": "chromium",
+                "wclass": "chromium",
+                "desktop_file": "chromium.desktop",
+                "name": "Chromium",
+                "initial_title": "Chromium",
+            },
+            "Nautilus": {
+                "cmd": "gtk-launch org.gnome.Nautilus",
+                "icon": "org.gnome.Nautilus",
+                "wclass": "org.gnome.Nautilus",
+                "desktop_file": "org.gnome.Nautilus.desktop",
+                "name": "Files",
+                "initial_title": "Files",
+            },
+            "Thunderbird": {
+                "cmd": "gtk-launch thunderbird",
+                "icon": "thunderbird",
+                "wclass": "thunderbird",
+                "desktop_file": "thunderbird.desktop",
+                "name": "Thunderbird",
+                "initial_title": "Thunderbird",
+            },
+            "Steam": {
+                "cmd": "gtk-launch steam",
+                "icon": "steam",
+                "wclass": "steam",
+                "desktop_file": "steam.desktop",
+                "name": "Steam",
+                "initial_title": "Steam",
+            },
         },
     },
     "org.waypanel.plugin.custom_menu": {

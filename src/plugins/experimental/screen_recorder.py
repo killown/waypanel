@@ -9,7 +9,7 @@ def get_plugin_metadata(panel):
         "version": "1.0.0",
         "enabled": True,
         "index": 10,
-        "hidden": False,
+        "hidden": True,
         "container": container,
         "deps": ["top_panel"],
         "description": about,

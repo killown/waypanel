@@ -149,6 +149,7 @@ def get_plugin_class():
                             "gnome-shutdown-symbolic",
                             "system-shutdown-symbolic",
                             "switch-off-symbolic",
+                            "preferences-system-power-symbolic",
                         ],
                     ),
                 },
@@ -282,7 +283,7 @@ def get_plugin_class():
                 self.gtk_helper.add_cursor_effect(btn)
 
                 btn_content = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 12)
-                icon_name = self.icon_exist(config["icons"][0], config["icons"])
+                icon_name = self.icon_exist(config["icons"][0])
                 img = self.gtk.Image.new_from_icon_name(icon_name)
                 img.set_pixel_size(22)
                 img.add_css_class("app-launcher-system-button-icon")
