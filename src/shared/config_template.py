@@ -1,5 +1,7 @@
-# NOTE: if using main_icon and fallback_main_icons,
-# necessary to include the icons in the template so the icons will appear in the first setup
+# NOTE: If using main_icon and fallback_main_icons, include the icons in the
+# template to ensure they appear during the initial setup.
+# The dockbar configuration template must not contain app template examples;
+# including them will prevent users from unpinning apps from the dockbar.
 
 from wayfire import WayfireSocket
 
