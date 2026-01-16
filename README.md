@@ -44,6 +44,17 @@ Ensure the following plugins are enabled in your ~/.config/wayfire.ini:
     cd waypanel
     python run.py # This will set up the venv automatically and run the panel
 
+
+#### Alternative options:
+
+###### install from AUR
+    yay -S waypanel-git
+
+###### install from flatpak
+    git clone https://github.com/killown/waypanel.git
+    cd waypanel/stage/flatpak
+    sh install-run.sh
+
 ## Recommended icon themes
 
 - https://github.com/PapirusDevelopmentTeam/papirus-icon-theme
