@@ -254,48 +254,6 @@ default_config = {
                 "buttons for theme customization."
             ),
         },
-        "app": {
-            "Firefox": {
-                "cmd": "gtk-launch firefox",
-                "icon": "firefox",
-                "wclass": "firefox",
-                "desktop_file": "firefox.desktop",
-                "name": "Firefox",
-                "initial_title": "Firefox",
-            },
-            "Chromium": {
-                "cmd": "gtk-launch chromium",
-                "icon": "chromium",
-                "wclass": "chromium",
-                "desktop_file": "chromium.desktop",
-                "name": "Chromium",
-                "initial_title": "Chromium",
-            },
-            "Nautilus": {
-                "cmd": "gtk-launch org.gnome.Nautilus",
-                "icon": "org.gnome.Nautilus",
-                "wclass": "org.gnome.Nautilus",
-                "desktop_file": "org.gnome.Nautilus.desktop",
-                "name": "Files",
-                "initial_title": "Files",
-            },
-            "Thunderbird": {
-                "cmd": "gtk-launch thunderbird",
-                "icon": "thunderbird",
-                "wclass": "thunderbird",
-                "desktop_file": "thunderbird.desktop",
-                "name": "Thunderbird",
-                "initial_title": "Thunderbird",
-            },
-            "Steam": {
-                "cmd": "gtk-launch steam",
-                "icon": "steam",
-                "wclass": "steam",
-                "desktop_file": "steam.desktop",
-                "name": "Steam",
-                "initial_title": "Steam",
-            },
-        },
     },
     "org.waypanel.plugin.custom_menu": {
         "_section_hint": (
