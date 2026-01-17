@@ -10,6 +10,15 @@ Waypanel is a lightweight, modular, and highly customizable status panel designe
 
 For detailed installation and basic usage, visit the [Official Install Wiki](https://github.com/killown/waypanel/wiki/Install-waypanel).
 
+### Extra Plugins
+
+Install extra plugins from the [Official Extra Plugins](https://github.com/killown/waypanel-plugins-extra) repository.
+
+For **automatic syncing** of the repo to `~/.local/share/waypanel/plugins/`, use the **Sync Plugins** plugin in the panel settings. Make sure to select the correct path to your cloned repository, **or just copy the cloned repo** directly to the local plugins path.
+
+More info: [Sync Plugins README](https://github.com/killown/waypanel/blob/main/src/plugins/essential/sync_plugins/README.md)
+
+
 ### How to Build `plugins`
 
 For detailed instructions on building and managing plugins, visit the [Official Plugin Wiki](https://github.com/killown/waypanel/wiki/Building-plugins).
