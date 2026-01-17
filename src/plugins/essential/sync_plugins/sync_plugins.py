@@ -7,7 +7,7 @@ def get_plugin_metadata(panel):
     return {
         "id": id,
         "name": "Plugin Synchronizer",
-        "version": "1.4.0",
+        "version": "1.4.1",
         "enabled": True,
         "container": container,
         "description": (
@@ -26,6 +26,11 @@ def get_plugin_class():
     from src.plugins.core._base import BasePlugin
 
     class PluginSync(BasePlugin):
+        """
+        Synchronizes external directories to isolated subfolders in the local plugins folder.
+        Wipes state if the destination root is missing to ensure a fresh recovery sync.
+        """
+
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
             self.dest_root = os.path.expanduser("~/.local/share/waypanel/plugins/")
@@ -34,22 +39,27 @@ def get_plugin_class():
             )
 
         def on_start(self):
+            """
+            Registers settings and triggers sync.
+            """
             self.get_plugin_setting_add_hint(
                 ["source_folders"],
                 ["~/Git/waypanel-plugins", "~/Git/waypanel-plugins-extra/"],
-                "List of paths to plugins to be synced.",
+                "List of absolute paths to folders containing plugins to be synced.",
             )
 
             if not shutil.which("rsync"):
-                self.logger.warning("rsync not found.")
+                self.logger.warning("rsync not found. Synchronizer disabled.")
                 return
 
             self.run_sync()
 
         def _get_folder_mtime(self, path):
+            """Finds the latest modification time in a directory tree."""
             try:
                 latest = os.path.getmtime(path)
                 for root, _, files in os.walk(path):
+                    # Check directory mtime to capture deletions
                     dir_mtime = os.path.getmtime(root)
                     if dir_mtime > latest:
                         latest = dir_mtime
@@ -65,60 +75,75 @@ def get_plugin_class():
                 return 0
 
         def run_sync(self):
-            # Check if root destination exists
+            """
+            Synchronizes sources into isolated subdirectories.
+            If the main plugins folder is missing, state is reset to force full sync.
+            """
+            # 1. Recovery Check: If dest_root is gone, we must sync everything regardless of state
+            force_sync = False
             if not os.path.exists(self.dest_root):
                 os.makedirs(self.dest_root, exist_ok=True)
+                force_sync = True
                 if os.path.exists(self.state_file):
-                    os.remove(self.state_file)
+                    try:
+                        os.remove(self.state_file)
+                        self.logger.info(
+                            "Plugins folder missing; state reset for full recovery."
+                        )
+                    except OSError:
+                        pass
 
             source_folders = self.get_plugin_setting("source_folders", [])
-            if not source_folders:
+            if not source_folders or not isinstance(source_folders, list):
                 return
 
             os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
 
             state = {}
-            if os.path.exists(self.state_file):
+            if not force_sync and os.path.exists(self.state_file):
                 try:
                     with open(self.state_file, "r") as f:
                         state = json.load(f)
-                except:
+                except (json.JSONDecodeError, OSError):
                     state = {}
 
             synced_any = False
             new_state = state.copy()
 
             for folder in source_folders:
-                full_path = os.path.expanduser(folder).rstrip("/")
+                full_path = os.path.abspath(os.path.expanduser(folder)).rstrip("/")
                 if not os.path.exists(full_path):
                     continue
 
-                # Use the source folder name as a unique sub-directory in plugins/
-                # This prevents Source A and Source B from overwriting each other.
+                # Isolate destination by source folder name
                 folder_name = os.path.basename(full_path)
                 specific_dest = os.path.join(self.dest_root, folder_name)
-
                 os.makedirs(specific_dest, exist_ok=True)
 
                 current_mtime = self._get_folder_mtime(full_path)
-                last_mtime = state.get(full_path, 0)
+                last_mtime = state.get(folder, 0)
 
-                if current_mtime != last_mtime:
-                    self.logger.info(f"Isolated sync for: {folder_name}")
+                # Sync if timestamps differ or if recovery is forced
+                if force_sync or current_mtime != last_mtime:
+                    self.logger.info(f"Syncing {folder_name} to {specific_dest}")
+                    # --delete mirrors the source exactly within its subfolder
                     self.cmd.run(
                         f"rsync -auz --delete '{full_path}/' '{specific_dest}/'"
                     )
-                    new_state[full_path] = current_mtime
+                    new_state[folder] = current_mtime
                     synced_any = True
 
             if synced_any:
-                with open(self.state_file, "w") as f:
-                    json.dump(new_state, f)
+                try:
+                    with open(self.state_file, "w") as f:
+                        json.dump(new_state, f)
+                except OSError as e:
+                    self.logger.error(f"Failed to save sync state: {e}")
 
                 def notify():
                     self.notify_send(
                         "Waypanel Sync",
-                        "Multi-source sync complete. Deletions isolated.",
+                        "Plugins mirrored to isolated subfolders. Restart the panel.",
                         "plugins",
                     )
                     return False
@@ -126,6 +151,7 @@ def get_plugin_class():
                 self.glib.timeout_add_seconds(3, notify)
 
         def on_reload(self):
+            """Triggered on config save in Control Center."""
             self.run_sync()
 
     return PluginSync
