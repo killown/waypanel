@@ -173,7 +173,10 @@ def get_plugin_class():
             )
             if not terminal:
                 return
-            cmd = [terminal, "-e"] + self.update_command.split()
+
+            wrapped_command = f"sh -c \"{self.update_command}; echo; echo 'Task finished. Press Enter to exit...'; read\""
+            cmd = [terminal, "-e", "sh", "-c", wrapped_command]
+
             try:
                 proc = self.subprocess.Popen(cmd)
                 self.terminal_pid = proc.pid
