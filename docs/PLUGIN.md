@@ -1,4 +1,4 @@
-# ✅ Creating Your First Waypanel Plugin (Complete Guide)
+# Creating Your First Waypanel Plugin (Complete Guide)
 
 This guide explains the \*\*mandatory structure\*\* for a modern Waypanel plugin, strictly adhering to the rule of importing modules inside `get_plugin_class()` and using the modern \*\*asynchronous API\*\* (`on_start`).
 
