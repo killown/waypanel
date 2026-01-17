@@ -1,4 +1,4 @@
-from .menu import AppMenuHandler
+from ._menu import AppMenuHandler
 import os
 
 
@@ -116,4 +116,3 @@ class RemoteApps:
 
         self.app_launcher.flowbox.append(button)
         self.app_launcher.remote_widgets.append(button)
-

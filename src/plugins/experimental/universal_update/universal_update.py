@@ -23,7 +23,7 @@ def get_plugin_metadata(panel):
 def get_plugin_class():
     import shutil
     from src.plugins.core._base import BasePlugin
-    from .manager import get_manager
+    from ._manager import get_manager
 
     class UniversalUpdate(BasePlugin):
         def __init__(self, panel_instance):

@@ -1,5 +1,5 @@
 def get_manager():
-    from .providers import (
+    from ._providers import (
         PacmanProvider,
         DnfProvider,
         AptProvider,

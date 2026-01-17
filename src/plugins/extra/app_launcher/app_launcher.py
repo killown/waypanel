@@ -23,10 +23,10 @@ def get_plugin_class():
     """
     import distro
     from src.plugins.core._base import BasePlugin
-    from .database import RecentAppsDatabase
-    from .scanner import AppScanner
-    from .menu import AppMenuHandler
-    from .remote_apps import RemoteApps
+    from ._database import RecentAppsDatabase
+    from ._scanner import AppScanner
+    from ._menu import AppMenuHandler
+    from ._remote_apps import RemoteApps
 
     class AppLauncher(BasePlugin):
         """

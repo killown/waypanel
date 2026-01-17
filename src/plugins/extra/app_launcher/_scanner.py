@@ -119,4 +119,3 @@ class AppScanner:
                 return Gio.ThemedIcon.new(icon) if icon else None
 
         return AppEntry()
-
