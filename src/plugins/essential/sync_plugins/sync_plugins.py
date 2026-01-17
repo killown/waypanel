@@ -6,7 +6,7 @@ def get_plugin_metadata(panel):
     return {
         "id": id,
         "name": "Plugin Synchronizer",
-        "version": "1.4.1",
+        "version": "1.5.2",
         "enabled": True,
         "container": container,
         "description": (
@@ -22,6 +22,7 @@ def get_plugin_class():
     import os
     import shutil
     import json
+    import hashlib
     from src.plugins.core._base import BasePlugin
 
     class PluginSync(BasePlugin):
@@ -54,32 +55,42 @@ def get_plugin_class():
 
             self.run_sync()
 
-        def _get_folder_mtime(self, path):
-            """Finds the latest modification time in a directory tree."""
+        def _generate_folder_hash(self, path):
+            """
+            Generates a composite hash of files only.
+            Ignores directory mtimes to prevent jitter loops on metadata-heavy filesystems.
+            """
+            hasher = hashlib.md5()
             try:
-                latest = os.path.getmtime(path)
                 for root, dirs, files in os.walk(path):
                     if ".ignore_plugins" in files:
                         dirs[:] = []
                         continue
-                    dir_mtime = os.path.getmtime(root)
-                    if dir_mtime > latest:
-                        latest = dir_mtime
+
+                    dirs.sort()
+                    files.sort()
+
+                    # Track directory names to detect new/deleted folders
+                    for d in dirs:
+                        hasher.update(f"dir:{d}".encode())
+
                     for f in files:
+                        full_path = os.path.join(root, f)
                         try:
-                            m = os.path.getmtime(os.path.join(root, f))
-                            if m > latest:
-                                latest = m
+                            stat = os.stat(full_path)
+                            hasher.update(f"file:{f}".encode())
+                            hasher.update(str(stat.st_size).encode())
+                            # Strictly file mtime only
+                            hasher.update(str(int(stat.st_mtime)).encode())
                         except OSError:
                             continue
-                return latest
+                return hasher.hexdigest()
             except OSError:
-                return 0
+                return ""
 
         def run_sync(self):
             """
             Synchronizes sources into isolated subdirectories.
-            If the main plugins folder is missing, state is reset to force full sync.
             """
             if self._is_syncing:
                 return
@@ -92,9 +103,6 @@ def get_plugin_class():
                 if os.path.exists(self.state_file):
                     try:
                         os.remove(self.state_file)
-                        self.logger.info(
-                            "Plugins folder missing; state reset for full recovery."
-                        )
                     except OSError:
                         pass
 
@@ -110,7 +118,7 @@ def get_plugin_class():
                 try:
                     with open(self.state_file, "r") as f:
                         state = json.load(f)
-                except (json.JSONDecodeError, OSError):
+                except:
                     state = {}
 
             synced_any = False
@@ -121,27 +129,55 @@ def get_plugin_class():
                 if not os.path.exists(full_path):
                     continue
 
-                folder_name = os.path.basename(full_path)
-                specific_dest = os.path.join(self.dest_root, folder_name)
-                os.makedirs(specific_dest, exist_ok=True)
+                current_hash = self._generate_folder_hash(full_path)
+                last_hash = state.get(folder, "")
 
-                current_mtime = self._get_folder_mtime(full_path)
-                last_mtime = state.get(folder, 0)
+                if force_sync or current_hash != last_hash:
+                    folder_name = os.path.basename(full_path)
+                    specific_dest = os.path.join(self.dest_root, folder_name)
 
-                if force_sync or current_mtime != last_mtime:
-                    self.logger.info(f"Syncing {folder_name} to {specific_dest}")
-                    self.cmd.run(
-                        f"rsync -auz --delete --exclude='.ignore_plugins' '{full_path}/' '{specific_dest}/'"
-                    )
-                    new_state[folder] = current_mtime
+                    try:
+                        valid_subdirs = [
+                            d
+                            for d in os.listdir(full_path)
+                            if os.path.isdir(os.path.join(full_path, d))
+                            and not os.path.exists(
+                                os.path.join(full_path, d, ".ignore_plugins")
+                            )
+                            and d not in [".git", "__pycache__", "examples"]
+                        ]
+                    except OSError:
+                        continue
+
+                    os.makedirs(specific_dest, exist_ok=True)
+
+                    # Mirror valid subdirectories
+                    for plugin_dir in valid_subdirs:
+                        src_p = os.path.join(full_path, plugin_dir)
+                        dst_p = os.path.join(specific_dest, plugin_dir)
+                        os.makedirs(dst_p, exist_ok=True)
+
+                        self.cmd.run(
+                            f"rsync -auz --delete --exclude='.ignore_plugins' '{src_p}/' '{dst_p}/'"
+                        )
+
+                    # Cleanup
+                    try:
+                        for d in os.listdir(specific_dest):
+                            if d not in valid_subdirs:
+                                shutil.rmtree(os.path.join(specific_dest, d))
+                    except OSError:
+                        pass
+
+                    new_state[folder] = current_hash
                     synced_any = True
 
             if synced_any:
                 try:
                     with open(self.state_file, "w") as f:
                         json.dump(new_state, f)
-                except OSError as e:
-                    self.logger.error(f"Failed to save sync state: {e}")
+                except OSError:
+                    pass
 
                 def notify():
                     self.notify_send(
