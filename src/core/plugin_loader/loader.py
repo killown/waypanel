@@ -73,29 +73,40 @@ class PluginLoader:
 
     def _find_plugins_in_dir(self, directory_path):
         """
-        Recursively searches a directory for Python plugin modules and collects
-        their paths into self.plugins_to_process for later batch processing.
+        Recursively searches a directory for Python plugin modules.
+        If a .ignore_plugins file is found, the directory and all subdirectories are skipped.
         """
         sys.path.append(directory_path)
+
         for root, dirs, files in os.walk(directory_path):
-            if "examples" in dirs:
-                dirs.remove("examples")
-            if ".git" in dirs:
-                dirs.remove(".git")
-            if "__pycache__" in dirs:
-                dirs.remove("__pycache__")
+            if ".ignore_plugins" in files:
+                self.logger.info(
+                    f"Ignoring all plugins in: {root} (found .ignore_plugins)"
+                )
+
+                dirs[:] = []
+                continue
+
+            for internal_dir in ["examples", ".git", "__pycache__"]:
+                if internal_dir in dirs:
+                    dirs.remove(internal_dir)
+
             for file_name in files:
                 if file_name.endswith(".py") and file_name != "__init__.py":
                     module_name = file_name[:-3]
+
                     module_path = (
                         os.path.relpath(os.path.join(root, file_name), directory_path)
                         .replace("/", ".")
                         .replace(".py", "")
                     )
+
                     file_path = os.path.join(root, file_name)
                     self.plugins_path[module_name] = file_path
+
                     if module_name not in self.plugins_to_process:
                         self.plugins_to_process.append((module_name, module_path))
+
             self.data_helper.get_current_time_with_ms(
                 f"Plugin loader: searching for plugins in the specified location {root}"
             )
