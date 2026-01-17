@@ -7,60 +7,52 @@ def get_plugin_metadata(panel):
     return {
         "id": id,
         "name": "Plugin Synchronizer",
-        "version": "1.3.3",
+        "version": "1.4.0",
         "enabled": True,
         "container": container,
         "description": (
-            "Automates management of external plugin collections. "
-            "Features self-healing: if the local plugins folder is deleted, "
-            "the state is reset and folders are re-synced automatically."
+            "A developer-centric sync engine that allows you to work on plugins in any "
+            "local directory (like ~/Git) while automatically mirroring changes—including "
+            "file deletions—to the Waypanel environment. Supports multiple source folders "
+            "with isolated state tracking to ensure no file collisions."
         ),
     }
 
 
 def get_plugin_class():
-    """
-    Provides the plugin's main class with deferred imports.
-    """
     import os
     import shutil
     import json
     from src.plugins.core._base import BasePlugin
 
     class PluginSync(BasePlugin):
-        """
-        Synchronizes external directories to the local plugins folder.
-        Wipes state if the destination folder is missing to ensure a fresh sync.
-        """
-
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
-            self.dest_folder = os.path.expanduser("~/.local/share/waypanel/plugins/")
+            self.dest_root = os.path.expanduser("~/.local/share/waypanel/plugins/")
             self.state_file = os.path.join(
                 self.path_handler.get_data_dir(), "sync_plugins", "sync_state.json"
             )
 
         def on_start(self):
-            """
-            Registers settings and triggers sync.
-            """
             self.get_plugin_setting_add_hint(
                 ["source_folders"],
                 ["~/Git/waypanel-plugins", "~/Git/waypanel-plugins-extra/"],
-                "List of absolute paths to folders containing plugins to be synced.",
+                "List of paths to plugins to be synced.",
             )
 
             if not shutil.which("rsync"):
-                self.logger.warning("rsync not found. Synchronizer disabled.")
+                self.logger.warning("rsync not found.")
                 return
 
             self.run_sync()
 
         def _get_folder_mtime(self, path):
-            """Finds the latest modification time in a directory."""
             try:
                 latest = os.path.getmtime(path)
                 for root, _, files in os.walk(path):
+                    dir_mtime = os.path.getmtime(root)
+                    if dir_mtime > latest:
+                        latest = dir_mtime
                     for f in files:
                         try:
                             m = os.path.getmtime(os.path.join(root, f))
@@ -73,24 +65,14 @@ def get_plugin_class():
                 return 0
 
         def run_sync(self):
-            """
-            Synchronizes sources if the source is newer than state.
-            Wipes state file first if dest_folder is missing.
-            """
-            # 1. Check if the destination exists. If not, kill the state file.
-            if not os.path.exists(self.dest_folder):
+            # Check if root destination exists
+            if not os.path.exists(self.dest_root):
+                os.makedirs(self.dest_root, exist_ok=True)
                 if os.path.exists(self.state_file):
-                    try:
-                        os.remove(self.state_file)
-                        self.logger.info(
-                            "Destination folder missing. Resetting sync state."
-                        )
-                    except OSError:
-                        pass
-                os.makedirs(self.dest_folder, exist_ok=True)
+                    os.remove(self.state_file)
 
             source_folders = self.get_plugin_setting("source_folders", [])
-            if not source_folders or not isinstance(source_folders, list):
+            if not source_folders:
                 return
 
             os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
@@ -100,38 +82,43 @@ def get_plugin_class():
                 try:
                     with open(self.state_file, "r") as f:
                         state = json.load(f)
-                except (json.JSONDecodeError, OSError):
+                except:
                     state = {}
 
             synced_any = False
             new_state = state.copy()
 
             for folder in source_folders:
-                full_path = os.path.expanduser(folder)
+                full_path = os.path.expanduser(folder).rstrip("/")
                 if not os.path.exists(full_path):
                     continue
+
+                # Use the source folder name as a unique sub-directory in plugins/
+                # This prevents Source A and Source B from overwriting each other.
+                folder_name = os.path.basename(full_path)
+                specific_dest = os.path.join(self.dest_root, folder_name)
+
+                os.makedirs(specific_dest, exist_ok=True)
 
                 current_mtime = self._get_folder_mtime(full_path)
                 last_mtime = state.get(full_path, 0)
 
-                # Sync if source is newer OR if it's a first-time sync (last_mtime is 0)
-                if current_mtime > last_mtime:
-                    self.logger.info(f"Syncing changes from: {full_path}")
-                    self.cmd.run(f"rsync -auz '{full_path}/' '{self.dest_folder}'")
+                if current_mtime != last_mtime:
+                    self.logger.info(f"Isolated sync for: {folder_name}")
+                    self.cmd.run(
+                        f"rsync -auz --delete '{full_path}/' '{specific_dest}/'"
+                    )
                     new_state[full_path] = current_mtime
                     synced_any = True
 
             if synced_any:
-                try:
-                    with open(self.state_file, "w") as f:
-                        json.dump(new_state, f)
-                except OSError as e:
-                    self.logger.error(f"Failed to save sync state: {e}")
+                with open(self.state_file, "w") as f:
+                    json.dump(new_state, f)
 
                 def notify():
                     self.notify_send(
                         "Waypanel Sync",
-                        "Plugins synchronized from custom folders. Restart the panel.",
+                        "Multi-source sync complete. Deletions isolated.",
                         "plugins",
                     )
                     return False
@@ -139,7 +126,6 @@ def get_plugin_class():
                 self.glib.timeout_add_seconds(3, notify)
 
         def on_reload(self):
-            """Triggered on config save in Control Center."""
             self.run_sync()
 
     return PluginSync
