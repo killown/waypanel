@@ -59,7 +59,7 @@
   --theme-bg-view-vibrant: var(--color-vibrancy-dark-blur);
 
   --theme-bg-control-base: var(--color-bg-button);
-  --theme-bg-selected-primary: var(--color-steam-light-blue-functional);
+  --theme-bg-selected-primary: var( --color-fg-subtle);
   --theme-bg-selected-inactive: var(--color-accent-gray);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
   --theme-bg-text-selection: #66c0f460;
