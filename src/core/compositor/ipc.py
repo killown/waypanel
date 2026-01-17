@@ -344,6 +344,11 @@ class IPC:
         return self.sock.list_methods()  # pyright: ignore
 
     @handle_ipc_error
+    def list_config_options(self) -> list | None:
+        """List all wayfire methods."""
+        return self.sock.list_config_options()  # pyright: ignore
+
+    @handle_ipc_error
     def list_outputs(self) -> list[dict[str, Any]] | None:
         """List all outputs connected to the compositor."""
         return self.sock.list_outputs()  # pyright: ignore
