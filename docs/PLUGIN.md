@@ -90,14 +90,56 @@ Save this code as `~/.local/share/waypanel/plugins/minimal_random_plugin.py`:
 
 ---
 
-## 2\. BasePlugin
+## 2. BasePlugin API Reference
 
-By inheriting from `BasePlugin`, your class gains essential resources and lifecycle methods:
+By inheriting from `BasePlugin`, your class gains access to a comprehensive suite of properties and methods designed to handle concurrency, configuration, UI manipulation, and system interaction without blocking the main thread.
 
-- **`self.logger`:** The structured logger. Use `self.logger.info()`, `.error()`, etc.
-- **`self.ipc_server`:** The object for subscribing to Wayfire events and handling inter-plugin communication.
-- **`def on_start()`:** The required activation method.
-- **`def on_stop()`:** The required deactivation/cleanup method.
+### Lifecycle Hooks
+
+- **`def on_enable(self)`**: The primary activation hook. Initialize UI components, register signals, and start background logic here.
+- **`def on_disable(self)`**: The deactivation hook. Use this for custom cleanup (closing sockets or file handles). `BasePlugin` handles task cancellation automatically.
+
+### Concurrency & Async Helpers
+
+- **`self.run_in_thread(func, *args)`**: Executes a function in the global `ThreadPoolExecutor`.
+- **`self.run_in_async_task(coro)`**: Schedules an `asyncio` coroutine in the global event loop.
+- **`self.schedule_in_gtk_thread(func, *args)`**: Safely pushes a function call to the main GTK thread. **Required** for any UI updates originating from a thread or async task.
+- **`self.run_cmd(cmd)`**: Runs a shell command non-blockingly via the thread pool.
+
+### Configuration & State
+
+- **`self.get_plugin_setting(key, default)`**: Retrieves a value from `config.toml` specific to your plugin ID.
+- **`self.set_plugin_setting(key, value)`**: Persists a value to the configuration file.
+- **`self.get_plugin_setting_add_hint(key, default, hint)`**: Retrieves a setting and registers a documentation hint for the Control Center UI.
+- **`self.update_config(key_path, value)`**: Updates and reloads configuration dynamically.
+
+### UI & GTK Utilities (`self.gtk_helper`)
+
+- **`self.set_widget()`**: Validates and prepares `self.main_widget` for the panel.
+- **`self.create_popover(relative_to, content)`**: Creates a standardized GTK popover.
+- **`self.get_icon(icon_name, size)`**: Fetches a themed icon as a `Gtk.Image` or `Gdk.Texture`.
+- **`self.add_cursor_effect(widget, cursor_name)`**: Changes the mouse cursor on hover (e.g., `"pointer"`).
+- **`self.create_async_button(label, callback)`**: Returns a button that executes a callback in a background thread.
+- **`self.update_widget_safely(widget, update_func)`**: Validates widget existence before applying updates.
+
+### System & Compositor Helpers
+
+- **`self.notify_send(title, message, icon)`**: Dispatches a system notification.
+- **`self.get_data_path(filename)`**: Returns a persistent path in `~/.local/share/waypanel/` for plugin data.
+- **`self.get_cache_path(filename)`**: Returns a path in the system cache directory.
+- **`self.set_keyboard_on_demand(mode=True)`**: Toggles whether the panel intercepts keyboard focus (essential for search inputs).
+- **`self.wf_helper.is_view_valid(view_id)`**: Checks if a Wayfire window/view is still active.
+
+### Data Validation (`self.data_helper`)
+
+- **`self.validate_widget(widget)`**: Ensures an object is a valid `Gtk.Widget`.
+- **`self.validate_string(obj, name)`**: Checks for non-empty strings and logs errors on failure.
+- **`self.validate_method(method)`**: Verifies if a callback is actually callable.
+
+### Module & Environment
+
+- **`self.lazy_load_module(module_name)`**: Imports a module only when called and caches it to keep startup performance high.
+- **`self.module_exist(module_name)`**: Checks for the existence of a library and attempts to install it if missing.
 
 ---
 
@@ -183,32 +225,41 @@ For plugins that run logic/services only (no visible UI).
 
 ---
 
-## 4\. Wayfire IPC Events (Compositor State Monitoring)
+## 4. Wayfire IPC Events (Compositor State Monitoring)
 
-Plugins subscribe to these events via `self.ipc_server` to monitor changes in the Wayfire compositor state (windows, workspaces, monitors).
+Plugins subscribe to these events via `self.ipc_server` to monitor and react to changes in the Wayfire compositor state. These events are essential for building taskbars, pagers, and window switchers.
 
 ### 4.1. View-Related Events (Window Management)
 
-    "view-focused"          # A window gained input focus.
-    "view-unmapped"         # A window was hidden or closed.
-    "view-mapped"           # A window became visible.
-    "view-title-changed"    # The window's title was updated.
-    "view-app-id-changed"   # The window's application ID changed.
-    "view-set-output"       # The window was moved to a different monitor.
-    "view-workspace-changed"# The window moved to a different workspace.
-    "view-geometry-changed" # The position or size changed.
-    "view-tiled"            # The window was snapped to a side.
-    "view-minimized"        # The window was minimized.
-    "view-fullscreen"       # The window entered/exited fullscreen mode.
-    "view-sticky"           # The window became visible on all workspaces.
-    "view-wset-changed"     # The view's assigned workspace set changed.
+These events track the lifecycle and properties of individual windows (views).
+
+- **`view-focused`**: Emitted when input focus changes. The `view` field may contain the toplevel view object or `None` (common during switcher/overview activation).
+- **`view-pre-map`**: Emitted immediately before a view is mapped. Note: This is a restricted event and is only received if explicitly subscribed to.
+- **`view-mapped`**: Emitted when a view becomes visible on the screen.
+- **`view-unmapped`**: Emitted when a view is hidden or closed.
+- **`view-title-changed`**: Emitted when the window title is updated.
+- **`view-app-id-changed`**: Emitted when the application ID (class) changes.
+- **`view-geometry-changed`**: Emitted when the view's position or size is modified.
+- **`view-tiled`**: Emitted when a view is tiled, snapped, or floating state changes.
+- **`view-minimized`**: Emitted when a view is minimized or restored.
+- **`view-fullscreen`**: Emitted when a view enters or exits fullscreen mode.
+- **`view-sticky`**: Emitted when a view becomes "sticky" (visible on all workspaces) or unsticky.
+- **`view-set-output`**: Emitted when a view is moved to another physical output (monitor).
+- **`view-workspace-changed`**: Emitted when a view is moved between workspaces.
+- **`view-wset-changed`**: Emitted when a view's assigned workspace set changes.
 
 ### 4.2. Output and Workspace Events (Desktop Management)
 
-    "wset-workspace-changed"        # The active workspace set of an output changed.
-    "workspace-activated"           # User switched to a new workspace.
-    "output-wset-changed"           # An output's workspace set (wset) changed.
-    "plugin-activation-state-changed" # A Wayfire plugin was activated/deactivated.
-    "output-gain-focus"             # An output (monitor) gained input focus.
-    "output-layout-changed"         # Monitor configuration changed.
-    "output-removed"                # A monitor was disconnected.
+These events track the state of monitors and the virtual desktop layout.
+
+- **`workspace-activated`**: Emitted when the user switches to a different workspace.
+- **`wset-workspace-changed`**: Emitted when the active workspace inside a specific workspace set changes.
+- **`output-gain-focus`**: Emitted when a specific monitor (output) gains input focus.
+- **`output-wset-changed`**: Emitted when an output changes its assigned workspace set.
+- **`output-layout-changed`**: Emitted when the physical monitor configuration changes (resolution, position, or plugging/unplugging monitors).
+- **`output-removed`**: Emitted when a monitor is disconnected.
+
+### 4.3. Input and Plugin Events
+
+- **`keyboard-modifier-state-changed`**: Emitted when modifier keys (Shift, Ctrl, Alt, Super) are pressed or released.
+- **`plugin-activation-state-changed`**: Emitted when a Wayfire plugin (like `expo` or `grid`) is activated or deactivated. This is useful for hiding the panel during full-screen overviews.
