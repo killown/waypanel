@@ -1,7 +1,6 @@
 def get_plugin_metadata(panel):
     id = "org.waypanel.plugin.plugin_sync"
     default_container = "background"
-
     container, id = panel.config_handler.get_plugin_container(default_container, id)
 
     return {
@@ -37,6 +36,7 @@ def get_plugin_class():
             self.state_file = os.path.join(
                 self.path_handler.get_data_dir(), "sync_plugins", "sync_state.json"
             )
+            self._is_syncing = False
 
         def on_start(self):
             """
@@ -58,8 +58,10 @@ def get_plugin_class():
             """Finds the latest modification time in a directory tree."""
             try:
                 latest = os.path.getmtime(path)
-                for root, _, files in os.walk(path):
-                    # Check directory mtime to capture deletions
+                for root, dirs, files in os.walk(path):
+                    if ".ignore_plugins" in files:
+                        dirs[:] = []
+                        continue
                     dir_mtime = os.path.getmtime(root)
                     if dir_mtime > latest:
                         latest = dir_mtime
@@ -79,7 +81,10 @@ def get_plugin_class():
             Synchronizes sources into isolated subdirectories.
             If the main plugins folder is missing, state is reset to force full sync.
             """
-            # 1. Recovery Check: If dest_root is gone, we must sync everything regardless of state
+            if self._is_syncing:
+                return
+            self._is_syncing = True
+
             force_sync = False
             if not os.path.exists(self.dest_root):
                 os.makedirs(self.dest_root, exist_ok=True)
@@ -95,6 +100,7 @@ def get_plugin_class():
 
             source_folders = self.get_plugin_setting("source_folders", [])
             if not source_folders or not isinstance(source_folders, list):
+                self._is_syncing = False
                 return
 
             os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
@@ -115,7 +121,6 @@ def get_plugin_class():
                 if not os.path.exists(full_path):
                     continue
 
-                # Isolate destination by source folder name
                 folder_name = os.path.basename(full_path)
                 specific_dest = os.path.join(self.dest_root, folder_name)
                 os.makedirs(specific_dest, exist_ok=True)
@@ -123,12 +128,10 @@ def get_plugin_class():
                 current_mtime = self._get_folder_mtime(full_path)
                 last_mtime = state.get(folder, 0)
 
-                # Sync if timestamps differ or if recovery is forced
                 if force_sync or current_mtime != last_mtime:
                     self.logger.info(f"Syncing {folder_name} to {specific_dest}")
-                    # --delete mirrors the source exactly within its subfolder
                     self.cmd.run(
-                        f"rsync -auz --delete '{full_path}/' '{specific_dest}/'"
+                        f"rsync -auz --delete --exclude='.ignore_plugins' '{full_path}/' '{specific_dest}/'"
                     )
                     new_state[folder] = current_mtime
                     synced_any = True
@@ -149,6 +152,8 @@ def get_plugin_class():
                     return False
 
                 self.glib.timeout_add_seconds(3, notify)
+
+            self._is_syncing = False
 
         def on_reload(self):
             """Triggered on config save in Control Center."""
