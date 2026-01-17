@@ -190,6 +190,9 @@ class PluginLoader:
                     continue
                 try:
                     module = importlib.import_module(module_path)
+                    self.logger.info(
+                        f"Plugin Loader: Imported {module_name} from {getattr(module, '__file__', 'unknown path')}"
+                    )
                     plugins_imported_in_chunk += 1
                     if not hasattr(module, "get_plugin_metadata") or not hasattr(
                         module, "get_plugin_class"
