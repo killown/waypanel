@@ -105,7 +105,17 @@ def get_plugin_class():
 
             # Customizable System Action Icons
             self.system_button_config = {
-                "Settings": {
+                "Panel Settings": {
+                    "icons": self.get_plugin_setting(
+                        ["buttons", "icons", "settings"],
+                        [
+                            "settings-configure-symbolic",
+                            "systemsettings-symbolic",
+                            "settings",
+                        ],
+                    ),
+                },
+                "Wayfire Settings": {
                     "icons": self.get_plugin_setting(
                         ["buttons", "icons", "settings"],
                         [
@@ -361,6 +371,24 @@ def get_plugin_class():
             self.main_box.append(self.middle_hbox)
             self.popover_launcher.set_child(self.main_box)
 
+        def launch_config_viewer(self):
+            config_viewer = self.plugins.get("wayfire_config_viewer")
+            if hasattr(config_viewer, "window"):
+                # set the view focus
+                if config_viewer.window and config_viewer.window.get_visible():
+                    id_found = [
+                        i["id"]
+                        for i in self.ipc.list_views()
+                        if i["app-id"] == "org.waypanel"
+                        and i["title"] == "Wayfire Configuration"
+                    ]
+                    if id_found:
+                        self.ipc.set_focus(id_found[0])
+                        self.popover_launcher.popdown()
+                # open a new window instance
+                if hasattr(config_viewer, "_open_viewer"):
+                    config_viewer._open_viewer()
+
         def on_system_action_clicked(self, button, action):
             """Executes requested system action and closes popover."""
             if action == "Exit Panel":
@@ -375,10 +403,12 @@ def get_plugin_class():
                 self.subprocess.Popen(self.reboot_command.split())
             elif action == "Lock":
                 self.subprocess.Popen(self.lock_command.split())
-            elif action == "Settings":
+            elif action == "Panel Settings":
                 control_center = self.plugins.get("control_center")
                 if control_center:
                     control_center.do_activate()
+            elif action == "Wayfire Settings":
+                self.launch_config_viewer()
 
             if self.popover_launcher:
                 self.popover_launcher.popdown()
