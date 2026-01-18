@@ -667,7 +667,7 @@ def get_plugin_class():
 
             out = next(o for o in outputs if o["id"] == view["output-id"])
 
-            w, h = 800, 680
+            w, h = 800, 710
             wa = out["workarea"]
 
             target_x = wa["x"] + (wa["width"] - w) // 2
