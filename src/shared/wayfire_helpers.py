@@ -343,6 +343,38 @@ class WayfireHelpers:
             )
             return -1
 
+    def center_view_on_output(
+        self, view_id: int, w: int | None = None, h: int | None = None
+    ):
+        """Centers a view within its assigned output's workarea.
+
+        Args:
+            view_id: The unique identifier of the view.
+            w: Target width. If None, current view width is used.
+            h: Target height. If None, current view height is used.
+
+        Returns:
+            The result of the IPC configure command.
+        """
+        view = self.ipc.get_view(view_id)
+        outputs = self.ipc.list_outputs()
+
+        out = next(o for o in outputs if o["id"] == view["output-id"])
+
+        if w is None:
+            w = view["geometry"]["width"]
+        if h is None:
+            h = view["geometry"]["height"]
+
+        wa = out["workarea"]
+
+        target_x = wa["x"] + (wa["width"] - w) // 2
+        target_y = wa["y"] + (wa["height"] - h) // 2
+
+        return self.ipc.configure_view(
+            view_id, int(target_x), int(target_y), int(w), int(h)
+        )
+
     def find_view_middle_cursor_position(
         self,
         view_geometry: Dict[str, int],

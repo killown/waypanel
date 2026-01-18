@@ -701,20 +701,6 @@ def get_plugin_class():
                     350, self.remote_apps._trigger_remote_search, query
                 )
 
-        def center_view_on_output(self, view_id):
-            view = self.ipc.get_view(view_id)
-            outputs = self.ipc.list_outputs()
-
-            out = next(o for o in outputs if o["id"] == view["output-id"])
-
-            w, h = 800, 710
-            wa = out["workarea"]
-
-            target_x = wa["x"] + (wa["width"] - w) // 2
-            target_y = wa["y"] + (wa["height"] - h) // 2
-
-            return self.ipc.configure_view(view_id, int(target_x), int(target_y), w, h)
-
         def manage_local_app(self, app_id, app_info):
             """Opens the Uninstall Window for local Flatpaks."""
             hit_data = {
@@ -727,7 +713,7 @@ def get_plugin_class():
             def configure_uninstall_view():
                 id_found = self.view_id_found(title="Flatpak Uninstaller")
                 if id_found:
-                    self.center_view_on_output(id_found[0])
+                    self.wf_helper.center_view_on_output(id_found[0], 800, 710)
 
             self.glib.timeout_add(150, configure_uninstall_view)
 
@@ -741,7 +727,7 @@ def get_plugin_class():
                 id_found = self.view_id_found(title="Flatpak Installer")
                 if id_found:
                     id = id_found[0]
-                    self.center_view_on_output(id)
+                    self.wf_helper.center_view_on_output(id, 800, 710)
 
             self.glib.timeout_add(100, configure_view_later)
 
