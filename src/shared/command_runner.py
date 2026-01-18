@@ -2,7 +2,7 @@ import os
 import asyncio
 import subprocess
 from typing import List, Optional, Tuple
-from gi.repository import GLib  # pyright: ignore
+from gi.repository import GLib
 
 
 class CommandRunner:
@@ -30,8 +30,9 @@ class CommandRunner:
         uid = os.getuid()
         runtime_dir = f"/run/user/{uid}"
 
-        wayland_display = "wayland-0"
+        wayland_display = os.getenv("WAYLAND_DISPLAY", "wayland-0")
         display = os.getenv("DISPLAY", ":0")
+        dbus_addr = os.getenv("DBUS_SESSION_BUS_ADDRESS", "")
 
         try:
             if os.path.exists(runtime_dir):
@@ -43,15 +44,21 @@ class CommandRunner:
         except Exception as e:
             self.logger.error(f"Error detecting host wayland socket: {e}")
 
-        return [
+        args = [
             f"--env=XDG_RUNTIME_DIR={runtime_dir}",
             f"--env=WAYLAND_DISPLAY={wayland_display}",
             f"--env=DISPLAY={display}",
-            "--env=XDG_DATA_DIRS=/usr/local/share:/usr/share",
-            "--env=DBUS_SESSION_BUS_ADDRESS=",
+            f"--env=XDG_DATA_DIRS={runtime_dir}/flatpak/exports/share:/usr/local/share:/usr/share",
             "--env=PYTHONPATH=",
+            "--env=PYTHONHOME=",
             "--env=LD_LIBRARY_PATH=",
+            "--env=LD_PRELOAD=",
         ]
+
+        if dbus_addr:
+            args.append(f"--env=DBUS_SESSION_BUS_ADDRESS={dbus_addr}")
+
+        return args
 
     def _wrap_cmd(self, cmd: List[str]) -> List[str]:
         """
@@ -69,26 +76,23 @@ class CommandRunner:
         try:
             final_cmd = cmd
             if self.is_flatpak:
-                env_str = " ".join(self._get_flatpak_env_args())
-                final_cmd = f"flatpak-spawn --host {env_str} {cmd}"
+                env_args = self._get_flatpak_env_args()
+                spawn_cmd = ["flatpak-spawn", "--host"] + env_args + ["sh", "-c", cmd]
 
                 def run_flatpak():
                     subprocess.Popen(
-                        final_cmd,
-                        shell=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True,
+                        spawn_cmd,
                         start_new_session=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
                     )
                     return False
 
                 GLib.idle_add(run_flatpak)
                 return
 
-            # Host System Logic
             if os.getenv("WAYFIRE_SOCKET"):
-                # Use Wayfire IPC to ensure the compositor handles the process lifecycle
+
                 def run_wayfire():
                     if hasattr(self, "ipc") and self.ipc:
                         self.ipc.run_cmd(final_cmd)
@@ -97,7 +101,6 @@ class CommandRunner:
                 GLib.idle_add(run_wayfire)
 
             elif os.getenv("SWAYSOCK"):
-                # Sway handles direct Popen better via its own environment
                 GLib.idle_add(
                     lambda: subprocess.Popen(
                         final_cmd,
@@ -108,7 +111,6 @@ class CommandRunner:
                         start_new_session=True,
                     )
                 )
-                self.logger.info(f"Command scheduled: {final_cmd}")
         except Exception as e:
             self.logger.error(
                 error=e, message=f"Error running command: {cmd}", level="error"
@@ -155,8 +157,7 @@ class CommandRunner:
         Opens a URL in the default web browser without blocking the UI.
         """
         try:
-            self.run(f'xdg-open "{url}"')
-            self.logger.info(f"Attempted to open URL: {url} with xdg-open.")
+            self.run(f"xdg-open '{url}'")
         except Exception as e:
             self.logger.error(
                 error=e,
