@@ -25,14 +25,11 @@ class AppScanner:
                 "/run/host/user-share/flatpak/exports/share/applications"
             )
             host_flatpak_sys = "/run/host/share/flatpak/exports/share/applications"
-            host_local_apps = "/run/host/user-local-share/applications"
 
             if os.path.isdir(host_flatpak_user):
                 self.search_paths.append(host_flatpak_user)
             if os.path.isdir(host_flatpak_sys):
                 self.search_paths.append(host_flatpak_sys)
-            if os.path.isdir(host_local_apps):
-                self.search_paths.append(host_local_apps)
 
     def scan(self) -> Dict[str, Any]:
         """
@@ -53,8 +50,23 @@ class AppScanner:
                         continue
 
                     file_path = os.path.join(app_dir, file_name)
-                    keyfile = GLib.KeyFile.new()
 
+                    if os.path.islink(file_path):
+                        target = os.readlink(file_path)
+                        if not os.path.isabs(target):
+                            target = os.path.join(app_dir, target)
+
+                        if target.startswith("/home/") and not target.startswith(
+                            "/run/host/"
+                        ):
+                            target = os.path.join("/run/host", target.lstrip("/"))
+
+                        file_path = target
+
+                    if not os.path.exists(file_path):
+                        continue
+
+                    keyfile = GLib.KeyFile.new()
                     try:
                         if not keyfile.load_from_file(
                             file_path, GLib.KeyFileFlags.NONE
@@ -63,22 +75,21 @@ class AppScanner:
                     except GLib.Error:
                         continue
 
-                    if not keyfile.has_group("Desktop Entry"):
-                        continue
-
-                    if self._should_skip(keyfile):
+                    if not keyfile.has_group("Desktop Entry") or self._should_skip(
+                        keyfile
+                    ):
                         continue
 
                     name = keyfile.get_locale_string("Desktop Entry", "Name")
                     if not name:
                         continue
 
-                    icon_name = self._get_string(keyfile, "Icon")
-                    exec_cmd = self._get_string(keyfile, "Exec")
-                    keywords = self._get_list(keyfile, "Keywords")
-
                     all_apps[file_name] = self._create_app_object(
-                        file_name, name, icon_name, exec_cmd, keywords
+                        file_name,
+                        name,
+                        self._get_string(keyfile, "Icon"),
+                        self._get_string(keyfile, "Exec"),
+                        self._get_list(keyfile, "Keywords"),
                     )
             except PermissionError:
                 continue
