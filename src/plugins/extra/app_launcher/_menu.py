@@ -37,16 +37,24 @@ class AppMenuHandler:
         for margin in ["start", "end", "top", "bottom"]:
             getattr(menu_box, f"set_margin_{margin}")(10)
 
-        # Handle unpacking safely for both 3-tuple (original) and 4-tuple (remote/updated) formats
         mytext = vbox.MYTEXT
         name, desktop_file, keywords = mytext[:3]
         is_remote = mytext[3] if len(mytext) > 3 else False
 
         dock_config = self.plugin.get_root_setting([self.plugin.dockbar_id], {})
-        is_docked = any(
-            v.get("desktop_file") == desktop_file
-            for v in dock_config.get("app", {}).values()
-        )
+        apps_data = dock_config.get("app", [])
+
+        is_docked = False
+        if isinstance(apps_data, list):
+            is_docked = any(
+                v.get("desktop_file") == desktop_file
+                for v in apps_data
+                if isinstance(v, dict)
+            )
+        elif isinstance(apps_data, dict):
+            is_docked = any(
+                v.get("desktop_file") == desktop_file for v in apps_data.values()
+            )
 
         if is_docked:
             dock_btn = self.plugin.gtk.Button.new_with_label("Remove from dockbar")
@@ -70,7 +78,6 @@ class AppMenuHandler:
             )
             menu_box.append(uninst_btn)
 
-        # Ignore/Unignore Logic
         ignored = self.plugin.get_plugin_setting(["behavior", "ignored_apps"], [])
 
         if desktop_file in ignored:
@@ -123,11 +130,19 @@ class AppMenuHandler:
             self.plugin.popover_launcher.popdown()
 
     def add_to_dockbar(self, button, name, desktop_file, popover):
-        """Adds an application to the dockbar settings."""
+        """Adds an application to the dockbar settings.
+
+        Args:
+            button: The Gtk.Button clicked.
+            name: The display name of the application.
+            desktop_file: The .desktop file name.
+            popover: The menu popover to close.
+        """
         import os
 
         wclass = os.path.splitext(desktop_file)[0]
         entry = {
+            "id": name,
             "cmd": f"gtk-launch {desktop_file.split('.desktop')[0]}",
             "icon": wclass,
             "wclass": wclass,
@@ -136,8 +151,12 @@ class AppMenuHandler:
             "initial_title": name,
         }
         config = self.plugin.get_root_setting([self.plugin.dockbar_id], {})
-        apps = config.get("app", {})
-        apps[name] = entry
+        apps = config.get("app", [])
+
+        if isinstance(apps, dict):
+            apps = list(apps.values())
+
+        apps.append(entry)
         config["app"] = apps
         self.plugin.config_handler.set_root_setting([self.plugin.dockbar_id], config)
         popover.popdown()
@@ -184,4 +203,3 @@ class AppMenuHandler:
                         self.plugin.cmd.run(cmd)
                     popover.popdown()
                     return
-
