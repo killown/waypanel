@@ -2,7 +2,6 @@ import os
 import threading
 import re
 import requests
-import subprocess
 from gi.repository import GdkPixbuf, Gdk
 
 
@@ -235,6 +234,7 @@ class FlatpakInstallWindow:
         self.spinner.set_visible(True)
         self.spinner.start()
 
+        # Build the command for the host system
         cmd = [
             "flatpak",
             "install",
@@ -244,6 +244,8 @@ class FlatpakInstallWindow:
             "flathub",
             self.app_id,
         ]
+
+        # Use flatpak-spawn --host to escape the panel's sandbox
         if os.path.exists("/.flatpak-info"):
             cmd = ["flatpak-spawn", "--host"] + cmd
 
@@ -284,8 +286,8 @@ class FlatpakInstallWindow:
         return True
 
     def _launch_app(self, _):
-        cmd = ["flatpak", "run", self.app_id]
-        if os.path.exists("/.flatpak-info"):
-            cmd = ["flatpak-spawn", "--host"] + cmd
-        subprocess.Popen(cmd)
-        self.window.destroy()
+        """Triggers application launch via the plugin's CommandRunner to escape sandbox."""
+        cmd = f"flatpak run {self.app_id}"
+        if hasattr(self.app_launcher, "cmd"):
+            self.app_launcher.cmd.run(cmd)
+            self.window.destroy()
