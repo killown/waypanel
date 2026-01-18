@@ -132,21 +132,66 @@ class PackageHelper:
         Args:
             desktop_id: The identifier for the application to uninstall.
         """
-        terminal = self._get_terminal()
-        if not terminal:
-            self.logger.error("AppLauncher: No terminal found for uninstall.")
-            return
-
         file_path = self._get_desktop_file_path(desktop_id)
         if not file_path:
             self.logger.error(f"AppLauncher: Path not found for {desktop_id}")
+            return
+
+        app_id = desktop_id.removesuffix(".desktop")
+
+        if not hasattr(self.plugin, "active_windows"):
+            self.plugin.active_windows = set()
+
+        if app_id in self.plugin.active_windows:
+            return
+
+        is_app_flatpak = "flatpak" in file_path
+        if not is_app_flatpak:
+            check_cmd = ["flatpak", "info", app_id]
+            if self.is_flatpak:
+                check_cmd = ["flatpak-spawn", "--host"] + check_cmd
+            try:
+                is_app_flatpak = (
+                    subprocess.run(check_cmd, capture_output=True).returncode == 0
+                )
+            except Exception:
+                is_app_flatpak = False
+
+        if is_app_flatpak:
+            from ._uninstall_window import FlatpakUninstallWindow
+
+            self.plugin.active_windows.add(app_id)
+
+            hit_data = {"name": app_id.split(".")[-1].capitalize(), "_local_icon": None}
+
+            def on_window_destroy(*_):
+                self.plugin.active_windows.discard(app_id)
+
+            def launch_gui():
+                win = FlatpakUninstallWindow(self.plugin, hit_data, app_id)
+                win.window.connect("destroy", on_window_destroy)
+
+            self.plugin.glib.idle_add(launch_gui)
+
+            if hasattr(self.plugin, "center_view_on_output"):
+
+                def configure_uninstall_view():
+                    id_found = self.plugin.view_id_found(title="Flatpak Uninstaller")
+                    if id_found:
+                        self.plugin.center_view_on_output(id_found[0])
+
+                self.plugin.glib.timeout_add(200, configure_uninstall_view)
+            return
+
+        terminal = self._get_terminal()
+        if not terminal:
+            self.logger.error("AppLauncher: No terminal found for uninstall.")
             return
 
         host_path = file_path
         if self.is_flatpak and host_path.startswith("/run/host"):
             host_path = host_path.replace("/run/host", "", 1)
 
-        app_id = desktop_id.removesuffix(".desktop")
         base_dir = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
         script_path = os.path.join(base_dir, "waypanel_uninstall.sh")
 
@@ -210,8 +255,6 @@ read -r
         else:
             final_cmd = f"{terminal} {flags} {script_path}"
 
-        self.logger.info(f"AppLauncher: Executing: {final_cmd}")
-
         try:
             if hasattr(self.plugin, "cmd") and self.plugin.cmd:
                 self.plugin.cmd.run(final_cmd)
@@ -236,57 +279,20 @@ read -r
             return []
 
     def install_flatpak(self, hit: dict):
-        """
-        Displays app details and prompts for installation in terminal.
+        """Normaliza o ID e inicia o processo de instalação visual."""
+        raw_id = hit.get("flatpakAppId") or hit.get("id")
 
-        Args:
-            hit (dict): Flathub application metadata.
-        """
-        terminal = self._get_terminal() or "xterm"
-        app_id = hit.get("app_id")
-        name = hit.get("name", "Unknown")
-        summary = hit.get("summary", "No summary.")
-        license = hit.get("project_license", "Unknown")
-        dev = hit.get("developer_name", "Unknown")
-        desc = hit.get("description", "").replace("'", "").replace('"', "")
-
-        script_path = "/tmp/waypanel_flatpak_install.sh"
-        content = f"""#!/bin/bash
-echo -e "\\033[1;34m[FLATHUB APPLICATION INFO]\\033[0m"
-echo -e "\\033[1mName:\\033[0m {name}"
-echo -e "\\033[1mID:\\033[0m   {app_id}"
-echo -e "\\033[1mDev:\\033[0m  {dev}"
-echo -e "\\033[1mLic:\\033[0m  {license}"
-echo -e "\\n\\033[1mSummary:\\033[0m\\n{summary}"
-echo -e "\\n\\033[1mDescription:\\033[0m"
-echo "{desc}" | fold -s -w 80
-echo -e "\\n--------------------------------------------------"
-echo -en "Install this application? (y/N): "
-read -r opt
-if [[ "$opt" =~ ^[Yy]$ ]]; then
-    flatpak install flathub {app_id} -y
-fi
-echo -e "\\nPress Enter to close..."
-read -r
-"""
-        try:
-            with open(script_path, "w") as f:
-                f.write(content)
-            os.chmod(script_path, 0o755)
-        except Exception as e:
-            self.logger.error(f"PackageHelper: Script failure: {e}")
+        if not raw_id:
+            self.logger.error(f"PackageHelper: ID ausente nos dados: {hit}")
             return
 
-        flags = "--hold -e" if terminal in ["kitty", "alacritty"] else "-e"
-        if terminal == "gnome-terminal":
-            flags = "--"
+        app_id = raw_id.replace("_", ".")
 
-        if self.is_flatpak:
-            env_args = " ".join(self._get_flatpak_env_args())
-            final_cmd = (
-                f"flatpak-spawn --host {env_args} {terminal} {flags} {script_path}"
+        if app_id.count(".") < 2:
+            self.logger.warning(
+                f"PackageHelper: ID '{app_id}' pode ser inválido para o Flatpak."
             )
-        else:
-            final_cmd = f"{terminal} {flags} {script_path}"
 
-        subprocess.Popen(final_cmd.split())
+        from ._install_window import FlatpakInstallWindow
+
+        FlatpakInstallWindow(self.plugin, hit, app_id)

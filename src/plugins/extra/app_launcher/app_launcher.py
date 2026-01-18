@@ -27,6 +27,7 @@ def get_plugin_class():
     from ._scanner import AppScanner
     from ._menu import AppMenuHandler
     from ._remote_apps import RemoteApps
+    from ._uninstall_window import FlatpakUninstallWindow
 
     class AppLauncher(BasePlugin):
         """
@@ -371,17 +372,19 @@ def get_plugin_class():
             self.main_box.append(self.middle_hbox)
             self.popover_launcher.set_child(self.main_box)
 
+        def view_id_found(self, title="Wayfire Configuration"):
+            return [
+                i["id"]
+                for i in self.ipc.list_views()
+                if i["app-id"] == "org.waypanel" and i["title"] == title
+            ]
+
         def launch_config_viewer(self):
             config_viewer = self.plugins.get("wayfire_config_viewer")
             if hasattr(config_viewer, "window"):
                 # set the view focus
                 if config_viewer.window and config_viewer.window.get_visible():
-                    id_found = [
-                        i["id"]
-                        for i in self.ipc.list_views()
-                        if i["app-id"] == "org.waypanel"
-                        and i["title"] == "Wayfire Configuration"
-                    ]
+                    id_found = self.view_id_found()
                     if id_found:
                         self.ipc.set_focus(id_found[0])
                         self.popover_launcher.popdown()
@@ -658,11 +661,49 @@ def get_plugin_class():
                     350, self.remote_apps._trigger_remote_search, query
                 )
 
+        def center_view_on_output(self, view_id):
+            view = self.ipc.get_view(view_id)
+            outputs = self.ipc.list_outputs()
+
+            out = next(o for o in outputs if o["id"] == view["output-id"])
+
+            w, h = 800, 680
+            wa = out["workarea"]
+
+            target_x = wa["x"] + (wa["width"] - w) // 2
+            target_y = wa["y"] + (wa["height"] - h) // 2
+
+            return self.ipc.configure_view(view_id, int(target_x), int(target_y), w, h)
+
+        def manage_local_app(self, app_id, app_info):
+            """Opens the Uninstall Window for local Flatpaks."""
+            hit_data = {
+                "name": app_info.get_name(),
+                "_local_icon": None,  # AppScanner info usually handles icon differently
+            }
+
+            FlatpakUninstallWindow(self, hit_data, app_id)
+
+            def configure_uninstall_view():
+                id_found = self.view_id_found(title="Flatpak Uninstaller")
+                if id_found:
+                    self.center_view_on_output(id_found[0])
+
+            self.glib.timeout_add(150, configure_uninstall_view)
+
         def install_remote_app(self, hit: dict):
             """Triggers installation and closes the launcher popover."""
             self.menu_handler.pkg_helper.install_flatpak(hit)
             if self.popover_launcher:
                 self.popover_launcher.popdown()
+
+            def configure_view_later():
+                id_found = self.view_id_found(title="Flatpak Installer")
+                if id_found:
+                    id = id_found[0]
+                    self.center_view_on_output(id)
+
+            self.glib.timeout_add(100, configure_view_later)
 
         def on_filter_invalidate(self, row):
             """Filters based on search query and the ignore list."""
