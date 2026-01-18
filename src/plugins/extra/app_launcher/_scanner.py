@@ -20,6 +20,20 @@ class AppScanner:
             "/run/host/usr/share/applications",
         ]
 
+        if os.path.exists("/.flatpak-info"):
+            host_flatpak_user = (
+                "/run/host/user-share/flatpak/exports/share/applications"
+            )
+            host_flatpak_sys = "/run/host/share/flatpak/exports/share/applications"
+            host_local_apps = "/run/host/user-local-share/applications"
+
+            if os.path.isdir(host_flatpak_user):
+                self.search_paths.append(host_flatpak_user)
+            if os.path.isdir(host_flatpak_sys):
+                self.search_paths.append(host_flatpak_sys)
+            if os.path.isdir(host_local_apps):
+                self.search_paths.append(host_local_apps)
+
     def scan(self) -> Dict[str, Any]:
         """
         Scans search paths for valid, non-hidden desktop applications.
@@ -33,36 +47,41 @@ class AppScanner:
             if not os.path.isdir(app_dir):
                 continue
 
-            for file_name in os.listdir(app_dir):
-                if not file_name.endswith(".desktop") or file_name in all_apps:
-                    continue
-
-                file_path = os.path.join(app_dir, file_name)
-                keyfile = GLib.KeyFile.new()
-
-                try:
-                    if not keyfile.load_from_file(file_path, GLib.KeyFileFlags.NONE):
+            try:
+                for file_name in os.listdir(app_dir):
+                    if not file_name.endswith(".desktop") or file_name in all_apps:
                         continue
-                except GLib.Error:
-                    continue
 
-                if not keyfile.has_group("Desktop Entry"):
-                    continue
+                    file_path = os.path.join(app_dir, file_name)
+                    keyfile = GLib.KeyFile.new()
 
-                if self._should_skip(keyfile):
-                    continue
+                    try:
+                        if not keyfile.load_from_file(
+                            file_path, GLib.KeyFileFlags.NONE
+                        ):
+                            continue
+                    except GLib.Error:
+                        continue
 
-                name = keyfile.get_locale_string("Desktop Entry", "Name")
-                if not name:
-                    continue
+                    if not keyfile.has_group("Desktop Entry"):
+                        continue
 
-                icon_name = self._get_string(keyfile, "Icon")
-                exec_cmd = self._get_string(keyfile, "Exec")
-                keywords = self._get_list(keyfile, "Keywords")
+                    if self._should_skip(keyfile):
+                        continue
 
-                all_apps[file_name] = self._create_app_object(
-                    file_name, name, icon_name, exec_cmd, keywords
-                )
+                    name = keyfile.get_locale_string("Desktop Entry", "Name")
+                    if not name:
+                        continue
+
+                    icon_name = self._get_string(keyfile, "Icon")
+                    exec_cmd = self._get_string(keyfile, "Exec")
+                    keywords = self._get_list(keyfile, "Keywords")
+
+                    all_apps[file_name] = self._create_app_object(
+                        file_name, name, icon_name, exec_cmd, keywords
+                    )
+            except PermissionError:
+                continue
 
         return all_apps
 
