@@ -22,6 +22,7 @@ def get_plugin_class():
     Dynamically imports dependencies and returns the AppLauncher class.
     """
     import distro
+    import os
     from src.plugins.core._base import BasePlugin
     from ._database import RecentAppsDatabase
     from ._scanner import AppScanner
@@ -490,10 +491,33 @@ def get_plugin_class():
                     self.popover_launcher.popup()
 
         def on_keypress(self, *_):
-            """Launches the searched application."""
-            cmd = f"gtk-launch {self.search_get_child}"
-            if hasattr(self, "cmd") and self.cmd:
-                self.cmd.run(cmd)
+            """Launches the searched application escaping the sandbox if needed."""
+            if not self.search_get_child:
+                return
+
+            desktop_id = f"{self.search_get_child}.desktop"
+            app_info = self.all_apps.get(desktop_id)
+
+            if app_info:
+                exec_cmd = app_info.get_exec()
+                if not exec_cmd:
+                    return
+
+                cmd_parts = [p for p in exec_cmd.split() if not p.startswith("%")]
+
+                if os.path.exists("/.flatpak-info"):
+                    final_cmd = ["flatpak-spawn", "--host"] + cmd_parts
+                else:
+                    final_cmd = cmd_parts
+
+                import subprocess
+
+                try:
+                    subprocess.Popen(final_cmd)
+                    self.add_recent_app(desktop_id)
+                except Exception as e:
+                    self.logger.error(f"AppLauncher: Launch failed: {e}")
+
             if self.popover_launcher:
                 self.popover_launcher.popdown()
 
@@ -577,7 +601,7 @@ def get_plugin_class():
             return self.recent_db.fetch_recent()
 
         def run_app_from_launcher(self, x, y):
-            """Executes the selected application."""
+            """Executes the selected application escaping the sandbox if needed."""
             selected = x.get_selected_children()
             if not selected:
                 return
@@ -586,17 +610,33 @@ def get_plugin_class():
                 return
 
             data = vbox.MYTEXT
-            name, desktop_id, keywords = data[0], data[1], data[2]
+            desktop_id = data[1]
             is_remote = data[3] if len(data) > 3 else False
 
             if is_remote:
                 return
 
-            desktop_id_no_ext = desktop_id.split(".desktop")[0]
-            cmd = f"gtk-launch {desktop_id_no_ext}"
-            self.add_recent_app(desktop_id)
-            if hasattr(self, "cmd") and self.cmd:
-                self.cmd.run(cmd)
+            app_info = self.all_apps.get(desktop_id)
+            if app_info:
+                exec_cmd = app_info.get_exec()
+                if not exec_cmd:
+                    return
+
+                cmd_parts = [p for p in exec_cmd.split() if not p.startswith("%")]
+
+                if os.path.exists("/.flatpak-info"):
+                    final_cmd = ["flatpak-spawn", "--host"] + cmd_parts
+                else:
+                    final_cmd = cmd_parts
+
+                import subprocess
+
+                try:
+                    subprocess.Popen(final_cmd)
+                    self.add_recent_app(desktop_id)
+                except Exception as e:
+                    self.logger.error(f"AppLauncher: Launch failed: {e}")
+
             if self.popover_launcher:
                 self.popover_launcher.popdown()
             self.update_flowbox()
