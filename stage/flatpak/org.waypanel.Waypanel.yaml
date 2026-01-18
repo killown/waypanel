@@ -17,13 +17,13 @@ finish-args:
   - --socket=session-bus
   - --socket=system-bus
   - --filesystem=host:ro
+  - --filesystem=xdg-data/flatpak:ro
+  - --filesystem=home:ro
   - --filesystem=~/.local/share:ro
   - --socket=pulseaudio
   - --filesystem=xdg-config/waypanel
   - --filesystem=~/.local/share/waypanel:create
   - --filesystem=xdg-cache/waypanel:create
-  #   Multi-session/TTY support (1-3); specific paths
-  #   prevent broad xdg-run exposure to maintain least-privilege security.
   - --filesystem=xdg-run/wayfire-wayland-1-.socket
   - --filesystem=xdg-run/wayfire-wayland-2-.socket
   - --filesystem=xdg-run/wayfire-wayland-3-.socket
