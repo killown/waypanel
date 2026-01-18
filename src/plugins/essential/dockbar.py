@@ -168,62 +168,69 @@ def get_plugin_class():
 
         def _edit_item(self, app_name=None, app_config=None):
             is_new = app_name is None
-            dialog = self.gtk.Dialog(
-                title="Edit Launcher" if not is_new else "Add Launcher"
-            )
-            content = dialog.get_content_area()
-            content.set_margin_end(12)
-            content.set_spacing(10)
 
-            name_entry = self.gtk.Entry(
-                text=app_name or "New App", placeholder_text="ID (e.g. firefox)"
-            )
-            cmd_entry = self.gtk.Entry(
-                text=app_config["cmd"] if app_config else "", placeholder_text="Command"
-            )
-            icon_entry = self.gtk.Entry(
-                text=app_config["icon"] if app_config else "",
-                placeholder_text="Icon Name",
-            )
+            def build_dialog():
+                dialog = self.gtk.Dialog(
+                    title="Edit Launcher" if not is_new else "Add Launcher"
+                )
+                # Ensure the dialog is treated as a separate window for Wayland
+                dialog.set_modal(True)
 
-            for label_text, entry in [
-                ("ID:", name_entry),
-                ("Command:", cmd_entry),
-                ("Icon:", icon_entry),
-            ]:
-                box = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL, spacing=4)
-                box.append(self.gtk.Label(label=label_text, xalign=0))
-                box.append(entry)
-                content.append(box)
+                content = dialog.get_content_area()
+                content.set_margin_end(12)
+                content.set_spacing(10)
 
-            dialog.add_button("Cancel", self.gtk.ResponseType.CANCEL)
-            dialog.add_button("Save", self.gtk.ResponseType.OK)
+                name_entry = self.gtk.Entry(
+                    text=app_name or "New App", placeholder_text="ID (e.g. firefox)"
+                )
+                cmd_entry = self.gtk.Entry(
+                    text=app_config["cmd"] if app_config else "",
+                    placeholder_text="Command",
+                )
+                icon_entry = self.gtk.Entry(
+                    text=app_config["icon"] if app_config else "",
+                    placeholder_text="Icon Name",
+                )
 
-            top_level = self._get_top_level_panel_widget()
-            if top_level:
-                dialog.set_transient_for(top_level)
-
-            def on_response(d, response_id):
-                if response_id == self.gtk.ResponseType.OK:
-                    new_name = name_entry.get_text()
-                    new_config = {
-                        "cmd": cmd_entry.get_text(),
-                        "icon": icon_entry.get_text(),
-                    }
-
-                    current_apps = self.get_plugin_setting(["app"], {})
-                    if not is_new and app_name in current_apps:
-                        del current_apps[app_name]
-
-                    current_apps[new_name] = new_config
-                    self.config_handler.set_root_setting(
-                        [self.plugin_id, "app"], current_apps
+                for label_text, entry in [
+                    ("ID:", name_entry),
+                    ("Command:", cmd_entry),
+                    ("Icon:", icon_entry),
+                ]:
+                    box = self.gtk.Box(
+                        orientation=self.gtk.Orientation.VERTICAL, spacing=4
                     )
-                    self.glib.idle_add(self._on_config_changed)
-                d.destroy()
+                    box.append(self.gtk.Label(label=label_text, xalign=0))
+                    box.append(entry)
+                    content.append(box)
 
-            dialog.connect("response", on_response)
-            dialog.present()
+                dialog.add_button("Cancel", self.gtk.ResponseType.CANCEL)
+                dialog.add_button("Save", self.gtk.ResponseType.OK)
+
+                def on_response(d, response_id):
+                    if response_id == self.gtk.ResponseType.OK:
+                        new_name = name_entry.get_text()
+                        new_config = {
+                            "cmd": cmd_entry.get_text(),
+                            "icon": icon_entry.get_text(),
+                        }
+
+                        current_apps = self.get_plugin_setting(["app"], {})
+                        if not is_new and app_name in current_apps:
+                            del current_apps[app_name]
+
+                        current_apps[new_name] = new_config
+                        self.config_handler.set_root_setting(
+                            [self.plugin_id, "app"], current_apps
+                        )
+                        self.glib.idle_add(self._on_config_changed)
+                    d.destroy()
+
+                dialog.connect("response", on_response)
+                dialog.present()
+                return False
+
+            self.glib.idle_add(build_dialog)
 
         def _add_separator(self):
             current_apps = self.get_plugin_setting(["app"], {})
@@ -411,7 +418,7 @@ def get_plugin_class():
                         new_config[f"sep_{id(child)}"] = {"type": "separator"}
                     child = child.get_next_sibling()
                 self.config_handler.set_root_setting(
-                    [self.plugin_id, "app"], new_config
+                    [str(self.plugin_id), "app"], new_config
                 )
             except Exception as e:
                 self.logger.error(f"Failed to save dockbar order: {e}")
@@ -507,33 +514,5 @@ def get_plugin_class():
                     self.handle_plugin_event,
                     plugin_name="dockbar",
                 )
-
-        def code_explanation(self):
-            """
-            Implements a configurable application dock for Wayfire via GTK4 LayerShell.
-
-            Architecture:
-                1. UI Hierarchy: A `Gtk.Box` (main_widget) containing dynamic `Gtk.Button`
-                   launchers or `Gtk.Separator` objects. It attaches to central panel
-                   containers (left, right, top, bottom).
-                2. Persistence: Reads/writes to the global configuration via `self.config_handler`.
-                   The plugin monitors `waypanel.toml` using `Gio.FileMonitor` to perform
-                   hot-reloads when the file is modified externally.
-                3. Layout & Reordering:
-                   - Supports both Horizontal and Vertical orientations based on panel position.
-                   - Dual-mode reordering: Visual Drag-and-Drop (Gtk4 `DragSource`/`DropTarget`)
-                     and precise Context Menu "Move" actions.
-                4. Interaction Model:
-                   - Left-click: Executes command and conditionally toggles Wayfire 'scale'.
-                   - Middle-click: Locates an empty workspace via `wf_helper` before launching.
-                   - Right-click: Triggers a `Gtk.PopoverMenu` for per-item management
-                     (Edit, Move, Unpin) and a global dock menu for adding new items.
-                5. Shell Integration:
-                   - LayerShell: Supports `Layer.TOP` with `auto_exclusive_zone_enable` to
-                     reserve screen space and prevent window overlap.
-                   - Multi-output: Logic for moving the cursor and launching apps across
-                     different monitors.
-            """
-            return self.code_explanation.__doc__
 
     return DockbarPlugin
