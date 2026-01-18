@@ -211,17 +211,23 @@ def get_plugin_class():
                     if response_id == self.gtk.ResponseType.OK:
                         new_name = name_entry.get_text()
                         new_config = {
+                            "id": new_name,
                             "cmd": cmd_entry.get_text(),
                             "icon": icon_entry.get_text(),
                         }
 
-                        current_apps = self.get_plugin_setting(["app"], {})
-                        if not is_new and app_name in current_apps:
-                            del current_apps[app_name]
+                        current_apps = self.get_plugin_setting(["app"], [])
 
-                        current_apps[new_name] = new_config
+                        if not is_new:
+                            for i, app in enumerate(current_apps):
+                                if app.get("id") == app_name:
+                                    current_apps[i] = new_config
+                                    break
+                        else:
+                            current_apps.append(new_config)
+
                         self.config_handler.set_root_setting(
-                            [self.plugin_id, "app"], current_apps
+                            [str(self.plugin_id), "app"], current_apps
                         )
                         self.glib.idle_add(self._on_config_changed)
                     d.destroy()
@@ -339,23 +345,31 @@ def get_plugin_class():
             return button
 
         def _load_and_populate_dockbar(self, orientation, class_style, use_label=False):
+            """Loads and populates the dockbar, handling both List and Dict structures."""
             if orientation == "h":
                 orientation = self.gtk.Orientation.HORIZONTAL
             elif orientation == "v":
                 orientation = self.gtk.Orientation.VERTICAL
             self.dockbar.set_orientation(orientation)
 
-            child = self.dockbar.get_first_child()
-            while child:
-                self.dockbar.remove(child)
-                child = self.dockbar.get_first_child()
+            config_data = self.get_plugin_setting(["app"], [])
 
-            config_data = self.get_plugin_setting(["app"], {})
-            for app_name, app_data in config_data.items():
+            if isinstance(config_data, dict):
+                items = config_data.items()
+            else:
+                items = [
+                    (item.get("id", f"app_{i}"), item)
+                    for i, item in enumerate(config_data)
+                ]
+
+            for app_name, app_data in items:
                 widget = self._create_dockbar_button(
                     app_name, app_data, class_style, use_label
                 )
-                self.gtk_helper.update_widget_safely(self.dockbar.append, widget)
+
+                if widget:
+                    widget.set_visible(True)
+                    self.dockbar.append(widget)
 
             drop_target = self.gtk.DropTarget.new(
                 self.gtk.Button, self.gdk.DragAction.MOVE
@@ -408,17 +422,23 @@ def get_plugin_class():
             return True
 
         def save_dockbar_order(self):
+            """Saves dockbar items as an ordered list to maintain visual sequence."""
             try:
-                new_config = {}
+                ordered_apps = []
                 child = self.dockbar.get_first_child()
+
                 while child:
                     if hasattr(child, "app_config"):
-                        new_config[child.app_name] = child.app_config  # pyright: ignore
+                        item_config = child.app_config.copy()  # pyright: ignore
+                        item_config["id"] = child.app_name  # pyright: ignore
+                        ordered_apps.append(item_config)
                     elif isinstance(child, self.gtk.Separator):
-                        new_config[f"sep_{id(child)}"] = {"type": "separator"}
+                        ordered_apps.append({"type": "separator"})
+
                     child = child.get_next_sibling()
+
                 self.config_handler.set_root_setting(
-                    [str(self.plugin_id), "app"], new_config
+                    [str(self.plugin_id), "app"], ordered_apps
                 )
             except Exception as e:
                 self.logger.error(f"Failed to save dockbar order: {e}")
@@ -470,8 +490,7 @@ def get_plugin_class():
             )
 
         def _setup_dockbar(self):
-            self.run_in_thread(
-                self._load_and_populate_dockbar,
+            self._load_and_populate_dockbar(
                 self.get_orientation(),
                 self.class_style,
             )
@@ -501,8 +520,28 @@ def get_plugin_class():
                 self._config_observer.cancel()
 
         def _on_config_changed(self):
+            # Temporarily pause monitor to prevent double-triggering during internal save
+            if self._config_observer:
+                self._config_observer.cancel()
+                self._config_observer = None
+
             self.config_handler.reload_config()
+
+            # Perform safe UI clear
+            children = []
+            child = self.dockbar.get_first_child()
+            while child:
+                children.append(child)
+                child = child.get_next_sibling()
+
+            for widget in children:
+                # Only remove if the widget hasn't been snatched by a parallel rebuild
+                if widget.get_parent() == self.dockbar:
+                    self.dockbar.remove(widget)
+
+            # Re-populate and restart monitor
             self._setup_dockbar()
+            self._setup_file_watcher()
 
         def handle_plugin_event(self, msg):
             return False
