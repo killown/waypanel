@@ -21,15 +21,26 @@ class AppScanner:
         ]
 
         if os.path.exists("/.flatpak-info"):
-            host_flatpak_user = (
-                "/run/host/user-share/flatpak/exports/share/applications"
-            )
-            host_flatpak_sys = "/run/host/share/flatpak/exports/share/applications"
+            # Standard host-mapped paths
+            for path in [
+                "/run/host/user-share/flatpak/exports/share/applications",
+                "/run/host/share/flatpak/exports/share/applications",
+            ]:
+                if os.path.isdir(path):
+                    self.search_paths.append(path)
 
-            if os.path.isdir(host_flatpak_user):
-                self.search_paths.append(host_flatpak_user)
-            if os.path.isdir(host_flatpak_sys):
-                self.search_paths.append(host_flatpak_sys)
+            # Internal sandbox paths where files are actually readable
+            internal_flatpak = os.path.expanduser("~/.local/share/flatpak/app")
+            if os.path.isdir(internal_flatpak):
+                for app_id in os.listdir(internal_flatpak):
+                    # Use 'active' symlink to target current version files
+                    internal_app_path = os.path.join(
+                        internal_flatpak,
+                        app_id,
+                        "x86_64/stable/active/files/share/applications",
+                    )
+                    if os.path.isdir(internal_app_path):
+                        self.search_paths.append(internal_app_path)
 
     def scan(self) -> Dict[str, Any]:
         """
@@ -50,23 +61,8 @@ class AppScanner:
                         continue
 
                     file_path = os.path.join(app_dir, file_name)
-
-                    if os.path.islink(file_path):
-                        target = os.readlink(file_path)
-                        if not os.path.isabs(target):
-                            target = os.path.join(app_dir, target)
-
-                        if target.startswith("/home/") and not target.startswith(
-                            "/run/host/"
-                        ):
-                            target = os.path.join("/run/host", target.lstrip("/"))
-
-                        file_path = target
-
-                    if not os.path.exists(file_path):
-                        continue
-
                     keyfile = GLib.KeyFile.new()
+
                     try:
                         if not keyfile.load_from_file(
                             file_path, GLib.KeyFileFlags.NONE
