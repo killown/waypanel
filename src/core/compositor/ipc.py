@@ -321,6 +321,10 @@ class IPC:
         return self.sock.send_json(payload)
 
     @handle_ipc_error
+    def press_key(self, key: str, timeout: int = 0) -> None:
+        return self.stipc.press_key(key, timeout)
+
+    @handle_ipc_error
     def get_view(self, id: int) -> dict[str, Any] | None:
         """Get the view by the given id."""
         return self.sock.get_view(id)  # pyright: ignore
@@ -722,8 +726,12 @@ class IPC:
 
     @handle_ipc_error
     def send_view_to_wset(self, view_id: int, wset_index: int):
-        """Clear all registered bindings."""
+        """Send view to wset"""
         return self.sock.send_view_to_wset(view_id, wset_index)  # pyright: ignore
+
+    def send_view_to_workspace(self, view_id: int, ws_x, ws_y):
+        """Send view to workspace."""
+        return self.sock.send_view_to_workspace(view_id, ws_x, ws_y)  # pyright: ignore
 
     @handle_ipc_error
     def set_tiling_layout(self, wset, wsx, wsy, desired_layout):
