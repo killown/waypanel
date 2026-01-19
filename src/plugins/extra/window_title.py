@@ -1,12 +1,13 @@
 def get_plugin_metadata(_):
     about = """
             A plugin that displays the title and icon of the currently
-            focused window on the panel.
+            focused window on the panel with a context menu to toggle 
+            auto-fullscreen persistence for the current application.
             """
     return {
         "id": "org.waypanel.plugin.window_title",
         "name": "Window Title",
-        "version": "1.0.0",
+        "version": "1.2.0",
         "enabled": True,
         "index": 1,
         "container": "top-panel-left",
@@ -23,18 +24,17 @@ def get_plugin_class():
     class WindowTitlePlugin(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
-            """
-            Initialize the Window Title plugin.
-            """
-            pass
 
         def on_start(self) -> None:
-            """
-            Hook for when plugin is loaded. Used to defer event subscription until
-            the EventManagerPlugin is guaranteed to be loaded.
-            """
+            """Registers the click controller and initial state trackers."""
             self._load_config()
             self.window_title_content = self.gtk.Box()
+
+            self.click_gesture = self.gtk.GestureClick()
+            self.click_gesture.set_button(1)
+            self.click_gesture.connect("pressed", self._on_left_click)
+            self.window_title_content.add_controller(self.click_gesture)
+
             self.main_widget = (self.window_title_content, "append")
             self.window_title_label = self.gtk.Label()
             self.window_title_icon = self.gtk.Image.new_from_icon_name("None")
@@ -43,39 +43,108 @@ def get_plugin_class():
             self.window_title_content.append(self.window_title_label)
             self.window_title_content.add_css_class("window-title-content")
             self.window_title_label.add_css_class("window-title-label")
+
             self._debounce_timer_id: Optional[int] = None
             self._debounce_interval: int = 50
             self._last_view_data: Optional[Dict[str, Any]] = None
-            first_title_update_from_focused_view = self.ipc.get_focused_view()
-            if first_title_update_from_focused_view:
-                self.update_title_icon(first_title_update_from_focused_view)
+            self._last_toplevel_view_focused: Optional[Dict[str, Any]] = None
+
+            first_view = self.ipc.get_focused_view()
+            if first_view:
+                self.update_title_icon(first_view)
+
             self.glib.idle_add(self._subscribe_to_events_with_retry)
 
+        def _on_left_click(self, gesture, n_press, x, y):
+            """Handles left click using the last known toplevel view focus and filters app-id."""
+            view = self._last_toplevel_view_focused
+            if not view:
+                return
+
+            app_id = view.get("app-id") or view.get("app_id")
+            if not app_id:
+                return
+
+            # Filter the app_id for the menu label
+            MAX_WORD_LENGTH = 15
+            display_id = app_id
+            if len(display_id) > MAX_WORD_LENGTH:
+                display_id = display_id[:MAX_WORD_LENGTH] + "…"
+
+            popover = self.gtk.Popover()
+            popover.set_parent(self.window_title_content)
+
+            vbox = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL, spacing=6)
+            vbox.set_margin_start(10)
+            vbox.set_margin_end(10)
+            vbox.set_margin_top(10)
+            vbox.set_margin_bottom(10)
+
+            fs_path = ["org.waypanel.plugin.auto_fullscreen", "fullscreen_app_ids"]
+            current_list = self.config_handler.get_root_setting(fs_path, [])
+
+            is_in_list = app_id in current_list
+
+            # Auto Fullscreen toggle button
+            label = (
+                f"Remove {display_id} from Auto FS"
+                if is_in_list
+                else f"Always Fullscreen {display_id}"
+            )
+
+            btn = self.gtk.Button(label=label)
+            btn.connect(
+                "clicked",
+                lambda _: self._toggle_app_fullscreen_rule(
+                    popover, app_id, current_list, is_in_list
+                ),
+            )
+            vbox.append(btn)
+
+            # --- Window Rules Integration ---
+            rules_plugin = self.plugins.get("org.waypanel.plugin.window_rules")
+            if rules_plugin:
+                vbox.append(self.gtk.Separator())
+                btn_rules = self.gtk.Button(label="Open Window Rules")
+                btn_rules.connect(
+                    "clicked",
+                    lambda _: [rules_plugin.open_rules_manager(), popover.popdown()],
+                )
+                vbox.append(btn_rules)
+
+            popover.set_child(vbox)
+            popover.popup()
+
+        def _toggle_app_fullscreen_rule(
+            self, popover, app_id, current_list, is_in_list
+        ):
+            """Updates the root config and triggers immediate fullscreen if enabling."""
+            fs_path = ["org.waypanel.plugin.auto_fullscreen", "fullscreen_app_ids"]
+
+            if is_in_list:
+                new_list = [id for id in current_list if id != app_id]
+            else:
+                new_list = current_list + [app_id]
+                self.ipc.press_key("KEY_F11")
+
+            self.config_handler.set_root_setting(fs_path, new_list)
+            popover.popdown()
+
         def _subscribe_to_events_with_retry(self) -> bool:
-            """
-            Implements the retry logic to manually subscribe to events only when the
-            'event_manager' plugin is fully loaded, ensuring the callbacks work.
-            Returns:
-                bool: self.glib.SOURCE_CONTINUE (True) to retry, GLib.SOURCE_REMOVE (False) to stop.
-            """
+            """Retries subscription until event_manager is ready."""
             plugin_name = self.__module__.split(".")[-1]
-            if "event_manager" not in self._panel_instance.plugin_loader.plugins:
-                self.logger.debug(f"{plugin_name} is waiting for EventManagerPlugin.")
+            mgr_id = "org.waypanel.plugin.event_manager"
+
+            if mgr_id not in self.plugins:
                 self.glib.timeout_add(100, self._subscribe_to_events_with_retry)
                 return self.glib.SOURCE_CONTINUE
-            event_manager = self._panel_instance.plugin_loader.plugins["event_manager"]
-            self.logger.info(
-                f"Subscribing to events for {plugin_name} Plugin (deferred)."
+
+            event_manager = self.plugins[mgr_id]
+            event_manager.subscribe_to_event(
+                "view-focused", self.on_view_focused, plugin_name=plugin_name
             )
             event_manager.subscribe_to_event(
-                "view-focused",
-                self.on_view_focused,
-                plugin_name=plugin_name,
-            )
-            event_manager.subscribe_to_event(
-                "view-closed",
-                self.on_view_closed,
-                plugin_name=plugin_name,
+                "view-closed", self.on_view_closed, plugin_name=plugin_name
             )
             event_manager.subscribe_to_event(
                 "view-title-changed",
@@ -85,52 +154,43 @@ def get_plugin_class():
             return self.glib.SOURCE_REMOVE
 
         def _load_config(self) -> None:
-            """Loads configuration from config_handler with defaults."""
+            """Loads window_title specific config."""
             config_data = self.config_handler.config_data.get("window_title", {})
             self.title_length: int = config_data.get("title_length", 30)
-            self.logger.debug(f"Loaded title_length: {self.title_length}")
 
         def on_disable(self) -> None:
-            """
-            Hook for when plugin is disabled. Cleans up self.glib timer.
-            BasePlugin.disable() will handle self.main_widget removal.
-            """
+            """Cleanup operations when the plugin is disabled."""
             if self._debounce_timer_id is not None:
                 self.glib.source_remove(self._debounce_timer_id)
-                self._debounce_timer_id = None
-                self.logger.debug("Debounce timer stopped.")
             self.clear_widget()
 
         @subscribe_to_event("view-focused")
         def on_view_focused(self, event_message: Dict[str, Any]) -> None:
-            """
-            Handle when a view gains focus.
-            """
             try:
                 view = event_message.get("view")
                 if view:
+                    if view.get("role") == "toplevel":
+                        self._last_toplevel_view_focused = view
                     self.update_title_icon_debounced(view)
             except Exception as e:
                 self.logger.error(f"Error handling 'view-focused' event: {e}")
 
         @subscribe_to_event("view-closed")
         def on_view_closed(self, event_message: Dict[str, Any]) -> None:
-            """
-            Handle when a view is closed.
-            """
             try:
-                if self._last_view_data and event_message.get("view", {}).get(
-                    "id"
-                ) == self._last_view_data.get("id"):
+                view_id = event_message.get("view", {}).get("id")
+                if self._last_view_data and view_id == self._last_view_data.get("id"):
                     self.clear_widget()
+                if (
+                    self._last_toplevel_view_focused
+                    and view_id == self._last_toplevel_view_focused.get("id")
+                ):
+                    self._last_toplevel_view_focused = None
             except Exception as e:
                 self.logger.error(f"Error handling 'view-closed' event: {e}")
 
         @subscribe_to_event("view-title-changed")
         def on_view_title_changed(self, event_message: Dict[str, Any]) -> None:
-            """
-            Handle when a view's title changes.
-            """
             try:
                 view = event_message.get("view")
                 if view:
@@ -154,10 +214,15 @@ def get_plugin_class():
                 self._debounce_interval, self._perform_debounced_update
             )
 
+        def _perform_debounced_update(self) -> bool:
+            """Internal method to perform the actual UI update after debounce."""
+            self._debounce_timer_id = None
+            if self._last_view_data:
+                self.update_title_icon(self._last_view_data)
+            return self.glib.SOURCE_REMOVE
+
         def update_title_icon(self, view: Optional[Dict[str, Any]]) -> None:
-            """
-            Update the title and icon based on the focused view.
-            """
+            """Update the title and icon based on the focused view."""
             try:
                 if not view:
                     return
@@ -168,9 +233,6 @@ def get_plugin_class():
                 if not view:
                     return
                 title: str = self.filter_title(view.get("title", ""))
-                initial_title = ""
-                if title:
-                    initial_title = title.split()[0]
                 app_id: Optional[str] = None
                 if view.get("window_properties"):
                     app_id = view.get("window_properties", {}).get("class")
@@ -184,16 +246,8 @@ def get_plugin_class():
                 self.logger.error(f"Error updating title/icon: {e}")
                 self.clear_widget()
 
-        def clear_widget(self) -> None:
-            """
-            Clear the widget when no view is focused.
-            """
-            self.update_title("", "")
-
         def filter_title(self, title: str) -> str:
-            """
-            Filter and shorten the title.
-            """
+            """Filter and shorten the title."""
             if not title:
                 return ""
             title = self.gtk_helper.filter_utf_for_gtk(title)
@@ -213,60 +267,23 @@ def get_plugin_class():
             return title
 
         def update_title(self, title: str, icon_name: str) -> None:
-            """
-            Update the window title widget with new title and icon.
-            Includes a defensive CSS check to prevent the GTK assertion crash.
-            """
+            """Update the window title widget with new title and icon."""
             try:
                 self.window_title_label.set_label(title)
                 icon_to_set = icon_name if icon_name else "None"
                 self.window_title_icon.set_from_icon_name(icon_to_set)
-                CLASS_NAME = "title-active"
                 if title:
-                    self.window_title_content.add_css_class(CLASS_NAME)
+                    self.window_title_content.add_css_class("title-active")
                 else:
-                    if self.window_title_content.has_css_class(CLASS_NAME):
-                        self.safe_remove_css_class(
-                            self.window_title_content, CLASS_NAME
-                        )
+                    self.safe_remove_css_class(
+                        self.window_title_content, "title-active"
+                    )
             except Exception as e:
                 self.logger.error(f"Error updating window title widget: {e}")
 
-        def _perform_debounced_update(self) -> bool:
-            """Internal method to perform the actual UI update after debounce."""
-            self._debounce_timer_id = None
-            if self._last_view_data:
-                self.update_title_icon(self._last_view_data)
-            return self.glib.SOURCE_REMOVE
-
-        def code_explanation(self):
-            """
-            This plugin tracks the active window and updates a panel widget
-            to display its title and icon. It uses an event-driven model to
-            remain synchronized with the system.
-            Its core logic is centered on **event subscription, state
-            synchronization, and debounced updates**:
-            1.  **Event Subscription**: The plugin listens for system events
-                such as "view-focused," "view-closed," and "view-title-changed."
-                This allows it to react instantly to changes in the active
-                window's state. It now uses a deferred retry loop (`_subscribe_to_events_with_retry`)
-                to ensure the `event_manager` plugin is loaded before attempting
-                to register callbacks.
-            2.  **Debounced Updates**: To prevent the panel from flickering or
-                excessively updating during rapid title changes (e.g., when a
-                web page is loading), it uses a debouncing mechanism. This
-                ensures updates are processed at a controlled rate by cancelling
-                and resetting the self.glib timer on every incoming event.
-            3.  **Title and Icon Management**: It extracts the title and
-                application ID from the event data. It filters the title to
-                remove extraneous information and truncates it to a set
-                length. It then uses the application ID to find and display
-                the correct icon.
-            4.  **UI Updates**: The plugin directly manipulates its internal
-                widgets to reflect the current state, displaying the
-                processed title and icon. The cleanup is handled in the
-                `on_disable` hook, ensuring the self.glib timer is correctly stopped.
-            """
-            return self.code_explanation.__doc__
+        def clear_widget(self) -> None:
+            """Clear the widget when no view is focused."""
+            self.update_title("", "None")
+            self._last_view_data = None
 
     return WindowTitlePlugin
