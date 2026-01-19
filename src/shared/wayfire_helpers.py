@@ -751,3 +751,16 @@ class WayfireHelpers:
         most_recent_tuple = max(active_views_data, key=operator.itemgetter(1))
         most_recent_id = most_recent_tuple[0]
         return most_recent_id
+
+
+def get_most_recent_focused_view(self) -> dict | None:
+    """Returns the view with the highest last-focus-timestamp.
+
+    Args:
+        views: List of view dictionaries.
+
+    Returns:
+        The most recently focused view dictionary or None if list is empty.
+    """
+    views = self.ipc.list_views()
+    return max(views, key=lambda x: x.get("last-focus-timestamp", 0))
