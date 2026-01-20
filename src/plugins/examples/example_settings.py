@@ -1,124 +1,80 @@
 def get_plugin_metadata(panel):
-    """
-    Args:
-        panel: The main Panel instance, used here to access config_handler.
-               (Type: The specific Panel application class.)
-    Provides the structured metadata for the Setting Timer Example plugin.
-    This plugin demonstrates the lifecycle of a configuration setting.
-    """
-
-    id = "org.waypanel.plugin.setting_timer_example"
+    id = "org.waypanel.plugin.settings_demo"
     default_container = "top-panel-center"
-
-    # check for user config containers, this is not necessary for background plugins
     container, id = panel.config_handler.get_plugin_container(default_container, id)
 
     return {
         "id": id,
-        "name": "Setting Timer Example",
-        "version": "1.0.0",
+        "name": "Settings Pure Demo",
+        "version": "1.0.8",
         "enabled": True,
-        "index": 99,
         "container": container,
-        "description": "A demonstration plugin for managing settings over time.",
     }
 
 
 def get_plugin_class():
-    """
-    Provides the plugin's main class, deferring all necessary imports
-    to adhere to the project's architectural standards.
-    """
     from src.plugins.core._base import BasePlugin
 
-    class SettingTimerExample(BasePlugin):
-        """
-        An example plugin that demonstrates the correct use of the BasePlugin's
-        configuration management API.
-
-        Upon starting, it writes a setting to the configuration file and then
-        schedules a timer to remove that entire setting section after a 10-second delay.
-        """
-
+    class SettingsDemo(BasePlugin):
         def __init__(self, panel_instance):
-            """Initializes the plugin state."""
+            """
+            CONSTRUCTOR: Initialize UI and state immediately to prevent loader crashes.
+            """
             super().__init__(panel_instance)
-            self._timer_id = None
-            self._label = self.gtk.Label()
-            self._label.add_css_class("example-plugin-label")
 
-        def on_start(self):
+            # BasePlugin properties
+            self.counter = 0
+            self.prefix = "Value"
+
+            # UI using self.gtk (GTK 4.0)
+            self.button = self.gtk.Button(label="Loading...")
+
+            # CRITICAL: Register main_widget to satisfy loader.py
+            self.main_widget = (self.button, "append")
+
+        def on_enable(self):
             """
-            Entry point for the plugin's lifecycle.
-
-            This method sets an initial configuration, schedules its own cleanup,
-            and initializes the UI widget.
+            LIFECYCLE: Logic using verified setting methods from _base.py.
             """
-            self.logger.info("Setting Timer Example plugin has started.")
-
-            # 1. Set the initial plugin setting.
-            initial_data = {
-                "status": "active",
-                "creation_timestamp": self.time.time(),
-                "message": "This setting will self-destruct.",
-            }
-            self.get_plugin_setting_add_hint(
-                ["session_data"],
-                initial_data,
-                "This is a hint for the key session_data, this is used in control-center",
-            )
-            self.logger.info(
-                f"Initial setting written for plugin '{self.plugin_id}'. "
-                "It will be removed in 10 seconds."
-            )
-            self._label.set_text("   Setting created. Removal pending...")
-
-            # 2. Schedule the removal of the setting using GLib's timer.
-            self._timer_id = self.glib.timeout_add_seconds(
-                10, self._remove_setting_callback
+            # get_plugin_setting_add_hint: Registers Control Center hint and fetches value
+            self.prefix = self.get_plugin_setting_add_hint(
+                ["ui", "label_prefix"], "Total", "Text shown before the counter"
             )
 
-            # 3. Define the main widget to be added to the panel.
-            self.main_widget = (self._label, "append")
+            # get_plugin_setting: Standard fetch for plugin-scoped keys
+            self.counter = self.get_plugin_setting("data/current", 0)
 
-        def _remove_setting_callback(self):
-            """
-            Callback function executed by the GLib timer.
+            # get_root_setting: Fetch global panel configuration
+            self.theme = self.get_root_setting(["panel", "theme"], "default")
 
-            This method calls the appropriate BasePlugin API to remove its own
-            configuration section and then updates the UI to reflect the change.
+            self.button.set_label(f"{self.prefix}: {self.counter}")
+            self.button.connect("clicked", self._on_interaction)
+
+        def _on_interaction(self, widget):
             """
-            self.logger.info(
-                f"10-second timer elapsed. Removing settings for '{self.plugin_id}'."
+            Interaction logic using set_plugin_setting and notify_send.
+            """
+            self.counter += 1
+
+            # set_plugin_setting: Persists value to config.toml
+            self.set_plugin_setting(["data", "current"], self.counter)
+
+            widget.set_label(f"{self.prefix}: {self.counter}")
+
+            # notify_send: Verified property from BasePlugin
+            self.notify_send(
+                title="Setting Updated",
+                message=f"{self.prefix} is now {self.counter}",
+                icon="low",
             )
 
-            # 1. Remove the entire section related to this plugin.
-            self.remove_plugin_setting()
-
-            self.logger.info("Plugin settings have been successfully removed.")
-            self._label.set_text("   Setting removed.")
-            self.glib.timeout_add_seconds(3, self._disable_plugin)
-            self._timer_id = None
-
-            # 2. Return False (or GLib.SOURCE_REMOVE) to stop the timer from repeating.
-            return self.glib.SOURCE_REMOVE
-
-        def _disable_plugin(self):
-            self.plugin_loader.disable_plugin("example_settings")
-            return False
+            if self.counter >= 10:
+                # remove_plugin_setting: Delete key from configuration
+                self.remove_plugin_setting(["data", "current"])
+                self.counter = 0
+                widget.set_label(f"{self.prefix}: Reset")
 
         def on_disable(self):
-            """
-            Cleanup hook for when the plugin is disabled or reloaded.
+            self.logger.info("Settings Demo disabled.")
 
-            Ensures that any pending timers are cancelled to prevent callbacks
-            from firing after the plugin is no longer active.
-            """
-            if self._timer_id:
-                self.glib.source_remove(self._timer_id)
-                self._timer_id = None
-                self.logger.info("Pending setting removal timer has been cancelled.")
-
-            self.logger.info("Setting Timer Example plugin has been disabled.")
-
-    return SettingTimerExample
+    return SettingsDemo
