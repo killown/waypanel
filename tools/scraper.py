@@ -6,9 +6,6 @@ def scrape_python_files(base_dir, output_file):
     """
     Scrapes Waypanel project files and organizes them into a structured format
     optimized for AI context windows.
-
-    PRIORITY #1: plugins/examples/ is placed at the absolute top of the
-    file to ensure the AI anchors to correct patterns immediately.
     """
 
     ai_header = """
@@ -32,42 +29,97 @@ Read files sequentially. Example implementations are at the ABSOLUTE TOP to serv
     def collect_files(base_dir):
         """
         Categorizes files into specific priority tiers.
-        Tier 1 is now strictly the plugins/examples/ folder.
         """
-        examples = []  # plugins/examples/* (PRIORITY #1)
-        priority_docs = []  # README, PLUGIN.md, base_plugin.py
-        plugin_core = []  # src/plugins/... (excluding examples)
-        project_source = []  # All other .py files
+        examples = []  # PRIORITY #1: plugins/examples/*
+        priority_docs = []  # PRIORITY #2: Root README, PLUGIN.md, Core definitions
+        plugin_core = []  # PRIORITY #3: src/plugins/essential (Core Logic)
+        project_source = []  # PRIORITY #4: All other source code
+
+        # 1. DIRECTORY BLACKLIST
+        #    Added 'ipc' and specific plugin subfolders.
+        ignored_dirs = {
+            "build",
+            ".venv",
+            "waypanel.egg-info",
+            "__pycache__",
+            ".git",
+            ".github",
+            "stage",
+            "tests",
+            "assets",
+            "locales",
+            "resources",
+            "docs",
+            "man",
+            "experimental",
+            "fixes",
+            "utils",
+            "rules",
+            "tools",
+            "extra",
+            "ipc",
+            "sync_plugins",  # <-- NEW EXCLUSIONS
+        }
+
+        # 2. FILE BLACKLIST
+        ignored_files = {
+            "CONTRIBUTING.md",
+            "requirements.txt",
+            "LICENSE",
+            "Makefile",
+            "CODE_OF_CONDUCT.md",
+            "flatpak.json",
+            "manifest.yaml",
+            "Dockerfile",
+            "install_helpers.py",
+            "run.py",  # <-- NEW EXCLUSIONS (Installation/Startup scripts)
+        }
 
         for root, dirs, files in os.walk(base_dir):
-            # Exclude build artifacts and environments
-            dirs[:] = [
-                d
-                for d in dirs
-                if d
-                not in ("build", ".venv", "waypanel.egg-info", "__pycache__", ".git")
-            ]
+            # Prune directories in-place
+            dirs[:] = [d for d in dirs if d not in ignored_dirs]
 
             for file in files:
-                if not file.endswith((".py", ".md", ".txt", ".yaml", ".json")):
+                # 3. EXTENSION FILTER
+                if not file.endswith((".py", ".md", ".txt")):
                     continue
 
+                if file in ignored_files:
+                    continue
+
+                # 4. EMPTY/INIT FILE FILTER
                 file_path = os.path.join(root, file)
+                if file == "__init__.py" and os.path.getsize(file_path) < 50:
+                    continue
+
                 rel_path = os.path.relpath(file_path, base_dir)
 
-                # Tier 1: Absolute Priority - The Examples Folder
-                if "plugins/examples" in rel_path or file.lower().startswith("example"):
+                # 5. NESTED README FILTER
+                if file.lower() == "readme.md" and os.path.dirname(rel_path) != ".":
+                    continue
+
+                # 6. PRIVATE IMPLEMENTATION FILTER
+                is_plugin_folder = (
+                    "src/plugins" in rel_path and "src/plugins/core" not in rel_path
+                )
+                if is_plugin_folder and file.startswith("_") and file != "__init__.py":
+                    continue
+
+                # --- CLASSIFICATION LOGIC ---
+
+                if "plugins/examples" in rel_path:
                     examples.append((file_path, rel_path))
-                # Tier 2: Core Protocol & Base Logic
+
                 elif (
                     file.lower() in ("readme.md", "plugin.md", "base_plugin.py")
                     or "src/core" in rel_path
+                    or "src/plugins/core/_base.py" in rel_path
                 ):
                     priority_docs.append((file_path, rel_path))
-                # Tier 3: Internal Plugin Logic
+
                 elif "plugins" in rel_path:
                     plugin_core.append((file_path, rel_path))
-                # Tier 4: General project source
+
                 else:
                     project_source.append((file_path, rel_path))
 
@@ -97,7 +149,6 @@ Read files sequentially. Example implementations are at the ABSOLUTE TOP to serv
 
         examples, docs, plugins, source = collect_files(base_dir)
 
-        # MANDATORY ORDER: Examples first, then documentation, then core, then source.
         write_files(examples, out_f, "PRIORITY #1: IMPLEMENTATION EXAMPLES")
         write_files(docs, out_f, "CORE PROTOCOL & BASE CLASSES")
         write_files(plugins, out_f, "WAYPANEL PLUGIN CORE")
@@ -106,7 +157,7 @@ Read files sequentially. Example implementations are at the ABSOLUTE TOP to serv
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Waypanel Context Scraper (Examples-First)"
+        description="Waypanel Context Scraper (Diamond Cut AI Optimized)"
     )
     parser.add_argument("--input", default=".", help="Root directory")
     parser.add_argument("--output", default="waypanel.txt", help="Output file")
@@ -115,6 +166,8 @@ if __name__ == "__main__":
 
     if os.path.isdir(args.input):
         scrape_python_files(args.input, args.output)
-        print(f"\nContext generated at {args.output} with Priority #1 on Examples.")
+        print(
+            f"\nContext generated at {args.output} with MAXIMUM efficiency (No IPC/Sync/Helpers)."
+        )
     else:
         print(f"Error: {args.input} is not a directory.")
