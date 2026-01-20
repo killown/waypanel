@@ -627,28 +627,31 @@ class WayfireHelpers:
         self, view: dict, alpha: float = 1.0, selected: bool = False
     ) -> None:
         """
-        Apply a focus indicator effect by animating the view's alpha (transparency).
-        Args:
-          view (dict): The view dictionary containing at least the 'id' key.
-          alpha (float): The transparency level to apply when selected (0.0 to 1.0).
-          selected (bool): Whether the view is currently selected/focused.
+        Apply a focus indicator effect by animating the view's alpha.
+        Always restores the original alpha value retrieved before the effect started.
         """
-        view_id = None
-        try:
-            view_id = view.get("id")
-            if not view_id:
-                self.logger.warning(f"Invalid or non-existent view ID: {view_id}")
-                return
-            if selected:
-                self.ipc.set_view_alpha(view_id, alpha)
-            else:
-                original_alpha_value = 1.0
-                self.ipc.set_view_alpha(view_id, original_alpha_value)
-        except Exception as e:
-            self.logger.error(
-                f"Unexpected error while applying focus indicator effect for view ID: {view_id} and {e}",
-                exc_info=True,
-            )
+        view_id = view.get("id")
+        if not view_id or not self.is_view_valid(view_id):
+            return
+
+        if selected:
+            # Only store if we haven't stored it yet to avoid capturing the 'effect' alpha
+            stored = self.ipc.get_view_property(view_id, "original_alpha")
+            if not stored or (
+                isinstance(stored, dict) and stored.get("result") != "ok"
+            ):
+                original_alpha_value = self.ipc.get_view_alpha(view_id)["alpha"]
+                self.ipc.set_view_property(
+                    view_id, "original_alpha", str(original_alpha_value)
+                )
+
+            self.ipc.set_view_alpha(view_id, alpha)
+        else:
+            stored = self.ipc.get_view_property(view_id, "original_alpha")
+            if stored:
+                val = stored.get("value") if isinstance(stored, dict) else stored
+                if val:
+                    self.ipc.set_view_alpha(view_id, float(str(val).replace(",", ".")))
 
     def is_plugin_enabled(self, plugin_name: str) -> bool:
         """
