@@ -11,6 +11,7 @@ def get_plugin_metadata(_):
         "enabled": True,
         "container": "top-panel-systray",
         "index": 5,
+        "priority": 960,
         "deps": ["top_panel", "clipboard_server"],
         "description": about,
     }

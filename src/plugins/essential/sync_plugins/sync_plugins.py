@@ -1,14 +1,11 @@
 def get_plugin_metadata(panel):
     id = "org.waypanel.plugin.plugin_sync"
-    default_container = "background"
-    container, id = panel.config_handler.get_plugin_container(default_container, id)
-
     return {
         "id": id,
         "name": "Plugin Synchronizer",
         "version": "1.5.2",
         "enabled": True,
-        "container": container,
+        "container": "background",
         "description": (
             "A developer-centric sync engine that allows you to work on plugins in any "
             "local directory (like ~/Git) while automatically mirroring changes—including "

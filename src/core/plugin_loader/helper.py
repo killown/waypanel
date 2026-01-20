@@ -1,11 +1,14 @@
 import sys
 import importlib
 import os
+import traceback
 from gi.repository import GLib  # pyright: ignore
 from src.shared.notify_send import Notifier
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Union, Optional
 
+# Updated to match the Loader's 5-element metadata structure
 PluginMetadataTuple = Tuple[Any, str, int, int, str]
+
 try:
     SOURCE_REMOVE = GLib.SOURCE_REMOVE
 except AttributeError:
@@ -16,23 +19,16 @@ class PluginResolver(dict):
     """
     Proxy that resolves short plugin names (e.g., 'clock') to full plugin IDs
     (e.g., 'org.waypanel.plugin.clock') upon lookup.
-    Architectural Rationale: This class maintains **Dependency Integrity** by allowing
-    plugins to access dependencies via their short, familiar names (backward compatibility)
-    while the underlying storage and Topological Sort rely on the full, stable IDs.
     """
 
     def __init__(
         self, *args, id_map: Dict[str, str], full_id_map: Dict[str, str], **kwargs
     ):
-        """Initializes the resolver with short-to-full ID maps."""
         super().__init__(*args, **kwargs)
         self.short_name_to_id = id_map
         self.module_name_to_id = full_id_map
 
     def __getitem__(self, key: str) -> Any:
-        """
-        Handles dictionary-style access (self[key]). Uses custom resolution logic.
-        """
         if super().__contains__(key):
             return super().__getitem__(key)
         resolved_id_by_short = self.short_name_to_id.get(key)
@@ -46,19 +42,12 @@ class PluginResolver(dict):
         raise KeyError(key)
 
     def get(self, key: str, default: Any = None) -> Any:
-        """
-        Overrides dict.get() to use the custom dependency resolution via __getitem__.
-        This fixes the failure with self.plugins.get("short_name").
-        """
         try:
             return self.__getitem__(key)
         except KeyError:
             return default
 
     def __contains__(self, key: str) -> bool:
-        """
-        Handles 'key in self' checks using custom resolution logic.
-        """
         if super().__contains__(key):
             return True
         if self.short_name_to_id.get(key) and super().__contains__(
@@ -83,9 +72,6 @@ class PluginLoaderHelpers:
     def reload_plugin(self, plugin_name: str) -> None:
         """
         Initiates a dynamic, non-disruptive reload of a single plugin.
-        It safely removes the old widget, disables the old instance, reloads
-        the module from disk, extracts its new placement metadata, and
-        delegates re-initialization to the robust `enable_plugin` method.
         """
         if plugin_name not in self.loader.plugins_path:
             self.logger.error(
@@ -99,7 +85,7 @@ class PluginLoaderHelpers:
                 if main_widget:
                     widget_to_remove = (
                         main_widget[0]
-                        if isinstance(main_widget, tuple)
+                        if isinstance(main_widget, (tuple, list))
                         else main_widget
                     )
                     if widget_to_remove and widget_to_remove.get_parent():
@@ -121,17 +107,22 @@ class PluginLoaderHelpers:
             else:
                 module = importlib.import_module(module_path)
                 self.logger.debug(f"Imported new module: {module_path}")
+
             if not hasattr(module, "get_plugin_metadata"):
                 self.logger.error(
                     f"Reloaded plugin '{plugin_name}' is missing "
                     "get_plugin_metadata(). Skipping."
                 )
                 return
-            metadata_dict = getattr(module, "get_plugin_metadata")(self.panel_instance)
+
+            metadata_dict = module.get_plugin_metadata(self.panel_instance)
             position = metadata_dict.get("container", "background")
             order = metadata_dict.get("index", 0)
             priority = metadata_dict.get("priority", 0)
-            plugin_metadata = (module, position, order, priority)
+            p_id = metadata_dict.get("id", plugin_name)
+
+            # Use the 5-tuple expected by the loader
+            plugin_metadata = (module, position, priority, order, p_id)
             self.enable_plugin(plugin_name, plugin_metadata)
             self.logger.info(f"Reload scheduled for plugin: {plugin_name}")
         except Exception as e:
@@ -144,26 +135,19 @@ class PluginLoaderHelpers:
         self, plugin_name: str, plugin_metadata: tuple
     ) -> bool:
         """
-        A robust, exception-safe wrapper for plugin initialization.
-        This function is executed by the GLib main loop and is responsible
-        for calling the actual plugin initializer, logging the true result,
-        and catching any exceptions that occur during initialization.
-        Args:
-            plugin_name: The name of the plugin being initialized.
-            plugin_metadata: The 4-tuple (module, position, order, priority).
-        Returns:
-            bool: GLib.SOURCE_REMOVE (or False) to ensure this idle task
-                  is removed from the main loop after execution.
+        Robust, exception-safe wrapper for plugin initialization via GLib idle.
         """
         try:
-            if not (plugin_metadata and len(plugin_metadata) == 4):
+            if not (plugin_metadata and len(plugin_metadata) == 5):
                 self.logger.error(
-                    f"Invalid metadata for '{plugin_name}' passed to wrapper. "
-                    "Skipping initialization."
+                    f"Invalid metadata 5-tuple for '{plugin_name}'. Skipping."
                 )
                 return SOURCE_REMOVE
-            module, position, order, priority = plugin_metadata
-            self.loader._initialize_single_plugin(module, position, order, priority)
+
+            module, position, priority, order, p_id = plugin_metadata
+            self.loader._initialize_single_plugin(
+                module, position, order, priority, p_id
+            )
             self.logger.info(
                 f"Successfully enabled and initialized plugin: {plugin_name}"
             )
@@ -175,23 +159,15 @@ class PluginLoaderHelpers:
         return SOURCE_REMOVE
 
     def enable_plugin(self, plugin_name: str, plugin_metadata: tuple) -> None:
-        """Enable a plugin by name.
-        Schedules a plugin to be initialized safely on the GLib main loop
-        using a robust wrapper.
-        Args:
-            plugin_name: The name of the plugin to enable.
-            plugin_metadata: A 4-tuple containing the required data:
-                             (module, position, order, priority).
-        """
+        """Schedules a plugin to be initialized safely on the GLib main loop."""
         if plugin_name not in self.loader.plugins_path:
             self.logger.error(
                 f"Plugin '{plugin_name}' not found in plugins_path. Skipping enable."
             )
             return
-        if not (plugin_metadata and len(plugin_metadata) == 4):
+        if not (plugin_metadata and len(plugin_metadata) == 5):
             self.logger.error(
-                f"Invalid or missing metadata for enabling plugin: {plugin_name}. "
-                "Expected 4-tuple (module, position, order, priority)."
+                f"Invalid metadata for enabling plugin: {plugin_name}. Expected 5-tuple."
             )
             return
         try:
@@ -203,43 +179,31 @@ class PluginLoaderHelpers:
             self.logger.info(f"Scheduled plugin for enabling: {plugin_name}")
         except Exception as e:
             self.logger.error(
-                f"Error scheduling plugin '{plugin_name}' for enabling: {e}",
-                level="error",
+                f"Error scheduling plugin '{plugin_name}' for enabling: {e}"
             )
 
-    def disable_plugin(self, plugin_name):
-        """Disable a plugin by name.
-        Safely stops and disables a plugin instance, ensuring proper cleanup
-        by calling available lifecycle methods. Handles both plugins that
-        support custom disable logic and those that don't.
-        Args:
-            plugin_name (str): The name of the plugin to disable.
-        """
+    def disable_plugin(self, plugin_name: str):
+        """Safely stops and disables a plugin instance."""
         if plugin_name not in self.loader.plugins:
             self.logger.warning(f"Plugin '{plugin_name}' not found.")
             return
         plugin_instance = self.loader.plugins[plugin_name]
-        if hasattr(plugin_instance, "on_stop"):
-            try:
-                plugin_instance.on_stop()
-                self.logger.info(f"Stopped plugin: {plugin_name}")
-            except Exception as e:
-                self.logger.error(f"Error stopping plugin {plugin_name}: {e}")
-        if hasattr(plugin_instance, "disable"):
-            plugin_instance.disable()
-            self.logger.info(f"Disabled plugin: {plugin_name}")
-        else:
-            self.logger.warning(f"Plugin '{plugin_name}' does not support disabling.")
+
+        # Lifecycle Sequence: on_disable -> on_stop -> disable
+        for callback in ["on_disable", "on_stop", "disable"]:
+            if hasattr(plugin_instance, callback):
+                try:
+                    getattr(plugin_instance, callback)()
+                    self.logger.info(f"Executed {callback} for plugin: {plugin_name}")
+                except Exception as e:
+                    self.logger.error(f"Error during {callback} for {plugin_name}: {e}")
+
+        # Cleanup instance from map to prevent leaks
+        if plugin_name in self.loader.plugins:
+            del self.loader.plugins[plugin_name]
 
     def get_real_user_home(self):
-        """Determine the real user's home directory.
-        This function handles privilege escalation scenarios (like sudo/pkexec) to ensure
-        paths point to the original user's home directory for configuration and data access.
-        It respects the $HOME environment variable for maximum compatibility in various desktop
-        environments.
-        Returns:
-            str: The absolute path to the real user's home directory.
-        """
+        """Handles privilege escalation to ensure paths point to the real user home."""
         if "SUDO_USER" in os.environ:
             return os.path.expanduser(f"~{os.environ['SUDO_USER']}")
         elif "PKEXEC_UID" in os.environ:
@@ -247,11 +211,7 @@ class PluginLoaderHelpers:
         return os.environ.get("HOME") or os.path.expanduser("~")
 
     def _get_target_panel_box(self, position, plugin_name=None):
-        """
-        Determines where to place the plugin's widget in the paneleturns:
-            object: Target box/widget if found, or 'background' if no UI is needed.
-            None: If invalid position or missing target.
-        """
+        """Maps logical position strings to panel GTK containers."""
         self.position_mapping = {
             "top-panel": "top_panel",
             "top-panel-left": "top_panel_box_left",
@@ -281,53 +241,49 @@ class PluginLoaderHelpers:
             )
             return None
         if target_attr == "background":
-            self.logger.debug(f"Plugin {plugin_name} is a background plugin.")
             return "background"
         if not hasattr(self.panel_instance, target_attr):
             self.logger.warning(
-                f"Panel box '{target_attr}' is not yet initialized for plugin {plugin_name}."
+                f"Panel box '{target_attr}' not yet initialized for {plugin_name}."
             )
             return None
         return getattr(self.panel_instance, target_attr)
 
     def register_overflow_container(self, plugin_instance):
-        """Stores the instance of the overflow container plugin."""
+        """Registers the overflow container for hidden widgets."""
         self.loader_instance.overflow_container = plugin_instance
         self.logger.info("Overflow indicator container registered.")
 
     def ensure_proportional_layout(self):
-        """
-        Checks if the actual allocated width of the Left, Center, or Right panel containers
-        exceeds their theoretical limits (output_width / 3). If any side
-        exceeds its limit, the 'last_plugin' added plugin is disabled.
-        """
+        """Enforces width constraints to prevent UI breaking (limit = width/3)."""
         max_attempts = self.loader.ensure_proportional_layout_attempts["max"]
         current_attempts = self.loader.ensure_proportional_layout_attempts["current"]
+
         sections_to_check = [
             ("top_panel_box_right", "Top Panel: Right Space"),
             ("top_panel_box_center", "Top Panel: Center Space"),
             ("top_panel_box_left", "Top Panel: Left Space"),
         ]
+
         for section, _ in sections_to_check:
             if not hasattr(self.panel_instance, section):
                 return True
+
         if current_attempts >= max_attempts:
-            self.logger.warning(
-                "Proportional layout check reached max attempts. Stopping source."
-            )
+            self.logger.warning("Proportional layout check reached max attempts.")
             return False
+
         self.loader.ensure_proportional_layout_attempts["current"] += 1
         if not self.panel_instance.plugins_startup_finished:
             return True
+
         try:
             width = self.loader.config_handler.get_root_setting(
                 ["org.waypanel.panel", "top", "width"]
             )
             if width is None or width <= 0:
-                self.logger.warning(
-                    "Panel width not configured or invalid. Skipping proportional space check."
-                )
                 return True
+
             limit_exceeded = False
             violating_side = "Unknown"
             for section, side_name in sections_to_check:
@@ -336,21 +292,20 @@ class PluginLoaderHelpers:
                 allocated_width = container.get_allocated_width()
                 if allocated_width > max_width_size:
                     self.logger.warning(
-                        f"Space violation detected in {side_name}. "
-                        f"Allocated: {allocated_width:.2f}px, Max: {max_width_size:.2f}px."
+                        f"Violation in {side_name}: {allocated_width}px > {max_width_size}px"
                     )
                     limit_exceeded = True
                     violating_side = side_name
                     break
+
             if limit_exceeded:
-                self.disable_plugin(self.loader.last_widget_plugin_added)
-                icon_name = "plugins-symbolic"
-                self.nofitier = Notifier()
-                self.notify_send = self.nofitier.notify_send
-                self.notify_send(
+                violating_plugin = self.loader.last_widget_plugin_added
+                self.disable_plugin(violating_plugin)
+                notifier = Notifier()
+                notifier.notify_send(
                     "Plugin Loader",
-                    f"{self.loader.last_widget_plugin_added} disabled due to violation in {violating_side}. Removed element for layout stability.",
-                    icon_name,
+                    f"{violating_plugin} disabled due to violation in {violating_side}.",
+                    "plugins-symbolic",
                 )
                 return False
             return True

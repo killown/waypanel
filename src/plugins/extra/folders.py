@@ -8,6 +8,7 @@ def get_plugin_metadata(_):
         "version": "1.0.0",
         "enabled": True,
         "index": 2,
+        "priority": 980,
         "container": "top-panel-box-widgets-left",
         "deps": [
             "top_panel",

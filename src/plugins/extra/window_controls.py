@@ -9,6 +9,7 @@ def get_plugin_metadata(_):
         "version": "1.0.0",
         "enabled": True,
         "index": 1,
+        "priority": 985,
         "container": "top-panel-after-systray",
         "deps": [
             "top_panel",

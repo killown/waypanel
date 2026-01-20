@@ -10,6 +10,7 @@ def get_plugin_metadata(_):
         "version": "1.2.0",
         "enabled": True,
         "index": 1,
+        "priority": 970,
         "container": "top-panel-left",
         "deps": ["top_panel", "event_manager", "view_property_controller"],
         "description": about,

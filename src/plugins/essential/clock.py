@@ -12,6 +12,7 @@ def get_plugin_metadata(panel):
         "enabled": True,
         "container": container,
         "index": 5,
+        "priority": 988,
         "deps": ["top_panel"],
         "description": about,
     }
