@@ -37,7 +37,7 @@ def get_plugin_class():
         type: The TaskbarPlugin class.
     """
     from src.plugins.core._base import BasePlugin
-    from gi.repository import Gtk, GLib
+    from gi.repository import Gtk, GLib, Gdk
 
     class TaskbarPlugin(BasePlugin):
         """Plugin providing a window taskbar for the Wayfire compositor."""
@@ -57,9 +57,9 @@ def get_plugin_class():
             self.is_scale_active = {}
             self.button_pool = []
             self.in_use_buttons = {}
+            self.menu = None
 
             self._init_settings()
-            self._setup_context_menu()
             self._subscribe_to_events()
 
             self.scrolled_window = Gtk.ScrolledWindow()
@@ -86,30 +86,6 @@ def get_plugin_class():
                 ["panel", "layer_always_exclusive"], False, "Always exclusive."
             )
             self.panel_name = self.config_handler.get_root_setting(["panel", "name"])
-
-        def _setup_context_menu(self):
-            self.menu = Gtk.Popover()
-            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-
-            move_btn = Gtk.Button(label="Move to Other Output", has_frame=False)
-            move_btn.set_halign(Gtk.Align.START)
-            move_btn.connect("clicked", self._on_menu_move_clicked)
-
-            close_btn = Gtk.Button(label="Close Window", has_frame=False)
-            close_btn.set_halign(Gtk.Align.START)
-            close_btn.connect("clicked", self._on_menu_close_clicked)
-
-            box.append(move_btn)
-            box.append(close_btn)
-            self.menu.set_child(box)
-
-        def _on_menu_move_clicked(self, _):
-            self.wf_helper.send_view_to_output(self.menu.active_view_id, None, True)
-            self.menu.popdown()
-
-        def _on_menu_close_clicked(self, _):
-            self.ipc.close_view(self.menu.active_view_id)
-            self.menu.popdown()
 
         def _setup_taskbar(self) -> None:
             position = self.get_plugin_setting(["panel", "position"], "bottom")
@@ -162,6 +138,89 @@ def get_plugin_class():
             self.taskbar.add_css_class("taskbar")
             self.Taskbar()
 
+        def _on_right_click(self, gesture, n_press, x, y):
+            btn = gesture.get_widget()
+
+            if self.menu:
+                self.menu.unparent()
+                self.menu = None
+
+            self.menu = Gtk.Popover()
+            self.menu.set_parent(btn)
+            self.menu.set_has_arrow(True)
+            self.menu.set_autohide(True)
+            self.menu.active_view_id = btn.view_id
+
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+
+            view_data = self.ipc.get_view(btn.view_id)
+            is_fullscreen = view_data.get("fullscreen", False)
+            is_atop = view_data.get("always-on-top", False)
+            is_sticky = view_data.get("sticky", False)
+
+            actions = [
+                (
+                    "Disable Fullscreen" if is_fullscreen else "Enable Fullscreen",
+                    self._on_menu_fullscreen_clicked,
+                ),
+                (
+                    "Disable Always on Top" if is_atop else "Enable Always on Top",
+                    self._on_menu_atop_clicked,
+                ),
+                (
+                    "Disable Sticky" if is_sticky else "Enable Sticky",
+                    self._on_menu_sticky_clicked,
+                ),
+                ("Move to Next Output", self._on_menu_move_next_clicked),
+                ("Close Window", self._on_menu_close_clicked),
+                ("Kill Process", self._on_menu_kill_clicked),
+            ]
+
+            for label, callback in actions:
+                item = Gtk.Button(label=label, has_frame=False)
+                item.set_halign(Gtk.Align.START)
+                item.connect("clicked", callback)
+                box.append(item)
+
+            self.menu.set_child(box)
+
+            rect = Gdk.Rectangle()
+            rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
+            self.menu.set_pointing_to(rect)
+            self.menu.popup()
+
+        def _on_menu_fullscreen_clicked(self, _):
+            vid = self.menu.active_view_id
+            current = self.ipc.get_view(vid)["fullscreen"]
+            self.ipc.set_view_fullscreen(vid, not current)
+            self.menu.popdown()
+
+        def _on_menu_atop_clicked(self, _):
+            vid = self.menu.active_view_id
+            current = self.ipc.get_view(vid)["always-on-top"]
+            self.ipc.set_view_always_on_top(vid, not current)
+            self.menu.popdown()
+
+        def _on_menu_sticky_clicked(self, _):
+            vid = self.menu.active_view_id
+            current = self.ipc.get_view(vid)["sticky"]
+            self.ipc.set_view_sticky(vid, not current)
+            self.menu.popdown()
+
+        def _on_menu_move_next_clicked(self, _):
+            self.wf_helper.send_view_to_output(self.menu.active_view_id, None, True)
+            self.menu.popdown()
+
+        def _on_menu_close_clicked(self, _):
+            self.ipc.close_view(self.menu.active_view_id)
+            self.menu.popdown()
+
+        def _on_menu_kill_clicked(self, _):
+            view = self.wf_helper.is_view_valid(self.menu.active_view_id)
+            if view and view.get("pid"):
+                self.run_cmd(f"kill -9 {view.get('pid')}")
+            self.menu.popdown()
+
         def _subscribe_to_events(self):
             mgr = self.plugins.get("event_manager")
             if not mgr:
@@ -194,24 +253,16 @@ def get_plugin_class():
                 button.set_child(box)
                 button.add_css_class("taskbar-button")
 
-                # Right Click (Menu)
                 right_click = Gtk.GestureClick(button=3)
                 right_click.connect("pressed", self._on_right_click)
                 button.add_controller(right_click)
 
-                # Middle Click (Close View)
                 middle_click = Gtk.GestureClick(button=2)
                 middle_click.connect("pressed", self._on_middle_click)
                 button.add_controller(middle_click)
 
                 button.set_visible(False)
                 self.button_pool.append({"view_id": "available", "button": button})
-
-        def _on_right_click(self, gesture, n_press, x, y):
-            btn = gesture.get_widget()
-            self.menu.set_parent(btn)
-            self.menu.active_view_id = btn.view_id
-            self.menu.popup()
 
         def _on_middle_click(self, gesture, n_press, x, y):
             btn = gesture.get_widget()
@@ -316,7 +367,10 @@ def get_plugin_class():
                 self.remove_button(view.get("id"))
             elif self.is_valid_view(view):
                 if ev in ("view-title-changed", "view-app-id-changed"):
-                    self.update_button(self.in_use_buttons.get(view.get("id")), view)
+                    if view.get("id") in self.in_use_buttons:
+                        self.update_button(
+                            self.in_use_buttons.get(view.get("id")), view
+                        )
                 elif ev == "view-focused":
                     self.on_view_focused(view)
                 elif ev == "view-mapped":
@@ -338,12 +392,10 @@ def get_plugin_class():
             )
 
         def scale_toggle(self) -> None:
-            """Toggles the Wayfire scale plugin."""
             if not self.layer_always_exclusive:
                 self.ipc.scale_toggle()
 
         def set_view_focus(self, view: dict) -> None:
-            """Focuses and centers the cursor on a specific view."""
             try:
                 vid = view.get("id")
                 view = self.wf_helper.is_view_valid(vid)
@@ -367,7 +419,7 @@ def get_plugin_class():
             ):
                 state = bool(msg.get("state"))
                 self.is_scale_active[msg.get("output")] = state
-                if not state:
+                if not state and self.menu:
                     self.menu.popdown()
             return False
 
