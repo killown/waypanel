@@ -1,13 +1,13 @@
 def get_plugin_metadata(_):
     about = """
             A plugin that displays the title and icon of the currently
-            focused window on the panel with a context menu to toggle 
-            auto-fullscreen persistence for the current application.
+            focused window on the panel with a context menu to open
+            the Window Rules manager.
             """
     return {
         "id": "org.waypanel.plugin.window_title",
         "name": "Window Title",
-        "version": "1.2.0",
+        "version": "1.3.0",
         "enabled": True,
         "index": 1,
         "priority": 970,
@@ -57,79 +57,33 @@ def get_plugin_class():
             self.glib.idle_add(self._subscribe_to_events_with_retry)
 
         def _on_left_click(self, gesture, n_press, x, y):
-            """Handles left click using the last known toplevel view focus and filters app-id."""
+            """Handles left click to open the rules management menu."""
             view = self._last_toplevel_view_focused
             if not view:
                 return
-
-            app_id = view.get("app-id") or view.get("app_id")
-            if not app_id:
-                return
-
-            # Filter the app_id for the menu label
-            MAX_WORD_LENGTH = 15
-            display_id = app_id
-            if len(display_id) > MAX_WORD_LENGTH:
-                display_id = display_id[:MAX_WORD_LENGTH] + "…"
 
             popover = self.gtk.Popover()
             popover.set_parent(self.window_title_content)
 
             vbox = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL, spacing=6)
-            vbox.set_margin_start(10)
-            vbox.set_margin_end(10)
-            vbox.set_margin_top(10)
-            vbox.set_margin_bottom(10)
-
-            fs_path = ["org.waypanel.plugin.auto_fullscreen", "fullscreen_app_ids"]
-            current_list = self.config_handler.get_root_setting(fs_path, [])
-
-            is_in_list = app_id in current_list
-
-            # Auto Fullscreen toggle button
-            label = (
-                f"Remove {display_id} from Auto FS"
-                if is_in_list
-                else f"Always Fullscreen {display_id}"
-            )
-
-            btn = self.gtk.Button(label=label)
-            btn.connect(
-                "clicked",
-                lambda _: self._toggle_app_fullscreen_rule(
-                    popover, app_id, current_list, is_in_list
-                ),
-            )
-            vbox.append(btn)
+            for m in ["start", "end", "top", "bottom"]:
+                getattr(vbox, f"set_margin_{m}")(10)
 
             # --- Window Rules Integration ---
             rules_plugin = self.plugins.get("org.waypanel.plugin.window_rules")
             if rules_plugin:
-                vbox.append(self.gtk.Separator())
                 btn_rules = self.gtk.Button(label="Open Window Rules")
+                btn_rules.add_css_class("suggested-action")
                 btn_rules.connect(
                     "clicked",
                     lambda _: [rules_plugin.open_rules_manager(), popover.popdown()],
                 )
                 vbox.append(btn_rules)
+            else:
+                vbox.append(self.gtk.Label(label="Window Rules plugin not found"))
 
             popover.set_child(vbox)
             popover.popup()
-
-        def _toggle_app_fullscreen_rule(
-            self, popover, app_id, current_list, is_in_list
-        ):
-            """Updates the root config and triggers immediate fullscreen if enabling."""
-            fs_path = ["org.waypanel.plugin.auto_fullscreen", "fullscreen_app_ids"]
-
-            if is_in_list:
-                new_list = [id for id in current_list if id != app_id]
-            else:
-                new_list = current_list + [app_id]
-                self.ipc.press_key("KEY_F11")
-
-            self.config_handler.set_root_setting(fs_path, new_list)
-            popover.popdown()
 
         def _subscribe_to_events_with_retry(self) -> bool:
             """Retries subscription until event_manager is ready."""
@@ -200,14 +154,14 @@ def get_plugin_class():
                 self.logger.error(f"Error handling 'view-title-changed' event: {e}")
 
         def sway_translate_ipc(self, view: Dict[str, Any]) -> Dict[str, Any]:
-            """Translates Wayland-specific keys to Sway/legacy keys for compatibility."""
+            """Translates Wayland-specific keys for compatibility."""
             v = view.copy()
             v["app-id"] = view.get("app_id")
             v["title"] = view.get("name")
             return v
 
         def update_title_icon_debounced(self, view: Dict[str, Any]) -> None:
-            """Debounce updates to prevent excessive calls during rapid changes."""
+            """Debounce updates to prevent excessive calls."""
             self._last_view_data = view
             if self._debounce_timer_id is not None:
                 self.glib.source_remove(self._debounce_timer_id)
@@ -216,7 +170,7 @@ def get_plugin_class():
             )
 
         def _perform_debounced_update(self) -> bool:
-            """Internal method to perform the actual UI update after debounce."""
+            """Internal method to perform UI update after debounce."""
             self._debounce_timer_id = None
             if self._last_view_data:
                 self.update_title_icon(self._last_view_data)
