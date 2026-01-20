@@ -158,22 +158,39 @@ class FlatpakInstallWindow:
 
     def _load_async_data(self):
         formatted_id = self.app_id.replace("_", ".")
-        url = f"https://flathub.org/api/v2/appstream/{formatted_id}"
+        base = "https://flathub.org/api/v2"
         try:
-            r = requests.get(url, timeout=10)
-            if r.status_code == 200:
-                data = r.json()
-                self.glib.idle_add(self._update_ui_text, data)
+            # Fetch Metadata and Stats
+            r_meta = requests.get(f"{base}/appstream/{formatted_id}", timeout=10)
+            r_stats = requests.get(f"{base}/stats/{formatted_id}", timeout=10)
+
+            data = r_meta.json() if r_meta.status_code == 200 else {}
+            stats = r_stats.json() if r_stats.status_code == 200 else {}
+
+            if data:
+                self.glib.idle_add(self._update_ui_text, data, stats)
                 self._load_screenshots(data.get("screenshots", []))
         except:
             self.glib.idle_add(self.desc_label.set_text, "Failed to load info.")
 
-    def _update_ui_text(self, data):
+    def _update_ui_text(self, data, stats):
         releases = data.get("releases", [])
         version = releases[0].get("version", "Unknown") if releases else "Unknown"
         self.version_label.set_text(f"Version: {version}")
+
+        # Grid rows
         self._add_row("Developer", data.get("developer_name") or "Mozilla", 0)
         self._add_row("License", data.get("project_license"), 1)
+
+        # Add Detailed Stats bellow existing rows
+        is_verified = data.get("metadata", {}).get(
+            "flathub::verification::verified", False
+        )
+        self._add_row("Verified", "✅ Yes" if is_verified else "❌ No", 2)
+
+        installs = stats.get("installs_total", 0)
+        self._add_row("Installs", f"{installs:,}" if installs else "N/A", 3)
+
         desc = re.sub("<[^<]+?>", "", data.get("description", "")).strip()
         self.desc_label.set_text(desc)
         return False
@@ -230,11 +247,9 @@ class FlatpakInstallWindow:
         self.install_view.set_visible(True)
         self.title_label.set_text("Installing...")
 
-        # Start spinner
         self.spinner.set_visible(True)
         self.spinner.start()
 
-        # Build the command for the host system
         cmd = [
             "flatpak",
             "install",
@@ -245,7 +260,6 @@ class FlatpakInstallWindow:
             self.app_id,
         ]
 
-        # Use flatpak-spawn --host to escape the panel's sandbox
         if os.path.exists("/.flatpak-info"):
             cmd = ["flatpak-spawn", "--host"] + cmd
 
@@ -264,11 +278,8 @@ class FlatpakInstallWindow:
     def _pulse(self):
         if self.process.get_if_exited():
             success = self.process.get_exit_status() == 0
-
-            # Stop and hide spinner
             self.spinner.stop()
             self.spinner.set_visible(False)
-
             self.progress_bar.set_fraction(1.0 if success else 0.0)
             self.title_label.set_text(
                 "Installation Finished" if success else "Installation Failed"
@@ -286,7 +297,6 @@ class FlatpakInstallWindow:
         return True
 
     def _launch_app(self, _):
-        """Triggers application launch via the plugin's CommandRunner to escape sandbox."""
         cmd = f"flatpak run {self.app_id}"
         if hasattr(self.app_launcher, "cmd"):
             self.app_launcher.cmd.run(cmd)
