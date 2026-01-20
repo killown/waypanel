@@ -431,6 +431,11 @@ class IPC:
             return self.sock.configure_view(view_id, x, y, w, h, output_id)  # pyright: ignore
 
     @handle_ipc_error
+    def get_total_workspaces(self):
+        """get the numbers of workspaces from current wset_index"""
+        return self.wf_utils._total_workspaces()
+
+    @handle_ipc_error
     def has_output_fullscreen_view(self, output_id: int | None = None) -> bool:
         """Check if the specified output has fullscreen views."""
         return self.wf_utils.has_output_fullscreen_view(output_id)  # pyright: ignore
@@ -528,9 +533,19 @@ class IPC:
         return self.wf_utils.set_view_maximized(view_id)  # pyright: ignore
 
     @handle_ipc_error
-    def set_view_fullscreen(self, view_id: int, state: bool) -> None:
+    def set_view_fullscreen(self, view_id: int, state: bool) -> dict:
         """Set the fullscreen state of a specific view."""
         return self.sock.set_view_fullscreen(view_id, state)  # pyright: ignore
+
+    @handle_ipc_error
+    def set_view_always_on_top(self, view_id, state) -> dict:
+        """Set view sticky"""
+        return self.sock.set_view_always_on_top(view_id, state)  # pyright: ignore
+
+    @handle_ipc_error
+    def set_view_sticky(self, view_id, state) -> dict:
+        """Set view sticky"""
+        return self.sock.set_view_sticky(view_id, state)  # pyright: ignore
 
     @handle_ipc_error
     def set_view_focus(self, view_id: int) -> None:
