@@ -1,5 +1,6 @@
 import sys
 import lazy_loader as lazy
+from typing import Any
 from gi.repository import Adw, Gio, GLib  # pyright: ignore
 from src.shared.config_handler import ConfigHandler
 
@@ -48,8 +49,11 @@ class Panel(Adw.Application):
         self.plugin_metadata = self.plugin_loader.plugin_metadata_map
         return False
 
-    def get_config(self, key_path, default=None):
+    def get_config(self, key_path: list[str] | str, default: Any = None) -> Any:
         """Safely retrieves a configuration value using a list of keys."""
+        if isinstance(key_path, str):
+            key_path = key_path.split(".")
+
         data = self.config_data
         for key in key_path:
             if isinstance(data, dict):
@@ -59,6 +63,16 @@ class Panel(Adw.Application):
             if data is None:
                 return default
         return data
+
+    def get_setting_add_hint(
+        self, key_path: list[str] | str, default_value: Any, hint: str | tuple[str, ...]
+    ) -> Any:
+        """
+        Registers a configuration hint for the Control Center and returns the value.
+        """
+        plugin_id = "org.waypanel.panel"
+        self.config_handler.set_setting_hint(plugin_id, key_path, hint)
+        return self.get_config(key_path, default_value)
 
     def set_panel_instance(self, panel_instance):
         self.panel_instance = panel_instance
@@ -203,14 +217,26 @@ class Panel(Adw.Application):
         Configure the top panel based on the provided configuration.
         """
         self.logger.debug("Setting up top panel...")
-        exclusive = bool(config.get("Exclusive", 1.0))
         anchor_edge = "TOP"
         css_class = "top-panel"
-        layer_position = config.get("layer_position", "TOP")
-        width = self.get_config(
-            ["org.waypanel.panel", "top", "width"], self.monitor_width
+
+        exclusive = self.get_setting_add_hint(
+            "org.waypanel.panel.top.Exclusive",
+            bool(config.get("Exclusive", 1.0)),
+            "Reserve space for the top panel",
         )
-        height = self.get_config(["org.waypanel.panel", "top", "height"], 32.0)
+        layer_position = self.get_setting_add_hint(
+            "org.waypanel.panel.top.layer_position",
+            config.get("layer_position", "TOP"),
+            "Layer position: BACKGROUND, BOTTOM, TOP, OVERLAY",
+        )
+        width = self.get_setting_add_hint(
+            "org.waypanel.panel.top.width", self.monitor_width, "Width of the top panel"
+        )
+        height = self.get_setting_add_hint(
+            "org.waypanel.panel.top.height", 32.0, "Height of the top panel"
+        )
+
         self.top_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
@@ -229,14 +255,28 @@ class Panel(Adw.Application):
         Configure the bottom panel based on the provided configuration.
         """
         self.logger.debug("Setting up bottom panel...")
-        exclusive = bool(config.get("Exclusive", 1.0))
         anchor_edge = "BOTTOM"
         css_class = "bottom-panel"
-        layer_position = config.get("layer_position", "BACKGROUND")
-        width = self.get_config(
-            ["org.waypanel.panel", "bottom", "width"], self.monitor_width
+
+        exclusive = self.get_setting_add_hint(
+            "org.waypanel.panel.bottom.Exclusive",
+            bool(config.get("Exclusive", 1.0)),
+            "Reserve space for the bottom panel",
         )
-        height = self.get_config(["org.waypanel.panel", "bottom", "height"], 32)
+        layer_position = self.get_setting_add_hint(
+            "org.waypanel.panel.bottom.layer_position",
+            config.get("layer_position", "BACKGROUND"),
+            "Layer position: BACKGROUND, BOTTOM, TOP, OVERLAY",
+        )
+        width = self.get_setting_add_hint(
+            "org.waypanel.panel.bottom.width",
+            self.monitor_width,
+            "Width of the bottom panel",
+        )
+        height = self.get_setting_add_hint(
+            "org.waypanel.panel.bottom.height", 32.0, "Height of the bottom panel"
+        )
+
         self.bottom_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
@@ -255,12 +295,26 @@ class Panel(Adw.Application):
         Configure the left panel based on the provided configuration.
         """
         self.logger.debug("Setting up left panel...")
-        exclusive = bool(config.get("Exclusive", 1.0))
         anchor_edge = "LEFT"
         css_class = "left-panel"
-        layer_position = config.get("layer_position", "BACKGROUND")
-        width = self.get_config(["org.waypanel.panel", "left", "width"], 32.0)
-        height = self.get_config(["org.waypanel.panel", "left", "height"], 0.0)
+
+        exclusive = self.get_setting_add_hint(
+            "org.waypanel.panel.left.Exclusive",
+            bool(config.get("Exclusive", 1.0)),
+            "Reserve space for the left panel",
+        )
+        layer_position = self.get_setting_add_hint(
+            "org.waypanel.panel.left.layer_position",
+            config.get("layer_position", "BACKGROUND"),
+            "Layer position: BACKGROUND, BOTTOM, TOP, OVERLAY",
+        )
+        width = self.get_setting_add_hint(
+            "org.waypanel.panel.left.width", 32.0, "Width of the left panel"
+        )
+        height = self.get_setting_add_hint(
+            "org.waypanel.panel.left.height", 0.0, "Height of the left panel"
+        )
+
         self.left_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
@@ -279,12 +333,26 @@ class Panel(Adw.Application):
         Configure the right panel based on the provided configuration.
         """
         self.logger.debug("Setting up right panel...")
-        exclusive = bool(config.get("Exclusive", 1.0))
         anchor_edge = "RIGHT"
         css_class = "right-panel"
-        layer_position = config.get("layer_position", "BACKGROUND")
-        width = self.get_config(["org.waypanel.panel", "right", "width"], 32.0)
-        height = self.get_config(["org.waypanel.panel", "right", "height"], 0.0)
+
+        exclusive = self.get_setting_add_hint(
+            "org.waypanel.panel.right.Exclusive",
+            bool(config.get("Exclusive", 1.0)),
+            "Reserve space for the right panel",
+        )
+        layer_position = self.get_setting_add_hint(
+            "org.waypanel.panel.right.layer_position",
+            config.get("layer_position", "BACKGROUND"),
+            "Layer position: BACKGROUND, BOTTOM, TOP, OVERLAY",
+        )
+        width = self.get_setting_add_hint(
+            "org.waypanel.panel.right.width", 32.0, "Width of the right panel"
+        )
+        height = self.get_setting_add_hint(
+            "org.waypanel.panel.right.height", 0.0, "Height of the right panel"
+        )
+
         self.right_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
@@ -297,43 +365,3 @@ class Panel(Adw.Application):
         if config.get("enabled", True):
             self.right_panel.present()
         self.logger.info("Right panel setup completed.")
-
-    def about(self):
-        """
-        The Panel class serves as the central control hub for the entire
-        waypanel application. It manages the application lifecycle,
-        handles configuration, loads plugins, and orchestrates the
-        creation of all UI panels.
-        """
-        return self.about.__doc__
-
-    def code_explanation(self):
-        """
-        The `Panel` class is the application's core orchestrator. Inheriting
-        from `Adw.Application`, it manages the entire startup and
-        runtime process. Its key functions are:
-        1.  **Configuration and Lifecycle Management**: The `__init__`
-            method initializes core components like the logger, IPC
-            client, and plugin loader. It also loads the `config.toml`
-            file, which acts as the single source of truth for the
-            application's state and appearance. The new `get_config`
-            method provides a safe and standardized way to retrieve
-            nested configuration values. Methods like
-            `reload_config()` (implicitly via a file watcher) allow
-            for dynamic updates at runtime, notifying individual
-            plugins of changes.
-        2.  **Modular Panel Creation**: The `setup_panels()` method
-            is a factory for creating the application's UI. It reads
-            the configuration to determine which panels to create
-            (top, bottom, left, right), their positions, sizes, and
-            exclusivity. This modular, configuration-driven approach
-            allows users to customize the panel layout without
-            modifying the source code.
-        3.  **Asynchronous Initialization (FIXED)**: The `on_activate` method
-            begins the application's main loop. It uses `GLib.idle_add`
-            to run `_load_plugins`, which now uses `asyncio.create_task`
-            to load plugins concurrently. This ensures the UI remains
-            responsive and doesn't freeze during startup, which was a
-            crucial fix for a smooth user experience.
-        """
-        return self.code_explanation.__doc__
