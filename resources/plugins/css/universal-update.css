@@ -1,0 +1,116 @@
+:root {
+  /* Main Trigger Button - High Visibility */
+  .universal-update-button {
+    -gtk-icon-size: 20px;
+    margin-top: 4px;
+    padding: 6px 10px;
+    border-radius: var(--radius-m);
+    background-image: linear-gradient(
+      to bottom,
+      var(--color-steam-blue-dark),
+      var(--color-steam-dark-blue)
+    );
+    color: var(--theme-fg-label-primary);
+    box-shadow: var(--shadow-control-small);
+    border: 1px solid var(--color-steam-blue-dark);
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .universal-update-button:hover {
+    background-image: none;
+    background-color: var(--color-bg-button-hover);
+    box-shadow:
+      0 0 12px var(--color-shadow-hue-bleed),
+      inset 0 0 0 1px var(--color-steam-light-blue);
+    border-color: var(--color-steam-light-blue);
+  }
+
+  .universal-update-button:active {
+    background-color: var(--color-bg-button-active);
+    box-shadow: var(--shadow-neumorphic-press);
+    transform: translateY(1px);
+  }
+
+  /* Popover Container - Floating Depth */
+  .universal-update-popover {
+    background-color: var(--color-bg-popover);
+    color: var(--theme-fg-label-primary);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-window-float);
+    border: 1px solid var(--color-separator-line);
+    margin: 8px;
+  }
+
+  /* Internal Box Layout */
+  .universal-update-popover box {
+    padding: 16px;
+    background-color: var(--color-bg-deep);
+    border-radius: var(--radius-l);
+  }
+
+  /* Labels and Status - Readability Focus */
+  .universal-update-popover label {
+    font-family: var(--font-family-system);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-steam-light-blue-functional);
+    font-size: 1.05rem;
+    margin-bottom: 12px;
+    padding: 2px 4px;
+  }
+
+  /* Action Buttons within Popover */
+  .universal-update-popover button {
+    border-radius: var(--radius-m);
+    padding: 8px 16px;
+    margin-top: 6px;
+    font-weight: var(--font-weight-medium);
+    border: 1px solid transparent;
+    transition: all 120ms ease-in-out;
+  }
+
+  /* Refresh Button (Secondary) - Subtle Contrast */
+  .universal-update-popover button:not(.suggested-action) {
+    background-color: var(--color-bg-searchbar);
+    color: var(--theme-fg-label-secondary);
+    box-shadow: var(--shadow-element-minimal);
+  }
+
+  .universal-update-popover button:not(.suggested-action):hover {
+    background-color: var(--color-bg-button-hover);
+    color: var(--theme-fg-label-primary);
+    border-color: var(--color-accent-blue-dark);
+  }
+
+  /* Update Now Button (Primary/Suggested) - Success Green */
+  .universal-update-popover button.suggested-action {
+    background-image: linear-gradient(
+      to bottom,
+      var(--color-steam-green-hover),
+      var(--color-steam-green)
+    );
+    color: var(--color-fg-primary);
+    margin-top: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .universal-update-popover button.suggested-action:hover {
+    background-image: none;
+    background-color: var(--color-steam-green-hover);
+    box-shadow: 0 0 10px rgba(90, 149, 60, 0.4);
+    border-color: var(--color-steam-light-blue-functional);
+  }
+
+  /* Shared Interaction States */
+  .universal-update-popover button:active {
+    box-shadow: var(--shadow-neumorphic-press);
+    background-color: var(--color-bg-button-active);
+  }
+
+  /* Accessibility & Focus Rings */
+  .universal-update-button:focus,
+  .universal-update-popover button:focus {
+    outline: 2px solid var(--color-steam-light-blue-functional);
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}

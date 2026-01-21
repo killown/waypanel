@@ -47,7 +47,6 @@ def get_plugin_class():
 
             self.menubutton_mullvad.set_icon_name(self.icon_name)
             self.menubutton_mullvad.add_css_class("top_right_widgets")
-            self.gtk_helper.add_cursor_effect(self.menubutton_mullvad)
 
             popover_content = self._create_popover_ui()
             self.popover_mullvad = self.gtk.Popover()
