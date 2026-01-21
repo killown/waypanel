@@ -1,19 +1,26 @@
 def get_plugin_metadata(panel):
+    """Retrieves the metadata for the Universal Update plugin.
+
+    Args:
+        panel: The panel instance used to resolve plugin configuration and containers.
+
+    Returns:
+        dict: A dictionary containing plugin identification, requirements, and metadata.
+    """
     import shutil
 
     bins = ["pacman", "dnf", "apt", "zypper", "xbps-install", "apk", "flatpak"]
     ENABLE = any(shutil.which(b) for b in bins)
-
     id = "org.waypanel.plugin.universal_update"
     default_container = "top-panel-center"
     container, id = panel.config_handler.get_plugin_container(default_container, id)
-
     return {
         "id": id,
         "name": "Universal Update",
         "version": "2.5.0",
         "enabled": ENABLE,
-        "index": 3,
+        "index": 1,
+        "priority": 1000,
         "container": container,
         "deps": ["top_panel"],
         "description": "Universal Linux update manager with per-backend custom commands.",
@@ -21,14 +28,25 @@ def get_plugin_metadata(panel):
 
 
 def get_plugin_class():
+    """Returns the UniversalUpdate plugin class definition with logic for background updates.
+
+    Returns:
+        type: The UniversalUpdate class inheriting from BasePlugin.
+    """
     import shutil
     from src.plugins.core._base import BasePlugin
     from ._manager import get_manager
 
     class UniversalUpdate(BasePlugin):
-        def __init__(self, panel_instance):
-            super().__init__(panel_instance)
+        """Plugin for orchestrating system updates across multiple Linux package managers."""
 
+        def __init__(self, panel_instance):
+            """Initializes the UniversalUpdate plugin, registering settings and UI components.
+
+            Args:
+                panel_instance: The main panel instance this plugin is attached to.
+            """
+            super().__init__(panel_instance)
             custom_cmds = {
                 "pacman": self.get_plugin_setting_add_hint(
                     ["commands", "pacman"], "", "Custom command for Pacman."
@@ -52,12 +70,10 @@ def get_plugin_class():
                     ["commands", "flatpak"], "", "Custom command for Flatpak."
                 ),
             }
-
             UpdateManager = get_manager()
             self.manager = UpdateManager(
                 config={k: v for k, v in custom_cmds.items() if v}
             )
-
             self.check_interval_seconds = self.get_plugin_setting_add_hint(
                 ["timing", "check_interval_seconds"], 3600, "Background check interval."
             )
@@ -79,73 +95,88 @@ def get_plugin_class():
                 ["kitty", "alacritty", "terminator", "xterm", "gnome-terminal"],
                 "Preferred terminals.",
             )
-
-            self.menu_button = self.gtk.MenuButton()
-            icon_name = self.icon_exist(
-                "software-update-available-symbolic", ["software-update-available"]
+            self.trigger_button = self.gtk.Button()
+            self.get_plugin_setting_add_hint(
+                ["main_icon"],
+                "software-update-available-symbolic",
+                "universal-update-button icon",
             )
-            self.menu_button.set_icon_name(icon_name)
-            self.menu_button.add_css_class("universal-update-button")
-            self.gtk_helper.add_cursor_effect(self.menu_button)
-
-            self.main_widget = (self.menu_button, "append")
+            self.trigger_button.add_css_class("universal-update-button")
+            self.gtk_helper.add_cursor_effect(self.trigger_button)
+            self.trigger_button.connect("clicked", self._on_button_clicked)
+            self.main_widget = (self.trigger_button, "append")
             self.update_count = 0
             self.is_checking = False
             self.terminal_pid = None
             self.count_label = None
 
         def on_start(self):
-            self.run_in_thread(self._setup_popover)
+            """Initializes the UI popover and starts the periodic update checking loop."""
+            self._setup_popover()
             self.run_in_async_task(self._manual_refresh())
             self.glib.timeout_add_seconds(
                 self.check_interval_seconds, self._check_updates_periodically
             )
 
         def _setup_popover(self):
+            """Constructs the GTK popover menu containing status info and action buttons."""
             self.popover_box = self.gtk.Box(
                 orientation=self.gtk.Orientation.VERTICAL, spacing=8
             )
             self.popover = self.create_popover(
-                parent_widget=self.menu_button,
+                parent_widget=self.trigger_button,
                 css_class="universal-update-popover",
                 visible_handler=self._on_popover_visibility_changed,
             )
             self.popover.set_child(self.popover_box)
-            self.menu_button.set_popover(self.popover)
-
             self.count_label = self.gtk.Label(label="Initializing...")
             self.popover_box.append(self.count_label)
-
             refresh_btn = self.gtk.Button(label="Refresh")
             refresh_btn.connect(
                 "clicked", lambda _: self.run_in_async_task(self._manual_refresh())
             )
             self.popover_box.append(refresh_btn)
-
             update_btn = self.gtk.Button(label="Update Now")
+            update_btn.add_css_class("suggested-action")
             update_btn.connect("clicked", self._launch_terminal)
             self.popover_box.append(update_btn)
 
+        def _on_button_clicked(self, _):
+            """Toggles the visibility of the update popover when the main button is clicked."""
+            if self.popover.get_visible():
+                self.popover.popdown()
+            else:
+                self.popover.popup()
+
         def _on_popover_visibility_changed(self, popover, _):
+            """Triggers a refresh of the update count when the popover becomes visible."""
             if popover.get_property("visible"):
                 self.run_in_async_task(self._manual_refresh())
 
         async def _manual_refresh(self):
+            """Performs an asynchronous update check, preventing concurrent polling operations."""
             if self.is_checking:
                 return
             self.is_checking = True
             self.schedule_in_gtk_thread(
-                self.count_label.set_label, "Polling backends..."
+                self.count_label.set_label,
+                "Polling backends...",
             )
             await self._check_updates()
             self.is_checking = False
 
         def _check_updates_periodically(self):
+            """Periodic callback for GLib timeout to trigger background update checks.
+
+            Returns:
+                bool: True to keep the timeout active.
+            """
             if not self.is_checking:
                 self.run_in_async_task(self._manual_refresh())
             return True
 
         async def _check_updates(self):
+            """Queries all available update backends and schedules a UI update with the results."""
             try:
                 count = await self.manager.check_all(
                     self.asyncio, self.subprocess, self.check_timeout_seconds
@@ -157,26 +188,30 @@ def get_plugin_class():
                 self.schedule_in_gtk_thread(self._update_ui, -1)
 
         def _update_ui(self, count):
+            """Updates the button visibility and popover label based on the update count.
+
+            Args:
+                count (int): Number of updates found, or -1 for error.
+            """
             if count == -1:
                 self.count_label.set_label("Backend Error")
-                self.menu_button.show()
+                self.trigger_button.show()
             elif count == 0:
                 self.count_label.set_label("System up to date")
-                self.menu_button.hide()
+                self.trigger_button.hide()
             else:
                 self.count_label.set_label(f"{count} updates available")
-                self.menu_button.show()
+                self.trigger_button.show()
 
         def _launch_terminal(self, _):
+            """Spawns the preferred terminal to execute the combined update command string."""
             terminal = next(
                 (t for t in self.terminal_preference if shutil.which(t)), None
             )
             if not terminal:
                 return
-
             wrapped_command = f"sh -c \"{self.update_command}; echo; echo 'Task finished. Press Enter to exit...'; read\""
             cmd = [terminal, "-e", "sh", "-c", wrapped_command]
-
             try:
                 proc = self.subprocess.Popen(cmd)
                 self.terminal_pid = proc.pid
@@ -188,6 +223,11 @@ def get_plugin_class():
             self.popover.popdown()
 
         def _monitor_terminal(self):
+            """Monitors the terminal process PID and refreshes status once the process exits.
+
+            Returns:
+                bool: True if monitoring should continue, False if process finished.
+            """
             if not self.terminal_pid:
                 return False
             try:
