@@ -91,3 +91,12 @@ class Helpers:
                 "monitor_interval",
             ],
         )
+
+        self.parent.add_hint(
+            ["The maximum size for image thumbnails."],
+            ["client", "thumbnail_size"],
+        )
+        self.parent.add_hint(
+            ["The fixed height for rows containing images."],
+            ["client", "image_row_height"],
+        )

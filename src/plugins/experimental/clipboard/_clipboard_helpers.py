@@ -6,6 +6,7 @@ import string
 import math
 from collections import Counter
 from src.shared.path_handler import PathHandler
+from src.shared.data_helpers import DataHelpers
 
 
 class ClipboardManager:
@@ -13,12 +14,14 @@ class ClipboardManager:
         plugin = get_plugin_class()
         self.server = plugin(panel_instance)
         self.path_handler = PathHandler(panel_instance)
+        self.data_helpers = DataHelpers()
         self.db_path = self.path_handler.get_data_path(
             "db/clipboard/clipboard_server.db"
         )
 
     async def initialize(self):
-        pass
+        """Triggers the server to verify/create the database and start monitoring."""
+        await self.server.start()
 
     async def get_history(self) -> list[tuple[int, str, str | None, int]]:
         """Returns all items as (id, content, label, is_pinned) tuples (new feature)"""
@@ -86,56 +89,45 @@ class ClipboardHelpers:
         pass
 
     def is_image_content(self, content):
-        """
-        Detect both image files AND raw image data.
-        Args:
-            content: The clipboard content to check (can be str or bytes).
-        Returns:
-            bool: True if the content represents an image, False otherwise.
-        """
-        if isinstance(content, str) and self.parent.data_helper.validate_string(
-            content, "content from is_image_content"
-        ):
-            if len(content) < 256 and Path(content).exists():
-                mime = mimetypes.guess_type(content)[0]
-                return mime and mime.startswith("image/")
-        elif isinstance(content, bytes) and self.parent.data_helper.validate_bytes(
-            content, name="bytes from is_image_content"
-        ):
-            magic_numbers = {
-                b"\x89PNG": "PNG",
-                b"\xff\xd8": "JPEG",
-                b"GIF87a": "GIF",
-                b"GIF89a": "GIF",
-                b"BM": "BMP",
-                b"RIFF....WEBP": "WEBP",
-            }
-            return any(content.startswith(magic) for magic in magic_numbers.keys())
-        elif isinstance(  # pyright: ignorecontent, str) and self.data_helper.validate_string(
-            content, "content from is_image_content"
-        ):
-            if (
-                content.startswith(("data:image/png", "data:image/jpeg"))
-                or content == "<image>"
+        """Detects if content is an image path, raw data, or an HTML image tag."""
+        if not content:
+            return False
+
+        # Check for HTML img tags or direct image URLs
+        if isinstance(content, str):
+            # Regex to catch the <img src="..."> pattern you provided
+            if re.search(
+                r'<img [^>]*src=["\']([^"\']+\.(?:png|jpg|jpeg|gif|webp|svg))["\']',
+                content,
+                re.I,
             ):
                 return True
-        return False
+            # Direct URL check
+            if content.lower().startswith(
+                ("http://", "https://")
+            ) and content.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
+                return True
+            # Existing file path check
+            if len(content) < 512 and Path(content).exists():
+                mime = mimetypes.guess_type(content)[0]
+                return mime and mime.startswith("image/")
+
+        # Existing bytes check
+        elif isinstance(content, bytes):
+            magic_numbers = {b"\x89PNG": "PNG", b"\xff\xd8": "JPEG", b"BM": "BMP"}
+            return any(content.startswith(magic) for magic in magic_numbers.keys())
+
+        return content == "<image>"
 
     def clear_and_calculate_height(self):
-        """
-        Clear the existing list and calculate the required height for the scrolled window.
-        FIXED (GTK4/PyGObject Memory Leak): Implements the GTK4 iteration pattern and
-        adds explicit cleanup for self.gtk.Popovers to resolve the "still has children left"
-        warning and prevent the memory leak.
-        Returns:
-            int: The calculated total height.
-        """
         try:
+            # Precise UI Cleanup
             if self.parent.listbox is not None:
                 row = self.parent.listbox.get_first_child()
                 while row:
                     next_row = row.get_next_sibling()
-                    row_hbox = row.get_child()  # pyright: ignore
+                    # Deep cleanup of popovers to prevent memory leaks
+                    row_hbox = row.get_child()
                     if row_hbox:
                         child = row_hbox.get_first_child()
                         while child:
@@ -145,20 +137,16 @@ class ClipboardHelpers:
                                     del child.popover
                                 except Exception:
                                     pass
-                            if child in self.parent.find_text_using_button:
-                                del self.parent.find_text_using_button[child]
                             child = child.get_next_sibling()
-                    if hasattr(row, "popover") and row.popover is not None:  # pyright: ignore
-                        try:
-                            row.popover.unparent()  # pyright: ignore
-                            del row.popover  # pyright: ignore
-                        except Exception:
-                            pass
+
                     self.parent.listbox.remove(row)
                     row = next_row
+
+            # Sync State with Server
             self.parent.asyncio.run(self.parent.manager.initialize())
             items = self.parent.asyncio.run(self.parent.manager.get_history())
-            self.parent.asyncio.run(self.parent.manager.server.stop())
+
+            # Calculate Height using explicit properties
             IMAGE_EXTENSIONS = (
                 ".png",
                 ".jpg",
@@ -169,23 +157,33 @@ class ClipboardHelpers:
                 ".svg",
             )
             total_height = 0
-            for item_id, content, label, is_pinned in items:
-                if any(
-                    content.lower().endswith(ext)
+
+            for _, content, _, _ in items:
+                is_img = any(
+                    isinstance(content, str) and content.lower().endswith(ext)
                     for ext in IMAGE_EXTENSIONS
-                    if isinstance(content, str)
-                ) or self.parent.clipboard_helper.is_image_content(content):
+                ) or self.parent.clipboard_helper.is_image_content(content)
+
+                if is_img:
                     total_height += self.parent.image_row_height
                 else:
-                    css_height_space = 30
-                    total_height += self.parent.text_row_height + css_height_space
+                    # Logic: Text height + markup/label overhead
+                    total_height += self.parent.text_row_height
+
                 total_height += self.parent.item_spacing
-            total_height = max(total_height, 100)
-            total_height = min(total_height, self.parent.popover_max_height)
-            return total_height
+
+            # Final Constraint Check
+            final_height = min(max(total_height, 100), self.parent.popover_max_height)
+
+            # Update ScrolledWindow to reflect new content size immediately
+            if hasattr(self.parent, "scrolled_window"):
+                self.parent.scrolled_window.set_min_content_height(final_height)
+
+            return final_height
+
         except Exception as e:
             self.parent.logger.error(
-                message=f"Error clearing list or calculating height in clear_and_calculate_height. {e}",
+                message=f"Error in clear_and_calculate_height: {e}"
             )
             return 100
 
