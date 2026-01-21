@@ -119,6 +119,7 @@ class GtkHelpers:
             widget.set_icon_name(icon_name)  # pyright: ignore
         else:
             self.logger.warning(f"Could not find icon for plugin: {plugin_name}")
+        self.add_cursor_effect(widget)
 
     def icon_exist(self, argument: str, fallback_icons=None) -> str:
         """
