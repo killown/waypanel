@@ -17,32 +17,42 @@ def get_plugin_metadata(_):
 
 def get_plugin_class():
     import asyncio
-
+    import threading
     from dbus_fast.aio import MessageBus
     from dbus_fast.service import ServiceInterface, method, signal
     from dbus_fast import BusType, NameFlag, RequestNameReply
     from gi.repository import GLib
+    from src.plugins.core._event_loop import get_global_loop
     from ._notify_server_db import Database
     from ._notify_server_ui import get_plugin_class as get_ui_class
 
     def run_server_in_background(panel_instance):
+        """
+        Registers the notification daemon within the global asyncio loop.
+        """
+        server = NotificationDaemon(panel_instance)
+        loop = get_global_loop()
+
         async def _run_server():
-            server = NotificationDaemon(panel_instance)
             await server.run()
             panel_instance.logger.info(
-                "Notification server (dbus-fast) running in background"
+                "Notification server integrated with global loop"
             )
-            # Keep the background loop alive
-            await asyncio.Future()
 
-        def _start_loop():
-            asyncio.run(_run_server())
+        # Schedule the server startup in the global loop
+        asyncio.run_coroutine_threadsafe(_run_server(), loop)
 
-        import threading
+        # Start the global loop in a single shared thread if it's not running
+        if not loop.is_running():
 
-        thread = threading.Thread(target=_start_loop, daemon=True)
-        thread.start()
-        return thread
+            def start_loop():
+                asyncio.set_event_loop(loop)
+                loop.run_forever()
+
+            thread = threading.Thread(target=start_loop, daemon=True)
+            thread.start()
+
+        return server
 
     class NotificationDaemon(ServiceInterface):
         def __init__(self, panel_instance):
@@ -79,41 +89,50 @@ def get_plugin_class():
             hints: "a{sv}",
             expire_timeout: "i",
         ) -> "u":
-            """Handle incoming notifications via dbus-fast."""
             notification_id = replaces_id if replaces_id != 0 else self.next_id
             if replaces_id == 0:
                 self.next_id += 1
 
-            # dbus-fast Variant handling: unpack .value if it exists
-            processed_hints = {}
-            for k, v in hints.items():
-                processed_hints[k] = v.value if hasattr(v, "value") else v
-
-            notification = {
+            # UI Version (Raw data for immediate display)
+            notification_ui = {
                 "app_name": app_name,
                 "summary": summary,
                 "body": body,
                 "app_icon": app_icon,
                 "actions": actions,
-                "hints": processed_hints,
+                "hints": hints,
                 "expire_timeout": expire_timeout,
             }
-            self.notifications[notification_id] = notification
+            self.notifications[notification_id] = notification_ui
 
-            # Save the notification to the database
-            self.db._save_notification_to_db(notification, self.db_path)
-
-            self.logger.info(f"Received notification {notification_id} from {app_name}")
-
-            # Show a popup for the notification
-            GLib.idle_add(self.ui.show_popup, notification)
-
-            # Emit the NotificationClosed signal after the timeout
-            if expire_timeout > 0:
-                GLib.timeout_add(
-                    expire_timeout, self.close_notification, notification_id, 1
+            # DB Version (Sanitized and Cached)
+            try:
+                # sanitize_for_db now returns a path string if it saves an image
+                processed_hints = self.ui.notify_utils.sanitize_for_db(
+                    hints, notification_id
                 )
 
+                # Check if processed_hints is a path to a cached icon
+                db_icon = app_icon
+                if isinstance(processed_hints, str) and processed_hints.endswith(
+                    ".png"
+                ):
+                    db_icon = processed_hints
+
+                notification_db = {
+                    "app_name": app_name,
+                    "summary": summary,
+                    "body": body,
+                    "app_icon": db_icon,
+                    "actions": actions,
+                    "hints": processed_hints,
+                    "expire_timeout": expire_timeout,
+                }
+                self.db._save_notification_to_db(notification_db, self.db_path)
+            except Exception as e:
+                self.logger.error(f"Failed to save notification: {str(e)}")
+
+            GLib.idle_add(self.ui.show_popup, notification_ui)
             return notification_id
 
         @method()

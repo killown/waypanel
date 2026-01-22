@@ -1,4 +1,7 @@
 def get_plugin_metadata(_):
+    """
+    Metadata for the Notify Server UI plugin.
+    """
     about = """
             This module provides the user-facing graphical interface (UI)
             for the notification server, responsible for rendering ephemeral
@@ -15,12 +18,22 @@ def get_plugin_metadata(_):
 
 
 def get_plugin_class():
+    """
+    Returns the UI plugin class.
+    """
     import re
     from src.plugins.core._base import BasePlugin
     from ._utils import NotifyUtils
 
     class UI(BasePlugin):
+        """
+        GTK4 LayerShell based UI for desktop notifications.
+        """
+
         def __init__(self, panel_instance) -> None:
+            """
+            Initializes the UI component and the notification utilities.
+            """
             super().__init__(panel_instance)
             self.notify_utils = NotifyUtils(panel_instance)
             self.app = self.gtk.Application(
@@ -37,6 +50,9 @@ def get_plugin_class():
             pass
 
         def notify_reload_config(self):
+            """
+            Reloads configuration settings for notifications and DND mode.
+            """
             self.show_messages = self.get_root_setting(
                 ["org.waypanel.plugin.notify_client", "show_messages"], True
             )
@@ -46,9 +62,7 @@ def get_plugin_class():
 
         def _extract_first_uri_from_text(self, text: str) -> str | None:
             """
-            Uses a regular expression to find and return the first URL in a string.
-            This pattern is designed to catch http/https, ftp, file, and www. links.
-            It ensures the returned URI is launchable by adding a scheme if necessary.
+            Extracts the first valid URI from a text string using regex.
             """
             url_regex = r"(?:https?|ftp|file)://\S+|www\.\S+"
             matches = re.findall(url_regex, text)
@@ -61,16 +75,13 @@ def get_plugin_class():
 
         def _strip_html_tags(self, text: str) -> str:
             """
-            Removes all HTML/XML/Pango tags from a string for safe display.
+            Strips HTML/Pango tags from the notification body.
             """
             return re.sub(r"<[^>]*>", "", text)
 
         def on_notification_click(self, gesture, n_press, x, y, notification, window):
             """
-            Handle click action on a notification:
-            1. Extract URI from hints (priority) or body (fallback).
-            2. If URI exists, use xdg-open via self.cmd.run (synchronous) and return.
-            3. If no URI, launch application from desktop-entry hint (FALLBACK).
+            Handles the click gesture on the notification window to launch URIs or apps.
             """
             hints = notification.get("hints", {})
             desktop_entry = hints.get("desktop-entry", "").lower()
@@ -83,30 +94,36 @@ def get_plugin_class():
                 command = f"xdg-open '{uri_to_launch}'"
                 try:
                     self.cmd.run(command)
-                    self.logger.info(f"Launching URI (via xdg-open): {uri_to_launch}")
                 except Exception as e:
-                    self.logger.error(f"Failed to launch URI with xdg-open: {e}")
+                    self.logger.error(f"Failed to launch URI: {e}")
                 window.close()
                 return
             if desktop_entry:
                 self.cmd.run(desktop_entry)
-                self.logger.info(
-                    f"Launching application via desktop entry: {desktop_entry}"
-                )
                 window.close()
                 return
-            self.logger.debug("Notification click had no associated action.")
+
+        def on_action_clicked(self, action_id, notification, window):
+            """
+            Invokes a specific notification action via the notification server.
+            """
+            try:
+                server = self.plugin_loader.plugins.get("notify_server")
+                if server and hasattr(server, "ActionInvoked"):
+                    nid = notification.get("id", 0)
+                    server.ActionInvoked(nid, action_id)
+                else:
+                    self.logger.error("Notify server not found or invalid instance")
+            except Exception as e:
+                self.logger.error(f"Failed to invoke action {action_id}: {e}")
+            window.close()
 
         def show_popup(self, notification):
             """
-            Show a GTK4 popup for the notification using LayerShell.
-            :param notification: Dictionary containing notification details.
+            Renders a transient notification window with support for actions and icons.
             """
             self.notify_reload_config()
             if not self.show_messages:
-                self.logger.info(
-                    "Do Not Disturb mode is active. Notification suppressed."
-                )
                 return
 
             popup_width = self.get_plugin_setting(["popup_width"], 399)
@@ -124,6 +141,7 @@ def get_plugin_class():
                 center_popup_position = new_width_position
             if new_height_position:
                 top_popup_position = new_height_position
+
             window = self.gtk.Window()
             window.add_css_class("notify-window")
             self.layer_shell.init_for_window(window)
@@ -136,75 +154,78 @@ def get_plugin_class():
             self.layer_shell.set_margin(
                 window, self.layer_shell.Edge.RIGHT, center_popup_position
             )
+
             vbox = self.gtk.Box(orientation=self.gtk.Orientation.VERTICAL, spacing=10)
             vbox.set_margin_top(10)
             vbox.set_margin_bottom(10)
             vbox.set_margin_start(10)
             vbox.set_margin_end(10)
             vbox.add_css_class("notify-server-vbox")
+            vbox.add_css_class("notification-box")
+
             click_gesture = self.gtk.GestureClick.new()
             click_gesture.set_button(0)
             click_gesture.connect(
                 "released", self.on_notification_click, notification, window
             )
             vbox.add_controller(click_gesture)
+
             icon = self.notify_utils.load_icon(notification)
             if icon:
                 icon.set_pixel_size(48)
                 vbox.append(icon)
+
             summary_label = self.gtk.Label(label=notification["summary"])
             summary_label.add_css_class("notify-server-summary-label")
+            summary_label.add_css_class("notification-summary")
             summary_label.set_wrap(True)
             vbox.append(summary_label)
-            body_text_to_display = self._strip_html_tags(notification["body"])
-            body_label = self.gtk.Label(label=body_text_to_display)
+
+            body_text = self._strip_html_tags(notification.get("body", ""))
+            body_label = self.gtk.Label(label=body_text)
             body_label.add_css_class("notify-server-body-label")
+            body_label.add_css_class("notification-body")
             body_label.set_wrap(True)
             body_label.set_max_width_chars(100)
             body_label.set_lines(5)
             body_label.set_ellipsize(self.pango.EllipsizeMode.END)
             body_label.set_halign(self.gtk.Align.CENTER)
             vbox.append(body_label)
+
+            actions = notification.get("actions", [])
+            if actions:
+                action_box = self.gtk.Box(
+                    orientation=self.gtk.Orientation.HORIZONTAL, spacing=5
+                )
+                action_box.set_halign(self.gtk.Align.CENTER)
+                for i in range(0, len(actions), 2):
+                    if i + 1 < len(actions):
+                        action_id = actions[i]
+                        action_label = actions[i + 1]
+                        if action_id == "default":
+                            continue
+                        btn = self.gtk.Button(label=action_label)
+                        btn.add_css_class("notification-action-button")
+                        btn.connect(
+                            "clicked",
+                            lambda _, aid=action_id: self.on_action_clicked(
+                                aid, notification, window
+                            ),
+                        )
+                        action_box.append(btn)
+                if action_box.get_first_child():
+                    vbox.append(action_box)
+
             close_button = self.gtk.Button(label="Close")
             close_button.connect("clicked", lambda _: window.close())
             vbox.append(close_button)
+
             window.set_child(vbox)
             window.set_default_size(popup_width, popup_height)
-            vbox.add_css_class("notification-box")
-            summary_label.add_css_class("notification-summary")
-            body_label.add_css_class("notification-body")
             window.present()
+
             self.glib.timeout_add_seconds(
                 self.timeout, lambda: window.close() if window.is_visible() else False
             )
-
-        def code_explanation(self):
-            """
-            The core logic of this UI module is to act as the presentation
-            layer for a decoupled notification system. Its design is based
-            on principles that make it robust and adaptable to future changes:
-            1.  **Separation of UI and Logic**: It is deliberately separated
-                from the D-Bus service (`notify_server.py`). Its only job is
-                to visually display notifications and respect the "Do Not
-                Disturb" setting. The `show_popup` method is the entry point
-                for this display logic.
-            2.  **Platform-Specific Presentation**: It utilizes a specialized
-                API, `self.gtk4LayerShell`, to create windows that are not managed
-                by the typical window manager. This ensures that notifications
-                appear consistently as non-intrusive overlays on the desktop.
-            3.  **Dynamic Configuration**: The module dynamically loads
-                settings (like pop-up size, position, and timeout) from a
-                configuration file. This externalizes user preferences, making
-                the UI highly customizable without requiring code modification.
-            4.  **Controlled Lifetime**: Each notification pop-up is given a
-                finite, configurable lifespan using a timer. This prevents the
-                UI from becoming cluttered with stale notifications and ensures
-                they are a transient visual cue rather than a persistent window.
-            5.  **Unified Click Action (Final Launch Fix)**: The entire notification box is clickable via `self.gtk.GestureClick`. The `on_notification_click` method centralizes the action hierarchy:
-                - **Launch Mechanism FIX**: The problematic asynchronous `Gtk.UriLauncher` methods (`_launch_uri_async` and `on_launch_finished`) have been removed from the class. They are replaced by a **synchronous** call to `self.cmd.run(f"xdg-open '{uri_to_launch}'")`. This direct command execution is the most robust way to launch all URIs (including `file://` paths) from a transient window environment, eliminating the race condition that caused the "application launch failed" error.
-                - **Window Closure**: For both URI launches and `desktop-entry` launches, `window.close()` is now performed immediately after the synchronous `self.cmd.run` call, ensuring the notification disappears upon action.
-                - **URI Extraction**: `_extract_first_uri_from_text` correctly recognizes **`file://`** URIs in addition to web protocols.
-            """
-            return self.code_explanation.__doc__
 
     return UI
