@@ -26,7 +26,7 @@ def get_plugin_class():
     from pathlib import Path
     from urllib.parse import unquote, urlparse
     import pyperclip
-    from gi.repository import GdkPixbuf, Gio, GLib, Gtk
+    from gi.repository import GdkPixbuf
     from src.plugins.core._base import BasePlugin
     from .clipboard_server import get_plugin_class as get_server_class
     from ._clipboard_template import Helpers
@@ -47,8 +47,6 @@ def get_plugin_class():
             self.delete_btn_map = {}
             self.listbox = None
             self.clipboard_helper = ClipboardHelpers(self)
-            self.gio = Gio
-            self.glib = GLib
 
             self._is_populating = False
 
@@ -119,9 +117,9 @@ def get_plugin_class():
                 history = await self.manager.get_history()
 
                 existing_ids = set()
-                row = self.listbox.get_first_child()
+                row = self.listbox.get_first_child()  # pyright: ignore
                 while row:
-                    child = row.get_child()
+                    child = row.get_child()  # pyright: ignore
                     if hasattr(child, "ITEM_ID"):
                         existing_ids.add(child.ITEM_ID)
                     row = row.get_next_sibling()
@@ -142,9 +140,9 @@ def get_plugin_class():
 
                     row_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 5)
                     row_hbox.add_css_class("clipboard-row-hbox")
-                    row_hbox.ITEM_ID = item_id
-                    row_hbox.MYTEXT = f"{item_id} {content} {label if label else ''}"
-                    row_hbox.IS_PINNED = is_pinned
+                    row_hbox.ITEM_ID = item_id  # pyright: ignore
+                    row_hbox.MYTEXT = f"{item_id} {content} {label if label else ''}"  # pyright: ignore
+                    row_hbox.IS_PINNED = is_pinned  # pyright: ignore
 
                     delete_btn = self.gtk.Button.new_from_icon_name(
                         self.gtk_helper.icon_exist("tag-delete")
@@ -198,7 +196,7 @@ def get_plugin_class():
                     gesture.connect("pressed", self.on_right_click_row)
                     row_widget.add_controller(gesture)
 
-                    self.listbox.prepend(row_widget)
+                    self.listbox.prepend(row_widget)  # pyright: ignore
             finally:
                 self._is_populating = False
 
@@ -237,45 +235,49 @@ def get_plugin_class():
 
         def create_popover_clipboard(self):
             """
-            Constructs the Popover UI.
+            Constructs the Popover UI using the automated helper with proper return types.
             """
-            popover = self.gtk.Popover.new()
-            popover.set_has_arrow(False)
-            popover.set_autohide(True)
+            self.popover_clipboard, self.scrolled_window, self.listbox = (  # pyright: ignore
+                self.gtk_helper.create_popover(
+                    parent_widget=self.button_clipboard,
+                    has_arrow=False,
+                    use_scrolled=True,
+                    use_listbox=True,
+                )
+            )
+
+            if self.listbox:
+                self.listbox.connect("row-activated", self.on_copy_row)
+            else:
+                self.logger.critical(
+                    "Widget listbox returned None, clipboard row copying is disabled."
+                )
+
+            self.scrolled_window.set_min_content_width(self.popover_min_width)
+            self.scrolled_window.set_max_content_height(self.popover_max_height)
 
             main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 10)
+
             self.searchbar = self.gtk.SearchEntry.new()
             self.searchbar.connect(
                 "search_changed",
-                lambda _: self.listbox.invalidate_filter(),
+                lambda _: self.listbox.invalidate_filter(),  # pyright: ignore
             )
+
             main_box.append(self.searchbar)
-
-            self.scrolled_window = self.gtk.ScrolledWindow()
-            self.scrolled_window.set_min_content_width(self.popover_min_width)
-            self.scrolled_window.set_max_content_height(self.popover_max_height)
-            self.scrolled_window.set_propagate_natural_height(True)
-
-            self.listbox = self.gtk.ListBox.new()
-            self.listbox.set_selection_mode(self.gtk.SelectionMode.NONE)
-            self.listbox.connect("row-activated", self.on_copy_row)
-            self.listbox.set_filter_func(
-                lambda row: self.searchbar.get_text().lower()
-                in row.get_child().MYTEXT.lower()
-            )
-
-            self.scrolled_window.set_child(self.listbox)
             main_box.append(self.scrolled_window)
 
             btn_clear = self.gtk.Button.new_with_label("Clear History")
-            btn_clear.set_focus_on_click(False)
             btn_clear.add_css_class("clipboard-button-clear")
             btn_clear.connect("clicked", self.on_clear_clicked)
             main_box.append(btn_clear)
 
-            popover.set_child(main_box)
-            popover.connect("map", lambda _: self.update_clipboard_list())
-            return popover
+            self.popover_clipboard.set_child(main_box)
+            self.popover_clipboard.connect(
+                "map", lambda _: self.update_clipboard_list()
+            )
+
+            return self.popover_clipboard
 
         def on_copy_row(self, _, row):
             """
@@ -311,11 +313,11 @@ def get_plugin_class():
             Removes item from database and refreshes the UI list.
             """
             await self.manager.delete_item(iid)
-            row = self.listbox.get_first_child()
+            row = self.listbox.get_first_child()  # pyright: ignore
             while row:
-                if row.get_child().ITEM_ID == iid:
+                if row.get_child().ITEM_ID == iid:  # pyright: ignore
                     row.unmap()
-                    self.listbox.remove(row)
+                    self.listbox.remove(row)  # pyright: ignore
                     break
                 row = row.get_next_sibling()
 
@@ -330,9 +332,9 @@ def get_plugin_class():
             Wipes the database and clears the UI list.
             """
             await self.manager.clear_history()
-            while row := self.listbox.get_first_child():
+            while row := self.listbox.get_first_child():  # pyright: ignore
                 row.unmap()
-                self.listbox.remove(row)
+                self.listbox.remove(row)  # pyright: ignore
 
         def on_right_click_row(self, gesture, *args):
             """
@@ -383,40 +385,32 @@ def get_plugin_class():
             Updates pin status in database and refreshes UI.
             """
             await self.manager.update_item_pin_status(iid, not pinned)
-            while row := self.listbox.get_first_child():
+            while row := self.listbox.get_first_child():  # pyright: ignore
                 row.unmap()
-                self.listbox.remove(row)
+                self.listbox.remove(row)  # pyright: ignore
             await self.populate_listbox_async()
 
         def create_popover_menu_clipboard(self):
             """
-            Initializes a standard Gtk.Button to handle the popover lifecycle manually.
-            This avoids crashes associated with Gtk.MenuButton in certain panel environments.
+            Initializes the clipboard button and popover.
+            Fixed: Order of initialization to prevent AttributeError.
             """
             self.button_clipboard = self.gtk.Button()
-
-            icon_box = self.gtk.Box(
-                orientation=self.gtk.Orientation.HORIZONTAL, spacing=0
+            self.create_popover_clipboard()
+            self._gtk_helper.create_popover_button(
+                icon_name=self.main_icon,
+                popover_widget=self.popover_clipboard,
+                button_instance=self.button_clipboard,  # pyright: ignore
             )
-            icon_image = self.gtk.Image.new_from_icon_name(self.main_icon)
-            icon_box.append(icon_image)
-            self.button_clipboard.set_child(icon_box)
 
-            self.popover_clipboard = self.create_popover_clipboard()
-            self.popover_clipboard.set_parent(self.button_clipboard)
-
-            if hasattr(self, "add_cursor_effect"):
-                self.add_cursor_effect(self.button_clipboard)
-
-            self.button_clipboard.connect("clicked", self.on_clipboard_button_clicked)
             self.main_widget = (self.button_clipboard, "append")
 
         def on_clipboard_button_clicked(self, _):
             """Manually toggles the popover visibility."""
-            if self.popover_clipboard.get_visible():
-                self.popover_clipboard.popdown()
+            if self.popover_clipboard.get_visible():  # pyright: ignore
+                self.popover_clipboard.popdown()  # pyright: ignore
             else:
-                self.popover_clipboard.popup()
+                self.popover_clipboard.popup()  # pyright: ignore
 
         def on_disable(self):
             """
