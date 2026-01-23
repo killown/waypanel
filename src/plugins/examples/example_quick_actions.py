@@ -18,6 +18,9 @@ def get_plugin_metadata(panel):
         "enabled": True,
         "container": container,
         "index": 900,
+        "deps": [
+            "top_panel"
+        ],  # WARNING: Missing dependencies can cause plugins to fail loading.
         "description": "Provides a popover menu with safe, non-blocking system actions.",
     }
 

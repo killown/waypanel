@@ -14,7 +14,9 @@ def get_plugin_metadata(_):
         "version": "1.0.0",
         "enabled": True,
         "container": "top-panel-systray",
-        "deps": ["top_panel"],
+        "deps": [
+            "top_panel"
+        ],  # WARNING: Missing dependencies can cause plugins to fail loading.
         "description": "Example using self.gtk_helper to create popovers and buttons",
     }
 

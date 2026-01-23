@@ -19,7 +19,9 @@ def get_plugin_metadata(panel):
         "enabled": True,
         "container": container,
         "index": 6,
-        "deps": ["top_panel"],
+        "deps": [
+            "top_panel"
+        ],  # WARNING: Missing dependencies can cause plugins to fail loading.
         "description": "A plugin that creates a dynamic application menu from installed applications, grouped by category.",
     }
 

@@ -44,7 +44,9 @@ def get_plugin_metadata(panel):
         "enabled": True,
         "container": container,
         "index": 5,
-        "deps": ["event_manager"],
+        "deps": [
+            "event_manager"
+        ],  # WARNING: Missing dependencies can cause plugins to fail loading.
     }
 
 

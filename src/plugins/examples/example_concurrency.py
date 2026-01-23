@@ -9,7 +9,9 @@ def get_plugin_metadata(panel):
         "version": "1.0.0",
         "enabled": True,
         "container": container,
-        "deps": ["top_panel"],
+        "deps": [
+            "top_panel"
+        ],  # WARNING: Missing dependencies can cause plugins to fail loading.
         "description": "Master guide for run_in_thread, run_in_async_task, and run_cmd.",
     }
 
