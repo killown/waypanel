@@ -62,8 +62,8 @@ class DockManager:
 
     def _create_separator(self):
         sep = self.p.gtk.Separator(orientation=self.p.dockbar.get_orientation())
-        sep.set_margin_start(5)
-        sep.set_margin_end(5)
+        sep.set_margin_start(0)
+        sep.set_margin_end(0)
         sep.add_css_class("dock-separator")
         # Separator context menu
         menu = self.p.gio.Menu.new()
