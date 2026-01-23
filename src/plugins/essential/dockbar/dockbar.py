@@ -1,6 +1,3 @@
-"""Waypanel Dockbar Plugin - Entry Point."""
-
-
 def get_plugin_metadata(panel_instance):
     config = panel_instance.config_handler
     pos = config.get_root_setting(
@@ -181,8 +178,8 @@ def get_plugin_class():
 
                 while child:
                     if hasattr(child, "app_config"):
-                        item_config = child.app_config.copy()
-                        item_config["id"] = child.app_name
+                        item_config = child.app_config.copy()  # pyright: ignore
+                        item_config["id"] = child.app_name  # pyright: ignore
                         ordered_apps.append(item_config)
                     elif isinstance(child, self.gtk.Separator):
                         ordered_apps.append({"type": "separator"})
