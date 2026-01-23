@@ -4,8 +4,6 @@
   border-radius: var(--radius-l);
   
   /* Solidified glass base using the panel background color with reduced transparency */
-  background-color: rgba(44, 44, 46, 0.85);
-  backdrop-filter: blur(15px);
   
   /* * REALISTIC COLORED GLASS STACK:
    * 1. THE RIM: Stronger 1px white highlight for a thicker glass look.

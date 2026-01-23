@@ -1,9 +1,10 @@
 .dockbar-buttons {
   border-radius: var(--radius-xs);
-  margin: -4px;
   background-color: transparent;
   transition: all 250ms ease-out;
+  margin: -2px;
 }
+
 
 .dockbar-buttons:hover {
   color: var(--theme-status-accent);
