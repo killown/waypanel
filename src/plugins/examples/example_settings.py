@@ -8,9 +8,9 @@ def get_plugin_metadata(panel):
         "name": "Settings Pure Demo",
         "version": "1.0.8",
         "enabled": True,
-        "deps": [
-            "top_panel"
-        ],  # WARNING: Missing dependencies can cause plugins to fail loading.
+        # CRITICAL: Always define dependencies if the current plugin requires certain plugin to be loaded first
+        # WARNING: Missing dependencies can cause plugins to fail loading.
+        "deps": ["top_panel"],
         "container": container,
     }
 

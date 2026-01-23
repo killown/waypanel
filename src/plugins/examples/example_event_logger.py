@@ -126,9 +126,9 @@ def get_plugin_metadata(_):
         # background container is used when the plugin loader has no widget to append/set
         "container": "background",
         "index": 0,
-        "deps": [
-            ["top_panel", "event_manager"]
-        ],  # WARNING: Missing dependencies can cause plugins to fail loading.
+        # CRITICAL: Always define dependencies if the current plugin requires certain plugin to be loaded first
+        # WARNING: Missing dependencies can cause plugins to fail loading.
+        "deps": ["top_panel", "event_manager"],
         "description": "Monitors and logs all Wayfire IPC events for debugging and tracking purposes.",
     }
 
