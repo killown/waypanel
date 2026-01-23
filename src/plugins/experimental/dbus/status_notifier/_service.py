@@ -9,6 +9,7 @@ from typing import Dict
 from src.plugins.core._event_loop import get_global_loop
 from src.plugins.core._base import BasePlugin
 from ._dbus_menu_proxy import DBusMenuProxy, dbus_menu_to_gio_model
+from src.shared.concurrency_helper import ConcurrencyHelper
 
 
 class StatusNotifierHost(BasePlugin):
@@ -85,6 +86,7 @@ class StatusNotifierWatcher(ServiceInterface):
         self.watcher = None
         self.service = service
         self.service_name_to_object_path: Dict[str, str] = {}
+        self.concurrency_helper = ConcurrencyHelper(panel_instance)
 
     def run_server_in_background(self, panel_instance):
         watcher = None
@@ -118,14 +120,7 @@ class StatusNotifierWatcher(ServiceInterface):
             while True:
                 await asyncio.sleep(1)
 
-        def _start_loop():
-            asyncio.set_event_loop(get_global_loop())
-            get_global_loop().run_until_complete(_run_server(panel_instance))
-
-        import threading
-
-        thread = threading.Thread(target=_start_loop, daemon=True)
-        thread.start()
+        self.concurrency_helper.run_in_async_task(_run_server(panel_instance))
         return watcher
 
     async def setup(self):
@@ -539,25 +534,3 @@ class StatusNotifierItem(BasePlugin):
                 return None
             return dbus_menu_to_gio_model(dbus_menu_data)
         return None
-
-    def code_explanation(self):
-        """
-        This Python code is a D-Bus service that acts as a
-        StatusNotifierHost, a role for managing modern system tray icons.
-        It uses the 'dbus-fast' library for D-Bus communication.
-        - **StatusNotifierWatcher**: The central service that listens for
-          applications to register new tray icons.
-        - **StatusNotifierHost**: Acts as a registry for active tray icons.
-        - **StatusNotifierItem**: A resilient proxy object for a single
-          application's tray icon. It now includes:
-          - A **resilient `initialize()` method** with 10 retries over 5 seconds
-            to handle extreme D-Bus race conditions and slow client startup.
-          - **FIX**: The `initialize()` method now performs a **D-Bus ownership check**
-            at the start of every retry to ensure it immediately aborts if the D-Bus
-            service name (like `:1.595`) is no longer active, preventing indefinite
-            retries against a dead endpoint.
-          - **`get_context_menu_model()`** to fetch the D-Bus context menu
-            (via `com.canonical.dbusmenu` protocol) and convert it into a
-            standard `Gio.MenuModel` for use in GTK widgets.
-        """
-        return self.code_explanation.__doc__
