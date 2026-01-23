@@ -50,7 +50,9 @@ def get_plugin_class():
             self.glib.timeout_add_seconds(2, self.reveal)
 
         def reveal(self):
-            auto_reveal = self.get_plugin_setting(["auto_reveal", "default"])
+            auto_reveal = self.get_plugin_setting_add_hint(
+                ["auto_reveal"], False, "auto reveal"
+            )
             self.revealer.set_reveal_child(auto_reveal)
             return False
 
@@ -65,28 +67,14 @@ def get_plugin_class():
         def add_hidden_widget(self, widget):
             """
             Method called by PluginLoader to add a plugin's widget.
-            The widgets are correctly appended to the hidden_widgets_box,
-            which is the child of the self.gtk.Revealer.
+            Ensures the widget is unparented before appending to prevent Gtk-CRITICAL.
             """
+            parent = widget.get_parent()
+            if parent is not None:
+                parent.remove(widget)
+
             widget.set_visible(True)
             self.hidden_widgets_box.append(widget)
             self.logger.info(f"Widget {widget.get_name()} added to overflow container.")
-
-        def code_explanation(self):
-            """
-            This plugin creates an overflow mechanism using a self.gtk.Revealer.
-
-            1. Widget Structure: The main widget is a self.gtk.Box containing the
-               `toggle_button` and the `revealer`. The `revealer` itself holds the
-               `hidden_widgets_box`, where overflowed plugin widgets are placed (via
-               `add_hidden_widget`).
-
-            2. Toggling Logic: The `_on_toggle_clicked` method flips the internal
-               `self.is_revealed` state and passes this boolean directly to
-               `self.revealer.set_reveal_child()`. This triggers the transition effect
-               (`SLIDE_RIGHT`) to show or hide the overflow box smoothly. The button's
-               icon is also updated to reflect the current state.
-            """
-            return self.code_explanation.__doc__
 
     return OverflowIndicator
