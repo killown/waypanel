@@ -635,16 +635,47 @@ class GtkHelpers:
 
     def add_cursor_effect(self, widget):
         motion = Gtk.EventControllerMotion()
-        motion.connect(
-            "enter",
-            lambda c, x, y: widget.set_cursor(
-                Gdk.Cursor.new_from_name("pointer", None)
-            ),
-        )
-        motion.connect(
-            "leave",
-            lambda c: widget.set_cursor(None),
-        )
+        widget._cursor_anim_id = None
+        widget._anim_start_time = 0
+
+        def on_tick(widget, frame_clock):
+            import math
+
+            frame_time = frame_clock.get_frame_time()
+
+            # 5 second timeout (5,000,000 microseconds)
+            if (frame_time - widget._anim_start_time) > 5000000:
+                on_leave(None)
+                return False
+
+            # Animation: Pulse opacity
+            widget.set_opacity(0.9 + 0.1 * math.sin(frame_time / 150000.0))
+            return True
+
+        def on_enter(controller, x, y):
+            widget.set_cursor(Gdk.Cursor.new_from_name("pointer", None))
+            # Ensure the widget is ready for animation
+            if widget._cursor_anim_id is None:
+                widget._anim_start_time = widget.get_frame_clock().get_frame_time()
+                widget._cursor_anim_id = widget.add_tick_callback(on_tick)
+
+        def on_leave(controller):
+            # Reset cursor
+            widget.set_cursor(None)
+
+            # Force the widget to unset hover/active states that cause "stuck" selection
+            widget.unset_state_flags(
+                Gtk.StateFlags.FOCUSED | Gtk.StateFlags.SELECTED | Gtk.StateFlags.ACTIVE
+            )
+
+            # Stop animation and reset visual properties
+            if widget._cursor_anim_id is not None:
+                widget.remove_tick_callback(widget._cursor_anim_id)
+                widget._cursor_anim_id = None
+                widget.set_opacity(1.0)
+
+        motion.connect("enter", on_enter)
+        motion.connect("leave", on_leave)
         widget.add_controller(motion)
 
     def create_button(
@@ -899,6 +930,8 @@ class GtkHelpers:
         closed_handler=None,
         visible_handler=None,
         offset=(0, 5),
+        use_scrolled: bool = False,
+        use_listbox: bool = False,
     ):
         """
         Creates and configures a standard Gtk.Popover for use in plugins.
@@ -907,9 +940,9 @@ class GtkHelpers:
             gtk (module): The Gtk module (e.g., gi.repository.Gtk).
             parent_widget (Gtk.Widget): The widget the popover will be parented to.
             css_class (str, optional): A custom CSS class to add to the popover.
-                                       Defaults to "plugin-default-popover".
+                                        Defaults to "plugin-default-popover".
             has_arrow (bool, optional): Whether the popover should display an arrow
-                                        pointing to its parent. Defaults to True.
+                                         pointing to its parent. Defaults to True.
             closed_handler (function, optional): Handler for the 'closed' signal.
             visible_handler (function, optional): Handler for the 'notify::visible' signal.
         Returns:
@@ -918,14 +951,72 @@ class GtkHelpers:
         popover = Gtk.Popover()
         popover.add_css_class(css_class)
         popover.set_has_arrow(has_arrow)
+        popover.set_autohide(True)
+
         x, y = offset
         popover.set_offset(x, y)
+
+        popover.connect(
+            "closed",
+            lambda _: parent_widget.unset_state_flags(
+                Gtk.StateFlags.FOCUSED | Gtk.StateFlags.ACTIVE
+            ),
+        )
+
         if closed_handler:
             popover.connect("closed", closed_handler)
         if visible_handler:
             popover.connect("notify::visible", visible_handler)
+
         popover.set_parent(parent_widget)
-        return popover
+
+        if not use_scrolled:
+            return popover
+
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scrolled.set_propagate_natural_height(True)
+
+        listbox = None
+        if use_listbox:
+            listbox = Gtk.ListBox()
+            listbox.set_selection_mode(Gtk.SelectionMode.NONE)
+            scrolled.set_child(listbox)
+
+        return (popover, scrolled, listbox)
+
+    def create_popover_button(
+        self,
+        icon_name: str,
+        popover_widget: Gtk.Popover,
+        css_class: Optional[str] = None,
+        button_instance: Optional[Gtk.Button] = None,
+    ) -> Gtk.Button:
+        """
+        Configures a Gtk.Button to manage a Gtk.Popover manually.
+        """
+        button = button_instance if button_instance else Gtk.Button()
+
+        if css_class:
+            button.add_css_class(css_class)
+
+        icon_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        valid_icon = self.icon_exist(icon_name)
+        icon_image = Gtk.Image.new_from_icon_name(valid_icon)
+        icon_box.append(icon_image)
+        button.set_child(icon_box)
+
+        popover_widget.set_parent(button)
+        self.add_cursor_effect(button)
+
+        button.connect(
+            "clicked",
+            lambda _: popover_widget.popdown()
+            if popover_widget.get_visible()
+            else popover_widget.popup(),
+        )
+
+        return button
 
     def create_menu_with_actions(self, action_map: dict, action_prefix: str = "app"):
         """
