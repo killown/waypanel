@@ -125,28 +125,4 @@ def get_plugin_class():
             else:
                 self.popover_calendar.popup()  # pyright: ignore
 
-        def code_explanation(self):
-            """
-            The core logic of this plugin is based on an architectural
-            pattern of modular UI composition and event-driven behavior.
-            Its design is based on these principles:
-            1.  **Dependent UI Augmentation**: This plugin does not create its
-                own panel button. Instead, it explicitly depends on the `clock`
-                plugin and attaches its `self.gtk.Popover` to the clock's button.
-                This approach creates a cohesive user experience where two
-                logically related components are visually and functionally
-                integrated.
-            2.  **Modular UI Construction**: The calendar interface is built
-                by composing several standard GTK widgets: a `self.gtk.Grid` for
-                layout, a `self.gtk.Calendar` widget for the core functionality,
-                and a `self.gtk.Popover` to serve as a floating, temporary window
-                for the entire structure.
-            3.  **Event-Driven Interaction**: The plugin's primary interaction
-                is handled by connecting the `clicked` signal of the clock
-                button to the `toggle_calendar` method. This simple event
-                handler controls the visibility of the popover, adhering
-                to a standard user interaction model.
-            """
-            return self.code_explanation.__doc__
-
     return CalendarPlugin
