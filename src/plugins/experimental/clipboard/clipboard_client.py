@@ -390,15 +390,33 @@ def get_plugin_class():
 
         def create_popover_menu_clipboard(self):
             """
-            Initializes the GtkMenuButton to handle popover lifecycle natively.
+            Initializes a standard Gtk.Button to handle the popover lifecycle manually.
+            This avoids crashes associated with Gtk.MenuButton in certain panel environments.
             """
-            self.menubutton_clipboard = self.gtk.MenuButton()
-            self.menubutton_clipboard.set_icon_name(self.main_icon)
+            self.button_clipboard = self.gtk.Button()
+
+            icon_box = self.gtk.Box(
+                orientation=self.gtk.Orientation.HORIZONTAL, spacing=0
+            )
+            icon_image = self.gtk.Image.new_from_icon_name(self.main_icon)
+            icon_box.append(icon_image)
+            self.button_clipboard.set_child(icon_box)
 
             self.popover_clipboard = self.create_popover_clipboard()
-            self.menubutton_clipboard.set_popover(self.popover_clipboard)
+            self.popover_clipboard.set_parent(self.button_clipboard)
 
-            self.main_widget = (self.menubutton_clipboard, "append")
+            if hasattr(self, "add_cursor_effect"):
+                self.add_cursor_effect(self.button_clipboard)
+
+            self.button_clipboard.connect("clicked", self.on_clipboard_button_clicked)
+            self.main_widget = (self.button_clipboard, "append")
+
+        def on_clipboard_button_clicked(self, _):
+            """Manually toggles the popover visibility."""
+            if self.popover_clipboard.get_visible():
+                self.popover_clipboard.popdown()
+            else:
+                self.popover_clipboard.popup()
 
         def on_disable(self):
             """
