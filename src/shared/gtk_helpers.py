@@ -932,21 +932,11 @@ class GtkHelpers:
         offset=(0, 5),
         use_scrolled: bool = False,
         use_listbox: bool = False,
+        max_height: int = 500,
+        min_width: int = 340,
     ):
         """
-        Creates and configures a standard Gtk.Popover for use in plugins.
-        This function extracts the generic popover setup logic from AppLauncher.
-        Args:
-            gtk (module): The Gtk module (e.g., gi.repository.Gtk).
-            parent_widget (Gtk.Widget): The widget the popover will be parented to.
-            css_class (str, optional): A custom CSS class to add to the popover.
-                                        Defaults to "plugin-default-popover".
-            has_arrow (bool, optional): Whether the popover should display an arrow
-                                         pointing to its parent. Defaults to True.
-            closed_handler (function, optional): Handler for the 'closed' signal.
-            visible_handler (function, optional): Handler for the 'notify::visible' signal.
-        Returns:
-            Gtk.Popover: The configured popover object.
+        Creates and configures a standard Gtk.Popover with size constraints.
         """
         popover = Gtk.Popover()
         popover.add_css_class(css_class)
@@ -975,7 +965,11 @@ class GtkHelpers:
 
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+
+        # Crucial for enforcing the height limit in GTK4
         scrolled.set_propagate_natural_height(True)
+        scrolled.set_max_content_height(max_height)
+        scrolled.set_min_content_width(min_width)
 
         listbox = None
         if use_listbox:
@@ -983,6 +977,7 @@ class GtkHelpers:
             listbox.set_selection_mode(Gtk.SelectionMode.NONE)
             scrolled.set_child(listbox)
 
+        popover.set_child(scrolled)
         return (popover, scrolled, listbox)
 
     def create_popover_button(
@@ -993,7 +988,7 @@ class GtkHelpers:
         button_instance: Optional[Gtk.Button] = None,
     ) -> Gtk.Button:
         """
-        Configures a Gtk.Button to manage a Gtk.Popover manually.
+        Configures a Gtk.Button to manage a Gtk.Popover manually with surface safety.
         """
         button = button_instance if button_instance else Gtk.Button()
 
@@ -1009,12 +1004,16 @@ class GtkHelpers:
         popover_widget.set_parent(button)
         self.add_cursor_effect(button)
 
-        button.connect(
-            "clicked",
-            lambda _: popover_widget.popdown()
-            if popover_widget.get_visible()
-            else popover_widget.popup(),
-        )
+        def on_button_clicked(btn):
+            if not btn.get_realized():
+                btn.realize()
+
+            if popover_widget.get_visible():
+                popover_widget.popdown()
+            else:
+                popover_widget.popup()
+
+        button.connect("clicked", on_button_clicked)
 
         return button
 
