@@ -1,10 +1,5 @@
 import os
 import sqlite3
-from gi.repository import Gdk, GdkPixbuf
-from urllib.parse import unquote, urlparse
-from pathlib import Path
-
-from src.plugins.core._base import BasePlugin
 from src.shared.path_handler import PathHandler
 
 
@@ -23,27 +18,26 @@ def verify_db(panel_instance):
     db_path = path_handler.get_data_path("db/clipboard/clipboard_server.db")
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
-    if not os.path.exists(db_path) or os.stat(db_path).st_size == 0:
-        with sqlite3.connect(db_path) as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS clipboard_items (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    content TEXT NOT NULL,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    label TEXT DEFAULT NULL,
-                    is_pinned INTEGER DEFAULT 0,
-                    thumbnail TEXT DEFAULT NULL
-                )
-            """)
-            conn.commit()
-        return
-
     with sqlite3.connect(db_path) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS clipboard_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                content TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                label TEXT DEFAULT NULL,
+                is_pinned INTEGER DEFAULT 0,
+                thumbnail TEXT DEFAULT NULL,
+                content_hash TEXT DEFAULT NULL
+            )
+        """)
+
+        # Column migration check
         cursor = conn.cursor()
         for col, col_type in [
             ("label", "TEXT DEFAULT NULL"),
             ("is_pinned", "INTEGER DEFAULT 0"),
             ("thumbnail", "TEXT DEFAULT NULL"),
+            ("content_hash", "TEXT DEFAULT NULL"),
         ]:
             try:
                 cursor.execute(f"SELECT {col} FROM clipboard_items LIMIT 1")
@@ -53,6 +47,14 @@ def verify_db(panel_instance):
 
 
 def get_plugin_class():
+    import os
+    import hashlib
+    from gi.repository import Gdk, GdkPixbuf
+    from urllib.parse import unquote, urlparse
+    from pathlib import Path
+
+    from src.plugins.core._base import BasePlugin
+
     class AsyncClipboardServer(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
@@ -89,89 +91,92 @@ def get_plugin_class():
                 self.run_in_async_task(self.add_item(text.strip()))
 
         def _on_image_read_ready(self, clipboard, result):
-            texture = clipboard.read_texture_finish(result)
-            if texture:
-                import time
+            try:
+                texture = clipboard.read_texture_finish(result)
+                if texture:
+                    import time
 
-                file_path = os.path.join(
-                    self.assets_path, f"clip_{int(time.time())}.png"
-                )
-                texture.save_to_png(file_path)
-                self.run_in_async_task(self.add_item(f"file://{file_path}"))
+                    filename = f"clip_{int(time.time())}.png"
+                    file_path = os.path.join(self.assets_path, filename)
+                    texture.save_to_png(file_path)
+                    self.run_in_async_task(self.add_item(f"file://{file_path}"))
+            except Exception as e:
+                self.logger.error(f"Clipboard: Failed to read image texture: {e}")
 
-        def _cleanup_file(self, content_path):
-            """Removes the raw image and its thumbnail from disk."""
-            if not content_path.startswith("file://"):
+        async def add_item(self, content):
+            """
+            Async database insertion with SHA256 de-duplication.
+            """
+            if content == self.last_clipboard_content:
                 return
 
+            content_hash = None
+            real_path = None
+
+            # Generate hash for comparison
+            if content.startswith("file://"):
+                real_path = unquote(urlparse(content).path)
+                if os.path.exists(real_path):
+                    with open(real_path, "rb") as f:
+                        content_hash = hashlib.sha256(f.read()).hexdigest()
+            else:
+                content_hash = hashlib.sha256(content.encode()).hexdigest()
+
+            async with self.aiosqlite.connect(self.db_path) as db:
+                # Check for existing hash
+                cursor = await db.execute(
+                    "SELECT id, content FROM clipboard_items WHERE content_hash = ? LIMIT 1",
+                    (content_hash,),
+                )
+                exists = await cursor.fetchone()
+
+                if exists:
+                    # Update timestamp of the existing record
+                    await db.execute(
+                        "UPDATE clipboard_items SET timestamp = CURRENT_TIMESTAMP WHERE id = ?",
+                        (exists[0],),
+                    )
+                    # If this was a new temporary asset file, delete it to save space
+                    if (
+                        real_path
+                        and content != exists[1]
+                        and content.startswith(f"file://{self.assets_path}")
+                    ):
+                        self._cleanup_file(content)
+                else:
+                    # New unique item
+                    cursor = await db.execute("SELECT COUNT(*) FROM clipboard_items")
+                    if (res := await cursor.fetchone()) and res[0] >= self.max_items:
+                        oldest = await db.execute(
+                            "SELECT content FROM clipboard_items WHERE is_pinned = 0 ORDER BY timestamp ASC LIMIT 1"
+                        )
+                        if item := await oldest.fetchone():
+                            self._cleanup_file(item[0])
+                        await db.execute(
+                            "DELETE FROM clipboard_items WHERE id = (SELECT id FROM clipboard_items WHERE is_pinned = 0 ORDER BY timestamp ASC LIMIT 1)"
+                        )
+
+                    thumb_path = self._process_image_content(content)
+                    await db.execute(
+                        "INSERT INTO clipboard_items (content, thumbnail, content_hash) VALUES (?, ?, ?)",
+                        (content, thumb_path, content_hash),
+                    )
+
+                await db.commit()
+                self.last_clipboard_content = content
+
+        def _cleanup_file(self, content_path):
+            if not content_path.startswith("file://"):
+                return
             try:
                 raw_path = Path(unquote(urlparse(content_path).path))
                 thumb_path = Path(f"{raw_path}.thumb")
-
                 if raw_path.exists():
                     raw_path.unlink()
                 if thumb_path.exists():
                     thumb_path.unlink()
             except Exception as e:
                 self.logger.error(f"Asset cleanup failed: {e}")
-
-        async def update_label(self, item_id, label):
-            """Updates the text alias for a specific history item."""
-            async with self.aiosqlite.connect(self.db_path) as db:
-                await db.execute(
-                    "UPDATE clipboard_items SET label = ? WHERE id = ?",
-                    (label, item_id),
-                )
-                await db.commit()
-
-        async def update_pin_status(self, item_id, status):
-            """Sets the is_pinned bit for an item (1 or 0)."""
-            async with self.aiosqlite.connect(self.db_path) as db:
-                await db.execute(
-                    "UPDATE clipboard_items SET is_pinned = ? WHERE id = ?",
-                    (status, item_id),
-                )
-                await db.commit()
-
-        async def add_item(self, content):
-            if content == self.last_clipboard_content:
-                return
-
-            thumb_path = self._process_image_content(content)
-
-            async with self.aiosqlite.connect(self.db_path) as db:
-                cursor = await db.execute(
-                    "SELECT id FROM clipboard_items WHERE content = ? LIMIT 1",
-                    (content,),
-                )
-                exists = await cursor.fetchone()
-
-                if exists:
-                    await db.execute(
-                        "UPDATE clipboard_items SET timestamp = CURRENT_TIMESTAMP WHERE id = ?",
-                        (exists[0],),
-                    )
-                else:
-                    cursor = await db.execute("SELECT COUNT(*) FROM clipboard_items")
-                    if (res := await cursor.fetchone()) and res[0] >= self.max_items:
-                        # Fetch the oldest item to clean up its file before deleting record
-                        oldest = await db.execute(
-                            "SELECT content FROM clipboard_items WHERE is_pinned = 0 ORDER BY timestamp ASC LIMIT 1"
-                        )
-                        if item := await oldest.fetchone():
-                            self._cleanup_file(item[0])
-
-                        await db.execute(
-                            "DELETE FROM clipboard_items WHERE id = (SELECT id FROM clipboard_items WHERE is_pinned = 0 ORDER BY timestamp ASC LIMIT 1)"
-                        )
-
-                    await db.execute(
-                        "INSERT INTO clipboard_items (content, thumbnail) VALUES (?, ?)",
-                        (content, thumb_path),
-                    )
-
-                await db.commit()
-                self.last_clipboard_content = content
 
         def _process_image_content(self, content: str) -> str | None:
             if not content.startswith("file://"):
@@ -188,14 +193,28 @@ def get_plugin_class():
                     return None
             return thumb_path
 
-        async def delete_item(self, item_id):
+        async def get_items(self, limit=100):
             async with self.aiosqlite.connect(self.db_path) as db:
                 cursor = await db.execute(
-                    "SELECT content FROM clipboard_items WHERE id = ?", (item_id,)
+                    "SELECT id, content, label, is_pinned, thumbnail FROM clipboard_items ORDER BY is_pinned DESC, timestamp DESC LIMIT ?",
+                    (limit,),
                 )
-                if item := await cursor.fetchone():
-                    self._cleanup_file(item[0])
-                await db.execute("DELETE FROM clipboard_items WHERE id = ?", (item_id,))
+                return await cursor.fetchall()
+
+        async def update_label(self, item_id, label):
+            async with self.aiosqlite.connect(self.db_path) as db:
+                await db.execute(
+                    "UPDATE clipboard_items SET label = ? WHERE id = ?",
+                    (label, item_id),
+                )
+                await db.commit()
+
+        async def update_pin_status(self, item_id, status):
+            async with self.aiosqlite.connect(self.db_path) as db:
+                await db.execute(
+                    "UPDATE clipboard_items SET is_pinned = ? WHERE id = ?",
+                    (status, item_id),
+                )
                 await db.commit()
 
         async def clear_all(self):
@@ -207,15 +226,14 @@ def get_plugin_class():
                 await db.execute("DELETE FROM clipboard_items")
                 await db.commit()
 
-        async def get_items(self, limit=100):
+        async def delete_item(self, item_id):
             async with self.aiosqlite.connect(self.db_path) as db:
                 cursor = await db.execute(
-                    "SELECT id, content, label, is_pinned, thumbnail FROM clipboard_items ORDER BY is_pinned DESC, timestamp DESC LIMIT ?",
-                    (limit,),
+                    "SELECT content FROM clipboard_items WHERE id = ?", (item_id,)
                 )
-                return await cursor.fetchall()
-
-        async def stop(self):
-            pass
+                if item := await cursor.fetchone():
+                    self._cleanup_file(item[0])
+                await db.execute("DELETE FROM clipboard_items WHERE id = ?", (item_id,))
+                await db.commit()
 
     return AsyncClipboardServer
