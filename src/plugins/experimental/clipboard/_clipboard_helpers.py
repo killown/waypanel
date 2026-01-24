@@ -37,13 +37,13 @@ class ClipboardManager:
                 return (item_id, content, label, is_pinned)
         return None
 
-    async def update_item_label(self, item_id: int, new_label: str | None):
-        """NEW: Update the custom label for a specific item ID using the server API."""
-        await self.server.update_label(item_id, new_label)
+    async def update_item_pin_status(self, item_id: int, status: bool):
+        """Updates the pin status using the native server method name."""
+        await self.server.update_pin_status(item_id, 1 if status else 0)
 
-    async def update_item_pin_status(self, item_id: int, is_pinned: bool):
-        """NEW: Update the pin status (0 or 1) for a specific item ID."""
-        await self.server.update_pin_status(item_id, 1 if is_pinned else 0)
+    async def update_item_label(self, item_id: int, label: str | None):
+        """Updates the item label using the native server method name."""
+        await self.server.update_label(item_id, label)
 
     async def clear_history(self):
         await self.server.clear_all()
