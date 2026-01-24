@@ -29,7 +29,6 @@ def get_plugin_class():
     from .events import TaskbarEvents
     from .views import TaskbarViews
     from .gestures import TaskbarGestures
-    import tldextract
     import re
 
     class TitleFormatter:
@@ -37,16 +36,18 @@ def get_plugin_class():
         def clean(raw_title, max_len):
             if not raw_title:
                 return ""
+
             words = raw_title.split(" ")
             filtered = []
             for word in words:
-                if not tldextract.extract(word).suffix:
-                    clean = re.sub(r"[-—]+", "", word).strip()
-                    if clean:
-                        filtered.append(clean)
-            title = " ".join(filtered).strip()
-            title = title if title else re.sub(r"[-—]+", "", raw_title).strip()
-            return (title[:max_len] + "...") if len(title) > max_len else title
+                clean = re.sub(r"[—]+", "", word).strip()
+                if clean:
+                    filtered.append(clean)
+
+            full_title = " ".join(filtered)
+            if len(full_title) > max_len:
+                return full_title[: max_len - 3] + "..."
+            return full_title
 
     class TaskbarPlugin(BasePlugin):
         def __init__(self, panel_instance):
@@ -163,14 +164,15 @@ def get_plugin_class():
                 for item in self.button_pool:
                     if item["button"] == button:
                         item["view_id"] = identifier
-            button.view_id = view.get("id")
-            self.taskbar.append(button)
+            button.view_id = view.get("id")  # pyright: ignore
+            self.taskbar.append(button)  # pyright: ignore
             self.in_use_buttons[identifier] = button
             self.update_button(button, view)
             button.set_visible(True)
             try:
                 button.disconnect_by_func(self._on_primary_click)
-            except:
+            except Exception as e:
+                self.logger.error(f"Taskbar: {e}")
                 pass
             button.connect("clicked", self._on_primary_click, identifier)
             self.gtk_helper.add_cursor_effect(button)
@@ -222,7 +224,7 @@ def get_plugin_class():
                     "clicked",
                     lambda *_, view=v: [
                         self.view_handler.set_view_focus(view),
-                        self.group_popover.popdown(),
+                        self.group_popover.popdown(),  # pyright: ignore
                     ],
                 )
                 vbox.append(row)
@@ -232,7 +234,7 @@ def get_plugin_class():
         def remove_button(self, identifier: str) -> None:
             btn = self.in_use_buttons.pop(identifier, None)
             if btn:
-                self.taskbar.remove(btn)
+                self.taskbar.remove(btn)  # pyright: ignore
                 btn.set_visible(False)
                 btn.view_id = None
                 for item in self.button_pool:
@@ -247,7 +249,7 @@ def get_plugin_class():
             btn.view_id = view.get("id")
             ico = self.ipc.get_view_property(btn.view_id, "icon")
             if not isinstance(ico, str):
-                ico = self.gtk_helper.icon_exist(view.get("app-id"))
+                ico = self.gtk_helper.icon_exist(view.get("app-id"))  # pyright: ignore
             btn.icon.set_from_icon_name(ico)
             btn.icon.set_pixel_size(self.icon_size)
             if not self.show_label:
