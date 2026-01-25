@@ -267,9 +267,9 @@ class PluginLoader:
                 if hasattr(w, "get_icon_name"):
                     self.plugin_icons[plugin_id] = w.get_icon_name()
                 self.update_widget_safely(flow.append, w)
-        elif action == "set_content":
+        elif action == "set_child":
             for w in widgets:
-                self.update_widget_safely(target.set_content, w)
+                self.update_widget_safely(target.set_child, w)
 
     def _initialize_sorted_plugins(self):
         """Topological Sort using pre-cached metadata (Zero function call overhead)."""
