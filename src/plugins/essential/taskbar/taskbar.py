@@ -174,11 +174,13 @@ def get_plugin_class():
             self.in_use_buttons[identifier] = button
             self.update_button(button, view)
             button.set_visible(True)
+
+            # Use the method directly from the instance to maintain signal connection integrity
             try:
                 button.disconnect_by_func(self._on_primary_click)
-            except Exception as e:
-                self.logger.error(f"Taskbar: {e}")
+            except Exception:
                 pass
+
             button.connect("clicked", self._on_primary_click, identifier)
             self.gtk_helper.add_cursor_effect(button)
 
@@ -191,7 +193,7 @@ def get_plugin_class():
                 for v in views
                 if (
                     v.get("app-id") == identifier
-                    if self.group_apps
+                    if self.config.group_apps
                     else v.get("id") == identifier
                 )
             ]
