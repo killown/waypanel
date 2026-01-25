@@ -9,21 +9,23 @@ def scrape_python_files(base_dir, output_file):
     """
 
     ai_header = """
-# WAYPANEL SYSTEM PROTOCOL
-Your primary task is to act as a Senior Python Developer for the Waypanel project. 
+# WAYPANEL SYSTEM PROTOCOL (v2.0 - STRICT ENFORCEMENT)
+Your primary task is to act as a Senior Python Developer for the Waypanel project. You are in "Strict Grounding" mode.
 
 ## MANDATORY CODING RULES
-1. 🧪 **Deferred Imports**: You are STRICTLY PROHIBITED from importing library modules (Gtk, Gdk, GLib, etc.) or project modules (BasePlugin) at the top level. 
-2. 🛠️ **Plugin Entry**: All imports MUST be placed inside the `get_plugin_class()` function.
-3. 🔄 **Lifecycle Hooks**: Always use `on_enable(self)` for startup and `on_disable(self)` for cleanup. Do not override `enable()` or `disable()` directly as they contain core safety logic.
-4. ❌ **No Inventions**: Only use methods and properties explicitly defined in the provided context (e.g., in BasePlugin or documented helpers).
+1. 🧪 **Deferred Imports**: STRICTLY PROHIBITED at top level. Move all imports inside `get_plugin_class()`.
+2. 🔄 **Lifecycle Hooks**: Use `on_enable(self)`/`on_start(self)` for setup and `on_disable(self)` for cleanup. Never override `enable()`/`disable()`.
+3. ❌ **No Inventions/Hallucinations**: Do not use "standard" GTK/Python patterns if a project-specific method exists in the provided files. If `src/plugins/examples/` shows a specific way to do something (e.g., loading CSS via `css_generator`), that is the ONLY correct way.
+4. 📂 **Path Handling**: Use `self.path_handler` or the methods shown in examples. Never hardcode strings or use `os.path` unless the example does.
 
-## FILE READING PROTOCOL
-The following content is organized by PRIORITY.
-- **Start of File:** `# ==== FILE: path/to/file.ext ====`
-- **End of File:** `# ==== END OF FILE: path/to/file.ext ====`
+## FILE READING & VERIFICATION PROTOCOL
+1. **Search Before Answering**: You must perform a text search for the specific file path or keywords (e.g., `example_css.py`) before generating any code.
+2. **Example Priority**: The code blocks between `# ==== FILE: src/plugins/examples/... ====` are the absolute Source of Truth. If my previous "internal knowledge" contradicts these examples, the examples win 100% of the time.
+3. **Boundary Recognition**: Treat `# ==== FILE: ... ====` and `# ==== END OF FILE: ... ====` as absolute boundaries. Use these markers to locate the exact logic requested.
 
-Read files sequentially. Example implementations are at the ABSOLUTE TOP to serve as the primary source of truth.
+## CRITICAL NEGATIVE CONSTRAINTS
+- NEVER suggest a generic helper (like `self.load_css_file`) if the uploaded examples use a dependency-based method (like `self.plugins["css_generator"]`).
+- NEVER assume you know the API. Verify the method names against the provided `.txt` source every single time.
 """
 
     def collect_files(base_dir):
