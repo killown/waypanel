@@ -280,6 +280,13 @@ class IPC:
             self.setup_compositor_socket()
         return True
 
+    def is_view_valid(self, view_id) -> bool:
+        """check if the view is a valid toplevel"""
+        filtered_view_ids = [item["id"] for item in self.wf_utils.list_filtered_views()]
+        if view_id not in filtered_view_ids:
+            return False
+        return True
+
     @handle_ipc_error
     def update_osd(
         self,
@@ -427,6 +434,10 @@ class IPC:
         output_id: int | None = None,
     ) -> Any:
         """Configure a view's position and size."""
+
+        if not self.is_view_valid(view_id):
+            return
+
         if hasattr(self.sock, "configure_view"):
             return self.sock.configure_view(view_id, x, y, w, h, output_id)  # pyright: ignore
 
