@@ -634,48 +634,62 @@ class GtkHelpers:
             return ""
 
     def add_cursor_effect(self, widget):
+        from gi.repository import Gtk, Gdk, GLib
+        import math
+
         motion = Gtk.EventControllerMotion()
         widget._cursor_anim_id = None
-        widget._anim_start_time = 0
+        widget._watchdog_id = None
 
         def on_tick(widget, frame_clock):
-            import math
-
-            frame_time = frame_clock.get_frame_time()
-
-            # 5 second timeout (5,000,000 microseconds)
-            if (frame_time - widget._anim_start_time) > 5000000:
-                on_leave(None)
+            duration = 300000.0  # 300ms in microseconds
+            elapsed = frame_clock.get_frame_time() - widget._anim_start_time
+            if elapsed > duration:
+                widget.set_opacity(1.0)
+                widget._cursor_anim_id = None
                 return False
-
-            # Animation: Pulse opacity
-            widget.set_opacity(0.9 + 0.1 * math.sin(frame_time / 150000.0))
+            # Pulse effect: 1.0 -> 0.7 -> 1.0
+            intensity = math.sin((elapsed / duration) * math.pi)
+            widget.set_opacity(1.0 - (0.3 * intensity))
             return True
 
-        def on_enter(controller, x, y):
-            widget.set_cursor(Gdk.Cursor.new_from_name("pointer", None))
-            # Ensure the widget is ready for animation
-            if widget._cursor_anim_id is None:
-                widget._anim_start_time = widget.get_frame_clock().get_frame_time()
-                widget._cursor_anim_id = widget.add_tick_callback(on_tick)
+        def handle_event(controller, *args):
+            # Distinguish event type based on argument count (enter has x,y)
+            is_enter = len(args) > 1
 
-        def on_leave(controller):
-            # Reset cursor
-            widget.set_cursor(None)
-
-            # Force the widget to unset hover/active states that cause "stuck" selection
-            widget.unset_state_flags(
-                Gtk.StateFlags.FOCUSED | Gtk.StateFlags.SELECTED | Gtk.StateFlags.ACTIVE
-            )
-
-            # Stop animation and reset visual properties
+            # Cleanup existing timers/callbacks
             if widget._cursor_anim_id is not None:
                 widget.remove_tick_callback(widget._cursor_anim_id)
                 widget._cursor_anim_id = None
-                widget.set_opacity(1.0)
+            if widget._watchdog_id:
+                GLib.source_remove(widget._watchdog_id)
+                widget._watchdog_id = None
 
-        motion.connect("enter", on_enter)
-        motion.connect("leave", on_leave)
+            if is_enter:
+                widget.set_cursor(Gdk.Cursor.new_from_name("pointer", None))
+                clock = widget.get_frame_clock()
+                if clock:
+                    widget._anim_start_time = clock.get_frame_time()
+                    widget._cursor_anim_id = widget.add_tick_callback(on_tick)
+
+                # Watchdog: Force recovery to 1.0 opacity after 500ms
+                widget._watchdog_id = GLib.timeout_add(
+                    500,
+                    lambda: [
+                        widget.set_opacity(1.0),
+                        setattr(widget, "_watchdog_id", None),
+                        False,
+                    ][2],
+                )
+            else:
+                widget.set_cursor(None)
+                widget.set_opacity(1.0)
+                widget.unset_state_flags(
+                    Gtk.StateFlags.FOCUSED | Gtk.StateFlags.SELECTED
+                )
+
+        motion.connect("enter", handle_event)
+        motion.connect("leave", handle_event)
         widget.add_controller(motion)
 
     def create_button(
