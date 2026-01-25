@@ -62,16 +62,12 @@ popover.taskbar-context-menu contents {
 }
 
 .taskbar-menu-item {
-  padding: 18px 22px;
   border-radius: var(--radius-m);
   transition: all 150ms ease;
   color: var(--theme-text-primary);
-  margin: 2px 0;
 }
 
 .taskbar-menu-label {
-  font-size: 18px; 
-  font-weight: 700;
   margin-left: 10px;
 }
 
