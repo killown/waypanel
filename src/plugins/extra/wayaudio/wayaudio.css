@@ -1,7 +1,8 @@
 /* Main Popover Shell */
 .volume-popover-root {
-  background-color: rgba(24, 36, 52, 0.85);
-  backdrop-filter: blur(20px) saturate(180%);
+  /* Replace backdrop-filter with a solid or high-opacity color 
+     as GTK 4 CSS does not support blur effects */
+  background-color: rgba(24, 36, 52, 0.98); 
   border-radius: var(--radius-xl);
   border: none;
   box-shadow:
@@ -17,19 +18,17 @@
 .volume-content-wrapper {
   background-color: transparent;
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
-  padding-right: 4px;
-  padding-left: 10px;
-  padding-bottom: 10px;
+  padding: 0 4px 10px 10px; /* shorthand for padding-right, bottom, left */
 }
 
-/* Routing Revealer - Constrained Width 
-   Using margin auto to center it within the wider popover
+/* Routing Revealer
+   GTK 4 doesn't support max-width in CSS. 
+   Sizing should be handled via set_size_request in the Python UI code.
 */
 .routing-revealer {
   background-color: rgba(0, 0, 0, 0.15);
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-  margin: 0 auto 8px auto;
-  max-width: 250px;
+  margin: 0 8px 8px 8px; /* Fixed margin syntax */
   border-radius: var(--radius-m);
 }
 
@@ -39,19 +38,18 @@
   margin-top: 2px;
 }
 
-/* Toggle Header (The button that was glued) */
+/* Toggle Header */
 .volume-section-toggle-header {
-  background: rgba(255, 255, 255, 0.02);
+  background-color: rgba(255, 255, 255, 0.02);
   border: none;
   border-radius: var(--radius-m);
   margin: 8px 8px 2px 8px;
   padding: 10px;
   box-shadow: none;
-  transition: background 0.2s;
 }
 
 .volume-section-toggle-header:hover {
-  background: rgba(122, 201, 255, 0.08);
+  background-color: rgba(122, 201, 255, 0.08);
 }
 
 /* Ultra-Thin Scrollbar */
@@ -59,16 +57,12 @@
   background-color: transparent;
   border: none;
   min-width: 2px;
-  width: 2px;
 }
 
 .volume-popover-root scrollbar slider {
   background-color: rgba(122, 201, 255, 0.25);
   border-radius: 10px;
   min-width: 2px;
-  transition:
-    background-color 0.2s,
-    min-width 0.2s;
 }
 
 .volume-popover-root scrollbar slider:hover {
@@ -102,15 +96,7 @@
 .volume-stream-title {
   color: var(--color-fg-muted);
   font-size: 0.72rem;
-  font-style: italic;
-  margin-bottom: -2px;
   opacity: 0.8;
-}
-
-/* Dropdowns inside restricted width revealer */
-.routing-revealer .volume-device-dropdown {
-  font-size: 0.8rem;
-  padding: 2px 6px;
 }
 
 .volume-device-dropdown {
