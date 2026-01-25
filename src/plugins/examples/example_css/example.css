@@ -1,0 +1,82 @@
+/* ==== FILE: src/plugins/examples/example.css ==== */
+
+/**
+ * FULL THEME VARIABLE REGISTRY (Extracted for Context)
+ * * -- BACKGROUNDS --
+ * --color-bg-base, --color-bg-window, --color-bg-panel, --color-bg-popover, --color-bg-searchbar,
+ * --color-bg-box-primary, --color-bg-box-secondary, --color-bg-button, --color-bg-button-hover,
+ * --color-bg-button-active, --color-bg-surface, --color-bg-raised, --color-bg-deep, --color-bg-alt-row,
+ * --color-bg-transparent-active, --theme-bg-view-primary, --theme-bg-view-secondary, --theme-bg-view-tertiary,
+ * --theme-bg-view-vibrant, --theme-bg-control-base, --theme-bg-selected-primary, --theme-bg-selected-inactive,
+ * --theme-bg-selected-secondary, --theme-bg-text-selection, --theme-bg-under-page, --theme-bg-alternating-row,
+ * --theme-bg-find-highlight, --color-bg-entry-base, --color-bg-entry-focus, --color-bg-entry-disabled,
+ * --color-bg-textview, --color-bg-button-flat, --color-bg-button-flat-hover, --color-bg-button-flat-active,
+ * --color-bg-button-normal, --color-bg-button-normal-hover, --color-bg-button-normal-active,
+ * --color-bg-button-suggested, --color-bg-button-suggested-hover, --color-bg-menu-bar, --color-bg-menu-popup,
+ * --color-bg-menu-item-hover, --color-bg-popover-content, --color-bg-list-header, --color-bg-tab-bar,
+ * --color-bg-tab-active, --color-bg-tab-inactive, --color-bg-tab-hover, --color-bg-treeview-header,
+ * --color-bg-toggle-off, --color-bg-toggle-on, --color-bg-check-radio-box, --color-bg-scrollbar-track,
+ * --color-bg-scrollbar-slider, --color-bg-scrollbar-slider-hover, --color-bg-status-bar, --color-bg-tooltip,
+ * --primary-bg, --secondary-bg, --tertiary-bg, --window-control-hover-bg
+ * * -- FOREGROUNDS (TEXT) --
+ * --color-fg-primary, --color-fg-secondary, --color-fg-muted, --color-fg-subtle, --color-fg-inverse,
+ * --color-fg-button-suggested, --theme-fg-label-primary, --theme-fg-label-secondary, --theme-fg-label-tertiary,
+ * --theme-fg-label-quaternary, --theme-fg-label-inverse, --theme-fg-control-text, --theme-fg-control-text-disabled,
+ * --theme-fg-link, --theme-fg-placeholder, --theme-fg-header-text, --theme-fg-text-selected,
+ * --theme-fg-text-alternate-selected, --main-text, --soft-text, --calendar-other-month
+ * * -- DECORATION & STATUS --
+ * --theme-decoration-separator, --theme-decoration-grid-line, --theme-decoration-keyboard-focus,
+ * --theme-decoration-border-control, --color-border-entry-base, --color-border-entry-focus,
+ * --color-focus-ring, --theme-status-accent, --theme-status-accent-inactive, --theme-status-success,
+ * --theme-status-danger, --theme-status-warning, --theme-status-highlight-virtual, --header-border,
+ * --accent-blue, --success-green, --danger-red, --success-green-light, --window-control-border-color,
+ * --color-accent-blue, --color-accent-blue-dark, --color-accent-gray, --color-status-success,
+ * --color-status-danger, --color-status-warning, --color-separator-line
+ * * -- SHADOWS & OPACITY --
+ * --color-shadow-hue-bleed, --color-status-success-bg, --color-status-danger-bg, --color-status-warning-bg,
+ * --color-shadow-dark, --color-shadow-medium, --color-shadow-lighter, --dseg-shadow-soft, --dseg-shadow-dark,
+ * --shadow-dark, --shadow-medium, --shadow-subtle-white, --shadow-subtle, --shadow-elevated,
+ * --shadow-button-flat, --shadow-control-small, --shadow-control-small-hover, --shadow-element-minimal,
+ * --shadow-window-float, --shadow-menubar-separator, --shadow-neumorphic-inset-medium,
+ * --shadow-neumorphic-outset-large, --shadow-neumorphic-press, --opacity-0, --opacity-08, --opacity-507,
+ * --opacity-555, --opacity-75, --opacity-15, --opacity-50, --opacity-60, --color-vibrancy-dark-blur,
+ * --color-vibrancy-light-blur, --opacity-vibrancy-bar
+ * * -- METRICS & FONTS --
+ * --radius-xs, --radius-s, --radius-m, --radius-l, --radius-xl, --radius-window-control,
+ * --radius-control-default, --radius-control-circular, --padding-window-control-vertical,
+ * --padding-window-control-horizontal, --font-family-default, --font-family-system,
+ * --font-weight-regular, --font-weight-medium, --font-weight-bold
+ */
+
+.example-custom-style {
+  background-color: var(--secondary-bg);
+  color: var(--main-text);
+  padding: var(--padding-window-control-vertical) var(--padding-window-control-horizontal);
+  border-radius: var(--radius-control-default);
+  border: 1px solid var(--theme-decoration-separator);
+  font-family: var(--font-family-system);
+  font-weight: var(--font-weight-medium);
+  box-shadow: var(--shadow-elevated);
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+
+.example-custom-style:hover {
+  background-color: var(--color-bg-button-normal-hover);
+  border-color: var(--color-focus-ring);
+  box-shadow: var(--shadow-window-float);
+}
+
+.example-status-success {
+  background-color: var(--color-status-success-bg);
+  color: var(--success-green);
+  border: 1px solid var(--theme-status-success);
+}
+
+.example-status-danger {
+  background-color: var(--color-status-danger-bg);
+  color: var(--danger-red);
+  border: 1px solid var(--theme-status-danger);
+}
+
+# ==== END OF FILE: src/plugins/examples/example.css ====
