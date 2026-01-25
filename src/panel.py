@@ -171,21 +171,18 @@ class Panel(Adw.Application):
 
     def load_css(self):
         self.gtk_helpers.load_css_from_file()
-        directories_to_monitor = [
-            self.path_handler.get_data_path("resources/plugins/css"),
-            self.path_handler.get_data_path("resources/themes/css"),
-        ]
+
+        # Monitor ONLY the master generated styles.css
         styles_css_path = self.path_handler.get_config_dir() / "styles.css"
         self.css_monitors = []
-        for path in directories_to_monitor:
-            gio_file = Gio.File.new_for_path(str(path))
-            monitor = gio_file.monitor_directory(Gio.FileMonitorFlags.NONE, None)
-            monitor.connect("changed", self.gtk_helpers.on_css_file_changed)
-            self.css_monitors.append(monitor)
+
         gio_file_css = Gio.File.new_for_path(str(styles_css_path))
+        # Gio.FileMonitorFlags.NONE is fine; GTK will reload when the generator finishes writing
         monitor_css = gio_file_css.monitor_file(Gio.FileMonitorFlags.NONE, None)
         monitor_css.connect("changed", self.gtk_helpers.on_css_file_changed)
         self.css_monitors.append(monitor_css)
+
+        self.logger.info("Panel CSS watcher attached to master styles.css")
         return False
 
     def setup_panels(self):
