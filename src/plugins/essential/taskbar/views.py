@@ -77,3 +77,35 @@ class TaskbarViews:
             and v.get("app-id") not in ("nil", None)
             and v.get("pid") != -1
         )
+
+    def cycle_group_focus(self, identifier, direction):
+        """Cycles focus among views in a group based on scroll direction."""
+        # Filter valid views belonging to this app/identifier
+        views = [v for v in self.plugin.ipc.list_views() if self.is_valid_view(v)]
+        target_views = [
+            v
+            for v in views
+            if (
+                v.get("app-id") == identifier
+                if self.plugin.group_apps
+                else v.get("id") == identifier
+            )
+        ]
+
+        if len(target_views) <= 1:
+            return
+
+        # Find the index of the currently focused view within this group
+        current_focus_id = self.plugin.group_last_focused.get(identifier)
+
+        try:
+            current_idx = next(
+                i for i, v in enumerate(target_views) if v.get("id") == current_focus_id
+            )
+            # Calculate next index with wrap-around
+            next_idx = (current_idx + direction) % len(target_views)
+            target = target_views[next_idx]
+            self.set_view_focus(target)
+        except StopIteration:
+            # If none are focused, just pick the first one
+            self.set_view_focus(target_views[0])

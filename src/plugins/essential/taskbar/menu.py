@@ -2,11 +2,7 @@ class TaskbarMenu:
     """Handles the creation and logic of the right-click context menu."""
 
     def __init__(self, plugin_instance):
-        """Initializes the menu handler.
-
-        Args:
-            plugin_instance: The TaskbarPlugin instance.
-        """
+        """Initializes the menu handler."""
         self.plugin = plugin_instance
         self.ipc = plugin_instance.ipc
         self.menu = None
@@ -19,14 +15,18 @@ class TaskbarMenu:
         btn.set_has_frame(False)
         btn.add_css_class("taskbar-menu-item")
 
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        box.set_margin_start(8)
-        box.set_margin_end(8)
+        # Increased spacing to give breathing room for large icons
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18)
+        box.set_valign(Gtk.Align.CENTER)
 
         icon = Gtk.Image.new_from_icon_name(icon_name)
-        icon.set_pixel_size(16)
+        # Force a large pixel size for the source image
+        icon.set_pixel_size(24)
+        icon.add_css_class("taskbar-menu-icon")
 
         lbl = Gtk.Label(label=label_text)
+        lbl.set_xalign(0)
+        lbl.add_css_class("taskbar-menu-label")
 
         box.append(icon)
         box.append(lbl)
@@ -50,12 +50,10 @@ class TaskbarMenu:
         self.menu.add_css_class("taskbar-context-menu")
         self.menu.active_view_id = widget.view_id
 
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        for margin in ["start", "end", "top", "bottom"]:
-            getattr(box, f"set_margin_{margin}")(6)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        box.set_margin_end(8)
 
         view_data = self.ipc.get_view(widget.view_id)
-
         if not view_data:
             return
 
@@ -63,7 +61,6 @@ class TaskbarMenu:
         is_atop = view_data.get("always-on-top", False)
         is_sticky = view_data.get("sticky", False)
 
-        # Action Definitions: (Label, Icon, Callback)
         actions = [
             (
                 "Restore" if is_fullscreen else "Fullscreen",

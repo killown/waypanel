@@ -32,6 +32,25 @@ class TaskbarGestures:
         motion.connect("leave", self._on_hover_leave)
         button.add_controller(motion)
 
+        sc = Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.VERTICAL)
+        sc.connect("scroll", self._on_scroll_cycle)
+        button.add_controller(sc)
+
+    def _on_scroll_cycle(self, controller, dx, dy):
+        """Detects scroll direction and triggers view cycling."""
+        btn = controller.get_widget()
+        # Find the identifier (app-id or window-id) for this button
+        identifier = next(
+            (k for k, v in self.plugin.in_use_buttons.items() if v == btn), None
+        )
+
+        if identifier:
+            # dy > 0 is scroll down (next), dy < 0 is scroll up (previous)
+            direction = 1 if dy > 0 else -1
+            self.plugin.view_handler.cycle_group_focus(identifier, direction)
+            return True  # Stop event propagation
+        return False
+
     def _on_middle_click_restore(self, gesture, n_press, x, y):
         """Triggers the restore logic from the view handler."""
         btn = gesture.get_widget()
