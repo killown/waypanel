@@ -3,13 +3,13 @@
   color: var(--main-text);
   font-weight: var(--font-weight-medium);
   box-shadow:
-    0 1px 0 var(--dseg-shadow-soft),
+    0 1px 0 transparent,
     0 6px 18px var(--color-shadow-lighter);
   font-family: var(--font-family-default); 
   text-decoration: none;
   text-shadow:
-    0 0 2px var(--dseg-shadow-soft),
-    0 0 5px var(--dseg-shadow-soft);
+    0 0 2px transparent,
+    0 0 5px transparent;
 }
 
 .top-panel-box-widgets-left {
@@ -39,15 +39,18 @@
   margin-top: 3px;
   margin-bottom: 5px;
   
-  box-shadow: rgba(0, 0, 0, 0.4) 0px 2px 4px, rgba(0, 0, 0, 0.3) 0px 7px 13px -3px, rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.4), 
+    0 7px 13px -3px rgba(0, 0, 0, 0.3), 
+    inset 0 -3px 0 rgba(0, 0, 0, 0.2);
     
   font-family: var(--font-family-default);
 
   color: var(--main-text);
   text-decoration: none;
   text-shadow:
-    0 0 2px var(--dseg-shadow-soft),
-    0 0 5px var(--dseg-shadow-soft);
+    0 0 2px transparent,
+    0 0 5px transparent;
 }
 
 .top-panel-box-right {

@@ -3,11 +3,11 @@
   -gtk-icon-size: 24px;
   padding-top: 9px;
   padding-bottom: 7px;
-  /* Simplified gradient for GTK parser stability */
-  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.18) 22%, transparent 23%), var(--color-bg-box-primary);
+  /* Fixed: Combined linear-gradient with background-color since GTK expects images or colors separately */
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.18) 22%, transparent 23%);
+  background-color: var(--color-bg-box-primary);
   border-radius: var(--radius-m);
   border-right: 2px solid rgba(0, 0, 0, 0.2);
-  /* Removed 4th shadow value (spread) which GTK often treats as junk */
   box-shadow: inset 0px 1px 0px rgba(255, 255, 255, 0.2), 0px 1px 1px rgba(0, 0, 0, 0.2);
   color: var(--theme-fg-label-primary);
 }
@@ -22,7 +22,6 @@
   background-color: var(--theme-bg-under-page);
   border: 1px solid var(--theme-decoration-separator);
   border-radius: var(--radius-xl);
-  /* GTK 4 shadows work best with simple offsets and blur */
   box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.5);
 }
 
