@@ -48,6 +48,7 @@ def get_plugin_class():
             self.btn.add_css_class("volume-panel-button")
             self.btn.set_icon_name("audio-volume-high-symbolic")
             self.btn.connect("clicked", self.toggle_popover)
+            self.add_cursor_effect(self.btn)
             self.main_widget = (self.btn, "append")
 
         def toggle_popover(self, *_):
