@@ -1,42 +1,20 @@
 /* Launcher Button */
 .app-launcher-menu-button {
   -gtk-icon-size: 24px;
-
   padding-top: 9px;
   padding-bottom: 7px;
-
-  background:
-    linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.45) 0%,
-      rgba(255, 255, 255, 0.18) 22%,
-      rgba(255, 255, 255, 0.0) 23%
-    ),
-    var(--color-bg-box-primary);
-
+  /* Simplified gradient for GTK parser stability */
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.18) 22%, transparent 23%), var(--color-bg-box-primary);
   border-radius: var(--radius-m);
-  border-right: 2px solid color-mix(
-    in srgb,
-    var(--color-bg-deep) 50%,
-    transparent 10%
-  );
-  box-shadow:
-    inset 0 0px 0 rgba(255, 255, 255, 0.6),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
-    0 1px 1px rgba(0, 0, 0, 0.2);
-
+  border-right: 2px solid rgba(0, 0, 0, 0.2);
+  /* Removed 4th shadow value (spread) which GTK often treats as junk */
+  box-shadow: inset 0px 1px 0px rgba(255, 255, 255, 0.2), 0px 1px 1px rgba(0, 0, 0, 0.2);
   color: var(--theme-fg-label-primary);
-
-  transition: background 120ms linear, box-shadow 120ms linear;
 }
 
 .app-launcher-menu-button:hover {
-  background: var(--color-bg-button-normal-hover);
-  box-shadow:
-    inset 0 2px 2px rgba(255, 255, 255, 0.25),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.4),
-    inset 5px 0 5px rgba(255, 255, 255, 0.1),
-    0 2px 8px rgba(0, 0, 0, 0.3);
+  background-color: var(--color-bg-button-normal-hover);
+  box-shadow: inset 0px 2px 2px rgba(255, 255, 255, 0.25), 0px 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Popover Shell */
@@ -44,223 +22,78 @@
   background-color: var(--theme-bg-under-page);
   border: 1px solid var(--theme-decoration-separator);
   border-radius: var(--radius-xl);
-  box-shadow: 
-    0 8px 16px rgba(0, 0, 0, 0.5),
-    inset 0 1px 1px rgba(255, 255, 255, 0.1),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.5);
+  /* GTK 4 shadows work best with simple offsets and blur */
+  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.5);
 }
 
 .app-launcher-popover.background > arrow {
   background-color: var(--theme-bg-under-page);
 }
 
-.app-launcher-popover {
-  background: transparent;
-  background-color: transparent;
-}
-
-/* Main Layout */
-.app-launcher-main-box {
-  background-color: var(--theme-bg-under-page);
-}
-
-.app-launcher-middle-hbox {
-  padding: 0px;
-}
-
-/* Center Box & Grid Spacing - Popover Only */
-.app-launcher-center-vbox {
-  background: transparent;
-  padding: 0px;
-}
-
-.app-launcher-popover flowboxchild {
-  padding: 0px;
-  margin-bottom: 24px;
-  margin-left: 2px;
-  margin-right: 2px;
-}
-
-.app-launcher-popover flowboxchild .app-launcher-vbox {
-  background: transparent;
-  padding: 0px;
-  margin: 0px;
-}
-
-/* Sidebar - Enhanced 3D Glassified Aesthetics */
+/* Sidebar */
 .app-launcher-sidebar-vbox {
-  background-color: var(--color-bg-transparent-active);
-  padding: 16px 10px;
-  min-width: 90px;
-  border-right: 1px solid var(--theme-decoration-separator);
-  border-left: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
-  box-shadow: 
-    inset -15px 0 30px -15px rgba(0, 0, 0, 0.3),
-    inset 2px 0 5px rgba(255, 255, 255, 0.03),
-    inset -2px 0 5px rgba(0, 0, 0, 0.4);
+  background-color: var(--color-bg-button-suggested-hover);
+  padding: 8px;
+  min-width: 160px;
+  border-left: 1px solid var(--theme-decoration-separator);
+  border-radius: 0px var(--radius-xl) var(--radius-xl) 0px;
 }
 
 .app-launcher-sidebar-button {
-  background: transparent;
+  background-color: transparent;
   border: 1px solid transparent;
-  padding: 12px 16px;
-  margin-bottom: 8px;
-  border-radius: var(--radius-m);
-  -gtk-secondary-caret-color: inherit; 
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  padding: 10px 14px;
+  margin-bottom: 4px;
+  border-radius: var(--radius-l);
 }
 
 .app-launcher-sidebar-button:hover {
-  background-color: var(--color-bg-button-normal-hover);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
-  transform: translateX(4px) scale(1.02);
-  box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.app-launcher-sidebar-button:active {
-  background-color: var(--color-bg-button-normal-active);
-  transform: translateX(2px) scale(0.98);
-  box-shadow: 
-    inset 0 4px 8px rgba(0, 0, 0, 0.5),
-    inset 0 1px 4px rgba(0, 0, 0, 0.8);
+  background-color: var(--color-bg-button-flat-hover);
 }
 
 .app-launcher-sidebar-button:checked,
 .app-launcher-sidebar-button:selected {
   background-color: var(--theme-bg-selected-secondary);
-  border-color: var(--theme-status-success);
-  box-shadow: 
-    0 0 15px rgba(0, 0, 0, 0.2),
-    inset 0 1px 2px rgba(255, 255, 255, 0.1);
-}
-
-.app-launcher-system-button-icon {
-  -gtk-icon-size: 22px;
-  color: var(--theme-fg-label-primary);
-  margin-right: 6px;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4));
-}
-
-.app-launcher-system-button-label {
-  color: var(--theme-fg-label-secondary);
-  font-size: 13px;
-  font-weight: var(--font-weight-bold);
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-/* Sidebar Separator - Laser Line */
-.app-launcher-sidebar-vbox separator {
-  background: linear-gradient(to right, 
-    transparent, 
-    var(--theme-status-accent), 
-    transparent
-  );
-  margin: 15px 12px;
-  min-height: 2px;
-  opacity: 0.6;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
-}
-
-/* Ignore Switch Section */
-.app-launcher-footer-label {
-  color: var(--theme-status-success);
-  font-size: 10px;
-  font-weight: var(--font-weight-bold);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-  padding-left: 6px;
-}
-
-.app-launcher-ignore-switch {
-  margin-left: 6px;
+  border-left: 3px solid var(--theme-status-accent);
 }
 
 /* Search bar */
 .app-launcher-searchbar {
-  background-color: var(--color-bg-searchbar);
-  border: 1px solid var(--theme-decoration-separator);
+  background-color: var(--color-bg-entry-base);
+  border: 1px solid var(--color-border-entry-base);
   border-radius: var(--radius-m);
   margin: 12px;
   padding: 8px 12px;
   color: var(--theme-fg-label-primary);
-  font-size: 18px;
-  font-weight: var(--font-weight-medium);
-  font-family: var(--font-family-default);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
-.app-launcher-searchbar:focus {
-  border-color: var(--theme-status-success);
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-}
-
-/* Icon Styling - Specifically for Popover Grid */
+/* Icon Styling */
 .app-launcher-popover .app-launcher-icon-from-popover {
-  -gtk-icon-size: 64px;
+  -gtk-icon-size: 48px;
   padding: 10px;
   background-color: var(--theme-bg-view-secondary);
-  border: 1px solid var(--gruv-shadow-border);
+  border: 1px solid var(--theme-decoration-separator);
   border-radius: var(--radius-l);
-  box-shadow: 
-    0 1px 3px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .app-launcher-popover .app-launcher-icon-from-popover:hover {
   background-color: var(--color-bg-button-normal-hover);
   border-color: var(--theme-status-accent);
-  transform: translateY(-4px) scale(1.05);
-  box-shadow: 
-    0 6px 12px rgba(0, 0, 0, 0.3),
-    inset 0 1px 2px rgba(255, 255, 255, 0.1);
-}
-
-.app-launcher-popover .app-launcher-icon-from-popover:active {
-  transform: translateY(1px);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
-  background-color: var(--theme-bg-under-page);
 }
 
 .app-launcher-popover .app-launcher-label-from-popover {
   font-size: 11px;
-  font-weight: var(--font-weight-bold);
+  font-weight: bold;
   color: var(--theme-fg-label-primary);
   margin-top: 10px;
 }
 
-/* Remote Items */
-.app-item-remote {
-  background: transparent;
-  border-radius: var(--radius-m);
-  padding: 10px;
-  transition: background 0.2s ease;
-}
-
-.app-item-remote:hover {
-  background: var(--color-status-danger-bg);
-}
-
 .flatpak-emblem {
   font-size: 7pt;
-  font-weight: var(--font-weight-bold);
-  background: var(--theme-status-accent);
+  font-weight: bold;
+  background-color: var(--theme-status-accent);
   color: var(--theme-fg-label-inverse);
   padding: 2px 6px;
   border-radius: var(--radius-xs);
   margin-top: -2px;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
-}
-
-/* Scrolled Window */
-.app-launcher-scrolled-window {
-  background: transparent;
-  background-color: transparent;
 }

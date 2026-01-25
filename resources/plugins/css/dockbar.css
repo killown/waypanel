@@ -1,28 +1,27 @@
+/* 1. Reset the generic class to prevent the 'row/box' from glowing */
 .dockbar-buttons {
   border-radius: var(--radius-xs);
   background-color: transparent;
   transition: all 250ms ease-out;
-  margin: -2px;
+  margin: 0; /* Reset margin to prevent layout shifts */
+  box-shadow: none;
 }
-
 
 .dockbar-buttons:hover {
-  color: var(--theme-status-accent);
-  background-color: var(--color-bg-transparent-active);
-  text-shadow: 0 0 10px var(--color-shadow-hue-bleed);
+  background-color: transparent; /* Force transparent so the container doesn't glow */
+  box-shadow: none;
+  text-shadow: none;
 }
 
+/* 2. Keep the glow confined strictly to the Button widget */
 .box-dockbar-buttons {
   border-radius: var(--radius-l);
   padding: 3px 6px;
   -gtk-icon-size: 36px;
   background-color: var(--color-bg-button-normal);
   color: var(--theme-fg-label-primary);
-  
-  /* Remove hard border, use multi-layered shadows for 3D depth */
   border: none;
   
-  /* 1. Inset highlight (top) 2. Inset shadow (bottom) 3. Soft drop shadow 4. Ambient glow */
   box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.08),
               inset 0 -2px 2px 0 rgba(0, 0, 0, 0.3),
               0 4px 6px -1px var(--shadow-dark),
@@ -38,7 +37,7 @@
 .box-dockbar-buttons:hover {
   background-color: var(--color-bg-button-normal-hover);
   
-  /* Shadow-based border effect using the user's accent color */
+  /* The glow stays inside this button's boundaries */
   box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15),
               inset 0 -1px 1px 0 rgba(0, 0, 0, 0.2),
               0 0 0 1px var(--theme-status-accent),
@@ -51,8 +50,6 @@
 .box-dockbar-buttons:active {
   background-color: var(--color-bg-button-normal-active);
   background-image: none;
-  
-  /* Deeply recessed shadow for realistic compression */
   box-shadow: inset 0 4px 8px 0 rgba(0, 0, 0, 0.6),
               inset 0 -1px 0 0 rgba(255, 255, 255, 0.05),
               0 1px 2px 0 rgba(255, 255, 255, 0.1);
@@ -64,8 +61,6 @@
 .box-dockbar-buttons:checked {
   background-color: var(--theme-bg-selected-primary);
   color: var(--theme-fg-text-selected);
-  
-  /* Internal glow that matches the selected accent color */
   box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.4),
               inset 0 0 15px 0 rgba(255, 255, 255, 0.1),
               0 0 25px 0 var(--color-shadow-hue-bleed),
