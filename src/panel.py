@@ -203,7 +203,7 @@ class Panel(Adw.Application):
                 elif panel_type == "right":
                     self._setup_right_panel(config)
                 else:
-                    self.logger.warning(f"Unknown panel type: {panel_type}")
+                    pass
             except Exception as e:
                 self.logger.error(
                     f"Failed to set up {panel_type} panel: {e}", exc_info=True
