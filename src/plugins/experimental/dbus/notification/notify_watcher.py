@@ -114,29 +114,4 @@ def get_plugin_class():
             """Log an error message."""
             self.logger.error(message)
 
-        def code_explanation(self):
-            """
-            The core logic of this plugin is to create a dynamic visual
-            indicator by linking a background process to a UI component
-            from a separate plugin. It operates on three key principles:
-            1.  **File System Monitoring**: The plugin uses `self.gio.FileMonitor`
-                to set up a listener on the notification database
-                file. Instead of periodically polling the database, it
-                reacts in real-time to file modification events, ensuring
-                the UI is updated instantly when new data is written.
-            2.  **State-Driven UI Updates**: It maintains an internal state
-                variable (`self.last_db_state`) that represents whether
-                notifications are present. When the database is modified,
-                the plugin checks the current state and only updates the
-                button's visibility if the state has genuinely changed.
-                This prevents redundant UI operations.
-            3.  **Cross-Plugin Interaction**: This plugin is "headless"
-                in that it doesn't create its own UI element on the
-                panel. Instead, it acts as a controller, retrieving a
-                button object from the `notify_client` plugin and
-                programmatically changing its visibility. This showcases
-                a flexible, modular architecture.
-            """
-            return self.code_explanation.__doc__
-
     return NotifyWatcherPlugin
