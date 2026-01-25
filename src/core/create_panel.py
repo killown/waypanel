@@ -11,7 +11,7 @@ sock = None
 if os.getenv("WAYFIRE_SOCKET"):
     sock = WayfireSocket()
 if os.getenv("SWAYSOCK") and not os.getenv("WAYFIRE_SOCKET"):
-    from pysway.ipc import SwayIPC
+    from pysway.ipc import SwayIPC  # pyright: ignore
 
     sock = SwayIPC()
 
@@ -43,8 +43,8 @@ def get_monitor_info() -> Dict[str, Dict[str, Any]]:
     if screen:
         monitors = screen.get_monitors()
         for monitor in monitors:
-            geometry = monitor.get_geometry()
-            name: str = monitor.props.connector
+            geometry = monitor.get_geometry()  # pyright: ignore
+            name: str = monitor.props.connector  # pyright: ignore
             monitor_info[name] = {
                 "monitor": monitor,
                 "width": int(geometry.width),
@@ -112,7 +112,7 @@ def get_target_monitor(
     primary = panel_cfg.get("primary_output", {})
     if isinstance(primary, dict):
         monitor_name = primary.get("name")
-        target = monitors.get(monitor_name)
+        target = monitors.get(monitor_name)  # pyright: ignore
         if target:
             return target
 
@@ -128,10 +128,12 @@ def setup_layer_shell(
     height: int,
     monitor: Optional[Dict[str, Any]],
     class_style: str,
+    title: str = "Panel",
 ) -> None:
     """Configure the GTK Layer Shell properties."""
     LayerShell.init_for_window(window)
-    LayerShell.set_namespace(window, "waypanel")
+    LayerShell.set_namespace(window, title)
+    LayerShell.set_keyboard_mode(window, LayerShell.KeyboardMode.ON_DEMAND)
 
     if monitor and "monitor" in monitor:
         LayerShell.set_monitor(window, monitor["monitor"])
@@ -158,25 +160,25 @@ def setup_layer_shell(
 
 
 def CreatePanel(
-    app: Adw.Application,
+    app: Gtk.Application,
     anchor: str,
     layer: str,
     exclusive: bool,
     width: int,
     height: int,
     class_style: str,
-) -> Adw.Window:
-    """Create and configure a panel window."""
-    window = Adw.Window(application=app)
+    title: str = "CreatePanel",
+) -> Gtk.Window:
+    """Create and configure a raw Gtk panel window."""
+    window = Gtk.Window(application=app)
     window.set_default_size(width, height)
-    window.set_focus_on_click(False)
 
     config = load_full_config()
     monitors = get_monitor_info()
     monitor = get_target_monitor(config, monitors)
 
     setup_layer_shell(
-        window=window,
+        window=window,  # pyright: ignore
         anchor=anchor,
         layer=layer,
         exclusive=exclusive,
@@ -184,5 +186,9 @@ def CreatePanel(
         height=height,
         monitor=monitor,
         class_style=class_style,
+        title=title,
     )
+
+    window.connect("destroy", Gtk.Application.quit)
+
     return window
