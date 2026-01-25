@@ -1,3 +1,4 @@
+from os import name
 import sys
 import lazy_loader as lazy
 from typing import Any
@@ -237,6 +238,8 @@ class Panel(Adw.Application):
             "org.waypanel.panel.top.height", 32.0, "Height of the top panel"
         )
 
+        namespace = "Waypanel-Top"
+
         self.top_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
             anchor_edge,
@@ -245,6 +248,7 @@ class Panel(Adw.Application):
             width,  # pyright: ignore
             height,  # pyright: ignore
             css_class,
+            namespace,
         )
         if config.get("enabled", True):
             self.top_panel.present()
@@ -276,6 +280,7 @@ class Panel(Adw.Application):
         height = self.get_setting_add_hint(
             "org.waypanel.panel.bottom.height", 32.0, "Height of the bottom panel"
         )
+        namespace = "Waypanel-Bottom"
 
         self.bottom_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
@@ -285,6 +290,7 @@ class Panel(Adw.Application):
             width,  # pyright: ignore
             height,  # pyright: ignore
             css_class,
+            namespace,
         )
         if config.get("enabled", True):
             self.bottom_panel.present()
@@ -314,6 +320,7 @@ class Panel(Adw.Application):
         height = self.get_setting_add_hint(
             "org.waypanel.panel.left.height", 0.0, "Height of the left panel"
         )
+        namespace = "Waypanel-Left"
 
         self.left_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
@@ -323,6 +330,7 @@ class Panel(Adw.Application):
             width,  # pyright: ignore
             height,  # pyright: ignore
             css_class,
+            namespace,
         )
         if config.get("enabled", True):
             self.left_panel.present()
@@ -352,6 +360,7 @@ class Panel(Adw.Application):
         height = self.get_setting_add_hint(
             "org.waypanel.panel.right.height", 0.0, "Height of the right panel"
         )
+        namespace = "Waypanel-Right"
 
         self.right_panel = CREATE_PANEL_MODULE.CreatePanel(
             self.panel_instance,  # pyright: ignore
@@ -361,6 +370,7 @@ class Panel(Adw.Application):
             width,  # pyright: ignore
             height,  # pyright: ignore
             css_class,
+            namespace,
         )
         if config.get("enabled", True):
             self.right_panel.present()
