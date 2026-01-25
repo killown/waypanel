@@ -1,0 +1,12 @@
+.right-panel {
+  -gtk-icon-size: 48px;
+  background: var(--color-bg-deep);
+  border-radius: 10px;
+  border-bottom-right-radius: 10px;
+  margin-right: 5px;
+  
+  box-shadow:
+    inset 3px 3px 5px rgba(255, 255, 255, 0.08),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    2px 2px 5px var(--shadow-medium);
+}

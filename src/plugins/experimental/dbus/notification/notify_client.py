@@ -11,7 +11,7 @@ def get_plugin_metadata(_):
         "enabled": True,
         "index": 7,
         "container": "top-panel-center",
-        "deps": ["top_panel", "notify_server"],
+        "deps": ["top_panel", "notify_server", "css_generator"],
         "description": about,
     }
 
@@ -98,6 +98,7 @@ def get_plugin_class():
             Pre-connects to the database and pre-loads notification data.
             """
             self.run_in_thread(self._preload_notifications)
+            self.plugins["css_generator"].install_css("notify.css")
 
         def _preload_notifications(self):
             """Internal method to populate the cache in a background thread."""

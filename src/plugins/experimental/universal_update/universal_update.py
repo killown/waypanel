@@ -22,7 +22,7 @@ def get_plugin_metadata(panel):
         "index": 1,
         "priority": 1000,
         "container": container,
-        "deps": ["top_panel"],
+        "deps": ["top_panel", "css_generator"],
         "description": "Universal Linux update manager with per-backend custom commands.",
     }
 
@@ -117,6 +117,7 @@ def get_plugin_class():
             self.glib.timeout_add_seconds(
                 self.check_interval_seconds, self._check_updates_periodically
             )
+            self.plugins["css_generator"].install_css("universal-update.css")
 
         def _setup_popover(self):
             """Constructs the GTK popover menu containing status info and action buttons."""

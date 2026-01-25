@@ -16,7 +16,7 @@ def get_plugin_metadata(panel_instance):
         "enabled": True,
         "container": valid.get(pos, "left-panel-center"),
         "priority": 1,
-        "deps": ["event_manager", "gestures_setup", "left_panel"],
+        "deps": ["event_manager", "gestures_setup", "left_panel", "css_generator"],
         "description": "A plugin that creates a configurable dockbar for launching applications.",
     }
 
@@ -48,6 +48,7 @@ def get_plugin_class():
             self.logic.setup_file_watcher()
             self._setup_dock_context_menu()
             self._subscribe_to_events()
+            self.plugins["css_generator"].install_css("dockbar.css")
 
         def _init_settings(self):
             self.add_hint(

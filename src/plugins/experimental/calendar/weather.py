@@ -10,7 +10,7 @@ def get_plugin_metadata(_):
         "version": "1.2.0",
         "enabled": True,
         "priority": 99,
-        "deps": ["calendar"],
+        "deps": ["calendar", "css_generator"],
         "description": about,
     }
 
@@ -84,6 +84,7 @@ def get_plugin_class():
                 self.logger.error(
                     "Weather coordinates are missing or invalid in config. Plugin functionally disabled."
                 )
+            self.plugins["css_generator"].install_css("weather.css")
 
         async def setup_weather_async(self):
             """Asynchronously set up the weather functionality."""

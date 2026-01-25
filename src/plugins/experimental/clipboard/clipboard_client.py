@@ -14,7 +14,7 @@ def get_plugin_metadata(_):
         "enabled": True,
         "container": "top-panel-systray",
         "index": 5,
-        "deps": ["top_panel", "clipboard_server"],
+        "deps": ["top_panel", "clipboard_server", "css_generator"],
         "description": about,
     }
 
@@ -67,6 +67,7 @@ def get_plugin_class():
         def on_enable(self):
             self.run_in_async_task(self.manager.initialize())
             self.create_clipboard_ui()
+            self.plugins["css_generator"].install_css("clipboard.css")
 
         def _resolve_local_path(self, content: str) -> str | None:
             if not content or not content.startswith(("file://", "/")):

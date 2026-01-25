@@ -6,7 +6,7 @@ def get_plugin_metadata(_):
         "enabled": True,
         "priority": 10,
         "container": "bottom-panel",
-        "deps": ["event_manager"],
+        "deps": ["event_manager", "css_generator"],
     }
 
 
@@ -18,6 +18,7 @@ def get_plugin_class():
             super().__init__(panel_instance)
             self._setup_boxes()
             self.add_css_class()
+            self.plugins["css_generator"].install_css("bottom-panel.css")
 
         def _setup_boxes(self):
             # Left, Center, and Right Containers

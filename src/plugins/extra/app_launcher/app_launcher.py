@@ -11,9 +11,7 @@ def get_plugin_metadata(_):
         "index": 1,
         "priority": 987,
         "container": "top-panel-box-widgets-left",
-        "deps": [
-            "top_panel",
-        ],
+        "deps": ["top_panel", "css_generator"],
         "description": about,
     }
 
@@ -234,6 +232,7 @@ def get_plugin_class():
             self._create_recent_apps_table()
             self.create_menu_popover_launcher()
             self.create_popover_launcher()
+            self.plugins["css_generator"].install_css("app-launcher.css")
 
         def _create_recent_apps_table(self):
             """Ensures the database table is ready."""

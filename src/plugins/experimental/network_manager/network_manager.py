@@ -10,7 +10,7 @@ def get_plugin_metadata(_):
         "index": 10,
         "priority": 988,
         "container": "top-panel-systray",
-        "deps": ["top_panel"],
+        "deps": ["top_panel", "css_generator"],
         "description": about,
     }
 
@@ -85,6 +85,7 @@ def get_plugin_class():
             self.global_loop.create_task(
                 self._apply_config_autoconnect_settings_async()
             )
+            self.plugins["css_generator"].install_css("network-manager.css")
 
         async def start_periodic_wifi_scan_async(self):
             """Starts a periodic background scan for Wi-Fi networks using self.asyncio."""

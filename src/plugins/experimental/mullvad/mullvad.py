@@ -10,7 +10,7 @@ def get_plugin_metadata(_):
         "enabled": True,
         "index": 8,
         "container": "top-panel-systray",
-        "deps": ["top_panel"],
+        "deps": ["top_panel", "css_generator"],
         "description": about,
     }
 
@@ -40,6 +40,7 @@ def get_plugin_class():
 
         def on_start(self):
             self.run_in_async_task(self._async_init_setup())
+            self.plugins["css_generator"].install_css("mullvad.css")
 
         async def _async_init_setup(self):
             self.mullvad_version = await self._get_version_async()

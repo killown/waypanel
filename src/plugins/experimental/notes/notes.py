@@ -13,7 +13,7 @@ def get_plugin_metadata(panel):
         "index": 1,
         "priority": 880,
         "container": container,
-        "deps": ["top_panel"],
+        "deps": ["top_panel", "css_generator"],
         "description": about,
     }
 
@@ -189,6 +189,7 @@ def get_plugin_class():
             self.main_widget = (self.menubutton_notes, "append")
             self.menubutton_notes.connect("clicked", self.open_popover_notes)
             self.gtk_helper.add_cursor_effect(self.menubutton_notes)
+            self.plugins["css_generator"].install_css("notes.css")
 
         def create_popover_notes(self):
             """Constructs the primary UI components of the popover."""

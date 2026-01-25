@@ -15,6 +15,7 @@ def get_plugin_metadata(panel_instance):
             "gestures_setup",
             "on_output_connect",
             "view_property_controller",
+            "css_generator",
         ],
         "description": "Fully modularized Taskbar with split logic files.",
     }
@@ -78,6 +79,7 @@ def get_plugin_class():
 
             self.run_in_thread(self._initialize_button_pool, 15)
             self.main_widget = (self.center_box, "append")
+            self.plugins["css_generator"].install_css("taskbar.css")
 
         def _init_settings_refs(self):
             """Syncs refs for compatibility."""

@@ -18,7 +18,7 @@ def get_plugin_metadata(panel):
         "index": 6,
         "hidden": hidden,
         "container": container,
-        "deps": ["top_panel"],
+        "deps": ["top_panel", "css_generator"],
         "description": about,
     }
 
@@ -63,6 +63,7 @@ def get_plugin_class():
                 "clicked", self.open_popover_dashboard
             )
             self.run_in_async_task(self._init_dbus_and_auto_connect())
+            self.plugins["css_generator"].install_css("bluetooth.css")
 
         async def _ensure_bus(self):
             async with self._bus_lock:

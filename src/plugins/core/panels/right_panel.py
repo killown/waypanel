@@ -6,7 +6,7 @@ def get_plugin_metadata(_):
         "enabled": True,
         "priority": 10,
         "container": "right-panel",
-        "deps": ["event_manager"],
+        "deps": ["event_manager", "css_generator"],
     }
 
 
@@ -27,6 +27,7 @@ def get_plugin_class():
             super().__init__(panel_instance)
             self._setup_boxes()
             self.add_css_class()
+            self.plugins["css_generator"].install_css("right-panel.css")
 
         def _setup_boxes(self):
             """Setup top, center, and bottom boxes for vertical alignment."""

@@ -11,9 +11,7 @@ def get_plugin_metadata(_):
         "index": 1,
         "priority": 985,
         "container": "top-panel-after-systray",
-        "deps": [
-            "top_panel",
-        ],
+        "deps": ["top_panel", "css_generator"],
         "description": about,
     }
 
@@ -52,6 +50,7 @@ def get_plugin_class():
             self.gtk_helper.add_cursor_effect(self.cf_box)
 
             self.cf_box.add_css_class("window-controls-box")
+            self.plugins["css_generator"].install_css("window-controls.css")
 
         def create_control_button(self, icon_name, css_class, callback):
             button = self.gtk_helper.create_button(

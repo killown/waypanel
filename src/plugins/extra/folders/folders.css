@@ -1,0 +1,84 @@
+.folders-popover {
+  border: none;
+}
+
+.folders-main-box {
+  padding: 15px;
+}
+
+.folders-right-click-popover {
+  border: none;
+}
+
+.folders-label-from-popover {
+  color: var(--main-text);
+}
+
+.folders-popover-menu-items {
+  font-size: 16px;
+}
+
+.folders-popover-menu-items:hover {
+  background-color: var(--success-green);
+  color: var(--primary-bg);
+  box-shadow: var(--shadow-neumorphic-outset-large);
+  transform: translateY(-2px);
+}
+
+.folders-search-entry {
+  background-color: var(--primary-bg);
+  border-width: 0px;
+  border-radius: 10px;
+  padding: 5px 10px;
+  color: var(--main-text);
+  font-size: 16px;
+  font-weight: 500;
+  font-family: var(--font-family-default);
+  box-shadow: var(--shadow-neumorphic-inset-medium);
+}
+
+.folders-scrolled-window {
+  border: none;
+  background-color: transparent;
+}
+
+.folders-listbox {
+  background-color: transparent;
+  padding: 10px;
+}
+
+.folders-row-hbox {
+  min-height: 40px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background-color: transparent;
+  transition: all 0.2s ease-in-out;
+}
+
+.folders-row-hbox:hover {
+  background-color: var(--secondary-bg);
+  box-shadow: var(--shadow-neumorphic-outset-large);
+  transform: translateY(-2px);
+}
+
+.folders-row-hbox:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-neumorphic-press);
+}
+
+.folders-icon-from-popover {
+  -gtk-icon-size: 42px;
+  color: var(--main-text);
+}
+
+.folders-label-from-popover {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--main-text);
+}
+
+.folders-menu-button {
+  -gtk-icon-size: 25px;
+  padding-top: 9px;
+  padding-bottom: 2px;
+}

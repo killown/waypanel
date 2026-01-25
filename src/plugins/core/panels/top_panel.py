@@ -6,7 +6,7 @@ def get_plugin_metadata(_):
         "enabled": True,
         "priority": 10,
         "container": "top-panel",
-        "deps": ["event_manager"],
+        "deps": ["event_manager", "css_generator"],
     }
 
 
@@ -23,6 +23,7 @@ def get_plugin_class():
             self.is_top_panel_ready = False
             self._setup_panel_boxes()
             self.add_css_class()
+            self.plugins["css_generator"].install_css("top-panel.css")
 
         def _attach_widget_to_grid_next_to(
             self, grid, widget_to_attach, relative_widget, position_type, width, height

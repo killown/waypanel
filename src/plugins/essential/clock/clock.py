@@ -13,7 +13,7 @@ def get_plugin_metadata(panel):
         "container": container,
         "index": 5,
         "priority": 988,
-        "deps": ["top_panel"],
+        "deps": ["top_panel", "css_generator"],
         "description": about,
     }
 
@@ -59,6 +59,7 @@ def get_plugin_class():
             self.update_widget_safely(self.clock_box.append, self.clock_button)
             self.update_clock()
             self.schedule_updates()
+            self.plugins["css_generator"].install_css("clock.css")
 
         def update_clock(self):
             """

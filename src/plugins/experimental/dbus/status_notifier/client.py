@@ -22,7 +22,7 @@ def get_plugin_metadata(panel_instance):
         "enabled": True,
         "container": container,
         "index": 5,
-        "deps": ["event_manager", "top_panel"],
+        "deps": ["event_manager", "top_panel", "css_generator"],
         "description": about,
     }
 
@@ -69,6 +69,7 @@ def get_plugin_class():
             Starts the background D-Bus watcher service.
             """
             self.notifier_watcher.run_server_in_background(self._panel_instance)
+            self.plugins["css_generator"].install_css("status-notifier.css")
 
         def subscribe_to_icon_updates(self):
             """

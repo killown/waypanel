@@ -1,0 +1,193 @@
+/* ====================== CONTROL CENTER THEME ====================== */
+
+/* Main window */
+.control-center-window {
+  background-color: var(--color-bg-window);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-window-float);
+  color: var(--theme-fg-label-inverse); /* black text */
+}
+
+/* Header */
+.control-center-header {
+  background-color: var(--color-bg-surface);
+  border-bottom: 1px solid var(--theme-decoration-separator);
+  box-shadow: none;
+  color: var(--theme-fg-label-primary); /* white text on dark header */
+}
+
+/* Group titles */
+.control-center-group-title {
+  color: var(--theme-status-accent);
+  font-size: 1.2em;
+  font-weight: var(--font-weight-bold);
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--theme-decoration-separator);
+}
+
+/* Hints / tooltips */
+.control-center-hint {
+  color: var(--theme-fg-label-inverse); /* black on light success bg */
+  font-style: italic;
+  font-size: 0.9em;
+  padding: 8px 15px;
+  margin-top: 5px;
+  border-radius: var(--radius-xs);
+  background-color: var(--color-status-success-bg);
+  box-shadow: none;
+}
+
+/* Save button */
+.control-center-save-button {
+  color: var(--color-fg-button-suggested); /* white text on green */
+  background-color: var(--theme-status-success);
+  font-weight: var(--font-weight-bold);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-neumorphic-outset-small);
+  transition: all 0.15s ease;
+  border: none;
+}
+
+.control-center-save-button:hover {
+  background-color: var(--color-bg-button-hover);
+  box-shadow: var(--shadow-neumorphic-outset-large);
+}
+
+.control-center-save-button:active {
+  background-color: var(--color-bg-button-active);
+  box-shadow: var(--shadow-neumorphic-press);
+}
+
+/* Category list */
+.control-center-category-list {
+  background-color: var(--color-bg-window);
+  padding: 10px 0;
+  border: none;
+  color: var(--theme-fg-label-inverse); /* black text */
+}
+
+/* Category items */
+.control-center-category-item {
+  margin: 3px 8px;
+  padding: 8px 15px;
+  border-radius: var(--radius-s);
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  transition: background-color 0.1s;
+  color: var(--theme-fg-label-inverse);
+}
+
+.control-center-category-item:hover {
+  background-color: var(--color-bg-transparent-active);
+}
+
+.control-center-category-item:active {
+  background-color: var(--color-bg-button-active);
+}
+
+.control-center-category-item:checked {
+  background-color: var(--theme-bg-selected-primary);
+  color: var(--theme-fg-text-selected);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Content area */
+.control-center-content-area {
+  background-color: var(--color-bg-window);
+  padding: 15px;
+  color: var(--theme-fg-label-inverse);
+}
+
+/* Config group */
+.control-center-config-group {
+  background-color: var(--color-bg-base);
+  border-radius: var(--radius-l);
+  margin: 15px 0;
+  padding: 15px;
+  box-shadow: var(--shadow-neumorphic-outset-large);
+  color: var(--theme-fg-label-inverse);
+}
+
+.control-center-vbox-item {
+  background-color: var(--color-bg-base);
+  border-radius: var(--radius-m);
+  padding: 15px;
+  margin: 8px 0;
+  border: 1px solid var(--color-separator-line);
+  box-shadow: none;
+  transition: background-color 0.15s;
+  color: var(--theme-fg-label-inverse);
+}
+
+.control-center-vbox-item:hover {
+  background-color: var(--color-bg-button-hover);
+  border-color: var(--color-accent-blue);
+}
+
+/* Setting rows */
+.control-center-setting-row,
+.control-center-config-expander {
+  color: var(--theme-fg-label-inverse);
+  padding: 8px 0;
+  margin: 2px 0;
+  background-color: transparent;
+}
+
+.control-center-setting-row:hover,
+.control-center-config-expander:hover {
+  background-color: var(--theme-bg-selected-secondary);
+  border-radius: var(--radius-xs);
+}
+
+/* Nested group box */
+.control-center-nested-group-box {
+  background-color: var(--color-bg-alt-row);
+  border-radius: var(--radius-m);
+  padding: 10px;
+  margin-top: 10px;
+  box-shadow: var(--shadow-neumorphic-inset-medium);
+  color: var(--theme-fg-label-inverse);
+}
+
+/* List editor override */
+.control-center-list-editor .control-center-config-group {
+  background-color: var(--color-bg-alt-row);
+  border: 1px solid var(--theme-decoration-separator);
+  box-shadow: none;
+  color: var(--theme-fg-label-inverse);
+}
+
+/* List item rows */
+.control-center-list-item-row {
+  padding-left: 10px;
+  color: var(--theme-fg-label-inverse);
+}
+
+/* Inputs */
+.control-center-text-input,
+.control-center-numeric-input,
+.control-center-value-display {
+  background-color: var(--color-bg-searchbar);
+  color: var(--theme-fg-label-inverse);
+  border-radius: var(--radius-xs);
+  padding: 5px 8px;
+  box-shadow: var(--shadow-neumorphic-inset-medium);
+  border: 1px solid var(--color-border-entry-base);
+  min-height: 28px;
+}
+
+.control-center-text-input:focus,
+.control-center-numeric-input:focus {
+  box-shadow: 0 0 0 1px var(--color-accent-blue);
+  border-color: var(--color-border-entry-focus);
+  background-color: var(--color-bg-searchbar);
+}
+
+switch.control-center-toggle-switch slider,
+switch.control-center-plugin-enable-switch slider {
+  background-color: var(--color-bg-box-primary);
+  border-radius: 99px;
+  padding: 10px;
+}

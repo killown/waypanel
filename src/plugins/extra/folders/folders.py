@@ -10,9 +10,7 @@ def get_plugin_metadata(_):
         "index": 2,
         "priority": 980,
         "container": "top-panel-box-widgets-left",
-        "deps": [
-            "top_panel",
-        ],
+        "deps": ["top_panel", "css_generator"],
         "description": about,
     }
 
@@ -59,6 +57,7 @@ def get_plugin_class():
             """
             self.create_menu_popover_folders()
             self.main_widget = (self.menubutton_folders, "append")
+            self.plugins["css_generator"].install_css("folders.css")
 
         def create_menu_popover_folders(self):
             """Creates the main menu button that triggers the folders popover."""

@@ -5,6 +5,7 @@ def get_plugin_metadata(_):
         "version": "1.0.0",
         "enabled": True,
         "priority": 99,
+        "deps": ["css_generator"],
         "description": "Plugin Control Center for Waypanel",
     }
 
@@ -36,6 +37,7 @@ def get_plugin_class():
             self.gtk = Gtk
             self.adw = Adw
             self.win = None
+            self.plugins["css_generator"].install_css("control-center.css")
 
         def create_category_widget(self, category_name: str) -> Gtk.Widget:
             """

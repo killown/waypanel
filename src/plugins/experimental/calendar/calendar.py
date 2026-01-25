@@ -10,7 +10,7 @@ def get_plugin_metadata(_):
         "version": "1.0.0",
         "enabled": True,
         "priority": 1,
-        "deps": ["clock"],
+        "deps": ["clock", "css_generator"],
         "description": about,
     }
 
@@ -117,6 +117,7 @@ def get_plugin_class():
             The primary activation method for the plugin.
             """
             self.setup_calendar()
+            self.plugins["css_generator"].install_css("calendar.css")
 
         def toggle_calendar(self, *_) -> None:
             """Toggle the calendar popover."""

@@ -20,7 +20,7 @@ def get_plugin_metadata(_):
         "index": 9,
         "priority": 930,
         "container": "top-panel-systray",
-        "deps": ["top_panel", "gestures_setup"],
+        "deps": ["top_panel", "gestures_setup", "css_generator"],
         "description": about,
     }
 
@@ -137,6 +137,7 @@ def get_plugin_class():
                 ],
                 "A prioritized list of fallback icons to use if the main icon is not found.",
             )
+            self.plugins["css_generator"].install_css("system-monitor.css")
 
         def create_menu_popover_system(self):
             """

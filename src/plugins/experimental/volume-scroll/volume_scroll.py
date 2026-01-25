@@ -7,7 +7,7 @@ def get_plugin_metadata(_):
         "id": "org.waypanel.plugin.volume_scroll",
         "name": "Volume Scroll",
         "version": "1.0.3",
-        "deps": ["top_panel"],
+        "deps": ["top_panel", "css_generator"],
         "enabled": True,
         "description": about,
     }
@@ -73,6 +73,7 @@ def get_plugin_class():
             self.popup_width = self.get_plugin_setting(
                 ["layout", "popup_size", "width"], 200
             )
+            self.plugins["css_generator"].install_css("volume-scroll.css")
 
         def _get_default_sink(
             self, pulse: pulsectl.Pulse

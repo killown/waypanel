@@ -12,7 +12,12 @@ def get_plugin_metadata(_):
         "index": 1,
         "priority": 970,
         "container": "top-panel-left",
-        "deps": ["top_panel", "event_manager", "view_property_controller"],
+        "deps": [
+            "top_panel",
+            "event_manager",
+            "view_property_controller",
+            "css_generator",
+        ],
         "description": about,
     }
 
@@ -55,6 +60,7 @@ def get_plugin_class():
                 self.update_title_icon(first_view)
 
             self.glib.idle_add(self._subscribe_to_events_with_retry)
+            self.plugins["css_generator"].install_css("window-title.css")
 
         def _on_left_click(self, gesture, n_press, x, y):
             """Handles left click to open the rules management menu."""
