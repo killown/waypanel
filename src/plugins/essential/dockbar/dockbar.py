@@ -27,12 +27,14 @@ def get_plugin_class():
     from .logic import DockLogic
     from .manager import DockManager
     from .editor import ShortcutEditor
+    from .menu import DockMenu
 
     class DockbarPlugin(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
             self._init_settings()
             self.logic = DockLogic(self)
+            self.menu_handler = DockMenu(self)
             self.ui = DockManager(self)
             self.editor = ShortcutEditor(self)
 
@@ -93,6 +95,9 @@ def get_plugin_class():
                 ["panel", "layer_always_exclusive"],
                 False,
                 "If True, the dockbar panel will be set to Layer.TOP and reserve space.",
+            )
+            self.icon_size = self.get_plugin_setting_add_hint(
+                ["layout", "icon_size"], 42, "Size of the dock icons."
             )
 
         def _setup_dockbar(self):

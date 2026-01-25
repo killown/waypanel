@@ -80,29 +80,74 @@ class DockManager:
 
     def _setup_item_context_menu(self, button, app_name, app_data):
         is_vert = self.p.dockbar.get_orientation() == self.p.gtk.Orientation.VERTICAL
-        menu = self.p.gio.Menu.new()
-        menu.append("Edit Shortcut", "dock.edit")
-        menu.append("Move Up" if is_vert else "Move Left", "dock.move_up")
-        menu.append("Move Down" if is_vert else "Move Right", "dock.move_down")
-        menu.append("Unpin from Dock", "dock.remove")
 
-        popover = self.p.gtk.PopoverMenu.new_from_model(menu)
+        popover = self.p.gtk.Popover()
         popover.set_parent(button)
         popover.set_has_arrow(False)
+        popover.add_css_class("dockbar-context-menu")
 
-        ag = self.p.gio.SimpleActionGroup.new()
-        actions = {
-            "remove": lambda *_: self.p._remove_from_dockbar(button),
-            "edit": lambda *_: self.p._edit_item(app_name, app_data),
-            "move_up": lambda *_: self.p._move_item(button, -1),
-            "move_down": lambda *_: self.p._move_item(button, 1),
-        }
-        for n, cb in actions.items():
-            act = self.p.gio.SimpleAction.new(n, None)
-            act.connect("activate", cb)
-            ag.add_action(act)
+        # Container for menu items
+        menu_box = self.p.gtk.Box(
+            orientation=self.p.gtk.Orientation.VERTICAL, spacing=2
+        )
+        menu_box.set_margin_top(6)
+        menu_box.set_margin_bottom(6)
+        menu_box.set_margin_start(6)
+        menu_box.set_margin_end(6)
 
-        button.insert_action_group("dock", ag)
+        # Menu definition: (Label, Icon, Callback)
+        items = [
+            (
+                "Edit Shortcut",
+                "edit-symbolic",
+                lambda: self.p._edit_item(app_name, app_data),
+            ),
+            (
+                "Move Up" if is_vert else "Move Left",
+                "go-up-symbolic" if is_vert else "go-previous-symbolic",
+                lambda: self.p._move_item(button, -1),
+            ),
+            (
+                "Move Down" if is_vert else "Move Right",
+                "go-down-symbolic" if is_vert else "go-next-symbolic",
+                lambda: self.p._move_item(button, 1),
+            ),
+            (
+                "Unpin from Dock",
+                "list-remove-symbolic",
+                lambda: self.p._remove_from_dockbar(button),
+            ),
+        ]
+
+        for label, icon_name, callback in items:
+            item_btn = self.p.gtk.Button(has_frame=False)
+            item_btn.add_css_class("dockbar-menu-item")
+
+            # Layout for the button content
+            item_content = self.p.gtk.Box(
+                orientation=self.p.gtk.Orientation.HORIZONTAL, spacing=10
+            )
+            item_content.set_margin_start(8)
+            item_content.set_margin_end(8)
+
+            img = self.p.gtk.Image.new_from_icon_name(icon_name)
+            img.set_pixel_size(16)
+
+            lbl = self.p.gtk.Label(label=label, xalign=0)
+
+            item_content.append(img)
+            item_content.append(lbl)
+            item_btn.set_child(item_content)
+
+            # Connect click and close popover
+            def on_menu_clicked(_, cb=callback):
+                popover.popdown()
+                cb()
+
+            item_btn.connect("clicked", on_menu_clicked)
+            menu_box.append(item_btn)
+
+        popover.set_child(menu_box)
         self.p.create_gesture(button, 3, lambda *_: popover.popup())
 
     def on_drag_prepare(self, source, x, y):
