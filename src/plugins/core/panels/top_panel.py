@@ -116,10 +116,10 @@ def get_plugin_class():
             )
             self.obj.top_panel_scrolled_window.set_child(self.obj.top_panel_box_full)
 
-            # Focus Fix: Prevent the scrolled window from trapping clicks
+            # Prevent the scrolled window from trapping clicks
             self.obj.top_panel_scrolled_window.set_focus_on_click(False)
 
-            self.main_widget = (self.obj.top_panel_scrolled_window, "set_content")
+            self.main_widget = (self.obj.top_panel_scrolled_window, "set_child")
             self.is_top_panel_ready = True
 
         def add_css_class(self):

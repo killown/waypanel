@@ -48,7 +48,7 @@ def get_plugin_class():
             self.obj.right_panel_box_full.append(self.obj.right_panel_box_top)
             self.obj.right_panel_box_full.append(self.obj.right_panel_box_center)
             self.obj.right_panel_box_full.append(self.obj.right_panel_box_bottom)
-            self.main_widget = (self.obj.right_panel_box_full, "set_content")
+            self.main_widget = (self.obj.right_panel_box_full, "set_child")
 
         def add_css_class(self):
             """Add CSS classes once widgets are ready."""
