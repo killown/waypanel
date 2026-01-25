@@ -776,10 +776,10 @@ class BasePlugin:
                 f"Invalid action in self.main_widget: {action}. Must be a string."
             )
             return None
-        if action not in ("append", "set_content"):
+        if action not in ("append", "set_child"):
             self.logger.error(
                 f"Invalid action in self.main_widget: {action}. "
-                "The action must be either 'append' or 'set_content'."
+                "The action must be either 'append' or 'set_child'."
             )
             return None
         self.logger.debug(
