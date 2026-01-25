@@ -45,7 +45,7 @@ def get_plugin_class():
             self.search_timeout_id = None
             self.popover_width = self.get_plugin_setting_add_hint(
                 ["layout", "popover_width"],
-                900,
+                600,
                 "The fixed width (in pixels) of the main launcher popover window.",
             )
             self.popover_height = self.get_plugin_setting_add_hint(
@@ -108,7 +108,7 @@ def get_plugin_class():
 
             # Customizable System Action Icons
             self.system_button_config = {
-                "Panel Settings": {
+                "Settings": {
                     "icons": self.get_plugin_setting(
                         ["buttons", "icons", "settings"],
                         [
@@ -118,7 +118,7 @@ def get_plugin_class():
                         ],
                     ),
                 },
-                "Wayfire Settings": {
+                "Compositor": {
                     "icons": self.get_plugin_setting(
                         ["buttons", "icons", "settings"],
                         [
@@ -152,13 +152,15 @@ def get_plugin_class():
                 "Reboot": {
                     "icons": self.get_plugin_setting(
                         ["buttons", "icons", "reboot"],
-                        ["system-reboot-update-symbolic", "system-reboot-symbolic"],
+                        ["system-reboot-symbolic", "system-reboot-update-symbolic"],
                     ),
                 },
                 "Shutdown": {
                     "icons": self.get_plugin_setting(
-                        ["buttons", "icons", "shutdown"],
+                        ["buttons", "icons", "system-shutdown-symbolic"],
                         [
+                            "system-shutdown-symbolic",
+                            "system-shutdown-panel",
                             "gnome-shutdown-symbolic",
                             "system-shutdown-symbolic",
                             "switch-off-symbolic",
@@ -408,11 +410,11 @@ def get_plugin_class():
                 self.subprocess.Popen(self.reboot_command.split())
             elif action == "Lock":
                 self.subprocess.Popen(self.lock_command.split())
-            elif action == "Panel Settings":
+            elif action == "Settings":
                 control_center = self.plugins.get("control_center")
                 if control_center:
                     control_center.do_activate()
-            elif action == "Wayfire Settings":
+            elif action == "Compositor":
                 self.launch_config_viewer()
 
             if self.popover_launcher:
@@ -482,7 +484,7 @@ def get_plugin_class():
             min_size, natural_size = self.flowbox.get_preferred_size()
             width = natural_size.width if natural_size else 0
             self.scrolled_window.set_size_request(
-                self.popover_width - 200, self.popover_height
+                self.popover_width, self.popover_height
             )
             self.scrolled_window.set_min_content_width(width)
             self.scrolled_window.set_min_content_height(self.min_app_grid_height)
