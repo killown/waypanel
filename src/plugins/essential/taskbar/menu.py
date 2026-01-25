@@ -11,6 +11,30 @@ class TaskbarMenu:
         self.ipc = plugin_instance.ipc
         self.menu = None
 
+    def _create_menu_item(self, label_text, icon_name, callback):
+        """Helper to create a menu button with an icon and label."""
+        from gi.repository import Gtk
+
+        btn = Gtk.Button()
+        btn.set_has_frame(False)
+        btn.add_css_class("taskbar-menu-item")
+
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        box.set_margin_start(8)
+        box.set_margin_end(8)
+
+        icon = Gtk.Image.new_from_icon_name(icon_name)
+        icon.set_pixel_size(16)
+
+        lbl = Gtk.Label(label=label_text)
+
+        box.append(icon)
+        box.append(lbl)
+        btn.set_child(box)
+
+        btn.connect("clicked", callback)
+        return btn
+
     def show(self, widget, x, y):
         """Creates and displays the context menu for a specific view."""
         from gi.repository import Gtk, Gdk
@@ -23,9 +47,13 @@ class TaskbarMenu:
         self.menu.set_parent(widget)
         self.menu.set_has_arrow(True)
         self.menu.set_autohide(True)
+        self.menu.add_css_class("taskbar-context-menu")
         self.menu.active_view_id = widget.view_id
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        for margin in ["start", "end", "top", "bottom"]:
+            getattr(box, f"set_margin_{margin}")(6)
+
         view_data = self.ipc.get_view(widget.view_id)
 
         if not view_data:
@@ -35,28 +63,37 @@ class TaskbarMenu:
         is_atop = view_data.get("always-on-top", False)
         is_sticky = view_data.get("sticky", False)
 
+        # Action Definitions: (Label, Icon, Callback)
         actions = [
             (
-                "Disable Fullscreen" if is_fullscreen else "Enable Fullscreen",
+                "Restore" if is_fullscreen else "Fullscreen",
+                "view-fullscreen-symbolic",
                 self._on_menu_fullscreen_clicked,
             ),
             (
-                "Disable Always on Top" if is_atop else "Enable Always on Top",
+                "Lower" if is_atop else "Always on Top",
+                "go-top-symbolic",
                 self._on_menu_atop_clicked,
             ),
             (
-                "Disable Sticky" if is_sticky else "Enable Sticky",
+                "Unstick" if is_sticky else "Sticky",
+                "pin-symbolic",
                 self._on_menu_sticky_clicked,
             ),
-            ("Move to Next Output", self._on_menu_move_next_clicked),
-            ("Close Window", self._on_menu_close_clicked),
-            ("Kill Process", self._on_menu_kill_clicked),
+            (
+                "Move to Next Output",
+                "go-next-symbolic",
+                self._on_menu_move_next_clicked,
+            ),
+            (
+                "Close Window",
+                "window-close-symbolic",
+                self._on_menu_close_clicked,
+            ),
         ]
 
-        for label, callback in actions:
-            item = Gtk.Button(label=label, has_frame=False)
-            item.set_halign(Gtk.Align.START)
-            item.connect("clicked", callback)
+        for label, icon, cb in actions:
+            item = self._create_menu_item(label, icon, cb)
             box.append(item)
 
         self.menu.set_child(box)
@@ -94,10 +131,4 @@ class TaskbarMenu:
 
     def _on_menu_close_clicked(self, _):
         self.ipc.close_view(self.menu.active_view_id)
-        self.menu.popdown()
-
-    def _on_menu_kill_clicked(self, _):
-        view = self.plugin.wf_helper.is_view_valid(self.menu.active_view_id)
-        if view and view.get("pid"):
-            self.plugin.run_cmd(f"kill -9 {view.get('pid')}")
         self.menu.popdown()

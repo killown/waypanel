@@ -73,10 +73,11 @@ def get_plugin_class():
             self.gesture_handler = TaskbarGestures(self)
 
             self.event_handler.subscribe()
-            self.scrolled_window = Gtk.ScrolledWindow()
-            self.run_in_thread(self.ui_handler.create_main_layout)
+
+            self.ui_handler.create_main_layout()
+
             self.run_in_thread(self._initialize_button_pool, 15)
-            self.main_widget = (self.scrolled_window, "append")
+            self.main_widget = (self.center_box, "append")
 
         def _init_settings_refs(self):
             """Syncs refs for compatibility."""
@@ -165,7 +166,9 @@ def get_plugin_class():
                     if item["button"] == button:
                         item["view_id"] = identifier
             button.view_id = view.get("id")  # pyright: ignore
+
             self.taskbar.append(button)  # pyright: ignore
+
             self.in_use_buttons[identifier] = button
             self.update_button(button, view)
             button.set_visible(True)
@@ -220,11 +223,13 @@ def get_plugin_class():
                 hbox.append(img)
                 hbox.append(lbl)
                 row.set_child(hbox)
+
+                # FIXED: Removed duplicate "clicked" argument
                 row.connect(
                     "clicked",
                     lambda *_, view=v: [
                         self.view_handler.set_view_focus(view),
-                        self.group_popover.popdown(),  # pyright: ignore
+                        self.group_popover.popdown(),
                     ],
                 )
                 vbox.append(row)
