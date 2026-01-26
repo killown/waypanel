@@ -428,6 +428,8 @@ class ControlCenterHelpers:
             self.parent.config_handler.save_config()
             if hasattr(self.parent._panel_instance, "apply_theme"):
                 self.parent._panel_instance.apply_theme(selected_theme)
+            if "css_generator" in self.parent.plugins:
+                self.parent.plugins["css_generator"].remove_themes()
         except Exception as e:
             self.display_notify(
                 f"Error saving theme setting: {e}", "dialog-error-symbolic"

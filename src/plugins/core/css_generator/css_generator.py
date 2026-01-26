@@ -159,6 +159,33 @@ def get_plugin_class():
             for path in self.manual_css_registry.values():
                 yield path
 
+        def remove_themes(self):
+            """
+            Scans styles.css and removes any @import lines pointing to the
+            resources/themes/css directory, then clears the hash to force a reset.
+            """
+            self.logger.info("CSS Generator: Removing all theme lines from styles.css")
+
+            if not self.output_css_path.exists():
+                return
+
+            try:
+                lines = self.output_css_path.read_text(encoding="utf-8").splitlines()
+                # Filter out any lines that reference the themes directory
+                # We target the specific directory 'resources/themes/css' used in paths
+                clean_lines = [
+                    line for line in lines if "resources/themes/css" not in line
+                ]
+
+                content = "\n".join(clean_lines)
+                self.output_css_path.write_text(content, encoding="utf-8")
+
+                # Invalidate hash so next boot generates fresh based on NEW config
+                self._last_content_hash = None
+
+            except Exception as e:
+                self.logger.error(f"Failed to remove themes from CSS: {e}")
+
         def build_imports(self):
             lines = []
             seen = set()
