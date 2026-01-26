@@ -420,15 +420,8 @@ def get_plugin_class():
                 self.main_vbox.set_margin_bottom(10)
                 self.main_vbox.set_margin_start(10)
                 self.main_vbox.set_margin_end(10)
-                clear_button = self.gtk.Button(label="Clear")
-                clear_button.connect(
-                    "clicked", lambda _: self.clear_all_notifications()
-                )
-                clear_button.set_tooltip_text("Clear All Notifications")
-                clear_button.set_margin_start(10)
-                clear_button.add_css_class("notify-clear-button")
-                self.gtk_helper.add_cursor_effect(clear_button)
-                self.update_widget_safely(self.main_vbox.append, clear_button)
+
+                # Notifications Scrolled Area
                 self.vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
                 self.vbox.set_vexpand(True)
                 scrolled_window = self.gtk.ScrolledWindow()
@@ -442,31 +435,52 @@ def get_plugin_class():
                     self.gtk.PolicyType.AUTOMATIC,
                 )
                 self.update_widget_safely(self.main_vbox.append, scrolled_window)
-                bottom_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
+
+                # Bottom Controls Row
+                bottom_box = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 10)
                 bottom_box.set_margin_top(10)
-                self.dnd_switch = self.gtk.Switch()
-                self.dnd_switch.set_active(False)
-                self.dnd_switch.connect("state-set", self.on_dnd_toggled)
-                self.gtk_helper.add_cursor_effect(self.dnd_switch)
-                dnd_label = self.gtk.Label(label="Do Not Disturb")
-                dnd_label.set_halign(self.gtk.Align.START)
-                dnd_label.set_margin_end(10)
-                dnd_box = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 5)
-                self.update_widget_safely(dnd_box.append, dnd_label)
-                self.update_widget_safely(dnd_box.append, self.dnd_switch)
-                self.update_widget_safely(bottom_box.append, dnd_box)
+
+                # Unified DND Toggle Button (Left)
+                dnd_label = (
+                    "Show Notifications"
+                    if getattr(self, "dnd_enabled", False)
+                    else "Do Not Disturb"
+                )
+                self.dnd_toggle_btn = self.gtk.Button(label=dnd_label)
+                self.dnd_toggle_btn.add_css_class("notify-dnd-button")
+                self.dnd_toggle_btn.connect("clicked", self.on_dnd_button_clicked)
+                self.gtk_helper.add_cursor_effect(self.dnd_toggle_btn)
+
+                # Clear All Button (Right)
+                clear_button = self.gtk.Button(label="Clear All")
+                clear_button.set_halign(self.gtk.Align.END)
+                clear_button.set_hexpand(True)
+                clear_button.connect(
+                    "clicked", lambda _: self.clear_all_notifications()
+                )
+                clear_button.set_tooltip_text("Clear All Notifications")
+                clear_button.add_css_class("notify-clear-button")
+                self.gtk_helper.add_cursor_effect(clear_button)
+
+                self.update_widget_safely(bottom_box.append, self.dnd_toggle_btn)
+                self.update_widget_safely(bottom_box.append, clear_button)
                 self.update_widget_safely(self.main_vbox.append, bottom_box)
+
                 self.popover.set_child(self.main_vbox)
+
             if self.popover.get_parent():
                 self.popover.unparent()
+
+            # Clear existing widgets
             child = self.vbox.get_first_child()
             while child:
                 next_child = child.get_next_sibling()
                 self.vbox.remove(child)
                 child = next_child
+
             self.notification_on_popover = {}
 
-            # Use preloaded cache or fetch if cache is empty
+            # Load notifications
             notifications = (
                 self.cached_notifications
                 if self.cached_notifications
@@ -474,7 +488,6 @@ def get_plugin_class():
             )
 
             if not notifications:
-                self.logger.info("No notifications to display.")
                 no_notify_label = self.gtk.Label(label="No recent notifications")
                 no_notify_label.add_css_class("no-notifications-label")
                 self.update_widget_safely(self.vbox.append, no_notify_label)
@@ -482,39 +495,20 @@ def get_plugin_class():
                 for notification in notifications:
                     self.create_notification_box(notification)
 
-            self.update_dnd_switch_state()
+            # Anchor and Show
             self.popover.set_parent(self.notification_button)
             self.popover.popup()
-
-            # Refresh cache in background for next interaction
             self.run_in_thread(self._preload_notifications)
 
-        def code_explanation(self):
-            """
-            This plugin serves as the graphical interface for the notification system.
-            Its architectural design focuses on three main pillars:
+        def on_dnd_button_clicked(self, button) -> None:
+            """Toggles DND state and updates the button label."""
+            self.dnd_enabled = not getattr(self, "dnd_enabled", False)
 
-            1.  **Stateful UI Synchronization**: The plugin manages a dynamic GTK
-                popover that synchronizes its state with an SQLite backend. It
-                tracks displayed notifications via `notification_on_popover` to
-                allow incremental updates and precise widget removal.
+            if self.dnd_enabled:
+                button.set_label("Show Notifications")
+            else:
+                button.set_label("Do Not Disturb")
 
-            2.  **Resource Management & DB Maintenance**: To prevent the 14MB+
-                database growth issue, the cleanup logic implements a two-stage
-                maintenance cycle:
-                - **Data Purge**: Executes `DELETE` operations to remove records.
-                - **Disk Reclamation**: Explicitly triggers `VACUUM` after
-                  committing transactions to defragment the database file and
-                  shrink its physical size on disk.
-
-            3.  **Action Priority Heuristics**: Notification clicks follow a
-                strict resolution hierarchy to determine the user's intent:
-                - **Regex Extraction**: Scans the message body for URIs.
-                - **Metadata Hints**: Falls back to specific `url` or
-                  `desktop-entry` metadata provided by the source application.
-                - **Environment Dispatch**: Uses system-level handlers (`xdg-open`
-                  or command runners) to execute the resolved action.
-            """
-            return self.code_explanation.__doc__
+            self.on_dnd_toggled(None, self.dnd_enabled)
 
     return NotificationPopoverPlugin

@@ -4,6 +4,11 @@
   margin: 3px;
 }
 
+.notify-dnd-button {
+  background-color: var(--color-bg-button-suggested);
+  color: var(--main-text);
+}
+
 .notify-client-heading {
   margin-top: 12px;
   font-weight: bold;
@@ -11,7 +16,6 @@
   font-size: 16px;
   color: var(--dseg-shadow-dark);
 }
-
 .notify-client-body-label,
 .notify-client-timestamp {
   margin: 3px;
