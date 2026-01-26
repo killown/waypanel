@@ -1,4 +1,3 @@
-from os import name
 import sys
 import lazy_loader as lazy
 from typing import Any
