@@ -17,7 +17,7 @@ def get_plugin_class():
     from gi.repository import Gio
     from src.plugins.core._base import BasePlugin
 
-    DEFAULT_THEME = "os-dark"
+    DEFAULT_THEME = "adwaita"
     OUTPUT_CSS_FILE_NAME = "styles.css"
     MY_ID = "org.waypanel.plugin.css_generator"
 
