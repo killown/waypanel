@@ -1,6 +1,6 @@
 /* Main Trigger Button - High Visibility */
 .universal-update-button {
-  -gtk-icon-size: 21px;
+  -gtk-icon-size: 25px;
   margin-top: 6px;
   padding: 1px;
   border-radius: var(--radius-m);
