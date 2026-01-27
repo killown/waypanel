@@ -1,3 +1,6 @@
+CONTAINER = ""
+
+
 def get_plugin_metadata(panel):
     """
     Returns the metadata for the App Launcher plugin.
@@ -5,7 +8,7 @@ def get_plugin_metadata(panel):
     about = "A dynamic application launcher with a search bar and a grid view of installed and recently used applications."
     default_container = "top-panel-box-widgets-left"
     id = "org.waypanel.plugin.app_launcher"
-    container, id = panel.config_handler.get_plugin_container(default_container, id)
+    CONTAINER, id = panel.config_handler.get_plugin_container(default_container, id)
     return {
         "id": id,
         "name": "App Launcher",
@@ -13,7 +16,7 @@ def get_plugin_metadata(panel):
         "enabled": True,
         "index": 1,
         "priority": 987,
-        "container": container,
+        "container": CONTAINER,
         "deps": ["css_generator"],
         "description": about,
     }
