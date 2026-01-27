@@ -183,7 +183,6 @@ class PluginLoader:
 
                     metadata = get_meta(self.panel_instance)
                     metadata["deps"] = self._resolve_dynamic_deps(metadata)
-                    print(metadata)
                     if not isinstance(metadata, dict) or not metadata.get(
                         "enabled", True
                     ):
