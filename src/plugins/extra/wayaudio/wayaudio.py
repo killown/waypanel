@@ -5,7 +5,7 @@ def get_plugin_metadata(panel):
         "id": id,
         "name": "Advanced Volume Control",
         "version": "2.0.3",
-        "deps": ["top_panel", "css_generator"],
+        "deps": ["css_generator"],
         "index": 11,
         "container": container,
         "enabled": True,

@@ -22,7 +22,7 @@ def get_plugin_metadata(panel):
         "index": 1,
         "priority": 1000,
         "container": container,
-        "deps": ["top_panel", "css_generator"],
+        "deps": ["css_generator"],
         "description": "Universal Linux update manager with per-backend custom commands.",
     }
 

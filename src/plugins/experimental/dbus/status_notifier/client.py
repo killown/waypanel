@@ -22,7 +22,7 @@ def get_plugin_metadata(panel_instance):
         "enabled": True,
         "container": container,
         "index": 5,
-        "deps": ["event_manager", "top_panel", "css_generator"],
+        "deps": ["event_manager", "css_generator"],
         "description": about,
     }
 

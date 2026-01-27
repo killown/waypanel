@@ -268,6 +268,8 @@ class ControlCenterHelpers:
                         if text.lower() == "false":
                             return False
                         return text
+            elif isinstance(widget, Gtk.ComboBoxText):
+                return widget.get_active_text()
             elif isinstance(widget, Gtk.SpinButton):
                 val = widget.get_value()
                 if val == int(val):

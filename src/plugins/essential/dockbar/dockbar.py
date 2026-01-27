@@ -16,7 +16,7 @@ def get_plugin_metadata(panel_instance):
         "enabled": True,
         "container": valid.get(pos, "left-panel-center"),
         "priority": 1,
-        "deps": ["event_manager", "gestures_setup", "left_panel", "css_generator"],
+        "deps": ["event_manager", "gestures_setup", "css_generator"],
         "description": "A plugin that creates a configurable dockbar for launching applications.",
     }
 

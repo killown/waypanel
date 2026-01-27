@@ -10,7 +10,7 @@ def get_plugin_metadata(_):
         "index": 2,
         "priority": 980,
         "container": "top-panel-box-widgets-left",
-        "deps": ["top_panel", "css_generator"],
+        "deps": ["css_generator"],
         "description": about,
     }
 

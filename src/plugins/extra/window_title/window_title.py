@@ -13,7 +13,6 @@ def get_plugin_metadata(_):
         "priority": 970,
         "container": "top-panel-left",
         "deps": [
-            "top_panel",
             "event_manager",
             "view_property_controller",
             "css_generator",

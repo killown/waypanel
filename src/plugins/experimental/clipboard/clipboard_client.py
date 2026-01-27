@@ -14,7 +14,7 @@ def get_plugin_metadata(_):
         "enabled": True,
         "container": "top-panel-systray",
         "index": 5,
-        "deps": ["top_panel", "clipboard_server", "css_generator"],
+        "deps": ["clipboard_server", "css_generator"],
         "description": about,
     }
 

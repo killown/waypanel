@@ -11,7 +11,7 @@ def get_plugin_metadata(_):
         "enabled": True,
         "index": 7,
         "container": "top-panel-center",
-        "deps": ["top_panel", "notify_server", "css_generator"],
+        "deps": ["notify_server", "css_generator"],
         "description": about,
     }
 

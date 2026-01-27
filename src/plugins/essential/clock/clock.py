@@ -13,7 +13,7 @@ def get_plugin_metadata(panel):
         "container": container,
         "index": 5,
         "priority": 988,
-        "deps": ["top_panel", "css_generator"],
+        "deps": ["css_generator"],
         "description": about,
     }
 

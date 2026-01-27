@@ -3,9 +3,8 @@ import importlib
 import importlib.util
 from gi.repository import GLib, Gtk  # pyright: ignore
 import sys
-import traceback
 from src.core.plugin_loader.helper import PluginLoaderHelpers, PluginResolver
-from typing import Any, Dict, Tuple, Union, Set
+from typing import Any, Dict, Tuple, Set
 
 PluginMetadataTuple = Tuple[Any, str, int, int, str]
 
@@ -45,6 +44,7 @@ class PluginLoader:
         self.register_overflow_container = (
             self.plugin_loader_helper.register_overflow_container
         )
+        self._resolve_dynamic_deps = self.plugin_loader_helper._resolve_dynamic_deps
 
         self.overflow_container = self.plugin_loader_helper.overflow_container
         self.position_mapping = {}
@@ -172,6 +172,7 @@ class PluginLoader:
                     continue
                 try:
                     module = importlib.import_module(module_path)
+
                     get_meta = getattr(module, "get_plugin_metadata", None)
                     get_class = hasattr(module, "get_plugin_class")
 
@@ -181,6 +182,8 @@ class PluginLoader:
                         continue
 
                     metadata = get_meta(self.panel_instance)
+                    metadata["deps"] = self._resolve_dynamic_deps(metadata)
+                    print(metadata)
                     if not isinstance(metadata, dict) or not metadata.get(
                         "enabled", True
                     ):

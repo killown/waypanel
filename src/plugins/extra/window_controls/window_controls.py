@@ -11,7 +11,7 @@ def get_plugin_metadata(_):
         "index": 1,
         "priority": 985,
         "container": "top-panel-after-systray",
-        "deps": ["top_panel", "css_generator"],
+        "deps": ["css_generator"],
         "description": about,
     }
 

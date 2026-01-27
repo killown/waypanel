@@ -18,7 +18,7 @@ def get_plugin_metadata(panel):
         "index": 6,
         "hidden": hidden,
         "container": container,
-        "deps": ["top_panel", "css_generator"],
+        "deps": ["css_generator"],
         "description": about,
     }
 

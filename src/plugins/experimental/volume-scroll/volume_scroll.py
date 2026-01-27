@@ -7,6 +7,8 @@ def get_plugin_metadata(_):
         "id": "org.waypanel.plugin.volume_scroll",
         "name": "Volume Scroll",
         "version": "1.0.3",
+        # NOTE: plugin loader will auto add deps related to the container but in this case
+        # there is no container
         "deps": ["top_panel", "css_generator"],
         "enabled": True,
         "description": about,

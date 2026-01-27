@@ -16,7 +16,7 @@ def get_plugin_metadata(_):
         "container": "top-panel-systray",
         # CRITICAL: Always define dependencies if the current plugin requires certain plugin to be loaded first
         # WARNING: Missing dependencies can cause plugins to fail loading.
-        "deps": ["top_panel"],
+        "deps": [],
         "description": "Example using self.gtk_helper to create popovers and buttons",
     }
 

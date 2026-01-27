@@ -128,7 +128,7 @@ def get_plugin_metadata(_):
         "index": 0,
         # CRITICAL: Always define dependencies if the current plugin requires certain plugin to be loaded first
         # WARNING: Missing dependencies can cause plugins to fail loading.
-        "deps": ["top_panel", "event_manager"],
+        "deps": ["event_manager"],
         "description": "Monitors and logs all Wayfire IPC events for debugging and tracking purposes.",
     }
 

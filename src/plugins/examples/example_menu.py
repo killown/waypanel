@@ -21,7 +21,7 @@ def get_plugin_metadata(panel):
         "index": 6,
         # CRITICAL: Always define dependencies if the current plugin requires certain plugin to be loaded first
         # WARNING: Missing dependencies can cause plugins to fail loading.
-        "deps": ["top_panel"],
+        "deps": [],
         "description": "A plugin that creates a dynamic application menu from installed applications, grouped by category.",
     }
 

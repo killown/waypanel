@@ -12,7 +12,7 @@ def get_plugin_metadata(_):
         "enabled": False,
         "container": "top-panel-systray",
         "index": 99,
-        "deps": ["top_panel"],
+        "deps": [],
         "description": about,
     }
 

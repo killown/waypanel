@@ -11,7 +11,7 @@ def get_plugin_metadata(panel):
         "container": container,
         # CRITICAL: Always define dependencies if the current plugin requires certain plugin to be loaded first
         # WARNING: Missing dependencies can cause plugins to fail loading.
-        "deps": ["top_panel"],
+        "deps": [],
         "description": "Master guide for run_in_thread, run_in_async_task, and run_cmd.",
     }
 

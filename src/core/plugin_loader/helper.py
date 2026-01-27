@@ -2,7 +2,8 @@ import sys
 import importlib
 import os
 import traceback
-from gi.repository import GLib  # pyright: ignore
+from gi.repository import GLib
+from gi.repository.Gio import proxy_resolver_get_default  # pyright: ignore
 from src.shared.notify_send import Notifier
 from typing import Any, Dict, Tuple, Union, Optional
 
@@ -68,6 +69,28 @@ class PluginLoaderHelpers:
         self.logger = self.panel_instance.logger
         self.overflow_container = None
         self.loader = loader_instance
+        self.position_mapping = {
+            "top-panel": "top_panel",
+            "top-panel-left": "top_panel_box_left",
+            "top-panel-box-widgets-left": "top_panel_box_widgets_left",
+            "top-panel-center": "top_panel_box_center",
+            "top-panel-right": "top_panel_box_right",
+            "top-panel-systray": "top_panel_box_systray",
+            "top-panel-after-systray": "top_panel_box_for_buttons",
+            "bottom-panel": "bottom_panel",
+            "bottom-panel-left": "bottom_panel_box_left",
+            "bottom-panel-center": "bottom_panel_box_center",
+            "bottom-panel-right": "bottom_panel_box_right",
+            "left-panel": "left_panel",
+            "left-panel-top": "left_panel_box_top",
+            "left-panel-center": "left_panel_box_center",
+            "left-panel-bottom": "left_panel_box_bottom",
+            "right-panel": "right_panel",
+            "right-panel-top": "right_panel_box_top",
+            "right-panel-center": "right_panel_box_center",
+            "right-panel-bottom": "right_panel_box_bottom",
+            "background": "background",
+        }
 
     def reload_plugin(self, plugin_name: str) -> None:
         """
@@ -210,30 +233,64 @@ class PluginLoaderHelpers:
             return os.path.expanduser(f"~{os.environ['PKEXEC_UID']}")
         return os.environ.get("HOME") or os.path.expanduser("~")
 
+    def _resolve_dynamic_deps(self, metadata: dict) -> list:
+        """
+        Dynamically injects core panel dependencies based on the target container.
+
+        This ensures that any plugin attempting to attach to a panel (top, bottom, left, or right)
+        is forced to wait for that specific panel's initialization. This prevents race
+        conditions where a plugin tries to access GTK containers before they exist.
+
+        Args:
+            metadata (dict): The plugin's metadata containing 'id', 'container', and 'deps'.
+
+        Returns:
+            list: The updated list of dependencies including the required core panel.
+        """
+        container = metadata.get("container", "background")
+        deps = metadata.get("deps", [])
+        p_id = metadata.get("id", "")
+
+        # CRITICAL: Prevent circular dependencies.
+        # If the plugin IS one of the core panels, it must not depend on itself,
+        # otherwise the topological sorter will lock into an infinite loop.
+        if (
+            p_id == "org.waypanel.plugin.top_panel"
+            or p_id == "org.waypanel.plugin.bottom_panel"
+            or p_id == "org.waypanel.plugin.left_panel"
+            or p_id == "org.waypanel.plugin.right_panel"
+        ):
+            return deps
+
+        if not isinstance(deps, list):
+            deps = [deps]
+
+        # Map logical position (e.g., 'top-panel-left') to internal panel attribute
+        target_internal = self.position_mapping.get(container, "background")
+
+        # Map internal direction prefix to the required dependency ID
+        direction_to_dep = {
+            "top": "top_panel",
+            "bottom": "bottom_panel",
+            "left": "left_panel",
+            "right": "right_panel",
+        }
+
+        # Check all directions to determine which core panel must be initialized first.
+        # This is necessary because Waypanel supports multi-panel layouts. A plugin
+        # targeting 'top-panel-center' must wait for 'top_panel', while a plugin
+        # targeting 'left-panel-bottom' must wait for 'left_panel'. Without checking
+        # all directions, plugins would attempt to initialize against 'None' attributes
+        for direction, dep in direction_to_dep.items():
+            if target_internal.startswith(direction):
+                if dep not in deps:
+                    deps.append(dep)
+                break
+
+        return deps
+
     def _get_target_panel_box(self, position, plugin_name=None):
         """Maps logical position strings to panel GTK containers."""
-        self.position_mapping = {
-            "top-panel": "top_panel",
-            "top-panel-left": "top_panel_box_left",
-            "top-panel-box-widgets-left": "top_panel_box_widgets_left",
-            "top-panel-center": "top_panel_box_center",
-            "top-panel-right": "top_panel_box_right",
-            "top-panel-systray": "top_panel_box_systray",
-            "top-panel-after-systray": "top_panel_box_for_buttons",
-            "bottom-panel": "bottom_panel",
-            "bottom-panel-left": "bottom_panel_box_left",
-            "bottom-panel-center": "bottom_panel_box_center",
-            "bottom-panel-right": "bottom_panel_box_right",
-            "left-panel": "left_panel",
-            "left-panel-top": "left_panel_box_top",
-            "left-panel-center": "left_panel_box_center",
-            "left-panel-bottom": "left_panel_box_bottom",
-            "right-panel": "right_panel",
-            "right-panel-top": "right_panel_box_top",
-            "right-panel-center": "right_panel_box_center",
-            "right-panel-bottom": "right_panel_box_bottom",
-            "background": "background",
-        }
         target_attr = self.position_mapping.get(position)
         if target_attr is None:
             self.logger.error(

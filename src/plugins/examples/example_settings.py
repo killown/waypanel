@@ -10,7 +10,7 @@ def get_plugin_metadata(panel):
         "enabled": True,
         # CRITICAL: Always define dependencies if the current plugin requires certain plugin to be loaded first
         # WARNING: Missing dependencies can cause plugins to fail loading.
-        "deps": ["top_panel"],
+        "deps": [],
         "container": container,
     }
 

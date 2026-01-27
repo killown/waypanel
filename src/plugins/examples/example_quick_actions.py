@@ -20,7 +20,7 @@ def get_plugin_metadata(panel):
         "index": 900,
         # CRITICAL: Always define dependencies if the current plugin requires certain plugin to be loaded first
         # WARNING: Missing dependencies can cause plugins to fail loading.
-        "deps": ["top_panel"],
+        "deps": [],
         "description": "Provides a popover menu with safe, non-blocking system actions.",
     }
 

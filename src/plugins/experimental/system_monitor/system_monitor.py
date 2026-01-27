@@ -20,7 +20,7 @@ def get_plugin_metadata(_):
         "index": 9,
         "priority": 930,
         "container": "top-panel-systray",
-        "deps": ["top_panel", "gestures_setup", "css_generator"],
+        "deps": ["gestures_setup", "css_generator"],
         "description": about,
     }
 
