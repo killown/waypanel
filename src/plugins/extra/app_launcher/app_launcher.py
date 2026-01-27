@@ -149,8 +149,8 @@ def get_plugin_class():
                 },
                 "Reboot": {
                     "icons": self.get_plugin_setting(
-                        ["buttons", "icons", "reboot"],
-                        ["system-reboot-symbolic", "system-reboot-update-symbolic"],
+                        ["buttons", "icons", "system-reboot-symbolic"],
+                        ["system-reboot-symbolic", "reboot"],
                     ),
                 },
                 "Shutdown": {
