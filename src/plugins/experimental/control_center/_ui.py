@@ -60,27 +60,26 @@ def get_ui_class():
             search_container.append(self.p.search_entry)
             main_vbox.append(search_container)
 
-            # Stacks & FlowBox
+            # FlowBox Setup
             self.p.category_flowbox = self.gtk.FlowBox()
             self.p.category_flowbox.set_homogeneous(True)
-            self.p.category_flowbox.set_sort_func(None)
             self.p.category_flowbox.set_filter_func(self._flowbox_filter_func)
             self.p.category_flowbox.set_selection_mode(self.gtk.SelectionMode.NONE)
             self.p.category_flowbox.set_row_spacing(20)
             self.p.category_flowbox.set_column_spacing(20)
 
-            # Anchor to top-left instead of center
+            # Anchor items to top-left of the FlowBox area
             self.p.category_flowbox.set_halign(self.gtk.Align.START)
             self.p.category_flowbox.set_valign(self.gtk.Align.START)
-
-            # Add horizontal margins to maintain aesthetic spacing
-            self.p.category_flowbox.set_margin_start(40)
-            self.p.category_flowbox.set_margin_end(40)
-
             self.p.category_flowbox.add_css_class("control-center-category-grid")
 
+            # This keeps the grid in the middle without restricting its width to one column
+            centering_box = self.gtk.Box(orientation=self.gtk.Orientation.HORIZONTAL)
+            centering_box.set_halign(self.gtk.Align.CENTER)
+            centering_box.append(self.p.category_flowbox)
+
             flowbox_scrolled = self.gtk.ScrolledWindow(vexpand=True, hexpand=True)
-            flowbox_scrolled.set_child(self.p.category_flowbox)
+            flowbox_scrolled.set_child(centering_box)
             flowbox_scrolled.set_policy(
                 self.gtk.PolicyType.NEVER, self.gtk.PolicyType.AUTOMATIC
             )
