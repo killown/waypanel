@@ -60,15 +60,23 @@ def get_ui_class():
             search_container.append(self.p.search_entry)
             main_vbox.append(search_container)
 
-            # Stacks
+            # Stacks & FlowBox
             self.p.category_flowbox = self.gtk.FlowBox()
-            self.p.category_flowbox.set_homogeneous(True)  # Makes grid uniform
-            self.p.category_flowbox.set_sort_func(None)  # Resets custom sorting
+            self.p.category_flowbox.set_homogeneous(True)
+            self.p.category_flowbox.set_sort_func(None)
             self.p.category_flowbox.set_filter_func(self._flowbox_filter_func)
             self.p.category_flowbox.set_selection_mode(self.gtk.SelectionMode.NONE)
             self.p.category_flowbox.set_row_spacing(20)
             self.p.category_flowbox.set_column_spacing(20)
-            self.p.category_flowbox.set_halign(self.gtk.Align.CENTER)
+
+            # Anchor to top-left instead of center
+            self.p.category_flowbox.set_halign(self.gtk.Align.START)
+            self.p.category_flowbox.set_valign(self.gtk.Align.START)
+
+            # Add horizontal margins to maintain aesthetic spacing
+            self.p.category_flowbox.set_margin_start(40)
+            self.p.category_flowbox.set_margin_end(40)
+
             self.p.category_flowbox.add_css_class("control-center-category-grid")
 
             flowbox_scrolled = self.gtk.ScrolledWindow(vexpand=True, hexpand=True)
@@ -409,6 +417,7 @@ def get_ui_class():
             icon = self.gtk.Image.new_from_icon_name(icon_name)
             icon.set_pixel_size(64)
             icon.add_css_class("control-center-category-icon")
+
             label = self.gtk.Label(label=display_name)
             label.set_halign(self.gtk.Align.CENTER)
 
