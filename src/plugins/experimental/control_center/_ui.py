@@ -266,7 +266,7 @@ def get_ui_class():
                                 value = bool(value)
                         except (KeyError, TypeError):
                             pass
-                    widget = self.create_widget_for_value(value)
+                    widget = self.create_widget_for_value(key, value)
                     if not widget:
                         continue
                     hint = self._helpers._get_hint_for_path(
@@ -348,23 +348,63 @@ def get_ui_class():
             list_box.append(preferences_group)
             return list_box
 
-        def create_widget_for_value(self, value: Any) -> Union[Gtk.Widget, None]:
+        def create_widget_for_value(self, key: str, value: Any) -> Gtk.Widget:
+            container_options = [
+                "top-panel",
+                "top-panel-left",
+                "top-panel-box-widgets-left",
+                "top-panel-center",
+                "top-panel-right",
+                "top-panel-systray",
+                "top-panel-after-systray",
+                "bottom-panel",
+                "bottom-panel-left",
+                "bottom-panel-center",
+                "bottom-panel-right",
+                "left-panel",
+                "left-panel-top",
+                "left-panel-center",
+                "left-panel-bottom",
+                "right-panel",
+                "right-panel-top",
+                "right-panel-center",
+                "right-panel-bottom",
+                "background",
+            ]
+
+            if key.lower() in ["container", "position", "target_container"]:
+                combo = self.gtk.ComboBoxText()
+                for option in container_options:
+                    combo.append_text(option)
+                if value in container_options:
+                    combo.set_active(container_options.index(value))
+                else:
+                    combo.set_active(0)
+                combo.set_hexpand(True)
+                combo.set_valign(self.gtk.Align.CENTER)
+                return combo
+
             if isinstance(value, str):
-                entry = Gtk.Entry()
+                entry = self.gtk.Entry()
                 entry.add_css_class("control-center-text-input")
                 entry.set_text(value)
                 entry.set_width_chars(5)
                 entry.set_max_width_chars(50)
+                entry.set_valign(self.gtk.Align.CENTER)
                 return entry
+
             elif isinstance(value, bool):
-                switch = Gtk.Switch()
+                switch = self.gtk.Switch()
                 switch.add_css_class("control-center-toggle-switch")
                 switch.set_active(value)
+                switch.set_halign(self.gtk.Align.END)
+                switch.set_valign(self.gtk.Align.CENTER)
                 return switch
-            elif isinstance(value, int) or isinstance(value, float):
-                entry = Gtk.SpinButton()
+
+            elif isinstance(value, (int, float)):
+                entry = self.gtk.SpinButton()
                 entry.add_css_class("control-center-numeric-input")
-                adjustment = Gtk.Adjustment(
+                adjustment = self.gtk.Adjustment.new(
                     value=float(value),
                     lower=-10000.0,
                     upper=10000.0,
@@ -375,16 +415,19 @@ def get_ui_class():
                 entry.set_adjustment(adjustment)
                 entry.set_width_chars(5)
                 entry.set_max_width_chars(10)
+                entry.set_valign(self.gtk.Align.CENTER)
                 if isinstance(value, float):
                     entry.set_digits(max(1, len(str(value).split(".")[-1])))
                 return entry
+
             elif isinstance(value, list):
-                entry = Gtk.Entry()
+                entry = self.gtk.Entry()
                 entry.add_css_class("control-center-text-input")
                 entry.set_text(", ".join(map(str, value)))
                 entry.set_sensitive(True)
                 entry.set_width_chars(10)
                 entry.set_max_width_chars(100)
+                entry.set_valign(self.gtk.Align.CENTER)
                 if value:
                     first_element_type = type(value[0])
                     if first_element_type is int:
@@ -396,9 +439,11 @@ def get_ui_class():
                 else:
                     entry.original_type = "str"  # pyright: ignore
                 return entry
+
             else:
-                value_label = Gtk.Label(label=str(value), xalign=0)
+                value_label = self.gtk.Label(label=str(value), xalign=0)
                 value_label.add_css_class("control-center-value-display")
+                value_label.set_valign(self.gtk.Align.CENTER)
                 return value_label
 
         def create_category_widget(self, category_name: str) -> Gtk.Widget:

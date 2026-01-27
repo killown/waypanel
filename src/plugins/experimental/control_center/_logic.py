@@ -153,23 +153,30 @@ def get_logic_class():
                     expander.set_child(list_content_box)
                     main_box.append(expander)
                 else:
-                    widget = self.p.ui.create_widget_for_value(value)
+                    widget = self.p.ui.create_widget_for_value(key, value)
                     if not widget:
                         continue
+
                     hint = self.p.helper._get_hint_for_path(
                         self.p.default_config, *current_path
                     )
-                    if not isinstance(widget, Gtk.Label):
-                        widget.set_tooltip_text(hint)
+
+                    # Create the row with Title and Description
                     action_row = Adw.ActionRow(
                         title=key.replace("_", " ").capitalize(), subtitle=hint
                     )
                     action_row.add_css_class("control-center-setting-row")
-                    if isinstance(widget, (Gtk.Switch, Gtk.Entry, Gtk.SpinButton)):
+
+                    # Add ComboBoxText to the suffix area so it aligns to the right
+                    if isinstance(
+                        widget,
+                        (Gtk.Switch, Gtk.Entry, Gtk.SpinButton, Gtk.ComboBoxText),
+                    ):
                         action_row.add_suffix(widget)
                         action_row.set_activatable_widget(widget)
                     else:
                         action_row.set_child(widget)
+
                     preferences_group.add(action_row)
                     self.p.widget_map[category_name][key] = widget
 
