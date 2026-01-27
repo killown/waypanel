@@ -1,6 +1,6 @@
 import os
 from gi.repository import Gtk, Adw, Gdk  # pyright: ignore
-from typing import Any, List, Dict, Union
+from typing import Any, Dict
 
 
 class ControlCenterHelpers:
@@ -70,189 +70,6 @@ class ControlCenterHelpers:
             f"Hint missing for key: '{key_name}' (Context: {context})"
         )
         return ""
-
-    def create_nested_widgets(
-        self,
-        widget_dict: Dict[str, Any],
-        subdict: Dict[str, Any],
-        current_path: List[str],
-    ) -> Gtk.Box:
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        box.add_css_class("control-center-nested-group-box")
-        group_title = current_path[-1].replace("_", " ").capitalize()
-        group_desc = self._get_hint_for_path(self.parent.default_config, *current_path)
-        preferences_group = Adw.PreferencesGroup(
-            title=group_title, description=group_desc
-        )
-        preferences_group.add_css_class("control-center-config-group")
-        for key, value in subdict.items():
-            new_path = current_path + [key]
-            if key.endswith(("_hint", "_section_hint", "_items_hint")):
-                continue
-            if isinstance(value, dict):
-                expander = Gtk.Expander.new(
-                    f"<b>{key.replace('_', ' ').capitalize()}</b>"
-                )
-                expander.set_use_markup(True)
-                expander.add_css_class("control-center-config-expander")
-                widget_dict[key] = {}
-                nested_box = self.create_nested_widgets(
-                    widget_dict[key], value, new_path
-                )
-                expander.set_child(nested_box)
-                preferences_group.add(expander)
-            elif isinstance(value, list) and all(
-                isinstance(item, dict) for item in value
-            ):
-                expander = Gtk.Expander.new(
-                    f"<b>{key.replace('_', ' ').capitalize()}</b>"
-                )
-                expander.set_use_markup(True)
-                expander.add_css_class("control-center-config-expander")
-                widget_dict[key] = []
-                list_content_box = self.create_list_widgets(
-                    widget_dict[key], value, new_path
-                )
-                expander.set_child(list_content_box)
-                preferences_group.add(expander)
-            else:
-                if isinstance(value, int) and value in (0, 1):
-                    try:
-                        default_val_container = self.parent.default_config
-                        for k in new_path:
-                            default_val_container = default_val_container[k]
-                        if isinstance(default_val_container, bool):
-                            value = bool(value)
-                    except (KeyError, TypeError):
-                        pass
-                widget = self.create_widget_for_value(value)
-                if not widget:
-                    continue
-                hint = self._get_hint_for_path(self.parent.default_config, *new_path)
-                if not isinstance(widget, Gtk.Label):
-                    widget.set_tooltip_text(hint)
-                action_row = Adw.ActionRow(
-                    title=key.replace("_", " ").capitalize(),
-                    subtitle=hint,
-                )
-                action_row.add_css_class("control-center-setting-row")
-                if isinstance(widget, (Gtk.Switch, Gtk.Entry, Gtk.SpinButton)):
-                    action_row.add_suffix(widget)
-                    action_row.set_activatable_widget(widget)
-                else:
-                    action_row.set_child(widget)
-                preferences_group.add(action_row)
-                widget_dict[key] = widget
-        box.append(preferences_group)
-        return box
-
-    def create_list_widgets(
-        self,
-        widget_list: List[Dict[str, Any]],
-        data_list: List[Dict[str, Any]],
-        current_path: List[str],
-    ) -> Gtk.Box:
-        list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        list_box.add_css_class("control-center-list-editor")
-        group_title = current_path[-1].replace("_", " ").capitalize()
-        group_desc = self._get_hint_for_path(self.parent.default_config, *current_path)
-        preferences_group = Adw.PreferencesGroup(
-            title=group_title, description=group_desc
-        )
-        preferences_group.add_css_class("control-center-config-group")
-        for i, item_dict in enumerate(data_list):
-            item_key = list(item_dict.keys())[0] if item_dict else f"Item_{i + 1}"
-            item_name = item_dict.get("name", item_key.replace("_", " ").capitalize())
-            item_name_path = current_path + ["name"]
-            item_cmd_path = current_path + ["cmd"]
-            name_hint = self._get_hint_for_path(
-                self.parent.default_config, *item_name_path
-            )
-            cmd_hint = self._get_hint_for_path(
-                self.parent.default_config, *item_cmd_path
-            )
-            name_row = Adw.ActionRow(
-                title=f"{item_name} - Name",
-                subtitle=name_hint,
-            )
-            name_row.add_css_class("control-center-setting-row")
-            name_row.add_css_class("control-center-list-item-row")
-            cmd_row = Adw.ActionRow(
-                title=f"{item_name} - Command",
-                subtitle=cmd_hint,
-            )
-            cmd_row.add_css_class("control-center-setting-row")
-            cmd_row.add_css_class("control-center-list-item-row")
-            cmd_entry = Gtk.Entry()
-            cmd_entry.set_text(item_dict.get("cmd", ""))
-            cmd_entry.set_tooltip_text(cmd_hint)
-            cmd_entry.add_css_class("control-center-text-input")
-            name_entry = Gtk.Entry()
-            name_entry.set_text(item_dict.get("name", ""))
-            name_entry.set_tooltip_text(name_hint)
-            name_entry.add_css_class("control-center-text-input")
-            name_row.add_suffix(name_entry)
-            name_row.set_activatable_widget(name_entry)
-            cmd_row.add_suffix(cmd_entry)
-            cmd_row.set_activatable_widget(cmd_entry)
-            preferences_group.add(name_row)
-            preferences_group.add(cmd_row)
-            widget_list.append({"name_entry": name_entry, "cmd_entry": cmd_entry})
-        list_box.append(preferences_group)
-        return list_box
-
-    def create_widget_for_value(self, value: Any) -> Union[Gtk.Widget, None]:
-        if isinstance(value, str):
-            entry = Gtk.Entry()
-            entry.add_css_class("control-center-text-input")
-            entry.set_text(value)
-            entry.set_width_chars(5)
-            entry.set_max_width_chars(50)
-            return entry
-        elif isinstance(value, bool):
-            switch = Gtk.Switch()
-            switch.add_css_class("control-center-toggle-switch")
-            switch.set_active(value)
-            return switch
-        elif isinstance(value, int) or isinstance(value, float):
-            entry = Gtk.SpinButton()
-            entry.add_css_class("control-center-numeric-input")
-            adjustment = Gtk.Adjustment(
-                value=float(value),
-                lower=-10000.0,
-                upper=10000.0,
-                step_increment=1.0 if isinstance(value, int) else 0.1,
-                page_increment=10.0,
-                page_size=0.0,
-            )
-            entry.set_adjustment(adjustment)
-            entry.set_width_chars(5)
-            entry.set_max_width_chars(10)
-            if isinstance(value, float):
-                entry.set_digits(max(1, len(str(value).split(".")[-1])))
-            return entry
-        elif isinstance(value, list):
-            entry = Gtk.Entry()
-            entry.add_css_class("control-center-text-input")
-            entry.set_text(", ".join(map(str, value)))
-            entry.set_sensitive(True)
-            entry.set_width_chars(10)
-            entry.set_max_width_chars(100)
-            if value:
-                first_element_type = type(value[0])
-                if first_element_type is int:
-                    entry.original_type = "int"  # pyright: ignore
-                elif first_element_type is float:
-                    entry.original_type = "float"  # pyright: ignore
-                else:
-                    entry.original_type = "str"  # pyright: ignore
-            else:
-                entry.original_type = "str"  # pyright: ignore
-            return entry
-        else:
-            value_label = Gtk.Label(label=str(value), xalign=0)
-            value_label.add_css_class("control-center-value-display")
-            return value_label
 
     def _list_fs_themes(self, dirs: list[str]) -> list[str]:
         themes = set()
@@ -338,42 +155,6 @@ class ControlCenterHelpers:
                 "dialog-error-symbolic",
             )
 
-    def _create_gsettings_theme_row(
-        self,
-        title: str,
-        subtitle: str,
-        schema: str,
-        key: str,
-        theme_dirs: list[str],
-    ) -> Adw.ActionRow:
-        theme_names = self._list_fs_themes(theme_dirs)
-        current_theme = self._get_current_gsettings_theme(schema, key)
-        if not theme_names:
-            theme_names = ["(No themes found)"]
-            current_theme = theme_names[0]
-        combobox = Gtk.ComboBoxText.new()
-        active_index = -1
-        for i, theme in enumerate(theme_names):
-            combobox.append_text(theme)
-            if theme == current_theme:
-                active_index = i
-        if active_index != -1:
-            combobox.set_active(active_index)
-        elif theme_names and theme_names[0] != "(No themes found)":
-            combobox.set_active(0)
-        combobox.set_halign(Gtk.Align.END)
-        combobox.connect("changed", self._on_gsettings_theme_selected, schema, key)
-        action_row = Adw.ActionRow(
-            title=title,
-            subtitle=subtitle,
-        )
-        action_row.add_suffix(combobox)
-        action_row.set_activatable_widget(combobox)
-        action_row.add_css_class("control-center-setting-row")
-        if current_theme == "(No themes found)":
-            combobox.set_sensitive(False)
-        return action_row
-
     def _get_available_themes(self) -> list[str]:
         css_dir = os.path.expanduser("~/.local/share/waypanel/resources/themes/css")
         if not os.path.isdir(css_dir):
@@ -406,6 +187,8 @@ class ControlCenterHelpers:
         css_path = self._get_waypanel_css_path(selected_theme)
         display = Gdk.Display.get_default()
         try:
+            if self.parent.current_wp_css_provider is None:
+                self.parent.current_wp_css_provider = Gtk.CssProvider()
             provider = self.parent.current_wp_css_provider
             provider.load_from_path(css_path)
             Gtk.StyleContext.add_provider_for_display(
@@ -434,75 +217,6 @@ class ControlCenterHelpers:
             self.display_notify(
                 f"Error saving theme setting: {e}", "dialog-error-symbolic"
             )
-
-    def _create_theme_selector_widget(self) -> Adw.ActionRow:
-        theme_names = self._get_available_themes()
-        MAIN_CONFIG_KEY = "org.waypanel.panel"
-        NESTED_CONFIG_KEY = "theme"
-        DEFAULT_KEY = "default"
-        current_theme = (
-            self.parent.config.get(MAIN_CONFIG_KEY, {})  # pyright: ignore
-            .get(NESTED_CONFIG_KEY, {})
-            .get(DEFAULT_KEY, None)
-        )
-        if not current_theme or current_theme not in theme_names:
-            current_theme = theme_names[0] if theme_names else "default"
-        combobox = Gtk.ComboBoxText.new()
-        active_index = -1
-        for i, theme in enumerate(theme_names):
-            combobox.append_text(theme)
-            if theme == current_theme:
-                active_index = i
-        if active_index != -1:
-            combobox.set_active(active_index)
-        combobox.set_halign(Gtk.Align.END)
-        combobox.connect("changed", self._on_theme_selected)
-        action_row = Adw.ActionRow(
-            title="Waypanel CSS Theme",
-            subtitle="Select the theme for Waypanel's internal components.",
-        )
-        action_row.add_suffix(combobox)
-        action_row.set_activatable_widget(combobox)
-        action_row.add_css_class("control-center-setting-row")
-        return action_row
-
-    def _create_theme_page(self, ui_key: str) -> Gtk.ScrolledWindow:
-        scrolled_window = Gtk.ScrolledWindow()
-        scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        main_box.add_css_class("control-center-content-area")
-        main_box.set_margin_top(20)
-        main_box.set_margin_bottom(20)
-        main_box.set_margin_start(20)
-        main_box.set_margin_end(20)
-        preferences_group = Adw.PreferencesGroup(
-            title="Appearance Settings",
-            description="Change the look and feel of Waypanel and GTK applications.",
-        )
-        preferences_group.add_css_class("control-center-config-group")
-        waypanel_theme_row = self._create_theme_selector_widget()
-        preferences_group.add(waypanel_theme_row)
-        gtk_theme_dirs = ["/usr/share/themes", "~/.local/share/themes", "~/.themes"]
-        gtk_theme_row = self._create_gsettings_theme_row(
-            title="GTK Theme",
-            subtitle="Select the theme for GTK 4/3 applications (applied via gsettings).",
-            schema="org.gnome.desktop.interface",
-            key="gtk-theme",
-            theme_dirs=gtk_theme_dirs,
-        )
-        preferences_group.add(gtk_theme_row)
-        icon_theme_dirs = ["/usr/share/icons", "~/.local/share/icons", "~/.icons"]
-        icon_theme_row = self._create_gsettings_theme_row(
-            title="Icon Theme",
-            subtitle="Select the icon theme for applications (applied via gsettings).",
-            schema="org.gnome.desktop.interface",
-            key="icon-theme",
-            theme_dirs=icon_theme_dirs,
-        )
-        preferences_group.add(icon_theme_row)
-        main_box.append(preferences_group)
-        scrolled_window.set_child(main_box)
-        return scrolled_window
 
     def _generate_plugin_map(self, config):
         plugin_map = {}

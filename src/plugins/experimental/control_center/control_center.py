@@ -19,9 +19,9 @@ def get_plugin_class():
     gi.require_version("Gdk", "4.0")
     from gi.repository import Gtk, Adw, Gdk  # pyright: ignore
     from src.plugins.core._base import BasePlugin
-    from ._control_center_helpers import ControlCenterHelpers
-    from .ui import get_ui_class
-    from .logic import get_logic_class
+    from ._helpers import ControlCenterHelpers
+    from ._ui import get_ui_class
+    from ._logic import get_logic_class
 
     class ControlCenter(BasePlugin):
         """
@@ -42,7 +42,7 @@ def get_plugin_class():
 
             # Attributes populated by UI class
             self.win = None
-            self.toast_overlay: Adw.ToastOverlay = None
+            self.toast_overlay: Adw.ToastOverlay = None  # pyright: ignore
             self.back_button = None
             self.back_button_stack = None
             self.save_button = None
@@ -51,6 +51,9 @@ def get_plugin_class():
             self.category_flowbox = None
             self.content_stack = None
             self.main_stack = None
+
+            # CSS Provider stored here for UI access
+            self.current_wp_css_provider = None
 
             self.gtk = Gtk
             self.adw = Adw
@@ -70,9 +73,9 @@ def get_plugin_class():
                 # Delegated to logic.py
                 self.logic.setup_categories_grid()
 
-                self.main_stack.set_visible_child_name("category_grid")
-                self.save_button_stack.set_visible_child_name("empty")
-                self.back_button_stack.set_visible_child_name("empty")
+                self.main_stack.set_visible_child_name("category_grid")  # pyright: ignore
+                self.save_button_stack.set_visible_child_name("empty")  # pyright: ignore
+                self.back_button_stack.set_visible_child_name("empty")  # pyright: ignore
 
             self.win.present()
 
@@ -88,22 +91,22 @@ def get_plugin_class():
 
         def on_category_widget_clicked(self, gesture, n_press, x, y, category_name):
             """Handles navigation to settings pages."""
-            self.content_stack.set_visible_child_name(category_name)
-            self.main_stack.set_visible_child_name("settings_pages")
+            self.content_stack.set_visible_child_name(category_name)  # pyright: ignore
+            self.main_stack.set_visible_child_name("settings_pages")  # pyright: ignore
 
             if category_name != "theme":
-                self.save_button_stack.set_visible_child_name("save_button")
+                self.save_button_stack.set_visible_child_name("save_button")  # pyright: ignore
             else:
-                self.save_button_stack.set_visible_child_name("empty")
+                self.save_button_stack.set_visible_child_name("empty")  # pyright: ignore
 
-            self.back_button_stack.set_visible_child_name("back_button")
+            self.back_button_stack.set_visible_child_name("back_button")  # pyright: ignore
 
         def on_back_clicked(self, button):
             """Returns to the primary grid view."""
-            self.main_stack.set_visible_child_name("category_grid")
-            self.save_button_stack.set_visible_child_name("empty")
-            self.back_button_stack.set_visible_child_name("empty")
-            self.search_entry.set_text("")
+            self.main_stack.set_visible_child_name("category_grid")  # pyright: ignore
+            self.save_button_stack.set_visible_child_name("empty")  # pyright: ignore
+            self.back_button_stack.set_visible_child_name("empty")  # pyright: ignore
+            self.search_entry.set_text("")  # pyright: ignore
 
         def on_search_changed(self, search_entry):
             """Bridge to search filtering logic."""
@@ -111,14 +114,13 @@ def get_plugin_class():
 
         def on_save_clicked(self, button):
             """Delegates save operation to helper."""
-            current_category = self.content_stack.get_visible_child_name()
+            current_category = self.content_stack.get_visible_child_name()  # pyright: ignore
             if current_category:
                 self.helper.save_category(current_category)
 
         def _on_add_field_clicked(self, button, group, category_name):
             """Bridge to dynamic field logic."""
-            # Note: Kept here for context, but logic is shared with helper
-            self.helper._on_add_field_clicked(button, group, category_name)
+            self.helper._on_add_field_clicked(button, group, category_name)  # pyright: ignore
 
         def _on_plugin_enable_toggled(self, switch, gparam, category_name):
             """Bridge to plugin runtime management logic."""
@@ -132,9 +134,8 @@ def get_plugin_class():
 
         def get_icon_for_category(self, category_name: str) -> str:
             """Logic for icon resolution."""
-            # Use original logic found in source
             norm_name = category_name.replace("_", " ").split()[0].lower()
-            icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+            icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())  # pyright: ignore
 
             icon_name = self._gtk_helper.icon_exist(norm_name)
             if icon_name:

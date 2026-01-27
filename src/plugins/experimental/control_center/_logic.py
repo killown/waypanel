@@ -37,7 +37,7 @@ def get_logic_class():
             category_widget = self.p.ui.create_category_widget(THEME_UI_KEY)
             self.p.category_flowbox.insert(category_widget, 0)
             self.p.category_widgets[THEME_UI_KEY] = category_widget
-            content_page = self.p.helper._create_theme_page(THEME_UI_KEY)
+            content_page = self.p.ui._create_theme_page(THEME_UI_KEY)
             self.p.content_stack.add_named(content_page, THEME_UI_KEY)
             self.p.ui_key_to_plugin_id_map[THEME_UI_KEY] = "theme"
 
@@ -57,7 +57,7 @@ def get_logic_class():
                 self.p.category_flowbox.insert(category_widget, -1)
                 self.p.category_widgets[ui_key] = category_widget
 
-                content_page = self.p.create_content_page(ui_key, category_data)
+                content_page = self.create_content_page(ui_key, category_data)
                 self.p.content_stack.add_named(content_page, ui_key)
 
         def create_content_page(
@@ -97,7 +97,7 @@ def get_logic_class():
                     toggle_switch.set_active(is_enabled)
                     toggle_switch.connect(
                         "notify::active",
-                        self.p._on_plugin_enable_toggled,
+                        self._on_plugin_enable_toggled,
                         category_name,
                     )
 
@@ -133,7 +133,7 @@ def get_logic_class():
                     expander.set_use_markup(True)
                     expander.add_css_class("control-center-config-expander")
                     self.p.widget_map[category_name][key] = {}
-                    expander_content = self.p.helper.create_nested_widgets(
+                    expander_content = self.p.ui.create_nested_widgets(
                         self.p.widget_map[category_name][key], value, current_path
                     )
                     expander.set_child(expander_content)
@@ -147,13 +147,13 @@ def get_logic_class():
                     expander.set_use_markup(True)
                     expander.add_css_class("control-center-config-expander")
                     self.p.widget_map[category_name][key] = []
-                    list_content_box = self.p.helper.create_list_widgets(
+                    list_content_box = self.p.ui.create_list_widgets(
                         self.p.widget_map[category_name][key], value, current_path
                     )
                     expander.set_child(list_content_box)
                     main_box.append(expander)
                 else:
-                    widget = self.p.helper.create_widget_for_value(value)
+                    widget = self.p.ui.create_widget_for_value(value)
                     if not widget:
                         continue
                     hint = self.p.helper._get_hint_for_path(
