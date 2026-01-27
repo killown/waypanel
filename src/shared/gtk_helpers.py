@@ -105,26 +105,34 @@ class GtkHelpers:
 
     def set_plugin_main_icon(self, widget: Gtk.Widget, plugin_name, icon_name):
         """
-        Sets the main icon using natural size allocation.
+        Sets the main icon using either a configured pixel size or natural size allocation.
         """
         fallback_icons = self.config_handler.get_root_setting(
             [plugin_name, "fallback_main_icons"], None
         )
+
+        # Retrieve custom size from config, default to -1 (natural size)
+        icon_size = self.config_handler.get_root_setting(
+            [plugin_name, "main_icon_size"], None
+        )
+
+        if icon_size is None:
+            self.config_handler.set_root_setting([plugin_name, "main_icon_size"], -1)
+            icon_size = -1
+
         icon_name = self.icon_exist(icon_name, fallback_icons)
 
         if icon_name:
-            # Set the icon. Gtk.Button.set_icon_name internally creates a Gtk.Image.
+            # Set the icon name on the button/widget
             widget.set_icon_name(icon_name)  # pyright: ignore
 
-            # Access the internal image created by the icon_name setter
+            # Access the internal Gtk.Image
             image = widget.get_child()
             if hasattr(image, "set_pixel_size"):
-                # -1 is the magic value: it tells GTK to use 'natural size'
-                # based on the container's size-allocate signal.
-                image.set_pixel_size(-1)
+                # Apply the configured size (specific integer or -1 for natural)
+                image.set_pixel_size(icon_size)
 
-                # We reset alignment to FILL so it doesn't try to center
-                # itself inside a smaller box than the panel height.
+                # Maintain fill alignment to respect panel constraints
                 image.set_valign(Gtk.Align.FILL)
                 image.set_halign(Gtk.Align.FILL)
         else:
