@@ -105,20 +105,31 @@ class GtkHelpers:
 
     def set_plugin_main_icon(self, widget: Gtk.Widget, plugin_name, icon_name):
         """
-        Sets the main icon for a plugin widget, deriving the plugin name from the
-        calling file's name (e.g., 'my_plugin.py' becomes 'my_plugin').
-        Args:
-            widget (Gtk.Widget): The widget instance to set the icon on.
-            fallback_icons (list): A list of backup icon names to try.
+        Sets the main icon using natural size allocation.
         """
         fallback_icons = self.config_handler.get_root_setting(
             [plugin_name, "fallback_main_icons"], None
         )
         icon_name = self.icon_exist(icon_name, fallback_icons)
+
         if icon_name:
+            # Set the icon. Gtk.Button.set_icon_name internally creates a Gtk.Image.
             widget.set_icon_name(icon_name)  # pyright: ignore
+
+            # Access the internal image created by the icon_name setter
+            image = widget.get_child()
+            if hasattr(image, "set_pixel_size"):
+                # -1 is the magic value: it tells GTK to use 'natural size'
+                # based on the container's size-allocate signal.
+                image.set_pixel_size(-1)
+
+                # We reset alignment to FILL so it doesn't try to center
+                # itself inside a smaller box than the panel height.
+                image.set_valign(Gtk.Align.FILL)
+                image.set_halign(Gtk.Align.FILL)
         else:
             self.logger.warning(f"Could not find icon for plugin: {plugin_name}")
+
         self.add_cursor_effect(widget)
 
     def icon_exist(self, argument: str, fallback_icons=None) -> str:
