@@ -31,6 +31,7 @@ def get_plugin_class():
     from .views import TaskbarViews
     from .gestures import TaskbarGestures
     import re
+    import gc
 
     class TitleFormatter:
         @staticmethod
@@ -262,7 +263,7 @@ def get_plugin_class():
 
                 # 4. Force GC to break the circular references from the
                 # gestures/popovers connected to this specific view ID.
-                self._panel_instance.gc.collect()
+                gc.collect()
 
         def update_button(
             self, btn, view: dict, count: int = 1, is_focused: bool = False
