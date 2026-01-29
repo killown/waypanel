@@ -282,9 +282,29 @@ def get_plugin_class():
             self.run_in_async_task(self._do_clear())
 
         async def _do_clear(self):
+            # 1. Server-side cleanup (DB and Files)
             await self.manager.clear_history()
-            while row := self.listbox.get_first_child():
-                self.listbox.remove(row)
+
+            # 2. UI-side "Nuke": Atomic detachment from the ScrolledWindow
+            # This prevents 100+ layout reflows on the main thread
+            self.sw.set_child(None)
+
+            # 3. Create fresh container
+            self.listbox = Gtk.ListBox()
+            self.listbox.set_selection_mode(Gtk.SelectionMode.NONE)
+            self.listbox.connect("row-activated", self.on_copy_row)
+            self.listbox.add_css_class("clipboard-listbox")
+
+            # 4. State reset
+            self.sw.set_child(self.listbox)
+            self.delete_btn_map.clear()
+            self.listbox.invalidate_filter()
+
+            # 5. Force memory release
+            # Crucial after discarding a large number of widgets with signal bindings
+            import gc
+
+            gc.collect()
 
         def on_right_click_row(self, gesture, *args):
             row = gesture.get_widget()
