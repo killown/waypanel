@@ -106,15 +106,40 @@ def get_plugin_class():
                 clipboard.set_content(self._active_clipboard_provider)
 
         async def populate_listbox_async(self):
+            """
+            Atomic population of the clipboard list.
+            Detaches the ListBox to bypass O(N) reflow hangs during reconstruction.
+            """
             if self._is_populating:
                 return
             self._is_populating = True
+
             try:
-                while row := self.listbox.get_first_child():
-                    self.listbox.remove(row)
+                # Atomic detachment to prevent UI thread freezing
+                self.sw.set_child(None)
+
+                self.listbox = Gtk.ListBox()
+                self.listbox.set_selection_mode(Gtk.SelectionMode.NONE)
+                self.listbox.connect("row-activated", self.on_copy_row)
+                self.listbox.add_css_class("clipboard-listbox")
+
+                # Setup filtering logic directly to avoid 'AttributeError'
+                def filter_func(row):
+                    search_text = self.searchbar.get_text().lower()
+                    if not search_text:
+                        return True
+
+                    child = row.get_child()
+                    content = getattr(child, "RAW_CONTENT", "").lower()
+                    return search_text in content
+
+                self.listbox.set_filter_func(filter_func)
+
                 self.delete_btn_map.clear()
                 history = await self.manager.get_history()
+
                 if not history:
+                    self.sw.set_child(self.listbox)
                     return
 
                 for item in history:
@@ -167,7 +192,13 @@ def get_plugin_class():
                     gesture = Gtk.GestureClick(button=3)
                     gesture.connect("pressed", self.on_right_click_row)
                     row_widget.add_controller(gesture)
+
                     self.listbox.append(row_widget)
+
+                # Re-link the populated list to the ScrolledWindow
+                self.sw.set_child(self.listbox)
+
+                self._panel_instance.gc.collect()
 
             except Exception as e:
                 self.logger.error(f"Clipboard: Population failed: {e}")
