@@ -243,12 +243,26 @@ def get_plugin_class():
         def remove_button(self, identifier: str) -> None:
             btn = self.in_use_buttons.pop(identifier, None)
             if btn:
-                self.taskbar.remove(btn)  # pyright: ignore
+                # 1. Detach from the UI to stop layout math
+                self.taskbar.remove(btn)
+
+                # 2. Reset internal references that hold large data
                 btn.set_visible(False)
                 btn.view_id = None
+
+                # IMPORTANT: If your button has an image/icon, reset it to a null state
+                # to release the GdkTexture/Pixbuf back to the system.
+                if hasattr(btn, "set_icon_name"):
+                    btn.set_icon_name("image-missing-symbolic")
+
+                # 3. Mark as available in the pool
                 for item in self.button_pool:
                     if item["button"] == btn:
                         item["view_id"] = "available"
+
+                # 4. Force GC to break the circular references from the
+                # gestures/popovers connected to this specific view ID.
+                self._panel_instance.gc.collect()
 
         def update_button(
             self, btn, view: dict, count: int = 1, is_focused: bool = False
