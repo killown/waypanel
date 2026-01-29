@@ -217,6 +217,7 @@ def get_plugin_class():
                     vbox.append(action_box)
 
             close_button = self.gtk.Button(label="Close")
+            close_button.add_css_class("notify-close-button")
             close_button.connect("clicked", lambda _: window.close())
             vbox.append(close_button)
 

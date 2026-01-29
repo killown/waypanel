@@ -1,30 +1,58 @@
 .notify-client-box {
   background-color: var(--color-bg-button-suggested);
   border-radius: 10px;
-  margin: 3px;
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 8px var(--color-shadow-medium), 
+              0 1px 2px var(--color-shadow-dark),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.notify-close-button {
+  margin-left: -14px;
+  margin-right: -2px;
+  margin-top: -6px;
+  padding: 0px;
+  min-width: 24px;
+  min-height: 24px;
+  background: transparent;
+  color: var(--main-text);
+  border-radius: var(--radius-control-circular);
+}
+
+.notify-close-button:hover {
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
 .notify-dnd-button {
   background-color: var(--color-bg-button-suggested);
   color: var(--main-text);
+  border-radius: 6px;
+  box-shadow: 0 2px 4px var(--color-shadow-lighter);
 }
 
 .notify-client-heading {
-  margin-top: 12px;
+  margin-top: 4px;
+  margin-bottom: 2px;
   font-weight: bold;
   font-family: var(--font-family-system);
   font-size: 16px;
-  color: var(--dseg-shadow-dark);
+  color: var(--main-text);
+  text-shadow: 0 1px 2px var(--color-shadow-dark);
 }
+
 .notify-client-body-label,
-.notify-client-timestamp {
-  margin: 3px;
+.notify-client-timestamp,
+.notify-server-body-label {
+  margin: 4px 8px;
   font-family: var(--font-family-system);
-  color: var(--dseg-shadow-dark);
+  color: var(--soft-text);
 }
 
 .notify-client-timestamp {
   font-size: 13px;
+  opacity: 0.8;
 }
 
 .notify-window {
@@ -41,14 +69,38 @@
 .notify-clear-button {
   background-color: var(--color-bg-button-suggested);
   color: var(--main-text);
+  border-radius: 6px;
+  padding: 6px 12px;
+  box-shadow: 0 2px 4px var(--color-shadow-medium);
 }
 
 .notify-server-vbox {
   background-color: var(--primary-bg);
   color: var(--main-text);
-  padding: 10px;
+  padding: 16px;
   font-weight: bold;
   font-family: var(--font-family-system);
   font-size: 16px;
-  border-radius: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--color-separator-line);
+  box-shadow: 0 8px 24px var(--color-shadow-dark);
+}
+
+.notification-summary {
+  font-weight: bold;
+  color: var(--main-text);
+}
+
+.notification-body {
+  color: var(--soft-text);
+}
+
+.notification-action-button {
+  background-color: var(--color-bg-button-suggested);
+  border-radius: 6px;
+}
+
+.no-notifications-label {
+  padding: 10px;
+  opacity: 0.6;
 }
