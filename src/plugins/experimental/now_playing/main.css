@@ -1,0 +1,79 @@
+/* The Main Panel Button Trigger */
+.player-trigger {
+  padding: 0 10px;
+  margin: 4px;
+  border-radius: var(--radius-m);
+  background-color: var(--color-bg-button-normal);
+  border: 1px solid var(--color-steam-blue-dark);
+  -gtk-icon-size: 24px;
+}
+
+/* Standalone Popover Styling */
+.player-popover {
+  background-color: var(--color-bg-popover);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-separator-line);
+}
+
+.player-popover-content {
+  padding: 16px;
+}
+
+/* Individual Player Card */
+.player-row {
+  background-color: var(--color-bg-searchbar);
+  border-radius: var(--radius-l);
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 12px;
+  min-width: 280px;
+}
+
+.player-art {
+  border-radius: 50%;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+  border: 3px solid var(--color-steam-blue-dark);
+}
+
+/* Typography with Monospace for stable Marquee animation */
+.player-title,
+.player-artist {
+  font-family: monospace;
+  color: var(--theme-fg-label-primary);
+}
+
+.player-title {
+  font-weight: var(--font-weight-bold);
+  font-size: 1.1rem;
+}
+
+.player-artist {
+  color: var(--theme-fg-label-secondary);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* Playback Controls Box */
+.player-controls {
+  margin-top: 15px;
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 8px 16px;
+  border-radius: var(--radius-xl);
+}
+
+/* Control Buttons Icon Sizes */
+.player-controls button {
+  padding: 8px;
+  -gtk-icon-size: 24px;
+  transition: all 200ms ease;
+}
+
+.player-btn-play {
+  -gtk-icon-size: 32px; /* Make play button slightly larger */
+  color: var(--color-steam-light-blue) !important;
+}
+
+.player-controls button:hover {
+  color: var(--color-steam-light-blue-functional);
+}
+
