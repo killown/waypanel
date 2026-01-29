@@ -55,6 +55,25 @@ class DbusHelpers:
         except Exception:
             return None
 
+    async def get_player_pid(self, player_name: str):
+        """Retrieves the Unix Process ID (PID) for a given bus name."""
+        from dbus_fast import Message
+
+        try:
+            reply = await self.bus.call(
+                Message(
+                    destination="org.freedesktop.DBus",
+                    path="/org/freedesktop/DBus",
+                    interface="org.freedesktop.DBus",
+                    member="GetConnectionUnixProcessID",
+                    signature="s",
+                    body=[player_name],
+                )
+            )
+            return reply.body[0]
+        except Exception:
+            return None
+
     async def get_active_mpris_players(self):
         """Finds all active players using the DBus ListNames method."""
         from dbus_fast import Message
