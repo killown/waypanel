@@ -1,6 +1,7 @@
 import sys
 import lazy_loader as lazy
 from typing import Any
+import gc
 from gi.repository import Adw, Gio, GLib  # pyright: ignore
 from src.shared.config_handler import ConfigHandler
 
@@ -42,6 +43,28 @@ class Panel(Adw.Application):
         self.plugin_loader = None
         self.plugin_metadata = None
         GLib.idle_add(self.start_plugin_loader)
+        self._gc_started = False
+
+    def run_gc_cleanup(self):
+        """Called ONCE during core startup, NOT by plugins."""
+        if self._gc_started:
+            return
+        self._gc_started = True
+
+        # Single 5-minute delay
+        GLib.timeout_add_seconds(300, self._initial_delayed_sweep)
+
+    def _initial_delayed_sweep(self):
+        gc.collect()
+        self.logger.info("Maintenance: Post-boot memory sweep complete.")
+        # Single 3-hour timer
+        GLib.timeout_add_seconds(10800, self._periodic_gc)
+        return False
+
+    def _periodic_gc(self):
+        gc.collect()
+        self.logger.debug("Maintenance: 3-hour periodic memory cleanup executed.")
+        return True
 
     def start_plugin_loader(self):
         self.plugin_loader = PLUGIN_LOADER_MODULE.PluginLoader(self)  # pyright: ignore

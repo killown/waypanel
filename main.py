@@ -416,6 +416,8 @@ def main():
         check_config_path()
         ipc_server = start_ipc_server(logger)
         panel = load_panel(ipc_server)
+        if hasattr(panel, "run_gc_cleanup"):
+            panel.run_gc_cleanup()
         return panel.run(["org.waypanel"])
     except Exception:
         logger.critical("Fatal error during initialization", exc_info=True)

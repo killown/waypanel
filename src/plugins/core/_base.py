@@ -177,7 +177,6 @@ class BasePlugin:
         if metadata is not None:
             if "id" in metadata:
                 self.plugin_id = metadata["id"]
-        self.run_gc_cleanup()
         self._config_handler = ConfigHandler(panel_instance, self.plugin_id)
 
     def get_plugin_metadata(self):
@@ -206,32 +205,6 @@ class BasePlugin:
     ) -> Any:
         self.add_hint(hint, key)
         return self.get_plugin_setting(key, default_value)
-
-    def run_gc_cleanup(self):
-        """
-        Initializes a low-impact memory maintenance cycle.
-        """
-        # Delay the first sweep significantly (e.g., 5 minutes after boot)
-        # to ensure the system is completely idle.
-        GLib.timeout_add_seconds(300, self._initial_delayed_sweep)
-        return False
-
-    def _initial_delayed_sweep(self):
-        """Runs once after the panel is stable, then starts the 3-hour timer."""
-
-        gc.collect()
-        self.logger.info("Maintenance: Post-boot memory sweep complete.")
-
-        # Schedule for 3 hours (10,800 seconds)
-        GLib.timeout_add_seconds(10800, self._periodic_gc)
-        return False
-
-    def _periodic_gc(self):
-        """Deep maintenance sweep every 3 hours."""
-
-        gc.collect()
-        self.logger.debug("Maintenance: 3-hour periodic memory cleanup executed.")
-        return True
 
     def set_keyboard_on_demand(self, mode=True):
         """Set the keyboard mode to ON_DEMAND."""
