@@ -755,15 +755,38 @@ class WayfireHelpers:
         most_recent_id = most_recent_tuple[0]
         return most_recent_id
 
+    def get_most_recent_focused_view(self) -> dict | None:
+        """Returns the view with the highest last-focus-timestamp.
 
-def get_most_recent_focused_view(self) -> dict | None:
-    """Returns the view with the highest last-focus-timestamp.
+        Args:
+            views: List of view dictionaries.
 
-    Args:
-        views: List of view dictionaries.
+        Returns:
+            The most recently focused view dictionary or None if list is empty.
+        """
+        views = self.ipc.list_views()
+        return max(views, key=lambda x: x.get("last-focus-timestamp", 0))
 
-    Returns:
-        The most recently focused view dictionary or None if list is empty.
-    """
-    views = self.ipc.list_views()
-    return max(views, key=lambda x: x.get("last-focus-timestamp", 0))
+    def get_view_by_pid(self, pid: int) -> dict | None:
+        """
+        Retrieves detailed Wayfire view metadata for a specific Process ID.
+
+        Args:
+            pid (int): The process ID to search for.
+
+        Returns:
+            dict | None: The view metadata dictionary if found, otherwise None.
+        """
+        if not pid:
+            return None
+
+        try:
+            # Accessing the IPC socket (sock) and listing all active views
+            all_views = self.ipc.list_views()
+
+            # Generator expression to find the first matching view by PID
+            return next((view for view in all_views if view.get("pid") == pid), None)
+
+        except Exception as e:
+            self.logger.error(f"Failed to resolve view for PID {pid}: {e}")
+            return None
