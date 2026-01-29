@@ -2,7 +2,7 @@
    Universal Update - Main Trigger Button (Centered & Robust)
    ========================================================================== */
 .universal-update-button {
-  -gtk-icon-size: 25px; /* Reduced slightly for better text alignment */
+  -gtk-icon-size: 25px;
   margin-top: 6px;
   padding: 4px 12px;
   border-radius: var(--radius-m);
@@ -22,17 +22,13 @@
 
 /* Internal Box Centering Logic */
 .universal-update-button > box {
-  margin-left: auto;
-  margin-right: auto;
   border: none;
   background: transparent;
-  spacing: 8px; /* Gap between icon and text */
 }
 
 .universal-update-button label {
   font-family: var(--font-family-system);
   font-weight: var(--font-weight-medium);
-  text-align: center;
   margin: 0;
   padding: 0;
 }
@@ -77,7 +73,6 @@
   color: var(--color-steam-light-blue-functional);
   font-size: 1.1rem;
   margin-bottom: 10px;
-  text-align: left;
 }
 
 /* List Item / Info Labels */
