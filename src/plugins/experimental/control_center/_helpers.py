@@ -130,6 +130,50 @@ class ControlCenterHelpers:
             pass
         self.parent.toast_overlay.add_toast(toast)
 
+    def _on_add_field_clicked(self, button, group, category_name):
+        """Adds a new row for a dynamic configuration field."""
+
+        # Ensure the dynamic field tracking list exists for this category
+        if "_dynamic_fields" not in self.parent.widget_map[category_name]:
+            self.parent.widget_map[category_name]["_dynamic_fields"] = []
+
+        # Create the UI components for the new field
+        row_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        row_box.set_margin_top(10)
+
+        path_entry = Gtk.Entry(placeholder_text="Path (e.g. settings.nested)")
+        path_entry.add_css_class("control-center-text-input")
+
+        key_entry = Gtk.Entry(placeholder_text="Key Name")
+        key_entry.add_css_class("control-center-text-input")
+
+        value_entry = Gtk.Entry(placeholder_text="Value")
+        value_entry.add_css_class("control-center-text-input")
+
+        # Layout for entries
+        entries_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        entries_box.append(path_entry)
+        entries_box.append(key_entry)
+        entries_box.append(value_entry)
+
+        # Remove button for this specific row
+        remove_btn = Gtk.Button(icon_name="list-remove-symbolic")
+        remove_btn.add_css_class("destructive-action")
+
+        field_tuple = (path_entry, key_entry, value_entry)
+
+        def on_remove_clicked(btn):
+            group.remove(row_box)
+            self.parent.widget_map[category_name]["_dynamic_fields"].remove(field_tuple)
+
+        remove_btn.connect("clicked", on_remove_clicked)
+        entries_box.append(remove_btn)
+
+        row_box.append(entries_box)
+        group.add(row_box)
+
+        self.parent.widget_map[category_name]["_dynamic_fields"].append(field_tuple)
+
     def _on_gsettings_theme_selected(
         self, combobox: Gtk.ComboBoxText, schema: str, key: str
     ):
