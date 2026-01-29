@@ -207,31 +207,31 @@ class BasePlugin:
         self.add_hint(hint, key)
         return self.get_plugin_setting(key, default_value)
 
-    def _periodic_gc(self):
-        """
-        Manually forces Python's garbage collector (GC) to run.
-        Crucial for GObject/GTK applications, this reclaims memory
-        stuck in uncollectable reference cycles that frequently form
-        between Python objects and the C-level library bindings.
-        Returns:
-            bool: True, signaling GLib to repeat the timer.
-        """
-        gc.collect()
-        self.logger.debug("Initialized the memory cleanup lifecycle _periodic_gc.")
-        return True  # continue glib loop
-
     def run_gc_cleanup(self):
         """
-        Initializes the entire memory cleanup lifecycle.
-        1. Runs `_periodic_gc` immediately to clear memory leaks
-           accumulated during startup initialization.
-        2. Sets up the long-running timer (5 minutes) for continuous
-           memory maintenance throughout the application's lifespan.
-        Returns:
-            bool: False, to ensure this setup function runs only once.
+        Initializes a low-impact memory maintenance cycle.
         """
-        GLib.timeout_add_seconds(300, self._periodic_gc)
-        return False  # stop glib loop
+        # Delay the first sweep significantly (e.g., 5 minutes after boot)
+        # to ensure the system is completely idle.
+        GLib.timeout_add_seconds(300, self._initial_delayed_sweep)
+        return False
+
+    def _initial_delayed_sweep(self):
+        """Runs once after the panel is stable, then starts the 3-hour timer."""
+
+        gc.collect()
+        self.logger.info("Maintenance: Post-boot memory sweep complete.")
+
+        # Schedule for 3 hours (10,800 seconds)
+        GLib.timeout_add_seconds(10800, self._periodic_gc)
+        return False
+
+    def _periodic_gc(self):
+        """Deep maintenance sweep every 3 hours."""
+
+        gc.collect()
+        self.logger.debug("Maintenance: 3-hour periodic memory cleanup executed.")
+        return True
 
     def set_keyboard_on_demand(self, mode=True):
         """Set the keyboard mode to ON_DEMAND."""
