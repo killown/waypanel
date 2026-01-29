@@ -446,24 +446,33 @@ def get_plugin_class():
             current_installed_apps = self.all_apps
             recent_app_ids = self.get_recent_apps()
 
-            for widget in list(self.remote_widgets):
-                if widget.get_parent() == self.flowbox:
-                    self.flowbox.remove(widget)
-            self.remote_widgets.clear()
+            # Mass removal of remote widgets
+            # Using list() to avoid mutation issues, then clearing
+            if self.remote_widgets:
+                for widget in list(self.remote_widgets):
+                    if widget.get_parent() == self.flowbox:
+                        self.flowbox.remove(widget)
+                self.remote_widgets.clear()
 
+            # Handle uninstalled apps
             apps_to_remove = set(self.icons.keys()) - set(current_installed_apps.keys())
-            for app_id in apps_to_remove:
-                widget_data = self.icons.pop(app_id, None)
-                if widget_data:
-                    vbox = widget_data["vbox"]
-                    flowbox_child = vbox.get_parent()
-                    if flowbox_child and flowbox_child.get_parent() == self.flowbox:
-                        self.flowbox.remove(flowbox_child)
+            if apps_to_remove:
+                for app_id in apps_to_remove:
+                    widget_data = self.icons.pop(app_id, None)
+                    if widget_data:
+                        vbox = widget_data["vbox"]
+                        flowbox_child = vbox.get_parent()
+                        if flowbox_child and flowbox_child.get_parent() == self.flowbox:
+                            self.flowbox.remove(flowbox_child)
+
+                # Reclaim memory from uninstalled app icons immediately
+                self._panel_instance.gc.collect()
 
             for app_id, app in current_installed_apps.items():
                 if app_id not in self.icons:
                     self._add_app_to_flowbox(app, app_id)
 
+            # Sort logic...
             desired_app_id_order = []
             recent_ids_set = set(recent_app_ids)
             for app_id in recent_app_ids:
