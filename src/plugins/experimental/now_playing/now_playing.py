@@ -3,9 +3,9 @@ def get_plugin_metadata(_):
     return {
         "id": id,
         "name": "Media Player",
-        "version": "3.3.1",
+        "version": "3.5.0",
         "index": 20,
-        "description": "Dedicated media control button with marquee scrolling and pulse effects.",
+        "description": "Dedicated media control button with marquee, pulse effects, window focus, and close action.",
         "container": "background",
         "deps": ["css_generator", "top_panel"],
         "enabled": True,
@@ -30,6 +30,7 @@ def get_plugin_class():
             self.service_name = service_name
             self.plugin = plugin
             self.last_art_url = None
+            self.current_pid = None
 
             self._scroll_pos = 0
             self._full_title = ""
@@ -39,13 +40,12 @@ def get_plugin_class():
             self._setup_ui()
 
         def add_cursor_effect(self, widget):
-            """Adds the hover pulse effect and pointer cursor to control buttons."""
             motion = Gtk.EventControllerMotion()
             widget._cursor_anim_id = None
             widget._watchdog_id = None
 
             def on_tick(widget, frame_clock):
-                duration = 300000.0  # 300ms
+                duration = 300000.0
                 if not hasattr(widget, "_anim_start_time"):
                     return False
                 elapsed = frame_clock.get_frame_time() - widget._anim_start_time
@@ -53,7 +53,6 @@ def get_plugin_class():
                     widget.set_opacity(1.0)
                     widget._cursor_anim_id = None
                     return False
-
                 intensity = math.sin((elapsed / duration) * math.pi)
                 widget.set_opacity(1.0 - (0.3 * intensity))
                 return True
@@ -91,14 +90,40 @@ def get_plugin_class():
 
         def _setup_ui(self):
             self.add_css_class("player-row")
-            self.set_halign(Gtk.Align.CENTER)
+
+            # Header with Close Button
+            header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+            header.set_valign(Gtk.Align.START)
+
+            spacer = Gtk.Box()
+            spacer.set_hexpand(True)
+            header.append(spacer)
+
+            self.btn_close = Gtk.Button.new_from_icon_name("window-close-symbolic")
+            self.btn_close.add_css_class("flat")
+            self.btn_close.add_css_class("player-close-btn")
+            self.add_cursor_effect(self.btn_close)
+            self.btn_close.connect("clicked", self._on_close_clicked)
+            header.append(self.btn_close)
+            self.append(header)
+
+            # Clickable Image Container
+            self.art_button = Gtk.Button()
+            self.art_button.add_css_class("flat")
+            self.art_button.add_css_class("player-art-btn")
+            self.add_cursor_effect(self.art_button)
+            self.art_button.connect("clicked", self._on_art_clicked)
 
             self.art_image = Gtk.Image()
             self.art_image.set_pixel_size(120)
             self.art_image.set_size_request(120, 120)
-            self.art_image.set_halign(Gtk.Align.CENTER)
             self.art_image.add_css_class("player-art")
-            self.append(self.art_image)
+            self.art_button.set_child(self.art_image)
+
+            art_center_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+            art_center_box.set_halign(Gtk.Align.CENTER)
+            art_center_box.append(self.art_button)
+            self.append(art_center_box)
 
             info_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
             info_vbox.set_halign(Gtk.Align.CENTER)
@@ -133,6 +158,21 @@ def get_plugin_class():
             info_vbox.append(controls_box)
             self.append(info_vbox)
 
+        def _on_art_clicked(self, _):
+            if not self.current_pid:
+                return
+            view = self.plugin.wf_helper.get_view_by_pid(self.current_pid)
+            if view and "id" in view:
+                self.plugin.ipc.set_focus(view["id"])
+
+        def _on_close_clicked(self, _):
+            if not self.current_pid:
+                return
+            view = self.plugin.wf_helper.get_view_by_pid(self.current_pid)
+            if view and "id" in view:
+                # Use the requested self.ipc.close_view method
+                self.plugin.ipc.close_view(view["id"])
+
         def _create_btn(self, icon, action):
             btn = Gtk.Button.new_from_icon_name(icon)
             btn.add_css_class("flat")
@@ -148,6 +188,7 @@ def get_plugin_class():
         def update_ui(self, data):
             title = data.get("title", "Unknown")
             artist = data.get("artist", "Unknown")
+            self.current_pid = data.get("pid")
 
             if title != self._full_title or artist != self._full_artist:
                 self._full_title, self._full_artist = title, artist
@@ -165,6 +206,11 @@ def get_plugin_class():
             if art_url and art_url != self.last_art_url:
                 self.last_art_url = art_url
                 self._load_art_async(art_url)
+            elif not art_url:
+                # Fallback to App Icon using icon_exist
+                app_id = data.get("player", "").split(".")[-1]
+                icon_name = self.plugin.icon_exist(app_id) or "audio-x-generic-symbolic"
+                self.art_image.set_from_icon_name(icon_name)
 
         def _start_marquee(self):
             if self._scroll_timer:
@@ -228,6 +274,7 @@ def get_plugin_class():
                 for p in players:
                     m = await self.local_dbus.get_media_metadata(p)
                     if m and (m.get("title") or m.get("status")):
+                        m["pid"] = await self.local_dbus.get_player_pid(p)
                         valid.add(p)
                         self.schedule_in_gtk_thread(self._sync_row, p, m)
                 for p in list(self.active_rows.keys()):
@@ -253,7 +300,6 @@ def get_plugin_class():
 
         def _sync_panel(self):
             container = self._panel_instance.top_panel_box_center
-
             if self.active_rows and not self._added:
                 self.main_button = Gtk.Button()
                 self.add_cursor_effect(self.main_button)
@@ -266,7 +312,6 @@ def get_plugin_class():
                     use_scrolled=True,
                     max_height=500,
                 )
-
                 scr.set_child(self.popover_box)
                 self.main_button.connect("clicked", lambda _: pop.popup())
                 container.append(self.main_button)
