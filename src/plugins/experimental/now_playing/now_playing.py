@@ -3,7 +3,7 @@ def get_plugin_metadata(_):
     return {
         "id": id,
         "name": "Media Player",
-        "version": "3.5.0",
+        "version": "3.5.2",
         "index": 20,
         "description": "Dedicated media control button with marquee, pulse effects, window focus, and close action.",
         "container": "background",
@@ -31,12 +31,10 @@ def get_plugin_class():
             self.plugin = plugin
             self.last_art_url = None
             self.current_pid = None
-
             self._scroll_pos = 0
             self._full_title = ""
             self._full_artist = ""
             self._scroll_timer = None
-
             self._setup_ui()
 
         def add_cursor_effect(self, widget):
@@ -94,7 +92,6 @@ def get_plugin_class():
             # Header with Close Button
             header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
             header.set_valign(Gtk.Align.START)
-
             spacer = Gtk.Box()
             spacer.set_hexpand(True)
             header.append(spacer)
@@ -170,7 +167,6 @@ def get_plugin_class():
                 return
             view = self.plugin.wf_helper.get_view_by_pid(self.current_pid)
             if view and "id" in view:
-                # Use the requested self.ipc.close_view method
                 self.plugin.ipc.close_view(view["id"])
 
         def _create_btn(self, icon, action):
@@ -207,7 +203,6 @@ def get_plugin_class():
                 self.last_art_url = art_url
                 self._load_art_async(art_url)
             elif not art_url:
-                # Fallback to App Icon using icon_exist
                 app_id = data.get("player", "").split(".")[-1]
                 icon_name = self.plugin.icon_exist(app_id) or "audio-x-generic-symbolic"
                 self.art_image.set_from_icon_name(icon_name)
@@ -273,21 +268,31 @@ def get_plugin_class():
                 valid = set()
                 for p in players:
                     m = await self.local_dbus.get_media_metadata(p)
+                    # Force valid if metadata exists, even if title is "Unknown"
                     if m and (m.get("title") or m.get("status")):
                         m["pid"] = await self.local_dbus.get_player_pid(p)
                         valid.add(p)
                         self.schedule_in_gtk_thread(self._sync_row, p, m)
+
+                # Cleanup rows for players that are no longer active
                 for p in list(self.active_rows.keys()):
                     if p not in valid:
                         self.schedule_in_gtk_thread(self._remove_row, p)
+
                 self.schedule_in_gtk_thread(self._sync_panel)
-                await self.asyncio.sleep(2)
+                await self.asyncio.sleep(1.5)
 
         def _sync_row(self, p, m):
-            if p not in self.active_rows:
+            # If row doesn't exist OR if it was orphaned from the UI, re-append
+            if p not in self.active_rows or self.active_rows[p].get_parent() is None:
+                if p in self.active_rows:
+                    # Clean up the old orphaned instance
+                    self._remove_row(p)
+
                 row = PlayerRow(p, self)
                 self.active_rows[p] = row
                 self.popover_box.append(row)
+
             self.active_rows[p].update_ui(m)
 
         def _remove_row(self, p):
@@ -295,30 +300,54 @@ def get_plugin_class():
             if row:
                 if row._scroll_timer:
                     GLib.source_remove(row._scroll_timer)
-                self.popover_box.remove(row)
+                if row.get_parent() == self.popover_box:
+                    self.popover_box.remove(row)
                 gc.collect()
 
         def _sync_panel(self):
             container = self._panel_instance.top_panel_box_center
+
             if self.active_rows and not self._added:
                 self.main_button = Gtk.Button()
                 self.add_cursor_effect(self.main_button)
                 self.main_button.add_css_class("player-trigger")
                 self.main_button.set_icon_name("multimedia-audio-player-symbolic")
 
-                pop, scr, _ = self.create_popover(
+                pop, scr, _ = self.create_popover(  # pyright: ignore
                     parent_widget=self.main_button,
                     css_class="player-popover",
                     use_scrolled=True,
                     max_height=500,
                 )
+
+                # Ensure the box is clean before assignment
+                current_parent = self.popover_box.get_parent()
+                if current_parent:
+                    # If it's inside a Viewport (GTK ScrolledWindow usually adds one)
+                    if hasattr(current_parent, "set_child"):
+                        current_parent.set_child(None)  # pyright: ignore
+                    # If it's a standard container
+                    elif hasattr(current_parent, "remove"):
+                        current_parent.remove(self.popover_box)  # pyright: ignore
+
+                # Now it is safe to set as child of the new scrolled window
                 scr.set_child(self.popover_box)
+
                 self.main_button.connect("clicked", lambda _: pop.popup())
                 container.append(self.main_button)
                 self._added = True
+
             elif not self.active_rows and self._added:
-                container.remove(self.main_button)
-                self.main_button, self._added = None, False
+                # Explicitly unset the child before removing the button to free the box
+                current_parent = self.popover_box.get_parent()
+                if current_parent and hasattr(current_parent, "set_child"):
+                    current_parent.set_child(None)  # pyright: ignore
+
+                if self.main_button.get_parent() == container:  # pyright: ignore
+                    container.remove(self.main_button)
+
+                self.main_button = None
+                self._added = False
                 gc.collect()
 
         def on_disable(self):
