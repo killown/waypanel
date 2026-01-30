@@ -9,7 +9,7 @@ def get_plugin_metadata(_):
         "name": "Notify Client",
         "version": "1.0.0",
         "enabled": True,
-        "index": 7,
+        "index": 1,
         "container": "top-panel-center",
         "deps": ["notify_server", "css_generator"],
         "description": about,
@@ -79,8 +79,11 @@ def get_plugin_class():
             self.notification_on_popover = {}
             self.notification_button = self.gtk.Button.new_from_icon_name(
                 self.gtk_helper.set_widget_icon_name(
-                    "notify",
-                    ["liteupdatesnotify", "org.gnome.Settings-notifications-symbolic"],
+                    "notifications-applet-symbolic",
+                    [
+                        "notifications-applet-symbolic",
+                        "org.gnome.Settings-notifications-symbolic",
+                    ],
                 )
             )
             self.notification_button.add_css_class("notification-panel-button")
@@ -424,12 +427,20 @@ def get_plugin_class():
                 # Notifications Scrolled Area
                 self.vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
                 self.vbox.set_vexpand(True)
+
                 scrolled_window = self.gtk.ScrolledWindow()
                 scrolled_window.set_child(self.vbox)
-                scrolled_window.set_propagate_natural_width(True)
+
+                # Enable natural height AND width propagation
                 scrolled_window.set_propagate_natural_height(True)
+                scrolled_window.set_propagate_natural_width(True)
+
                 scrolled_window.set_min_content_height(100)
                 scrolled_window.set_max_content_height(self.popover_max_height)
+
+                # Ensure the popover has a reasonable minimum width so it doesn't look cramped
+                scrolled_window.set_min_content_width(300)
+
                 scrolled_window.set_policy(
                     self.gtk.PolicyType.NEVER,
                     self.gtk.PolicyType.AUTOMATIC,
