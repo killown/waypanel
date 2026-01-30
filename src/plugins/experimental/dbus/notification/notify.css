@@ -1,106 +1,122 @@
-.notify-client-box {
-  background-color: var(--color-bg-button-suggested);
-  border-radius: 10px;
-  padding: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 8px var(--color-shadow-medium), 
-              0 1px 2px var(--color-shadow-dark),
-              inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+/* Panel Integration */
+.notification-panel-button {
+  -gtk-icon-size: 24px;
+  margin-top: 3px;
 }
 
-.notify-close-button {
-  margin-left: -14px;
-  margin-right: -2px;
-  margin-top: -6px;
-  padding: 0px;
-  min-width: 24px;
-  min-height: 24px;
-  background: transparent;
+/* Popover Base - Uses semantic project vars */
+.notify-window, popover contents {
+  background-color: var(--primary-bg);
   color: var(--main-text);
-  border-radius: var(--radius-control-circular);
+  border-radius: var(--radius-xl);
+  padding: 0;
+}
+
+/* Container for the notification balloon */
+.notify-client-box {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.05) 0%, 
+    rgba(0, 0, 0, 0.2) 100%
+  );
+  background-color: var(--color-bg-button-suggested);
+  border-radius: var(--radius-xl);
+  padding: 18px;
+  margin-bottom: 12px;
+  
+  /* 3D Depth Stack: Uses semantic shadow variables */
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.1),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.2),
+    0 8px 16px -4px var(--shadow-dark),
+    var(--shadow-elevated);
+    
+  /* Rim Lighting: Adapts to theme brightness */
+  border: 1px solid var(--color-separator-line);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  
+  transition: transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1), 
+              box-shadow 250ms ease;
+}
+
+.notify-client-box:hover {
+  transform: translateY(-4px) scale(1.02);
+  background-color: var(--color-bg-button-suggested-hover);
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.2),
+    0 18px 32px -8px var(--shadow-dark),
+    0 0 25px -3px var(--color-shadow-hue-bleed);
+}
+
+/* Close Button - Semantic Danger Color */
+.notify-close-button {
+  margin: 0;
+  min-width: 28px;
+  min-height: 28px;
+  background: var(--color-bg-deep);
+  color: var(--main-text);
+  border-radius: var(--radius-s); 
+  border: 1px solid var(--color-separator-line);
+  align-self: center;
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .notify-close-button:hover {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: var(--danger-red);
+  color: white;
+  transform: scale(1.1);
+  box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
-.notify-dnd-button {
-  background-color: var(--color-bg-button-suggested);
-  color: var(--main-text);
-  border-radius: 6px;
-  box-shadow: 0 2px 4px var(--color-shadow-lighter);
-}
-
+/* 3D Text Typography */
 .notify-client-heading {
-  margin-top: 4px;
-  margin-bottom: 2px;
-  font-weight: bold;
-  font-family: var(--font-family-system);
+  font-weight: var(--font-weight-bold);
   font-size: 16px;
   color: var(--main-text);
-  text-shadow: 0 1px 2px var(--color-shadow-dark);
+  text-shadow: 0 2px 4px var(--shadow-medium);
+  margin-top: 2px;
 }
 
-.notify-client-body-label,
-.notify-client-timestamp,
-.notify-server-body-label {
-  margin: 4px 8px;
-  font-family: var(--font-family-system);
+.notify-client-body-label {
+  font-size: 14px;
   color: var(--soft-text);
+  line-height: 1.5;
 }
 
 .notify-client-timestamp {
-  font-size: 13px;
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--accent-blue);
   opacity: 0.8;
+  margin-top: 8px;
 }
 
-.notify-window {
-  background-color: transparent;
+/* 3D Icon Presentation */
+.notification-icon {
+  border-radius: var(--radius-xl);
+  box-shadow: 0 6px 12px var(--shadow-dark);
+  background-color: var(--color-bg-deep);
+  padding: 4px;
+  border: 1px solid var(--color-separator-line);
+}
+
+/* Control Buttons */
+.notify-dnd-button, .notify-clear-button {
+  background: linear-gradient(to bottom, var(--color-bg-button-normal), var(--color-bg-button-normal-hover));
   color: var(--main-text);
-  border-radius: 10px;
+  border-radius: var(--radius-l);
+  padding: 8px 18px;
+  border: 1px solid var(--color-separator-line);
+  box-shadow: var(--shadow-neumorphic-outset-large);
+  font-weight: var(--font-weight-bold);
 }
 
-.notification-panel-button {
-  -gtk-icon-size: 23px;
-  margin-top: 5px;
-}
-
-.notify-clear-button {
-  background-color: var(--color-bg-button-suggested);
-  color: var(--main-text);
-  border-radius: 6px;
-  padding: 6px 12px;
-  box-shadow: 0 2px 4px var(--color-shadow-medium);
-}
-
+/* Server Popup */
 .notify-server-vbox {
   background-color: var(--primary-bg);
   color: var(--main-text);
-  padding: 16px;
-  font-weight: bold;
-  font-family: var(--font-family-system);
-  font-size: 16px;
-  border-radius: 12px;
+  padding: 18px;
+  border-radius: var(--radius-xl);
   border: 1px solid var(--color-separator-line);
-  box-shadow: 0 8px 24px var(--color-shadow-dark);
-}
-
-.notification-summary {
-  font-weight: bold;
-  color: var(--main-text);
-}
-
-.notification-body {
-  color: var(--soft-text);
-}
-
-.notification-action-button {
-  background-color: var(--color-bg-button-suggested);
-  border-radius: 6px;
-}
-
-.no-notifications-label {
-  padding: 10px;
-  opacity: 0.6;
+  box-shadow: var(--shadow-window-float);
 }
