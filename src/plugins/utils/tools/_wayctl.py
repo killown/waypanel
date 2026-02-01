@@ -1,14 +1,14 @@
 import os
 import sys
-import orjson as js
+import json as js
 from configparser import ConfigParser
 import argparse
 import shutil
 from subprocess import call, check_output, run, Popen
-from PIL import Image, ImageFont
+import subprocess
+import asyncio
 import time
 import dbus
-import requests
 import configparser
 from wayfire import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
@@ -301,35 +301,43 @@ class Wayctl:
         call(["grim", "-o", name, output_file])
         self.xdg_open(output_file)
 
+    def get_absolute_geometry(self):
+        sock = WayfireSocket()
+
+        view = sock.get_focused_view()
+        output = sock.get_focused_output()
+
+        if not view or not output:
+            return None
+
+        # Calculate absolute position
+        abs_x = output["geometry"]["x"] + view["geometry"]["x"]
+        abs_y = output["geometry"]["y"] + view["geometry"]["y"]
+        width = view["geometry"]["width"]
+        height = view["geometry"]["height"]
+
+        return f"{abs_x},{abs_y} {width}x{height}"
+
+    async def capture_view(self):
+        region = self.get_absolute_geometry()
+        if not region:
+            return
+
+        output_path = "/tmp/focused_view.png"
+
+        # Using grim with the calculated global geometry
+        try:
+            subprocess.run(["grim", "-g", region, output_path], check=True)
+        except FileNotFoundError:
+            pass
+
     def screenshot(self, id, filename):
-        wpe.capture_view_shot(id, filename)
-
-    def view_focused(self):
-        view = self.sock.get_focused_view()
-        print("[{0}: {1}]".format(view["app-id"], view["title"]))
-        view_str = js.dumps(view)
-        print(view_str)
-        print("\n\n")
-
-    def screenshot_geometry(self):
-        output = self.sock.get_focused_output()
-        focused_view = self.sock.get_focused_view()
-        ox = output["geometry"]["x"]
-        oy = output["workarea"]["y"]
-        vwidth = focused_view["geometry"]["width"]
-        vheight = focused_view["geometry"]["height"]
-        view_geometry = "{0},{1} {2}x{3}".format(ox, oy, vwidth, vheight)
-        return view_geometry, focused_view
+        self.screenshot_focused_output()
 
     def screenshot_view_focused(self):
-        focused = self.sock.get_focused_view()
-        view_id = focused["id"]
-        app_id = focused["app-id"]
-        filename = f"/tmp/{app_id}-{view_id}.png"
-        if os.path.exists(filename):
-            os.remove(filename)
-        self.screenshot_view_id(view_id, filename)
-        stipc.run_cmd(f"xdg-open {filename}")
+        asyncio.run(self.capture_view())
+        output_file = "/tmp/focused_view.png"
+        self.xdg_open(output_file)
 
     def screenshot_focused_output(self):
         self.screenshot_focused_monitor()
