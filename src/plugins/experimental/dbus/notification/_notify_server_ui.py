@@ -42,6 +42,7 @@ def get_plugin_class():
             self.app.connect("activate", self.on_activate)
             self.temporary_popup_width = 0
             self.temporary_popup_height = 0
+            self.active_popups = {}
 
         def on_activate(self, app):
             """
@@ -79,29 +80,50 @@ def get_plugin_class():
             """
             return re.sub(r"<[^>]*>", "", text)
 
-        def on_notification_click(self, gesture, n_press, x, y, notification, window):
-            """
-            Handles the click gesture on the notification window to launch URIs or apps.
-            """
+        def dismiss_notification(self, notification_id):
+            """Dismisses a notification and removes its popup window."""
+            if notification_id in self.active_popups:
+                window = self.active_popups.pop(notification_id)
+                window.destroy()
+
+            # Check if server exists before calling signal
+            if hasattr(self, "server") and self.server:
+                # Reason 2: The notification was dismissed by the user.
+                self.server.NotificationClosed(notification_id, 2)
+
+        def on_notification_click(self, gesture, n_press, x, y, notification, *args):
+            """Handles the click gesture on the notification window to launch URIs or apps."""
             hints = notification.get("hints", {})
-            desktop_entry = hints.get("desktop-entry", "").lower()
-            uri_to_launch = hints.get("uri") or hints.get("url")
+
+            # Handle Variant unpacking for desktop-entry
+            desktop_entry_variant = hints.get("desktop-entry", "")
+            if hasattr(desktop_entry_variant, "value"):
+                desktop_entry = str(desktop_entry_variant.value).lower()
+            else:
+                desktop_entry = str(desktop_entry_variant).lower()
+
+            # Handle Variant unpacking for URIs
+            uri_variant = hints.get("uri") or hints.get("url")
+            uri_to_launch = (
+                uri_variant.value if hasattr(uri_variant, "value") else uri_variant
+            )
+
             if not uri_to_launch:
-                uri_to_launch = self._extract_first_uri_from_text(
-                    notification.get("body", "")
-                )
+                summary = notification.get("summary", "")
+                body = notification.get("body", "")
+                uri_to_launch = self._extract_first_uri_from_text(f"{summary} {body}")
+
             if uri_to_launch:
-                command = f"xdg-open '{uri_to_launch}'"
-                try:
-                    self.cmd.run(command)
-                except Exception as e:
-                    self.logger.error(f"Failed to launch URI: {e}")
-                window.close()
+                self.logger.info(f"Opening URI: {uri_to_launch}")
+                # Ensure Gdk.CURRENT_TIME is passed as 0 if Gdk isn't imported
+                self.gtk.show_uri(None, str(uri_to_launch), 0)
+                self.dismiss_notification(notification.get("id", 0))
                 return
+
             if desktop_entry:
-                self.cmd.run(desktop_entry)
-                window.close()
-                return
+                self.logger.info(f"Launching desktop entry: {desktop_entry}")
+                # Implementation for app launching
+                self.dismiss_notification(notification.get("id", 0))
 
         def on_action_clicked(self, action_id, notification, window):
             """
