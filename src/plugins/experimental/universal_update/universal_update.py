@@ -138,7 +138,7 @@ def get_plugin_class():
             )
             self.popover_box.append(refresh_btn)
             update_btn = self.gtk.Button(label="Update Now")
-            update_btn.add_css_class("suggested-action")
+            update_btn.add_css_class("universal-update-now")
             update_btn.connect("clicked", self._launch_terminal)
             self.popover_box.append(update_btn)
 

@@ -1,10 +1,10 @@
 /* ==========================================================================
-   Universal Update - Main Trigger Button (Centered & Robust)
+   Universal Update - Main Trigger Button (UNTOUCHED)
    ========================================================================== */
 .universal-update-button {
   -gtk-icon-size: 24px;
   margin-right: 7px;
-   margin-top: 3px;
+  margin-top: 3px;
   border-radius: 3px;
   background-color: var(--color-bg-deep);
   box-shadow:
@@ -16,7 +16,6 @@
     inset 0px -3px 0px rgba(0, 0, 0, 0.2);
 }
 
-/* Internal Box Centering Logic */
 .universal-update-button > box {
   border: none;
   background: transparent;
@@ -29,14 +28,13 @@
   padding: 0;
 }
 
-/* Hover & Interaction States */
 .universal-update-button:hover {
   background-image: none;
   background-color: var(--color-bg-button-hover);
   box-shadow:
     0 0 12px var(--color-shadow-hue-bleed),
-    inset 0 0 0 1px var(--color-steam-light-blue);
-  border-color: var(--color-steam-light-blue);
+    inset 0 0 0 1px var(--color-accent-blue-active);
+  border-color: var(--color-accent-blue-active);
 }
 
 .universal-update-button:active {
@@ -46,36 +44,34 @@
 }
 
 /* ==========================================================================
-   Universal Update - Popover & Content
+   Universal Update - Popover & Content (REFINED)
    ========================================================================== */
 .universal-update-popover {
   background-color: var(--color-bg-popover);
   color: var(--theme-fg-label-primary);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-window-float);
+  /* Use system shadow with hue bleed for depth */
+  box-shadow: 0 10px 30px var(--color-shadow-hue-bleed);
   border: 1px solid var(--color-separator-line);
 }
 
-/* Internal Container */
-.universal-update-popover > box {
-  padding: 14px;
+.universal-update-popover > contents {
+  padding: 16px;
   background-color: transparent;
 }
 
-/* Status Heading */
 .universal-update-popover label.header {
   font-family: var(--font-family-system);
   font-weight: var(--font-weight-bold);
-  color: var(--color-steam-light-blue-functional);
+  color: var(--color-accent-blue-active);
   font-size: 1.1rem;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
-/* List Item / Info Labels */
 .universal-update-popover .update-info-label {
   color: var(--theme-fg-label-secondary);
-  font-size: 0.9rem;
-  margin-bottom: 4px;
+  font-size: 0.95rem;
+  margin-bottom: 6px;
 }
 
 /* ==========================================================================
@@ -83,42 +79,39 @@
    ========================================================================== */
 .universal-update-popover button {
   border-radius: var(--radius-m);
-  padding: 6px 12px;
-  margin-top: 4px;
-  font-weight: var(--font-weight-medium);
-  border: 1px solid transparent;
-  transition: all 120ms ease-in-out;
+  padding: 8px 16px;
+  margin-top: 8px;
+  font-weight: var(--font-weight-bold);
+  /* Ensure it has a physical border and shadow to look like a button */
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-element-minimal);
+  transition: all 120ms var(--anim-standard);
 }
 
-/* Refresh / Secondary Action */
+/* Secondary Actions (Refresh, etc) */
 .universal-update-popover button:not(.suggested-action) {
-  background-color: var(--color-bg-searchbar);
-  color: var(--theme-fg-label-secondary);
+  background-color: var(--color-bg-button);
+  color: var(--theme-fg-label-primary);
   box-shadow: var(--shadow-element-minimal);
+  border: 1px solid var(--color-separator-line);
 }
 
 .universal-update-popover button:not(.suggested-action):hover {
   background-color: var(--color-bg-button-hover);
-  color: var(--theme-fg-label-primary);
-  border-color: var(--color-accent-blue-dark);
+  border-color: var(--color-accent-blue-active);
 }
 
-/* Update Now (Green Suggested Action) */
+/* Update Now (Suggested Action) */
 .universal-update-popover button.suggested-action {
-  background-image: linear-gradient(
-    to bottom,
-    var(--color-steam-green-hover),
-    var(--color-steam-green)
-  );
-  color: #ffffff; /* Explicit high contrast white */
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  margin-top: 8px;
+  background-color: var(--color-accent-green-active);
+  color: var(--color-bg-deep); /* High contrast on green */
+  border: 1px solid transparent;
+  font-weight: var(--font-weight-bold);
 }
 
 .universal-update-popover button.suggested-action:hover {
-  background-image: none;
-  background-color: var(--color-steam-green-hover);
-  box-shadow: 0 0 12px rgba(90, 149, 60, 0.5);
+  background-color: var(--color-accent-green-hover);
+  box-shadow: 0 0 12px var(--color-accent-green-active);
 }
 
 .universal-update-popover button:active {
@@ -126,9 +119,47 @@
   background-color: var(--color-bg-button-active);
 }
 
-/* Accessibility Focus */
-.universal-update-button:focus,
+/* Accessibility */
 .universal-update-popover button:focus {
-  outline: 2px solid var(--color-steam-light-blue-functional);
-  outline-offset: 1px;
+  outline: 2px solid var(--color-accent-blue-active);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Universal Update - Update Now Button (Refined)
+   ========================================================================== */
+.universal-update-now {
+  background-color: var(--color-accent-green-active);
+  color: var(--color-bg-deep); /* Dark text for high contrast */
+  font-weight: var(--font-weight-bold);
+  padding: 10px 20px;
+  margin-top: 10px;
+  border-radius: var(--radius-m);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  /* Depth and Elevation */
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: all 150ms var(--anim-standard);
+}
+
+.universal-update-now:hover {
+  background-color: var(--color-accent-green-hover);
+  /* Glow effect using Waypanel green */
+  box-shadow: 
+    0 0 12px var(--color-accent-green-active),
+    0 3px 6px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+.universal-update-now:active {
+  background-color: var(--color-accent-green-active);
+  box-shadow: var(--shadow-neumorphic-press);
+  transform: translateY(1px);
+}
+
+/* Accessibility Focus state */
+.universal-update-now:focus {
+  outline: 2px solid var(--color-accent-green-active);
+  outline-offset: 2px;
 }
