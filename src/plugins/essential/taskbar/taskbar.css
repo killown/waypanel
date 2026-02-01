@@ -1,109 +1,98 @@
-/* Taskbar Precision - 3D Depth & Tactical Feel */
+/* ==========================================================================
+   Tactical Taskbar - Low-Profile 3D Precision
+   ========================================================================== */
 
 .taskbar-container {
-  background-color: var(--color-bg-deep, #121212);
-  border-radius: var(--radius-l, 14px);
-  margin: 2px 6px;
+  background-color: var(--color-bg-window);
+  border-radius: var(--radius-m);
+  margin: 1px 4px;
   padding: 0;
-  /* Outer elevation to lift the solid container off the wallpaper */
-  box-shadow: 
-    0 4px 15px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--theme-decoration-separator);
+  box-shadow: var(--shadow-small);
 }
 
 .taskbar {
   background: transparent;
   margin: 0;
-  padding: 3px 5px;
+  padding: 2px 4px; /* Tight vertical padding to reduce total height */
 }
 
 .taskbar-button {
-  border-radius: var(--radius-m, 10px);
-  background-color: var(--color-bg-button-normal);
+  border-radius: 3px; /* Fixed radius per your request */
+  background-color: var(--color-bg-deep);
   color: var(--theme-fg-label-primary);
   border: none;
-  margin: 0 3px;
+  margin: 0 2px;
   padding: 0 6px;
-  min-height: 32px;
+  min-height: 26px; /* Reduced height for low-profile feel */
   
-  /* 3D Skeuomorphic stack: Top highlight, Bottom shade, Drop shadow */
-  box-shadow: 
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -2px 2px 0 rgba(0, 0, 0, 0.3),
-    0 4px 6px -1px var(--shadow-dark),
-    0 0 2px 0 var(--color-shadow-lighter);
+  /* 3D Stack: Preserving your exact physical shadow logic */
+  box-shadow:
+    inset 0 0px 1px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.25),
+    1px 1px 2px var(--shadow-dark),
+    0px 2px 2px rgba(0, 0, 0, 0.4),
+    0px 2px 1px -1px rgba(0, 0, 0, 0.3),
+    inset 0px -3px 0px rgba(0, 0, 0, 0.2);
 
-  /* Subtle curvature gradient */
-  background-image: linear-gradient(to bottom, 
-                                   rgba(255, 255, 255, 0.03), 
-                                   rgba(0, 0, 0, 0.08));
-
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 150ms var(--anim-standard);
 }
 
 .taskbar-button image {
-  -gtk-icon-size: 20px;
-  /* Filter adds depth specifically to the icon asset */
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+  -gtk-icon-size: 18px; /* Slightly smaller for the low-profile container */
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
 }
 
+/* Hover: Slight lift without breaking the low-profile constraints */
 .taskbar-button:hover {
-  background-color: var(--color-bg-button-normal-hover);
-  
-  /* Increased elevation and accent glow */
-  box-shadow: 
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.2),
-    0 0 0 1px var(--theme-status-accent),
-    0 8px 16px -2px var(--shadow-dark),
-    0 0 12px 0 var(--color-shadow-hue-bleed);
-              
-  transform: translateY(-2px);
+  background-color: var(--color-bg-button-hover);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 0px 1px rgba(0, 0, 0, 0.2),
+    0 4px 8px -2px var(--shadow-dark),
+    0 0 5px var(--color-shadow-hue-bleed);
 }
 
+/* Focused: Active Forged State */
 .taskbar-button.focused {
   background-color: var(--theme-bg-selected-primary);
-  /* "Internal glow" for active state */
+  color: var(--theme-fg-label-inverse);
+  transform: translateY(0);
+  /* Intense inner-glow for focused state */
   box-shadow: 
-    inset 0 2px 4px 0 rgba(0, 0, 0, 0.4),
-    inset 0 0 15px 0 rgba(255, 255, 255, 0.1),
-    0 0 25px 0 var(--color-shadow-hue-bleed),
+    inset 0 1px 2px rgba(0,0,0,0.4),
+    0 0 12px var(--color-shadow-hue-bleed),
     0 0 0 1px var(--theme-status-accent);
-  transform: translateY(-1px) scale(1.02);
 }
 
+/* Active: Mechanical Compression */
 .taskbar-button:active {
-  background-color: var(--color-bg-button-normal-active);
-  background-image: none;
-  /* Recessed "pressed" effect */
+  background-color: var(--color-bg-button-active);
+  transform: translateY(1px);
+  /* Inverted shadow stack for "pressed" effect */
   box-shadow: 
-    inset 0 4px 8px 0 rgba(0, 0, 0, 0.6),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.05),
-    0 1px 2px 0 rgba(255, 255, 255, 0.1);
-              
-  transform: translateY(1px) scale(0.96);
-  transition-duration: 40ms;
+    inset 0 3px 5px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+  transition-duration: 50ms;
 }
 
-/* Context Menu refinement */
+/* Context Menu - Compact Precision */
 popover.taskbar-context-menu contents {
-  background-color: var(--color-bg-surface);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-l, 14px);
-  box-shadow: 
-    0 20px 40px -10px rgba(0, 0, 0, 0.8),
-    0 0 0 1px rgba(255, 255, 255, 0.03);
-  padding: 8px;
+  background-color: var(--color-bg-popover);
+  border: 1px solid var(--theme-decoration-separator);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-window-float);
+  padding: 4px;
 }
 
 .taskbar-menu-item {
-  border-radius: var(--radius-m, 8px);
-  padding: 6px 12px;
-  transition: all 150ms ease;
-  color: var(--theme-text-primary);
+  border-radius: 2px;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--theme-fg-label-primary);
 }
 
 .taskbar-menu-item:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--theme-bg-selected-secondary);
   color: var(--theme-status-accent);
 }
