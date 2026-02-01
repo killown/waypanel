@@ -28,12 +28,78 @@ def get_plugin_class():
     """
     import distro
     import os
+    from gi.repository import Gtk, WebKit
     from src.plugins.core._base import BasePlugin
     from ._database import RecentAppsDatabase
     from ._scanner import AppScanner
     from ._menu import AppMenuHandler
     from ._remote_apps import RemoteApps
     from ._uninstall_window import FlatpakUninstallWindow
+
+    class FlathubBrowser(Gtk.ApplicationWindow):
+        """Dedicated WebKit window for Flathub with install interception."""
+
+        def __init__(self, plugin, **kwargs):
+            super().__init__(title="Flathub Store", **kwargs)
+            self.plugin = plugin
+            self.set_default_size(1100, 800)
+
+            # Setup WebKit
+            self.webview = WebKit.WebView()
+            self.webview.connect("decide-policy", self._on_decide_policy)
+            self.webview.load_uri("https://flathub.org")
+
+            self.set_child(self.webview)
+
+        def _on_decide_policy(self, webview, decision, decision_type):
+            if decision_type == WebKit.PolicyDecisionType.NAVIGATION_ACTION:
+                nav_action = decision.get_navigation_action()
+                uri = nav_action.get_request().get_uri()
+
+                if uri.endswith(".flatpakref") or "dl.flathub.org" in uri:
+                    self.plugin.logger.info(f"Intercepted Flathub Install: {uri}")
+
+                    # 1. Extract App ID from the URI
+                    # Example: https://.../net.kirgroup.confy.flatpakref -> net.kirgroup.confy
+                    app_id = (
+                        uri.split("/")[-1]
+                        .replace(".flatpakref", "")
+                        .replace("flatpak+", "")
+                    )
+
+                    # 2. Build hit data for your PackageHelper
+                    hit_data = {
+                        "id": app_id,
+                        "name": app_id.split(".")[-1].capitalize(),
+                        "remote": True,
+                    }
+
+                    # 3. Trigger your internal installer (avoids xdg-open crash)
+                    try:
+                        # Use the helper already defined in your plugin
+                        self.plugin.menu_handler.pkg_helper.install_flatpak(hit_data)
+
+                        # Use your project's view centering logic
+                        def configure_view_later():
+                            id_found = self.plugin.view_id_found(
+                                title="Flatpak Installer"
+                            )
+                            if id_found:
+                                self.plugin.wf_helper.center_view_on_output(
+                                    id_found[0], 800, 710
+                                )
+
+                        self.plugin.glib.timeout_add(150, configure_view_later)
+                    except Exception as e:
+                        self.plugin.logger.error(
+                            f"Internal install trigger failed: {e}"
+                        )
+
+                    # 4. Reset Browser and Ignore request
+                    self.webview.load_uri("https://flathub.org")
+                    decision.ignore()
+                    return True
+            return False
 
     class AppLauncher(BasePlugin):
         """
@@ -317,6 +383,29 @@ def get_plugin_class():
                 btn.connect("clicked", self.on_system_action_clicked, action_label)
                 self.sidebar_vbox.append(btn)
 
+                # Insert Flathub Store button directly below Compositor
+                if action_label == "Compositor":
+                    f_btn = self.gtk.Button()
+                    f_btn.add_css_class("app-launcher-sidebar-button")
+                    self.gtk_helper.add_cursor_effect(f_btn)
+
+                    f_content = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 12)
+                    f_img = self.gtk.Image.new_from_icon_name(
+                        "system-software-install-symbolic"
+                    )
+                    f_img.set_pixel_size(22)
+                    f_img.add_css_class("app-launcher-system-button-icon")
+
+                    f_lbl = self.gtk.Label.new("Flathub Store")
+                    f_lbl.add_css_class("app-launcher-system-button-label")
+                    f_lbl.set_halign(self.gtk.Align.START)
+
+                    f_content.append(f_img)
+                    f_content.append(f_lbl)
+                    f_btn.set_child(f_content)
+                    f_btn.connect("clicked", self.on_flathub_store_clicked)
+                    self.sidebar_vbox.append(f_btn)
+
             # Bottom of Column: Show Ignored Switch
             separator = self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL)
             separator.set_margin_top(10)
@@ -380,6 +469,17 @@ def get_plugin_class():
             self.middle_hbox.append(self.sidebar_vbox)
             self.main_box.append(self.middle_hbox)
             self.popover_launcher.set_child(self.main_box)
+
+        def on_flathub_store_clicked(self, _widget):
+            """Callback for the Flathub Store sidebar button."""
+            if not hasattr(self, "_flathub_win") or self._flathub_win is None:
+                from gi.repository import WebKit
+
+                self._flathub_win = FlathubBrowser(self)
+
+            self._flathub_win.present()
+            if self.popover_launcher:
+                self.popover_launcher.popdown()
 
         def view_id_found(self, title="Wayfire Configuration"):
             return [
