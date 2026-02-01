@@ -28,6 +28,9 @@ def get_plugin_class():
     """
     import distro
     import os
+    import gi
+
+    gi.require_version("WebKit", "6.0")
     from gi.repository import Gtk, WebKit
     from src.plugins.core._base import BasePlugin
     from ._database import RecentAppsDatabase
