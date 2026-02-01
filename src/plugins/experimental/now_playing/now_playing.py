@@ -313,7 +313,10 @@ def get_plugin_class():
                 self.main_button = Gtk.Button()
                 self.add_cursor_effect(self.main_button)
                 self.main_button.add_css_class("player-trigger")
-                self.main_button.set_icon_name("multimedia-audio-player-symbolic")
+                icon_name = self.icon_exist(
+                    "media-playback-start-symbolic", ["media-playback-playing-symbolic"]
+                )
+                self.main_button.set_icon_name(icon_name)
 
                 pop, scr, _ = self.create_popover(  # pyright: ignore
                     parent_widget=self.main_button,

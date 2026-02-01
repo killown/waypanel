@@ -1,13 +1,13 @@
+/* ==========================================================================
+   Advanced Volume Control - Full Adaptive Theme
+   ========================================================================== */
+
 /* Main Popover Shell */
 .volume-popover-root {
-  /* Replace backdrop-filter with a solid or high-opacity color 
-     as GTK 4 CSS does not support blur effects */
-  background-color: rgba(24, 36, 52, 0.98); 
+  background-color: var(--color-bg-popover);
   border-radius: var(--radius-xl);
-  border: none;
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.6),
-    0 0 15px var(--color-shadow-hue-bleed);
+  border: 1px solid var(--theme-decoration-separator);
+  box-shadow: var(--shadow-window-float);
 }
 
 .volume-popover-root scrolledwindow {
@@ -17,42 +17,123 @@
 /* Content Wrapper */
 .volume-content-wrapper {
   background-color: transparent;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
-  padding: 0 4px 10px 10px; /* shorthand for padding-right, bottom, left */
+  padding: 0 4px 10px 10px;
 }
 
-/* Routing Revealer
-   GTK 4 doesn't support max-width in CSS. 
-   Sizing should be handled via set_size_request in the Python UI code.
-*/
+/* Routing Revealer (Device List) */
 .routing-revealer {
-  background-color: rgba(0, 0, 0, 0.15);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-  margin: 0 8px 8px 8px; /* Fixed margin syntax */
+  background-color: var(--theme-bg-view-secondary);
+  border-bottom: 1px solid var(--theme-decoration-separator);
+  margin: 0 8px 8px 8px;
   border-radius: var(--radius-m);
 }
 
-/* Sections inside the revealer */
 .routing-revealer > box {
   padding: 10px;
   margin-top: 2px;
 }
 
-/* Toggle Header */
+/* Toggle Header (Expand/Collapse) */
 .volume-section-toggle-header {
-  background-color: rgba(255, 255, 255, 0.02);
-  border: none;
+  background-color: var(--color-bg-alt-row);
+  border: 1px solid var(--theme-decoration-separator);
   border-radius: var(--radius-m);
   margin: 8px 8px 2px 8px;
   padding: 10px;
-  box-shadow: none;
 }
 
 .volume-section-toggle-header:hover {
-  background-color: rgba(122, 201, 255, 0.08);
+  background-color: var(--color-bg-button-hover);
 }
 
-/* Ultra-Thin Scrollbar */
+/* FIX: Section Headers
+   Adding the 'label' prefix and !important to force the theme accent
+   and prevent system 'blue' overrides.
+*/
+label.volume-header-text {
+  font-family: var(--font-family-default);
+  font-weight: var(--font-weight-bold);
+  color: var(--theme-status-accent) !important;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  padding: 12px 0 6px 8px;
+  line-height: var(--line-height-standard);
+}
+
+/* Application Group Card */
+.volume-app-entry {
+  background-color: var(--theme-bg-view-secondary);
+  border-radius: var(--radius-l);
+  padding: 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--theme-decoration-separator);
+  box-shadow: var(--shadow-neumorphic-press);
+}
+
+/* Stream Titles */
+.volume-stream-title {
+  color: var(--theme-fg-label-secondary);
+  font-size: 0.72rem;
+}
+
+/* ==========================================================================
+   DropDown - Adaptive Structural Styling
+   ========================================================================== */
+
+.volume-device-dropdown {
+  background-color: var(--color-bg-entry-base);
+  border: 1px solid var(--theme-decoration-separator);
+  border-radius: var(--radius-s);
+  color: var(--theme-fg-label-primary);
+  padding: 6px 10px;
+  margin-top: 6px;
+  min-height: 38px;
+}
+
+.volume-device-dropdown > label {
+  color: var(--theme-fg-label-primary);
+  line-height: var(--line-height-comfortable);
+  padding: 2px 0;
+  -gtk-label-ellipsize: end;
+}
+
+/* Popover list inside the dropdown */
+.volume-device-dropdown popover list {
+  background-color: var(--color-bg-popover);
+  padding: 6px;
+}
+
+.volume-device-dropdown popover listrow label {
+  color: var(--theme-fg-label-primary);
+  line-height: var(--line-height-comfortable);
+  padding: 6px 0;
+}
+
+/* ==========================================================================
+   GTK Scale / Volume Sliders
+   ========================================================================== */
+scale trough {
+  background-color: var(--color-bg-button);
+  border-radius: var(--radius-xl);
+  min-height: 4px;
+}
+
+scale highlight {
+  background-color: var(--theme-status-accent);
+  border-radius: var(--radius-xl);
+}
+
+scale slider {
+  background-color: var(--color-bg-raised);
+  border: 1px solid var(--theme-decoration-separator);
+  min-width: 14px;
+  min-height: 14px;
+  border-radius: 999px;
+  box-shadow: var(--shadow-small);
+}
+
+/* Scrollbar Style */
 .volume-popover-root scrollbar.vertical {
   background-color: transparent;
   border: none;
@@ -60,50 +141,16 @@
 }
 
 .volume-popover-root scrollbar slider {
-  background-color: rgba(122, 201, 255, 0.25);
+  background-color: var(--color-bg-transparent-active);
   border-radius: 10px;
-  min-width: 2px;
 }
 
 .volume-popover-root scrollbar slider:hover {
-  background-color: var(--color-steam-light-blue);
-  min-width: 4px;
+  background-color: var(--theme-status-accent);
 }
 
-/* Section Headers */
-.volume-header-text {
-  font-family: var(--font-family-default);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-steam-light-blue-functional);
-  text-shadow: 0 0 8px rgba(122, 201, 255, 0.4);
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 2px;
-  padding: 12px 0 6px 8px;
-}
-
-/* Application Group Card */
-.volume-app-entry {
-  background-color: rgba(20, 32, 45, 0.4);
-  border-radius: var(--radius-l);
-  padding: 14px;
-  margin-bottom: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
-}
-
-/* Stream Titles */
-.volume-stream-title {
-  color: var(--color-fg-muted);
-  font-size: 0.72rem;
-  opacity: 0.8;
-}
-
-.volume-device-dropdown {
-  background-color: rgba(23, 29, 37, 0.8);
-  border: 1px solid var(--color-steam-blue-dark);
-  border-radius: var(--radius-s);
-  color: var(--color-fg-muted);
-  padding: 4px 10px;
-  margin-top: 6px;
+/* Label Status Logic */
+.volume-percentage-label {
+  font-family: var(--font-family-monospace);
+  color: var(--theme-fg-label-primary);
 }

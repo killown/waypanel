@@ -1,60 +1,124 @@
-
+/* ==========================================================================
+   System Monitor - Main Panel Button
+   ========================================================================== */
 .system-monitor-menubutton {
-
+  padding-left: 6px;
+  padding-right: 6px;
+  border-radius: var(--radius-s);
+  transition: all 200ms var(--anim-standard);
 }
 
+.system-monitor-menubutton:hover {
+  background-color: var(--color-bg-button-hover);
+}
+
+/* Fix: Redirect blue focus ring to theme accent */
+.system-monitor-menubutton:focus {
+  outline: 2px solid var(--theme-status-accent);
+  outline-offset: -2px;
+}
+
+/* ==========================================================================
+   System Monitor - Popover & Shell
+   ========================================================================== */
 .system-monitor-popover {
-    background-color: var(--color-bg-base);
-    border-radius: var(--radius-xl);
-    border: 1px solid var(--color-separator-line);
-    padding: 10px;
-    min-width: 380px;
-    box-shadow: var(--shadow-window-float);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--theme-decoration-separator);
+  box-shadow: var(--shadow-window-float);
+  min-width: 380px;
 }
 
-.system-monitor-popover.background > contents {
-  background-color: var(--color-bg-deep);
-}
-
+/* GTK4 Popover Internal Nodes */
+.system-monitor-popover.background > contents,
 .system-monitor-popover.background > arrow {
-  background-color: var(--color-bg-deep);
+  background-color: var(--color-bg-popover);
+  border: 1px solid var(--theme-decoration-separator);
 }
 
 .system-monitor-vbox {
-    padding: 10px;
+  padding: 10px;
 }
 
+/* ==========================================================================
+   System Monitor - List & Scrolled Area
+   ========================================================================== */
 .system-monitor-scrolledwindow {
-    border-radius: var(--radius-m);
-    border: 1px solid var(--color-separator-line);
-    background-color: var(--color-bg-alt-row);
+  border-radius: var(--radius-m);
+  border: 1px solid var(--theme-decoration-separator);
+  background-color: var(--theme-bg-alternating-row);
 }
 
 .system-monitor-listview {
-    border-radius: var(--radius-s);
-    background-color: var(--color-bg-base);
-    padding: 4px;
+  background-color: transparent;
+  padding: 4px;
+}
+
+/* Fix: Kill bluish focus on the list itself */
+.system-monitor-listview:focus {
+  outline: none;
 }
 
 .system-monitor-listitem {
-    padding: 2px 6px;
-    border-bottom: 1px solid var(--color-separator-line);
-    border-radius: var(--radius-s);
-    background-color: var(--color-bg-button);
+  padding: 4px 8px;
+  margin-bottom: 2px;
+  border-radius: var(--radius-s);
+  background-color: var(--theme-bg-view-secondary);
+  color: var(--theme-fg-label-primary);
+  border: 1px solid transparent;
+  transition: background-color 150ms ease;
 }
 
-.system-monitor-hbox {
+.system-monitor-listitem:hover {
+  background-color: var(--color-bg-button-hover);
 }
 
+/* Fix: Bluish selection/focus state redirection */
+.system-monitor-listitem:selected,
+.system-monitor-listitem:focus {
+  background-color: var(--theme-bg-selected-secondary);
+  border-color: var(--theme-status-accent);
+  outline: none;
+}
+
+/* ==========================================================================
+   System Monitor - Typography & State Handling
+   ========================================================================== */
 .system-monitor-name-label {
-    font-family: "DejaVu Sans Mono";
-    font-size: 12px;
-    color: var(--theme-fg-label-primary);
+  font-family: "DejaVu Sans Mono";
+  font-size: 12px;
+  color: var(--theme-fg-label-primary);
 }
 
 .system-monitor-value-label {
-    font-family: "DejaVu Sans Mono";
-    font-size: 12px;
-    color: var(--theme-fg-label-secondary);
+  font-family: "DejaVu Sans Mono";
+  font-size: 12px;
+  color: var(--theme-fg-label-secondary);
 }
 
+/* Critical state triggered by Python GObject logic (is_critical property) */
+.critical-alert {
+  color: var(--theme-status-danger) !important;
+  font-weight: var(--font-weight-bold);
+}
+
+/* ==========================================================================
+   System Monitor - Frame & Separators
+   ========================================================================== */
+GtkFrame {
+  border: 1px solid var(--theme-decoration-separator);
+  border-radius: var(--radius-m);
+}
+
+GtkSeparator {
+  background-color: var(--theme-decoration-separator);
+  min-height: 1px;
+}
+
+/* Fix: Expander Arrow Color */
+expander > title > arrow {
+  color: var(--theme-fg-label-secondary);
+}
+
+expander > title:hover > arrow {
+  color: var(--theme-status-accent);
+}

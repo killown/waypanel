@@ -1,45 +1,50 @@
-/* Launcher Button */
+/* Launcher Button - Using Neutral Material Logic */
 .app-launcher-menu-button {
   -gtk-icon-size: 24px;
   padding-top: 9px;
   padding-bottom: 7px;
-  /* Fixed: Combined linear-gradient with background-color since GTK expects images or colors separately */
-  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.18) 22%, transparent 23%);
-  background-color: var(--color-bg-box-primary);
-  border-radius: var(--radius-m);
-  border-right: 2px solid rgba(0, 0, 0, 0.2);
-  box-shadow: inset 0px 1px 0px rgba(255, 255, 255, 0.2), 0px 1px 1px rgba(0, 0, 0, 0.2);
-  color: var(--theme-fg-label-primary);
+  border-radius: 3px;
+  background-color: var(--color-bg-deep);
+  box-shadow:
+    inset 0 0px 1px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.25),
+    1px 1px 2px var(--shadow-dark),
+    0px 2px 2px rgba(0, 0, 0, 0.4),
+    0px 2px 1px -1px rgba(0, 0, 0, 0.3),
+    inset 0px -3px 0px rgba(0, 0, 0, 0.2);
 }
 
 .app-launcher-menu-button:hover {
-  background-color: var(--color-bg-button-normal-hover);
-  box-shadow: inset 0px 2px 2px rgba(255, 255, 255, 0.25), 0px 2px 8px rgba(0, 0, 0, 0.3);
+  background-color: var(--color-bg-button-hover);
+  box-shadow: 0 0 10px var(--color-shadow-lighter);
 }
 
-/* Popover Shell */
+/* Popover Shell - Adaptive Floating Window */
 .app-launcher-popover.background > contents {
-  background-color: var(--theme-bg-under-page);
-  border: 1px solid var(--theme-decoration-separator);
+  background-color: var(--color-bg-popover);
+  border: 1px solid var(--color-separator-line);
   border-radius: var(--radius-xl);
-  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.5);
+  /* Uses the elevated shadow protocol from waypanel.txt */
+  box-shadow: var(--shadow-window-float);
 }
 
 .app-launcher-popover.background > arrow {
-  background-color: var(--theme-bg-under-page);
+  background-color: var(--color-bg-popover);
+  border: 1px solid var(--color-separator-line);
 }
 
-/* Sidebar */
+/* Sidebar - Using Neutral Surfaces instead of Suggested-Hover to avoid tint clashing */
 .app-launcher-sidebar-vbox {
-  background-color: var(--color-bg-button-suggested-hover);
+  background-color: var(--color-bg-window);
   padding: 8px;
   min-width: 160px;
-  border-left: 1px solid var(--theme-decoration-separator);
+  border-left: 1px solid var(--color-separator-line);
   border-radius: 0px var(--radius-xl) var(--radius-xl) 0px;
 }
 
 .app-launcher-sidebar-button {
   background-color: transparent;
+  color: var(--theme-fg-label-secondary);
   border: 1px solid transparent;
   padding: 10px 14px;
   margin-bottom: 4px;
@@ -48,12 +53,15 @@
 
 .app-launcher-sidebar-button:hover {
   background-color: var(--color-bg-button-flat-hover);
+  color: var(--theme-fg-label-primary);
 }
 
 .app-launcher-sidebar-button:checked,
 .app-launcher-sidebar-button:selected {
+  /* Using selection variables ensures it matches the Cherry Red or accent color of the theme */
   background-color: var(--theme-bg-selected-secondary);
-  border-left: 3px solid var(--theme-status-accent);
+  color: var(--color-accent-red);
+  border-left: 3px solid var(--color-accent-red);
 }
 
 /* Search bar */
@@ -66,33 +74,38 @@
   color: var(--theme-fg-label-primary);
 }
 
-/* Icon Styling */
+.app-launcher-searchbar:focus {
+  border-color: var(--color-border-entry-focus);
+  box-shadow: var(--theme-decoration-keyboard-focus);
+}
+
+/* Icon Styling - Grid Items */
 .app-launcher-popover .app-launcher-icon-from-popover {
   -gtk-icon-size: 48px;
   padding: 10px;
   background-color: var(--theme-bg-view-secondary);
-  border: 1px solid var(--theme-decoration-separator);
+  border: 1px solid var(--color-separator-line);
   border-radius: var(--radius-l);
 }
 
 .app-launcher-popover .app-launcher-icon-from-popover:hover {
-  background-color: var(--color-bg-button-normal-hover);
-  border-color: var(--theme-status-accent);
+  background-color: var(--color-bg-button-hover);
+  border-color: var(--color-accent-red);
+  box-shadow: 0 0 8px var(--color-bg-transparent-active);
 }
 
 .app-launcher-popover .app-launcher-label-from-popover {
   font-size: 11px;
-  font-weight: bold;
+  font-weight: var(--font-weight-bold);
   color: var(--theme-fg-label-primary);
   margin-top: 10px;
 }
 
 .flatpak-emblem {
   font-size: 7pt;
-  font-weight: bold;
-  background-color: var(--theme-status-accent);
-  color: var(--theme-fg-label-inverse);
+  font-weight: var(--font-weight-bold);
+  background-color: var(--color-accent-red);
+  color: var(--color-fg-inverse);
   padding: 2px 6px;
   border-radius: var(--radius-xs);
-  margin-top: -2px;
 }

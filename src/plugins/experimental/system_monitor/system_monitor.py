@@ -38,7 +38,7 @@ def get_plugin_class():
 
     gi.require_version("Gio", "2.0")
     gi.require_version("Gtk", "4.0")
-    from gi.repository import GObject, Gtk
+    from gi.repository import GObject, Gtk, Gio
     from ._system_monitor_helper import SystemMonitorHelpers
     from src.plugins.core._base import BasePlugin
 
@@ -55,6 +55,7 @@ def get_plugin_class():
             self._value = value
             self._tooltip = tooltip
             self._visible = visible
+            self._is_critical = False
 
         @GObject.Property(type=str)
         def name(self) -> str:
@@ -94,6 +95,16 @@ def get_plugin_class():
                 self._visible = value
                 self.notify("visible")
 
+        @GObject.Property(type=bool, default=False)
+        def is_critical(self) -> bool:
+            return self._is_critical
+
+        @is_critical.setter
+        def is_critical(self, value: bool):
+            if self._is_critical != value:
+                self._is_critical = value
+                self.notify("is-critical")
+
     class SystemMonitorPlugin(BasePlugin):
         """
         Plugin class managing hardware stats and process tracking in a sectioned layout.
@@ -120,8 +131,8 @@ def get_plugin_class():
                 self.sections["Battery"] = "battery-full-symbolic"
 
             self.create_gesture = self.plugins["gestures_setup"].create_gesture
-            self.create_menu_popover_system()
 
+            # Define icons BEFORE creating the UI
             self.main_icon = self.get_plugin_setting_add_hint(
                 ["main_icon"],
                 "system-monitor-app-symbolic",
@@ -137,14 +148,24 @@ def get_plugin_class():
                 ],
                 "A prioritized list of fallback icons to use if the main icon is not found.",
             )
+
+            # Now safe to create the UI
+            self.create_menu_popover_system()
             self.plugins["css_generator"].install_css("system-monitor.css")
 
         def create_menu_popover_system(self):
             """
             Initializes the tray button and icon.
             """
-            self.menubutton_system = self.gtk.Button()
+            self.menubutton_system = Gtk.Button()
             self.menubutton_system.add_css_class("system-monitor-menubutton")
+
+            # self.main_icon is now defined
+            actual_icon = self.gtk_helper.icon_exist(
+                self.main_icon, self.fallback_main_icons
+            )
+            self.menubutton_system.set_child(Gtk.Image.new_from_icon_name(actual_icon))
+
             self.menubutton_system.connect("clicked", self.open_popover_system)
             self.gtk_helper.add_cursor_effect(self.menubutton_system)
             self.main_widget = (self.menubutton_system, "append")
@@ -152,10 +173,6 @@ def get_plugin_class():
         def _set_margins(self, widget: Gtk.Widget, value: int):
             """
             Manual application of margins for GTK4.
-
-            Args:
-                widget: The target widget.
-                value: Margin size in pixels.
             """
             widget.set_margin_top(value)
             widget.set_margin_bottom(value)
@@ -189,16 +206,10 @@ def get_plugin_class():
             value: str,
             tooltip: str | None = None,
             is_visible: bool = True,
+            is_critical: bool = False,
         ):
             """
             Updates the specific section store and tracks the key for pruning.
-
-            Args:
-                section: Section header (e.g., CPU).
-                name: Metric name label.
-                value: Metric value.
-                tooltip: Optional hover text.
-                is_visible: Current visibility state.
             """
             if self.popover_system is None:
                 return
@@ -209,20 +220,19 @@ def get_plugin_class():
                     item = self.metric_items[key]
                     item.value = str(value)
                     item.visible = True
+                    item.is_critical = is_critical
                     if tooltip is not None:
                         item.tooltip = tooltip
                 else:
-                    self.add_metric(section, name, value, tooltip)
+                    item = self.add_metric(section, name, value, tooltip)
+                    if item:
+                        item.is_critical = is_critical
             else:
                 self.remove_metric(section, name)
 
         def remove_metric(self, section: str, name: str):
             """
             Hides an item instead of removing it from the store to prevent layout blinking.
-
-            Args:
-                section: Target section.
-                name: Metric name.
             """
             key = f"{section}:{name}"
             if key in self.metric_items:
@@ -233,15 +243,6 @@ def get_plugin_class():
         ):
             """
             Appends a new metric item to the relevant section store.
-
-            Args:
-                section: Section header.
-                name: Metric label.
-                value: Initial value.
-                tooltip: Initial tooltip.
-
-            Returns:
-                ProperMetricItem: The newly created item.
             """
             if section not in self.list_stores:
                 return None
@@ -254,12 +255,6 @@ def get_plugin_class():
         def _hw_prettifier(self, driver: str) -> str:
             """
             Maps sensor driver strings to hardware names dynamically.
-
-            Args:
-                driver: Raw driver name.
-
-            Returns:
-                str: Prettified hardware name.
             """
             mapping = {
                 "k10temp": "AMD CPU",
@@ -273,15 +268,12 @@ def get_plugin_class():
             }
             if driver in mapping:
                 return mapping[driver]
-
-            # Clean up underscore/case for unknown drivers
             return driver.replace("_", " ").title()
 
         def add_gpu(self):
             """
             Handles multi-vendor GPU status polling synchronously.
             """
-            # NVIDIA
             try:
                 nv = subprocess.run(
                     [
@@ -299,8 +291,6 @@ def get_plugin_class():
                 self.update_metric("GPU", "VRAM", f"{p[2].strip()} / {p[3].strip()} MB")
             except Exception:
                 pass
-
-            # AMD
             try:
                 import pyamdgpuinfo
 
@@ -314,9 +304,6 @@ def get_plugin_class():
             except Exception:
                 pass
 
-            # Intel (via sysfs or similar if helper supports it)
-            # Future expansion: Add Intel GPU metrics if a reliable library is found.
-
         def _poll_sensors(self):
             """
             Polls thermals and routes them correctly based on hardware patterns.
@@ -325,67 +312,59 @@ def get_plugin_class():
                 temps = psutil.sensors_temperatures()
                 if not temps:
                     return
-
                 for driver, entries in temps.items():
                     if not entries:
                         continue
-
                     vendor = self._hw_prettifier(driver)
                     current_temp = entries[0].current
                     critical_temp = entries[0].critical or 85
-
                     val = f"{current_temp}°C"
-                    if current_temp >= critical_temp:
-                        val = f"<span foreground='#ff3b3b' weight='bold'>{val}</span>"
-
-                    # Dynamic routing logic
+                    is_danger = current_temp >= critical_temp
                     if "nvme" in driver or "Storage" in vendor:
-                        self.update_metric("Storage", f"{vendor} Temp", val)
+                        self.update_metric(
+                            "Storage", f"{vendor} Temp", val, is_critical=is_danger
+                        )
                     elif any(x in driver for x in ["wifi", "mt7921", "iwl"]):
-                        self.update_metric("Network", "WiFi Temp", val)
+                        self.update_metric(
+                            "Network", "WiFi Temp", val, is_critical=is_danger
+                        )
                     elif "gpu" in driver.lower() or "radeon" in vendor.lower():
-                        self.update_metric("GPU", f"{vendor} Temp", val)
+                        self.update_metric(
+                            "GPU", f"{vendor} Temp", val, is_critical=is_danger
+                        )
                     else:
-                        # Default to CPU section for general thermal zones or CPU drivers
-                        self.update_metric("CPU", f"{vendor} Temp", val)
+                        self.update_metric(
+                            "CPU", f"{vendor} Temp", val, is_critical=is_danger
+                        )
             except Exception:
                 pass
 
         def fetch_and_update_system_data(self):
             """
             Updates all monitor sections and prunes keys using visibility to avoid flickering.
-
-            Returns:
-                bool: Whether the popover is still visible.
             """
             self.updated_keys.clear()
-
             self.update_metric("CPU", "Usage", f"{self.helper.get_cpu_usage()}%")
             self.update_metric("RAM", "Usage", self.helper.get_ram_info())
             self.update_metric("Network", "Usage", self.helper.get_network_usage())
-
             if "Battery" in self.sections:
                 batt = self.helper.get_battery_status()
                 self.update_metric(
                     "Battery", "Status", batt or "N/A", is_visible=batt is not None
                 )
-
             self.add_gpu()
             self._poll_sensors()
-
             disks = self.helper.get_disk_usages()
             for u in disks:
                 self.update_metric(
                     "Storage", u["mountpoint"], f"{u['used']:.1f} / {u['total']:.0f}GB"
                 )
-
             fid = self._wf_helper.get_the_last_focused_view_id()
             view = self.ipc.get_view(fid)
             if view:
                 p = view["pid"]
                 p_usage = self.helper.get_process_usage(p)
                 p_disk = self.helper.get_process_disk_usage(p)
-
                 self.update_metric(
                     "Wayfire", "APP ID", f"({view['app-id']}): {view['id']}"
                 )
@@ -406,17 +385,14 @@ def get_plugin_class():
                         "Disk Usage",
                         f"<b>I/O:</b> R:{p_disk['read_bytes']} | W:{p_disk['write_bytes']}",
                     )
-
                 self.update_metric(
                     "Wayfire", "Watch events", "L_CLICK all or R_CLICK selected"
                 )
-
             for full_key, item in self.metric_items.items():
                 if full_key not in self.updated_keys:
                     if "Wayfire" in full_key:
                         continue
                     item.visible = False
-
             return self.popover_system and self.popover_system.is_visible()
 
         def open_popover_system(self, *_):
@@ -435,78 +411,59 @@ def get_plugin_class():
             """
             Builds section-based layout with a default-hidden Storage expander.
             """
-            self.popover_system = self.gtk.Popover.new()
+            self.popover_system = Gtk.Popover.new()
+            self.popover_system.add_css_class("system-monitor-popover")
             self.popover_system.connect("closed", lambda *_: self.stop_system_updates())
-
-            root_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, spacing=15)
+            root_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, spacing=15)
+            root_vbox.add_css_class("system-monitor-vbox")
             self._set_margins(root_vbox, 15)
-
             for name, icon in self.sections.items():
                 self._build_section(name, icon, root_vbox)
-
-            storage_exp = self.gtk.Expander.new("Storage & Disks")
+            storage_exp = Gtk.Expander.new("Storage & Disks")
             storage_exp.set_expanded(False)
-            storage_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, spacing=5)
+            storage_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, spacing=5)
             self._set_margins(storage_vbox, 10)
-
-            store = self.gio.ListStore.new(ProperMetricItem)
+            store = Gio.ListStore.new(ProperMetricItem)
             self.list_stores["Storage"] = store
-            lv = self.gtk.ListView.new(
-                self.gtk.SingleSelection.new(store), self._get_factory()
-            )
+            lv = Gtk.ListView.new(Gtk.SingleSelection.new(store), self._get_factory())
+            lv.add_css_class("system-monitor-listview")
             storage_vbox.append(lv)
             storage_exp.set_child(storage_vbox)
             root_vbox.append(storage_exp)
-
             self.popover_system.set_child(root_vbox)
             self.popover_system.set_parent(self.menubutton_system)
-            self.popover_system.set_size_request(450, -1)
 
         def _build_section(self, name, icon, container):
             """
             Constructs a themed section frame with a stable ListView.
-
-            Args:
-                name: Header label.
-                icon: Header icon name.
-                container: Parent container.
             """
-            frame = self.gtk.Frame()
-            vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, spacing=5)
+            frame = Gtk.Frame()
+            vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, spacing=5)
             self._set_margins(vbox, 10)
-            icon = self.icon_exist(icon)
-            header = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, spacing=10)
-            header.append(self.gtk.Image.new_from_icon_name(icon))
-            lbl = self.gtk.Label()
+            icon = self.gtk_helper.icon_exist(icon)
+            header = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=10)
+            header.append(Gtk.Image.new_from_icon_name(icon))
+            lbl = Gtk.Label()
             lbl.set_markup(f"<b>{name}</b>")
             header.append(lbl)
             vbox.append(header)
-            vbox.append(self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL))
-
-            store = self.gio.ListStore.new(ProperMetricItem)
+            vbox.append(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+            store = Gio.ListStore.new(ProperMetricItem)
             self.list_stores[name] = store
-            lv = self.gtk.ListView.new(
-                self.gtk.SingleSelection.new(store), self._get_factory()
-            )
+            lv = Gtk.ListView.new(Gtk.SingleSelection.new(store), self._get_factory())
+            lv.add_css_class("system-monitor-listview")
             vbox.append(lv)
-
             if name == "Wayfire":
-                self.app_io_label = self.gtk.Label(
-                    halign=self.gtk.Align.START, xalign=0.0
-                )
+                self.app_io_label = Gtk.Label(halign=Gtk.Align.START, xalign=0.0)
                 vbox.append(self.app_io_label)
-
             frame.set_child(vbox)
             container.append(frame)
 
         def _get_factory(self):
             """
             Returns a configured SignalListItemFactory.
-
-            Returns:
-                Gtk.SignalListItemFactory: The setup factory.
             """
-            f = self.gtk.SignalListItemFactory()
+            f = Gtk.SignalListItemFactory()
             f.connect("setup", self._factory_setup)
             f.connect("bind", self._factory_bind)
             return f
@@ -514,14 +471,13 @@ def get_plugin_class():
         def _factory_setup(self, f, li):
             """
             Row layout helper with visibility containers.
-
-            Args:
-                f: Factory instance.
-                li: Target list item.
             """
-            hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, spacing=20)
-            n = self.gtk.Label(halign=self.gtk.Align.START, hexpand=True, xalign=0.0)
-            v = self.gtk.Label(halign=self.gtk.Align.END, xalign=1.0)
+            hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing=20)
+            hbox.add_css_class("system-monitor-listitem")
+            n = Gtk.Label(halign=Gtk.Align.START, hexpand=True, xalign=0.0)
+            n.add_css_class("system-monitor-name-label")
+            v = Gtk.Label(halign=Gtk.Align.END, xalign=1.0)
+            v.add_css_class("system-monitor-value-label")
             v.set_use_markup(True)
             hbox.append(n)
             hbox.append(v)
@@ -531,15 +487,10 @@ def get_plugin_class():
         def _factory_bind(self, f, li):
             """
             Property binding and gesture assignment.
-
-            Args:
-                f: Factory instance.
-                li: Bound list item.
             """
             item = li.get_item()
             h = li._h
             li._n.set_markup(f"{item.name}:")
-
             item.bind_property(
                 "value", li._v, "label", GObject.BindingFlags.SYNC_CREATE
             )
@@ -549,6 +500,15 @@ def get_plugin_class():
             item.bind_property(
                 "visible", h, "visible", GObject.BindingFlags.SYNC_CREATE
             )
+
+            def on_critical_notified(obj, pspec):
+                if obj.is_critical:
+                    li._v.add_css_class("critical-alert")
+                else:
+                    li._v.remove_css_class("critical-alert")
+
+            item.connect("notify::is-critical", on_critical_notified)
+            on_critical_notified(item, None)
 
             nm = item.name
             if nm == "APP PID":

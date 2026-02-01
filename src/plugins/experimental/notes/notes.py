@@ -165,7 +165,7 @@ def get_plugin_class():
 
             self.main_icon = self.get_plugin_setting_add_hint(
                 ["main_icon"],
-                "notes",
+                "ymuse-replace-queue-symbolic",
                 "The default icon name for the notes plugin.",
             )
 
@@ -173,22 +173,22 @@ def get_plugin_class():
                 ["fallback_main_icons"],
                 [
                     "view-paged-symbolic",
-                    "notes-panel",
-                    "stock_notes",
+                    "org.gnome.Notes-symbolic",
+                    "notes-app-symbolic",
                     "accessories-notes-symbolic",
                     "xapp-annotations-text-symbolic",
-                    "accessories-notes",
                     "accessories-text-editor-symbolic",
                     "x-office-document-symbolic",
+                    "ymuse-replace-queue-symbolic",
                 ],
                 "A prioritized list of fallback icons to use if the main icon is not found.",
             )
 
-            self.menubutton_notes = Gtk.Button.new()
-            self.menubutton_notes.add_css_class("notes-menubutton")
-            self.main_widget = (self.menubutton_notes, "append")
-            self.menubutton_notes.connect("clicked", self.open_popover_notes)
-            self.gtk_helper.add_cursor_effect(self.menubutton_notes)
+            self.button_open_popover = Gtk.Button()
+            self.button_open_popover.add_css_class("notes-menubutton")
+            self.button_open_popover.connect("clicked", self.open_popover_notes)
+            self.main_widget = (self.button_open_popover, "append")
+            self.gtk_helper.add_cursor_effect(self.button_open_popover)
             self.plugins["css_generator"].install_css("notes.css")
 
         def create_popover_notes(self):
@@ -252,7 +252,7 @@ def get_plugin_class():
             self.main_box.append(self.scrolled_window)
             self.popover_notes.set_child(self.main_box)
             self.run_in_thread(self.update_notes_list)
-            self.popover_notes.set_parent(self.menubutton_notes)
+            self.popover_notes.set_parent(self.button_open_popover)
             return self.popover_notes
 
         def clear_notes(self, *_):
