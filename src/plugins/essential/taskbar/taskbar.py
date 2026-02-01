@@ -31,6 +31,7 @@ def get_plugin_class():
     from .views import TaskbarViews
     from .gestures import TaskbarGestures
     import re
+    import gc
 
     class TitleFormatter:
         @staticmethod
@@ -228,7 +229,6 @@ def get_plugin_class():
                 hbox.append(lbl)
                 row.set_child(hbox)
 
-                # FIXED: Removed duplicate "clicked" argument
                 row.connect(
                     "clicked",
                     lambda *_, view=v: [
@@ -249,7 +249,7 @@ def get_plugin_class():
                 for item in self.button_pool:
                     if item["button"] == btn:
                         item["view_id"] = "available"
-                self._panel_instance.gc.collect()
+                gc.collect()
 
         def update_button(
             self, btn, view: dict, count: int = 1, is_focused: bool = False
