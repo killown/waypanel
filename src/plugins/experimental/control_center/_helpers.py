@@ -121,6 +121,61 @@ class ControlCenterHelpers:
         except Exception:
             return ""
 
+    def on_delete_config_clicked(self, button, category_name):
+        """Prompts the user to confirm wiping the plugin configuration."""
+        from gi.repository import Adw
+
+        dialog = Adw.MessageDialog(
+            transient_for=getattr(self.parent, "main_window", None),
+            heading=f"Wipe {category_name.replace('_', ' ').capitalize()} Config?",
+            body=(
+                f"This will permanently delete the configuration for '{category_name}' "
+                "from config.toml. This action cannot be undone."
+            ),
+        )
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("delete", "Wipe Config")
+        dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_default_response("cancel")
+        dialog.set_close_response("cancel")
+
+        def handle_response(dialog, response):
+            if response == "delete":
+                self._execute_config_wipe(category_name)
+
+        dialog.connect("response", handle_response)
+        dialog.present()
+
+    def _execute_config_wipe(self, category_name: str) -> None:
+        """Removes a plugin configuration section and resets to main grid."""
+        full_config_key = self.parent.ui_key_to_plugin_id_map.get(category_name)
+
+        if not full_config_key:
+            return
+
+        try:
+            # Authoritative removal via the ConfigHandler
+            self.parent.config_handler.remove_root_setting(full_config_key)
+            self.parent.config = self.parent.config_handler.config_data
+
+            self.display_notify(
+                f"Configuration for {category_name.replace('_', ' ').capitalize()} wiped.",
+                "user-trash-full-symbolic",
+            )
+
+            # Rebuild UI state
+            self.parent.logic.setup_categories_grid()
+
+            # Navigate back to search grid
+            # Logic: Using 'category_grid' to match the main_stack child name
+            self.parent.main_stack.set_visible_child_name("category_grid")
+
+            self.parent.config_handler.save_config()
+
+        except Exception as e:
+            self.logger.error(f"Failed to execute config wipe for {category_name}: {e}")
+            self.display_notify(f"Error wiping configuration: {e}", "dialog-error")
+
     def display_notify(self, title: str, icon_name: str):
         if not self.parent.toast_overlay:
             print("ERROR: Cannot show toast. Adw.ToastOverlay not initialized.")

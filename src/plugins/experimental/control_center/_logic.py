@@ -28,9 +28,13 @@ def get_logic_class():
                 self.p.content_stack.set_visible_child_name("no_config")
                 return
 
-            # Clear grid
+            # Clear the FlowBox (Grid)
             while child := self.p.category_flowbox.get_first_child():
                 self.p.category_flowbox.remove(child)
+
+            # Clear the Content Stack (The actual settings pages)
+            while child := self.p.content_stack.get_first_child():
+                self.p.content_stack.remove(child)
 
             # Theme Page
             THEME_UI_KEY = "theme"
@@ -67,6 +71,7 @@ def get_logic_class():
             full_config_key = self.p.helper._generate_plugin_map(
                 self.p.default_config
             ).get(category_name, category_name)
+
             scrolled_window = Gtk.ScrolledWindow()
             scrolled_window.set_policy(
                 Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC
@@ -101,11 +106,23 @@ def get_logic_class():
                         category_name,
                     )
 
+                    # Wipe Button
+                    wipe_button = Gtk.Button(icon_name="edit-delete-symbolic")
+                    wipe_button.add_css_class("destructive-action")
+                    wipe_button.set_tooltip_text(f"Wipe {category_name} configuration")
+                    wipe_button.set_valign(Gtk.Align.CENTER)
+                    wipe_button.connect(
+                        "clicked",
+                        self.p.helper.on_delete_config_clicked,
+                        category_name,
+                    )
+
                     toggle_row = Adw.ActionRow(
                         title="Enable Plugin",
-                        subtitle="Toggle the plugin on or off. Changes are persistent.",
+                        subtitle="Toggle the plugin on or off or wipe all settings.",
                     )
                     toggle_row.add_suffix(toggle_switch)
+                    toggle_row.add_suffix(wipe_button)
                     toggle_row.set_activatable_widget(toggle_switch)
                     status_group.add(toggle_row)
                     main_box.append(status_group)
@@ -161,13 +178,11 @@ def get_logic_class():
                         self.p.default_config, *current_path
                     )
 
-                    # Create the row with Title and Description
                     action_row = Adw.ActionRow(
                         title=key.replace("_", " ").capitalize(), subtitle=hint
                     )
                     action_row.add_css_class("control-center-setting-row")
 
-                    # Add ComboBoxText to the suffix area so it aligns to the right
                     if isinstance(
                         widget,
                         (Gtk.Switch, Gtk.Entry, Gtk.SpinButton, Gtk.ComboBoxText),
