@@ -4,6 +4,8 @@ def get_plugin_metadata(_):
         "name": "Color Picker",
         "version": "1.0.0",
         "enabled": True,
+        "container": "background",
+        "deps": ["event_manager"],
         "description": "Configuration for the Color Picker plugin, enabling the global keybind.",
     }
 
