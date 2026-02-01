@@ -1,8 +1,4 @@
 .tray_icon {
-  background-color: var(--primary-bg);
-}
-
-.tray-menu-button {
   border-radius: 3px;
   background-color: var(--color-bg-deep);
   box-shadow:
@@ -13,4 +9,3 @@
     0px 2px 1px -1px rgba(0, 0, 0, 0.3),
     inset 0px -3px 0px rgba(0, 0, 0, 0.2);
 }
-
