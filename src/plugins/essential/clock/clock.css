@@ -1,18 +1,34 @@
+/* ==========================================================================
+   System Clock - High-Precision 3D Machined Theme
+   ========================================================================== */
+
 .clock-label {
-  background: var(--color-bg-deep);
-  border-radius: var(--radius-xs);
-  padding: 4px 3px;
-  border: 1px solid var(--color-shade-stone); 
-  box-shadow: rgba(0, 0, 0, 0.4) 0px 2px 4px, rgba(0, 0, 0, 0.3) 0px 7px 13px -3px, rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+  background-color: var(--color-bg-deep);
+  border-radius: 3px; /* Precise fixed radius for mechanical look */
+  padding: 4px 6px;   /* Adjusted for proportional balance */
+  border: none;       /* Shadow stack handles the physical boundary */
+  
+  /* 3D Stack: Top highlight, Bottom shade, and Inset depth */
+  box-shadow:
+    inset 0 0px 1px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.25),
+    1px 1px 2px var(--shadow-dark),
+    0px 2px 2px rgba(0, 0, 0, 0.4),
+    0px 2px 1px -1px rgba(0, 0, 0, 0.3),
+    inset 0px -3px 0px rgba(0, 0, 0, 0.2);
+
   font-family: var(--font-family-default), monospace;
-  font-size: 15px;
-  color: var(--main-text);
+  font-size: 16px;
+  color: var(--theme-fg-label-primary);
   text-decoration: none;
-  text-shadow: 0 0 4px rgba(136, 192, 208, 0.25);
+  
+  /* Subtle illumination effect */
+  text-shadow: 0 0 4px var(--color-bg-transparent-active);
   line-height: 1.2;
+  
+  transition: all 150ms var(--anim-standard);
 }
 
-/* Remaining styles (unchanged) */
 .clock-box {
   padding: 0 4px;
   background-color: transparent;
@@ -20,7 +36,13 @@
 
 .clock-button {
   background-color: transparent;
-  border-radius: var(--radius-xs);
+  border-radius: 3px;
   box-shadow: none;
-  transition: none;
+  transition: transform 200ms ease;
+}
+
+/* Optional: Slight "hover" lift to match taskbar interactivity */
+.clock-button:hover .clock-label {
+  background-color: var(--color-bg-button-hover);
+  transform: translateY(-1px);
 }
