@@ -154,16 +154,41 @@ def get_plugin_class():
         def GetServerInformation(self) -> "ssss":
             return ["waypanel", "waypanel-project", "1.1.0", "1.2"]
 
+        async def notify_send_daemon_conflict(self):
+            from subprocess import Popen
+
+            await Popen(
+                [
+                    "notify-send",
+                    "Notification conflict: Another daemon is already running.",
+                ]
+            )
+
         async def run(self):
             try:
                 bus = await MessageBus(bus_type=BusType.SESSION).connect()
                 bus.export("/org/freedesktop/Notifications", self)
-                await bus.request_name(
-                    "org.freedesktop.Notifications",
-                    flags=NameFlag.ALLOW_REPLACEMENT
-                    | NameFlag.REPLACE_EXISTING
-                    | NameFlag.DO_NOT_QUEUE,
+
+                # Initial request without replacement to check status
+                reply = await bus.request_name(
+                    "org.freedesktop.Notifications", flags=NameFlag.DO_NOT_QUEUE
                 )
+
+                # If another daemon is running, status will be EXISTS (value 3)
+                if reply == RequestNameReply.EXISTS:
+                    self.logger.warning(
+                        "Notification conflict: Another daemon is already running."
+                    )
+                    await self.notify_send_daemon_conflict()
+
+                    # Forcibly take over the name after the warning
+                    await bus.request_name(
+                        "org.freedesktop.Notifications",
+                        flags=NameFlag.ALLOW_REPLACEMENT
+                        | NameFlag.REPLACE_EXISTING
+                        | NameFlag.DO_NOT_QUEUE,
+                    )
+
                 self.logger.info("Notification daemon listening via dbus-fast.")
             except Exception as e:
                 self.logger.error(f"Error starting notification daemon: {e}")
