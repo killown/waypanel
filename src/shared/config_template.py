@@ -150,12 +150,16 @@ default_config = {
         "_section_hint": (
             "Configuration for the Quick Notes plugin, allowing users to save and view short text entries."
         ),
-        "main_icon": "notes-panel",
+        "main_icon": "ymuse-replace-queue-symbolic",
         "fallback_main_icons": [
-            "stock_notes",
             "accessories-notes-symbolic",
             "xapp-annotations-text-symbolic",
-            "accessories-notes",
+            "view-paged-symbolic",
+            "org.gnome.Notes-symbolic",
+            "notes-app-symbolic",
+            "accessories-text-editor-symbolic",
+            "x-office-document-symbolic",
+            "ymuse-replace-queue-symbolic",
         ],
         "icon_delete": "edit-delete",
         "hide_in_systray": False,
