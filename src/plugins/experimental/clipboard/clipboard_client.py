@@ -30,6 +30,7 @@ def get_plugin_class():
     from .clipboard_server import get_plugin_class as get_server_class
     from ._clipboard_template import Helpers
     from ._clipboard_helpers import ClipboardHelpers, ClipboardManager
+    import gc
 
     class ClipboardClient(BasePlugin):
         """
@@ -198,7 +199,7 @@ def get_plugin_class():
                 # Re-link the populated list to the ScrolledWindow
                 self.sw.set_child(self.listbox)
 
-                self._panel_instance.gc.collect()
+                gc.collect()
 
             except Exception as e:
                 self.logger.error(f"Clipboard: Population failed: {e}")
