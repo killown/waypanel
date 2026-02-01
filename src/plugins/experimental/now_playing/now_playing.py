@@ -204,7 +204,9 @@ def get_plugin_class():
                 self._load_art_async(art_url)
             elif not art_url:
                 app_id = data.get("player", "").split(".")[-1]
-                icon_name = self.plugin.icon_exist(app_id) or "audio-x-generic-symbolic"
+                icon_name = (
+                    self.plugin.icon_exist(app_id) or "multimedia-audio-player-symbolic"
+                )
                 self.art_image.set_from_icon_name(icon_name)
 
         def _start_marquee(self):
