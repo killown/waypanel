@@ -1,6 +1,3 @@
-CONTAINER = ""
-
-
 def get_plugin_metadata(panel):
     """
     Returns the metadata for the App Launcher plugin.
@@ -29,6 +26,7 @@ def get_plugin_class():
     import distro
     import os
     import gi
+    import shlex
 
     gi.require_version("WebKit", "6.0")
     from src.plugins.core._base import BasePlugin
@@ -406,7 +404,7 @@ def get_plugin_class():
             self.middle_hbox.append(self.center_vbox)
             self.middle_hbox.append(self.sidebar_vbox)
             self.main_box.append(self.middle_hbox)
-            self.popover_launcher.set_child(self.main_box)
+            self.popover_launcher.set_child(self.main_box)  # pyright: ignore
 
         def on_flathub_store_clicked(self, _widget):
             """Callback for the Flathub Store sidebar button."""
@@ -418,7 +416,7 @@ def get_plugin_class():
 
             # Close the launcher popover after opening the store
             if self.popover_launcher:
-                self.popover_launcher.popdown()
+                self.popover_launcher.popdown()  # pyright: ignore
 
         def view_id_found(self, title="Wayfire Configuration"):
             return [
@@ -431,14 +429,14 @@ def get_plugin_class():
             config_viewer = self.plugins.get("wayfire_config_viewer")
             if hasattr(config_viewer, "window"):
                 # set the view focus
-                if config_viewer.window and config_viewer.window.get_visible():
+                if config_viewer.window and config_viewer.window.get_visible():  # pyright: ignore
                     id_found = self.view_id_found()
                     if id_found:
                         self.ipc.set_focus(id_found[0])
-                        self.popover_launcher.popdown()
+                        self.popover_launcher.popdown()  # pyright: ignore
                 # open a new window instance
                 if hasattr(config_viewer, "_open_viewer"):
-                    config_viewer._open_viewer()
+                    config_viewer._open_viewer()  # pyright: ignore
 
         def on_system_action_clicked(self, button, action):
             """Executes requested system action and closes popover."""
@@ -542,9 +540,9 @@ def get_plugin_class():
             self.scrolled_window.set_min_content_width(width)
             self.scrolled_window.set_min_content_height(self.min_app_grid_height)
             if self.popover_launcher:
-                self.popover_launcher.set_parent(self.appmenu)
+                self.popover_launcher.set_parent(self.appmenu)  # pyright: ignore
                 if not is_initial_setup:
-                    self.popover_launcher.popup()
+                    self.popover_launcher.popup()  # pyright: ignore
 
         def on_keypress(self, *_):
             """Launches the searched application escaping the sandbox if needed."""
@@ -552,7 +550,7 @@ def get_plugin_class():
                 return
 
             desktop_id = f"{self.search_get_child}.desktop"
-            app_info = self.all_apps.get(desktop_id)
+            app_info = self.all_apps.get(desktop_id)  # pyright: ignore
 
             if app_info:
                 exec_cmd = app_info.get_exec()
@@ -562,7 +560,12 @@ def get_plugin_class():
                 cmd_parts = [p for p in exec_cmd.split() if not p.startswith("%")]
 
                 if os.path.exists("/.flatpak-info"):
-                    final_cmd = ["flatpak-spawn", "--host"] + cmd_parts
+                    final_cmd = [
+                        "flatpak-spawn",
+                        "--host",
+                        "--env=GDK_BACKEND=wayland",
+                        f"--env=WAYLAND_DISPLAY={os.environ.get('WAYLAND_DISPLAY', 'wayland-0')}",
+                    ] + cmd_parts
                 else:
                     final_cmd = cmd_parts
 
@@ -575,7 +578,7 @@ def get_plugin_class():
                     self.logger.error(f"AppLauncher: Launch failed: {e}")
 
             if self.popover_launcher:
-                self.popover_launcher.popdown()
+                self.popover_launcher.popdown()  # pyright: ignore
 
         def _add_app_to_flowbox(self, app, app_id):
             """Creates visual entry for an application and adds to grid."""
@@ -598,7 +601,7 @@ def get_plugin_class():
                 vbox.set_halign(self.gtk.Align.CENTER)
                 vbox.set_valign(self.gtk.Align.CENTER)
                 vbox.add_css_class("app-launcher-vbox")
-                vbox.MYTEXT = (display_name, cmd, keywords, False)
+                vbox.MYTEXT = (display_name, cmd, keywords, False)  # pyright: ignore
                 image = self.gtk.Image.new_from_gicon(icon)
                 image.set_halign(self.gtk.Align.CENTER)
                 image.add_css_class("app-launcher-icon-from-popover")
@@ -657,7 +660,7 @@ def get_plugin_class():
             return self.recent_db.fetch_recent()
 
         def run_app_from_launcher(self, x, y):
-            """Executes the selected application escaping the sandbox if needed."""
+            """Executes the selected application escaping the sandbox using a shell string."""
             selected = x.get_selected_children()
             if not selected:
                 return
@@ -667,45 +670,50 @@ def get_plugin_class():
 
             data = vbox.MYTEXT
             desktop_id = data[1]
-            is_remote = data[3] if len(data) > 3 else False
+            app_info = self.all_apps.get(desktop_id)  # pyright: ignore
 
-            if is_remote:
-                return
-
-            app_info = self.all_apps.get(desktop_id)
             if app_info:
                 exec_cmd = app_info.get_exec()
                 if not exec_cmd:
                     return
 
+                # Clean GTK field codes (%u, %f, etc)
                 cmd_parts = [p for p in exec_cmd.split() if not p.startswith("%")]
 
                 if os.path.exists("/.flatpak-info"):
-                    final_cmd = ["flatpak-spawn", "--host"] + cmd_parts
+                    # Generic Wayland seat forwarding for host execution
+                    final_cmd_list = [
+                        "flatpak-spawn",
+                        "--host",
+                        "--env=GDK_BACKEND=wayland",
+                        f"--env=WAYLAND_DISPLAY={os.environ.get('WAYLAND_DISPLAY', 'wayland-0')}",
+                    ] + cmd_parts
                 else:
-                    final_cmd = cmd_parts
-
-                import subprocess
+                    final_cmd_list = cmd_parts
 
                 try:
-                    subprocess.Popen(final_cmd)
+                    # Construct the single command string
+                    full_cmd_string = shlex.join(final_cmd_list)
+
+                    # Execute via the project's string runner
+                    self.run_cmd(full_cmd_string)
                     self.add_recent_app(desktop_id)
                 except Exception as e:
                     self.logger.error(f"AppLauncher: Launch failed: {e}")
 
             if self.popover_launcher:
-                self.popover_launcher.popdown()
+                self.popover_launcher.popdown()  # pyright: ignore
             self.update_flowbox()
 
         def open_popover_launcher(self, *_):
             """Toggles the visibility of the launcher popover."""
             if self.popover_launcher:
-                if self.popover_launcher.is_visible():
-                    self.popover_launcher.popdown()
+                if self.popover_launcher.is_visible():  # pyright: ignore
+                    self.popover_launcher.popdown()  # pyright: ignore
                 else:
                     self.update_flowbox()
                     self.flowbox.unselect_all()
-                    self.popover_launcher.popup()
+                    self.popover_launcher.popup()  # pyright: ignore
                     self.searchbar.set_text("")
 
         def popover_is_open(self, *_):
@@ -728,21 +736,19 @@ def get_plugin_class():
             """Closes popover on Escape key press."""
             if event.keyval == self.gdk.KEY_Escape:
                 if self.popover_launcher:
-                    self.popover_launcher.popdown()
+                    self.popover_launcher.popdown()  # pyright: ignore
                 return True
             return False
 
         def on_show_searchbar_action_actived(self, action, parameter):
             """Activates the search mode."""
-            self.searchbar.set_search_mode(True)
+            self.searchbar.set_search_mode(True)  # pyright: ignore
 
         def on_search_entry_changed(self, searchentry):
             """Updates grid filter and schedules a remote search."""
-            from gi.repository import GLib
-
             searchentry.grab_focus()
             if self.search_timeout_id:
-                GLib.source_remove(self.search_timeout_id)
+                self.glib.source_remove(self.search_timeout_id)
                 self.search_timeout_id = None
 
             for widget in list(self.remote_widgets):
@@ -753,7 +759,7 @@ def get_plugin_class():
             self.flowbox.invalidate_filter()
             query = searchentry.get_text().strip().lower()
             if len(query) >= 3:
-                self.search_timeout_id = GLib.timeout_add(
+                self.search_timeout_id = self.glib.timeout_add(
                     350, self.remote_apps._trigger_remote_search, query
                 )
 
@@ -777,7 +783,7 @@ def get_plugin_class():
             """Triggers installation and closes the launcher popover."""
             self.menu_handler.pkg_helper.install_flatpak(hit)
             if self.popover_launcher:
-                self.popover_launcher.popdown()
+                self.popover_launcher.popdown()  # pyright: ignore
 
             def configure_view_later():
                 id_found = self.view_id_found(title="Flatpak Installer")
