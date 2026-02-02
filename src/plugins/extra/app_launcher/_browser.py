@@ -89,7 +89,9 @@ class FlathubBrowser(Gtk.ApplicationWindow):
         if uri and "/apps/" in uri:
             app_id = uri.split("/apps/")[-1].split("/")[0]
             if self._is_flatpak_installed(app_id):
-                self._mark_as_installed_in_dom()
+                # FIXME: sometimes disabling all buttons
+                # self._mark_as_installed_in_dom()
+                pass
 
     def _on_load_changed(self, webview, load_event):
         if load_event == WebKit.LoadEvent.FINISHED:
