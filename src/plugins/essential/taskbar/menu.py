@@ -48,7 +48,7 @@ class TaskbarMenu:
         self.menu.set_has_arrow(True)
         self.menu.set_autohide(True)
         self.menu.add_css_class("taskbar-context-menu")
-        self.menu.active_view_id = widget.view_id
+        self.menu.active_view_id = widget.view_id  # pyright: ignore
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         box.set_margin_end(8)
@@ -99,33 +99,78 @@ class TaskbarMenu:
         self.menu.set_pointing_to(rect)
         self.menu.popup()
 
+    def _check_hanging_process(self, vid):
+        """Checks if view is still active and kills it if necessary."""
+        import os
+        import signal
+        import subprocess
+
+        # Scan current views to see if the target still exists
+        active_view = next(
+            (v for v in self.ipc.list_views() if v.get("id") == vid), None
+        )
+
+        if active_view:
+            pid = active_view.get("pid", -1)
+            app_id = active_view.get("app-id", "Unknown")
+
+            try:
+                subprocess.Popen(
+                    [
+                        "notify-send",
+                        "-i",
+                        "process-stop-symbolic",
+                        "Taskbar Watchdog",
+                        f"Process '{app_id}' is hanging. Force killing...",
+                    ]
+                )
+
+                # Force Kill
+                if pid > 0:
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+                    except Exception as e:
+                        self.plugin.logger.error(
+                            f"Watchdog failed to kill {pid} ({app_id}): {e}"
+                        )
+            except Exception as e:
+                self.plugin.logger.error(e)
+
+        return False  # Don't repeat the timer
+
     def popdown(self):
         """Hides the menu."""
         if self.menu:
             self.menu.popdown()
 
     def _on_menu_fullscreen_clicked(self, _):
-        vid = self.menu.active_view_id
+        vid = self.menu.active_view_id  # pyright: ignore
         current = self.ipc.get_view(vid)["fullscreen"]
         self.ipc.set_view_fullscreen(vid, not current)
-        self.menu.popdown()
+        self.menu.popdown()  # pyright: ignore
 
     def _on_menu_atop_clicked(self, _):
-        vid = self.menu.active_view_id
+        vid = self.menu.active_view_id  # pyright: ignore
         current = self.ipc.get_view(vid)["always-on-top"]
         self.ipc.set_view_always_on_top(vid, not current)
-        self.menu.popdown()
+        self.menu.popdown()  # pyright: ignore
 
     def _on_menu_sticky_clicked(self, _):
-        vid = self.menu.active_view_id
+        vid = self.menu.active_view_id  # pyright: ignore
         current = self.ipc.get_view(vid)["sticky"]
         self.ipc.set_view_sticky(vid, not current)
-        self.menu.popdown()
+        self.menu.popdown()  # pyright: ignore
 
     def _on_menu_move_next_clicked(self, _):
-        self.plugin.wf_helper.send_view_to_output(self.menu.active_view_id, None, True)
-        self.menu.popdown()
+        self.plugin.wf_helper.send_view_to_output(self.menu.active_view_id, None, True)  # pyright: ignore
+        self.menu.popdown()  # pyright: ignore
 
     def _on_menu_close_clicked(self, _):
-        self.ipc.close_view(self.menu.active_view_id)
-        self.menu.popdown()
+        from gi.repository import GLib
+
+        vid = self.menu.active_view_id  # pyright: ignore
+        self.ipc.close_view(vid)
+        self.menu.popdown()  # pyright: ignore
+
+        # Schedule check for hanging process
+        GLib.timeout_add_seconds(3, self._check_hanging_process, vid)
