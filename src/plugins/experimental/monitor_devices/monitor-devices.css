@@ -1,0 +1,94 @@
+/* ==========================================================================
+   Monitor Devices - Adaptive 3D Theme
+   ========================================================================== */
+
+/* Top Panel Button */
+.usb-monitor-button {
+  margin-right: 10px;
+  margin-top: 3px;
+  border-radius: 3px;
+  background-color: var(--color-bg-deep);
+  box-shadow:
+    inset 0 0px 1px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.25),
+    1px 1px 2px var(--shadow-dark),
+    0px 2px 2px rgba(0, 0, 0, 0.4),
+    0px 2px 1px -1px rgba(0, 0, 0, 0.3),
+    inset 0px -3px 0px rgba(0, 0, 0, 0.2);
+}
+
+/* Popover Styling */
+.usb-monitor-popover popover contents {
+  background-color: var(--color-bg-popover);
+  color: var(--theme-fg-label-primary);
+  border-radius: var(--radius-xl);
+  padding: 0;
+}
+
+.usb-monitor-container {
+  background-color: var(--color-bg-popover);
+  color: var(--theme-fg-label-primary);
+  padding: 20px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--theme-decoration-separator);
+  box-shadow: var(--shadow-window-float);
+}
+
+/* Device Entry (Balloon Style) */
+.usb-device-row {
+  background-color: var(--theme-bg-view-secondary);
+  border-radius: var(--radius-xl);
+  padding: 18px;
+  margin: 4px 0 12px 0;
+  border: 1px solid var(--theme-decoration-separator);
+  box-shadow:
+    inset 0 1px 1px var(--color-shadow-lighter),
+    var(--shadow-elevated);
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.usb-device-row:hover {
+  background-color: var(--color-bg-button-hover);
+  box-shadow:
+    var(--shadow-window-float),
+    inset 0 0 0 1px var(--theme-status-accent);
+}
+
+/* Device Name Header */
+.usb-device-label {
+  font-weight: var(--font-weight-bold);
+  font-size: 16px;
+  color: var(--theme-fg-label-primary);
+  text-shadow: 0 1px 2px var(--color-shadow-lighter);
+}
+
+/* Action Buttons Container */
+.usb-action-box {
+  margin-top: 8px;
+}
+
+/* Standard Control Buttons (Open/Eject) */
+.usb-open-button,
+.usb-eject-button {
+  background-color: var(--color-bg-raised);
+  color: var(--theme-fg-label-primary);
+  border-radius: var(--radius-l);
+  padding: 8px 18px;
+  border: 1px solid var(--theme-decoration-separator);
+  box-shadow: var(--shadow-medium);
+  font-weight: var(--font-weight-bold);
+  transition: all 200ms ease;
+}
+
+/* Open Button Specific (Suggested Action) */
+.usb-open-button:hover {
+  background-color: var(--color-bg-button-hover);
+  border-color: var(--theme-status-accent);
+}
+
+/* Eject Button Specific (Destructive Action) */
+.usb-eject-button:hover {
+  background-color: var(--theme-status-danger);
+  color: var(--theme-fg-label-inverse);
+  border-color: var(--theme-status-danger);
+}
