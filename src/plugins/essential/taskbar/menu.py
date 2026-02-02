@@ -99,49 +99,6 @@ class TaskbarMenu:
         self.menu.set_pointing_to(rect)
         self.menu.popup()
 
-    def _check_hanging_process(self, vid):
-        """Checks if view is still active via IPC and kills it if PID > 0."""
-        import os
-        import signal
-        import subprocess
-
-        # Retrieve the current state of the view directly
-        view = self.ipc.get_view(vid)
-
-        # If view is gone (None) completely, we are good.
-        if not view:
-            return False
-
-        pid = view.get("pid", -1)
-
-        # PID -1 usually implies successful minimization to tray.
-        # We only kill if we have a tangible Process ID > 0.
-        if pid <= 0:
-            return False
-
-        # If PID is valid (>0) and view still exists, it is hanging.
-        app_id = view.get("app-id", "Unknown")
-
-        subprocess.Popen(
-            [
-                "notify-send",
-                "-i",
-                "process-stop-symbolic",
-                "Taskbar Watchdog",
-                f"Process '{app_id}' is hanging. Force killing...",
-            ]
-        )
-
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except ProcessLookupError:
-            # Process might have died exactly between check and kill
-            pass
-        except Exception as e:
-            self.plugin.logger.error(f"Watchdog failed to kill {pid} ({app_id}): {e}")
-
-        return False
-
     def popdown(self):
         """Hides the menu."""
         if self.menu:
@@ -168,6 +125,12 @@ class TaskbarMenu:
     def _on_menu_move_next_clicked(self, _):
         self.plugin.wf_helper.send_view_to_output(self.menu.active_view_id, None, True)  # pyright: ignore
         self.menu.popdown()  # pyright: ignore
+
+    def _check_hanging_process(self, vid):
+        from src.shared.wayfire_helpers import WayfireHelpers
+
+        wf_helper = WayfireHelpers(self.plugin._panel_instance)
+        wf_helper._check_hanging_process(vid)
 
     def _on_menu_close_clicked(self, _):
         from gi.repository import GLib
