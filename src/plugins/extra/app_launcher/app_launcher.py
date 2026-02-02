@@ -174,6 +174,12 @@ def get_plugin_class():
                         ],
                     ),
                 },
+                "Restart Panel": {
+                    "icons": self.get_plugin_setting(
+                        ["buttons", "icons", "restart"],
+                        ["view-refresh-symbolic", "system-reboot-symbolic"],
+                    ),
+                },
                 "Exit Panel": {
                     "icons": self.get_plugin_setting(
                         ["buttons", "icons", "exit"],
@@ -442,6 +448,28 @@ def get_plugin_class():
             """Executes requested system action and closes popover."""
             if action == "Exit Panel":
                 self.subprocess.Popen(self.exit_panel_command.split())
+            if action == "Restart Panel":
+                root_path = self.path_handler.get_root_path()
+                run_script = os.path.join(root_path, "run.py")
+
+                restart_cmd = f"nohup python {run_script} > /dev/null 2>&1 &"
+
+                if os.path.exists("/.flatpak-info"):
+                    cmd_list = [
+                        "flatpak-spawn",
+                        "--host",
+                        "bash",
+                        "-c",
+                        f"({restart_cmd}) & disown",
+                    ]
+                else:
+                    cmd_list = ["bash", "-c", f"({restart_cmd}) & disown"]
+
+                try:
+                    # Execute as a single joined string
+                    self.run_cmd(shlex.join(cmd_list))
+                except Exception as e:
+                    self.logger.error(f"AppLauncher: Panel Restart failed: {e}")
             elif action == "Logout":
                 self.subprocess.Popen(self.logout_command.split())
             elif action == "Shutdown":

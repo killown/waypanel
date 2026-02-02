@@ -56,6 +56,10 @@ class PathHandler:
                 paths.append(resolved_path)
         return paths
 
+    def get_root_path(self) -> str:
+        """Returns the absolute string path to the project root directory."""
+        return str(self._package_root)
+
     def get_config_dir(self) -> Path:
         """
         Returns the user-specific, writable configuration directory:
