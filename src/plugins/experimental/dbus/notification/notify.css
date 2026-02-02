@@ -119,7 +119,6 @@ popover contents {
   color: var(--theme-fg-label-primary);
   border-radius: var(--radius-s); 
   border: 1px solid var(--theme-decoration-separator);
-  align-self: center;
   transition: all 200ms ease;
 }
 

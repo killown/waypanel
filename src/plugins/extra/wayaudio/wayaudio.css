@@ -53,7 +53,7 @@
 label.volume-header-text {
   font-family: var(--font-family-default);
   font-weight: var(--font-weight-bold);
-  color: var(--theme-status-accent) !important;
+  color: var(--theme-status-accent);
   text-transform: uppercase;
   font-size: 0.65rem;
   letter-spacing: 2px;
@@ -95,7 +95,6 @@ label.volume-header-text {
   color: var(--theme-fg-label-primary);
   line-height: var(--line-height-comfortable);
   padding: 2px 0;
-  -gtk-label-ellipsize: end;
 }
 
 /* Popover list inside the dropdown */

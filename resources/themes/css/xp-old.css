@@ -1,81 +1,75 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - XP OLD 95 (PERFECTED AAA) ==== */
+  /* ==== CORE PALETTE - Windows 2000 Pro (#d4d0c8) == */
   /* ================================================= */
   
-  --color-bg-base: #C0C0C0;
-  --color-bg-window: var(--color-bg-base);
-  --color-bg-panel: var(--color-bg-base);
-  --color-bg-popover: var(--color-bg-base);
-  --color-bg-searchbar: #FFFFFF;
-  --color-bg-box-primary: #bfbfbf;
+  --color-bg-base: #d4d0c8;
+  --color-bg-window: #ffffff;
+  --color-bg-panel: #d4d0c8;
+  --color-bg-popover: #d4d0c8;
+  --color-bg-searchbar: #ffffff;
+  --color-bg-box-primary: #d4d0c8;
   --color-bg-box-secondary: #808080;
-  --color-bg-button: var(--color-bg-base);
-  --color-bg-button-hover: #D0D0D0;
-  --color-bg-button-active: #B0B0B0;
-  --color-bg-surface: var(--color-bg-base);
-  --color-bg-raised: var(--color-bg-base);
-  --color-bg-deep: #808080;
-  --color-bg-alt-row: #F0F0F0;
-  --color-bg-transparent-active: #000080;
+  --color-bg-button: #d4d0c8;
+  --color-bg-button-hover: #e4e0d8;
+  --color-bg-button-active: #b4b0a8;
+  --color-bg-surface: #d4d0c8;
+  --color-bg-raised: #d4d0c8;
+  --color-bg-deep: #3a6ea5; 
+  --color-bg-alt-row: #e4e4e4;
+  --color-bg-transparent-active: #e4e4e4;
 
+  /* Standard Win2k Foreground Palette */
   --color-fg-primary: #000000;
   --color-fg-secondary: #000000;
   --color-fg-muted: #808080;
   --color-fg-subtle: #808080;
-  --color-fg-inverse: #FFFFFF;
+  --color-fg-inverse: #ffffff;
 
-  --color-fg-primary-AAA: #454545; /* New AAA Compliant Primary Text on #C0C0C0 */
-  --color-fg-muted-AAA: #454545; /* New AAA Compliant Muted/Subtle Text */
-  --color-fg-link-AAA: #000091; /* New AAA Compliant Blue Link on #C0C0C0 */
+  --color-fg-primary-AAA: #000000; 
+  --color-fg-muted-AAA: #404040; 
+  --color-fg-link-AAA: #0000ff; 
 
-  --color-accent-blue: #0000ff;
-  --color-accent-blue-dark: #000050;
+  /* Win2k Specific Accents - Balanced for Black Text */
+  --color-accent-blue: #0a246a; 
+  --color-accent-blue-dark: #000080;
   --color-accent-gray: #808080;
   --color-status-success: #008000;
-  --color-status-danger: #FF0000;
-  --color-status-warning: #FFFF00;
+  --color-status-danger: #ff0000;
+  --color-status-warning: #808000;
   
   --color-separator-line: #808080;
-  --color-highlight-line: #FFFFFF;
+  --color-highlight-line: #ffffff;
   
+  /* 3D Bevel Primitives (NT Standard) */
   --color-3d-dark-shadow: #808080;
-  --color-3d-light-highlight: #FFFFFF;
-  --color-3d-border-dark: #000000;
-  --color-3d-border-light: #C0C0C0;
-  --color-shadow-hue-bleed: none; /* Light theme, no hue bleed glow */
+  --color-3d-light-highlight: #ffffff;
+  --color-3d-border-dark: #404040;
+  --color-3d-border-light: #d4d0c8;
+  --color-shadow-hue-bleed: none;
 
-  /* Status Color Backgrounds (Ensuring visibility) */
-  --color-status-success-bg: #E0FFE0;
-  --color-status-danger-bg: #FFE0E0;
-  --color-status-warning-bg: #FFFFE0;
-
-  /* ================================================= */
-  /* ========= TRANSPARENCY AND VIBRANCY (Advanced UI Structure) ===== */
-  /* ================================================= */
-  
-  --color-vibrancy-dark-blur: var(--color-bg-window);
-  --color-vibrancy-light-blur: var(--color-bg-popover);
-  --opacity-vibrancy-bar: 1.0;
+  --color-status-success-bg: #e0ffe0;
+  --color-status-danger-bg: #ffe0e0;
+  --color-status-warning-bg: #ffffe0;
 
   /* ================================================= */
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
   /* ================================================= */
 
   --theme-bg-view-primary: var(--color-bg-window);
-  --theme-bg-view-secondary: var(--color-bg-surface);
+  --theme-bg-view-secondary: var(--color-bg-panel);
   --theme-bg-view-tertiary: var(--color-bg-raised);
   --theme-bg-view-vibrant: var(--color-bg-base);
 
   --theme-bg-control-base: var(--color-bg-button);
   --theme-bg-selected-primary: var(--color-accent-blue);
-  --theme-bg-selected-inactive: var(--color-bg-raised);
-  --theme-bg-selected-secondary: #C0C0C0;
-  --theme-bg-text-selection: #000080;
+  --theme-bg-selected-inactive: var(--color-accent-gray);
+  --theme-bg-selected-secondary: #d4d0c8;
+  --theme-bg-text-selection: #0a246a;
   
   --theme-bg-under-page: var(--color-bg-deep);
   --theme-bg-alternating-row: var(--color-bg-alt-row);
-  --theme-bg-find-highlight: #FFFF00;
+  --theme-bg-find-highlight: #ffff00;
   --theme-bg-acrylic-backdrop: var(--color-bg-base);
 
 
@@ -83,10 +77,10 @@
   /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
   /* ================================================= */
   
-  --color-bg-entry-base: #FFFFFF;
-  --color-bg-entry-focus: #FFFFFF;
-  --color-bg-entry-disabled: #C0C0C0;
-  --color-bg-textview: #FFFFFF;
+  --color-bg-entry-base: #ffffff;
+  --color-bg-entry-focus: #ffffff;
+  --color-bg-entry-disabled: #d4d0c8;
+  --color-bg-textview: #ffffff;
   
   --color-bg-button-flat: transparent;
   --color-bg-button-flat-hover: var(--color-bg-button-hover);
@@ -97,61 +91,61 @@
   --color-bg-button-suggested: var(--color-accent-blue);
   --color-bg-button-suggested-hover: var(--color-accent-blue-dark);
   
-  --color-bg-menu-bar: var(--color-bg-surface);
-  --color-bg-menu-popup: var(--color-bg-popover);
+  --color-bg-menu-bar: var(--color-bg-panel);
+  --color-bg-menu-popup: var(--color-bg-panel);
   --color-bg-menu-item-hover: var(--color-accent-blue);
-  --color-bg-popover-content: var(--color-bg-popover);
+  --color-bg-popover-content: var(--color-bg-panel);
 
   --color-bg-list-header: var(--color-bg-raised);
-  --color-bg-tab-bar: var(--color-bg-surface);
-  --color-bg-tab-active: var(--color-bg-raised);
-  --color-bg-tab-inactive: var(--color-bg-surface);
+  --color-bg-tab-bar: var(--color-bg-panel);
+  --color-bg-tab-active: var(--color-bg-panel);
+  --color-bg-tab-inactive: var(--color-bg-panel);
   --color-bg-tab-hover: var(--color-bg-raised);
   --color-bg-treeview-header: var(--color-bg-raised);
 
-  --color-bg-toggle-off: var(--color-fg-muted-AAA); /* AAA Compliant toggle text */
-  --color-bg-toggle-on: var(--color-fg-link-AAA); /* AAA Compliant toggle background */
-  --color-bg-check-radio-box: #FFFFFF;
+  --color-bg-toggle-off: var(--color-fg-muted-AAA); 
+  --color-bg-toggle-on: var(--color-fg-link-AAA); 
+  --color-bg-check-radio-box: #ffffff;
   
-  --color-bg-scrollbar-track: var(--color-bg-base);
-  --color-bg-scrollbar-slider: #808080;
-  --color-bg-scrollbar-slider-hover: #404040;
+  --color-bg-scrollbar-track: #eeeeee;
+  --color-bg-scrollbar-slider: #d4d0c8;
+  --color-bg-scrollbar-slider-hover: #e4e0d8;
   
-  --color-bg-status-bar: var(--color-bg-surface);
-  --color-bg-tooltip: #FFFFE1;
+  --color-bg-status-bar: var(--color-bg-panel);
+  --color-bg-tooltip: #ffffeb;
 
 
   /* ================================================= */
   /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
   /* ================================================= */
 
-  --theme-fg-label-primary: var(--color-fg-primary-AAA); /* Use AAA primary */
+  --theme-fg-label-primary: var(--color-fg-primary-AAA); 
   --theme-fg-label-secondary: var(--color-fg-primary-AAA);
-  --theme-fg-label-tertiary: var(--color-fg-muted-AAA); /* Use AAA muted */
-  --theme-fg-label-quaternary: var(--color-fg-muted-AAA); /* Use AAA subtle */
+  --theme-fg-label-tertiary: var(--color-fg-muted-AAA); 
+  --theme-fg-label-quaternary: var(--color-fg-muted-AAA); 
   --theme-fg-label-inverse: var(--color-fg-inverse);
   
   --theme-fg-control-text: var(--color-fg-primary-AAA);
   --theme-fg-control-text-disabled: var(--color-fg-muted-AAA);
-  --theme-fg-link: var(--color-fg-link-AAA); /* Use AAA link */
+  --theme-fg-link: #0000ff; 
   --theme-fg-placeholder: var(--color-fg-muted-AAA);
   --theme-fg-header-text: var(--color-fg-inverse);
   
   --theme-fg-text-selected: var(--color-fg-inverse);
-  --theme-fg-text-alternate-selected: var(--color-fg-primary-AAA);
+  --theme-fg-text-alternate-selected: var(--color-fg-inverse);
 
 
   /* ================================================= */
   /* ============= DECORATION & SEPARATORS ============= */
   /* ================================================= */
 
-  --theme-decoration-separator: var(--color-separator-line);
-  --theme-decoration-grid-line: #A0A0A0;
-  --theme-decoration-keyboard-focus: 1px dashed var(--color-fg-primary-AAA);
+  --theme-decoration-separator: var(--color-3d-dark-shadow);
+  --theme-decoration-grid-line: #808080;
+  --theme-decoration-keyboard-focus: 1px dotted #000000;
   --theme-decoration-border-control: var(--color-3d-dark-shadow);
   --color-border-entry-base: var(--color-3d-dark-shadow);
-  --color-border-entry-focus: var(--color-fg-primary-AAA);
-  --color-focus-ring: var(--color-fg-primary-AAA);
+  --color-border-entry-focus: #000000;
+  --color-focus-ring: #000000;
 
 
   /* ================================================= */
@@ -163,7 +157,7 @@
   --theme-status-success: var(--color-status-success);
   --theme-status-danger: var(--color-status-danger);
   --theme-status-warning: var(--color-status-warning);
-  --theme-status-highlight-virtual: #C0C0C0;
+  --theme-status-highlight-virtual: #d4d0c8;
 
 
   /* ================================================= */
@@ -173,7 +167,7 @@
   --primary-bg: var(--theme-bg-view-primary);
   --secondary-bg: var(--theme-bg-view-secondary);
   --tertiary-bg: var(--theme-bg-view-tertiary);
-  --header-border: var(--color-separator-line);
+  --header-border: var(--theme-decoration-separator);
 
   --main-text: var(--theme-fg-label-primary);
   --soft-text: var(--theme-fg-label-secondary);
@@ -183,7 +177,7 @@
   --success-green: var(--theme-status-success);
   --danger-red: var(--theme-status-danger);
   
-  --success-green-light: #E0FFE0;
+  --success-green-light: #e0ffe0;
   --window-control-hover-bg: #808080;
   --window-control-border-color: #000000;
 
@@ -191,18 +185,22 @@
   --dseg-shadow-dark: none;
 
   /* ================================================= */
-  /* =============== SHADOWS (3D BEVEL) ============== */
+  /* =============== SHADOWS (2000 SOFT BEVEL) ======= */
   /* ================================================= */
 
   --shadow-raised-outer:
-    -1px -1px 0 0 var(--color-3d-light-highlight),
-    1px 1px 0 0 var(--color-3d-dark-shadow);
+    inset 1px 1px 0 0 var(--color-3d-light-highlight),
+    inset -1px -1px 0 0 var(--color-3d-dark-shadow),
+    inset -2px -2px 0 0 var(--color-3d-border-dark),
+    inset 2px 2px 0 0 var(--color-bg-base);
   
   --shadow-inset-inner:
+    inset 1px 1px 0 0 var(--color-3d-border-dark),
+    inset 2px 2px 0 0 var(--color-3d-dark-shadow),
     inset -1px -1px 0 0 var(--color-3d-light-highlight),
-    inset 1px 1px 0 0 var(--color-3d-dark-shadow);
+    inset -2px -2px 0 0 var(--color-bg-base);
 
-  --shadow-elevated: 0 5px 10px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 2px 2px 4px rgba(0, 0, 0, 0.4);
   --shadow-subtle: none;
   --shadow-button-flat: none;
   --shadow-control-small: var(--shadow-raised-outer);
@@ -227,16 +225,8 @@
   --radius-l: 0px;
   --radius-xl: 0px;
   --radius-control-default: var(--radius-xs);
-  --radius-control-circular: 50%;
+  --radius-control-circular: 0%;
 
 
   /* ================================================= */
-  /* ================== FONT VARIABLES ================ */
-  /* ================================================= */
-
-  --font-family-default: "Motiva Sans", "Inter", "Segoe UI";
-  --font-family-system: var(--font-family-default);
-  --font-weight-regular: 400;
-  --font-weight-medium: 700;
-  --font-weight-bold: 700;
-}
+  /*

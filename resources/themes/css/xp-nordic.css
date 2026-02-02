@@ -8,12 +8,7 @@
 --color-bg-panel: #2159d7;
 --color-bg-popover: #242933;
 --color-bg-searchbar: #434853;
---color-bg-box-primary: linear-gradient(
-    to bottom,
-    #6fd26f 0%,
-    #4bbf4b 45%,
-    #2e8b2e 100%
-  );
+--color-bg-box-primary: var(--color-bg-deep);
 --color-bg-box-secondary: #D0E4F9;
 --color-bg-button: #E5E5E5;
 --color-bg-button-hover: var(--color-status-success);

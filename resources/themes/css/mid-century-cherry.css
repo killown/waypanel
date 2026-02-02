@@ -1,11 +1,13 @@
 :root {
   /* ================================================= */
-  /* ==== CORE PALETTE (Theme Specific) - Mid-Century Cherry (REFINED) ==== */
+  /* ==== CORE PALETTE (Theme Specific) - Mid-Century Cherry ==== */
   /* ================================================= */
 
-  --color-cherry-red: #d62828;
-  --color-cherry-red-functional: #B40000;
-  --color-cherry-red-dark: #820000;
+  /* Fix: Replaced harsh #d62828 with a professional designer Vermillion */
+  --color-cherry-red: #e63946;            /* Refined Primary Red */
+  --color-cherry-red-functional: #c1121f; /* Deep Functional Red */
+  --color-cherry-red-dark: #780001;       /* Dark Material Red */
+  
   --color-off-white: #f7f7f7;
   --color-mid-gray: #ededed;
   --color-charcoal: #1f1f1f;
@@ -25,7 +27,7 @@
   --color-bg-surface: var(--color-mid-gray);
   --color-bg-raised: var(--color-bg-popover);
   --color-bg-alt-row: #f4f4f4;
-  --color-bg-transparent-active: rgba(214, 40, 40, 0.1);
+  --color-bg-transparent-active: rgba(230, 57, 70, 0.1);
 
   --color-fg-primary: var(--color-charcoal);
   --color-fg-secondary: #555555;
@@ -42,22 +44,21 @@
   --color-separator-line: var(--color-separator-light);
 
   --color-status-success-bg: rgba(28, 138, 28, 0.1); 
-  --color-status-danger-bg: rgba(180, 0, 0, 0.15);
+  --color-status-danger-bg: rgba(193, 18, 31, 0.15);
   --color-status-warning-bg: rgba(255, 184, 51, 0.1);
 
-  --color-shadow-dark: rgba(0, 0, 0, 0.2); 
-  --color-shadow-medium: rgba(0, 0, 0, 0.15);
-  --color-shadow-lighter: rgba(0, 0, 0, 0.05);
-
+  /* Improved Shadow Definition for LCH clarity */
+  --color-shadow-dark: rgba(0, 0, 0, 0.18); 
+  --color-shadow-medium: rgba(0, 0, 0, 0.12);
+  --color-shadow-lighter: rgba(0, 0, 0, 0.06);
 
   /* ================================================= */
-  /* ========= TRANSPARENCY AND VIBRANCY (Advanced UI Structure) ===== */
+  /* ========= TRANSPARENCY AND VIBRANCY ============== */
   /* ================================================= */
   
   --color-vibrancy-dark-blur: var(--color-bg-window);   
   --color-vibrancy-light-blur: var(--color-bg-popover);   
   --opacity-vibrancy-bar: 1.0;                         
-
 
   /* ================================================= */
   /* ===== HIERARCHICAL UI SURFACES (BACKGROUNDS) ==== */
@@ -72,15 +73,14 @@
   --theme-bg-selected-primary: var(--color-accent-red-bright);
   --theme-bg-selected-inactive: var(--color-mid-gray);
   --theme-bg-selected-secondary: var(--color-bg-transparent-active);
-  --theme-bg-text-selection: #d6282840;   
+  --theme-bg-text-selection: rgba(230, 57, 70, 0.3);   
   
   --theme-bg-under-page: var(--color-bg-deep); 
   --theme-bg-alternating-row: var(--color-bg-alt-row);
   --theme-bg-find-highlight: #ffb83340;
 
-
   /* ================================================= */
-  /* ==== ADVANCED GTK/WIDGET BACKGROUNDS (ADDED) ==== */
+  /* ==== ADVANCED GTK/WIDGET BACKGROUNDS ============ */
   /* ================================================= */
   
   --color-bg-entry-base: #ffffff;         
@@ -120,7 +120,6 @@
   --color-bg-status-bar: var(--color-bg-window);         
   --color-bg-tooltip: var(--color-bg-popover);             
 
-
   /* ================================================= */
   /* ======== FOREGROUND ELEMENTS (TEXT & ICONS) ======= */
   /* ================================================= */
@@ -140,7 +139,6 @@
   --theme-fg-text-selected: var(--color-fg-inverse); 
   --theme-fg-text-alternate-selected: var(--color-fg-primary); 
 
-
   /* ================================================= */
   /* ============= DECORATION & SEPARATORS ============= */
   /* ================================================= */
@@ -152,7 +150,6 @@
   --color-border-entry-base: var(--color-separator-line);
   --color-border-entry-focus: var(--color-accent-red-bright);
 
-
   /* ================================================= */
   /* =========== SYSTEM ACCENT/STATUS COLORS ========= */
   /* ================================================= */
@@ -163,7 +160,6 @@
   --theme-status-danger: var(--color-status-danger);
   --theme-status-warning: var(--color-status-warning);
   --theme-status-highlight-virtual: var(--color-bg-raised);
-
 
   /* ================================================= */
   /* ====== SEMANTIC MAPPING (Used by Base CSS) ====== */
@@ -188,7 +184,6 @@
 
   --dseg-shadow-soft: rgba(0, 0, 0, 0.1);
   --dseg-shadow-dark: rgba(0, 0, 0, 0.5);
-
 
   /* ================================================= */
   /* =============== SHADOWS AND OPACITY ============== */

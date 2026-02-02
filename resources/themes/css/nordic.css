@@ -166,7 +166,7 @@
 
   --shadow-dark: var(--color-shadow-dark);
   --shadow-medium: var(--color-shadow-medium);
-  --shadow-subtle-white: 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-subtle-white: 0 1px 3px rgba(255, 255, 255, 0.05);
 
   --opacity-0: 0.0;
   --opacity-08: 0.08;
@@ -177,7 +177,7 @@
   --opacity-50: 0.5;
   --opacity-60: 0.6;
 
-  --shadow-subtle: 0 1px 0 var(--shadow-subtle-white);
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.15);
   --shadow-elevated: 0 4px 12px var(--shadow-medium), 0 0 8px rgba(136, 192, 208, 0.1);
   --shadow-button-flat: none;
   --shadow-control-small: none;
