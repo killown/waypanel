@@ -100,43 +100,47 @@ class TaskbarMenu:
         self.menu.popup()
 
     def _check_hanging_process(self, vid):
-        """Checks if view is still active and kills it if necessary."""
+        """Checks if view is still active via IPC and kills it if PID > 0."""
         import os
         import signal
         import subprocess
 
-        # Scan current views to see if the target still exists
-        active_view = next(
-            (v for v in self.ipc.list_views() if v.get("id") == vid), None
+        # Retrieve the current state of the view directly
+        view = self.ipc.get_view(vid)
+
+        # If view is gone (None) completely, we are good.
+        if not view:
+            return False
+
+        pid = view.get("pid", -1)
+
+        # PID -1 usually implies successful minimization to tray.
+        # We only kill if we have a tangible Process ID > 0.
+        if pid <= 0:
+            return False
+
+        # If PID is valid (>0) and view still exists, it is hanging.
+        app_id = view.get("app-id", "Unknown")
+
+        subprocess.Popen(
+            [
+                "notify-send",
+                "-i",
+                "process-stop-symbolic",
+                "Taskbar Watchdog",
+                f"Process '{app_id}' is hanging. Force killing...",
+            ]
         )
 
-        if active_view:
-            pid = active_view.get("pid", -1)
-            app_id = active_view.get("app-id", "Unknown")
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            # Process might have died exactly between check and kill
+            pass
+        except Exception as e:
+            self.plugin.logger.error(f"Watchdog failed to kill {pid} ({app_id}): {e}")
 
-            try:
-                subprocess.Popen(
-                    [
-                        "notify-send",
-                        "-i",
-                        "process-stop-symbolic",
-                        "Taskbar Watchdog",
-                        f"Process '{app_id}' is hanging. Force killing...",
-                    ]
-                )
-
-                # Force Kill
-                if pid > 0:
-                    try:
-                        os.kill(pid, signal.SIGKILL)
-                    except Exception as e:
-                        self.plugin.logger.error(
-                            f"Watchdog failed to kill {pid} ({app_id}): {e}"
-                        )
-            except Exception as e:
-                self.plugin.logger.error(e)
-
-        return False  # Don't repeat the timer
+        return False
 
     def popdown(self):
         """Hides the menu."""
