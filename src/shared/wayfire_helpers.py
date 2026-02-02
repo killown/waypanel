@@ -790,3 +790,46 @@ class WayfireHelpers:
         except Exception as e:
             self.logger.error(f"Failed to resolve view for PID {pid}: {e}")
             return None
+
+    def _check_hanging_process(self, vid):
+        """Checks if view is still active via IPC and kills it if PID > 0."""
+        import os
+        import signal
+        import subprocess
+
+        # Retrieve the current state of the view directly
+        view = self.ipc.get_view(vid)
+
+        # If view is gone (None) completely, we are good.
+        if not view:
+            return False
+
+        pid = view.get("pid", -1)
+
+        # PID -1 usually implies successful minimization to tray.
+        # We only kill if we have a tangible Process ID > 0.
+        if pid <= 0:
+            return False
+
+        # If PID is valid (>0) and view still exists, it is hanging.
+        app_id = view.get("app-id", "Unknown")
+
+        subprocess.Popen(
+            [
+                "notify-send",
+                "-i",
+                "process-stop-symbolic",
+                "Taskbar Watchdog",
+                f"Process '{app_id}' is hanging. Force killing...",
+            ]
+        )
+
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            # Process might have died exactly between check and kill
+            pass
+        except Exception as e:
+            self.logger.error(f"Watchdog failed to kill {pid} ({app_id}): {e}")
+
+        return False
