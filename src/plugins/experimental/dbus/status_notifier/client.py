@@ -539,6 +539,7 @@ def get_plugin_class():
             message_data = self.messages[service_name]
             icon_name = message_data["icon_name"]
             menubutton = self.gtk.MenuButton()
+            self.add_cursor_effect(menubutton)
             if icon_pixmap_data := message_data.get("icon_pixmap"):
                 if pixbuf := self.create_pixbuf_from_pixels(icon_pixmap_data):
                     menubutton.set_child(self.gtk.Image.new_from_pixbuf(pixbuf))
