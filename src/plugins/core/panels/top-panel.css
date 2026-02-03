@@ -10,6 +10,8 @@
 .top-panel-box-widgets-left {
   background: var(--color-bg-box-primary);
   border-top-right-radius: 10px;
+  padding-top: 3px;
+  padding-right: 3px ;
   border-radius: var(--radius-s);
 
   /* 3D Machined Shadow Stack */

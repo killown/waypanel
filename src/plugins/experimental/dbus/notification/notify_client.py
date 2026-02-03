@@ -86,6 +86,7 @@ def get_plugin_class():
                     ],
                 )
             )
+            self.main_widget = (self.notification_button, "append")
             self.notification_button.add_css_class("notification-panel-button")
             self.notification_button.set_tooltip_text("View Recent Notifications")
             self.notification_button.connect("clicked", self.open_popover_notifications)

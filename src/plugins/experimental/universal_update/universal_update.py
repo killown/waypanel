@@ -106,6 +106,7 @@ def get_plugin_class():
             self.trigger_button.connect("clicked", self._on_button_clicked)
 
             self.plugins["status_notifier"].tray_box.append(self.trigger_button)
+            self.main_widget = (self.trigger_button, "append")
             self.update_count = 0
             self.is_checking = False
             self.terminal_pid = None

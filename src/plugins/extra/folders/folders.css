@@ -79,7 +79,7 @@
 
 /* Folders Menu Button */
 .folders-menu-button {
-  -gtk-icon-size: 25px;
+  -gtk-icon-size: 24px;
   border-radius: 3px;
   margin-top: 3px;
   background-color: var(--color-bg-deep);

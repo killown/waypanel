@@ -53,20 +53,36 @@ def get_plugin_class():
             self.messages = {}
             self.menus_layout = {}
             self.tray_button = {}
+
+            container_id = "org.waypanel.plugin.status_notifier"
+            default_container_name = "top_panel_box_center"
+
+            target_container_name, _ = (
+                panel_instance.config_handler.get_plugin_container(
+                    default_container_name, container_id
+                )
+            )
+
+            attr_name = target_container_name.replace("-", "_")
+            target_container = getattr(self._panel_instance, attr_name, None)
+
             self.tray_box = self.gtk.Box(
                 orientation=self.gtk.Orientation.HORIZONTAL, spacing=0
             )
+            self.tray_box.add_css_class("tray-box")
             self.tray_box.set_valign(self.gtk.Align.CENTER)
             self.tray_box.set_vexpand(False)
-            self._panel_instance.top_panel_box_center.append(self.tray_box)
+
+            if target_container and hasattr(target_container, "append"):
+                target_container.append(self.tray_box)
+            else:
+                self._panel_instance.top_panel_box_center.append(self.tray_box)
+
+            self.main_widget = (self.tray_box, "append")
+
             self._pending_creation = set()
             self._rebuild_pending = set()
             self.notifier_watcher = StatusNotifierWatcher("", panel_instance)
-            self.get_plugin_setting_add_hint(
-                ["panel"],
-                "top-panel-center",
-                "set the status notifier position:  left, center, right, systray, after-systray",
-            )
 
         def on_start(self):
             """
@@ -530,7 +546,7 @@ def get_plugin_class():
                     menubutton.set_icon_name(icon_name)
             else:
                 menubutton.set_icon_name(icon_name)
-            menubutton.add_css_class("tray_icon")
+            menubutton.add_css_class("tray-icon")
             if tooltip_variant := message_data.get("tooltip"):
                 try:
                     icon_name, icon_data, title, text = tooltip_variant.value

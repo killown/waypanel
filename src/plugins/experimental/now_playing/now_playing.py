@@ -313,6 +313,8 @@ def get_plugin_class():
                 self.main_button = self.gtk.Button()
                 self.add_cursor_effect(self.main_button)
                 self.main_button.add_css_class("player-trigger")
+                # we usually pass None to inform the loader the plugin will manually append to the container
+                self.main_widget = (self.main_button, None)
 
                 # Force the button to NOT fill the height and stay centered
                 self.main_button.set_valign(self.gtk.Align.CENTER)
