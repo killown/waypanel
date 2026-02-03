@@ -5,7 +5,7 @@
 .window-title-content {
   background-color: var(--color-bg-deep);
   border-radius: var(--radius-xs);
-  padding: 5px 8px;
+  padding: 5px;
   margin: 6px 10px 5px 10px;
   border: none;
   

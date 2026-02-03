@@ -1,4 +1,6 @@
 .tray_icon {
+  margin-left: 2px;
+  margin-right: 2px;
   border-radius: 3px;
   background-color: var(--color-bg-deep);
   box-shadow:

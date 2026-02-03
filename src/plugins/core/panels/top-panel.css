@@ -49,8 +49,9 @@
   /* Inherits from .top-panel */
 }
 
-.top_panel_box_center {
-  -gtk-icon-size: 0px;
+.top-panel-box-center {
+  padding: 0;
+  margin: 0;
 }
 
 .right-box-spacer {

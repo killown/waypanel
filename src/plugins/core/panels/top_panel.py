@@ -83,10 +83,13 @@ def get_plugin_class():
             )
 
             # Center Box Setup
-            self.obj.top_panel_box_center = self.gtk.Box()
+            self.obj.top_panel_box_center = self.gtk.FlowBox()
             self.obj.top_panel_box_center.set_halign(self.gtk.Align.CENTER)
             self.obj.top_panel_box_center.set_valign(self.gtk.Align.CENTER)
             self.obj.top_panel_box_center.set_hexpand(False)
+            self.obj.top_panel_box_center.set_row_spacing(0)
+            self.obj.top_panel_box_center.set_column_spacing(0)
+            self.obj.top_panel_box_center.set_min_children_per_line(1)
 
             # Main Grid Assembly
             self.obj.top_panel_box_full = self.gtk.Grid()

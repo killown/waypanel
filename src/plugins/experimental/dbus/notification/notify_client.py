@@ -11,7 +11,7 @@ def get_plugin_metadata(_):
         "enabled": True,
         "index": 1,
         "container": "top-panel-center",
-        "deps": ["notify_server", "css_generator"],
+        "deps": ["notify_server", "css_generator", "status_notifier"],
         "description": about,
     }
 
@@ -89,12 +89,12 @@ def get_plugin_class():
             self.notification_button.add_css_class("notification-panel-button")
             self.notification_button.set_tooltip_text("View Recent Notifications")
             self.notification_button.connect("clicked", self.open_popover_notifications)
+            self.plugins["status_notifier"].tray_box.append(self.notification_button)
             self.gtk_helper.add_cursor_effect(self.notification_button)
             self.dnd_switch = self.gtk.Switch()
             self.dnd_switch.set_active(False)
             self.dnd_switch.connect("state-set", self.on_dnd_toggled)
             self.db_path = self.path_handler.get_data_path("db/notify/notifications.db")
-            self.main_widget = (self.notification_button, "append")
 
         def on_start(self):
             """

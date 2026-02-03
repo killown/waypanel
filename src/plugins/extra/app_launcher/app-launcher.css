@@ -4,10 +4,9 @@
 
 /* Launcher Button */
 .app-launcher-menu-button {
-  -gtk-icon-size: 24px;
-  padding-top: 9px;
-  padding-bottom: 7px;
+  -gtk-icon-size: 25px;
   border-radius: 3px;
+  margin-top: 3px;
   background-color: var(--color-bg-deep);
   box-shadow:
     inset 0 0px 1px rgba(0, 0, 0, 0.4),
@@ -93,7 +92,6 @@
    Installation & Dialogue Windows
    ========================================================================== */
 
-/* Universal Dialogue Background Fix */
 window.dialog,
 window.dialog > box,
 .app-launcher-install-dialog {
@@ -101,7 +99,6 @@ window.dialog > box,
   color: var(--theme-fg-label-primary);
 }
 
-/* Ensure all labels inside dialogues pull correct theme colors */
 .app-launcher-install-dialog label,
 .app-launcher-confirmation-box label {
   color: var(--theme-fg-label-primary);
@@ -112,7 +109,6 @@ window.dialog > box,
   color: var(--theme-fg-label-secondary);
 }
 
-/* 3D Action Buttons in Dialogue */
 .app-launcher-install-button {
   background-color: var(--theme-bg-selected-primary);
   color: var(--color-fg-inverse);
@@ -128,7 +124,6 @@ window.dialog > box,
   box-shadow: var(--shadow-elevated);
 }
 
-/* Console/Log Area in Install Window */
 .app-launcher-install-console {
   background-color: var(--color-bg-deep);
   color: var(--color-fg-primary); 
@@ -139,7 +134,6 @@ window.dialog > box,
   margin: 10px 0;
 }
 
-/* Emblem/Labels */
 .flatpak-emblem {
   font-size: 7pt;
   font-weight: var(--font-weight-bold);
@@ -149,19 +143,16 @@ window.dialog > box,
   border-radius: var(--radius-xs);
 }
 
-
 /* ==========================================================================
    Flatpak Installer - Adaptive Window Theme
    ========================================================================== */
 
-/* Target the window by the name set in Python: self.window.set_name("waypanel-installer") */
 window#waypanel-installer,
 window#waypanel-installer > box {
   background-color: var(--color-bg-popover);
   color: var(--theme-fg-label-primary);
 }
 
-/* HeaderBar fix for Light/Dark parity */
 window#waypanel-installer headerbar {
   background-color: var(--color-bg-window);
   color: var(--theme-fg-label-primary);
@@ -169,12 +160,10 @@ window#waypanel-installer headerbar {
   padding: 6px;
 }
 
-/* Scrolled Window & Content Area */
 window#waypanel-installer scrolledwindow {
   background-color: transparent;
 }
 
-/* Card Style (used for screenshots and description frames) */
 window#waypanel-installer .card {
   background-color: var(--theme-bg-view-secondary);
   border: 1px solid var(--theme-decoration-separator);
@@ -182,7 +171,6 @@ window#waypanel-installer .card {
   box-shadow: var(--shadow-small);
 }
 
-/* Typography Fixes */
 window#waypanel-installer label {
   color: var(--theme-fg-label-primary);
 }
@@ -191,14 +179,12 @@ window#waypanel-installer label.dim-label {
   color: var(--theme-fg-label-secondary);
 }
 
-/* Titles using GTK predefined classes */
 window#waypanel-installer label.title-1,
 window#waypanel-installer label.title-4 {
   font-weight: var(--font-weight-bold);
   color: var(--theme-fg-label-primary);
 }
 
-/* Spinner and Switch Fixes */
 window#waypanel-installer spinner {
   color: var(--theme-status-accent);
 }
@@ -207,7 +193,6 @@ window#waypanel-installer switch:checked {
   background-color: var(--theme-bg-selected-primary);
 }
 
-/* Installation Progress */
 window#waypanel-installer progressbar trough {
   background-color: var(--color-bg-button);
   border-radius: var(--radius-xl);

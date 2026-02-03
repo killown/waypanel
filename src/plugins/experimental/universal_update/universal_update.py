@@ -21,7 +21,7 @@ def get_plugin_metadata(panel):
         "enabled": ENABLE,
         "index": 11,
         "container": container,
-        "deps": ["css_generator"],
+        "deps": ["css_generator", "status_notifier"],
         "description": "Universal Linux update manager with per-backend custom commands.",
     }
 
@@ -95,15 +95,17 @@ def get_plugin_class():
                 "Preferred terminals.",
             )
             self.trigger_button = self.gtk.Button()
-            self.get_plugin_setting_add_hint(
+            main_icon = self.get_plugin_setting_add_hint(
                 ["main_icon"],
                 "software-update-available-symbolic",
                 "universal-update-button icon",
             )
             self.trigger_button.add_css_class("universal-update-button")
+            self.trigger_button.set_icon_name(main_icon)
             self.gtk_helper.add_cursor_effect(self.trigger_button)
             self.trigger_button.connect("clicked", self._on_button_clicked)
-            self.main_widget = (self.trigger_button, "append")
+
+            self.plugins["status_notifier"].tray_box.append(self.trigger_button)
             self.update_count = 0
             self.is_checking = False
             self.terminal_pid = None

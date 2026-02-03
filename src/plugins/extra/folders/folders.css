@@ -1,3 +1,7 @@
+/* ==========================================================================
+   Folders - Adaptive Theme
+   ========================================================================== */
+
 .folders-popover {
   border: none;
 }
@@ -12,6 +16,8 @@
 
 .folders-label-from-popover {
   color: var(--main-text);
+  font-size: 16px;
+  font-weight: bold;
 }
 
 .folders-popover-menu-items {
@@ -71,14 +77,17 @@
   color: var(--main-text);
 }
 
-.folders-label-from-popover {
-  font-size: 16px;
-  font-weight: bold;
-  color: var(--main-text);
-}
-
+/* Folders Menu Button */
 .folders-menu-button {
   -gtk-icon-size: 25px;
-  padding-top: 9px;
-  padding-bottom: 2px;
+  border-radius: 3px;
+  margin-top: 3px;
+  background-color: var(--color-bg-deep);
+  box-shadow:
+    inset 0 0px 1px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.25),
+    1px 1px 2px var(--shadow-dark),
+    0px 2px 2px rgba(0, 0, 0, 0.4),
+    0px 2px 1px -1px rgba(0, 0, 0, 0.3),
+    inset 0px -3px 0px rgba(0, 0, 0, 0.2);
 }

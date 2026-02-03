@@ -307,48 +307,49 @@ def get_plugin_class():
                 gc.collect()
 
         def _sync_panel(self):
-            container = self._panel_instance.top_panel_box_center
+            container = self.plugins["status_notifier"].tray_box
 
             if self.active_rows and not self._added:
-                self.main_button = Gtk.Button()
+                self.main_button = self.gtk.Button()
                 self.add_cursor_effect(self.main_button)
                 self.main_button.add_css_class("player-trigger")
+
+                # Force the button to NOT fill the height and stay centered
+                self.main_button.set_valign(self.gtk.Align.CENTER)
+                self.main_button.set_halign(self.gtk.Align.CENTER)
+                self.main_button.set_vexpand(False)
                 icon_name = self.icon_exist(
                     "media-playback-start-symbolic", ["media-playback-playing-symbolic"]
                 )
                 self.main_button.set_icon_name(icon_name)
 
-                pop, scr, _ = self.create_popover(  # pyright: ignore
+                pop, scr, _ = self.create_popover(
                     parent_widget=self.main_button,
                     css_class="player-popover",
                     use_scrolled=True,
                     max_height=500,
                 )
 
-                # Ensure the box is clean before assignment
                 current_parent = self.popover_box.get_parent()
                 if current_parent:
-                    # If it's inside a Viewport (GTK ScrolledWindow usually adds one)
                     if hasattr(current_parent, "set_child"):
-                        current_parent.set_child(None)  # pyright: ignore
-                    # If it's a standard container
+                        current_parent.set_child(None)
                     elif hasattr(current_parent, "remove"):
-                        current_parent.remove(self.popover_box)  # pyright: ignore
+                        current_parent.remove(self.popover_box)
 
-                # Now it is safe to set as child of the new scrolled window
                 scr.set_child(self.popover_box)
-
                 self.main_button.connect("clicked", lambda _: pop.popup())
+
+                # Direct append to the center container
                 container.append(self.main_button)
                 self._added = True
 
             elif not self.active_rows and self._added:
-                # Explicitly unset the child before removing the button to free the box
                 current_parent = self.popover_box.get_parent()
                 if current_parent and hasattr(current_parent, "set_child"):
-                    current_parent.set_child(None)  # pyright: ignore
+                    current_parent.set_child(None)
 
-                if self.main_button.get_parent() == container:  # pyright: ignore
+                if self.main_button and self.main_button.get_parent() == container:
                     container.remove(self.main_button)
 
                 self.main_button = None

@@ -53,8 +53,12 @@ def get_plugin_class():
             self.messages = {}
             self.menus_layout = {}
             self.tray_button = {}
-            self.tray_box = self.gtk.FlowBox()
-            self.main_widget = (self.tray_box, "append")
+            self.tray_box = self.gtk.Box(
+                orientation=self.gtk.Orientation.HORIZONTAL, spacing=0
+            )
+            self.tray_box.set_valign(self.gtk.Align.CENTER)
+            self.tray_box.set_vexpand(False)
+            self._panel_instance.top_panel_box_center.append(self.tray_box)
             self._pending_creation = set()
             self._rebuild_pending = set()
             self.notifier_watcher = StatusNotifierWatcher("", panel_instance)

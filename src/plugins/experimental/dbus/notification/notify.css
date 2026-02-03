@@ -4,8 +4,8 @@
 
 /* Panel Integration - PRESERVED UNTOUCHED */
 .notification-panel-button {
-  margin-right: 7px;
-  margin-top: 3px;
+  margin-left: 2px;
+  margin-right: 2px;
   border-radius: 3px;
   background-color: var(--color-bg-deep);
   box-shadow:
