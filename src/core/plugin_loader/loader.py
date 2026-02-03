@@ -337,12 +337,10 @@ class PluginLoader:
 
     def _initialize_single_plugin(self, module, container, order, priority, plugin_id):
         """Initializes instance and manages lifecycle with pre-resolved metadata."""
-        # Performance: Use cache instead of dict.get() repeatedly
         meta = self._meta_cache.get(plugin_id, {})
         try:
             instance = module.get_plugin_class()(self.panel_instance)
 
-            # Sequence hooks via fast getattr checks
             getattr(instance, "on_start", lambda: None)()
             getattr(instance, "on_enable", lambda: None)()
 
@@ -350,10 +348,42 @@ class PluginLoader:
             target = self._get_target_panel_box(container, plugin_id)
 
             if target and container != "background" and hasattr(instance, "set_widget"):
-                widgets, action = instance.set_widget()
-                self.handle_set_widget(
-                    action, widgets, target, plugin_id, meta.get("hidden", False)
+                if hasattr(instance, "main_widget") and instance.main_widget:
+                    w_check = (
+                        instance.main_widget[0]
+                        if isinstance(instance.main_widget, (list, tuple))
+                        else instance.main_widget
+                    )
+                    # Only check get_parent if w_check is a valid GTK object, not the action string
+                    if (
+                        hasattr(w_check, "get_parent")
+                        and w_check.get_parent() is not None
+                    ):
+                        return False
+
+                res = instance.set_widget()
+                if not res or len(res) != 2:
+                    return False
+
+                widgets, action = res
+                widget_list = (
+                    widgets if isinstance(widgets, (list, tuple)) else [widgets]
                 )
+
+                valid_widgets = [
+                    w
+                    for w in widget_list
+                    if hasattr(w, "get_parent") and w.get_parent() is None
+                ]
+
+                if valid_widgets:
+                    self.handle_set_widget(
+                        action,
+                        valid_widgets,
+                        target,
+                        plugin_id,
+                        meta.get("hidden", False),
+                    )
         except Exception as e:
             self.logger.error(f"Failed init {plugin_id}: {e}")
         return False
