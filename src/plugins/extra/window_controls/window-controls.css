@@ -13,8 +13,7 @@
 .window-controls-close-button,
 .window-controls-maximize-button,
 .window-controls-minimize-button {
-  /* Scaled up from 14px to 17px for a more balanced presence */
-  -gtk-icon-size: 17px;
+  -gtk-icon-size: 24px;
   padding: 2px 6px;
   
   margin-left: 2px;
