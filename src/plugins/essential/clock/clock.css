@@ -1,39 +1,64 @@
 .clock-label {
   background-color: var(--color-bg-deep);
   border-radius: var(--radius-xs);
-  padding: 4px 10px 4px 10px; 
-  border: none;
+  padding: 1px 7px;
+  margin-top: 3px;
+  margin-right: 10px;
+  
+  /* The "Machined" Edge: A dark border with a light top-inset */
+  border: 1px solid var(--color-shadow-dark);
+  
   font-family: 'Geist Mono', 'Google Sans Code', monospace;
   font-size: 14px;
-  font-weight: 400;
-  letter-spacing: 0.08em;
-  box-shadow:
-    inset 0 0px 1px rgba(0, 0, 0, 0.4),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.25),
-    1px 1px 2px var(--shadow-dark),
-    0px 2px 2px rgba(0, 0, 0, 0.4),
-    0px 2px 1px -1px rgba(0, 0, 0, 0.3),
-    inset 0px -1.5px 0px rgba(0, 0, 0, 0.2);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1.2px;
   color: var(--theme-fg-label-primary);
-  text-decoration: none;
-  text-shadow: 0 0 4px var(--color-bg-transparent-active);
-  line-height: normal; 
-  transition: all 150ms var(--anim-standard);
-}
-.clock-box {
-    background-color: transparent;
-  /* Remove font properties from here to prevent inheritance conflicts */
-}
+  
+  /* 3D Stack: 
+     1. Top Highlight (Rim light)
+     2. Inner Depth (Recess)
+     3. Outer Drop Shadow (Elevation)
+     4. Blue Ambient Glow (Tech) */
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1.5px 2px var(--shadow-dark),
+    0 1px 0 rgba(255, 255, 255, 0.05),
+    0 3px 6px var(--shadow-dark),
+    0 0 4px var(--shadow-medium);
 
-.clock-button {
-  background-color: transparent;
-  border-radius: var(--radius-xs);
-  box-shadow: none;
-  transition: transform 200ms ease;
+  text-shadow: 0 0 3px var(--shadow-medium);
+  transition: all 200ms var(--anim-standard);
 }
 
 .clock-button:hover .clock-label {
   background-color: var(--color-bg-button-hover);
-  transform: translateY(-1px);
-  text-shadow: 0 0 8px var(--color-accessible-accent);
+  /* The border glows, simulating light hitting the 3D edge */
+  border-color: var(--color-accent-blue);
+  transform: translateY(-1.5px);
+  
+  /* Hover 3D Shift: Stronger shadow to simulate higher elevation */
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.15),
+    0 5px 12px var(--shadow-dark),
+    0 0 15px var(--shadow-medium);
+    
+  text-shadow: 
+    0 0 2px var(--color-fg-primary),
+    0 0 8px var(--color-accent-blue);
+}
+
+/* Mechanical "Click" Effect */
+.clock-button:active .clock-label {
+  transform: translateY(0.5px);
+  box-shadow:
+    inset 0 2px 4px var(--shadow-dark),
+    0 1px 2px var(--shadow-dark);
+  transition: all 50ms ease;
+}
+
+.clock-button {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
 }

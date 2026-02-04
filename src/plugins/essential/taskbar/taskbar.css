@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Tactical Taskbar - Low-Profile 3D Precision
+   Tactical Taskbar - Sapphire 3D Precision
    ========================================================================== */
 
 .taskbar-container {
@@ -7,105 +7,85 @@
   border-radius: var(--radius-m);
   margin: 1px 4px;
   padding: 0;
-  border: 1px solid var(--theme-decoration-separator);
+  border: 1px solid rgba(0, 0, 0, 0.5); /* Sharper boundary */
   box-shadow:
-    inset 0 0px 1px rgba(0, 0, 0, 0.4),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.25),
-    1px 1px 2px var(--shadow-dark),
-    0px 2px 2px rgba(0, 0, 0, 0.4),
-    0px 2px 1px -1px rgba(0, 0, 0, 0.3),
-    inset 0px -3px 0px rgba(0, 0, 0, 0.2);
+    0 1px 0 rgba(255, 255, 255, 0.05), /* External rim light */
+    inset 0 1px 3px rgba(0, 0, 0, 0.4);  /* Slight recess for the container */
 }
 
 .taskbar {
   border-radius: 10px;
   background-color: var(--color-bg-deep);
-  box-shadow:
-    inset 0 0px 1px rgba(0, 0, 0, 0.4),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.25),
-    1px 1px 2px var(--shadow-dark),
-    0px 2px 2px rgba(0, 0, 0, 0.4),
-    0px 2px 1px -1px rgba(0, 0, 0, 0.3),
-    inset 0px -3px 0px rgba(0, 0, 0, 0.2);
-  padding: 4px; /* Tight vertical padding to reduce total height */
+  /* Sapphire depth gradient */
+  background-image: linear-gradient(
+    to bottom, 
+    rgba(53, 132, 228, 0.04) 0%, 
+    transparent 60%, 
+    rgba(0, 0, 0, 0.15) 100%
+  );
+  padding: 4px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .taskbar-button {
-  border-radius: 3px; /* Fixed radius per your request */
+  border-radius: 3px;
   background-color: var(--color-bg-deep);
   color: var(--theme-fg-label-primary);
-  border: none;
+  border: 1px solid rgba(0, 0, 0, 0.7); /* Machined border */
   margin: 0 2px;
-  padding: 0 6px;
-  min-height: 26px; /* Reduced height for low-profile feel */
+  padding: 0 8px;
+  min-height: 26px;
   
-  /* 3D Stack: Preserving your exact physical shadow logic */
+  /* Machined 3D Physics - Mirroring Clock Logic */
   box-shadow:
-    inset 0 0px 1px rgba(0, 0, 0, 0.4),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.25),
-    1px 1px 2px var(--shadow-dark),
-    0px 2px 2px rgba(0, 0, 0, 0.4),
-    0px 2px 1px -1px rgba(0, 0, 0, 0.3),
-    inset 0px -3px 0px rgba(0, 0, 0, 0.2); 
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.12),  /* Specular rim */
+    inset 0 -1.5px 2px rgba(0, 0, 0, 0.4),      /* Recess shadow */
+    0 0.5px 0 rgba(255, 255, 255, 0.06),       /* Surface highlight */
+    0 3px 6px rgba(0, 0, 0, 0.5),              /* Grounding shadow */
+    0 0 4px var(--shadow-medium);              /* Blue bleed */
 
-  transition: all 150ms var(--anim-standard);
+  transition: all 180ms var(--anim-standard);
 }
 
 .taskbar-button image {
-  -gtk-icon-size: 18px; /* Slightly smaller for the low-profile container */
+  -gtk-icon-size: 18px;
+  /* Icon luminescence to match text bloom */
+  -gtk-icon-shadow: 0 0 4px var(--shadow-medium);
   filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
 }
 
-/* Hover: Slight lift without breaking the low-profile constraints */
+/* Hover: Lifted Sapphire State */
 .taskbar-button:hover {
   background-color: var(--color-bg-button-hover);
-  transform: translateY(-1px);
+  border-color: var(--color-accent-blue);
+  transform: translateY(-1.5px);
+  
   box-shadow:
-    inset 0 0px 1px rgba(0, 0, 0, 0.2),
-    0 4px 8px -2px var(--shadow-dark),
-    0 0 5px var(--color-shadow-hue-bleed);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.2),
+    0 6px 14px rgba(0, 0, 0, 0.6),
+    0 0 12px var(--shadow-medium);
 }
 
-/* Focused: Active Forged State */
+/* Focused: Forged Active Sapphire */
 .taskbar-button.focused {
   background-color: var(--theme-bg-selected-primary);
   color: var(--theme-fg-label-inverse);
+  border-color: var(--accent-blue-light);
   transform: translateY(0);
-  /* Intense inner-glow for focused state */
+  
+  /* Internal glow for focused state */
   box-shadow: 
-    inset 0 1px 2px rgba(0,0,0,0.4),
-    0 0 12px var(--color-shadow-hue-bleed),
-    0 0 0 1px var(--theme-status-accent);
+    inset 0 1px 3px rgba(0,0,0,0.4),
+    inset 0 -1px 0 rgba(255,255,255,0.2),
+    0 0 15px var(--shadow-medium);
 }
 
 /* Active: Mechanical Compression */
 .taskbar-button:active {
   background-color: var(--color-bg-button-active);
   transform: translateY(1px);
-  /* Inverted shadow stack for "pressed" effect */
   box-shadow: 
-    inset 0 3px 5px rgba(0, 0, 0, 0.5),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+    inset 0 4px 8px rgba(0, 0, 0, 0.8),
+    0 1px 0 rgba(255, 255, 255, 0.1);
   transition-duration: 50ms;
-}
-
-/* Context Menu - Compact Precision */
-popover.taskbar-context-menu contents {
-  background-color: var(--color-bg-popover);
-  border: 1px solid var(--theme-decoration-separator);
-  border-radius: var(--radius-s);
-  box-shadow: var(--shadow-window-float);
-  padding: 4px;
-}
-
-.taskbar-menu-item {
-  border-radius: 2px;
-  padding: 4px 12px;
-  font-size: 13px;
-  color: var(--theme-fg-label-primary);
-}
-
-.taskbar-menu-item:hover {
-  background-color: var(--theme-bg-selected-secondary);
-  color: var(--theme-status-accent);
 }

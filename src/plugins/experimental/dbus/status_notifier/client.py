@@ -55,7 +55,7 @@ def get_plugin_class():
             self.tray_button = {}
 
             container_id = "org.waypanel.plugin.status_notifier"
-            default_container_name = "top_panel_box_center"
+            default_container_name = "top_panel_box_right"
 
             target_container_name, _ = (
                 panel_instance.config_handler.get_plugin_container(
@@ -67,11 +67,10 @@ def get_plugin_class():
             target_container = getattr(self._panel_instance, attr_name, None)
 
             self.tray_box = self.gtk.Box(
-                orientation=self.gtk.Orientation.HORIZONTAL, spacing=0
+                orientation=self.gtk.Orientation.HORIZONTAL, spacing=4
             )
             self.tray_box.add_css_class("tray-box")
             self.tray_box.set_valign(self.gtk.Align.CENTER)
-            self.tray_box.set_vexpand(False)
 
             if target_container and hasattr(target_container, "append"):
                 target_container.append(self.tray_box)
@@ -469,7 +468,7 @@ def get_plugin_class():
                 ):
                     continue
                 row = Gtk.ListBoxRow()
-                box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+                box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
                 box.set_margin_top(8)
                 box.set_margin_bottom(8)
                 box.set_margin_start(8)
@@ -519,7 +518,7 @@ def get_plugin_class():
                 row.set_activatable(item.get("enabled", True))
                 listbox.append(row)
 
-        def get_best_icon_entry(self, pixmap_data: list, target_size: int = 24):
+        def get_best_icon_entry(self, pixmap_data: list, target_size: int = 14):
             """
             Selects the best icon from a list of (width, height, data) tuples.
             """
@@ -539,6 +538,7 @@ def get_plugin_class():
             message_data = self.messages[service_name]
             icon_name = message_data["icon_name"]
             menubutton = self.gtk.MenuButton()
+            menubutton.get_style_context().add_class("panel-menu-button")
             self.add_cursor_effect(menubutton)
             if icon_pixmap_data := message_data.get("icon_pixmap"):
                 if pixbuf := self.create_pixbuf_from_pixels(icon_pixmap_data):
@@ -547,6 +547,7 @@ def get_plugin_class():
                     menubutton.set_icon_name(icon_name)
             else:
                 menubutton.set_icon_name(icon_name)
+
             menubutton.add_css_class("tray-icon")
             if tooltip_variant := message_data.get("tooltip"):
                 try:

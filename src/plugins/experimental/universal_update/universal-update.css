@@ -2,9 +2,7 @@
    Universal Update - Main Trigger Button (UNTOUCHED)
    ========================================================================== */
 .universal-update-button {
-  -gtk-icon-size: 24px;
-  margin-left: 2px;
-  margin-right: 2px;
+  -gtk-icon-size: 14px;
   border-radius: 3px;
   background-color: var(--color-bg-deep);
   box-shadow:
