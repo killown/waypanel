@@ -5,7 +5,7 @@
 .window-controls-box {
   border-style: none;
   background: transparent;
-  margin-top: 8px;
+  margin-top: 5px;
 }
 
 .window-controls-close-button,
@@ -34,15 +34,15 @@
 }
 
 .window-controls-close-button {
-  background: linear-gradient(145deg, var(--danger-red) 15%, var(--secondary-bg) 85%);
+  background: linear-gradient(145deg, var(--color-bg-raised) 15%, var(--secondary-bg) 85%);
 }
 
 .window-controls-maximize-button {
-  background: linear-gradient(145deg, var(--accent-blue) 15%, var(--secondary-bg) 85%);
+  background: linear-gradient(145deg, var(--color-bg-raised) 15%, var(--secondary-bg) 85%);
 }
 
 .window-controls-minimize-button {
-  background: linear-gradient(145deg, var(--success-green) 15%, var(--secondary-bg) 85%);
+  background: linear-gradient(145deg, var(--color-bg-raised) 15%, var(--secondary-bg) 85%);
 }
 
 .window-controls-maximize-button:hover,

@@ -68,7 +68,11 @@ def get_plugin_class():
                 bool: Always returns True to continue the self.glib timeout.
             """
             try:
-                current_time = self.datetime.datetime.now().strftime(self.time_format)
+                raw_time = self.datetime.datetime.now().strftime(self.time_format)
+
+                # 2. Capitalize the entire string (e.g., "04 FEB 12:17")
+                # Or use .title() for "04 Feb 12:17"
+                current_time = raw_time.title()
                 self.clock_label.set_label(current_time)  # pyright: ignore
             except Exception as e:
                 self.logger.error(f"Error updating clock: {e}")
