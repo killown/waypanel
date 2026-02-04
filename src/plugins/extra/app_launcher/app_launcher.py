@@ -27,6 +27,7 @@ def get_plugin_class():
     import os
     import gi
     import shlex
+    import gc
 
     gi.require_version("WebKit", "6.0")
     from src.plugins.core._base import BasePlugin
@@ -56,7 +57,7 @@ def get_plugin_class():
             )
             self.popover_height = self.get_plugin_setting_add_hint(
                 ["layout", "popover_height"],
-                570,
+                420,
                 "The fixed height (in pixels) of the main launcher popover window.",
             )
             self.min_app_grid_height = self.get_plugin_setting_add_hint(
@@ -111,7 +112,11 @@ def get_plugin_class():
                 "swaylock",
                 "The full command used to lock the screen.",
             )
-
+            self.get_plugin_setting_add_hint(
+                ["behavior", "only_flatpak"],
+                False,
+                "Only show Flatpak applications in the launcher",
+            )
             # Customizable System Action Icons
             self.system_button_config = {
                 "Settings": {
@@ -288,23 +293,25 @@ def get_plugin_class():
             return popover
 
         def _setup_scrolled_window_and_flowbox(self):
-            """Initializes the search bar, app grid, and sidebar actions."""
+            """Initializes the search bar, app grid, sidebar, and global footer."""
             self.main_box = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
             self.main_box.add_css_class("app-launcher-main-box")
 
-            # Content area with Sidebar
+            # 1. Content Area (App Grid + Sidebar)
             self.middle_hbox = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
             self.middle_hbox.add_css_class("app-launcher-middle-hbox")
+            self.middle_hbox.set_vexpand(True)
+            self.middle_hbox.set_hexpand(True)
+            self.middle_hbox.set_valign(self.gtk.Align.FILL)
 
             # Sidebar Column
             self.sidebar_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 4)
             self.sidebar_vbox.add_css_class("app-launcher-sidebar-vbox")
             self.sidebar_vbox.set_valign(self.gtk.Align.FILL)
-            self.sidebar_vbox.set_margin_start(10)
-            self.sidebar_vbox.set_margin_end(10)
-            self.sidebar_vbox.set_margin_top(10)
-            self.sidebar_vbox.set_margin_bottom(10)
+            for m in ["start", "end", "top", "bottom"]:
+                getattr(self.sidebar_vbox, f"set_margin_{m}")(10)
 
+            # System Buttons Loop
             for action_label, config in self.system_button_config.items():
                 btn = self.gtk.Button()
                 btn.add_css_class("app-launcher-sidebar-button")
@@ -315,6 +322,7 @@ def get_plugin_class():
                 img = self.gtk.Image.new_from_icon_name(icon_name)
                 img.set_pixel_size(22)
                 img.add_css_class("app-launcher-system-button-icon")
+
                 lbl = self.gtk.Label.new(action_label)
                 lbl.add_css_class("app-launcher-system-button-label")
                 lbl.set_halign(self.gtk.Align.START)
@@ -325,54 +333,29 @@ def get_plugin_class():
                 btn.connect("clicked", self.on_system_action_clicked, action_label)
                 self.sidebar_vbox.append(btn)
 
-                # Insert Flathub Store button directly below Compositor
                 if action_label == "Compositor":
                     f_btn = self.gtk.Button()
                     f_btn.add_css_class("app-launcher-sidebar-button")
                     self.gtk_helper.add_cursor_effect(f_btn)
-
                     f_content = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 12)
                     f_img = self.gtk.Image.new_from_icon_name(
                         "system-software-install-symbolic"
                     )
                     f_img.set_pixel_size(22)
-                    f_img.add_css_class("app-launcher-system-button-icon")
-
                     f_lbl = self.gtk.Label.new("Flathub Store")
                     f_lbl.add_css_class("app-launcher-system-button-label")
                     f_lbl.set_halign(self.gtk.Align.START)
-
                     f_content.append(f_img)
                     f_content.append(f_lbl)
                     f_btn.set_child(f_content)
                     f_btn.connect("clicked", self.on_flathub_store_clicked)
                     self.sidebar_vbox.append(f_btn)
 
-            # Bottom of Column: Show Ignored Switch
-            separator = self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL)
-            separator.set_margin_top(10)
-            separator.set_margin_bottom(10)
-            self.sidebar_vbox.append(separator)
-
-            ignore_container = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 6)
-            ignore_container.set_halign(self.gtk.Align.START)
-            ignore_label = self.gtk.Label.new("Show Ignored")
-            ignore_label.add_css_class("app-launcher-footer-label")
-            ignore_label.set_halign(self.gtk.Align.START)
-
-            self.ignore_switch = self.gtk.Switch.new()
-            self.ignore_switch.set_active(self.show_ignored)
-            self.ignore_switch.set_halign(self.gtk.Align.START)
-            self.ignore_switch.add_css_class("app-launcher-ignore-switch")
-            self.ignore_switch.connect("state-set", self.on_ignore_switch_toggled)
-
-            ignore_container.append(ignore_label)
-            ignore_container.append(self.ignore_switch)
-            self.sidebar_vbox.append(ignore_container)
-
-            # Center Container: Search bar + Scrolled Window
+            # Center Area (Search Bar + Scrolled Grid)
             self.center_vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
             self.center_vbox.set_hexpand(True)
+            self.center_vbox.set_vexpand(True)
+            self.center_vbox.set_valign(self.gtk.Align.FILL)
             self.center_vbox.add_css_class("app-launcher-center-vbox")
 
             self.searchbar = self.gtk.SearchEntry.new()
@@ -380,37 +363,96 @@ def get_plugin_class():
             self.searchbar.connect("search_changed", self.on_search_entry_changed)
             self.searchbar.connect("activate", self.on_keypress)
             self.searchbar.connect("stop-search", self.on_searchbar_key_release)
-            self.searchbar.set_focus_on_click(True)
             self.searchbar.set_placeholder_text("Search apps...")
             self.searchbar.add_css_class("app-launcher-searchbar")
-            self.searchbar.set_valign(self.gtk.Align.START)
             self.searchbar.set_hexpand(True)
+            self.searchbar.set_valign(self.gtk.Align.START)
             self.center_vbox.append(self.searchbar)
 
             self.scrolled_window = self.gtk.ScrolledWindow()
             self.scrolled_window.set_policy(
-                self.gtk.PolicyType.NEVER,
-                self.gtk.PolicyType.AUTOMATIC,
+                self.gtk.PolicyType.NEVER, self.gtk.PolicyType.AUTOMATIC
             )
+            self.scrolled_window.set_vexpand(True)
+            self.scrolled_window.set_hexpand(True)
+
             self.flowbox = self.gtk.FlowBox()
-            self.flowbox.set_valign(self.gtk.Align.START)
+            self.flowbox.set_valign(
+                self.gtk.Align.START
+            )  # Crucial: Keep grid at the top
             self.flowbox.set_halign(self.gtk.Align.FILL)
             self.flowbox.set_max_children_per_line(self.max_apps_per_row)
+            self.flowbox.set_min_children_per_line(self.max_apps_per_row)
             self.flowbox.set_selection_mode(self.gtk.SelectionMode.SINGLE)
-            self.flowbox.set_activate_on_single_click(True)
             self.flowbox.connect("child-activated", self.run_app_from_launcher)
             self.flowbox.add_css_class("app-launcher-flowbox")
             self.flowbox.set_sort_func(self.app_sort_func, None)
             self.flowbox.set_filter_func(self.on_filter_invalidate)
 
             self.scrolled_window.set_child(self.flowbox)
-            self.scrolled_window.set_vexpand(True)
             self.center_vbox.append(self.scrolled_window)
 
+            # Join Grid and Sidebar
             self.middle_hbox.append(self.center_vbox)
             self.middle_hbox.append(self.sidebar_vbox)
+
+            # 2. Full-Width Footer Section
+            self.footer_container = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 0)
+            self.footer_container.add_css_class("app-launcher-footer-container")
+
+            footer_sep = self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL)
+            footer_sep.add_css_class("app-launcher-footer-separator")
+            self.footer_container.append(footer_sep)
+
+            # Horizontal Switch Layout
+            self.footer_switches_row = self.gtk.Box.new(
+                self.gtk.Orientation.HORIZONTAL, 20
+            )
+            self.footer_switches_row.add_css_class("app-launcher-footer-switches-row")
+            for m in ["start", "end"]:
+                getattr(self.footer_switches_row, f"set_margin_{m}")(20)
+            for m in ["top", "bottom"]:
+                getattr(self.footer_switches_row, f"set_margin_{m}")(10)
+
+            # Show Ignored Toggle
+            ignore_box = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 8)
+            ignore_box.add_css_class("app-launcher-footer-item")
+            ignore_lbl = self.gtk.Label.new("Show Ignored")
+            ignore_lbl.add_css_class("app-launcher-footer-label")
+            self.ignore_switch = self.gtk.Switch.new()
+            self.ignore_switch.set_active(self.show_ignored)
+            self.ignore_switch.add_css_class("app-launcher-footer-switch")
+            self.ignore_switch.connect("state-set", self.on_ignore_switch_toggled)
+            ignore_box.append(ignore_lbl)
+            ignore_box.append(self.ignore_switch)
+
+            # Only Flatpaks Toggle
+            flatpak_box = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 8)
+            flatpak_box.add_css_class("app-launcher-footer-item")
+            flatpak_lbl = self.gtk.Label.new("Only Flatpaks")
+            flatpak_lbl.add_css_class("app-launcher-footer-label")
+            self.flatpak_switch = self.gtk.Switch.new()
+            only_fp = self.get_plugin_setting(["behavior", "only_flatpak"], False)
+            self.flatpak_switch.set_active(only_fp)
+            self.flatpak_switch.add_css_class("app-launcher-footer-switch")
+            self.flatpak_switch.connect("state-set", self.on_flatpak_switch_toggled)
+            flatpak_box.append(flatpak_lbl)
+            flatpak_box.append(self.flatpak_switch)
+
+            # Assembly of footer items
+            self.footer_switches_row.append(ignore_box)
+            spacer = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
+            spacer.set_hexpand(True)
+            self.footer_switches_row.append(spacer)
+            self.footer_switches_row.append(flatpak_box)
+
+            self.footer_container.append(self.footer_switches_row)
+
+            # Final Stacking
             self.main_box.append(self.middle_hbox)
-            self.popover_launcher.set_child(self.main_box)  # pyright: ignore
+            self.main_box.append(self.footer_container)
+
+            self.popover_launcher.set_child(self.main_box)
 
         def on_flathub_store_clicked(self, _widget):
             """Callback for the Flathub Store sidebar button."""
@@ -505,21 +547,57 @@ def get_plugin_class():
                     self._add_app_to_flowbox(app_info, app_id)
             self.update_flowbox()
 
+        def on_flatpak_switch_toggled(self, _switch, state):
+            """Callback for the sidebar Flatpak toggle."""
+            self.set_plugin_setting(["behavior", "only_flatpak"], state)
+            self.update_flowbox()
+            return False
+
+        def get_installed_flatpak_ids(self):
+            """Returns a set of all currently installed Flatpak application IDs."""
+            try:
+                result = self.subprocess.run(
+                    ["flatpak", "list", "--columns=application"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                # Split lines and filter out empty ones and the header
+                return {
+                    line.strip()
+                    for line in result.stdout.split("\n")
+                    if line.strip() and line.strip() != "Application"
+                }
+            except (self.subprocess.CalledProcessError, FileNotFoundError):
+                return set()
+
         def update_flowbox(self):
             """Synchronizes grid UI with installed apps and usage history."""
             self.all_apps = self.scanner.scan()
-            current_installed_apps = self.all_apps
+
+            only_flatpak = self.get_plugin_setting(["behavior", "only_flatpak"], False)
+
+            if only_flatpak:
+                flatpak_ids = self.get_installed_flatpak_ids()
+                current_installed_apps = {}
+                for app_id, app in self.all_apps.items():
+                    # Strip .desktop to match the ID from 'flatpak list'
+                    clean_id = app_id.replace(".desktop", "")
+                    if clean_id in flatpak_ids:
+                        current_installed_apps[app_id] = app
+            else:
+                current_installed_apps = self.all_apps
+
             recent_app_ids = self.get_recent_apps()
 
             # Mass removal of remote widgets
-            # Using list() to avoid mutation issues, then clearing
             if self.remote_widgets:
                 for widget in list(self.remote_widgets):
                     if widget.get_parent() == self.flowbox:
                         self.flowbox.remove(widget)
                 self.remote_widgets.clear()
 
-            # Handle uninstalled apps
+            # Handle uninstalled or filtered-out apps
             apps_to_remove = set(self.icons.keys()) - set(current_installed_apps.keys())
             if apps_to_remove:
                 for app_id in apps_to_remove:
@@ -529,15 +607,13 @@ def get_plugin_class():
                         flowbox_child = vbox.get_parent()
                         if flowbox_child and flowbox_child.get_parent() == self.flowbox:
                             self.flowbox.remove(flowbox_child)
-
-                # Reclaim memory from uninstalled app icons immediately
-                self._panel_instance.gc.collect()
+                gc.collect()
 
             for app_id, app in current_installed_apps.items():
                 if app_id not in self.icons:
                     self._add_app_to_flowbox(app, app_id)
 
-            # Sort logic...
+            # Sorting logic remains same...
             desired_app_id_order = []
             recent_ids_set = set(recent_app_ids)
             for app_id in recent_app_ids:
