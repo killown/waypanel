@@ -3,13 +3,9 @@
   border-radius: var(--radius-xs);
   padding: 1px 7px;
   margin-right: 10px;
-  
-  /* The "Machined" Edge: A dark border with a light top-inset */
   border: 1px solid var(--color-shadow-dark);
-  
-  font-family: 'Roboto', 'Geist Mono', 'Google Sans Code', 'Orbitron', 'MesloLGS Nerd Font Mono', monospace;
-  font-size: 17px;
-  font-weight: var(--font-weight-bold);
+  font-size: 16px;
+  font-weight: var(--font-weight-medium);
   letter-spacing: 2px;
   color: var(--theme-fg-label-primary);
   

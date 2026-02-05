@@ -244,8 +244,6 @@
   --radius-control-default: var(--radius-s);
   --radius-control-circular: 50%;
 
-  --font-family-default: "Inter", "SF Pro Display", "Segoe UI", sans-serif;
-  --font-family-system: var(--font-family-default);
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-bold: 600;

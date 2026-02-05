@@ -32,12 +32,26 @@ def get_plugin_class():
             self._last_content_hash = None
             self._import_regex = re.compile(r'@import\s+url\("([^"]+)"\);')
 
-            plugin_file = Path(inspect.getfile(self.__class__))
-            self.internal_base_css = (plugin_file.parent / "base.css").resolve()
-
             self._load_existing_registry()
 
         def on_start(self):
+            # Register font settings for user control
+            self.get_plugin_setting_add_hint(
+                "font_family",
+                [
+                    "Oxanium",
+                    "Tektur",
+                    "Geist Mono",
+                    "Google Sans Code",
+                    "Orbitron",
+                    "MesloLGS Nerd Font Mono",
+                    "Motiva Sans",
+                    "Inter",
+                    "Segoe UI",
+                    "monospace",
+                ],
+                "The primary font stack for the panel",
+            )
             self.generate_styles_css(is_startup=True)
             self.log_monitored_files()
 
@@ -77,7 +91,6 @@ def get_plugin_class():
             self.manual_css_registry[path_str] = path
             try:
                 gio_file = Gio.File.new_for_path(path_str)
-                # Use WATCH_HARD_LINKS to catch atomic moves/renames from IDEs
                 monitor = gio_file.monitor_file(
                     Gio.FileMonitorFlags.WATCH_HARD_LINKS, None
                 )
@@ -90,14 +103,12 @@ def get_plugin_class():
                 self.logger.error(f"Failed to watch {path_str}: {e}")
 
         def _on_source_css_changed(self, monitor, file, other_file, event_type):
-            # Accept CHANGES_DONE_HINT or CREATED (to handle atomic save/replace)
             valid_events = [
                 Gio.FileMonitorEvent.CHANGES_DONE_HINT,
                 Gio.FileMonitorEvent.CREATED,
             ]
             if event_type in valid_events:
                 self.logger.info(f"Detected change in source: {file.get_path()}")
-                # Reset hash to force a write even if the import list structure is the same
                 self._last_content_hash = None
                 self._schedule_generation()
 
@@ -107,7 +118,7 @@ def get_plugin_class():
                 module = inspect.getmodule(frame[0])
                 if not module or not hasattr(module, "__file__"):
                     return
-                caller_dir = Path(module.__file__).parent  # pyright: ignore
+                caller_dir = Path(module.__file__).parent
                 css_path = (caller_dir / css_filename).resolve()
                 if css_path.exists():
                     self._register_and_monitor(css_path)
@@ -134,9 +145,6 @@ def get_plugin_class():
             if theme_path.exists():
                 yield theme_path
 
-            if self.internal_base_css.exists():
-                yield self.internal_base_css
-
             for p_id, p_obj in self.plugin_loader.plugins.items():
                 if p_id == MY_ID:
                     continue
@@ -156,35 +164,8 @@ def get_plugin_class():
                     self.logger.error(f"{e}")
                     continue
 
-            for path in self.manual_css_registry.values():
+            for path in list(self.manual_css_registry.values()):
                 yield path
-
-        def remove_themes(self):
-            """
-            Scans styles.css and removes any @import lines pointing to the
-            resources/themes/css directory, then clears the hash to force a reset.
-            """
-            self.logger.info("CSS Generator: Removing all theme lines from styles.css")
-
-            if not self.output_css_path.exists():
-                return
-
-            try:
-                lines = self.output_css_path.read_text(encoding="utf-8").splitlines()
-                # Filter out any lines that reference the themes directory
-                # We target the specific directory 'resources/themes/css' used in paths
-                clean_lines = [
-                    line for line in lines if "resources/themes/css" not in line
-                ]
-
-                content = "\n".join(clean_lines)
-                self.output_css_path.write_text(content, encoding="utf-8")
-
-                # Invalidate hash so next boot generates fresh based on NEW config
-                self._last_content_hash = None
-
-            except Exception as e:
-                self.logger.error(f"Failed to remove themes from CSS: {e}")
 
         def build_imports(self):
             lines = []
@@ -203,19 +184,84 @@ def get_plugin_class():
                 self.glib.timeout_add(500, self.log_monitored_files)
             return "\n".join(lines)
 
+        def _get_injected_base_css(self):
+            """Returns the hardcoded base CSS and user font variables."""
+            font_list = self.get_plugin_setting(
+                "font_family",
+                [
+                    "Oxanium",
+                    "Tektur",
+                    "Geist Mono",
+                    "Google Sans Code",
+                    "Orbitron",
+                    "MesloLGS Nerd Font Mono",
+                    "Motiva Sans",
+                    "Inter",
+                    "Segoe UI",
+                    "monospace",
+                ],
+            )
+
+            # Format list as CSS font-family string
+            font_stack = ", ".join([f"'{f}'" if " " in f else f for f in font_list])
+
+            return f"""/* INJECTED BASE CONFIGURATION */
+:root {{
+  --font-family-default: {font_stack};
+}}
+
+* {{
+  font-family: var(--font-family-default);
+  color: var(--main-text);
+  -gtk-font-features: "tnum";
+}}
+
+popover.background {{
+  background-color: transparent;
+  border: none;
+}}
+
+popover.background > contents {{
+  background-color: var(--primary-bg);
+}}
+
+popover.background > arrow {{
+  background-color: var(--primary-bg);
+}}
+
+/* adjust panel size here */
+.box-widgets {{
+  margin: -2px;
+}}
+
+/* Right bar icons size is changed here */
+.image-button {{
+  -gtk-icon-size: 16px;
+  color: var(--main-text);
+  background-color: transparent;
+}}
+
+menubutton > button.toggle {{
+  -gtk-icon-size: 16px;
+}}
+
+"""
+
         def generate_styles_css(self, is_startup=False):
-            content = self.build_imports()
+            # Injected base (with fonts) MUST come before imports for variables to resolve
+            base_block = self._get_injected_base_css()
+            import_block = self.build_imports()
+
+            content = base_block + import_block
             new_hash = hashlib.md5(content.encode()).hexdigest()
 
-            # Logic: If this is NOT startup and we reached here via a monitor trigger,
-            # self._last_content_hash was cleared, forcing the write and triggering Panel reload.
             if new_hash == self._last_content_hash:
                 return
 
             try:
                 self.output_css_path.write_text(content, encoding="utf-8")
                 self._last_content_hash = new_hash
-                self.logger.info("Styles.css updated - Source change synchronized.")
+                self.logger.info("Styles.css updated: Injected base and user fonts.")
             except Exception as e:
                 self.logger.error(f"CSS Write Error: {e}")
 

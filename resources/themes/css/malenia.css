@@ -185,9 +185,6 @@
   --radius-l: 5px;
   --radius-xl: 6px;
   --radius-control-default: var(--radius-s);
-
-  --font-family-default: "Motiva Sans", "Inter", "Segoe UI";
-  --font-family-system: var(--font-family-default);
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-bold: 600;

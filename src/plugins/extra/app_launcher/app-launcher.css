@@ -6,7 +6,7 @@
 .app-launcher-menu-button {
   -gtk-icon-size: 24px;
   border-radius: 3px;
-  margin-top: 3px;
+
   background-color: var(--color-bg-deep);
   box-shadow:
     inset 0 0px 1px rgba(0, 0, 0, 0.4),
@@ -78,7 +78,6 @@
   padding: 4px;
   margin: 0;
   border-radius: var(--radius-l);
-  width: 96px; 
   transition: none;
 }
 
@@ -138,7 +137,7 @@
 }
 
 .app-launcher-footer-switch {
-  -gtk-outline-radius: var(--radius-m);
+  
 }
 
 /* ==========================================================================

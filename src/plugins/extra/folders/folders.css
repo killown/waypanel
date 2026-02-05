@@ -81,7 +81,6 @@
 .folders-menu-button {
   -gtk-icon-size: 24px;
   border-radius: 3px;
-  margin-top: 3px;
   background-color: var(--color-bg-deep);
   box-shadow:
     inset 0 0px 1px rgba(0, 0, 0, 0.4),
