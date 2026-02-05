@@ -46,16 +46,12 @@
   background-color: var(--color-bg-button-hover);
 }
 
-/* FIX: Section Headers
-   Adding the 'label' prefix and !important to force the theme accent
-   and prevent system 'blue' overrides.
-*/
 label.volume-header-text {
   font-family: var(--font-family-default);
   font-weight: var(--font-weight-bold);
   color: var(--theme-status-accent);
   text-transform: uppercase;
-  font-size: 0.65rem;
+  font-size: 1rem;
   letter-spacing: 2px;
   padding: 12px 0 6px 8px;
   line-height: var(--line-height-standard);
