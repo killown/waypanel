@@ -1,0 +1,43 @@
+/* ==========================================================================
+   WAYPANEL USER CUSTOMIZATION (custom.css)
+   ==========================================================================
+
+   This file is the absolute highest priority in the CSS cascade. 
+   Rules defined here will override themes, base plugin styles, and 
+   the dynamically generated font/structural injections.
+
+   HOW TO USE:
+   1. To override a style, uncomment the relevant block.
+   2. You can find all available CSS classes by extracting and inspecting 
+      the .css files located in your Waypanel installation directory:
+      ~/.../waypanel/resources/themes/css/ (or your plugin directories).
+   3. Changes are detected automatically by the CSS Generator plugin.
+   ========================================================================== */
+
+/* --- Example: Clock Customization ---
+.clock-label {
+    font-size: 18px;
+    font-weight: 800;
+    color: #ff0000;
+    -gtk-font-features: "tnum" 1;
+}
+*/
+
+/* --- Example: Panel Transparency ---
+.waypanel-window {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+*/
+
+/* --- Example: App Launcher Overrides ---
+.app-launcher-menu-button {
+    border-radius: 50%;
+    background-color: var(--color-accent-blue);
+}
+*/
+
+/* --- NOTE ---
+   If you break the CSS syntax (e.g., forgetting a semicolon), 
+   the GTK CSS engine will fail to parse this file and 
+   revert to the generated styles.css defaults. 
+*/

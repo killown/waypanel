@@ -26,6 +26,7 @@ def get_plugin_class():
             super().__init__(panel_instance)
             self.config_dir = self.path_handler.get_config_dir()
             self.output_css_path = self.config_dir / OUTPUT_CSS_FILE_NAME
+            self.custom_css_path = self.config_dir / "custom.css"
             self.manual_css_registry = {}
             self.monitors = {}
             self._debounce_id = 0
@@ -35,7 +36,11 @@ def get_plugin_class():
             self._load_existing_registry()
 
         def on_start(self):
-            # Register font settings for user control
+            # 1. Watch custom.css if it exists
+            if self.custom_css_path.exists():
+                self._register_and_monitor(self.custom_css_path)
+
+            # 2. Register font settings
             self.get_plugin_setting_add_hint(
                 "font_family",
                 [
@@ -165,7 +170,9 @@ def get_plugin_class():
                     continue
 
             for path in list(self.manual_css_registry.values()):
-                yield path
+                # Filter out custom.css as it is handled separately at the bottom
+                if path != self.custom_css_path:
+                    yield path
 
         def build_imports(self):
             lines = []
@@ -185,7 +192,6 @@ def get_plugin_class():
             return "\n".join(lines)
 
         def _get_injected_base_css(self):
-            """Returns the hardcoded base CSS and user font variables."""
             font_list = self.get_plugin_setting(
                 "font_family",
                 [
@@ -201,8 +207,6 @@ def get_plugin_class():
                     "monospace",
                 ],
             )
-
-            # Format list as CSS font-family string
             font_stack = ", ".join([f"'{f}'" if " " in f else f for f in font_list])
 
             return f"""/* INJECTED BASE CONFIGURATION */
@@ -229,12 +233,10 @@ popover.background > arrow {{
   background-color: var(--primary-bg);
 }}
 
-/* adjust panel size here */
 .box-widgets {{
   margin: -2px;
 }}
 
-/* Right bar icons size is changed here */
 .image-button {{
   -gtk-icon-size: 16px;
   color: var(--main-text);
@@ -248,11 +250,18 @@ menubutton > button.toggle {{
 """
 
         def generate_styles_css(self, is_startup=False):
-            # Injected base (with fonts) MUST come before imports for variables to resolve
+            # 1. Base configuration
             base_block = self._get_injected_base_css()
+
+            # 2. Dynamic imports from themes and plugins
             import_block = self.build_imports()
 
-            content = base_block + import_block
+            # 3. Priority: custom.css import at the absolute bottom
+            custom_import = ""
+            if self.custom_css_path.exists():
+                custom_import = f'\n@import url("custom.css");'
+
+            content = base_block + import_block + custom_import
             new_hash = hashlib.md5(content.encode()).hexdigest()
 
             if new_hash == self._last_content_hash:
@@ -261,7 +270,7 @@ menubutton > button.toggle {{
             try:
                 self.output_css_path.write_text(content, encoding="utf-8")
                 self._last_content_hash = new_hash
-                self.logger.info("Styles.css updated: Injected base and user fonts.")
+                self.logger.info("Styles.css updated: Custom CSS placed at bottom.")
             except Exception as e:
                 self.logger.error(f"CSS Write Error: {e}")
 
