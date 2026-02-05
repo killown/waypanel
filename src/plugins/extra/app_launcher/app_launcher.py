@@ -649,37 +649,33 @@ def get_plugin_class():
                     self.popover_launcher.popup()  # pyright: ignore
 
         def on_keypress(self, *_):
-            """Launches the searched application escaping the sandbox if needed."""
+            """Launches the searched application using gtk-launch for desktop ID integration."""
             if not self.search_get_child:
                 return
 
             desktop_id = f"{self.search_get_child}.desktop"
-            app_info = self.all_apps.get(desktop_id)  # pyright: ignore
 
-            if app_info:
-                exec_cmd = app_info.get_exec()
-                if not exec_cmd:
-                    return
+            if os.path.exists("/.flatpak-info"):
+                final_cmd = [
+                    "flatpak-spawn",
+                    "--host",
+                    "--env=GDK_BACKEND=wayland",
+                    f"--env=WAYLAND_DISPLAY={os.environ.get('WAYLAND_DISPLAY', 'wayland-0')}",
+                    "gtk-launch",
+                    desktop_id,
+                ]
+            else:
+                final_cmd = ["gtk-launch", desktop_id]
 
-                cmd_parts = [p for p in exec_cmd.split() if not p.startswith("%")]
+            try:
+                full_cmd_string = shlex.join(final_cmd)
 
-                if os.path.exists("/.flatpak-info"):
-                    final_cmd = [
-                        "flatpak-spawn",
-                        "--host",
-                        "--env=GDK_BACKEND=wayland",
-                        f"--env=WAYLAND_DISPLAY={os.environ.get('WAYLAND_DISPLAY', 'wayland-0')}",
-                    ] + cmd_parts
-                else:
-                    final_cmd = cmd_parts
-
-                import subprocess
-
-                try:
-                    subprocess.Popen(final_cmd)
-                    self.add_recent_app(desktop_id)
-                except Exception as e:
-                    self.logger.error(f"AppLauncher: Launch failed: {e}")
+                self.run_cmd(full_cmd_string)
+                self.add_recent_app(desktop_id)
+            except Exception as e:
+                self.logger.error(
+                    f"AppLauncher: Search launch failed via gtk-launch: {e}"
+                )
 
             if self.popover_launcher:
                 self.popover_launcher.popdown()  # pyright: ignore
@@ -764,7 +760,7 @@ def get_plugin_class():
             return self.recent_db.fetch_recent()
 
         def run_app_from_launcher(self, x, y):
-            """Executes the selected application escaping the sandbox using a shell string."""
+            """Executes the selected application using gtk-launch for desktop ID integration."""
             selected = x.get_selected_children()
             if not selected:
                 return
@@ -774,36 +770,26 @@ def get_plugin_class():
 
             data = vbox.MYTEXT
             desktop_id = data[1]
-            app_info = self.all_apps.get(desktop_id)  # pyright: ignore
 
-            if app_info:
-                exec_cmd = app_info.get_exec()
-                if not exec_cmd:
-                    return
+            # Construct command using gtk-launch and the desktop entry ID
+            if os.path.exists("/.flatpak-info"):
+                final_cmd_list = [
+                    "flatpak-spawn",
+                    "--host",
+                    "--env=GDK_BACKEND=wayland",
+                    f"--env=WAYLAND_DISPLAY={os.environ.get('WAYLAND_DISPLAY', 'wayland-0')}",
+                    "gtk-launch",
+                    desktop_id,
+                ]
+            else:
+                final_cmd_list = ["gtk-launch", desktop_id]
 
-                # Clean GTK field codes (%u, %f, etc)
-                cmd_parts = [p for p in exec_cmd.split() if not p.startswith("%")]
-
-                if os.path.exists("/.flatpak-info"):
-                    # Generic Wayland seat forwarding for host execution
-                    final_cmd_list = [
-                        "flatpak-spawn",
-                        "--host",
-                        "--env=GDK_BACKEND=wayland",
-                        f"--env=WAYLAND_DISPLAY={os.environ.get('WAYLAND_DISPLAY', 'wayland-0')}",
-                    ] + cmd_parts
-                else:
-                    final_cmd_list = cmd_parts
-
-                try:
-                    # Construct the single command string
-                    full_cmd_string = shlex.join(final_cmd_list)
-
-                    # Execute via the project's string runner
-                    self.run_cmd(full_cmd_string)
-                    self.add_recent_app(desktop_id)
-                except Exception as e:
-                    self.logger.error(f"AppLauncher: Launch failed: {e}")
+            try:
+                full_cmd_string = shlex.join(final_cmd_list)
+                self.run_cmd(full_cmd_string)
+                self.add_recent_app(desktop_id)
+            except Exception as e:
+                self.logger.error(f"AppLauncher: Launch failed via gtk-launch: {e}")
 
             if self.popover_launcher:
                 self.popover_launcher.popdown()  # pyright: ignore
