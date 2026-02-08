@@ -4,7 +4,7 @@ def get_plugin_metadata(panel):
         "name": "Hardware Monitor",
         "version": "4.7.1",
         "enabled": True,
-        "container": "top-panel-center",
+        "container": "top-panel-right",
         "deps": ["css_generator"],
         "description": "GTK4 Hardware monitor with Mount/Eject controls.",
     }

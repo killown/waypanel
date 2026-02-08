@@ -4,8 +4,8 @@
 
 /* Top Panel Button */
 .usb-monitor-button {
-  margin-right: 10px;
-  margin-top: 3px;
+  margin-right: 3px;
+  margin-top: 1px;
   border-radius: 3px;
   background-color: var(--color-bg-deep);
   box-shadow:
