@@ -1,14 +1,53 @@
 .floating-volume-widget {
-  background-color: var(--secondary-bg);
-  box-shadow: 0 8px 15px var(--shadow-medium);
+  background-color: var(--color-bg-deep); 
+  box-shadow: var(--shadow-window-float);
+}
+
+.volume-osd-container {
+  background-color: var(--color-bg-deep); 
+
 }
 
 .floating-volume-icon {
-  color: var(--main-text);
+  color: var(--color-accent-blue);
+  -gtk-icon-size: 26px;
 }
 
 .floating-volume-label {
-  font-size: 14px;
-  font-weight: bold;
-  color: var(--main-text);
+  font-family: var(--font-family-system);
+  font-size: 18px;
+  font-weight: var(--font-weight-bold);
+  color: var(--theme-fg-label-primary);
+  min-width: 55px;
+}
+
+.floating-volume-slider {
+  min-width: 240px;
+  margin-left: 12px;
+  padding: 6px 0;
+}
+
+.floating-volume-slider contents trough {
+  min-height: 10px;
+  background-color: var(--color-bg-deep);
+  border-radius: var(--radius-m);
+}
+
+.floating-volume-slider contents trough highlight {
+  background-color: var(--color-accent-blue);
+  border-radius: var(--radius-m);
+}
+
+.floating-volume-slider contents trough slider {
+  min-height: 22px;
+  min-width: 22px;
+  margin: -6px 0; 
+  background-color: var(--color-fg-primary);
+  border: 2px solid var(--color-accent-blue);
+  border-radius: 100%;
+  box-shadow: var(--shadow-elevated);
+}
+
+.floating-volume-slider contents trough slider:hover {
+  background-color: var(--accent-blue-light);
 }
