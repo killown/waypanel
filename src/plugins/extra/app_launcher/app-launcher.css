@@ -92,7 +92,7 @@
 }
 
 .app-launcher-popover .app-launcher-icon-from-popover {
-  -gtk-icon-size: 44px;
+  -gtk-icon-size: 54px;
   padding: 8px;
   background-color: var(--theme-bg-view-secondary);
   border: 1px solid var(--color-separator-line);
