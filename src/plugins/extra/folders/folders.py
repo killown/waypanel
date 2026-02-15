@@ -163,12 +163,26 @@ def get_plugin_class():
             self.gtk_helper.clear_listbox(self.listbox)
             all_folders = self.get_plugin_setting("path", None) or {}
             pinned_paths = set()
+
             if all_folders:
                 for key, folder_data in all_folders.items():
-                    name = folder_data["name"]
-                    folders_path = folder_data["path"]
-                    filemanager = folder_data["filemanager"]
-                    icon = folder_data["icon"]
+                    # Fallback to the dictionary key if 'name' is missing
+                    name = folder_data.get("name", key)
+                    folders_path = folder_data.get("path")
+
+                    # If path is missing, we cannot render the row
+                    if not folders_path:
+                        self.logger.warning(
+                            f"Skipping pinned folder '{key}': 'path' is missing in config."
+                        )
+                        continue
+
+                    # Safely handle filemanager and icon defaults
+                    filemanager = folder_data.get(
+                        "filemanager"
+                    )  # None is handled by open_folder fallback
+                    icon = folder_data.get("icon", "folder-symbolic")
+
                     pinned_paths.add(folders_path)
                     row_hbox = self._create_folder_row(
                         name=name,
@@ -180,26 +194,34 @@ def get_plugin_class():
                     listbox_row = self.gtk.ListBoxRow.new()
                     listbox_row.set_child(row_hbox)
                     self.listbox.append(listbox_row)
+
             mounted_dirs = []
             visible_home_dirs = []
             hidden_home_dirs = []
-            for path in self._home_path.iterdir():
-                folders_path = str(path)
-                if not path.is_dir() or folders_path in pinned_paths:
-                    continue
-                if path.is_mount():
-                    mounted_dirs.append(path)
-                elif path.name.startswith("."):
-                    hidden_home_dirs.append(path)
-                else:
-                    visible_home_dirs.append(path)
+
+            try:
+                for path in self._home_path.iterdir():
+                    folders_path = str(path)
+                    if not path.is_dir() or folders_path in pinned_paths:
+                        continue
+                    if path.is_mount():
+                        mounted_dirs.append(path)
+                    elif path.name.startswith("."):
+                        hidden_home_dirs.append(path)
+                    else:
+                        visible_home_dirs.append(path)
+            except Exception as e:
+                self.logger.error(f"Error scanning home directory: {e}")
+
             mounted_dirs.sort(key=lambda p: p.name.lower())
             if mounted_dirs:
                 separator = self.gtk.Separator.new(self.gtk.Orientation.HORIZONTAL)
                 separator_row = self.gtk.ListBoxRow.new()
                 separator_row.set_child(separator)
                 self.listbox.append(separator_row)
-                filemanager = "nautilus"
+
+                # Default values for mounted drives
+                filemanager = None
                 icon = "drive-harddisk-symbolic"
                 for path in mounted_dirs:
                     row_hbox = self._create_folder_row(
@@ -212,10 +234,13 @@ def get_plugin_class():
                     listbox_row = self.gtk.ListBoxRow.new()
                     listbox_row.set_child(row_hbox)
                     self.listbox.append(listbox_row)
+
             visible_home_dirs.sort(key=lambda p: p.name.lower())
             hidden_home_dirs.sort(key=lambda p: p.name.lower())
             sorted_home_dirs = visible_home_dirs + hidden_home_dirs
-            filemanager = "nautilus"
+
+            # Default values for home folders
+            filemanager = None
             icon = "nautilus"
             for path in sorted_home_dirs:
                 row_hbox = self._create_folder_row(
@@ -420,17 +445,27 @@ def get_plugin_class():
             if not row_child or not hasattr(row_child, "MYTEXT"):
                 self.logger.error("Folder row is missing path data.")
                 return
+
             path_tuple = row_child.MYTEXT
+
+            # Handle both tuple and string formats from MYTEXT
             if isinstance(path_tuple, tuple):
-                path, filemanager = path_tuple
+                path = path_tuple[0]
+                # Default to None if the filemanager index is missing or empty
+                filemanager = path_tuple[1] if len(path_tuple) > 1 else None
             else:
-                path, filemanager = path_tuple.split()
-            cmd = (
-                f"xdg-open '{path}'"
-                if filemanager == "nautilus"
-                else f"{filemanager} '{path}'"
-            )
+                parts = path_tuple.split()
+                path = parts[0]
+                filemanager = parts[1] if len(parts) > 1 else None
+
+            # Logic: If filemanager is 'nautilus' or missing/None, use xdg-open
+            if not filemanager or filemanager == "nautilus":
+                cmd = f"xdg-open '{path}'"
+            else:
+                cmd = f"{filemanager} '{path}'"
+
             self.run_cmd(cmd)
+
             if self.popover_folders:
                 self.popover_folders.popdown()
 
@@ -483,13 +518,5 @@ def get_plugin_class():
                     f"Unexpected error occurred in on_filter_invalidate. {e}"
                 )
                 return False
-
-        def code_explanation(self):
-            """
-            This plugin creates a popover-based user interface for managing files and directories.
-            Its core logic focuses on dynamic, responsive file browsing, custom pinning, and external
-            application launching (file manager, disk usage analyzer).
-            """
-            return self.code_explanation.__doc__
 
     return PopoverFolders
