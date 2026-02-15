@@ -44,6 +44,11 @@ class DeviceWatcher:
         raw_name = (
             device.get("ID_FS_LABEL") or device.get("ID_MODEL") or "Unknown Device"
         )
+
+        # Skip if the device name is unknown
+        if raw_name == "Unknown Device":
+            return
+
         name = " ".join(raw_name.replace("-", " ").replace("_", " ").split())
 
         if name.upper().startswith(("EFI", "VTOY")):
