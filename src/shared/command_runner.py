@@ -92,13 +92,11 @@ class CommandRunner:
     def run(self, cmd: str) -> None:
         """
         Execute a shell command without blocking the main GTK thread.
-        Appends GTK_THEME environment variable to the shell command if on host.
+        Appends PATH environment variable to the shell command to ensure
+        local binaries are resolved correctly on the host.
         """
         try:
-            # Enforce theme on host by prepending to command string
-            final_cmd = cmd
-            if not self.is_flatpak and self._gtk_theme:
-                final_cmd = f"GTK_THEME='{self._gtk_theme}' {cmd}"
+            host_path = os.getenv("PATH", "/usr/bin:/bin")
 
             if self.is_flatpak:
                 env_args = self._get_flatpak_env_args()
@@ -116,26 +114,17 @@ class CommandRunner:
                 GLib.idle_add(run_flatpak)
                 return
 
-            if os.getenv("WAYFIRE_SOCKET"):
+            def run_host():
+                theme_env = f"GTK_THEME='{self._gtk_theme}' " if self._gtk_theme else ""
+                final_cmd = f"PATH='{host_path}' {theme_env}{cmd}"
 
-                def run_wayfire():
-                    if hasattr(self, "ipc") and self.ipc:
-                        self.ipc.run_cmd(final_cmd)
-                    return False
+                if hasattr(self, "ipc") and self.ipc:
+                    self.ipc.run_cmd(final_cmd)
 
-                GLib.idle_add(run_wayfire)
+                return False
 
-            elif os.getenv("SWAYSOCK"):
-                GLib.idle_add(
-                    lambda: subprocess.Popen(
-                        final_cmd,
-                        shell=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True,
-                        start_new_session=True,
-                    )
-                )
+            GLib.idle_add(run_host)
+
         except Exception as e:
             self.logger.error(
                 error=e, message=f"Error running command: {cmd}", level="error"
