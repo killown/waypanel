@@ -1,7 +1,6 @@
 import os
 import sys
 import json as js
-from configparser import ConfigParser
 import argparse
 import shutil
 from subprocess import call, check_output, run, Popen
@@ -9,7 +8,6 @@ import subprocess
 import asyncio
 import time
 import dbus
-import configparser
 from wayfire import WayfireSocket
 from wayfire.extra.ipc_utils import WayfireUtils
 from wayfire.extra.stipc import Stipc
@@ -21,28 +19,11 @@ utils = WayfireUtils(sock)
 wpe = WPE(sock)
 
 
-class ViewDropDown:
-    def __init__(self, term, width, height) -> None:
-        pass
-        self.TERMINAL_CMD = term
-        self.TERMINAL_WIDTH = width
-        self.TERMINAL_HEIGHT = height
-        self.VIEW_STICKY = True
-        self.VIEW_ALWAYS_ON_TOP = True
-        addr = os.getenv("WAYFIRE_SOCKET")
-        self.sock = WayfireSocket(addr)
-
-
 class Wayctl:
     def __init__(self):
         self.ws_utils = WayfireUtils(sock)
         self.parser = argparse.ArgumentParser(
             description="wayctl script utility for controlling parts of the wayfire compositor through the command line interface or a script."
-        )
-        self.parser.add_argument(
-            "--move_cursor",
-            nargs="*",
-            help="move mouse cursor position with <x-coordinate> <y-coordinate>",
         )
         self.parser.add_argument(
             "--dpms",
@@ -55,19 +36,14 @@ class Wayctl:
             help="Capture screenshots with various options. Usage: --screenshot focused view (to capture a screenshot of the focused view), --screenshot slurp (to select a region to screenshot), --screenshot output all (to capture screenshots of all outputs).",
         )
         self.parser.add_argument(
+            "--pastebin",
+            action="store_true",
+            help="Upload clipboard to 0x0.st and copy URL",
+        )
+        self.parser.add_argument(
             "--colorpicker",
             nargs="*",
             help="Color picker using slurp and grim",
-        )
-        self.parser.add_argument(
-            "--plugin",
-            nargs="*",
-            help="manage plugins with -> enable, disable, restart, status",
-        )
-        self.parser.add_argument(
-            "--drop",
-            nargs="*",
-            help="start a view in guake mode",
         )
         self.parser.add_argument(
             "--move-view-to-empty-workspace",
@@ -77,149 +53,6 @@ class Wayctl:
         self.args = self.parser.parse_args()
         self.args = self.parser.parse_args()
         self.sock = sock
-
-    def get_wayfire_ini_path(self):
-        wayfire_ini_path = os.getenv("WAYFIRE_CONFIG_FILE")
-        if wayfire_ini_path:
-            return wayfire_ini_path
-        else:
-            print("Error: WAYFIRE_CONFIG_FILE environment variable is not set.")
-            return None
-
-    def is_plugin_enabled(self, plugin):
-        wayfire_ini_path = self.get_wayfire_ini_path()
-        if not wayfire_ini_path:
-            return
-        config = ConfigParser()
-        config.read(wayfire_ini_path)
-        if "core" not in config:
-            raise KeyError("Section 'core' not found in wayfire.ini")
-        plugins = config.get("core", "plugins", fallback="").split()
-        plugins = [p.strip() for p in plugins]
-        if plugin in plugins:
-            print("{0} is enabled".format(plugin))
-        else:
-            print("{0} is disabled".format(plugin))
-
-    def activate_plugin(self, plugin_name):
-        wayfire_ini_path = self.get_wayfire_ini_path()
-        if not wayfire_ini_path:
-            return
-        config = ConfigParser()
-        config.read(wayfire_ini_path)
-        if "core" not in config:
-            config["core"] = {}
-        plugins = config["core"].get("plugins", "").split()
-        if plugin_name in plugins:
-            print(f"Plugin '{plugin_name}' is already enabled in wayfire.ini.")
-            return
-        plugins.append(plugin_name)
-        config["core"]["plugins"] = " ".join(plugins)
-        with open(wayfire_ini_path, "w") as configfile:
-            config.write(configfile)
-        print(f"Plugin '{plugin_name}' enabled successfully in wayfire.ini.")
-
-    def disactivate_plugin(self, plugin_name):
-        wayfire_ini_path = self.get_wayfire_ini_path()
-        if not wayfire_ini_path:
-            return
-        config = ConfigParser()
-        config.read(wayfire_ini_path)
-        if "core" not in config:
-            print("Error: 'core' section not found in wayfire.ini.")
-            return
-        plugins = config["core"].get("plugins", "").split()
-        if plugin_name not in plugins:
-            print(f"Plugin '{plugin_name}' is not enabled in wayfire.ini.")
-            return
-        plugins.remove(plugin_name)
-        config["core"]["plugins"] = " ".join(plugins)
-        with open(wayfire_ini_path, "w") as configfile:
-            config.write(configfile)
-        print(f"Plugin '{plugin_name}' disabled successfully in wayfire.ini.")
-
-    def plugin_list(self):
-        official_url = "https://github.com/WayfireWM/wayfire/tree/master/metadata"
-        extra_url = (
-            "https://github.com/WayfireWM/wayfire-plugins-extra/tree/master/metadata"
-        )
-        official_response = requests.get(official_url)
-        extra_response = requests.get(extra_url)
-        if official_response.status_code != 200 or extra_response.status_code != 200:
-            print("Failed to fetch content from one or both repositories.")
-            return {}
-        official_html_content = official_response.text
-        extra_html_content = extra_response.text
-        official_start_index = official_html_content.find(
-            '<script type="application/json" data-target="react-app.embeddedData">'
-        )
-        extra_start_index = extra_html_content.find(
-            '<script type="application/json" data-target="react-app.embeddedData">'
-        )
-        official_end_index = official_html_content.find(
-            "</script>", official_start_index
-        )
-        extra_end_index = extra_html_content.find("</script>", extra_start_index)
-        official_json_data = official_html_content[
-            official_start_index
-            + len(
-                '<script type="application/json" data-target="react-app.embeddedData">'
-            ) : official_end_index
-        ]
-        extra_json_data = extra_html_content[
-            extra_start_index
-            + len(
-                '<script type="application/json" data-target="react-app.embeddedData">'
-            ) : extra_end_index
-        ]
-        official_data = js.loads(official_json_data)
-        extra_data = js.loads(extra_json_data)
-        official_plugin_names = [
-            item["name"][:-4]
-            for item in official_data["payload"]["tree"]["items"]
-            if item["contentType"] == "file" and item["name"].endswith(".xml")
-        ]
-        extra_plugin_names = [
-            item["name"][:-4]
-            for item in extra_data["payload"]["tree"]["items"]
-            if item["contentType"] == "file" and item["name"].endswith(".xml")
-        ]
-        return {
-            "official-plugins": official_plugin_names,
-            "extra-plugins": extra_plugin_names,
-        }
-
-    def list_enabled_plugins(self):
-        wayfire_ini_path = self.get_wayfire_ini_path()
-        if not wayfire_ini_path:
-            return []
-        config = ConfigParser()
-        config.read(wayfire_ini_path)
-        if "core" not in config:
-            print("Error: 'core' section not found in wayfire.ini.")
-            return []
-        plugins = config["core"].get("plugins", "").split()
-        return plugins
-
-    def reload_plugins(self):
-        filename = self.get_wayfire_ini_path()
-        if not filename:
-            return
-        config = configparser.ConfigParser()
-        config.read(filename)
-        config["core"]["plugins"] = "# " + config["core"]["plugins"]
-        with open(filename, "w") as configfile:
-            config.write(configfile)
-        config["core"]["plugins"] = (
-            config["core"]["plugins"][2:]
-            if config["core"]["plugins"].startswith("# ")
-            else config["core"]["plugins"]
-        )
-        with open(filename, "w") as configfile:
-            config.write(configfile)
-
-    def reload_plugin(self, plugin_name):
-        self.disable_plugin(plugin_name)
 
     def dpms_status(self):
         status = check_output(["wlopm"]).decode().strip().split("\n")
@@ -371,18 +204,68 @@ class Wayctl:
         call(cmd)
         Popen(["xdg-open", filename])
 
-    def generate_screenshot_info(self, view_id, filename):
-        font_size = 22
-        font_filepath = "SourceCodePro-ExtraLight.otf"
-        color = (80, 80, 80)
-        view = self.sock.get_view(view_id)
-        text = f"ID: {view['id']}, PID: {view['pid']}, Title: {view['title']}"
-        font = ImageFont.truetype(font_filepath, size=font_size)
-        mask_image = font.getmask(text, "L")
-        size = mask_image.size[0] + 20, mask_image.size[1] + 20
-        img = Image.new("RGBA", size)
-        img.im.paste(color, (20, 20) + size, mask_image)
-        img.save(filename)
+    def pastebin_upload(self):
+        """
+        Uploads clipboard content to 0x0.st using system curl.
+
+        WHY CURL IS USED INSTEAD OF PYTHON MODULES:
+        Fingerprint Matching: 0x0.st (and similar services) aggressively block
+           Python-requests/HTTPX User-Agents and TLS fingerprints with 403 Forbidden.
+           Native curl provides the 'standard' handshake the server expects.
+        """
+        try:
+            data = check_output(["wl-paste"], text=False)
+            if not data:
+                run(["notify-send", "0x0.st", "Clipboard is empty"])
+                return
+
+            result = run(
+                ["curl", "-F", "file=@-", "https://0x0.st"],
+                input=data,
+                capture_output=True,
+                text=False,
+                check=True,
+            )
+
+            url_bytes = result.stdout.strip()
+
+            if url_bytes.startswith(b"https://"):
+                url = url_bytes.decode()
+                run(["wl-copy"], input=url_bytes, check=True)
+                run(
+                    [
+                        "notify-send",
+                        "--action=open=Open Link",
+                        "0x0.st",
+                        f"URL Copied: {url}",
+                    ]
+                )
+
+                if os.fork() == 0:
+                    action = run(
+                        [
+                            "notify-send",
+                            "--action=open=Open Link",
+                            "0x0.st",
+                            f"URL Copied: {url}",
+                        ],
+                        capture_output=True,
+                        text=True,
+                    ).stdout.strip()
+                    if action == "open":
+                        run(["xdg-open", url])
+                    sys.exit(0)
+            else:
+                run(
+                    [
+                        "notify-send",
+                        "0x0.st Error",
+                        f"Unexpected response: {url_bytes.decode()}",
+                    ]
+                )
+
+        except Exception as e:
+            run(["notify-send", "0x0.st Error", f"Upload failed: {str(e)}"])
 
     def color_picker(self):
         def get_color_at_position(x, y):
@@ -458,27 +341,11 @@ class Wayctl:
             print(view)
             print("\n\n")
 
-    def list_plugins(self):
-        plugins = self.plugin_list()
-        for plugin in plugins:
-            print(plugin)
-            print(plugins[plugin])
-            print("\n")
-        print("Enabled Plugins ")
-        print(self.list_enabled_plugins())
-
-    def _reload_plugin(self, plugin_name):
-        self.reload_plugin(plugin_name)
-
-    def enable_plugin(self, plugin_name):
-        self.enable_plugin(plugin_name)
-
-    def disable_plugin(self, plugin_name):
-        self.disable_plugin(plugin_name)
-
 
 if __name__ == "__main__":
     wayctl = Wayctl()
+    if wayctl.args.pastebin:
+        wayctl.pastebin_upload()
     if wayctl.args.dpms is not None:
         wayctl.dpms()
     if wayctl.args.colorpicker is not None:
@@ -504,16 +371,3 @@ if __name__ == "__main__":
         if "view" in wayctl.args.screenshot[0]:
             if "all" in wayctl.args.screenshot[1]:
                 wayctl.screenshot_view_list()
-    if wayctl.args.plugin is not None:
-        if "reload" in wayctl.args.plugin:
-            if wayctl.args.plugin[1] != "all":
-                wayctl._reload_plugin(wayctl.args.plugin[1])
-        if "enable" in wayctl.args.plugin:
-            wayctl.activate_plugin(wayctl.args.plugin[1])
-        if "disable" in wayctl.args.plugin:
-            wayctl.disactivate_plugin(wayctl.args.plugin[1])
-        if "list" in wayctl.args.plugin:
-            wayctl.list_plugins()
-        if "status" in wayctl.args.plugin:
-            plugin = wayctl.args.plugin[1]
-            wayctl.is_plugin_enabled(plugin)
