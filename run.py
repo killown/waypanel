@@ -329,6 +329,7 @@ def main() -> None:
 
     os.environ["LD_PRELOAD"] = str(gtk_lib)
     os.environ["PYTHONPATH"] = str(install_root)
+    os.environ["WAYPANEL_VENV"] = str(config.venv_python)
 
     ensure_initial_setup(config)
     manage_virtual_environment(config, install_root / "requirements.txt")
