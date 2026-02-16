@@ -21,23 +21,6 @@ class CommandRunner:
         self.logger = panel_instance.logger
         self.ipc = panel_instance.ipc
         self.is_flatpak = os.path.exists("/.flatpak-info")
-        self._gtk_theme = self._get_current_gtk_theme()
-
-    def _get_current_gtk_theme(self) -> Optional[str]:
-        """
-        Queries gsettings for the current system GTK theme.
-        """
-        try:
-            result = subprocess.run(
-                ["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            return result.stdout.strip().replace("'", "")
-        except Exception as e:
-            self.logger.error(f"Failed to query current GTK theme: {e}")
-            return None
 
     def _get_flatpak_env_args(self) -> List[str]:
         """
@@ -71,10 +54,6 @@ class CommandRunner:
             "--env=LD_LIBRARY_PATH=",
             "--env=LD_PRELOAD=",
         ]
-
-        # Enforce GTK_THEME inside Flatpak sandbox
-        if self._gtk_theme:
-            args.append(f"--env=GTK_THEME={self._gtk_theme}")
 
         if dbus_addr:
             args.append(f"--env=DBUS_SESSION_BUS_ADDRESS={dbus_addr}")
@@ -115,8 +94,7 @@ class CommandRunner:
                 return
 
             def run_host():
-                theme_env = f"GTK_THEME='{self._gtk_theme}' " if self._gtk_theme else ""
-                final_cmd = f"PATH='{host_path}' {theme_env}{cmd}"
+                final_cmd = f"PATH='{host_path}' {cmd}"
 
                 if hasattr(self, "ipc") and self.ipc:
                     self.ipc.run_cmd(final_cmd)
@@ -135,8 +113,6 @@ class CommandRunner:
         Asynchronously executes a command with GTK_THEME environment set.
         """
         env = os.environ.copy()
-        if self._gtk_theme:
-            env["GTK_THEME"] = self._gtk_theme
 
         wrapped = self._wrap_cmd(cmd_list)
         try:
@@ -161,8 +137,6 @@ class CommandRunner:
         Synchronous execution with GTK_THEME environment set.
         """
         env = os.environ.copy()
-        if self._gtk_theme:
-            env["GTK_THEME"] = self._gtk_theme
 
         wrapped = self._wrap_cmd(cmd_list)
         try:
