@@ -615,10 +615,15 @@ class WayfireHelpers:
                     f"Keybind '{keybind}' already used. Skipping registration."
                 )
                 return
-        self.logger.info(f"Registering keybinding: {keybind}")
+
+        venv_python = os.getenv("WAYPANEL_VENV", "python3")
+        wayctl_path = self.get_wayctl_path()
+
+        self.logger.info(f"Registering keybinding: {keybind} via {venv_python}")
+
         self.ipc.register_binding(
             binding=keybind,
-            command=f"python3 {self.get_wayctl_path()} {args}",
+            command=f"{venv_python} {wayctl_path} {args}",
             exec_always=True,
             mode="normal",
         )
