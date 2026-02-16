@@ -17,7 +17,7 @@ def get_plugin_metadata(panel):
     return {
         "id": id,
         "name": "Universal Update",
-        "version": "2.5.0",
+        "version": "2.5.1",
         "enabled": ENABLE,
         "index": 11,
         "container": container,
@@ -84,11 +84,13 @@ def get_plugin_class():
                 2,
                 "PID check interval.",
             )
+
             self.update_command = self.get_plugin_setting_add_hint(
-                ["actions", "update_command"],
+                ["actions", "system_update_command"],
                 self.manager.get_combined_command(),
                 "Combined update command for all detected managers.",
             )
+
             self.terminal_preference = self.get_plugin_setting_add_hint(
                 ["actions", "terminal_preference"],
                 ["kitty", "alacritty", "terminator", "xterm", "gnome-terminal"],

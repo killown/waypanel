@@ -1,6 +1,7 @@
 import abc
 import shutil
 import re
+import os
 
 
 class UpdateProvider(abc.ABC):
@@ -36,7 +37,17 @@ class PacmanProvider(UpdateProvider):
         return "Pacman"
 
     def is_available(self):
-        return bool(shutil.which("pacman"))
+        if not shutil.which("pacman"):
+            return False
+        try:
+            if os.path.exists("/etc/os-release"):
+                with open("/etc/os-release", "r") as f:
+                    content = f.read().lower()
+                    if "id=fedora" in content or "id_like=fedora" in content:
+                        return False
+        except Exception:
+            pass
+        return True
 
     def get_default_command(self):
         return "sudo pacman -Syu"
@@ -75,7 +86,12 @@ class DnfProvider(UpdateProvider):
                 stderr=subprocess_lib.DEVNULL,
             )
             stdout, _ = await asyncio_lib.wait_for(proc.communicate(), timeout=timeout)
-            return len(stdout.decode().strip().splitlines()) if stdout else 0
+
+            if proc.returncode == 100 and stdout:
+                lines = stdout.decode().strip().splitlines()
+                updates = [l for l in lines if l.strip()]
+                return len(updates)
+            return 0
         except Exception:
             return 0
 
