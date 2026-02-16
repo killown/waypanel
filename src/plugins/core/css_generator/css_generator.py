@@ -242,7 +242,6 @@ def get_plugin_class():
 * {{
   font-family: var(--font-family-default);
   color: var(--main-text);
-  -gtk-font-features: "tnum";
 }}
 
 popover.background {{
