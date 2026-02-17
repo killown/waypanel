@@ -426,6 +426,8 @@ def get_plugin_class():
             ignore_box.append(ignore_lbl)
             ignore_box.append(self.ignore_switch)
 
+            self.sidebar_vbox.append(ignore_box)
+
             # Only Flatpaks Toggle
             flatpak_box = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 8)
             flatpak_box.add_css_class("app-launcher-footer-item")
@@ -438,15 +440,7 @@ def get_plugin_class():
             self.flatpak_switch.connect("state-set", self.on_flatpak_switch_toggled)
             flatpak_box.append(flatpak_lbl)
             flatpak_box.append(self.flatpak_switch)
-
-            # Assembly of footer items
-            self.footer_switches_row.append(ignore_box)
-            spacer = self.gtk.Box.new(self.gtk.Orientation.HORIZONTAL, 0)
-            spacer.set_hexpand(True)
-            self.footer_switches_row.append(spacer)
-            self.footer_switches_row.append(flatpak_box)
-
-            self.footer_container.append(self.footer_switches_row)
+            self.sidebar_vbox.append(flatpak_box)
 
             # Final Stacking
             self.main_box.append(self.middle_hbox)
