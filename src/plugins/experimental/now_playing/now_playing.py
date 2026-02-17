@@ -1,7 +1,9 @@
 def get_plugin_metadata(_):
-    id = "org.waypanel.plugin.now_playing"
+    """
+    Returns the metadata for the Now Playing plugin.
+    """
     return {
-        "id": id,
+        "id": "org.waypanel.plugin.now_playing",
         "name": "Media Player",
         "version": "3.5.2",
         "index": 20,
@@ -13,6 +15,9 @@ def get_plugin_metadata(_):
 
 
 def get_plugin_class():
+    """
+    Defines and returns the MediaPlugin class with deferred imports.
+    """
     import gi
     import gc
     import math
@@ -25,6 +30,10 @@ def get_plugin_class():
     from dbus_fast import BusType
 
     class PlayerRow(Gtk.Box):
+        """
+        UI component representing a single MPRIS player session within the popover.
+        """
+
         def __init__(self, service_name, plugin):
             super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
             self.service_name = service_name
@@ -38,6 +47,9 @@ def get_plugin_class():
             self._setup_ui()
 
         def add_cursor_effect(self, widget):
+            """
+            Applies interactive hover effects and cursor changes to a widget.
+            """
             motion = Gtk.EventControllerMotion()
             widget._cursor_anim_id = None
             widget._watchdog_id = None
@@ -87,9 +99,11 @@ def get_plugin_class():
             widget.add_controller(motion)
 
         def _setup_ui(self):
+            """
+            Constructs the layout for the player row including art, controls, and labels.
+            """
             self.add_css_class("player-row")
 
-            # Header with Close Button
             header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
             header.set_valign(Gtk.Align.START)
             spacer = Gtk.Box()
@@ -104,7 +118,6 @@ def get_plugin_class():
             header.append(self.btn_close)
             self.append(header)
 
-            # Clickable Image Container
             self.art_button = Gtk.Button()
             self.art_button.add_css_class("flat")
             self.art_button.add_css_class("player-art-btn")
@@ -156,6 +169,9 @@ def get_plugin_class():
             self.append(info_vbox)
 
         def _on_art_clicked(self, _):
+            """
+            Focuses the window of the media player associated with this row.
+            """
             if not self.current_pid:
                 return
             view = self.plugin.wf_helper.get_view_by_pid(self.current_pid)
@@ -163,6 +179,9 @@ def get_plugin_class():
                 self.plugin.ipc.set_focus(view["id"])
 
         def _on_close_clicked(self, _):
+            """
+            Closes the application associated with the current media player.
+            """
             if not self.current_pid:
                 return
             view = self.plugin.wf_helper.get_view_by_pid(self.current_pid)
@@ -170,6 +189,9 @@ def get_plugin_class():
                 self.plugin.ipc.close_view(view["id"])
 
         def _create_btn(self, icon, action):
+            """
+            Helper to create an MPRIS control button with localized DBus actions.
+            """
             btn = Gtk.Button.new_from_icon_name(icon)
             btn.add_css_class("flat")
             self.add_cursor_effect(btn)
@@ -182,6 +204,9 @@ def get_plugin_class():
             return btn
 
         def update_ui(self, data):
+            """
+            Updates the labels, icons, and album art based on fresh metadata.
+            """
             title = data.get("title", "Unknown")
             artist = data.get("artist", "Unknown")
             self.current_pid = data.get("pid")
@@ -210,6 +235,9 @@ def get_plugin_class():
                 self.art_image.set_from_icon_name(icon_name)
 
         def _start_marquee(self):
+            """
+            Initiates the marquee animation if labels exceed the width limit.
+            """
             if self._scroll_timer:
                 GLib.source_remove(self._scroll_timer)
             if len(self._full_title) > 25 or len(self._full_artist) > 25:
@@ -219,6 +247,9 @@ def get_plugin_class():
                 self.artist_label.set_text(self._full_artist)
 
         def _on_marquee_tick(self):
+            """
+            Handles the text shifting logic for the marquee animation.
+            """
             self._scroll_pos += 1
 
             def shift(text, limit=25):
@@ -233,6 +264,10 @@ def get_plugin_class():
             return True
 
         def _load_art_async(self, url):
+            """
+            Loads album art from a URI asynchronously to avoid blocking the UI thread.
+            """
+
             def _done(s, r):
                 try:
                     pix = GdkPixbuf.Pixbuf.new_from_stream_at_scale(
@@ -250,7 +285,14 @@ def get_plugin_class():
                 pass
 
     class MediaPlugin(BasePlugin):
+        """
+        Main plugin class managing DBus connectivity and MPRIS session tracking.
+        """
+
         def on_enable(self):
+            """
+            Initializes state and starts the asynchronous DBus monitoring loop.
+            """
             self.active_rows, self.local_dbus, self.main_button, self._added = (
                 {},
                 None,
@@ -263,6 +305,9 @@ def get_plugin_class():
             self.plugins["css_generator"].install_css("main.css")
 
         async def _init_dbus(self):
+            """
+            Asynchronous loop that polls for active MPRIS players and filters invalid metadata.
+            """
             bus = await MessageBus(bus_type=BusType.SESSION).connect()
             self.local_dbus = DbusHelpers(bus)
             while True:
@@ -270,13 +315,22 @@ def get_plugin_class():
                 valid = set()
                 for p in players:
                     m = await self.local_dbus.get_media_metadata(p)
-                    # Force valid if metadata exists, even if title is "Unknown"
-                    if m and (m.get("title") or m.get("status")):
-                        m["pid"] = await self.local_dbus.get_player_pid(p)
-                        valid.add(p)
-                        self.schedule_in_gtk_thread(self._sync_row, p, m)
 
-                # Cleanup rows for players that are no longer active
+                    if not m:
+                        continue
+
+                    title = m.get("title", "").strip()
+                    status = m.get("status", "").strip()
+
+                    if not title or title.lower() == "unknown":
+                        continue
+                    if not status or status.lower() == "unknown":
+                        continue
+
+                    m["pid"] = await self.local_dbus.get_player_pid(p)
+                    valid.add(p)
+                    self.schedule_in_gtk_thread(self._sync_row, p, m)
+
                 for p in list(self.active_rows.keys()):
                     if p not in valid:
                         self.schedule_in_gtk_thread(self._remove_row, p)
@@ -285,10 +339,11 @@ def get_plugin_class():
                 await self.asyncio.sleep(1.5)
 
         def _sync_row(self, p, m):
-            # If row doesn't exist OR if it was orphaned from the UI, re-append
+            """
+            Ensures a UI row exists for a valid player and updates its content.
+            """
             if p not in self.active_rows or self.active_rows[p].get_parent() is None:
                 if p in self.active_rows:
-                    # Clean up the old orphaned instance
                     self._remove_row(p)
 
                 row = PlayerRow(p, self)
@@ -298,6 +353,9 @@ def get_plugin_class():
             self.active_rows[p].update_ui(m)
 
         def _remove_row(self, p):
+            """
+            Removes a player row from the UI and stops its animation timers.
+            """
             row = self.active_rows.pop(p, None)
             if row:
                 if row._scroll_timer:
@@ -307,16 +365,17 @@ def get_plugin_class():
                 gc.collect()
 
         def _sync_panel(self):
+            """
+            Manages the visibility and attachment of the trigger button in the panel.
+            """
             container = self.plugins["status_notifier"].tray_box
 
             if self.active_rows and not self._added:
                 self.main_button = self.gtk.Button()
                 self.add_cursor_effect(self.main_button)
                 self.main_button.add_css_class("player-trigger")
-                # we usually pass None to inform the loader the plugin will manually append to the container
                 self.main_widget = (self.main_button, None)
 
-                # Force the button to NOT fill the height and stay centered
                 self.main_button.set_valign(self.gtk.Align.CENTER)
                 self.main_button.set_halign(self.gtk.Align.CENTER)
                 self.main_button.set_vexpand(False)
@@ -342,7 +401,6 @@ def get_plugin_class():
                 scr.set_child(self.popover_box)
                 self.main_button.connect("clicked", lambda _: pop.popup())
 
-                # Direct append to the center container
                 container.append(self.main_button)
                 self._added = True
 
@@ -359,6 +417,9 @@ def get_plugin_class():
                 gc.collect()
 
         def on_disable(self):
+            """
+            Cleans up active timers and UI elements when the plugin is stopped.
+            """
             if self.main_button and self._added:
                 self._sync_panel()
             for r in self.active_rows.values():
