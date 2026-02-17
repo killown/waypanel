@@ -1,7 +1,5 @@
 ## waypanel
 
-<img width="1920" height="1080" alt="waypanel" src="https://github.com/user-attachments/assets/37513dee-b43a-4040-ad02-e5e007a7f3b8" />
-
 ##### _GTK4 panel for wayfire_
 
 Waypanel is a lightweight, modular, and highly customizable status panel designed for the Sway and Wayfire. Built with Python and leveraging GTK 4/Adwaita , it mimics a shell-like interface while prioritizing efficiency and extensibility. Supports multiple panels (top, bottom, left, right) with customizable styling. Plugins can append widgets (e.g., system monitors, app launchers) or manage gestures for interactive workflows.
