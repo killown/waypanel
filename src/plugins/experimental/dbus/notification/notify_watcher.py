@@ -20,6 +20,8 @@ def get_plugin_class():
     class NotifyWatcherPlugin(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+
+        def on_start(self):
             self.notify_client = None
             self.notification_button = None
             self.db_path = self.path_handler.get_data_path("db/notify/notifications.db")
@@ -27,8 +29,6 @@ def get_plugin_class():
             self.gio_monitor = None
             self._last_mod_time = 0.0
             self.last_db_state = None
-
-        def on_start(self):
             self.start_watching()
 
         def __del__(self):

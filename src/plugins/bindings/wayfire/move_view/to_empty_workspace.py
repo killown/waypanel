@@ -20,6 +20,8 @@ def get_plugin_class():
     class MoveViewToEmptyWorkspacePlugin(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+
+        def delay_on_start(self):
             self.add_hint(
                 [
                     "Configuration for the keybinds that move a window to an empty workspace."
@@ -36,5 +38,9 @@ def get_plugin_class():
                 KEYBIND_FALLBACK_DEFAULT,
                 "--move-view-to-empty-workspace",
             )
+            return False
+
+        def on_start(self):
+            self.glib.timeout_add_seconds(3, self.delay_on_start)
 
     return MoveViewToEmptyWorkspacePlugin

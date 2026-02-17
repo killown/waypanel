@@ -30,16 +30,16 @@ def get_plugin_class():
 
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
-            self.dest_root = os.path.expanduser("~/.local/share/waypanel/plugins/")
-            self.state_file = os.path.join(
-                self.path_handler.get_data_dir(), "sync_plugins", "sync_state.json"
-            )
-            self._is_syncing = False
 
         def on_start(self):
             """
             Registers settings and triggers sync.
             """
+            self.dest_root = os.path.expanduser("~/.local/share/waypanel/plugins/")
+            self.state_file = os.path.join(
+                self.path_handler.get_data_dir(), "sync_plugins", "sync_state.json"
+            )
+            self._is_syncing = False
             self.get_plugin_setting_add_hint(
                 ["source_folders"],
                 ["~/Git/waypanel-plugins", "~/Git/waypanel-plugins-extra/"],

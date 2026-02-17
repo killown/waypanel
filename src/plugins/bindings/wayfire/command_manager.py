@@ -15,6 +15,9 @@ def get_plugin_class():
     class CommandManagerPlugin(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+
+        def delay_on_start(self):
+            """Lifecycle hook to register all configured commands."""
             self.get_plugin_setting_add_hint(
                 ["custom_commands"],
                 {
@@ -23,10 +26,11 @@ def get_plugin_class():
                 },
                 "Dictionary of custom commands: name = [binding, command]",
             )
+            self.register_custom_bindings()
+            return False
 
         def on_start(self):
-            """Lifecycle hook to register all configured commands."""
-            self.register_custom_bindings()
+            self.glib.timeout_add_seconds(3, self.delay_on_start)
 
         def register_custom_bindings(self):
             """

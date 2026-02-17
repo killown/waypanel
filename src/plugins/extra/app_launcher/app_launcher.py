@@ -48,6 +48,9 @@ def get_plugin_class():
             Initializes the launcher settings, scanner, database, menu handler and UI.
             """
             super().__init__(panel_instance)
+
+        def on_start(self):
+            """Triggered when the plugin starts. Initializes UI and database."""
             self.remote_widgets = []
             self.search_timeout_id = None
             self.popover_width = self.get_plugin_setting_add_hint(
@@ -237,9 +240,6 @@ def get_plugin_class():
                 False,
                 "Whether to show applications marked as ignored.",
             )
-
-        def on_start(self):
-            """Triggered when the plugin starts. Initializes UI and database."""
             self.main_widget = (self.appmenu, "append")
             try:
                 self.settings = self.gio.Settings.new("org.gnome.desktop.interface")

@@ -39,6 +39,8 @@ def get_plugin_class():
                 panel_instance: The main panel instance provided by the framework.
             """
             super().__init__(panel_instance)
+
+        def delay_on_start(self):
             self.config_handler.set_setting_hint(
                 "org.waypanel.plugin.calendar",
                 ["weather"],
@@ -58,26 +60,24 @@ def get_plugin_class():
             self.rain_summary_label: Optional[self.gtk.Label] = None  # pyright: ignore
             self.rain_total_label: Optional[self.gtk.Label] = None  # pyright: ignore
             self.update_task = None
-            config_coords = self.get_root_setting(
+            self.config_coords = self.get_root_setting(
                 ["org.waypanel.plugin.calendar", "weather", "coordinates"],
                 [
                     "-23.5505",
                     "-46.6333",
                 ],
             )
-            if isinstance(config_coords, (list, tuple)) and len(config_coords) == 2:
-                self.coordinates = tuple(config_coords)
+            if (
+                isinstance(self.config_coords, (list, tuple))
+                and len(self.config_coords) == 2
+            ):
+                self.coordinates = tuple(self.config_coords)
                 self.logger.info(f"Using coordinates from config: {self.coordinates}")
             else:
                 self.coordinates = ("-23.5505", "-46.6333")
                 self.logger.warning(
                     f"Weather coordinates not configured or invalid. Defaulting to {self.coordinates}."
                 )
-
-        def on_start(self):
-            """
-            Starts the asynchronous weather setup if coordinates are available.
-            """
             if self.coordinates:
                 self.run_in_async_task(self.setup_weather_async())
             else:
@@ -85,6 +85,15 @@ def get_plugin_class():
                     "Weather coordinates are missing or invalid in config. Plugin functionally disabled."
                 )
             self.plugins["css_generator"].install_css("weather.css")
+            return False
+
+        def on_start(self):
+            """
+            Starts the asynchronous weather setup if coordinates are available.
+            """
+
+            # This plugin doesn't need to start immediately.
+            self.glib.timeout_add_seconds(3, self.delay_on_start)
 
         async def setup_weather_async(self):
             """Asynchronously set up the weather functionality."""

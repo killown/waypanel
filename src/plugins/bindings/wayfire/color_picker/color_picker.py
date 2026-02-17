@@ -17,6 +17,8 @@ def get_plugin_class():
     class ColorPickerPlugin(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+
+        def delay_on_start(self):
             self.keybind = self.get_plugin_setting_add_hint(
                 ["keybind"],
                 "<ctrl><super><alt> BTN_LEFT",
@@ -26,6 +28,11 @@ def get_plugin_class():
                 ),
             )
             self.register_keybinding()
+            return False
+
+        def on_start(self):
+            # This plugin does not need to start immediately.
+            self.glib.timeout_add_seconds(3, self.delay_on_start)
 
         def register_keybinding(self):
             self.wf_helper.register_wayctl_binding(

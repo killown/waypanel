@@ -33,6 +33,9 @@ def get_plugin_class():
     class Bluetooth(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+
+        def on_start(self):
+            """Hook called by BasePlugin after successful initialization."""
             self.popover_dashboard = None
             self.bluetooth_buttons = {}
             self.bluetooth_button_popover = self.gtk.Button()
@@ -56,9 +59,6 @@ def get_plugin_class():
             )
             self.bus = None
             self._bus_lock = self.asyncio.Lock()
-
-        def on_start(self):
-            """Hook called by BasePlugin after successful initialization."""
             self.bluetooth_button_popover.connect(
                 "clicked", self.open_popover_dashboard
             )

@@ -25,6 +25,8 @@ def get_plugin_class():
     class PanelScaleExclusivePlugin(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+
+        def on_start(self):
             self.logger.info("PanelScaleExclusivePlugin initialized.")
             self.exclusive_state = {
                 "top": False,
@@ -108,21 +110,5 @@ def get_plugin_class():
                         self.logger.warning(
                             f"Unknown state value for scale plugin: {msg['state']}"
                         )
-
-        def code_explanation(self):
-            """
-            This plugin coordinates with the 'scale' plugin to manage panel layer behavior.
-            Its core logic is centered on **synchronizing panel exclusivity with the scale effect**:
-            1.  **Event Subscription**: It listens for activation and deactivation events from the 'scale' plugin.
-            2.  **Conditional Activation**: When 'scale' is activated, the plugin checks if the
-                currently focused monitor is the same as the one the panels are
-                configured for.
-            3.  **Exclusive Mode**: If the monitors match, it sets all four panels (top,
-                bottom, left, right) to exclusive layer mode. This prevents windows from
-                overlapping the panels during the 'scale' effect.
-            4.  **State Reset**: When 'scale' is deactivated, the exclusive layer mode is
-                removed from all panels, returning them to their normal state.
-            """
-            return self.code_explanation.__doc__
 
     return PanelScaleExclusivePlugin

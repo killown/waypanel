@@ -35,7 +35,10 @@ def get_plugin_class():
             Initializes the UI component and the notification utilities.
             """
             super().__init__(panel_instance)
-            self.notify_utils = NotifyUtils(panel_instance)
+            self.panel = panel_instance
+            self.notify_utils = NotifyUtils(self.panel)
+
+        def on_start(self):
             self.app = self.gtk.Application(
                 application_id="com.example.NotificationPopup"
             )
@@ -43,12 +46,6 @@ def get_plugin_class():
             self.temporary_popup_width = 0
             self.temporary_popup_height = 0
             self.active_popups = {}
-
-        def on_activate(self, app):
-            """
-            Callback when the GTK application is activated.
-            """
-            pass
 
         def notify_reload_config(self):
             """

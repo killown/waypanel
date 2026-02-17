@@ -108,6 +108,8 @@ def get_plugin_class():
         def __init__(self, panel_instance):
             """Initializes the plugin and loads configurable settings."""
             super().__init__(panel_instance)
+
+        def on_start(self):
             self.db_path = self.path_handler.get_data_path("db/notes/notes.db")
             self.notes_manager = NotesManager(self.path_handler, self.db_path)
             self.popover_notes = None

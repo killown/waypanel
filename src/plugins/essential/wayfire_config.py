@@ -27,18 +27,25 @@ def get_plugin_class():
             Args:
                 panel_instance: The instance of the panel.
             """
+
+            super().__init__(panel_instance)
+            self.panel = panel_instance
+
+        def delay_initial_setup(self):
             config_home = self.os.environ.get(
                 "XDG_CONFIG_HOME", self.os.path.expanduser("~/.config")
             )
             self.wayfire_config_path = self.os.path.join(
                 config_home, "waypanel/wayfire/wayfire.toml"
             )
-
-            super().__init__(panel_instance)
-            self.panel = panel_instance
             self.config = None
+            # It consumes hardware resources, so it's better to delay it a bit.
             self.global_loop.create_task(self._initial_setup())
             self.monitor_handler = self.start_watching()
+            return False
+
+        def on_start(self):
+            self.glib.timeout_add(100, self.delay_initial_setup)
 
         async def _initial_setup(self):
             """

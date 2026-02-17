@@ -23,6 +23,7 @@ def get_plugin_class():
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
 
+        def on_start(self):
             self.last_toplevel_focused_view = None
             self.cf_box = self.gtk.Box()
             self.main_widget = (self.cf_box, "append")

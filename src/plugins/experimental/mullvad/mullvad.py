@@ -24,6 +24,8 @@ def get_plugin_class():
     class MullvadPlugin(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+
+        def on_start(self):
             self.mullvad_version = None
             self.city_code = self.get_plugin_setting_add_hint(
                 ["city_code"], "sao", "Default city code for relay selection."
@@ -37,8 +39,7 @@ def get_plugin_class():
             self.relays_cache = {}
             self.is_connected = False
             self.main_widget = (self.menubutton_mullvad, "append")
-
-        def on_start(self):
+            self.gtk_helper.add_cursor_effect(self.menubutton_mullvad)
             self.run_in_async_task(self._async_init_setup())
             self.plugins["css_generator"].install_css("mullvad.css")
 

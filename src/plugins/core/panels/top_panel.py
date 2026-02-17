@@ -21,6 +21,8 @@ def get_plugin_class():
             super().__init__(panel_instance)
             self._deferred_widgets_attached = False
             self.is_top_panel_ready = False
+
+        def on_start(self):
             self._setup_panel_boxes()
             self.add_css_class()
             self.plugins["css_generator"].install_css("top-panel.css")

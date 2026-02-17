@@ -30,6 +30,11 @@ def get_plugin_class():
                 panel_instance: The main Waypanel application instance.
             """
             super().__init__(panel_instance)
+
+        def on_start(self):
+            """
+            Pre-connects to the database and pre-loads notification data.
+            """
             self.notify_utils = NotifyUtils(self.obj)
             self.notification_server = self.plugins["notify_server"]
             self.vbox = self.gtk.Box.new(self.gtk.Orientation.VERTICAL, 5)
@@ -96,11 +101,6 @@ def get_plugin_class():
             self.dnd_switch.set_active(False)
             self.dnd_switch.connect("state-set", self.on_dnd_toggled)
             self.db_path = self.path_handler.get_data_path("db/notify/notifications.db")
-
-        def on_start(self):
-            """
-            Pre-connects to the database and pre-loads notification data.
-            """
             self.run_in_thread(self._preload_notifications)
             self.plugins["css_generator"].install_css("notify.css")
 

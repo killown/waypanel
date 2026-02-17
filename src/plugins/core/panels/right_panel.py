@@ -25,6 +25,8 @@ def get_plugin_class():
                                 like configuration, logger, and widget containers.
             """
             super().__init__(panel_instance)
+
+        def on_start(self):
             self._setup_boxes()
             self.add_css_class()
             self.plugins["css_generator"].install_css("right-panel.css")

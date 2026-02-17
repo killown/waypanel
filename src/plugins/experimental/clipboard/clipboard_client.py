@@ -39,7 +39,10 @@ def get_plugin_class():
 
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
-            self.manager = ClipboardManager(panel_instance, get_server_class)
+            self.panel = panel_instance
+
+        def on_start(self):
+            self.manager = ClipboardManager(self.panel, get_server_class)
             self.popover_clipboard = None
             self.delete_btn_map = {}
             self.listbox = None
@@ -64,8 +67,6 @@ def get_plugin_class():
             self.main_icon = self.get_plugin_setting(
                 ["main_icon"], "edit-paste-symbolic"
             )
-
-        def on_enable(self):
             self.run_in_async_task(self.manager.initialize())
             self.create_clipboard_ui()
             self.plugins["css_generator"].install_css("clipboard.css")

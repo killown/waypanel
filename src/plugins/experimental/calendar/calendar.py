@@ -36,6 +36,34 @@ def get_plugin_class():
                 panel_instance: The main panel instance provided by the framework.
             """
             super().__init__(panel_instance)
+
+        def setup_calendar(self):
+            """Setup the calendar popover."""
+            if "clock" not in self.plugin_loader.plugins:
+                self.logger.error("Clock plugin is not loaded. Cannot append calendar.")
+                return
+            clock_plugin = self.plugin_loader.plugins["clock"]
+            clock_button = clock_plugin.clock_button
+            self.popover_calendar = self._gtk_helper.create_popover(
+                clock_button, "calender-popover", has_arrow=False, offset=(0, 5)
+            )
+            self.grid = self.gtk.Grid()
+            self.grid.set_row_spacing(self.layout_row_spacing)
+            self.grid.set_column_spacing(self.layout_column_spacing)
+            self.grid.set_margin_top(self.layout_margin_top)
+            self.grid.set_margin_bottom(self.layout_margin_bottom)
+            self.grid.set_margin_start(self.layout_margin_start)
+            self.grid.set_margin_end(self.layout_margin_end)
+            self.calendar = self.gtk.Calendar()
+            self.calendar.add_css_class("calendar-widget")
+            self.grid.attach(self.calendar, 0, 0, 1, 1)
+            self.popover_calendar.set_child(self.grid)
+            clock_button.connect("clicked", self.toggle_calendar)
+
+        def on_start(self):
+            """
+            The primary activation method for the plugin.
+            """
             self.popover_calendar = None
             self.calendar = None
             self.add_hint(
@@ -89,33 +117,6 @@ def get_plugin_class():
                 ["layout", "margin_from_end"],
             )
 
-        def setup_calendar(self):
-            """Setup the calendar popover."""
-            if "clock" not in self.plugin_loader.plugins:
-                self.logger.error("Clock plugin is not loaded. Cannot append calendar.")
-                return
-            clock_plugin = self.plugin_loader.plugins["clock"]
-            clock_button = clock_plugin.clock_button
-            self.popover_calendar = self._gtk_helper.create_popover(
-                clock_button, "calender-popover", has_arrow=False, offset=(0, 5)
-            )
-            self.grid = self.gtk.Grid()
-            self.grid.set_row_spacing(self.layout_row_spacing)
-            self.grid.set_column_spacing(self.layout_column_spacing)
-            self.grid.set_margin_top(self.layout_margin_top)
-            self.grid.set_margin_bottom(self.layout_margin_bottom)
-            self.grid.set_margin_start(self.layout_margin_start)
-            self.grid.set_margin_end(self.layout_margin_end)
-            self.calendar = self.gtk.Calendar()
-            self.calendar.add_css_class("calendar-widget")
-            self.grid.attach(self.calendar, 0, 0, 1, 1)
-            self.popover_calendar.set_child(self.grid)
-            clock_button.connect("clicked", self.toggle_calendar)
-
-        def on_start(self):
-            """
-            The primary activation method for the plugin.
-            """
             self.setup_calendar()
             self.plugins["css_generator"].install_css("calendar.css")
 

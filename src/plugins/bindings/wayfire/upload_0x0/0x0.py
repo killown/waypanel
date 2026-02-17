@@ -14,17 +14,19 @@ def get_plugin_class():
     from src.plugins.core._base import BasePlugin
 
     class Uplo0x0Plugin(BasePlugin):
-        def __init__(self, panel_instance):
-            super().__init__(panel_instance)
+        def delay_on_start(self):
+            """Lifecycle hook to register the binding."""
             self.keybind = self.get_plugin_setting_add_hint(
                 ["keybind"],
                 "<ctrl><super><alt> KEY_0",
                 "Key combination to upload clipboard to 0x0.st",
             )
 
-        def on_start(self):
-            """Lifecycle hook to register the binding."""
             self.register_keybinding()
+            return False
+
+        def on_start(self):
+            self.glib.timeout_add_seconds(3, self.delay_on_start)
 
         def register_keybinding(self):
             """

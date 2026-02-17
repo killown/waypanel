@@ -46,6 +46,9 @@ def get_plugin_class():
                 panel_instance: The main panel instance this plugin is attached to.
             """
             super().__init__(panel_instance)
+
+        def delay_on_start(self):
+            """Initializes the UI popover and starts the periodic update checking loop."""
             custom_cmds = {
                 "pacman": self.get_plugin_setting_add_hint(
                     ["commands", "pacman"], "", "Custom command for Pacman."
@@ -113,15 +116,16 @@ def get_plugin_class():
             self.is_checking = False
             self.terminal_pid = None
             self.count_label = None
-
-        def on_start(self):
-            """Initializes the UI popover and starts the periodic update checking loop."""
             self._setup_popover()
             self.run_in_async_task(self._manual_refresh())
             self.glib.timeout_add_seconds(
                 self.check_interval_seconds, self._check_updates_periodically
             )
             self.plugins["css_generator"].install_css("universal-update.css")
+            return False
+
+        def on_start(self):
+            self.glib.timeout_add_seconds(10, self.delay_on_start)
 
         def _setup_popover(self):
             """Constructs the GTK popover menu containing status info and action buttons."""

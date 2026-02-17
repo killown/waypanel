@@ -12,12 +12,11 @@ def get_plugin_metadata(panel):
 
 def get_plugin_class():
     from src.plugins.core._base import BasePlugin
-    from gi.repository import Gtk, Gio, Adw
+    from gi.repository import Gtk
     import subprocess
     import os
     import sys
 
-    # Import the watcher locally
     plugin_dir = os.path.dirname(os.path.abspath(__file__))
     if plugin_dir not in sys.path:
         sys.path.append(plugin_dir)

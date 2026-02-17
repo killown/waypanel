@@ -31,6 +31,8 @@ def get_plugin_class():
 
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+
+        def delay_on_start(self):
             self.config = {}
             self.widget_map = {}
             self.ui_key_to_plugin_id_map: Dict[str, str] = {}
@@ -58,6 +60,10 @@ def get_plugin_class():
             self.gtk = Gtk
             self.adw = Adw
             self.plugins["css_generator"].install_css("control-center.css")
+            return False
+
+        def on_start(self):
+            self.glib.timeout_add_seconds(3, self.delay_on_start)
 
         def load_config(self):
             """Syncs configuration state."""

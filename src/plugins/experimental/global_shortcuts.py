@@ -15,6 +15,8 @@ def get_plugin_class():
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
             self.panel_instance = panel_instance
+
+        def on_start(self):
             self.shortcuts = (
                 self.get_root_setting(["plugins", "global_shortcuts"]) or {}
             )
@@ -23,8 +25,6 @@ def get_plugin_class():
                     "No global shortcuts configured for GlobalShortcuts plugin."
                 )
             self.actions = {}
-
-        def on_start(self):
             if isinstance(self.shortcuts, dict):
                 for action_name, command_str in self.shortcuts.items():
                     self._create_action(action_name, command_str)

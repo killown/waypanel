@@ -22,6 +22,8 @@ def get_plugin_class():
 
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+
+        def on_start(self):
             self.is_revealed = False
             self.hidden_widgets_box = self.gtk.Box.new(
                 self.gtk.Orientation.HORIZONTAL, 0

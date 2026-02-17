@@ -289,7 +289,7 @@ def get_plugin_class():
         Main plugin class managing DBus connectivity and MPRIS session tracking.
         """
 
-        def on_enable(self):
+        def on_start(self):
             """
             Initializes state and starts the asynchronous DBus monitoring loop.
             """

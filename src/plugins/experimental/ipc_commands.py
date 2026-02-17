@@ -55,11 +55,11 @@ def get_plugin_class():
 
         def __init__(self, panel_instance: Any):
             super().__init__(panel_instance)
-            self.data_store = _DevDataStore()
             self._panel_instance = panel_instance
 
         def on_start(self):
             """Registers synchronous IPC commands when the panel starts."""
+            self.data_store = _DevDataStore()
             if hasattr(self.ipc_server, "register_command"):
                 self.ipc_server.register_command(
                     "get_config_data", self._handle_get_config

@@ -20,6 +20,8 @@ def get_plugin_class():
     class EventManagerPlugin(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+
+        def on_start(self):
             from src.ipc.client import WayfireClientIPC
 
             self._routers = {

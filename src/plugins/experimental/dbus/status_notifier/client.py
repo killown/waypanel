@@ -48,6 +48,12 @@ def get_plugin_class():
 
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+            self.panel = panel_instance
+
+        def on_start(self):
+            """
+            Starts the background D-Bus watcher service.
+            """
             self.subscribe_to_icon_updates()
             self.subscribe_to_removal_events()
             self.messages = {}
@@ -57,10 +63,8 @@ def get_plugin_class():
             container_id = "org.waypanel.plugin.status_notifier"
             default_container_name = "top_panel_box_right"
 
-            target_container_name, _ = (
-                panel_instance.config_handler.get_plugin_container(
-                    default_container_name, container_id
-                )
+            target_container_name, _ = self.panel.config_handler.get_plugin_container(
+                default_container_name, container_id
             )
 
             attr_name = target_container_name.replace("-", "_")
@@ -81,12 +85,8 @@ def get_plugin_class():
 
             self._pending_creation = set()
             self._rebuild_pending = set()
-            self.notifier_watcher = StatusNotifierWatcher("", panel_instance)
+            self.notifier_watcher = StatusNotifierWatcher("", self.panel)
 
-        def on_start(self):
-            """
-            Starts the background D-Bus watcher service.
-            """
             self.notifier_watcher.run_server_in_background(self._panel_instance)
             self.plugins["css_generator"].install_css("status-notifier.css")
 

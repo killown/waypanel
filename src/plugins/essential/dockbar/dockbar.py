@@ -31,6 +31,8 @@ def get_plugin_class():
     class DockbarPlugin(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+
+        def on_start(self):
             self._init_settings()
             self.logic = DockLogic(self)
             self.menu_handler = DockMenu(self)
@@ -42,7 +44,6 @@ def get_plugin_class():
             )
             self.create_gesture = self.plugins["gestures_setup"].create_gesture
             self.dockbar_content = self.get_panel()
-
             self._setup_dockbar()
             self.logic.setup_file_watcher()
             self._setup_dock_context_menu()

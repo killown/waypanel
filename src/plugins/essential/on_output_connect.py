@@ -24,6 +24,8 @@ def get_plugin_class():
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
             self.panel = panel_instance
+
+        def on_start(self):
             self.current_output_name = None
             self._debounce_timeout_id = None
             self.current_output_name = None
@@ -49,6 +51,7 @@ def get_plugin_class():
                     "No primary output set. Will use first available output."
                 )
                 self.primary_output_name = self.get_first_output()
+
             self.glib.idle_add(self._apply_initial_output)
 
         def get_first_output(self):

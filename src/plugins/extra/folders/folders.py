@@ -31,9 +31,16 @@ def get_plugin_class():
         def __init__(self, panel_instance):
             """Initializes the plugin state."""
             super().__init__(panel_instance)
+            self.panel = panel_instance
+
+        def on_start(self):
+            """
+            Called when the plugin is started.
+            Initializes the UI components and sets the main widget for the panel.
+            """
             self._home_path = pathlib.Path.home()
             self.popover_folders = None
-            self.plugin_id = get_plugin_metadata(panel_instance).get("id")
+            self.plugin_id = get_plugin_metadata(self.panel).get("id")
             self.main_icon = self.get_plugin_setting_add_hint(
                 ["main_icon"],
                 "nautilus-folder-search-symbolic",
@@ -49,12 +56,6 @@ def get_plugin_class():
                 ],
                 "A prioritized list of fallback icons to use if the main icon is not found.",
             )
-
-        def on_start(self):
-            """
-            Called when the plugin is started.
-            Initializes the UI components and sets the main widget for the panel.
-            """
             self.create_menu_popover_folders()
             self.main_widget = (self.menubutton_folders, "append")
             self.plugins["css_generator"].install_css("folders.css")

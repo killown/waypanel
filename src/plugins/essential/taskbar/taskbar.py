@@ -54,6 +54,8 @@ def get_plugin_class():
     class TaskbarPlugin(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+
+        def on_start(self):
             self._debounce_pending = False
             self._debounce_timer_id = None
             self._debounce_interval = 100
@@ -73,11 +75,8 @@ def get_plugin_class():
             self.event_handler = TaskbarEvents(self)
             self.view_handler = TaskbarViews(self)
             self.gesture_handler = TaskbarGestures(self)
-
             self.event_handler.subscribe()
-
             self.ui_handler.create_main_layout()
-
             self.run_in_thread(self._initialize_button_pool, 15)
             self.main_widget = (self.center_box, "append")
             self.plugins["css_generator"].install_css("taskbar.css")

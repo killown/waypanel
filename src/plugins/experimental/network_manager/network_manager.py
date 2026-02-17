@@ -29,7 +29,10 @@ def get_plugin_class():
     class NetworkManager(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
-            self.cli_backend = NetworkCLI(panel_instance)
+            self.panel = panel_instance
+
+        def on_start(self):
+            self.cli_backend = NetworkCLI(self.panel)
             self.button = self.gtk.MenuButton()
             self.popover = None
             self.icon_wired_connected = self.gtk_helper.icon_exist(
@@ -78,8 +81,6 @@ def get_plugin_class():
             self.add_hint(
                 "Time in (Seconds) to scan for Wi-Fi networks.", "scan_interval"
             )
-
-        def on_start(self):
             self.global_loop.create_task(self.start_periodic_wifi_scan_async())
             self.global_loop.create_task(
                 self._apply_config_autoconnect_settings_async()
@@ -570,28 +571,5 @@ def get_plugin_class():
             self.glib.idle_add(self.popover.popdown)
             await self.cli_backend._connect_to_network_async(ssid)
             await self.update_icon_and_popover()
-
-        def code_explanation(self):
-            """
-            This plugin manages network status display and control using asynchronous
-            operations and the NetworkManager Command Line Interface (nmcli) via a
-            dedicated backend. Key aspects include:
-            1. Asynchronous Networking: All network checks (`is_internet_connected_async`,
-                `scan_networks_async`) are run non-blockingly using asyncio to ensure
-                the panel UI remains responsive.
-            2. Dynamic Icon Status: The panel icon dynamically reflects the current
-                connection status (wired/Wi-Fi) and visually indicates Wi-Fi quality
-                using signal strength icons (excellent, good, ok, weak).
-            3. Popover Management: The `Gtk.Popover` is set up using the
-                `self.create_popover` helper, which automatically connects the
-                `notify::visible` signal to refresh the popover content whenever it is opened.
-            4. Data Presentation (Refactored): The popover now uses a **Gtk.Stack**
-                for drill-down navigation:
-                - A main **Dashboard View** uses a `Gtk.FlowBox` to display network
-                  devices as clickable icons, providing a visual overview.
-                - Clicking a device switches the stack to a **Detail View**, populated
-                  with the device's full `nmcli device show` output, enhancing user access to diagnostics.
-            """
-            return self.code_explanation.__doc__
 
     return NetworkManager

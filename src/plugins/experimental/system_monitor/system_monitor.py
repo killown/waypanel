@@ -112,9 +112,12 @@ def get_plugin_class():
 
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
+            self.panel = panel_instance
+
+        def on_start(self):
             self.popover_system = None
             self.update_timeout_id = None
-            self.helper = SystemMonitorHelpers(panel_instance)
+            self.helper = SystemMonitorHelpers(self.panel)
             self.list_stores = {}
             self.metric_items = {}
             self.disk_labels = {}

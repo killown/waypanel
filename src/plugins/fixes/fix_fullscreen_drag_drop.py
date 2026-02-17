@@ -19,7 +19,8 @@ def get_plugin_class():
     class FixFullscreenDragDropPlugin(BasePlugin):
         def __init__(self, panel_instance):
             super().__init__(panel_instance)
-            """Initialize the FixFullscreenDragDropPlugin."""
+
+        def on_start(self):
             self.logger.info("FixFullscreenDragDropPlugin initialized.")
             self.schedule_in_gtk_thread(self.subscribe_to_events)
 
