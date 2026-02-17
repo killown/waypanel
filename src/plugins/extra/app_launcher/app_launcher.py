@@ -568,15 +568,14 @@ def get_plugin_class():
         def update_flowbox(self):
             """Synchronizes grid UI with installed apps and usage history."""
             self.all_apps = self.scanner.scan()
-
             only_flatpak = self.get_plugin_setting(["behavior", "only_flatpak"], False)
 
             if only_flatpak:
                 flatpak_ids = self.get_installed_flatpak_ids()
                 current_installed_apps = {}
                 for app_id, app in self.all_apps.items():
-                    # Strip .desktop to match the ID from 'flatpak list'
-                    clean_id = app_id.replace(".desktop", "")
+                    clean_id = app_id.removesuffix(".desktop")
+
                     if clean_id in flatpak_ids:
                         current_installed_apps[app_id] = app
             else:

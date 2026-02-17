@@ -280,19 +280,12 @@ read -r
 
     def install_flatpak(self, hit: dict):
         """Normaliza o ID e inicia o processo de instalação visual."""
-        raw_id = hit.get("flatpakAppId") or hit.get("id")
+        raw_id = hit.get("app_id") or hit.get("flatpakAppId") or hit.get("id")
 
         if not raw_id:
             self.logger.error(f"PackageHelper: ID ausente nos dados: {hit}")
             return
 
-        app_id = raw_id.replace("_", ".")
-
-        if app_id.count(".") < 2:
-            self.logger.warning(
-                f"PackageHelper: ID '{app_id}' pode ser inválido para o Flatpak."
-            )
-
         from ._install_window import FlatpakInstallWindow
 
-        FlatpakInstallWindow(self.plugin, hit, app_id)
+        FlatpakInstallWindow(self.plugin, hit, raw_id)

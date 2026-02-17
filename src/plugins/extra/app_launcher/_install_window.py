@@ -157,12 +157,12 @@ class FlatpakInstallWindow:
         self.grid.attach(v, 1, row, 1, 1)
 
     def _load_async_data(self):
-        formatted_id = self.app_id.replace("_", ".")
+        id = self.app_id
         base = "https://flathub.org/api/v2"
         try:
             # Fetch Metadata and Stats
-            r_meta = requests.get(f"{base}/appstream/{formatted_id}", timeout=10)
-            r_stats = requests.get(f"{base}/stats/{formatted_id}", timeout=10)
+            r_meta = requests.get(f"{base}/appstream/{id}", timeout=10)
+            r_stats = requests.get(f"{base}/stats/{id}", timeout=10)
 
             data = r_meta.json() if r_meta.status_code == 200 else {}
             stats = r_stats.json() if r_stats.status_code == 200 else {}
@@ -259,6 +259,7 @@ class FlatpakInstallWindow:
             "flathub",
             self.app_id,
         ]
+        print(cmd)
 
         if os.path.exists("/.flatpak-info"):
             cmd = ["flatpak-spawn", "--host"] + cmd
