@@ -18,7 +18,6 @@ def get_plugin_metadata(_):
         "version": "3.5.5",
         "enabled": True,
         "index": 9,
-        "priority": 930,
         "container": "top-panel-systray",
         "deps": ["gestures_setup", "css_generator"],
         "description": about,

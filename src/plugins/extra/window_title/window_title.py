@@ -10,7 +10,6 @@ def get_plugin_metadata(_):
         "version": "1.3.0",
         "enabled": True,
         "index": 1,
-        "priority": 970,
         "container": "top-panel-left",
         "deps": [
             "event_manager",

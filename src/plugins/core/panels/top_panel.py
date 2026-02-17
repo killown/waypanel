@@ -6,7 +6,7 @@ def get_plugin_metadata(_):
         "enabled": True,
         "priority": 10,
         "container": "top-panel",
-        "deps": ["event_manager", "css_generator"],
+        "deps": ["event_manager"],
     }
 
 

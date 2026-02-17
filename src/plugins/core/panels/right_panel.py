@@ -4,7 +4,7 @@ def get_plugin_metadata(_):
         "name": "Right Panel",
         "version": "1.0.0",
         "enabled": True,
-        "priority": 10,
+        "priority": 1,
         "container": "right-panel",
         "deps": ["event_manager", "css_generator"],
     }
