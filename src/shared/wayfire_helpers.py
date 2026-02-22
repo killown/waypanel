@@ -796,6 +796,13 @@ class WayfireHelpers:
             self.logger.error(f"Failed to resolve view for PID {pid}: {e}")
             return None
 
+    def get_view_by_title(self, title):
+        all_views = self.ipc.list_views()
+        return next(
+            (view for view in all_views if title.lower() in view.get("title").lower()),
+            None,
+        )
+
     def _check_hanging_process(self, vid):
         """Checks if view is still active via IPC and kills it if PID > 0."""
         import os
