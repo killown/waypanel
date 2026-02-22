@@ -16,7 +16,7 @@ def get_ui_class():
             win = self.adw.ApplicationWindow()
             win.add_css_class("control-center-window")
             win.set_title("Waypanel Control Center")
-            win.set_default_size(800, 600)
+            win.set_default_size(1600, 800)
 
             main_vbox = self.gtk.Box(
                 orientation=self.gtk.Orientation.VERTICAL, spacing=30
