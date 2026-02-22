@@ -112,12 +112,18 @@ class ControlCenterHelpers:
         is_flatpak = os.path.exists("/.flatpak-info")
         cmd_prefix = "flatpak-spawn --host " if is_flatpak else ""
         try:
-            # Use subprocess for cleaner output handling than os.popen
             cmd = f"{cmd_prefix}gsettings get {schema} {key}"
             result = os.popen(f"{cmd} 2>/dev/null").read().strip()
+
+            theme = result
             if result and result.startswith("'") and result.endswith("'"):
-                return result[1:-1]
-            return result
+                theme = result[1:-1]
+
+            # Sync the environment variable so CommandRunner inherits it
+            if theme:
+                os.environ["GTK_THEME"] = theme
+
+            return theme
         except Exception:
             return ""
 

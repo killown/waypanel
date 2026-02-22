@@ -1,6 +1,7 @@
 import os
 import asyncio
 import subprocess
+import psutil
 from typing import List, Optional, Tuple
 from gi.repository import GLib
 
@@ -22,6 +23,21 @@ class CommandRunner:
         self.ipc = panel_instance.ipc
         self.is_flatpak = os.path.exists("/.flatpak-info")
 
+    def _get_active_display(self) -> str:
+        current_display = os.getenv("DISPLAY")
+        if current_display:
+            print(current_display)
+            return current_display
+
+        for proc in psutil.process_iter(["name"]):
+            try:
+                if "xwayland-satellite" in (proc.info["name"] or ""):
+                    return ":1"
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        return ":0"
+
     def _get_flatpak_env_args(self) -> List[str]:
         """
         Returns the surgical environment cleaning arguments for flatpak-spawn.
@@ -31,8 +47,9 @@ class CommandRunner:
         runtime_dir = f"/run/user/{uid}"
 
         wayland_display = os.getenv("WAYLAND_DISPLAY", "wayland-0")
-        display = os.getenv("DISPLAY", ":0")
+        display = self._get_active_display()
         dbus_addr = os.getenv("DBUS_SESSION_BUS_ADDRESS", "")
+        gtk_theme = os.getenv("GTK_THEME")
 
         try:
             if os.path.exists(runtime_dir):
@@ -48,12 +65,15 @@ class CommandRunner:
             f"--env=XDG_RUNTIME_DIR={runtime_dir}",
             f"--env=WAYLAND_DISPLAY={wayland_display}",
             f"--env=DISPLAY={display}",
-            f"--env=XDG_DATA_DIRS={runtime_dir}/flatpak/exports/share:/usr/local/share:/usr/share",
+            f"--env=XDG_DATA_DIRS={runtime_dir}/flatpak/exports/share:/usr/share",
             "--env=PYTHONPATH=",
             "--env=PYTHONHOME=",
             "--env=LD_LIBRARY_PATH=",
             "--env=LD_PRELOAD=",
         ]
+
+        if gtk_theme:
+            args.append(f"--env=GTK_THEME={gtk_theme}")
 
         if dbus_addr:
             args.append(f"--env=DBUS_SESSION_BUS_ADDRESS={dbus_addr}")
@@ -76,6 +96,8 @@ class CommandRunner:
         """
         try:
             host_path = os.getenv("PATH", "/usr/bin:/bin")
+            display = self._get_active_display()
+            gtk_theme = os.getenv("GTK_THEME", "")
 
             if self.is_flatpak:
                 env_args = self._get_flatpak_env_args()
@@ -94,7 +116,7 @@ class CommandRunner:
                 return
 
             def run_host():
-                final_cmd = f"PATH='{host_path}' {cmd}"
+                final_cmd = f"DISPLAY='{display}' PATH='{host_path}' GTK_THEME='{gtk_theme}' {cmd}"
 
                 if hasattr(self, "ipc") and self.ipc:
                     self.ipc.run_cmd(final_cmd)
@@ -113,6 +135,8 @@ class CommandRunner:
         Asynchronously executes a command with GTK_THEME environment set.
         """
         env = os.environ.copy()
+        env["DISPLAY"] = self._get_active_display()
+        env["GTK_THEME"] = os.getenv("GTK_THEME", "")
 
         wrapped = self._wrap_cmd(cmd_list)
         try:
@@ -137,6 +161,8 @@ class CommandRunner:
         Synchronous execution with GTK_THEME environment set.
         """
         env = os.environ.copy()
+        env["DISPLAY"] = self._get_active_display()
+        env["GTK_THEME"] = os.getenv("GTK_THEME", "")
 
         wrapped = self._wrap_cmd(cmd_list)
         try:
