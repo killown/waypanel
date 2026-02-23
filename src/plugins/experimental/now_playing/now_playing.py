@@ -177,6 +177,8 @@ def get_plugin_class():
                 return
 
             view = self.plugin.wf_helper.get_view_by_title(self.current_title)
+            if not view:
+                view = self.plugin.wf_helper.get_view_by_pid(self.current_pid)
 
             if view.get("pid") != self.current_pid:
                 return
