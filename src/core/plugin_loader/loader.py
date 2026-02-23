@@ -77,6 +77,8 @@ class PluginLoader:
         self.disabled_plugins: Set[str] = set(disabled)
         self.plugin_icons = {}
 
+        self._sys_path_cache: Set[str] = set(sys.path)
+
     def _smart_scan(self, current_dir, package_prefix=""):
         """
         Recursively scans the directory structure to identify plugin modules.
@@ -122,8 +124,9 @@ class PluginLoader:
                         ".git",
                     ):
                         if not entry.name.isidentifier():
-                            if entry.path not in sys.path:
+                            if entry.path not in self._sys_path_cache:
                                 sys.path.append(entry.path)
+                                self._sys_path_cache.add(entry.path)
                             self._smart_scan(entry.path, package_prefix="")
                         else:
                             new_prefix = (
@@ -141,13 +144,15 @@ class PluginLoader:
         Initiates the scanning process for both system and user plugin directories.
         """
         try:
-            if self.plugins_dir not in sys.path:
+            if self.plugins_dir not in self._sys_path_cache:
                 sys.path.append(self.plugins_dir)
+                self._sys_path_cache.add(self.plugins_dir)
             self._smart_scan(self.plugins_dir, package_prefix="")
 
             if os.path.exists(self.user_plugins_dir):
-                if self.user_plugins_dir not in sys.path:
+                if self.user_plugins_dir not in self._sys_path_cache:
                     sys.path.append(self.user_plugins_dir)
+                    self._sys_path_cache.add(self.user_plugins_dir)
                 self._smart_scan(self.user_plugins_dir, package_prefix="")
 
         except Exception as e:
