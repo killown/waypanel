@@ -342,6 +342,7 @@ class PluginLoader:
     def _initialize_sorted_plugins(self):
         """
         Performs a topological sort on plugins based on dependencies and priority.
+        Top panel plugins are prioritized during sorting.
         """
         if not self.plugin_metadata:
             return False
@@ -366,23 +367,36 @@ class PluginLoader:
                     adj[d_id].append(name)
                     in_degree[name] += 1
 
+        def sort_key(item):
+            container_rank = {
+                "top": 4,
+                "bottom": 3,
+                "left": 2,
+                "right": 1,
+                "background": 0,
+            }
+            container = item[3]
+            priority = item[1]
+            index = item[2]
+            return (-container_rank.get(container, 0), -priority, index)
+
         ready = [
-            (n, all_plugins[n][2], all_plugins[n][3])
+            (n, all_plugins[n][2], all_plugins[n][3], all_plugins[n][1])
             for n, deg in in_degree.items()
             if deg == 0
         ]
-        ready.sort(key=lambda x: (-x[1], x[2]))
+        ready.sort(key=sort_key)
 
         sorted_names = []
         while ready:
-            curr, _, _ = ready.pop(0)
+            curr, _, _, _ = ready.pop(0)
             sorted_names.append(curr)
             for d in adj.get(curr, []):
                 in_degree[d] -= 1
                 if in_degree[d] == 0:
                     meta = all_plugins[d]
-                    ready.append((d, meta[2], meta[3]))
-                    ready.sort(key=lambda x: (-x[1], x[2]))
+                    ready.append((d, meta[2], meta[3], meta[1]))
+                    ready.sort(key=sort_key)
 
         self.plugins_to_initialize = [all_plugins[n] for n in sorted_names]
         self.plugins_to_initialize_index = 0
