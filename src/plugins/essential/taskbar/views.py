@@ -54,7 +54,6 @@ class TaskbarViews:
         self.set_view_focus(target)
 
     def set_view_focus(self, view: dict) -> None:
-        """Focuses a specific view and handles cursor/effect logic."""
         try:
             vid = view.get("id")
             v = self.plugin.wf_helper.is_view_valid(vid)
@@ -64,7 +63,6 @@ class TaskbarViews:
                 self.plugin.ipc.scale_toggle()
             self.plugin.ipc.go_workspace_set_focus(vid)
             self.plugin.ipc.center_cursor_on_view(vid)
-            self.plugin.wf_helper.view_focus_indicator_effect(v)
         except Exception as e:
             self.plugin.logger.error(f"Error focusing: {e}")
 
