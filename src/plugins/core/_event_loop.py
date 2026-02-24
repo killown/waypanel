@@ -1,8 +1,9 @@
 import asyncio
+import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
-_GLOBAL_EXECUTOR: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=4)
+_GLOBAL_EXECUTOR: Optional[ThreadPoolExecutor] = None
 _GLOBAL_LOOP: Optional[asyncio.AbstractEventLoop] = None
 
 
@@ -30,4 +31,10 @@ def get_global_executor() -> ThreadPoolExecutor:
     Returns:
         ThreadPoolExecutor: The shared executor for blocking operations.
     """
+    global _GLOBAL_EXECUTOR
+    if _GLOBAL_EXECUTOR is None:
+        max_workers = (os.cpu_count() or 1) + 4
+        _GLOBAL_EXECUTOR = ThreadPoolExecutor(
+            max_workers=max_workers, thread_name_prefix="WaypanelWorker"
+        )
     return _GLOBAL_EXECUTOR
