@@ -241,20 +241,32 @@ class Panel(Adw.Application):
         css_class = "top-panel"
 
         exclusive = self.get_setting_add_hint(
-            "org.waypanel.panel.top.Exclusive",
+            ["org.waypanel.panel", "top", "Exclusive"],
             bool(config.get("Exclusive", 1.0)),
             "Reserve space for the top panel",
         )
         layer_position = self.get_setting_add_hint(
-            "org.waypanel.panel.top.layer_position",
+            ["org.waypanel.panel", "top", "layer_position"],
             config.get("layer_position", "TOP"),
             "Layer position: BACKGROUND, BOTTOM, TOP, OVERLAY",
         )
         width = self.get_setting_add_hint(
-            "org.waypanel.panel.top.width", self.monitor_width, "Width of the top panel"
+            ["org.waypanel.panel", "top", "width"],
+            self.monitor_width,
+            "Width of the top panel",
         )
         height = self.get_setting_add_hint(
-            "org.waypanel.panel.top.height", 32.0, "Height of the top panel"
+            ["org.waypanel.panel", "top", "height"], 32.0, "Height of the top panel"
+        )
+        margin_top = self.get_setting_add_hint(
+            ["org.waypanel.panel", "top", "margin_top"],
+            0,
+            "Margin top of the top panel",
+        )
+        margin_bottom = self.get_setting_add_hint(
+            ["org.waypanel.panel", "top", "margin_bottom"],
+            0,
+            "Margin bottom of the top panel",
         )
 
         namespace = "Waypanel-Top"
@@ -268,6 +280,8 @@ class Panel(Adw.Application):
             height,  # pyright: ignore
             css_class,
             namespace,
+            margin_top=margin_top,  # pyright: ignore
+            margin_bottom=margin_bottom,  # pyright: ignore
         )
         if config.get("enabled", True):
             self.top_panel.present()
@@ -282,22 +296,24 @@ class Panel(Adw.Application):
         css_class = "bottom-panel"
 
         exclusive = self.get_setting_add_hint(
-            "org.waypanel.panel.bottom.Exclusive",
+            ["org.waypanel.panel", "bottom", "Exclusive"],
             bool(config.get("Exclusive", 1.0)),
             "Reserve space for the bottom panel",
         )
         layer_position = self.get_setting_add_hint(
-            "org.waypanel.panel.bottom.layer_position",
+            ["org.waypanel.panel", "bottom", "layer_position"],
             config.get("layer_position", "BACKGROUND"),
             "Layer position: BACKGROUND, BOTTOM, TOP, OVERLAY",
         )
         width = self.get_setting_add_hint(
-            "org.waypanel.panel.bottom.width",
+            ["org.waypanel.panel", "bottom", "width"],
             self.monitor_width,
             "Width of the bottom panel",
         )
         height = self.get_setting_add_hint(
-            "org.waypanel.panel.bottom.height", 32.0, "Height of the bottom panel"
+            ["org.waypanel.panel", "bottom", "height"],
+            32.0,
+            "Height of the bottom panel",
         )
         namespace = "Waypanel-Bottom"
 
@@ -324,20 +340,20 @@ class Panel(Adw.Application):
         css_class = "left-panel"
 
         exclusive = self.get_setting_add_hint(
-            "org.waypanel.panel.left.Exclusive",
+            ["org.waypanel.panel", "left", "Exclusive"],
             bool(config.get("Exclusive", 1.0)),
             "Reserve space for the left panel",
         )
         layer_position = self.get_setting_add_hint(
-            "org.waypanel.panel.left.layer_position",
+            ["org.waypanel.panel", "left", "layer_position"],
             config.get("layer_position", "BACKGROUND"),
             "Layer position: BACKGROUND, BOTTOM, TOP, OVERLAY",
         )
         width = self.get_setting_add_hint(
-            "org.waypanel.panel.left.width", 32.0, "Width of the left panel"
+            ["org.waypanel.panel", "left", "width"], 32.0, "Width of the left panel"
         )
         height = self.get_setting_add_hint(
-            "org.waypanel.panel.left.height", 0.0, "Height of the left panel"
+            ["org.waypanel.panel", "left", "height"], 0.0, "Height of the left panel"
         )
         namespace = "Waypanel-Left"
 
@@ -364,20 +380,20 @@ class Panel(Adw.Application):
         css_class = "right-panel"
 
         exclusive = self.get_setting_add_hint(
-            "org.waypanel.panel.right.Exclusive",
+            ["org.waypanel.panel", "right", "Exclusive"],
             bool(config.get("Exclusive", 1.0)),
             "Reserve space for the right panel",
         )
         layer_position = self.get_setting_add_hint(
-            "org.waypanel.panel.right.layer_position",
+            ["org.waypanel.panel", "right", "layer_position"],
             config.get("layer_position", "BACKGROUND"),
             "Layer position: BACKGROUND, BOTTOM, TOP, OVERLAY",
         )
         width = self.get_setting_add_hint(
-            "org.waypanel.panel.right.width", 32.0, "Width of the right panel"
+            ["org.waypanel.panel", "right", "width"], 32.0, "Width of the right panel"
         )
         height = self.get_setting_add_hint(
-            "org.waypanel.panel.right.height", 0.0, "Height of the right panel"
+            ["org.waypanel.panel", "right", "height"], 0.0, "Height of the right panel"
         )
         namespace = "Waypanel-Right"
 
