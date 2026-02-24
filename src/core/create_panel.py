@@ -129,6 +129,10 @@ def setup_layer_shell(
     monitor: Optional[Dict[str, Any]],
     class_style: str,
     title: str = "Panel",
+    margin_top: int = 0,
+    margin_bottom: int = 0,
+    margin_left: int = 0,
+    margin_right: int = 0,
 ) -> None:
     """Configure the GTK Layer Shell properties."""
     LayerShell.init_for_window(window)
@@ -141,6 +145,14 @@ def setup_layer_shell(
     layer = layer.upper()
     if layer in ("TOP", "LEFT", "RIGHT"):
         LayerShell.set_layer(window, LayerShell.Layer.TOP)
+        if margin_top > 0:
+            LayerShell.set_margin(window, LayerShell.Edge.TOP, margin_top)
+        if margin_bottom > 0:
+            LayerShell.set_margin(window, LayerShell.Edge.BOTTOM, margin_bottom)
+        if margin_left > 0:
+            LayerShell.set_margin(window, LayerShell.Edge.LEFT, margin_left)
+        if margin_right > 0:
+            LayerShell.set_margin(window, LayerShell.Edge.RIGHT, margin_right)
     else:
         LayerShell.set_layer(window, LayerShell.Layer.BACKGROUND)
 
@@ -149,11 +161,6 @@ def setup_layer_shell(
         LayerShell.set_anchor(window, edge, True)
         if exclusive:
             LayerShell.auto_exclusive_zone_enable(window)
-
-    if class_style == "TopBarBackground":
-        m_width = get_monitor_width(monitor) if monitor else width
-        window.set_default_size(m_width, height)
-        LayerShell.set_margin(window, LayerShell.Edge.BOTTOM, 11)
 
     window.set_size_request(10, 10)
     window.add_css_class(class_style)
@@ -168,6 +175,10 @@ def CreatePanel(
     height: int,
     class_style: str,
     title: str = "CreatePanel",
+    margin_top=0,
+    margin_bottom=0,
+    margin_left=0,
+    margin_right=0,
 ) -> Gtk.Window:
     """Create and configure a raw Gtk panel window."""
     window = Gtk.Window(application=app)
@@ -187,6 +198,10 @@ def CreatePanel(
         monitor=monitor,
         class_style=class_style,
         title=title,
+        margin_top=margin_top,
+        margin_bottom=margin_bottom,
+        margin_left=margin_left,
+        margin_right=margin_right,
     )
 
     window.connect("destroy", Gtk.Application.quit)
