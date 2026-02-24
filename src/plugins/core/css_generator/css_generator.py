@@ -110,7 +110,7 @@ def get_plugin_class():
                 return
             self.logger.info(f"CSS Watcher: Active on {len(self.monitors)} files.")
             for path_str in sorted(self.monitors.keys()):
-                self.logger.info(f"  [WATCHING] {path_str}")
+                self.logger.debug(f"  [WATCHING] {path_str}")
 
         def _register_and_monitor(self, path: Path, schedule=True):
             path_str = str(path)
