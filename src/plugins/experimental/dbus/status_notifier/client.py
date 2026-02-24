@@ -21,7 +21,6 @@ def get_plugin_metadata(panel_instance):
         "version": "1.0.0",
         "enabled": True,
         "container": container,
-        "index": 5,
         "deps": ["event_manager", "css_generator"],
         "description": about,
     }

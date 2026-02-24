@@ -6,7 +6,6 @@ def get_plugin_metadata(_):
         "id": "org.waypanel.plugin.now_playing",
         "name": "Media Player",
         "version": "3.5.2",
-        "index": 20,
         "description": "Dedicated media control button with marquee, pulse effects, window focus, and close action.",
         "container": "background",
         "deps": ["css_generator", "top_panel"],

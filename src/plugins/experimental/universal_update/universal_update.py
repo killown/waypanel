@@ -19,7 +19,6 @@ def get_plugin_metadata(panel):
         "name": "Universal Update",
         "version": "2.5.1",
         "enabled": ENABLE,
-        "index": 11,
         "container": container,
         "deps": ["css_generator", "status_notifier"],
         "description": "Universal Linux update manager with per-backend custom commands.",

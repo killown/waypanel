@@ -9,7 +9,6 @@ def get_plugin_metadata(_):
         "name": "Notify Client",
         "version": "1.0.0",
         "enabled": True,
-        "index": 1,
         "container": "top-panel-center",
         "deps": ["notify_server", "css_generator", "status_notifier"],
         "description": about,
