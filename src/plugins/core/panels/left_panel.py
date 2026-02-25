@@ -4,7 +4,7 @@ def get_plugin_metadata(_):
         "name": "Left Panel",
         "version": "1.0.0",
         "enabled": True,
-        "priority": 10,
+        "priority": 1,
         "container": "left-panel",
         "deps": ["event_manager", "css_generator"],
     }

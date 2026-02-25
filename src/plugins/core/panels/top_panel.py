@@ -4,7 +4,7 @@ def get_plugin_metadata(_):
         "name": "Top Panel",
         "version": "1.0.0",
         "enabled": True,
-        "priority": 10,
+        "priority": 10000,
         "container": "top-panel",
         "deps": ["event_manager"],
     }
