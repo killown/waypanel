@@ -1,11 +1,10 @@
-# ==== FILE: src/plugins/core/panels/bottom_panel.py ====
 def get_plugin_metadata(_):
     return {
         "id": "org.waypanel.plugin.bottom_panel",
         "name": "Bottom Panel",
         "version": "1.0.0",
         "enabled": True,
-        "priority": 10,
+        "priority": 1,
         "container": "bottom-panel",
         "deps": ["event_manager", "css_generator"],
     }
@@ -95,26 +94,35 @@ def get_plugin_class():
 
             # Main Grid Assembly (Symmetrical to Top)
             self.obj.bottom_panel_box_full = self.gtk.Grid()
-            self.obj.bottom_panel_box_full.set_column_homogeneous(True)
+
+            # Disable column homogeneity to allow children (like Taskbar)
+            # to keep their natural width instead of forcing 33%/33%/33% split.
+            self.obj.bottom_panel_box_full.set_column_homogeneous(False)
+
+            # Left side: Fixed width or takes minimal space
+            self.obj.bottom_panel_box_left.set_hexpand(False)
             self.obj.bottom_panel_box_full.attach(
-                self.obj.bottom_panel_box_left, 1, 0, 1, 2
+                self.obj.bottom_panel_box_left, 0, 0, 1, 1
             )
 
-            self._attach_widget_to_grid_next_to(
-                self.obj.bottom_panel_box_full,
+            # Center side: Takes all remaining space to keep Taskbar centered
+            self.obj.bottom_panel_box_center.set_hexpand(True)
+            self.obj.bottom_panel_box_full.attach_next_to(
                 self.obj.bottom_panel_box_center,
                 self.obj.bottom_panel_box_left,
                 self.gtk.PositionType.RIGHT,
                 1,
-                2,
+                1,
             )
-            self._attach_widget_to_grid_next_to(
-                self.obj.bottom_panel_box_full,
+
+            # Right side: Fixed width or takes minimal space
+            self.obj.bottom_panel_grid_right.set_hexpand(False)
+            self.obj.bottom_panel_box_full.attach_next_to(
                 self.obj.bottom_panel_grid_right,
                 self.obj.bottom_panel_box_center,
                 self.gtk.PositionType.RIGHT,
                 1,
-                3,
+                1,
             )
 
             # Scrolled Window Wrapper (Symmetrical to Top)
@@ -159,10 +167,7 @@ def get_plugin_class():
                 )
                 return False
             else:
-                self.glib.timeout_add(100, self.add_css_class)
+                self.glib.idle_add(self.add_css_class)
                 return True
 
     return BottomPanelPlugin
-
-
-# ==== END OF FILE: src/plugins/core/panels/bottom_panel.py ====

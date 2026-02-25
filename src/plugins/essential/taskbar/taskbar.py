@@ -78,7 +78,7 @@ def get_plugin_class():
             self.event_handler.subscribe()
             self.ui_handler.create_main_layout()
             self.run_in_thread(self._initialize_button_pool, 15)
-            self.main_widget = (self.center_box, "append")
+            self.main_widget = (self.scrolled_window, "append")  # pyright: ignore
             self.plugins["css_generator"].install_css("taskbar.css")
 
         def _init_settings_refs(self):
