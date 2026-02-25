@@ -424,7 +424,6 @@ class StatusNotifierItem(BasePlugin):
     async def _is_service_name_valid(self) -> bool:
         """
         Checks if the D-Bus service name of this item is currently owned.
-        FIX: Implemented D-Bus ownership check to prevent retries on dead services.
         """
         try:
             await self.bus.call(
